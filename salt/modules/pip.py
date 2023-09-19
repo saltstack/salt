@@ -464,7 +464,7 @@ def install(
     cache_dir=None,
     no_binary=None,
     disable_version_check=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Install packages with pip
@@ -758,6 +758,16 @@ def install(
     if log:
         if os.path.isdir(log):
             raise OSError("'{}' is a directory. Use --log path_to_file".format(log))
+        if not os.path.exists(log):
+            parent = os.path.dirname(log)
+            if not os.path.exists(parent):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' does not exist."
+                )
+            elif not os.access(parent, os.W_OK):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' is not writeable."
+                )
         elif not os.access(log, os.W_OK):
             raise OSError("'{}' is not writeable".format(log))
 
@@ -1336,7 +1346,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
             user=user,
             cwd=cwd,
             env_vars=env_vars,
-            **kwargs
+            **kwargs,
         )
 
     cmd = _get_pip_bin(bin_env)

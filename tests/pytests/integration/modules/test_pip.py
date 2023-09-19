@@ -591,6 +591,35 @@ def test_pip_install_multiple_editables_and_pkgs(venv_dir, salt_cli, salt_minion
             )
 
 
+@pytest.mark.parametrize("touch", [True, False])
+@pytest.mark.slow_test
+def test_pip_non_existent_log_file(venv_dir, salt_cli, salt_minion, tmp_path, touch):
+    log_file = tmp_path / "tmp-pip-install.log"
+    if touch:
+        log_file.touch()
+    # Create the testing virtualenv
+    with VirtualEnv(venv_dir):
+        ret = salt_cli.run(
+            "pip.install",
+            ["pep8"],
+            log=str(log_file),
+            bin_env=venv_dir,
+            minion_tgt=salt_minion.id,
+        )
+
+        if not isinstance(ret.data, dict):
+            pytest.fail(
+                "The 'pip.install' command did not return the expected dictionary."
+                " Output:\n{}".format(ret)
+            )
+
+        if _check_download_error(ret.stdout):
+            pytest.skipTest("Test skipped due to pip download error")
+        assert ret.returncode == 0
+        assert log_file.exists()
+        assert "pep8" in log_file.read_text()
+
+
 @pytest.mark.skipif(
     shutil.which("/bin/pip3") is None, reason="Could not find /bin/pip3"
 )
