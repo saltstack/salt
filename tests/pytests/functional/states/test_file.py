@@ -12,6 +12,7 @@ from contextlib import closing
 import pytest
 
 import salt.utils.files
+import salt.utils.json
 
 
 class RequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -222,4 +223,92 @@ def test_file_symlink_replace_existing_link(states, tmp_path):
         "changes": {"new": str(name)},
         "comment": f"Created new symlink {str(name)} -> {str(target)}",
         "result": True,
+    }
+
+
+def test_file_managed_contents_function(states, tmp_path):
+    name = tmp_path / "foo"
+
+    ret = states.file.managed(
+        name=str(name),
+        contents_function=[
+            {
+                "fun": "test.echo",
+                "args": ["salt guy"],
+            },
+            {
+                "fun": "test.ping",
+            },
+        ],
+    )
+
+    assert ret.filtered == {
+        "name": str(name),
+        "changes": {"diff": "New file"},
+        "comment": f"File {str(name)} updated",
+        "result": True,
+    }
+    assert name.read_text() == "salt guy\nTrue\n"
+
+
+def test_file_serialize_dataset_function(states, tmp_path):
+    name = tmp_path / "foo"
+
+    ret = states.file.serialize(
+        name=str(name),
+        serializer="json",
+        dataset_function=[
+            {
+                "fun": "test.arg",
+                "args": ["salt", "guy"],
+                "kwargs": {
+                    "foo": "bar",
+                    "zip": "zap",
+                },
+            },
+            {
+                "fun": "test.kwarg",
+                "kwargs": {
+                    "monkey": "donkey",
+                    "foo": "buzz",
+                },
+            },
+        ],
+    )
+
+    assert ret.filtered == {
+        "name": str(name),
+        "changes": {"diff": "New file"},
+        "comment": f"File {str(name)} updated",
+        "result": True,
+    }
+    file_contents = name.read_text()
+    assert (
+        file_contents
+        == """{
+  "args": [
+    "salt",
+    "guy"
+  ],
+  "foo": "buzz",
+  "kwargs": {
+    "foo": "bar",
+    "zip": "zap"
+  },
+  "monkey": "donkey"
+}
+"""
+    )
+    actual = salt.utils.json.loads(file_contents)
+    assert actual == {
+        "args": [
+            "salt",
+            "guy",
+        ],
+        "foo": "buzz",
+        "kwargs": {
+            "foo": "bar",
+            "zip": "zap",
+        },
+        "monkey": "donkey",
     }

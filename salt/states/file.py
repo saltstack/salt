@@ -3044,17 +3044,19 @@ def managed(
             if isinstance(contents_function, list):
                 list_contents = []
                 for nextf in contents_function:
-                    nextc = __salt__[nextf["func"]](
+                    nextc = __salt__[nextf["fun"]](
                         *nextf.get("args", []), **nextf.get("kwargs", {})
                     )
                     if nextc is __NOT_FOUND:
                         return _error(ret, "contents_function returned an empty object")
                     list_contents.append(nextc)
-                use_contents = os.linesep.join(list_contents)
+                use_contents = os.linesep.join(str(cnt) for cnt in list_contents)
             else:
-                use_contents = contents_function["func"](
-                    *contents_function.get("args", []),
-                    **contents_function("kwargs", {}),
+                use_contents = str(
+                    contents_function["fun"](
+                        *contents_function.get("args", []),
+                        **contents_function("kwargs", {}),
+                    )
                 )
                 if use_contents is __NOT_FOUND:
                     return _error(ret, "contents_function returned an empty object")
@@ -8147,7 +8149,7 @@ def serialize(
                 dataset_list = []
 
                 for nextf in dataset_function:
-                    nextc = __salt__[nextf["func"]](
+                    nextc = __salt__[nextf["fun"]](
                         *nextf.get("args", []), **nextf.get("kwargs", {})
                     )
                     if nextc is __NOT_FOUND:
@@ -8168,7 +8170,7 @@ def serialize(
                         "dataset_function cannot combine data structures of different types",
                     )
             else:
-                func_dataset = dataset_function["func"](
+                func_dataset = dataset_function["fun"](
                     *dataset_function.get("args", []),
                     **dataset_function("kwargs", {}),
                 )
