@@ -374,3 +374,14 @@ def test_add_del_repo_key(get_key_file, aptkey):
             assert not keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert "0E08A149DE57BFBE" not in query_key
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_wildcard():
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
+    ret = aptpkg.remove(name="nginx-*")
+    assert not ret["nginx-light"]["new"]
+    assert ret["nginx-light"]["old"]
+    assert not ret["nginx-doc"]["new"]
+    assert ret["nginx-doc"]["old"]
