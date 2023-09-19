@@ -1224,7 +1224,7 @@ def decompress_dependencies(session):
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if not nox_dependencies_tarball_path.exists():
         session.error(
-            f"The {nox_dependencies_tarball} file"
+            f"The {nox_dependencies_tarball} file "
             "does not exist. Not decompressing anything."
         )
 
