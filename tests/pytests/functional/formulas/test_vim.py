@@ -20,6 +20,10 @@ def modules(loaders, _formula):
 
 @pytest.mark.skip_on_windows
 @pytest.mark.destructive_test
+@pytest.mark.skipif(
+    'grains["oscodename"] == "Photon"',
+    reason="vim package not available for this distrubition",
+)
 def test_vim_formula(modules):
     ret = modules.state.sls("vim")
     assert not ret.errors
