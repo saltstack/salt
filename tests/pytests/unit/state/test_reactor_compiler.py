@@ -416,7 +416,7 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
             },
             [
                 "The require statement in state 'add_test_2' in SLS '/srv/reactor/start.sls' needs to be formed as a list",
-                "Too many functions declared in state 'local.cmd.run' in SLS '/srv/reactor/start.sls'",
+                "Argument not formed as a dictionary in state 'add_test_2' in SLS '/srv/reactor/start.sls': 'cmd.run'",
             ],
         ),
         (
