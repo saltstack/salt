@@ -11,6 +11,7 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.file as file
 import salt.modules.gpg as gpg
+import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.mock import Mock, patch
@@ -63,6 +64,7 @@ def configure_loader_modules(minion_opts):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,
         },

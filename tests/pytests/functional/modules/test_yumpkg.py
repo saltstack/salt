@@ -1,6 +1,7 @@
 import pytest
 
 import salt.modules.cmdmod as cmd
+import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 
 
@@ -11,6 +12,7 @@ def configure_loader_modules(minion_opts):
             "__salt__": {
                 "cmd.run_all": cmd.run_all,
                 "cmd.run": cmd.run,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,
         },
