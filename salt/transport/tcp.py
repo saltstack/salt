@@ -15,6 +15,7 @@ import queue
 import socket
 import threading
 import urllib
+import uuid
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
@@ -569,10 +570,7 @@ class MessageClient:
         self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
-        self._mid = 1
-        self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
         # TODO: max queue size
-        self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
 
         self._read_until_future = None
@@ -722,18 +720,7 @@ class MessageClient:
         self._stream_return_running = False
 
     def _message_id(self):
-        wrap = False
-        while self._mid in self.send_future_map:
-            if self._mid >= self._max_messages:
-                if wrap:
-                    # this shouldn't ever happen, but just in case
-                    raise Exception("Unable to find available messageid")
-                self._mid = 1
-                wrap = True
-            else:
-                self._mid += 1
-
-        return self._mid
+        return str(uuid.uuid4())
 
     # TODO: return a message object which takes care of multiplexing?
     def on_recv(self, callback):
