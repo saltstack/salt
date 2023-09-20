@@ -6,7 +6,6 @@ import re
 import sys
 
 import pytest
-from saltfactories.utils.tempfiles import temp_directory
 
 import salt.defaults.exitcodes
 import salt.utils.files
@@ -432,28 +431,6 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
     assert "test.echo" in ret.data
 
 
-def salt_minion(salt_master, salt_minion_factory):
-    """
-    A running salt-minion fixture
-    """
-    assert salt_master.is_running()
-    with salt_minion_factory.started():
-        # Sync All
-        salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        assert ret.returncode == 0, ret
-        yield salt_minion_factory
-
-
-def salt_call_cli(salt_minion):
-    """
-    The ``salt-call`` CLI as a fixture against the running minion
-    """
-    assert salt_minion.is_running()
-    return salt_minion.salt_call_cli(timeout=30)
-
-
-## DGM def test_state_highstate_custom_grains(salt_minion, salt_call_cli):
 def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
     """
     This test ensure that custom grains in salt://_grains are loaded before pillar compilation
@@ -461,8 +438,8 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
     a sync of grains occurs before loading the regular /etc/salt/grains or configuration file
     grains, as well as the usual grains.
 
-    Problem: cannot use salt_minion and salt_call_cli, since these will be loaded before
-    the pillar and custom_grains files are written.
+    Note: cannot use salt_minion and salt_call_cli, since these will be loaded before
+    the pillar and custom_grains files are written, hence using salt_minion_factory.
     """
     pillar_top_sls = """
     base:
@@ -489,68 +466,26 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
     def main():
         return {'custom_grain': 'test_value'}
     """
-    log.warning("DGM test_state_highstate_custom_grains start of tests")
-
     assert salt_master.is_running()
-
-    log.warning("DGM test_state_highstate_custom_grains salt_master.is_running")
-
     with salt_minion_factory.started():
-        ## # Sync All
-        ## salt_call_cli = salt_minion_factory.salt_call_cli()
-        ## ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        ## assert ret.returncode == 0, ret
-        ## yield salt_minion_factory
-
-        log.warning(
-            "DGM test_state_highstate_custom_grains salt_minion_factory started"
-        )
-
         salt_minion = salt_minion_factory
         salt_call_cli = salt_minion_factory.salt_call_cli()
-
-        log.warning(
-            "DGM test_state_highstate_custom_grains have salt_minion and salt_call_cli"
-        )
-
         with salt_minion.pillar_tree.base.temp_file(
             "top.sls", pillar_top_sls
         ), salt_minion.pillar_tree.base.temp_file(
             "defaults.sls", pillar_defaults_sls
         ), salt_minion.state_tree.base.temp_file(
-            "top.sls",
-            salt_top_sls
-            ## ), test_sls_file = salt_minion.state_tree.base.temp_file(
-            ##     "test.sls", salt_test_sls
-            ## ), temp_directory(
-            ##     "_grains"
-            ## ), salt_minion.state_tree.base.temp_file(
-            ##     "custom_grain.py", salt_custom_grains_sls, "_grains"
+            "top.sls", salt_top_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "test.sls", salt_test_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "_grains/custom_grain.py", salt_custom_grains_sls
         ):
-            test_sls_file = salt_minion.state_tree.base.temp_file(
-                "test.sls", salt_test_sls
-            )
-            log.warning(f"DGM highstate_custom_grains, test_sls_file '{test_sls_file}'")
-
-            dgm_tmp_dir = temp_directory("_grains")
-            dgm_grains_file = salt_minion.state_tree.base.temp_file(
-                "custom_grain.py", salt_custom_grains_sls, "_grains"
-            )
-            log.warning(
-                f"DGM highstate_custom_grains, dgm_tmp_dir '{dgm_tmp_dir}', dgm_grains_file '{dgm_grains_file}'"
-            )
-
-            log.warning("DGM highstate_custom_grains, cmd.run for salt:// etc.")
-            ret = salt_call_cli.run("--local", "cmd.run", "salt://*")
-            ret = salt_call_cli.run("--local", "cmd.run", "salt://_grains/*")
-
-            log.warning("DGM highstate_custom_grains, pre state.highstate call")
-
             ret = salt_call_cli.run("--local", "state.highstate")
-
-            log.warning(f"DGM highstate_custom_grains, state.highstate ret '{ret}'")
             assert ret.returncode == 0
-
-            log.warning(f"DGM highstate_custom_grains, pillar.items ret '{ret}'")
-            ret = salt_call_cli.run("pillar.items")
+            ret = salt_call_cli.run("--local", "pillar.items")
             assert ret.returncode == 0
+            assert ret.data
+            pillar_items = ret.data
+            assert "mypillar" in pillar_items
+            assert pillar_items["mypillar"] == "test_value"

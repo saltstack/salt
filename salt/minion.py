@@ -922,14 +922,9 @@ class SMinion(MinionBase):
         import salt.loader
 
         # need sync of custom grains as may be used in pillar compilation
-        ret, touched = salt.utils.extmods.sync(opts, "grains")
-        log.warning(f"DGM SMinion dunder init, sync ret '{ret}', touched '{touched}'")
-
+        salt.utils.extmods.sync(opts, "grains")
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
-
-        dgm_grains = opts["grains"]
-        log.warning(f"DGM SMinion dunder init, post load grains  '{dgm_grains}'")
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
