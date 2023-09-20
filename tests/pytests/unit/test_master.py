@@ -990,7 +990,7 @@ def test_key_rotate_no_master_match(maintenance):
 def test_key_dfn_wait(cluster_maintenance):
     now = time.monotonic()
     key = pathlib.Path(cluster_maintenance.opts["cluster_pki_dir"]) / ".aes"
-    salt.crypt.Crypticle.read_or_generate_key(str(key))
+    salt.crypt.Crypticle.write_key(str(key))
     rotate_time = time.monotonic() - (cluster_maintenance.opts["publish_session"] + 1)
     os.utime(str(key), (rotate_time, rotate_time))
 
