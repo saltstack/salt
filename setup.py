@@ -595,6 +595,10 @@ HOME_DIR = {home_dir!r}
 
 class Build(build):
     def run(self):
+        if getattr(self.distribution, "with_salt_version", False):
+            self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+            self.run_command("write_salt_version")
+
         # Run build.run function
         build.run(self)
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
