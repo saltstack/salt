@@ -59,6 +59,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_auditpol
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.serializers.configparser import deserialize
@@ -4799,8 +4800,6 @@ class _policy_info:
         """
         converts a list of pysid objects to string representations
         """
-        if isinstance(val, str):
-            val = val.split(",")
         usernames = []
         for _sid in val:
             try:
@@ -4918,11 +4917,11 @@ class _policy_info:
             return None
         if value_lookup:
             if not isinstance(item, list):
-                return "Invalid Value"
+                return "Invalid Value: Not a list"
             ret_val = 0
         else:
             if not isinstance(item, int):
-                return "Invalid Value"
+                return "Invalid Value: Not an int"
             ret_val = []
         if "lookup" in kwargs:
             for k, v in kwargs["lookup"].items():
@@ -4937,7 +4936,7 @@ class _policy_info:
                     if do_test and isinstance(k, int) and item & k == k:
                         ret_val.append(v)
         else:
-            return "Invalid Value"
+            return "Invalid Value: No lookup passed"
         return ret_val
 
     @classmethod
@@ -5392,7 +5391,7 @@ def _get_advaudit_defaults(option=None):
         # Get available setting names and GUIDs
         # This is used to get the fieldnames and GUIDs for individual policies
         log.debug("Loading auditpol defaults into __context__")
-        dump = __utils__["auditpol.get_auditpol_dump"]()
+        dump = salt.utils.win_lgpo_auditpol.get_auditpol_dump()
         reader = csv.DictReader(dump)
         audit_defaults = {"fieldnames": reader.fieldnames}
         for row in reader:
@@ -5624,7 +5623,7 @@ def _set_advaudit_pol_data(option, value):
         "3": "Success and Failure",
     }
     defaults = _get_advaudit_defaults(option)
-    return __utils__["auditpol.set_setting"](
+    return salt.utils.win_lgpo_auditpol.set_setting(
         name=defaults["Auditpol Name"], value=auditpol_values[value]
     )
 
