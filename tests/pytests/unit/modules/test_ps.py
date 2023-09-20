@@ -770,23 +770,51 @@ def test_top():
                         zombie_cpu_times,
                     ]
                     ret = ps.top(num_processes=1, interval=0)
-                    assert ret[0]["mem"] == {
-                        "rss": 0,
-                        "vms": 0,
-                        "shared": 0,
-                        "text": 0,
-                        "lib": 0,
-                        "data": 0,
-                        "dirty": 0,
-                    }
 
-                    assert ret[0]["cpu"] == {
-                        "user": 0,
-                        "system": 0,
-                        "children_user": 0,
-                        "children_system": 0,
-                        "iowait": 0,
-                    }
+                    if salt.utils.platform.is_windows():
+                        expected_mem = {
+                            "rss": 0,
+                            "vms": 0,
+                            "num_page_faults": 0,
+                            "peak_wset": 0,
+                            "wset": 0,
+                            "peak_paged_pool": 0,
+                            "paged_pool": 0,
+                            "peak_nonpaged_pool": 0,
+                            "nonpaged_pool28144": 0,
+                            "pagefile": 0,
+                            "peak_pagefile": 0,
+                            "private": 0,
+                        }
+
+                        expected_cpu = {
+                            "user": 0,
+                            "system": 0,
+                            "children_user": 0,
+                            "children_system": 0,
+                        }
+
+                    else:
+                        expected_mem = {
+                            "rss": 0,
+                            "vms": 0,
+                            "shared": 0,
+                            "text": 0,
+                            "lib": 0,
+                            "data": 0,
+                            "dirty": 0,
+                        }
+
+                        expected_cpu = {
+                            "user": 0,
+                            "system": 0,
+                            "children_user": 0,
+                            "children_system": 0,
+                            "iowait": 0,
+                        }
+
+                    assert ret[0]["mem"] == expected_mem
+                    assert ret[0]["cpu"] == expected_cpu
 
     with patch("salt.utils.psutil_compat.pids", return_value=[1]):
         with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
