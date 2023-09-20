@@ -117,11 +117,11 @@ def verify_socket(interface, pub_port, ret_port):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((interface, int(port)))
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "Unable to bind socket {}:{}".format(interface, port)
+            msg = f"Unable to bind socket {interface}:{port}"
             if exc.args:
-                msg = "{}, error: {}".format(msg, str(exc))
+                msg = f"{msg}, error: {str(exc)}"
             else:
-                msg = "{}, this might not be a problem.".format(msg)
+                msg = f"{msg}, this might not be a problem."
             msg += "; Is there another salt-master running?"
             log.warning(msg)
             return False
@@ -202,7 +202,7 @@ def verify_files(files, user):
 
         except OSError as err:
             if os.path.isfile(dirname):
-                msg = "Failed to create path {}, is {} a file?".format(fn_, dirname)
+                msg = f"Failed to create path {fn_}, is {dirname} a file?"
                 raise SaltSystemExit(msg=msg)
             if err.errno != errno.EACCES:
                 raise
@@ -212,7 +212,7 @@ def verify_files(files, user):
             raise SaltSystemExit(msg=msg)
 
         except OSError as err:  # pylint: disable=duplicate-except
-            msg = 'Failed to create path "{}" - {}'.format(fn_, err)
+            msg = f'Failed to create path "{fn_}" - {err}'
             raise SaltSystemExit(msg=msg)
 
         stats = os.stat(fn_)
@@ -271,7 +271,7 @@ def verify_env(
                     os.chown(dir_, uid, gid)
             for subdir in [a for a in os.listdir(dir_) if "jobs" not in a]:
                 fsubdir = os.path.join(dir_, subdir)
-                if "{}jobs".format(os.path.sep) in fsubdir:
+                if f"{os.path.sep}jobs" in fsubdir:
                     continue
                 for root, dirs, files in salt.utils.path.os_walk(fsubdir):
                     for name in itertools.chain(files, dirs):
@@ -396,7 +396,7 @@ def check_path_traversal(path, user="root", skip_perm_errors=False):
     """
     for tpath in list_path_traversal(path):
         if not os.access(tpath, os.R_OK):
-            msg = "Could not access {}.".format(tpath)
+            msg = f"Could not access {tpath}."
             if not os.path.exists(tpath):
                 msg += " Path does not exist."
             else:
@@ -404,9 +404,9 @@ def check_path_traversal(path, user="root", skip_perm_errors=False):
                 # Make the error message more intelligent based on how
                 # the user invokes salt-call or whatever other script.
                 if user != current_user:
-                    msg += " Try running as user {}.".format(user)
+                    msg += f" Try running as user {user}."
                 else:
-                    msg += " Please give {} read permissions.".format(user)
+                    msg += f" Please give {user} read permissions."
 
             # We don't need to bail on config file permission errors
             # if the CLI
@@ -603,7 +603,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     allow_path = "\\".join([system_root, "TEMP"])
     if not salt.utils.path.safe_path(path=path, allow_path=allow_path):
         raise CommandExecutionError(
-            "`file_roots` set to a possibly unsafe location: {}".format(path)
+            f"`file_roots` set to a possibly unsafe location: {path}"
         )
 
     # Create the root path directory if missing

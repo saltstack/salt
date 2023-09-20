@@ -151,7 +151,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
@@ -294,7 +294,7 @@ netaddr==0.8.0
     #   pyeapi
 netmiko==4.2.0
     # via napalm
-netutils==1.4.1
+netutils==1.6.0
     # via napalm
 ntc-templates==3.4.0
     # via netmiko
@@ -354,7 +354,7 @@ pydantic==1.10.8
     #   inflect
 pyeapi==1.0.0
     # via napalm
-pygit2==1.12.1 ; python_version >= "3.8"
+pygit2==1.12.1
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
@@ -558,7 +558,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -566,7 +566,7 @@ transitions==0.9.0
     # via junos-eznc
 ttp-templates==0.3.5
     # via napalm
-ttp==0.9.4
+ttp==0.9.5
     # via
     #   napalm
     #   ttp-templates
