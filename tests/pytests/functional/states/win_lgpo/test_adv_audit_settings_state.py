@@ -3,6 +3,7 @@ import pytest
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
+import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -20,11 +21,16 @@ def configure_loader_modules(minion_opts, modules):
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
         },
         win_lgpo_module: {
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
+        },
+        win_lgpo_auditpol: {
+            "__context__": {},
         },
     }
 
