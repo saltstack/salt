@@ -2649,7 +2649,7 @@ class SaltKeyOptionParser(
             default=".",
             help=(
                 "Set the directory to save the generated keypair, only "
-                "works with \"gen_keys_dir\" option. Default: '%default'."
+                "works with \"--gen-keys\" option. Default: '%default'."
             ),
         )
 
@@ -2767,10 +2767,11 @@ class SaltKeyOptionParser(
 
     def process_gen_keys_dir(self):
         # Schedule __create_keys_dir() to run if there's a value for
-        # --create-keys-dir
-        self._mixin_after_parsed_funcs.append(
-            self.__create_keys_dir
-        )  # pylint: disable=no-member
+        # --gen-keys-dir
+        if self.options.gen_keys:
+            self._mixin_after_parsed_funcs.append(
+                self.__create_keys_dir
+            )  # pylint: disable=no-member
 
     def __create_keys_dir(self):
         if not os.path.isdir(self.config["gen_keys_dir"]):

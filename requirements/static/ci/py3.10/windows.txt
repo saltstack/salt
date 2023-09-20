@@ -10,7 +10,7 @@ aiosignal==1.3.1
     # via aiohttp
 async-timeout==4.0.2
     # via aiohttp
-attrs==20.3.0
+attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
@@ -20,7 +20,7 @@ attrs==20.3.0
     #   pytest-skip-markers
     #   pytest-system-statistics
 bcrypt==4.0.1
-    # via passlib
+    # via -r requirements/static/ci/common.in
 boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
@@ -94,7 +94,7 @@ dnspython==1.16.0
 docker-pycreds==0.4.0
     # via docker
 docker==2.7.0
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
@@ -198,7 +198,7 @@ packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
@@ -257,11 +257,11 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.6
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc25
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.3.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -270,10 +270,6 @@ pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-tempdir==2019.10.12
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-salt-factories
 pytest-timeout==2.1.0
     # via -r requirements/pytest.txt
 pytest==7.2.0
@@ -286,7 +282,6 @@ pytest==7.2.0
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
-    #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.1
     # via
@@ -318,6 +313,7 @@ pyyaml==6.0.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
+    #   pytest-salt-factories
     #   yamllint
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via
