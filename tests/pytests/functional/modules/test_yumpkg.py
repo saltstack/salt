@@ -22,6 +22,7 @@ def configure_loader_modules(minion_opts, grains):
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,
+            "__grains__": grains,
         },
     }
 
