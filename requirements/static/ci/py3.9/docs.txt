@@ -146,11 +146,11 @@ sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
 sphinxcontrib-spelling==8.0.0
     # via -r requirements/static/ci/docs.in
-tempora==5.2.2
+tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   pydantic
