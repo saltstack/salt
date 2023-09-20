@@ -559,7 +559,7 @@ def test_swap_memory():
             ps.swap_memory()
         assert (
             exc.value.error
-            == "virtual_memory is only available in psutil 0.6.0 or greater"
+            == "swap_memory is only available in psutil 0.6.0 or greater"
         )
 
     with patch(
