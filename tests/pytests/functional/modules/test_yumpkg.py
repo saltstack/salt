@@ -15,9 +15,9 @@ def configure_loader_modules(minion_opts, grains):
         },
         salt.modules.yumpkg: {
             "__salt__": {
-                "cmd.run": salt.modules.cmd.run,
-                "cmd.run_all": salt.modules.cmd.run_all,
-                "cmd.run_stdout": salt.modules.cmd.run_stdout,
+                "cmd.run": salt.modules.cmdmod.run,
+                "cmd.run_all": salt.modules.cmdmod.run_all,
+                "cmd.run_stdout": salt.modules.cmdmod.run_stdout,
                 "pkg_resource.add_pkg": salt.modules.pkg_resource.add_pkg,
                 "pkg_resource.parse_targets": salt.modules.pkg_resource.parse_targets,
             },
