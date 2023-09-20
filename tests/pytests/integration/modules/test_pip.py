@@ -259,9 +259,9 @@ def test_requirements_as_list__non_absolute_file_path(venv_dir, salt_cli, salt_m
 
         ret = salt_cli.run(
             "pip.install",
+            f"cwd={req_cwd}",
             requirements=requirements_list,
             bin_env=venv_dir,
-            cwd=req_cwd,
             minion_tgt=salt_minion.id,
         )
 
@@ -338,8 +338,8 @@ def test_chained_requirements__non_absolute_file_path(venv_dir, salt_cli, salt_m
 
         ret = salt_cli.run(
             "pip.install",
+            f"cwd={req_basepath}",
             requirements=req1_filename,
-            cwd=req_basepath,
             bin_env=venv_dir,
             minion_tgt=salt_minion.id,
         )
