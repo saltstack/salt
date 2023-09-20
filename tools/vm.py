@@ -821,7 +821,12 @@ class VM:
 
     def write_ssh_config(self):
         if self.ssh_config_file.exists():
-            return
+            if (
+                f"Hostname {self.instance.private_ip_address}"
+                in self.ssh_config_file.read_text()
+            ):
+                # If what's on config matches, then we're good
+                return
         if os.environ.get("CI") is not None:
             forward_agent = "no"
         else:
