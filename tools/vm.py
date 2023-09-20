@@ -1413,7 +1413,7 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir", session_args=[self.name])
 
     def compress_dependencies(self):
         """

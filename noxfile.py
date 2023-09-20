@@ -1349,6 +1349,28 @@ def combine_coverage(session):
         pass
 
 
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="combine-coverage-onedir",
+    venv_params=["--system-site-packages"],
+)
+def combine_coverage_onedir(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
+
+
 @nox.session(python="3", name="create-html-coverage-report")
 def create_html_coverage_report(session):
     _install_coverage_requirement(session)
