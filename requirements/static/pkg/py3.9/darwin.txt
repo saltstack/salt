@@ -29,7 +29,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/darwin.txt
 idna==3.4
     # via
@@ -111,7 +111,7 @@ tempora==5.2.2
     # via portend
 timelib==0.3.0
     # via -r requirements/darwin.txt
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
 typing-extensions==4.6.2
     # via pydantic

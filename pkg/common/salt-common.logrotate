@@ -4,6 +4,7 @@
 	rotate 7
 	compress
 	notifempty
+	create 0640 salt salt
 }
 
 /var/log/salt/minion {
@@ -20,6 +21,7 @@
 	rotate 7
 	compress
 	notifempty
+	create 0640 salt salt
 }
 
 /var/log/salt/api {
@@ -28,6 +30,7 @@
 	rotate 7
 	compress
 	notifempty
+	create 0640 salt salt
 }
 
 /var/log/salt/syndic {

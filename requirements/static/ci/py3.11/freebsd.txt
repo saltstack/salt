@@ -133,7 +133,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
@@ -490,7 +490,7 @@ timelib==0.3.0
     #   -r requirements/static/pkg/freebsd.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt

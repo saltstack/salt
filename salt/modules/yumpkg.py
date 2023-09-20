@@ -216,7 +216,7 @@ def _yum_pkginfo(output):
     keys = itertools.cycle(("name", "version", "repoid"))
     values = salt.utils.itertools.split(_strip_headers(output))
     osarch = __grains__["osarch"]
-    for (key, value) in zip(keys, values):
+    for key, value in zip(keys, values):
         if key == "name":
             try:
                 cur["name"], cur["arch"] = value.rsplit(".", 1)
@@ -747,6 +747,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = [
         "rpm",
         "-qa",
+        "--nodigest",
+        "--nosignature",
         "--queryformat",
         salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
     ]
@@ -2557,7 +2559,7 @@ def group_list():
     return ret
 
 
-def group_info(name, expand=False, ignore_groups=None):
+def group_info(name, expand=False, ignore_groups=None, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0,3001
@@ -2568,6 +2570,10 @@ def group_info(name, expand=False, ignore_groups=None):
         to ``mandatory``, ``optional``, and ``default`` for accuracy, as
         environment groups include other groups, and not packages. Finally,
         this function now properly identifies conditional packages.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists packages belonging to a certain group
 
@@ -2588,18 +2594,46 @@ def group_info(name, expand=False, ignore_groups=None):
 
         .. versionadded:: 3001
 
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_info 'Perl Support'
+        salt '*' pkg.group_info 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_info 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
     for pkgtype in pkgtypes:
         ret[pkgtype] = set()
 
-    cmd = [_yum(), "--quiet", "groupinfo", name]
+    options = _get_options(
+        **{
+            key: val
+            for key, val in kwargs.items()
+            if key in ("fromrepo", "enablerepo", "disablerepo")
+        }
+    )
+
+    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2667,22 +2701,49 @@ def group_info(name, expand=False, ignore_groups=None):
     return ret
 
 
-def group_diff(name):
+def group_diff(name, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists which of a group's packages are installed and which are not
     installed
+
+    name
+        The name of the group to check
+
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_diff 'Perl Support'
+        salt '*' pkg.group_diff 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_diff 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
@@ -2690,7 +2751,7 @@ def group_diff(name):
         ret[pkgtype] = {"installed": [], "not installed": []}
 
     pkgs = list_pkgs()
-    group_pkgs = group_info(name, expand=True)
+    group_pkgs = group_info(name, expand=True, **kwargs)
     for pkgtype in pkgtypes:
         for member in group_pkgs.get(pkgtype, []):
             if member in pkgs:
