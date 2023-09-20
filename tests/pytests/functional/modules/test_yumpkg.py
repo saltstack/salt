@@ -10,10 +10,10 @@ import salt.utils.pkg.rpm
 def configure_loader_modules(minion_opts, grains):
     grains.update({"osarch": salt.utils.pkg.rpm.get_osarch()})
     return {
-        pkg_resource: {
+        salt.modules.pkg_resource: {
             "__grains__": grains,
         },
-        yumpkg: {
+        salt.modules.yumpkg: {
             "__salt__": {
                 "cmd.run": salt.modules.cmd.run,
                 "cmd.run_all": salt.modules.cmd.run_all,
