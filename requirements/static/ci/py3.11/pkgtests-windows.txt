@@ -118,7 +118,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via pytest-salt-factories
-pytest==7.3.1
+pytest==7.3.2
     # via
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -144,7 +144,7 @@ requests==2.31.0
     # via -r requirements/base.txt
 tempora==5.2.2
     # via portend
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
 typing-extensions==4.6.2
     # via
