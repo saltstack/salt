@@ -54,6 +54,8 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 @pytest.fixture
 def configure_loader_modules(minion_opts, grains):
+    osarch = cmd.run("dpkg --print-architecture").strip()
+    grains.update({"osarch": osarch})
     return {
         aptpkg: {
             "__salt__": {
@@ -64,8 +66,9 @@ def configure_loader_modules(minion_opts, grains):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
-                "pkg_resource.parse_targets": pkg_resource.parse_targets,
                 "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,
         },

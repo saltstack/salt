@@ -3,10 +3,12 @@ import pytest
 import salt.modules.cmdmod as cmd
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
+import salt.utils.pkg.rpm
 
 
 @pytest.fixture
 def configure_loader_modules(minion_opts, grains):
+    grains.update({"osarch": salt.utils.pkg.rpm.get_osarch()})
     return {
         pkg_resource: {
             "__grains__": grains,
@@ -16,6 +18,7 @@ def configure_loader_modules(minion_opts, grains):
                 "cmd.run": cmd.run,
                 "cmd.run_all": cmd.run_all,
                 "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,
