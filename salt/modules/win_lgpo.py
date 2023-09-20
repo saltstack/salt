@@ -5391,7 +5391,7 @@ def _get_advaudit_defaults(option=None):
         # Get available setting names and GUIDs
         # This is used to get the fieldnames and GUIDs for individual policies
         log.debug("Loading auditpol defaults into __context__")
-        dump = salt.utils.win_lgpo_auditpol.get_auditpol_dump()
+        dump = __utils__["auditpol.get_auditpol_dump"]()
         reader = csv.DictReader(dump)
         audit_defaults = {"fieldnames": reader.fieldnames}
         for row in reader:
@@ -5623,7 +5623,7 @@ def _set_advaudit_pol_data(option, value):
         "3": "Success and Failure",
     }
     defaults = _get_advaudit_defaults(option)
-    return salt.utils.win_lgpo_auditpol.set_setting(
+    return __utils__["auditpol.set_setting"](
         name=defaults["Auditpol Name"], value=auditpol_values[value]
     )
 
