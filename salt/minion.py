@@ -44,6 +44,7 @@ import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.error
 import salt.utils.event
+import salt.utils.extmods
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
@@ -73,7 +74,6 @@ from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
-from salt.utils.extmods import sync as _sync
 from salt.utils.network import parse_host_port
 from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
@@ -922,9 +922,14 @@ class SMinion(MinionBase):
         import salt.loader
 
         # need sync of custom grains as may be used in pillar compilation
-        _sync(opts, "grains")
+        ret, touched = salt.utils.extmods.sync(opts, "grains")
+        log.warning(f"DGM SMinion dunder init, sync ret '{ret}', touched '{touched}'")
+
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
+
+        dgm_grains = opts["grains"]
+        log.warning(f"DGM SMinion dunder init, post load grains  '{dgm_grains}'")
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
@@ -3940,7 +3945,7 @@ class SProxyMinion(SMinion):
             salt '*' sys.reload_modules
         """
         # need sync of custom grains as may be used in pillar compilation
-        _sync(self.opts, "grains")
+        salt.utils.extmods.sync(self.opts, "grains")
         self.opts["grains"] = salt.loader.grains(self.opts)
         self.opts["pillar"] = salt.pillar.get_pillar(
             self.opts,
