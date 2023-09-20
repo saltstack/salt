@@ -279,6 +279,26 @@
     "is_windows": "false",
     "ssh_username": "ubuntu"
   },
+  "ubuntu-23.04-arm64": {
+    "ami": "ami-0e8818777218efeeb",
+    "ami_description": "CI Image of Ubuntu 23.04 arm64",
+    "ami_name": "salt-project/ci/ubuntu/23.04/arm64/20230912.1552",
+    "arch": "arm64",
+    "cloudwatch-agent-available": "true",
+    "instance_type": "m6g.large",
+    "is_windows": "false",
+    "ssh_username": "ubuntu"
+  },
+  "ubuntu-23.04": {
+    "ami": "ami-0813a38bf6a6cf4de",
+    "ami_description": "CI Image of Ubuntu 23.04 x86_64",
+    "ami_name": "salt-project/ci/ubuntu/23.04/x86_64/20230912.1552",
+    "arch": "x86_64",
+    "cloudwatch-agent-available": "true",
+    "instance_type": "t3a.large",
+    "is_windows": "false",
+    "ssh_username": "ubuntu"
+  },
   "windows-2016": {
     "ami": "ami-099db55543619f54a",
     "ami_description": "CI Image of Windows 2016 x86_64",

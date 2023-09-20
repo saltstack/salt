@@ -1376,6 +1376,44 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
 
+  ubuntu-2304:
+    name: Ubuntu 23.04
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-23.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
+  ubuntu-2304-arm64:
+    name: Ubuntu 23.04 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-23.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
   build-src-repo:
     name: Build Source Repository
     environment: staging
@@ -2792,6 +2830,8 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+      - ubuntu-2304
+      - ubuntu-2304-arm64
       - amazonlinux-2-pkg-tests
       - centos-7-pkg-tests
       - centosstream-8-pkg-tests
