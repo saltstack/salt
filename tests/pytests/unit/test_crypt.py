@@ -284,12 +284,12 @@ def test_verify_signature_bad_sig(tmp_path):
 def test_read_or_generate_key_string(tmp_path):
     keyfile = tmp_path / ".aes"
     assert not keyfile.exists()
-    first_key = salt.crypt.Crypticle.read_or_generate_key(keyfile)
-    assert keyfile.exists()
-    second_key = salt.crypt.Crypticle.read_or_generate_key(keyfile)
-    assert first_key == second_key
-    third_key = salt.crypt.Crypticle.read_or_generate_key(keyfile, remove=True)
-    assert second_key != third_key
+    first_key = salt.crypt.Crypticle.read_key(keyfile)
+    assert first_key is None
+    assert not keyfile.exists()
+    salt.crypt.Crypticle.write_key(keyfile)
+    second_key = salt.crypt.Crypticle.read_key(keyfile)
+    assert second_key is not None
 
 
 def test_dropfile_contents(tmp_path, master_opts):
