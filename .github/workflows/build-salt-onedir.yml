@@ -19,14 +19,12 @@ on:
         type: string
         description: Seed used to invalidate caches
       relenv-version:
-        required: false
+        required: true
         type: string
-        default: 0.13.2
         description: The version of relenv to use
       python-version:
-        required: false
+        required: true
         type: string
-        default: 3.10.12
         description: The version of python to use with relenv
 
 env:
