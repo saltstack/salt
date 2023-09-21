@@ -405,7 +405,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "refresh",
                         "--force",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(gpgautoimport=True, force=True)
                 zypper_mock.assert_called_with(
@@ -416,7 +416,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "refresh",
                         "--force",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(gpgautoimport=True, force=False)
                 zypper_mock.assert_called_with(
@@ -426,7 +426,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--gpg-auto-import-keys",
                         "refresh",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(
                     gpgautoimport=True,
@@ -444,7 +444,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--force",
                         "mock-repo-name",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(
                     gpgautoimport=True,
@@ -461,7 +461,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--force",
                         "mock-repo-name",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
 
     def test_info_installed(self):
