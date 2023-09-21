@@ -61,7 +61,7 @@ class MySQLCombo:
 
 def get_test_versions():
     test_versions = []
-    name = "mysql/mysql-server"
+    name = "mysql-server"
     for version in ("5.5", "5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
