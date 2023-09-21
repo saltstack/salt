@@ -19,5 +19,7 @@ def modules(loaders, _formula):
 @pytest.mark.destructive_test
 def test_docker_formula(modules):
     ret = modules.state.sls("docker")
+    assert not ret.errors
+    assert ret.failed is False
     for staterun in ret:
-        assert not staterun.result.failed
+        assert staterun.result is True
