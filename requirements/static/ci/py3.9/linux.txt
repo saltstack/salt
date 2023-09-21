@@ -660,6 +660,7 @@ packaging==22.0
     # via
     #   -r requirements/base.txt
     #   ansible-core
+    #   docker
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -741,7 +742,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc25
+pytest-salt-factories==1.0.0rc26
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -930,6 +931,7 @@ tzlocal==2.1
 urllib3==1.26.6
     # via
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
