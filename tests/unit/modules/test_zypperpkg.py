@@ -405,7 +405,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "refresh",
                         "--force",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(gpgautoimport=True, force=True)
                 zypper_mock.assert_called_with(
@@ -416,7 +416,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "refresh",
                         "--force",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(gpgautoimport=True, force=False)
                 zypper_mock.assert_called_with(
@@ -426,7 +426,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--gpg-auto-import-keys",
                         "refresh",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(
                     gpgautoimport=True,
@@ -444,7 +444,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--force",
                         "mock-repo-name",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
                 zypper.refresh_db(
                     gpgautoimport=True,
@@ -461,7 +461,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--force",
                         "mock-repo-name",
                     ],
-                    **call_kwargs
+                    **call_kwargs,
                 )
 
     def test_info_installed(self):
@@ -1896,15 +1896,11 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
 
         for op in zypper.Wildcard.Z_OP:
-            assert zypper.Wildcard(_zpr)(
-                "libzypp", "{}*.1".format(op)
-            ) == "{}17.2.6-27.9.1".format(op)
+            assert zypper.Wildcard(_zpr)("libzypp", f"{op}*.1") == f"{op}17.2.6-27.9.1"
 
         # Auto-fix feature: moves operator from end to front
         for op in zypper.Wildcard.Z_OP:
-            assert zypper.Wildcard(_zpr)(
-                "libzypp", "16*{}".format(op)
-            ) == "{}16.2.5-25.1".format(op)
+            assert zypper.Wildcard(_zpr)("libzypp", f"16*{op}") == f"{op}16.2.5-25.1"
 
     def test_wildcard_to_query_unsupported_operators(self):
         """
@@ -1923,7 +1919,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         with self.assertRaises(CommandExecutionError):
             for op in [">>", "==", "<<", "+"]:
-                zypper.Wildcard(_zpr)("libzypp", "{}*.1".format(op))
+                zypper.Wildcard(_zpr)("libzypp", f"{op}*.1")
 
     @patch("salt.modules.zypperpkg._get_visible_patterns")
     def test__get_installed_patterns(self, get_visible_patterns):
