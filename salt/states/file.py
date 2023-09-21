@@ -1,8 +1,8 @@
 """
 
-This reference page explains how to use the file module in your state files.
+This reference page explains how to use the state file module.
 
-For the functions reference documentation, see :ref:`file-module-functions`.
+For the module functions reference documentation, see :ref:`file-module-functions`.
 
 Example operations on regular files, special files, directories, and symlinks
 =============================================================================
@@ -64,7 +64,7 @@ templating system:
 Use py renderer as a templating option
 --------------------------------------
 
-It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
+It is also possible to use any renderer as a
 templating option. The template would be a Python script which would need to
 contain a function called ``run()``, which returns a string. All arguments
 to the state will be made available to the Python script as globals. The
