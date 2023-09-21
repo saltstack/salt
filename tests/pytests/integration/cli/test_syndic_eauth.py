@@ -229,8 +229,10 @@ def docker_master(
     # container.container_start_check(confirm_container_started, container)
     with container.started() as factory:
         for user in ("bob", "fnord"):
-            container.run(f"adduser {user}")
-            container.run(f"passwd -d {user}")
+            ret = container.run(f"adduser {user}")
+            assert ret.returncode == 0
+            ret = container.run(f"passwd -d {user}")
+            assert ret.returncode == 0
         yield factory
 
 
