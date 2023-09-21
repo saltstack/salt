@@ -4,6 +4,7 @@
 
 apache-libcloud>=2.4.0
 cherrypy>=17.4.1
+gitpython>=3.1.35
 cryptography>=41.0.3
 gitpython>=3.1.30
 idna>=2.8
