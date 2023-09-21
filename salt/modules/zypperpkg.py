@@ -1397,7 +1397,7 @@ def mod_repo(repo, **kwargs):
     return repo
 
 
-def refresh_db(force=None, root=None, **kwargs):
+def refresh_db(force=None, root=None, gpgautoimport=False, **kwargs):
     """
     Trigger a repository refresh by calling ``zypper refresh``. Refresh will run
     with ``--force`` if the "force=True" flag is passed on the CLI or
@@ -1447,7 +1447,7 @@ def refresh_db(force=None, root=None, **kwargs):
     repos = kwargs.get("repos", [])
     refresh_opts.extend([repos] if not isinstance(repos, list) else repos)
 
-    if kwargs.get("gpgautoimport", False):
+    if gpgautoimport:
         global_opts.append("--gpg-auto-import-keys")
 
     # We do the actual call to zypper refresh.
