@@ -1,9 +1,6 @@
 import logging
-import subprocess
 
-import pytest
-
-import salt.utils.platform
+# pylint: disable=unused-import
 from tests.pytests.integration.cluster.conftest import (
     cluster_cache_path,
     cluster_master_1,
@@ -13,5 +10,8 @@ from tests.pytests.integration.cluster.conftest import (
     cluster_pki_path,
     cluster_shared_path,
 )
+
+# pylint: enable=unused-import
+
 
 log = logging.getLogger(__name__)
