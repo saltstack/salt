@@ -1,6 +1,7 @@
 import pytest
 
 import salt.modules.cmdmod
+import salt.modules.config
 import salt.modules.pkg_resource
 import salt.modules.yumpkg
 import salt.utils.pkg.rpm
@@ -18,9 +19,11 @@ def configure_loader_modules(minion_opts, grains):
                 "cmd.run": salt.modules.cmdmod.run,
                 "cmd.run_all": salt.modules.cmdmod.run_all,
                 "cmd.run_stdout": salt.modules.cmdmod.run_stdout,
+                "config.get": salt.modules.config.get,
                 "pkg_resource.add_pkg": salt.modules.pkg_resource.add_pkg,
                 "pkg_resource.format_pkg_list": salt.modules.pkg_resource.format_pkg_list,
                 "pkg_resource.parse_targets": salt.modules.pkg_resource.parse_targets,
+                "pkg_resource.sort_pkglist": salt.modules.pkg_resource.sort_pkglist,
             },
             "__opts__": minion_opts,
             "__grains__": grains,
