@@ -15,84 +15,19 @@ metadata server set `metadata_server_grains: True` in the minion config.
 """
 
 import os
-import socket
 
+import salt.utils.aws as metadata
 import salt.utils.data
-import salt.utils.http as http
 import salt.utils.json
 import salt.utils.stringutils
-
-# metadata server information
-IP = "169.254.169.254"
-HOST = f"http://{IP}/"
-
-
-def __virtual__():
-    if __opts__.get("metadata_server_grains", False) is False:
-        return False
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(0.1)
-    result = sock.connect_ex((IP, 80))
-    if result != 0:
-        return False
-    if http.query(os.path.join(HOST, "latest/"), status=True).get("status") != 200:
-        # Initial connection failed, might need a token
-        _refresh_token()
-        if (
-            http.query(
-                os.path.join(HOST, "latest/"),
-                status=True,
-                header_dict={
-                    "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
-                },
-            ).get("status")
-            != 200
-        ):
-            return False
-    return True
-
-
-def _refresh_token():
-    __context__["metadata_aws_token"] = http.query(
-        os.path.join(HOST, "latest/api/token"),
-        method="PUT",
-        header_dict={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
-    ).get("body")
-
 
 def _search(prefix="latest/"):
     """
     Recursively look up all grains in the metadata server
     """
     ret = {}
-    if "metadata_aws_token" in __context__:
-        if (
-            http.query(
-                os.path.join(HOST, "latest/"),
-                status=True,
-                header_dict={
-                    "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
-                },
-            ).get("status")
-            != 200
-        ):
-            _refresh_token()
-
-        linedata = http.query(
-            os.path.join(HOST, prefix),
-            header_dict={"X-aws-ec2-metadata-token": __context__["metadata_aws_token"]},
-            headers=True,
-        )
-    else:
-        linedata = http.query(os.path.join(HOST, prefix), headers=True)
-    if "body" not in linedata:
-        return ret
-    body = salt.utils.stringutils.to_unicode(linedata["body"])
-    if (
-        linedata["headers"].get("Content-Type", "text/plain")
-        == "application/octet-stream"
-    ):
-        return body
+    result = metadata.get_metadata(prefix)
+    body = result.text
     for line in body.split("\n"):
         if line.endswith("/"):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
@@ -107,15 +42,7 @@ def _search(prefix="latest/"):
             key, value = line.split("=")
             ret[value] = _search(prefix=os.path.join(prefix, key))
         else:
-            if "metadata_aws_token" in __context__:
-                retdata = http.query(
-                    os.path.join(HOST, prefix, line),
-                    header_dict={
-                        "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
-                    },
-                ).get("body", None)
-            else:
-                retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
+            retdata = metadata.get_metadata(os.path.join(prefix, line)).text
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
             if isinstance(retdata, bytes):
@@ -129,6 +56,8 @@ def _search(prefix="latest/"):
                 ret[line] = retdata
     return salt.utils.data.decode(ret)
 
-
-def metadata():
-    return _search()
+def main():
+    ret = {}
+    ret['dynamic'] = _search('dynamic')
+    ret['meta-data'] = _search('meta-data')
+    return ret
