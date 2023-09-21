@@ -298,10 +298,24 @@ jobs:
           #  --file artifacts/coverage/salt.xml --flag ${{ matrix.transport }} \
           #  --flag salt --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-          ./codecov --file artifacts/coverage/salt.xml \
-            --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-            --flags salt,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
-            --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/salt.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags salt,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
+              --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }} --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
 
       - name: Upload Tests Code Coverage To Codecov
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
@@ -312,10 +326,24 @@ jobs:
           #  --file artifacts/coverage/tests.xml --flag ${{ matrix.transport }} \
           #  --flag tests --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-          ./codecov --file artifacts/coverage/tests.xml \
-            --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-            --flags tests,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
-            --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/tests.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags tests,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
+              --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }} --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
 
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
