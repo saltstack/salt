@@ -259,10 +259,20 @@
     "is_windows": "false",
     "ssh_username": "ec2-user"
   },
+  "photonos-3-arm64": {
+    "ami": "ami-0383031c08217b13e",
+    "ami_description": "CI Image of PhotonOS 3 arm64",
+    "ami_name": "salt-project/ci/photonos/3/arm64/20230924.0913",
+    "arch": "arm64",
+    "cloudwatch-agent-available": "true",
+    "instance_type": "m6g.large",
+    "is_windows": "false",
+    "ssh_username": "root"
+  },
   "photonos-3": {
-    "ami": "ami-089e102b09ffb1641",
+    "ami": "ami-06004a7d856e94355",
     "ami_description": "CI Image of PhotonOS 3 x86_64",
-    "ami_name": "salt-project/ci/photonos/3/x86_64/20230912.1532",
+    "ami_name": "salt-project/ci/photonos/3/x86_64/20230924.0913",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -270,9 +280,9 @@
     "ssh_username": "root"
   },
   "photonos-4-arm64": {
-    "ami": "ami-0f7ab5c7a51a4acce",
+    "ami": "ami-08808bcf97f824036",
     "ami_description": "CI Image of PhotonOS 4 arm64",
-    "ami_name": "salt-project/ci/photonos/4/arm64/20230912.1532",
+    "ami_name": "salt-project/ci/photonos/4/arm64/20230924.0924",
     "arch": "arm64",
     "cloudwatch-agent-available": "true",
     "instance_type": "m6g.large",
@@ -280,9 +290,9 @@
     "ssh_username": "root"
   },
   "photonos-4": {
-    "ami": "ami-07d9e3141e7b629a4",
+    "ami": "ami-0fd7a6ed4c61ee312",
     "ami_description": "CI Image of PhotonOS 4 x86_64",
-    "ami_name": "salt-project/ci/photonos/4/x86_64/20230912.1532",
+    "ami_name": "salt-project/ci/photonos/4/x86_64/20230924.0925",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -290,9 +300,9 @@
     "ssh_username": "root"
   },
   "photonos-5-arm64": {
-    "ami": "ami-06fb0aa6a684bdbff",
+    "ami": "ami-0c85ad72d107ec4b8",
     "ami_description": "CI Image of PhotonOS 5 arm64",
-    "ami_name": "salt-project/ci/photonos/5/arm64/20230912.1533",
+    "ami_name": "salt-project/ci/photonos/5/arm64/20230924.0927",
     "arch": "arm64",
     "cloudwatch-agent-available": "true",
     "instance_type": "m6g.large",
@@ -300,9 +310,9 @@
     "ssh_username": "root"
   },
   "photonos-5": {
-    "ami": "ami-06dadda9679e03cb1",
+    "ami": "ami-0732ce03b2ab6fad2",
     "ami_description": "CI Image of PhotonOS 5 x86_64",
-    "ami_name": "salt-project/ci/photonos/5/x86_64/20230912.1532",
+    "ami_name": "salt-project/ci/photonos/5/x86_64/20230924.0927",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
