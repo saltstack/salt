@@ -1480,20 +1480,9 @@ async def test_client_timeout_msg(minion_opts):
     client = salt.transport.zeromq.AsyncReqMessageClient(
         minion_opts, "tcp://127.0.0.1:4506"
     )
-    assert hasattr(client, "_future")
-    assert client._future is None
-    future = salt.ext.tornado.concurrent.Future()
-    client._future = future
-    client.timeout_message(future)
-    with pytest.raises(salt.exceptions.SaltReqTimeoutError):
-        await future
-    assert client._future is None
-
-    future_a = salt.ext.tornado.concurrent.Future()
-    future_b = salt.ext.tornado.concurrent.Future()
-    future_b.set_exception = MagicMock()
-    client._future = future_a
-    client.timeout_message(future_b)
-
-    assert client._future == future_a
-    future_b.set_exception.assert_not_called()
+    client.connect()
+    try:
+        with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+            await client.send({"meh": "bah"}, 1)
+    finally:
+        client.close()
