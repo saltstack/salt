@@ -80,7 +80,7 @@ def get_test_versions():
             )
         )
     name = "percona"
-    for version in ("5.5", "5.6", "5.7", "8.0"):
+    for version in ("5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
                 name=name,
