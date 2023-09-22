@@ -252,10 +252,15 @@ class TestVirtTest:
         assert len(caps["guests"]) >= 1
         assert caps["guests"][0]["os_type"] in ["hvm", "xen", "xenpvh", "exe"]
 
-    def test_cpu_baseline(self, salt_cli, virt_minion_0):
+    def test_cpu_baseline(self, salt_cli, virt_minion_0, grains):
         """
         Test virt.cpu_baseline
         """
+        if grains.get("osarch", "") != "x86_64":
+            raise pytest.skip.Exception(
+                f"Test is only meant to run on 'x86_64' architecture, not '{grains['osarch']}'",
+                _use_item_location=True,
+            )
         vendors = ["Intel", "ARM", "AMD"]
         ret = salt_cli.run(
             "virt.cpu_baseline", out="libvirt", minion_tgt=virt_minion_0.id
@@ -340,7 +345,12 @@ def virt_domain():
 
 
 @pytest.fixture
-def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
+def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain, grains):
+    if grains.get("osarch", "") != "x86_64":
+        raise pytest.skip.Exception(
+            f"Test is only meant to run on 'x86_64' architecture, not '{grains['osarch']}'",
+            _use_item_location=True,
+        )
     try:
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
@@ -382,13 +392,18 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
 @pytest.mark.slow_test
 @pytest.mark.skip_if_binaries_missing("docker")
 class TestVirtMigrateTest:
-    def test_define_xml_path(self, salt_cli, virt_minion_0, virt_domain):
+    def test_define_xml_path(self, salt_cli, virt_minion_0, virt_domain, grains):
         """
         Define a new domain with virt.define_xml_path,
         verify that the new domain is shown with virt.list_domains,
         remove the domain with virt.undefine, and verifies that
         domain is no longer shown with virt.list_domains.
         """
+        if grains.get("osarch", "") != "x86_64":
+            raise pytest.skip.Exception(
+                f"Test is only meant to run on 'x86_64' architecture, not '{grains['osarch']}'",
+                _use_item_location=True,
+            )
         ret = salt_cli.run(
             "virt.define_xml_path",
             "/{}.xml".format(virt_domain),
