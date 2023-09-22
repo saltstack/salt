@@ -158,7 +158,7 @@ def test_network_grains_secondary_ip(tmp_path):
     opts = {
         "cachedir": str(cache_dir),
         "extension_modules": str(extmods),
-        "optimization_order": [0],
+        "optimization_order": [0, 1, 2],
     }
     with patch("salt.utils.network.interfaces", side_effect=[data]):
         grains = salt.loader.grain_funcs(opts)
@@ -254,7 +254,7 @@ def test_network_grains_cache(tmp_path):
     opts = {
         "cachedir": str(cache_dir),
         "extension_modules": str(extmods),
-        "optimization_order": [0],
+        "optimization_order": [0, 1, 2],
     }
     with patch(
         "salt.utils.network.interfaces", side_effect=[call_1, call_2]

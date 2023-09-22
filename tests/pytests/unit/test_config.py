@@ -20,7 +20,7 @@ def test_call_id_function(tmp_path):
         "cachedir": str(cache_dir),
         "extension_modules": str(extmods),
         "grains": {"osfinger": "meh"},
-        "optimization_order": [0],
+        "optimization_order": [0, 1, 2],
     }
     ret = salt.config.call_id_function(opts)
     assert ret == "meh"
