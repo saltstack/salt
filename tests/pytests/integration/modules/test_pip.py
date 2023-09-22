@@ -387,7 +387,7 @@ def test_issue_4805_nested_requirements(venv_dir, salt_cli, salt_minion):
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             assert "installed pep8" in ret.stdout
         except KeyError as exc:
@@ -413,7 +413,7 @@ def test_pip_uninstall(venv_dir, salt_cli, salt_minion):
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             assert "installed pep8" in ret.stdout
         except KeyError as exc:
@@ -457,7 +457,7 @@ def test_pip_install_upgrade(venv_dir, salt_cli, salt_minion):
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             assert "installed pep8" in ret.stdout
         except KeyError as exc:
@@ -482,7 +482,7 @@ def test_pip_install_upgrade(venv_dir, salt_cli, salt_minion):
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             assert "installed pep8" in ret.stdout
         except KeyError as exc:
@@ -536,7 +536,7 @@ def test_pip_install_multiple_editables(venv_dir, salt_cli, salt_minion):
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             for package in ("iStr", "SaltTesting"):
                 match = re.search(
@@ -576,7 +576,7 @@ def test_pip_install_multiple_editables_and_pkgs(venv_dir, salt_cli, salt_minion
 
         try:
             if _check_download_error(ret.stdout):
-                pytest.skipTest("Test skipped due to pip download error")
+                pytest.skip("Test skipped due to pip download error")
             assert ret.returncode == 0
             for package in ("iStr", "SaltTesting", "pep8"):
                 match = re.search(
@@ -614,7 +614,7 @@ def test_pip_non_existent_log_file(venv_dir, salt_cli, salt_minion, tmp_path, to
             )
 
         if _check_download_error(ret.stdout):
-            pytest.skipTest("Test skipped due to pip download error")
+            pytest.skip("Test skipped due to pip download error")
         assert ret.returncode == 0
         assert log_file.exists()
         assert "pep8" in log_file.read_text()
