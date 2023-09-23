@@ -27,6 +27,14 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      testing-releases:
+        required: true
+        type: string
+        description: A JSON list of releases to test upgrades against
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
@@ -50,7 +58,6 @@ on:
 
 
 env:
-  NOX_VERSION: "2022.8.7"
   COLUMNS: 160
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
@@ -77,7 +84,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}
+          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
   dependencies:
     name: Setup Test Dependencies
@@ -97,7 +104,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -227,7 +234,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -260,12 +267,14 @@ jobs:
       - name: Show System Info & Test Plan
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
+            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+            ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install\
-            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+          ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm

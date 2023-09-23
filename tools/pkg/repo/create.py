@@ -12,18 +12,18 @@ import pathlib
 import shutil
 import sys
 import textwrap
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
-from tools.utils import (
-    Version,
+from tools.utils import Version, parse_versions
+from tools.utils.repo import (
     create_full_repo_path,
     create_top_level_repo_path,
     get_repo_json_file_contents,
-    parse_versions,
 )
 
 try:
@@ -487,7 +487,7 @@ def rpm(
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            base_url = f"salt-dev/{nightly_build_from}/"
+            base_url = f"salt-dev/{nightly_build_from}/{datetime.utcnow().strftime('%Y-%m-%d')}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"

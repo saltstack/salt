@@ -110,6 +110,7 @@ jobs:
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
+          APPLE_TEAM_ID: "${{ secrets.MAC_SIGN_APPLE_TEAM_ID }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
         run: |
           tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{

@@ -16,10 +16,10 @@
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -40,10 +40,10 @@
       nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -82,10 +82,10 @@
       nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 

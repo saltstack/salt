@@ -509,6 +509,3 @@ def healthy():
         salt '*' fmadm.healthy
     """
     return False if faulty() else True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

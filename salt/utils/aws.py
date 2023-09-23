@@ -145,30 +145,28 @@ def creds(provider):
     ## if needed
     if provider["id"] == IROLE_CODE or provider["key"] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if __Expiration__ != "":
-            timenow = datetime.utcnow()
-            timestamp = timenow.strftime("%Y-%m-%dT%H:%M:%SZ")
-            if timestamp < __Expiration__:
-                # Current timestamp less than expiration fo cached credentials
-                return __AccessKeyId__, __SecretAccessKey__, __Token__
-        # We don't have any cached credentials, or they are expired, get them
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ):
+            # We don't have any cached credentials, or they are expired, get them
+            try:
+                result = get_metadata("meta-data/iam/security-credentials/")
+                role = result.text
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        try:
-            result = get_metadata("meta-data/iam/security-credentials/")
-            role = result.text
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
+            try:
+                result = get_metadata(
+                    "meta-data/iam/security-credentials/{}".format(role)
+                )
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        try:
-            result = get_metadata("meta-data/iam/security-credentials/{}".format(role))
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
-
-        data = result.json()
-        __AccessKeyId__ = data["AccessKeyId"]
-        __SecretAccessKey__ = data["SecretAccessKey"]
-        __Token__ = data["Token"]
-        __Expiration__ = data["Expiration"]
+            data = result.json()
+            __AccessKeyId__ = data["AccessKeyId"]
+            __SecretAccessKey__ = data["SecretAccessKey"]
+            __Token__ = data["Token"]
+            __Expiration__ = data["Expiration"]
 
         ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:

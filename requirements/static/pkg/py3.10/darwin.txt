@@ -6,11 +6,11 @@
 #
 apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
-certifi==2022.12.7
+certifi==2023.07.22
     # via requests
 cffi==1.14.6
     # via cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -18,7 +18,7 @@ cherrypy==18.6.1
     # via -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/darwin.txt
     #   pyopenssl
@@ -26,7 +26,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.35
     # via -r requirements/darwin.txt
 idna==2.8
     # via
@@ -81,7 +81,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
@@ -89,7 +89,7 @@ python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2022.1
     # via tempora
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==23.2.0
     # via -r requirements/zeromq.txt

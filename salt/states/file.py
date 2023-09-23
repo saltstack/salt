@@ -1802,9 +1802,11 @@ def symlink(
 
     if __salt__["file.is_link"](name):
         # The link exists, verify that it matches the target
-        if os.path.normpath(__salt__["file.readlink"](name)) == os.path.normpath(
+        if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
             target
         ):
+            __salt__["file.remove"](name)
+        else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
@@ -4497,10 +4499,8 @@ def recurse(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv)
-    if srcpath not in master_dirs and not any(
-        x for x in master_dirs if x.startswith(srcpath + "/")
-    ):
+    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv, prefix=srcpath + "/")
+    if srcpath not in master_dirs:
         ret["result"] = False
         ret["comment"] = (
             "The directory '{}' does not exist on the salt fileserver "

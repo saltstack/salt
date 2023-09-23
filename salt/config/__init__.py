@@ -373,7 +373,7 @@ VALID_OPTS = immutabletypes.freeze(
         # applications that depend on the original format.
         "unique_jid": bool,
         # Governs whether state runs will queue or fail to run when a state is already running
-        "state_queue": bool,
+        "state_queue": (bool, int),
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
@@ -991,6 +991,8 @@ VALID_OPTS = immutabletypes.freeze(
         "maintenance_interval": int,
         # Fileserver process restart interval
         "fileserver_interval": int,
+        "request_channel_timeout": int,
+        "request_channel_tries": int,
     }
 )
 
@@ -1052,6 +1054,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "request_channel_timeout": 30,
+        "request_channel_tries": 3,
         "gpg_cache": False,
         "gpg_cache_ttl": 86400,
         "gpg_cache_backend": "disk",
@@ -2279,6 +2283,8 @@ def minion_config(
     """
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS.copy()
+        if role == "master":
+            defaults["default_include"] = DEFAULT_MASTER_OPTS["default_include"]
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
