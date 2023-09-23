@@ -924,19 +924,15 @@ class AsyncAuth:
         payload["id"] = self.opts["id"]
         payload["nonce"] = uuid.uuid4().hex
         if "autosign_grains" in self.opts:
-            autosign_grains = {}
-        
+            autosign_grains = {}      
         for grain in self.opts["autosign_grains"]:
-            value = self.opts["grains"].get(grain, None)
-            
+            value = self.opts["grains"].get(grain, None)            
             # Handle non-string values
             if isinstance(value, (int, float, bool)):
                 value = str(value)
             elif isinstance(value, dict):
-                value = json.dumps(value)
-                
-            autosign_grains[grain] = value
-            
+                value = json.dumps(value)                
+            autosign_grains[grain] = value            
         payload["autosign_grains"] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
