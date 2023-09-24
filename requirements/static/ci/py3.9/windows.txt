@@ -95,7 +95,7 @@ dnspython==1.16.0
     #   python-etcd
 docker-pycreds==0.4.0
     # via docker
-docker==2.7.0
+docker==6.1.2
     # via -r requirements/static/ci/common.in
 etcd3-py==0.1.6 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
