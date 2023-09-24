@@ -732,6 +732,12 @@ def test_mod_repo_enabled():
     """
     Checks if a repo is enabled or disabled depending on the passed kwargs.
     """
+    source_type = "deb"
+    source_uri = "http://cdn-aws.deb.debian.org/debian/"
+    source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+
+    mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
+
     with patch.dict(
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
@@ -742,7 +748,9 @@ def test_mod_repo_enabled():
             ) as data_is_true:
                 with patch("salt.modules.aptpkg.SourcesList", MagicMock(), create=True):
                     with patch(
-                        "salt.modules.aptpkg.SourceEntry", MagicMock(), create=True
+                        "salt.modules.aptpkg.SourceEntry",
+                        MagicMock(return_value=mock_source),
+                        create=True,
                     ):
                         with patch("pathlib.Path", MagicMock()):
                             repo = aptpkg.mod_repo("foo", enabled=False)
@@ -790,14 +798,14 @@ def test_mod_repo_match():
                         with patch(
                             "salt.modules.aptpkg._split_repo_str",
                             MagicMock(
-                                return_value=(
-                                    "deb",
-                                    [],
-                                    "http://cdn-aws.deb.debian.org/debian/",
-                                    "stretch",
-                                    ["main"],
-                                    "",
-                                )
+                                return_value={
+                                    "type": "deb",
+                                    "architectures": [],
+                                    "uri": "http://cdn-aws.deb.debian.org/debian/",
+                                    "dist": "stretch",
+                                    "comps": ["main"],
+                                    "signedby": "",
+                                }
                             ),
                         ):
                             source_line_no_slash = (
@@ -1290,17 +1298,17 @@ def test_call_apt_dpkg_lock():
     ]
 
     cmd_mock = MagicMock(side_effect=cmd_side_effect)
-    cmd_call = (
+    cmd_call = [
         call(
             ["dpkg", "-l", "python"],
-            env={},
-            ignore_retcode=False,
             output_loglevel="quiet",
             python_shell=True,
+            env={},
+            ignore_retcode=False,
             username="Darth Vader",
         ),
-    )
-    expected_calls = [cmd_call * 5]
+    ]
+    expected_calls = cmd_call * 5
 
     with patch.dict(
         aptpkg.__salt__,
@@ -1320,7 +1328,7 @@ def test_call_apt_dpkg_lock():
 
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
-            cmd_mock.has_calls(expected_calls)
+            cmd_mock.assert_has_calls(expected_calls)
 
 
 def test_services_need_restart_checkrestart_missing():

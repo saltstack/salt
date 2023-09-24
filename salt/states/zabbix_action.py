@@ -1,7 +1,7 @@
 """
 Management of Zabbix Action object over Zabbix API.
 
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
@@ -12,6 +12,12 @@ import logging
 from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
 
 
 def __virtual__():
@@ -127,7 +133,7 @@ def present(name, params, **kwargs):
 
             if dry_run:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{}" would be fixed.'.format(name)
+                ret["comment"] = f'Zabbix Action "{name}" would be fixed.'
                 ret["changes"] = {
                     name: {
                         "old": (
@@ -151,14 +157,14 @@ def present(name, params, **kwargs):
                 )
                 if action_update:
                     ret["result"] = True
-                    ret["comment"] = 'Zabbix Action "{}" updated.'.format(name)
+                    ret["comment"] = f'Zabbix Action "{name}" updated.'
                     ret["changes"] = {
                         name: {
                             "old": (
                                 'Zabbix Action "{}" differed '
                                 "in following parameters: {}".format(name, diff_params)
                             ),
-                            "new": 'Zabbix Action "{}" fixed.'.format(name),
+                            "new": f'Zabbix Action "{name}" fixed.',
                         }
                     }
 
@@ -173,10 +179,10 @@ def present(name, params, **kwargs):
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Action "{}" would be created.'.format(name)
+            ret["comment"] = f'Zabbix Action "{name}" would be created.'
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Action "{}" does not exist.'.format(name),
+                    "old": f'Zabbix Action "{name}" does not exist.',
                     "new": (
                         'Zabbix Action "{}" would be created according definition.'.format(
                             name
@@ -193,10 +199,10 @@ def present(name, params, **kwargs):
 
             if action_create:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{}" created.'.format(name)
+                ret["comment"] = f'Zabbix Action "{name}" created.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{}" did not exist.'.format(name),
+                        "old": f'Zabbix Action "{name}" did not exist.',
                         "new": (
                             'Zabbix Action "{}" created according definition.'.format(
                                 name
@@ -235,15 +241,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Action "{}" does not exist.'.format(name)
+        ret["comment"] = f'Zabbix Action "{name}" does not exist.'
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Action "{}" would be deleted.'.format(name)
+            ret["comment"] = f'Zabbix Action "{name}" would be deleted.'
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Action "{}" exists.'.format(name),
-                    "new": 'Zabbix Action "{}" would be deleted.'.format(name),
+                    "old": f'Zabbix Action "{name}" exists.',
+                    "new": f'Zabbix Action "{name}" would be deleted.',
                 }
             }
         else:
@@ -253,11 +259,11 @@ def absent(name, **kwargs):
 
             if action_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{}" deleted.'.format(name)
+                ret["comment"] = f'Zabbix Action "{name}" deleted.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{}" existed.'.format(name),
-                        "new": 'Zabbix Action "{}" deleted.'.format(name),
+                        "old": f'Zabbix Action "{name}" existed.',
+                        "new": f'Zabbix Action "{name}" deleted.',
                     }
                 }
 

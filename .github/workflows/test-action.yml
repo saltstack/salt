@@ -32,16 +32,15 @@ on:
         required: true
         type: string
         description: The platform arch being tested
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
         description: The onedir package name to use
         default: salt
-      pull-labels:
-        required: false
-        type: string
-        description: List of all the pull labels
-        default: '["test:slow", "test:core"]'
       skip-code-coverage:
         required: false
         type: boolean
@@ -55,7 +54,6 @@ on:
 
 
 env:
-  NOX_VERSION: "2022.8.7"
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
@@ -116,7 +114,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -247,7 +245,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -303,36 +301,9 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
-      - name: Get Test Flags
-        id: get-test-flags
-        shell: bash
-        env:
-          PULL_LABELS: ${{ inputs.pull-labels }}
-        run: |
-          echo "$PULL_LABELS"
-          # shellcheck disable=SC2086
-          no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
-          # shellcheck disable=SC2086
-          slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
-          # shellcheck disable=SC2086
-          core_tests="$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)"
-          # shellcheck disable=SC2086
-          flaky_jail_tests="$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)"
-          echo "$no_fast_tests"
-          echo "$slow_tests"
-          echo "$core_tests"
-          echo "$flaky_jail_tests"
-          # shellcheck disable=SC2086
-          {
-          echo "no_fast_tests=$no_fast_tests";
-          echo "slow_tests=$slow_tests";
-          echo "core_tests=$core_tests";
-          echo "flaky_jail_tests=$flaky_jail_tests";
-          } >> "$GITHUB_OUTPUT"
-
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'true' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -341,7 +312,7 @@ jobs:
 
       - name: Run Slow/Changed Tests
         id: run-slow-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'false' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -350,7 +321,7 @@ jobs:
 
       - name: Run Core/Changed Tests
         id: run-core-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'false' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -359,7 +330,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'false' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
@@ -367,7 +338,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'true' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -375,7 +346,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'true' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -383,7 +354,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.flaky_jail_tests == 'true' }}
+        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -426,6 +397,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          path: |
+            artifacts/coverage/
+
+      - name: Upload All Code Coverage Test Run Artifacts
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        uses: actions/upload-artifact@v3
+        with:
+          name: all-testrun-coverage-artifacts
           path: |
             artifacts/coverage/
 
@@ -494,7 +473,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Combine Code Coverage
         if: ${{ inputs.skip-code-coverage == false }}

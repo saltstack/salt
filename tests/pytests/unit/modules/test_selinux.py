@@ -2,7 +2,7 @@ import pytest
 
 import salt.modules.selinux as selinux
 from salt.exceptions import SaltInvocationError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/www(/.*)?     all files         "
-                " system_u:object_r:httpd_sys_content_t:s0"
+                " system_u:object_r:httpd_sys_content_t:s0 "
             ),
             "name": "/var/www(/.*)?",
             "filetype": "all files",
@@ -31,7 +31,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/www(/.*)? all files         "
-                " system_u:object_r:httpd_sys_content_t:s0"
+                " system_u:object_r:httpd_sys_content_t:s0  "
             ),
             "name": "/var/www(/.*)?",
             "filetype": "all files",
@@ -43,7 +43,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/lib/dhcp3?                                    directory      "
-                "    system_u:object_r:dhcp_state_t:s0"
+                "    system_u:object_r:dhcp_state_t:s0	"
             ),
             "name": "/var/lib/dhcp3?",
             "filetype": "directory",
@@ -293,3 +293,86 @@ def test_fcontext_policy_parsing_fail():
             "retcode": 1,
             "error": "Unrecognized response from restorecon command.",
         }
+
+
+def test_selinux_config_enforcing():
+    """
+    Test values written to /etc/selinux/config are lowercase
+    """
+    mock_file = """
+# This file controls the state of SELinux on the system.
+# SELINUX= can take one of these three values:
+#     enforcing - SELinux security policy is enforced.
+#     permissive - SELinux prints warnings instead of enforcing.
+#     disabled - No SELinux policy is loaded.
+## SELINUX=disabled
+SELINUX=permissive
+# SELINUXTYPE= can take one of these three values:
+#     targeted - Targeted processes are protected,
+#     minimum - Modification of targeted policy. Only selected processes are protected.
+#     mls - Multi Level Security protection.
+SELINUXTYPE=targeted
+
+"""
+    with patch("salt.utils.files.fopen", mock_open(read_data=mock_file)) as m_open:
+        selinux.setenforce("Enforcing")
+        writes = m_open.write_calls()
+        assert writes
+        for line in writes:
+            if line.startswith("SELINUX="):
+                assert line == "SELINUX=enforcing"
+
+
+def test_selinux_config_permissive():
+    """
+    Test values written to /etc/selinux/config are lowercase
+    """
+    mock_file = """
+# This file controls the state of SELinux on the system.
+# SELINUX= can take one of these three values:
+#     enforcing - SELinux security policy is enforced.
+#     permissive - SELinux prints warnings instead of enforcing.
+#     disabled - No SELinux policy is loaded.
+SELINUX=disabled
+# SELINUXTYPE= can take one of these three values:
+#     targeted - Targeted processes are protected,
+#     minimum - Modification of targeted policy. Only selected processes are protected.
+#     mls - Multi Level Security protection.
+SELINUXTYPE=targeted
+
+"""
+    with patch("salt.utils.files.fopen", mock_open(read_data=mock_file)) as m_open:
+        selinux.setenforce("Permissive")
+        writes = m_open.write_calls()
+        assert writes
+        for line in writes:
+            if line.startswith("SELINUX="):
+                assert line == "SELINUX=permissive"
+
+
+def test_selinux_config_disabled():
+    """
+    Test values written to /etc/selinux/config are lowercase
+    """
+    mock_file = """
+# This file controls the state of SELinux on the system.
+# SELINUX= can take one of these three values:
+#     enforcing - SELinux security policy is enforced.
+#     permissive - SELinux prints warnings instead of enforcing.
+#     disabled - No SELinux policy is loaded.
+## SELINUX=disabled
+SELINUX=permissive
+# SELINUXTYPE= can take one of these three values:
+#     targeted - Targeted processes are protected,
+#     minimum - Modification of targeted policy. Only selected processes are protected.
+#     mls - Multi Level Security protection.
+SELINUXTYPE=targeted
+
+"""
+    with patch("salt.utils.files.fopen", mock_open(read_data=mock_file)) as m_open:
+        selinux.setenforce("Disabled")
+        writes = m_open.write_calls()
+        assert writes
+        for line in writes:
+            if line.startswith("SELINUX="):
+                assert line == "SELINUX=disabled"

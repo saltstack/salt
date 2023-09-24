@@ -4,6 +4,7 @@
 
 import asyncio
 import concurrent.futures
+import copy
 import logging
 import os
 import signal
@@ -99,9 +100,11 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
+    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
-        self.opts["pillar"],
+        pillar,
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
@@ -169,8 +172,8 @@ def post_master_init(self, master):
         salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
     )
 
-    proxy_init_func_name = "{}.init".format(fq_proxyname)
-    proxy_shutdown_func_name = "{}.shutdown".format(fq_proxyname)
+    proxy_init_func_name = f"{fq_proxyname}.init"
+    proxy_shutdown_func_name = f"{fq_proxyname}.shutdown"
     if (
         proxy_init_func_name not in self.proxy
         or proxy_shutdown_func_name not in self.proxy
@@ -184,7 +187,7 @@ def post_master_init(self, master):
         raise SaltSystemExit(code=-1, msg=errmsg)
 
     self.module_executors = self.proxy.get(
-        "{}.module_executors".format(fq_proxyname), lambda: []
+        f"{fq_proxyname}.module_executors", lambda: []
     )()
     proxy_init_fn = self.proxy[proxy_init_func_name]
     proxy_init_fn(self.opts)
@@ -581,7 +584,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     raise tornado.gen.Return({"proxy_minion": _proxy_minion, "proxy_opts": proxyopts})
 
 
-def target(cls, minion_instance, opts, data, connected):
+def target(cls, minion_instance, opts, data, connected, creds_map):
     """
     Handle targeting of the minion.
 
@@ -594,6 +597,8 @@ def target(cls, minion_instance, opts, data, connected):
         minion_instance.opts["id"],
         opts["id"],
     )
+    if creds_map:
+        salt.crypt.AsyncAuth.creds_map = creds_map
 
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
@@ -622,7 +627,7 @@ def thread_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt._logging.setup_logging()
 
-    salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
+    salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -638,11 +643,9 @@ def thread_return(cls, minion_instance, opts, data):
     )
     allow_missing_funcs = any(
         [
-            minion_instance.executors["{}.allow_missing_func".format(executor)](
-                function_name
-            )
+            minion_instance.executors[f"{executor}.allow_missing_func"](function_name)
             for executor in executors
-            if "{}.allow_missing_func".format(executor) in minion_instance.executors
+            if f"{executor}.allow_missing_func" in minion_instance.executors
         ]
     )
     if function_name in minion_instance.functions or allow_missing_funcs is True:
@@ -699,11 +702,9 @@ def thread_return(cls, minion_instance, opts, data):
             log.debug("Executors list %s", executors)
 
             for name in executors:
-                fname = "{}.execute".format(name)
+                fname = f"{name}.execute"
                 if fname not in minion_instance.executors:
-                    raise SaltInvocationError(
-                        "Executor '{}' is not available".format(name)
-                    )
+                    raise SaltInvocationError(f"Executor '{name}' is not available")
 
                 return_data = minion_instance.executors[fname](
                     opts, data, func, args, kwargs
@@ -748,9 +749,9 @@ def thread_return(cls, minion_instance, opts, data):
             ret["retcode"] = retcode
             ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
         except CommandNotFoundError as exc:
-            msg = 'Command required for "{}" not found'.format(function_name)
+            msg = f'Command required for "{function_name}" not found'
             log.debug(msg, exc_info=True)
-            ret["return"] = "{}: {}".format(msg, exc)
+            ret["return"] = f"{msg}: {exc}"
             ret["out"] = "nested"
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except CommandExecutionError as exc:
@@ -760,7 +761,7 @@ def thread_return(cls, minion_instance, opts, data):
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
-            ret["return"] = "ERROR: {}".format(exc)
+            ret["return"] = f"ERROR: {exc}"
             ret["out"] = "nested"
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except SaltInvocationError as exc:
@@ -770,7 +771,7 @@ def thread_return(cls, minion_instance, opts, data):
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
-            ret["return"] = 'ERROR executing "{}": {}'.format(function_name, exc)
+            ret["return"] = f'ERROR executing "{function_name}": {exc}'
             ret["out"] = "nested"
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except TypeError as exc:
@@ -787,11 +788,11 @@ def thread_return(cls, minion_instance, opts, data):
             salt.utils.error.fire_exception(
                 salt.exceptions.MinionError(msg), opts, job=data
             )
-            ret["return"] = "{}: {}".format(msg, traceback.format_exc())
+            ret["return"] = f"{msg}: {traceback.format_exc()}"
             ret["out"] = "nested"
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
     else:
-        docs = minion_instance.functions["sys.doc"]("{}*".format(function_name))
+        docs = minion_instance.functions["sys.doc"](f"{function_name}*")
         if docs:
             docs[function_name] = minion_instance.functions.missing_fun_string(
                 function_name
@@ -838,7 +839,7 @@ def thread_return(cls, minion_instance, opts, data):
         ret["id"] = opts["id"]
         for returner in set(data["ret"].split(",")):
             try:
-                returner_str = "{}.returner".format(returner)
+                returner_str = f"{returner}.returner"
                 if returner_str in minion_instance.returners:
                     minion_instance.returners[returner_str](ret)
                 else:
@@ -870,7 +871,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt._logging.setup_logging()
 
-    salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
+    salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -968,7 +969,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
         for returner in set(data["ret"].split(",")):
             ret["id"] = opts["id"]
             try:
-                minion_instance.returners["{}.returner".format(returner)](ret)
+                minion_instance.returners[f"{returner}.returner"](ret)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
@@ -1061,21 +1062,23 @@ def handle_decoded_payload(self, data):
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
     name = "ProcessPayload(jid={})".format(data["jid"])
+    creds_map = None
     if multiprocessing_enabled:
         if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we"re
             # running on spawning platforms
             instance = None
+            creds_map = salt.crypt.AsyncAuth.creds_map
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=target,
-                args=(self, instance, self.opts, data, self.connected),
+                args=(self, instance, self.opts, data, self.connected, creds_map),
                 name=name,
             )
     else:
         process = threading.Thread(
             target=target,
-            args=(self, instance, self.opts, data, self.connected),
+            args=(self, instance, self.opts, data, self.connected, creds_map),
             name=name,
         )
 
