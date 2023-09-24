@@ -421,7 +421,7 @@ dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==5.0.3
+docker==6.1.2
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
