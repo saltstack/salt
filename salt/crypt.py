@@ -1102,7 +1102,7 @@ class AsyncAuth:
             autosign_grains = {}      
         for grain in self.opts["autosign_grains"]:
             value = self.opts["grains"].get(grain, None)            
-            # Handle non-string values
+            #  Handle non-string values
             if isinstance(value, (int, float, bool)):
                 value = str(value)
             elif isinstance(value, dict):
