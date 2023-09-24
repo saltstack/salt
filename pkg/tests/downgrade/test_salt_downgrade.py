@@ -53,10 +53,7 @@ def test_salt_downgrade(salt_call_cli, install_salt):
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
 
-    # Windows does not keep the extras directory around in the same state
-    # TODO: Fix this problem in windows installers
-    # TODO: Fix this problem in macos installers
-    if is_downgrade_to_relenv and not (platform.is_windows() or platform.is_darwin()):
+    if is_downgrade_to_relenv:
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
             # test pip install after a downgrade
