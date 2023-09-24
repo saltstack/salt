@@ -66,7 +66,8 @@ def virt_minion_0(
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
-            }
+            },
+            "cgroupns": "host",
         },
         pull_before_start=True,
         skip_on_pull_failure=True,
@@ -103,7 +104,8 @@ def virt_minion_1(
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
-            }
+            },
+            "cgroupns": "host",
         },
         pull_before_start=True,
         skip_on_pull_failure=True,
