@@ -29,7 +29,7 @@ distro==1.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-skip-markers
-docker==6.1.2
+docker==6.1.3
     # via -r requirements/static/ci/pkgtests.in
 exceptiongroup==1.1.0
     # via pytest
