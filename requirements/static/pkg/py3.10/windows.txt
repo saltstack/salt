@@ -6,7 +6,7 @@
 #
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -15,7 +15,7 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.2.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -25,7 +25,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.1
+cryptography==41.0.3
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/windows.txt
@@ -34,7 +34,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/windows.txt
 idna==3.4
     # via requests
@@ -91,7 +91,7 @@ pydantic==1.10.8
     # via inflect
 pymssql==2.2.7
     # via -r requirements/windows.txt
-pymysql==1.0.2
+pymysql==1.0.3
     # via -r requirements/windows.txt
 pyopenssl==23.2.0
     # via -r requirements/windows.txt
@@ -107,7 +107,7 @@ pywin32==306
     # via
     #   -r requirements/windows.txt
     #   wmi
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via -r requirements/zeromq.txt
@@ -125,7 +125,7 @@ tempora==5.2.2
     # via portend
 timelib==0.3.0
     # via -r requirements/windows.txt
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
 typing-extensions==4.6.2
     # via pydantic

@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import logging
 import os
+import pathlib
 import random
 import stat
 import sys
@@ -81,10 +82,20 @@ if not HAS_M2 and not HAS_CRYPTO:
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None):
+def read_dropfile(cachedir):
+    dfn = os.path.join(cachedir, ".dfn")
+    try:
+        with salt.utils.files.fopen(dfn, "r") as fp:
+            return fp.read()
+    except FileNotFoundError:
+        pass
+
+
+def dropfile(cachedir, user=None, master_id=""):
     """
     Set an AES dropfile to request the master update the publish session key
     """
+    dfn_next = os.path.join(cachedir, ".dfn-next")
     dfn = os.path.join(cachedir, ".dfn")
     # set a mask (to avoid a race condition on file creation) and store original.
     with salt.utils.files.set_umask(0o277):
@@ -95,17 +106,18 @@ def dropfile(cachedir, user=None):
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
-        with salt.utils.files.fopen(dfn, "wb+") as fp_:
-            fp_.write(b"")
-        os.chmod(dfn, stat.S_IRUSR)
+        with salt.utils.files.fopen(dfn_next, "w+") as fp_:
+            fp_.write(master_id)
+        os.chmod(dfn_next, stat.S_IRUSR)
         if user:
             try:
                 import pwd
 
                 uid = pwd.getpwnam(user).pw_uid
-                os.chown(dfn, uid, -1)
+                os.chown(dfn_next, uid, -1)
             except (KeyError, ImportError, OSError):
                 pass
+        os.rename(dfn_next, dfn)
 
 
 def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
@@ -175,6 +187,83 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
             # report the error
             pass
     return priv
+
+
+class PrivateKey:
+    def __init__(self, path, passphrase=None):
+        if HAS_M2:
+            self.key = RSA.load_key(path, lambda x: bytes(passphrase))
+        else:
+            with salt.utils.files.fopen(path) as f:
+                self.key = RSA.importKey(f.read(), passphrase)
+
+    def encrypt(self, data):
+        if HAS_M2:
+            return self.key.private_encrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
+        else:
+            return salt.utils.rsax931.RSAX931Signer(self.key.exportKey("PEM")).sign(
+                data
+            )
+
+    def sign(self, data):
+        if HAS_M2:
+            md = EVP.MessageDigest("sha1")
+            md.update(salt.utils.stringutils.to_bytes(data))
+            digest = md.final()
+            return self.key.sign(digest)
+        else:
+            signer = PKCS1_v1_5.new(self.key)
+            return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(data)))
+
+
+class PublicKey:
+    def __init__(self, path, _HAS_M2=HAS_M2):
+        self._HAS_M2 = _HAS_M2
+        if self._HAS_M2:
+            with salt.utils.files.fopen(path, "rb") as f:
+                data = f.read().replace(b"RSA ", b"")
+            bio = BIO.MemoryBuffer(data)
+            try:
+                self.key = RSA.load_pub_key_bio(bio)
+            except RSA.RSAError:
+                raise InvalidKeyError("Encountered bad RSA public key")
+        else:
+            with salt.utils.files.fopen(path) as f:
+                try:
+                    self.key = RSA.importKey(f.read())
+                except (ValueError, IndexError, TypeError):
+                    raise InvalidKeyError("Encountered bad RSA public key")
+
+    def encrypt(self, data):
+        bdata = salt.utils.stringutils.to_bytes(data)
+        if self._HAS_M2:
+            return self.key.public_encrypt(bdata, salt.crypt.RSA.pkcs1_oaep_padding)
+        else:
+            return salt.crypt.PKCS1_OAEP.new(self.key).encrypt(bdata)
+
+    def verify(self, data, signature):
+        if self._HAS_M2:
+            md = EVP.MessageDigest("sha1")
+            md.update(salt.utils.stringutils.to_bytes(data))
+            digest = md.final()
+            try:
+                return self.key.verify(digest, signature)
+            except RSA.RSAError as exc:
+                log.debug("Signature verification failed: %s", exc.args[0])
+                return False
+        else:
+            verifier = PKCS1_v1_5.new(self.key)
+            return verifier.verify(
+                SHA.new(salt.utils.stringutils.to_bytes(data)), signature
+            )
+
+    def decrypt(self, data):
+        data = salt.utils.stringutils.to_bytes(data)
+        if HAS_M2:
+            return self.key.public_decrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
+        else:
+            verifier = salt.utils.rsax931.RSAX931Verifier(self.key.exportKey("PEM"))
+            return verifier.verify(data)
 
 
 @salt.utils.decorators.memoize
@@ -360,12 +449,33 @@ class MasterKeys(dict):
     def __init__(self, opts):
         super().__init__()
         self.opts = opts
-        self.pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
-        self.rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
-
+        self.master_pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
+        self.master_rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
         key_pass = salt.utils.sdb.sdb_get(self.opts["key_pass"], self.opts)
-        self.key = self.__get_keys(passphrase=key_pass)
+        self.master_key = self.__get_keys(passphrase=key_pass)
 
+        self.cluster_pub_path = None
+        self.cluster_rsa_path = None
+        self.cluster_key = None
+        if self.opts["cluster_id"]:
+            self.cluster_pub_path = os.path.join(
+                self.opts["cluster_pki_dir"], "cluster.pub"
+            )
+            self.cluster_rsa_path = os.path.join(
+                self.opts["cluster_pki_dir"], "cluster.pem"
+            )
+            self.cluster_shared_path = os.path.join(
+                self.opts["cluster_pki_dir"],
+                "peers",
+                f"{self.opts['id']}.pub",
+            )
+            self.check_master_shared_pub()
+            key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
+            self.cluster_key = self.__get_keys(
+                name="cluster",
+                passphrase=key_pass,
+                pki_dir=self.opts["cluster_pki_dir"],
+            )
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -422,15 +532,41 @@ class MasterKeys(dict):
     def __getstate__(self):
         return {"opts": self.opts}
 
-    def __get_keys(self, name="master", passphrase=None):
+    @property
+    def key(self):
+        if self.cluster_key:
+            return self.cluster_key
+        return self.master_key
+
+    @property
+    def pub_path(self):
+        if self.cluster_pub_path:
+            return self.cluster_pub_path
+        return self.master_pub_path
+
+    @property
+    def rsa_path(self):
+        if self.cluster_rsa_path:
+            return self.cluster_rsa_path
+        return self.master_rsa_path
+
+    def __key_exists(self, name="master", passphrase=None, pki_dir=None):
+        if pki_dir is None:
+            pki_dir = self.opts["pki_dir"]
+        path = os.path.join(pki_dir, name + ".pem")
+        return os.path.exists(path)
+
+    def __get_keys(self, name="master", passphrase=None, pki_dir=None):
         """
         Returns a key object for a key in the pki-dir
         """
-        path = os.path.join(self.opts["pki_dir"], name + ".pem")
-        if not os.path.exists(path):
-            log.info("Generating %s keys: %s", name, self.opts["pki_dir"])
+        if pki_dir is None:
+            pki_dir = self.opts["pki_dir"]
+        path = os.path.join(pki_dir, name + ".pem")
+        if not self.__key_exists(name, passphrase, pki_dir):
+            log.info("Generating %s keys: %s", name, pki_dir)
             gen_keys(
-                self.opts["pki_dir"],
+                pki_dir,
                 name,
                 self.opts["keysize"],
                 self.opts.get("user"),
@@ -454,7 +590,14 @@ class MasterKeys(dict):
         Return the string representation of a public key
         in the pki-directory
         """
-        path = os.path.join(self.opts["pki_dir"], name + ".pub")
+        if self.cluster_pub_path:
+            path = self.cluster_pub_path
+        else:
+            path = self.master_pub_path
+        # XXX We should always have a key present when this is called, if not
+        # it's an error.
+        # if not os.path.isfile(path):
+        #     raise RuntimeError(f"The key {path} does not exist.")
         if not os.path.isfile(path):
             key = self.__get_keys()
             if HAS_M2:
@@ -464,6 +607,9 @@ class MasterKeys(dict):
                     wfh.write(key.publickey().exportKey("PEM"))
         with salt.utils.files.fopen(path) as rfh:
             return rfh.read()
+
+    def get_ckey_paths(self):
+        return self.cluster_pub_path, self.cluster_rsa_path
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path
@@ -477,6 +623,35 @@ class MasterKeys(dict):
         or None if the master has its own signing keys
         """
         return self.pub_signature
+
+    def check_master_shared_pub(self):
+        """
+        Check the status of the master's shared public key.
+
+        If the shared master key does not exist, write this master's public key
+        to the shared location. Otherwise validate the shared key matches our
+        key. Failed validation raises MasterExit
+        """
+        shared_pub = pathlib.Path(self.cluster_shared_path)
+        master_pub = pathlib.Path(self.master_pub_path)
+        if shared_pub.exists():
+            if shared_pub.read_bytes() != master_pub.read_bytes():
+                message = (
+                    f"Shared key does not match, remove it to continue: {shared_pub}"
+                )
+                log.error(message)
+                raise MasterExit(message)
+        else:
+            # permissions
+            log.debug("Writing shared key %s", shared_pub)
+            shared_pub.write_bytes(master_pub.read_bytes())
+
+    def master_private_decrypt(self, data):
+        if HAS_M2:
+            return self.master_key.private_decrypt(data, RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(self.master_key)
+            return cipher.decrypt(data)
 
 
 class AsyncAuth:
@@ -806,9 +981,9 @@ class AsyncAuth:
                 raise SaltClientError("Invalid master key")
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-        if os.path.exists(master_pubkey_path) and not verify_signature(
-            master_pubkey_path, clear_signed_data, clear_signature
-        ):
+        if os.path.exists(master_pubkey_path) and not PublicKey(
+            master_pubkey_path
+        ).verify(clear_signed_data, clear_signature):
             log.critical("The payload signature did not validate.")
             raise SaltClientError("Invalid signature")
 
@@ -1443,12 +1618,27 @@ class Crypticle:
         self.serial = serial
 
     @classmethod
-    def generate_key_string(cls, key_size=192):
+    def generate_key_string(cls, key_size=192, **kwargs):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
         b64key = base64.b64encode(key)
         b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
+
+    @classmethod
+    def read_or_generate_key(cls, path, key_size=192, remove=False):
+        if remove:
+            os.remove(path)
+        with salt.utils.files.set_umask(0o177):
+            try:
+                with salt.utils.files.fopen(path, "r") as fp:
+                    return fp.read()
+            except FileNotFoundError:
+                pass
+            key = cls.generate_key_string(key_size)
+            with salt.utils.files.fopen(path, "w") as fp:
+                fp.write(key)
+            return key
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
@@ -1533,7 +1723,7 @@ class Crypticle:
             ret_nonce = data[:32].decode()
             data = data[32:]
             if ret_nonce != nonce:
-                raise SaltClientError("Nonce verification error")
+                raise SaltClientError(f"Nonce verification error {ret_nonce} {nonce}")
         payload = salt.payload.loads(data, raw=raw)
         if isinstance(payload, dict):
             if "serial" in payload:

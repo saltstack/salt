@@ -29,7 +29,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{} module can only be loaded on SmartOS compute nodes".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded on SmartOS compute nodes",
     )
 
 
@@ -70,7 +70,7 @@ def _parse_image_meta(image=None, detail=False):
                     docker_repo = image["manifest"]["tags"][tag]
 
             if docker_repo and docker_tag:
-                name = "{}:{}".format(docker_repo, docker_tag)
+                name = f"{docker_repo}:{docker_tag}"
                 description = (
                     "Docker image imported from {repo}:{tag} on {date}.".format(
                         repo=docker_repo,
@@ -183,7 +183,7 @@ def update_installed(uuid=""):
 
         salt '*' imgadm.update [uuid]
     """
-    cmd = "imgadm update {}".format(uuid).rstrip()
+    cmd = f"imgadm update {uuid}".rstrip()
     __salt__["cmd.run"](cmd)
     return {}
 
@@ -279,7 +279,7 @@ def show(uuid):
     ret = {}
 
     if _is_uuid(uuid) or _is_docker_uuid(uuid):
-        cmd = "imgadm show {}".format(uuid)
+        cmd = f"imgadm show {uuid}"
         res = __salt__["cmd.run_all"](cmd, python_shell=False)
         retcode = res["retcode"]
         if retcode != 0:
@@ -287,7 +287,7 @@ def show(uuid):
         else:
             ret = salt.utils.json.loads(res["stdout"])
     else:
-        ret["Error"] = "{} is not a valid uuid.".format(uuid)
+        ret["Error"] = f"{uuid} is not a valid uuid."
 
     return ret
 
@@ -312,7 +312,7 @@ def get(uuid):
         uuid = docker_to_uuid(uuid)
 
     if _is_uuid(uuid):
-        cmd = "imgadm get {}".format(uuid)
+        cmd = f"imgadm get {uuid}"
         res = __salt__["cmd.run_all"](cmd, python_shell=False)
         retcode = res["retcode"]
         if retcode != 0:
@@ -320,7 +320,7 @@ def get(uuid):
         else:
             ret = salt.utils.json.loads(res["stdout"])
     else:
-        ret["Error"] = "{} is not a valid uuid.".format(uuid)
+        ret["Error"] = f"{uuid} is not a valid uuid."
 
     return ret
 
@@ -341,7 +341,7 @@ def import_image(uuid, verbose=False):
         salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     """
     ret = {}
-    cmd = "imgadm import {}".format(uuid)
+    cmd = f"imgadm import {uuid}"
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     retcode = res["retcode"]
     if retcode != 0:
@@ -367,7 +367,7 @@ def delete(uuid):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     """
     ret = {}
-    cmd = "imgadm delete {}".format(uuid)
+    cmd = f"imgadm delete {uuid}"
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     retcode = res["retcode"]
     if retcode != 0:
@@ -465,7 +465,7 @@ def source_delete(source):
         salt '*' imgadm.source_delete https://updates.joyent.com
     """
     ret = {}
-    cmd = "imgadm sources -d {}".format(source)
+    cmd = f"imgadm sources -d {source}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     if retcode != 0:
@@ -500,7 +500,7 @@ def source_add(source, source_type="imgapi"):
     if source_type not in ["imgapi", "docker"]:
         log.warning("Possible unsupported imgage source type specified!")
 
-    cmd = "imgadm sources -a {} -t {}".format(source, source_type)
+    cmd = f"imgadm sources -a {source} -t {source_type}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     if retcode != 0:
@@ -508,6 +508,3 @@ def source_add(source, source_type="imgapi"):
         return ret
 
     return sources(False)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

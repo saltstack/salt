@@ -18,6 +18,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      skip-test-pypi-publish:
+        type: boolean
+        default: false
+        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -39,6 +43,7 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
+  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
@@ -48,7 +53,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: staging-check
     steps:
       - name: Check For Admin Permission
@@ -59,7 +64,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - check-requirements
     outputs:
@@ -167,6 +172,11 @@ jobs:
         run:
           tools ci print-gh-event
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
@@ -187,6 +197,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
 
       - name: Write Changed Files To A Local File
         run:
@@ -265,11 +278,6 @@ jobs:
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
-
-      - name: Set Cache Seed Output
-        id: set-cache-seed
-        run: |
-          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
 
       - name: Get Release Changelog Target
         id: get-release-changelog-target
@@ -452,7 +460,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v3
 
@@ -499,8 +507,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -515,8 +523,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
 
   build-rpm-pkgs:
     name: Build RPM Packages
@@ -527,8 +535,8 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
 
   build-deb-pkgs:
     name: Build DEB Packages
@@ -539,8 +547,8 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -551,8 +559,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
       environment: staging
       sign-packages: ${{ inputs.sign-windows-packages }}
     secrets: inherit
@@ -566,8 +574,8 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.12.3"
-      python-version: "3.10.11"
+      relenv-version: "0.13.10"
+      python-version: "3.10.13"
       environment: staging
       sign-packages: true
     secrets: inherit
@@ -585,7 +593,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -603,7 +612,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -621,7 +631,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -639,7 +650,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -657,7 +669,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -675,7 +688,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -693,7 +707,8 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -711,7 +726,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -729,7 +745,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -747,7 +764,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -765,7 +783,8 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -783,7 +802,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -801,7 +821,8 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -819,7 +840,8 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -837,7 +859,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -855,7 +878,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -873,7 +897,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -891,7 +916,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -909,7 +935,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -927,7 +954,8 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      nox-version: 2022.8.7
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -944,9 +972,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -962,9 +991,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -980,9 +1010,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -998,9 +1029,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1016,9 +1048,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1034,9 +1067,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1052,9 +1086,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1070,9 +1105,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1088,9 +1124,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1106,9 +1143,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1124,9 +1162,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1142,9 +1181,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1160,9 +1200,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1178,9 +1219,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1196,9 +1238,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1214,9 +1257,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1232,9 +1276,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1250,9 +1295,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1268,9 +1314,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1286,9 +1333,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1304,9 +1352,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1322,9 +1371,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -1340,9 +1390,10 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
+      nox-version: 2022.8.7
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: true
       skip-junit-reports: true
 
@@ -2104,9 +2155,10 @@ jobs:
       distro-slug: almalinux-8
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2123,9 +2175,10 @@ jobs:
       distro-slug: almalinux-8-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2142,9 +2195,10 @@ jobs:
       distro-slug: almalinux-9
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2161,9 +2215,10 @@ jobs:
       distro-slug: almalinux-9-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2180,9 +2235,10 @@ jobs:
       distro-slug: amazonlinux-2
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2199,9 +2255,10 @@ jobs:
       distro-slug: amazonlinux-2-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2218,9 +2275,10 @@ jobs:
       distro-slug: centos-7
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2237,9 +2295,10 @@ jobs:
       distro-slug: centos-7-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2256,9 +2315,10 @@ jobs:
       distro-slug: centosstream-8
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2275,9 +2335,10 @@ jobs:
       distro-slug: centosstream-8-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2294,9 +2355,10 @@ jobs:
       distro-slug: centosstream-9
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2313,9 +2375,10 @@ jobs:
       distro-slug: centosstream-9-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2332,9 +2395,10 @@ jobs:
       distro-slug: debian-10
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2351,9 +2415,10 @@ jobs:
       distro-slug: debian-11
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2370,9 +2435,10 @@ jobs:
       distro-slug: debian-11-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2389,9 +2455,10 @@ jobs:
       distro-slug: fedora-37
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2408,9 +2475,10 @@ jobs:
       distro-slug: fedora-37-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2427,9 +2495,10 @@ jobs:
       distro-slug: fedora-38
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2446,9 +2515,10 @@ jobs:
       distro-slug: fedora-38-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2465,9 +2535,10 @@ jobs:
       distro-slug: photonos-3
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2484,9 +2555,10 @@ jobs:
       distro-slug: photonos-4
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2503,9 +2575,10 @@ jobs:
       distro-slug: ubuntu-20.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2522,9 +2595,10 @@ jobs:
       distro-slug: ubuntu-20.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2541,9 +2615,10 @@ jobs:
       distro-slug: ubuntu-22.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2560,9 +2635,10 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
@@ -2579,9 +2655,10 @@ jobs:
       distro-slug: ubuntu-22.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: onedir
@@ -2598,9 +2675,10 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
+      nox-version: 2022.8.7
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: onedir
@@ -2617,10 +2695,11 @@ jobs:
       distro-slug: macos-12
       platform: darwin
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
+      nox-version: 2022.8.7
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: package
     secrets: inherit
@@ -2636,10 +2715,11 @@ jobs:
       distro-slug: macos-12
       platform: darwin
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
+      nox-version: 2022.8.7
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: onedir
     secrets: inherit
@@ -2656,10 +2736,11 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: nsis
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
+      nox-version: 2022.8.7
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
@@ -2675,10 +2756,11 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: msi
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
+      nox-version: 2022.8.7
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
@@ -2694,16 +2776,17 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
+      nox-version: 2022.8.7
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   publish-pypi:
     name: Publish to PyPi(test)
-    if: ${{ github.event.repository.fork != true }}
+    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
@@ -2834,7 +2917,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - check-requirements
       - prepare-workflow

@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import sys
 import time
 from typing import TYPE_CHECKING, Any
@@ -715,6 +716,7 @@ def pkg_matrix(
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
+        sessions.append("downgrade")
     # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
@@ -729,12 +731,13 @@ def pkg_matrix(
     ):
         # Packages for these OSs where never built for classic previously
         sessions.append("upgrade-classic")
+        sessions.append("downgrade-classic")
 
     for session in sessions:
         versions: list[str | None] = [None]
-        if session == "upgrade":
+        if session in ("upgrade", "downgrade"):
             versions = [str(version) for version in testing_releases]
-        elif session == "upgrade-classic":
+        elif session in ("upgrade-classic", "downgrade-classic"):
             versions = [
                 str(version)
                 for version in testing_releases
@@ -973,7 +976,7 @@ def get_testing_releases(
         ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
         # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-        threshold_major = 3006
+        threshold_major = 3005
         parsed_salt_version = tools.utils.Version(salt_version)
         # We want the latest 4 major versions, removing the oldest if this version is a new major
         num_major_versions = 4
@@ -996,19 +999,77 @@ def get_testing_releases(
             ]
             testing_releases.append(minors_of_major[-1])
 
-        # TODO: Remove this block when we reach version 3009.0
-        # Append the latest minor version of 3005 if we don't have enough major versions to test against
-        if len(testing_releases) != num_major_versions:
-            url = "https://repo.saltproject.io/salt/onedir/repo.json"
-            ret = ctx.web.get(url)
-            repo_data = ret.json()
-            latest = list(repo_data["latest"].keys())[0]
-            version = repo_data["latest"][latest]["version"]
-            testing_releases = [version] + testing_releases
-
         str_releases = [str(version) for version in testing_releases]
 
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testing-releases={json.dumps(str_releases)}\n")
 
         ctx.exit(0)
+
+
+@ci.command(
+    name="define-cache-seed",
+    arguments={
+        "static_cache_seed": {
+            "help": "The static cache seed value",
+        },
+        "randomize": {
+            "help": "Randomize the cache seed value",
+        },
+    },
+)
+def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = False):
+    """
+    Set `cache-seed` in GH Actions outputs.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is None:
+        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_step_summary is not None
+
+    labels: list[str] = []
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        labels.extend(
+            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
+        )
+
+    if randomize is True:
+        cache_seed = f"SEED-{random.randint(100, 1000)}"
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"The cache seed has been randomized to `{cache_seed}` because "
+                "`--randomize` was passed to `tools ci define-cache-seed`."
+            )
+    elif "test:random-cache-seed" in labels:
+        cache_seed = f"SEED-{random.randint(100, 1000)}"
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"The cache seed has been randomized to `{cache_seed}` because "
+                "the label `test:random-cache-seed` was set."
+            )
+    else:
+        cache_seed = static_cache_seed
+
+    ctx.info("Writing 'cache-seed' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"cache-seed={cache_seed}\n")

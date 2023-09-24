@@ -685,6 +685,16 @@ def salt_information():
     yield "Salt", __version__
 
 
+def package_information():
+
+    """
+    Report package type
+    """
+    import salt.utils.package
+
+    yield "Package Type", salt.utils.package.pkg_type()
+
+
 def dependency_information(include_salt_cloud=False):
     """
     Report versions of library dependencies.
@@ -867,12 +877,14 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
+    package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
         "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
+        "Salt Package Information": dict(package_info),
     }
     if include_extensions:
         extensions_info = extensions_information()
@@ -905,6 +917,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
         "Python Version",
         "Dependency Versions",
         "Salt Extensions",
+        "Salt Package Information",
         "System Versions",
     ):
         if ver_type == "Salt Extensions" and ver_type not in ver_info:
