@@ -1637,16 +1637,6 @@ def list_all_versions(
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
 
-    if index_url:
-        if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
-        cmd.extend(["--index-url", index_url])
-
-    if extra_index_url:
-        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
-            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
-        cmd.extend(["--extra-index-url", extra_index_url])
-
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
@@ -1658,6 +1648,15 @@ def list_all_versions(
         regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
         cmd.extend(["install", f"{pkg}==versions"])
 
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
+        cmd.extend(["--index-url", index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
+        cmd.extend(["--extra-index-url", extra_index_url])
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
     )

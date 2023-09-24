@@ -6,17 +6,19 @@
 # Date: December 2020
 #
 # Description: This notarizes the macOS Installer Package (.pkg). It uses the
-#              `altool` xcode utility which is only available in the full
-#              Xcode package. It is not available in Command Line Tools.
+#              `notarytool` xcode utility which became available in Xcode 13.
+#              Xcode 13 requires macOS Big Sur 11.3 or higher. However, the
+#              notarytool binary can be extracted and run on macOS Catalina
+#              10.15.7 and higher. It is not available in Command Line Tools.
 #
 #              This script will upload a copy of the package to Apple and wait
 #              for the notarization to return. This can take several minutes.
 #
-#              If this command is run with sudo, you need to pass the `-E`
-#              option to make sure the environment variables pass through to the
-#              sudo environment. For example:
+#              This script requires the presence of some environment variables.
+#              If running this script with sudo, be sure to pass the `-E`
+#              option.
 #
-#              sudo -E ./notarize.sh
+#              sudo -E ./notarize.sh salt-3006.2-signed.pkg
 #
 # Requirements:
 #     - Full Xcode Installation
@@ -31,24 +33,26 @@
 #             The package that will be notarized (must be signed)
 #
 #     Example:
-#         The following will notarize the 'salt-3006.1-1-signed.pkg' file
+#         The following will notarize the 'salt-3006.2-signed.pkg' file:
 #
-#         ./notarize.sh salt-3006.1-1-signed.pkg
+#         ./notarize.sh salt-3006.2-signed.pkg
 #
 # Environment Setup:
 #
 #     Define Environment Variables:
-#         Create two environment variables for the Apple account and the
-#         app-specific password associated with that account. To generate the
-#         app-specific password see: https://support.apple.com/en-us/HT204397
+#         Create three environment variables for the apple account, apple team
+#         ID, and the app-specific password associated with that account. To
+#         generate the app-specific password see:
+#         https://support.apple.com/en-us/HT204397
 #
 #         export APPLE_ACCT="username@domain.com"
+#         export APPLE_TEAM_ID="AB283DVDS5"
 #         export APP_SPEC_PWD="abcd-efgh-ijkl-mnop"
 #
 ################################################################################
 
 #-------------------------------------------------------------------------------
-# Variables
+# Check input parameters
 #-------------------------------------------------------------------------------
 if [ "$1" == "" ]; then
     echo "Must supply a package to notarize"
@@ -57,28 +61,9 @@ else
     PACKAGE=$1
 fi
 
-BUNDLE_ID="com.saltstack.salt"
-CMD_OUTPUT=$(mktemp -t cmd.log)
-
 #-------------------------------------------------------------------------------
 # Functions
 #-------------------------------------------------------------------------------
-# _usage
-#
-#   Prints out help text
-_usage() {
-     echo ""
-     echo "Script to notarize the Salt package:"
-     echo ""
-     echo "usage: ${0}"
-     echo "             [-h|--help]"
-     echo ""
-     echo "  -h, --help      this message"
-     echo ""
-     echo "  To notarize the Salt package:"
-     echo "      example: $0 salt-3006.1-1-signed.pkg"
-}
-
 # _msg
 #
 #   Prints the message with a dash... no new line
@@ -99,38 +84,32 @@ _success() {
 _failure() {
     printf "\e[31m%s\e[0m\n" "Failure"
     echo "output >>>>>>"
-    cat "$CMD_OUTPUT" 1>&2
+    cat "$NOTARIZE_LOG" 1>&2
     echo "<<<<<< output"
     exit 1
 }
 
 #-------------------------------------------------------------------------------
-# Get Parameters
+# Environment Variables
 #-------------------------------------------------------------------------------
-while true; do
-    if [[ -z "$1" ]]; then break; fi
-    case "$1" in
-        -h | --help )
-            _usage
-            exit 0
-            ;;
-        -*)
-            echo "Invalid Option: $1"
-            echo ""
-            _usage
-            exit 1
-            ;;
-        * )
-            shift
-            ;;
-    esac
-done
+_msg "Setting Variables"
+NOTARIZE_LOG=$(mktemp -t notarize-app.log)
+NOTARY_TOOL=$(xcrun --find notarytool)
+_success
+
+#-------------------------------------------------------------------------------
+# Check for notarytool
+#-------------------------------------------------------------------------------
+if [ ! -f "$NOTARY_TOOL" ]; then
+    echo "This script requires the NotaryTool binary"
+    exit 1
+fi
 
 #-------------------------------------------------------------------------------
 # Delete temporary files on exit
 #-------------------------------------------------------------------------------
 function finish {
-    rm "$CMD_OUTPUT"
+    rm "$NOTARIZE_LOG"
 }
 trap finish EXIT
 
@@ -139,87 +118,34 @@ trap finish EXIT
 #-------------------------------------------------------------------------------
 printf "=%.0s" {1..80}; printf "\n"
 echo "Notarize Salt Package"
+echo "- This can take up to 30 minutes"
 printf -- "-%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
 # Submit app for notarization
 #-------------------------------------------------------------------------------
-_msg "Submitting package for notarization"
-if xcrun altool --notarize-app \
-                --primary-bundle-id "$BUNDLE_ID" \
-                --username "$APPLE_ACCT" \
-                --password "$APP_SPEC_PWD" \
-                -f "$PACKAGE" > "$CMD_OUTPUT" 2>&1; then
+_msg "Submitting Package for Notarization"
+if $NOTARY_TOOL submit \
+        --apple-id "$APPLE_ACCT" \
+        --team-id "$APPLE_TEAM_ID" \
+        --password "$APP_SPEC_PWD" \
+        --wait \
+        "$PACKAGE" > "$NOTARIZE_LOG" 2>&1; then
     _success
 else
     _failure
 fi
 
-# Get RequestUUID from the CMD_OUTPUT
-# Uncomment for debugging
-# cat "$CMD_OUTPUT"
-
-_msg "Verifying successful upload"
-if grep -q "No errors uploading" "$CMD_OUTPUT"; then
+# Make sure the status is "Accepted", then staple
+_msg "Verifying accepted status"
+if grep -q "status: Accepted" "$NOTARIZE_LOG"; then
     _success
 else
-    echo ">>>>>> Failed Uploading Package <<<<<<" > "$CMD_OUTPUT"
     _failure
 fi
-RequestUUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "$CMD_OUTPUT")
 
-# Clear CMD_OUTPUT
-echo "" > "$CMD_OUTPUT"
-
-echo "- Checking Notarization Status (every 30 seconds):"
-echo -n "  "
-# Though it usually takes 5 minutes, notarization can take up to 30 minutes
-# Check status every 30 seconds for 40 minutes
-tries=0
-while sleep 30; do
-    ((tries++))
-    echo -n "."
-
-    # check notarization status
-    if ! xcrun altool --notarization-info "$RequestUUID" \
-                      --username "$APPLE_ACCT" \
-                      --password "$APP_SPEC_PWD" > "$CMD_OUTPUT" 2>&1; then
-        echo ""
-        cat "$CMD_OUTPUT" 1>&2
-        exit 1
-    fi
-
-    # Look for Status in the CMD_OUTPUT
-    # Uncomment for debugging
-    # cat "$CMD_OUTPUT"
-
-    # Continue checking until Status is no longer "in progress"
-    if ! grep -q "Status: in progress" "$CMD_OUTPUT"; then
-        echo ""
-        break
-    fi
-
-    if (( tries > 80 )); then
-        echo ""
-        echo "Failed after 40 minutes"
-        echo "Log: $CMD_OUTPUT"
-        cat "$CMD_OUTPUT" 1>&2
-        exit 1
-    fi
-
-done
-
-# Make sure the result is "success", then staple
-if ! grep -q "Status: success" "$CMD_OUTPUT"; then
-    echo "**** There was a problem notarizing the package"
-    echo "**** View the log for details:"
-    awk -F ': ' '/LogFileURL/ {print $2}' "$CMD_OUTPUT"
-    exit 1
-fi
-echo "  Notarization Complete"
-
-_msg "Stapling notarization to the package"
-if xcrun stapler staple "$PACKAGE" > "$CMD_OUTPUT"; then
+_msg "Stapling Notarization to the Package"
+if xcrun stapler staple "$PACKAGE" > "$NOTARIZE_LOG"; then
     _success
 else
     _failure

@@ -214,11 +214,15 @@ def present(name, **kwargs):
         Whether the scheduled job should run immediately after the skip_during_range time
         period ends.
 
+    offline
+        Add the scheduled job to the Salt minion when the Salt minion is not running.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
 
     if name in current_schedule:
         new_item = __salt__["schedule.build_schedule_item"](name, **kwargs)
@@ -237,7 +241,7 @@ def present(name, **kwargs):
                 new_item["enabled"] = True
 
         if new_item == current_schedule[name]:
-            ret["comment"].append("Job {} in correct state".format(name))
+            ret["comment"].append(f"Job {name} in correct state")
         else:
             if "test" in __opts__ and __opts__["test"]:
                 kwargs["test"] = True
@@ -251,7 +255,7 @@ def present(name, **kwargs):
                     ret["comment"] = result["comment"]
                     return ret
                 else:
-                    ret["comment"].append("Modifying job {} in schedule".format(name))
+                    ret["comment"].append(f"Modifying job {name} in schedule")
                     ret["changes"] = result["changes"]
     else:
         if "test" in __opts__ and __opts__["test"]:
@@ -265,7 +269,7 @@ def present(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Adding new job {} to schedule".format(name))
+                ret["comment"].append(f"Adding new job {name} to schedule")
                 ret["changes"] = result["changes"]
 
     ret["comment"] = "\n".join(ret["comment"])
@@ -289,7 +293,9 @@ def absent(name, **kwargs):
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
     if name in current_schedule:
         if "test" in __opts__ and __opts__["test"]:
             kwargs["test"] = True
@@ -302,10 +308,10 @@ def absent(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Removed job {} from schedule".format(name))
+                ret["comment"].append(f"Removed job {name} from schedule")
                 ret["changes"] = result["changes"]
     else:
-        ret["comment"].append("Job {} not present in schedule".format(name))
+        ret["comment"].append(f"Job {name} not present in schedule")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -339,9 +345,9 @@ def enabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Enabled job {} from schedule".format(name))
+                ret["comment"].append(f"Enabled job {name} from schedule")
     else:
-        ret["comment"].append("Job {} not present in schedule".format(name))
+        ret["comment"].append(f"Job {name} not present in schedule")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -357,11 +363,15 @@ def disabled(name, **kwargs):
     persist
         Whether changes to the scheduled job should be saved, defaults to True.
 
+    offline
+        Delete the scheduled job to the Salt minion when the Salt minion is not running.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
     if name in current_schedule:
         if "test" in __opts__ and __opts__["test"]:
             kwargs["test"] = True
@@ -374,9 +384,9 @@ def disabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Disabled job {} from schedule".format(name))
+                ret["comment"].append(f"Disabled job {name} from schedule")
     else:
-        ret["comment"].append("Job {} not present in schedule".format(name))
+        ret["comment"].append(f"Job {name} not present in schedule")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret

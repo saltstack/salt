@@ -123,3 +123,65 @@ def test_assumed_creds_deletes_expired_key():
                     "mock_SecretAccessKey",
                     "mock_SessionToken",
                 )
+
+
+def test_creds_with_role_arn_should_always_call_assumed_creds():
+    role_arn = "arn:aws:iam::111111111111:role/my-role-to-assume"
+
+    access_key_id = "mock_AccessKeyId"
+    secret_access_key = "mock_SecretAccessKey"
+    token = "mock_Token"
+    expiration = (datetime.utcnow() + timedelta(seconds=900)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+    patch_expiration = patch("salt.utils.aws.__Expiration__", new=expiration)
+
+    def handle_get_metadata_mock(path, **args):
+        response_metadata = MagicMock()
+        response_metadata.status_code = 200
+        if path == "meta-data/iam/security-credentials/":
+            response_metadata.text = "Role"
+        else:
+            response_metadata.json.return_value = {
+                "AccessKeyId": access_key_id,
+                "SecretAccessKey": secret_access_key,
+                "Token": token,
+                "Expiration": expiration,
+            }
+        return response_metadata
+
+    patch_get_metadata = patch.object(
+        aws, "get_metadata", side_effect=handle_get_metadata_mock
+    )
+
+    assumed_access_key_id = "mock_assumed_AccessKeyId"
+    assumed_secret_access_key = "mock_assumed_SecretAccessKey"
+    assumed_session_token = "mock_assumed_SessionToken"
+    assumed_creds_ret = (
+        assumed_access_key_id,
+        assumed_secret_access_key,
+        assumed_session_token,
+    )
+
+    patch_assumed_creds = patch.object(
+        aws, "assumed_creds", return_value=assumed_creds_ret
+    )
+
+    # test for the first call, with __Expiration__ = "" (default)
+    with patch_get_metadata as mock_get_metadata:
+        with patch_assumed_creds:
+            result = aws.creds(
+                {"id": aws.IROLE_CODE, "key": aws.IROLE_CODE, "role_arn": role_arn}
+            )
+            assert mock_get_metadata.call_count == 2
+            assert result == assumed_creds_ret
+
+    # test for the second call, with valid __Expiration__
+    with patch_get_metadata as mock_get_metadata:
+        with patch_expiration, patch_assumed_creds:
+            result = aws.creds(
+                {"id": aws.IROLE_CODE, "key": aws.IROLE_CODE, "role_arn": role_arn}
+            )
+            assert mock_get_metadata.call_count == 0
+            assert result == assumed_creds_ret

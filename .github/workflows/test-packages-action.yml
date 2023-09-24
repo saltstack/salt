@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: A JSON list of releases to test upgrades against
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
@@ -54,7 +58,6 @@ on:
 
 
 env:
-  NOX_VERSION: "2022.8.7"
   COLUMNS: 160
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
@@ -265,13 +268,13 @@ jobs:
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
-            ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
+            ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
-          ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
+          ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm

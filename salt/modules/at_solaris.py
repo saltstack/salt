@@ -95,7 +95,7 @@ def atq(tag=None):
         job = str(job)
 
         # search for any tags
-        atjob_file = "/var/spool/cron/atjobs/{job}".format(job=job)
+        atjob_file = f"/var/spool/cron/atjobs/{job}"
         if __salt__["file.file_exists"](atjob_file):
             with salt.utils.files.fopen(atjob_file, "r") as atjob:
                 for line in atjob:
@@ -162,7 +162,7 @@ def atrm(*args):
 
     # call atrm for each job in ret['jobs']['removed']
     for job in ret["jobs"]["removed"]:
-        res_job = __salt__["cmd.run_all"]("atrm {job}".format(job=job))
+        res_job = __salt__["cmd.run_all"](f"atrm {job}")
         if res_job["retcode"] > 0:
             if "failed" not in ret["jobs"]:
                 ret["jobs"]["failed"] = {}
@@ -205,9 +205,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     cmd_kwargs = {"stdin": stdin, "python_shell": False}
     if "runas" in kwargs:
         cmd_kwargs["runas"] = kwargs["runas"]
-    res = __salt__["cmd.run_all"](
-        'at "{timespec}"'.format(timespec=args[0]), **cmd_kwargs
-    )
+    res = __salt__["cmd.run_all"](f'at "{args[0]}"', **cmd_kwargs)
 
     # verify job creation
     if res["retcode"] > 0:
@@ -233,14 +231,14 @@ def atc(jobid):
         salt '*' at.atc <jobid>
     """
 
-    atjob_file = "/var/spool/cron/atjobs/{job}".format(job=jobid)
+    atjob_file = f"/var/spool/cron/atjobs/{jobid}"
     if __salt__["file.file_exists"](atjob_file):
         with salt.utils.files.fopen(atjob_file, "r") as rfh:
             return "".join(
                 [salt.utils.stringutils.to_unicode(x) for x in rfh.readlines()]
             )
     else:
-        return {"error": "invalid job id '{}'".format(jobid)}
+        return {"error": f"invalid job id '{jobid}'"}
 
 
 def _atq(**kwargs):
@@ -258,7 +256,7 @@ def _atq(**kwargs):
     month = kwargs.get("month", None)
     year = kwargs.get("year", None)
     if year and len(str(year)) == 2:
-        year = "20{}".format(year)
+        year = f"20{year}"
 
     jobinfo = atq()["jobs"]
     if not jobinfo:
@@ -282,28 +280,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "{:02d}".format(int(hour)) == job["time"].split(":")[0]:
+        elif f"{int(hour):02d}" == job["time"].split(":")[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "{:02d}".format(int(minute)) == job["time"].split(":")[1]:
+        elif f"{int(minute):02d}" == job["time"].split(":")[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "{:02d}".format(int(day)) == job["date"].split("-")[2]:
+        elif f"{int(day):02d}" == job["date"].split("-")[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "{:02d}".format(int(month)) == job["date"].split("-")[1]:
+        elif f"{int(month):02d}" == job["date"].split("-")[1]:
             pass
         else:
             continue
@@ -342,6 +340,3 @@ def jobcheck(**kwargs):
         return {"error": "You have given a condition"}
 
     return _atq(**kwargs)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

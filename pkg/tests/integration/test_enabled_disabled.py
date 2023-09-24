@@ -8,9 +8,6 @@ def test_services(install_salt, salt_cli, salt_minion):
     """
     Check if Services are enabled/disabled
     """
-    if install_salt.compressed:
-        pytest.skip("Skip test on single binary and onedir package")
-
     if install_salt.distro_id in ("ubuntu", "debian"):
         services_enabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
         services_disabled = []

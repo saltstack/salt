@@ -293,6 +293,7 @@ def setup_redhat_family(
             "salt-syndic",
             "salt-cloud",
             "salt-api",
+            "salt-debuginfo",
         ),
     ]
 
@@ -365,6 +366,7 @@ def setup_debian_family(
                 "salt-syndic",
                 "salt-cloud",
                 "salt-api",
+                "salt-dbg",
             ),
         ]
         for cmd in commands:

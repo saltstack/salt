@@ -63,7 +63,7 @@ def absent(name):
         elif res[name] not in ["absent"]:  # oops something went wrong
             ret["result"] = False
     else:
-        ret["comment"] = "account {login} is absent".format(login=name)
+        ret["comment"] = f"account {name} is absent"
 
     return ret
 
@@ -141,6 +141,3 @@ def present(name, **kwargs):
     Alias for pdbedit.managed
     """
     return managed(name, **kwargs)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

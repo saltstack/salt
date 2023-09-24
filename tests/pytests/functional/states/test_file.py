@@ -139,7 +139,7 @@ def test_file_managed_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        f"localhost:{free_port}",
+        f"localhost{free_port}",
         "foo.txt",
     )
     cached_etag = cached_file + ".etag"

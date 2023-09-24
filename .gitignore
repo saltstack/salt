@@ -130,6 +130,7 @@ Session.vim
 
 # Nox requirements archives
 nox.*.tar.bzip2
+nox.*.tar.xz
 
 # Debian packages
 /debian
@@ -140,6 +141,7 @@ nox.*.tar.bzip2
 /pkg/debian/salt-api
 /pkg/debian/salt-common
 /pkg/debian/salt-cloud
+/pkg/debian/salt-dbg
 /pkg/debian/salt-master
 /pkg/debian/salt-minion
 /pkg/debian/salt-ssh

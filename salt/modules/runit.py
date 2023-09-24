@@ -122,7 +122,7 @@ def start(name):
 
         salt '*' runit.start <service name>
     """
-    cmd = "sv start {}".format(_service_path(name))
+    cmd = f"sv start {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -140,7 +140,7 @@ def stop(name):
 
         salt '*' runit.stop <service name>
     """
-    cmd = "sv stop {}".format(_service_path(name))
+    cmd = f"sv stop {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -158,7 +158,7 @@ def reload_(name):
 
         salt '*' runit.reload <service name>
     """
-    cmd = "sv reload {}".format(_service_path(name))
+    cmd = f"sv reload {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -176,7 +176,7 @@ def restart(name):
 
         salt '*' runit.restart <service name>
     """
-    cmd = "sv restart {}".format(_service_path(name))
+    cmd = f"sv restart {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -226,7 +226,7 @@ def status(name, sig=None):
 
     # sv return code is not relevant to get a service status.
     # Check its output instead.
-    cmd = "sv status {}".format(svc_path)
+    cmd = f"sv status {svc_path}"
     try:
         out = __salt__["cmd.run_stdout"](cmd)
         return out.startswith("run: ")
@@ -628,7 +628,7 @@ def enable(name, start=False, **kwargs):
     # if not, down_file might be removed too quickly,
     # before 'sv' have time to take care about it.
     # Documentation indicates that a change is handled within 5 seconds.
-    cmd = "sv status {}".format(_service_path(name))
+    cmd = f"sv status {_service_path(name)}"
     retcode_sv = 1
     count_sv = 0
     while retcode_sv != 0 and count_sv < 10:
@@ -726,6 +726,3 @@ def remove(name):
         log.error("Unable to remove symlink %s", svc_path)
         return False
     return True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

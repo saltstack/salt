@@ -311,6 +311,7 @@ def test(
         "PRINT_TEST_PLAN_ONLY": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+        "COVERAGE_CONTEXT": name,
     }
     if "LANG" in os.environ:
         env["LANG"] = os.environ["LANG"]
@@ -591,8 +592,20 @@ def sync_cache(
     cached_instances = {}
     if STATE_DIR.exists():
         for state_path in STATE_DIR.iterdir():
-            instance_id = (state_path / "instance-id").read_text()
-            cached_instances[instance_id] = state_path.name
+            try:
+                instance_id = (state_path / "instance-id").read_text()
+            except FileNotFoundError:
+                if not delete:
+                    log.info(
+                        f"Would remove {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+                else:
+                    shutil.rmtree(state_path)
+                    log.info(
+                        f"REMOVED {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+            else:
+                cached_instances[instance_id] = state_path.name
 
     # Find what instances we are missing in our cached states
     to_write = {}
@@ -1191,7 +1204,7 @@ class VM:
             timeout = self.config.terminate_timeout
             timeout_progress = 0.0
             progress = create_progress_bar()
-            task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
+            task = progress.add_task(f"Terminating {self!r}...", total=timeout)
             self.instance.terminate()
             try:
                 with progress:
