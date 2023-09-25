@@ -11,6 +11,9 @@ import salt.utils.pkg.rpm
 def configure_loader_modules(minion_opts, grains):
     grains.update({"osarch": salt.utils.pkg.rpm.get_osarch()})
     return {
+        salt.modules.config: {
+            "__grains__": grains,
+        },
         salt.modules.pkg_resource: {
             "__grains__": grains,
         },

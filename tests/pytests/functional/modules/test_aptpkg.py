@@ -71,6 +71,7 @@ def configure_loader_modules(minion_opts, grains):
                 "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
                 "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
+                "pkg_resource.stringify": pkg_resource.stringify,
             },
             "__opts__": minion_opts,
             "__grains__": grains,
