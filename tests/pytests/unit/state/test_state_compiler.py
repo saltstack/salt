@@ -1107,11 +1107,11 @@ def test_verify_onlyif_cmd_opts_exclude(minion_opts):
     (
         (
             {"/some/file": {"file.managed": ["source:salt://bla"]}},
-            "Argument not formed as a dictionary",
+            "Too many functions declared in state '/some/file' in SLS 'sls'. Please choose one of the following: managed, source:salt://bla",
         ),
         (
             {"/some/file": {"file": ["managed", "source:salt://bla"]}},
-            "Please choose one of the following: managed, source:salt",
+            "Too many functions declared in state '/some/file' in SLS 'sls'. Please choose one of the following: managed, source:salt://bla",
         ),
     ),
 )
