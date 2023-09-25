@@ -80,7 +80,7 @@ packaging==23.1
     #   -r requirements/base.txt
     #   docker
     #   pytest
-platformdirs==2.6.2
+platformdirs==3.5.3
     # via virtualenv
 pluggy==1.0.0
     # via pytest
@@ -150,7 +150,7 @@ urllib3==1.26.14
     #   requests
 virtualenv==20.23.0
     # via pytest-salt-factories
-websocket-client==0.40.0
+websocket-client==1.6.3
     # via docker
 zc.lockfile==3.0.post1
     # via cherrypy
