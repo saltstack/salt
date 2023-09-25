@@ -69,7 +69,7 @@ Here is an example of result parsing and appending:
         - name: __slot__:salt:user.info(someuser).home ~ /subdirectory
         - source: salt://somefile
 
-Execution Module Returns as File Contents or Data
+Execution module returns as file contents or data
 -------------------------------------------------
 
 The following examples demonstrate how to use execution module returns as file
@@ -77,7 +77,7 @@ contents or data in Salt states. These examples show how to incorporate the
 output of execution functions into file contents or data in the `file.managed`
 and `file.serialize` states.
 
-Content from Execution Modules
+Content from execution modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can use the results of execution modules directly as file contents in Salt
@@ -112,7 +112,7 @@ and then used as the content of the file `/tmp/things.txt`:
           - __slot__:salt:test.echo("hello")
           - __slot__:salt:test.echo("world")
 
-Serializing Data from Execution Modules
+Serializing data from execution modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can also serialize data obtained from execution modules and write it to
