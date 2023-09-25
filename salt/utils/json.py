@@ -20,13 +20,9 @@ class DatetimeEncoder(json.JSONEncoder):
     """Datetime encoder to handle json serialization"""
 
     def default(self, obj):
-        try:
-            return super().default(obj)
-        except TypeError as e:
-            if isinstance(obj, (datetime.date, datetime.datetime)):
-                return obj.isoformat()
-
-            raise TypeError(e)
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 def __split(raw):
