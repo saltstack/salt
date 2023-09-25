@@ -21,17 +21,9 @@ def test_services(install_salt, salt_cli, salt_minion):
         pytest.fail(f"Don't know how to handle os_family={install_salt.distro_id}")
 
     for service in services_enabled:
-        assert (
-            "true"
-            in salt_cli.run(
-                "service.enabled", service, minion_tgt=salt_minion.id
-            ).stdout
-        )
+        ret = salt_cli.run("service.enabled", service, minion_tgt=salt_minion.id)
+        assert "true" in ret.stdout
 
     for service in services_disabled:
-        assert (
-            "true"
-            in salt_cli.run(
-                "service.disabled", service, minion_tgt=salt_minion.id
-            ).stdout
-        )
+        ret = salt_cli.run("service.disabled", service, minion_tgt=salt_minion.id)
+        assert "true" in ret.stdout
