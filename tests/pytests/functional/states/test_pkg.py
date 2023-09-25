@@ -46,7 +46,10 @@ def PKG_TARGETS(grains):
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            _PKG_TARGETS = ["wget", "zsh-html"]
+            if grains["osmajorrelease"] >= 5:
+                _PKG_TARGETS = ["wget", "zsh"]
+            else:
+                _PKG_TARGETS = ["wget", "zsh-html"]
         elif (
             grains["os"] in ("CentOS Stream", "AlmaLinux")
             and grains["osmajorrelease"] == 9
