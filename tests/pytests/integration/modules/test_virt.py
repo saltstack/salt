@@ -356,7 +356,7 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
         ret = salt_cli.run(
             "virt.define_xml_path",
-            "/{}.xml".format(virt_domain),
+            f"/{virt_domain}.xml",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret
@@ -391,7 +391,7 @@ class TestVirtMigrateTest:
         """
         ret = salt_cli.run(
             "virt.define_xml_path",
-            "/{}.xml".format(virt_domain),
+            f"/{virt_domain}.xml",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret
@@ -447,7 +447,7 @@ class TestVirtMigrateTest:
         ret = salt_cli.run(
             "virt.migrate",
             virt_domain,
-            "qemu+ssh://{}/system".format(virt_minion_1.uri),
+            f"qemu+ssh://{virt_minion_1.uri}/system",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret
