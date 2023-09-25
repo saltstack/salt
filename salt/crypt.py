@@ -1108,8 +1108,8 @@ class AsyncAuth:
                 autosign_grains[grain] = str(value)
             elif isinstance(value, dict):
                 autosign_grains[grain] = dict.__str__(value)
-        else:
-            autosign_grains[grain] = str(value)
+            else:
+                autosign_grains[grain] = str(value)
 
         payload["autosign_grains"] = autosign_grains
         try:
