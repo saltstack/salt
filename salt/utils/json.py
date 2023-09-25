@@ -16,13 +16,13 @@ log = logging.getLogger(__name__)
 JSONEncoder = json.JSONEncoder
 
 
-class DatetimeEncoder(json.JSONEncoder):
+class DatetimeEncoder(JSONEncoder):
     """Datetime encoder to handle json serialization"""
 
-    def default(self, obj):
-        if isinstance(obj, (datetime.date, datetime.datetime)):
-            return obj.isoformat()
-        return super().default(obj)
+    def default(self, o):
+        if isinstance(o, (datetime.date, datetime.datetime)):
+            return o.isoformat()
+        return super().default(o)
 
 
 def __split(raw):
