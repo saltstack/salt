@@ -2668,6 +2668,11 @@ def managed(
             be used instead. However, this will not work for binary files in
             Salt releases before 2015.8.4.
 
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
+
     contents_grains
         .. versionadded:: 2014.7.0
 
@@ -7880,6 +7885,11 @@ def serialize(
         causing indentation mismatches.
 
         .. versionadded:: 2015.8.0
+
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
 
     serializer (or formatter)
         Write the data as this format. See the list of
