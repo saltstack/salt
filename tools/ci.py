@@ -25,6 +25,17 @@ if sys.version_info < (3, 11):
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
+try:
+    import boto3
+except ImportError:
+    print(
+        "\nPlease run 'python -m pip install -r "
+        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+        file=sys.stderr,
+        flush=True,
+    )
+    raise
+
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -718,35 +729,6 @@ def pkg_matrix(
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     if TYPE_CHECKING:
         assert testing_releases
-    _matrix = []
-    sessions = [
-        "install",
-    ]
-    if (
-        distro_slug
-        not in [
-            "debian-11-arm64",
-            # TODO: remove debian 12 once debian 12 pkgs are released
-            "debian-12-arm64",
-            "debian-12",
-            "ubuntu-20.04-arm64",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # These OS's never had arm64 packages built for them
-        # with the tiamat onedir packages.
-        # we will need to ensure when we release 3006.0
-        # we allow for 3006.0 jobs to run, because then
-        # we will have arm64 onedir packages to upgrade from
-        sessions.append("upgrade")
-        sessions.append("downgrade")
 
     still_testing_3005 = False
     for release_version in testing_releases:
@@ -758,57 +740,99 @@ def pkg_matrix(
     if still_testing_3005 is False:
         ctx.error(
             f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error"
+            "and remove this error and the logic above the error. There may "
+            "be other places that need code removed as well."
         )
         ctx.exit(1)
 
-    # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
-    if (
-        distro_slug
-        not in [
-            "centosstream-9",
-            "debian-11-arm64",
-            "debian-12-arm64",
-            "debian-12",
-            "ubuntu-22.04",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # Packages for these OSs where never built for classic previously
-        sessions.append("upgrade-classic")
-        sessions.append("downgrade-classic")
+    adj_versions = []
+    for ver in testing_releases:
+        if ver < tools.utils.Version("3006.0"):
+            adj_versions.append((ver, "classic"))
+            adj_versions.append((ver, "tiamat"))
+        else:
+            adj_versions.append((ver, "relenv"))
+    ctx.info(f"Will look for the following versions: {adj_versions}")
 
-    for session in sessions:
-        versions: list[str | None] = [None]
-        if session in ("upgrade", "downgrade"):
-            versions = [str(version) for version in testing_releases]
-        elif session in ("upgrade-classic", "downgrade-classic"):
-            versions = [
-                str(version)
-                for version in testing_releases
-                if version < tools.utils.Version("3006.0")
-            ]
-        for version in versions:
-            if (
-                version
-                and distro_slug.startswith("photonos-5")
-                and version < tools.utils.Version("3007.0")
-            ):
-                # We never build packages for Photon OS 5 prior to 3007.0
-                continue
-            _matrix.append(
-                {
-                    "test-chunk": session,
-                    "version": version,
-                }
+    # Filter out the prefixes to look under
+    if "macos-" in distro_slug:
+        # We don't have golden images for macos, handle these separately
+        prefixes = {
+            "classic": "osx/",
+            "tiamat": "salt/py3/macos/minor/",
+            "relenv": "salt/py3/macos/minor/",
+        }
+    else:
+        parts = distro_slug.split("-")
+        name = parts[0]
+        version = parts[1]
+        if name in ("debian", "ubuntu"):
+            arch = "amd64"
+        elif name in ("centos", "centosstream", "amazonlinux"):
+            arch = "x86_64"
+        if len(parts) > 2:
+            arch = parts[2]
+        if name == "amazonlinux":
+            name = "amazon"
+        if "centos" in name:
+            name = "redhat"
+        if name == "windows":
+            prefixes = {
+                "classic": "windows/",
+                "tiamat": "salt/py3/windows/minor",
+                "relenv": "salt/py3/windows/minor",
+            }
+        else:
+            prefixes = {
+                "classic": f"py3/{name}/{version}/{arch}/",
+                "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
+                "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
+            }
+
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    matrix = [
+        {
+            "test-chunk": "install",
+            "version": None,
+        }
+    ]
+
+    for version, backend in adj_versions:
+        prefix = prefixes[backend]
+        # Using a paginator allows us to list recursively and avoid the item limit
+        # TODO: Swap this for the prod bucket before merge
+        page_iterator = paginator.paginate(
+            Bucket="salt-project-test-salt-artifacts-release", Prefix=prefix
+        )
+        # Uses a jmespath expression to test if the wanted version is in any of the filenames
+        key_filter = f"Contents[?contains(Key, '{version}')][]"
+        if pkg_type == "MSI":
+            # TODO: Add this back when we add MSI upgrade and downgrade tests
+            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            continue
+        elif pkg_type == "NSIS":
+            key_filter = (
+                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
+        # objects = list(page_iterator.search(f"Contents[?contains(Key, '{key_filter}')][]"))
+        objects = page_iterator.search(key_filter)
+        # ctx.info(objects)
+        try:
+            first = next(objects)
+            ctx.info(f"Found {version} ({backend}) for {distro_slug}: {first['Key']}")
+            for session in ("upgrade", "downgrade"):
+                matrix.append(
+                    {
+                        "test-chunk": f"{session}-classic"
+                        if backend == "classic"
+                        else session,
+                        "version": str(version),
+                    }
+                )
+        except StopIteration:
+            ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
+
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 
