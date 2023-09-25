@@ -9,22 +9,6 @@ This state requires the ``augeas`` Python module.
 
 Augeas_ can be used to manage configuration files.
 
-.. warning::
-
-    Minimal installations of Debian and Ubuntu have been seen to have packaging
-    bugs with python-augeas, causing the augeas module to fail to import. If
-    the minion has the augeas module installed, and the state fails with a
-    comment saying that the state is unavailable, first restart the salt-minion
-    service. If the problem persists past that, the following command can be
-    run from the master to determine what is causing the import to fail:
-
-    .. code-block:: bash
-
-        salt minion-id cmd.run 'python -c "from augeas import Augeas"'
-
-    For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
-    known to resolve the issue.
-
 """
 
 import difflib
