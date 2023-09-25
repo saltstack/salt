@@ -119,7 +119,7 @@ urllib3==1.26.6
     # via requests
 vultr==1.0.1
     # via -r requirements/darwin.txt
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 
 # The following packages are considered to be unsafe in a requirements file:

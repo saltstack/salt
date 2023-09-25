@@ -148,11 +148,11 @@ urllib3==1.26.14
     # via
     #   docker
     #   requests
-virtualenv==20.17.1
+virtualenv==20.23.0
     # via pytest-salt-factories
-websocket-client==1.5.1
+websocket-client==0.40.0
     # via docker
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 
 # The following packages are considered to be unsafe in a requirements file:

@@ -106,7 +106,7 @@ typing-extensions==4.6.3
     # via pydantic
 urllib3==1.26.6
     # via requests
-zc.lockfile==1.4
+zc.lockfile==3.0.post1
     # via cherrypy
 zipp==3.15.0
     # via

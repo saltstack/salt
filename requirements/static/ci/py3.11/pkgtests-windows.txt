@@ -153,11 +153,11 @@ typing-extensions==4.6.3
     #   pytest-system-statistics
 urllib3==1.26.14
     # via requests
-virtualenv==20.18.0
+virtualenv==20.23.0
     # via pytest-salt-factories
 wmi==1.5.1 ; sys_platform == "win32"
     # via -r requirements/static/ci/pkgtests-windows.in
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 
 # The following packages are considered to be unsafe in a requirements file:

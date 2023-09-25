@@ -82,7 +82,7 @@ packaging==23.1
     #   -r requirements/base.txt
     #   docker
     #   pytest
-platformdirs==3.5.3
+platformdirs==2.6.2
     # via virtualenv
 pluggy==1.0.0
     # via pytest
@@ -148,13 +148,13 @@ typing-extensions==4.6.3
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==2.0.3
+urllib3==1.26.14
     # via
     #   docker
     #   requests
 virtualenv==20.23.0
     # via pytest-salt-factories
-websocket-client==1.5.3
+websocket-client==0.40.0
     # via docker
 zc.lockfile==3.0.post1
     # via cherrypy

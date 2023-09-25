@@ -160,7 +160,7 @@ urllib3==1.26.6
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
-zc.lockfile==1.4
+zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
