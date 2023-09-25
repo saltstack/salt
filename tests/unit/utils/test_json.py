@@ -2,6 +2,7 @@
 Tests for salt.utils.json
 """
 
+import datetime
 import textwrap
 
 import salt.utils.files
@@ -105,7 +106,7 @@ class JSONTestCase(TestCase):
         self.assertDictEqual(ret, expected_ret)
 
         # Now pre-pend some garbage and re-test
-        garbage_prepend_json = "{}{}".format(LOREM_IPSUM, test_sample_json)
+        garbage_prepend_json = f"{LOREM_IPSUM}{test_sample_json}"
         ret = salt.utils.json.find_json(garbage_prepend_json)
         self.assertDictEqual(ret, expected_ret)
 
@@ -145,3 +146,13 @@ class JSONTestCase(TestCase):
             ret = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp_.read()))
             # Loading should be equal to the original data
             self.assertEqual(ret, self.data)
+
+    def test_datetime_encoding(self):
+        dt = datetime.datetime(2021, 9, 25, 12, 30, 45)
+        encoded = salt.utils.json.dumps({"time": dt})
+        self.assertEqual(encoded, '{"time": "2021-09-25T12:30:45"}')
+
+    def test_date_encoding(self):
+        dt = datetime.date(2021, 9, 25)
+        encoded = salt.utils.json.dumps({"time": dt})
+        self.assertEqual(encoded, '{"time": "2021-09-25"}')
