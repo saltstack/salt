@@ -825,6 +825,9 @@ def pkg_matrix(
 
     for version, backend in adj_versions:
         prefix = prefixes[backend]
+        # TODO: Remove this after 3009.0
+        if backend == "relenv" and version >= tools.utils.Version("3007.0"):
+            prefix.replace("/arm64/", "/aarch64/")
         # Using a paginator allows us to list recursively and avoid the item limit
         # TODO: Swap this for the prod bucket before merge
         page_iterator = paginator.paginate(
