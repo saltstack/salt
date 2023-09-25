@@ -7838,6 +7838,9 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
+    check_cmd=None,
+    tmp_dir="",
+    tmp_ext="",
     **kwargs,
 ):
     """
@@ -7987,6 +7990,52 @@ def serialize(
         which accept a callable object cannot be handled in an SLS file.
 
         .. versionadded:: 2019.2.0
+
+    check_cmd
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new file contents.  If the command
+        exits with a zero status the new file contents will be written to
+        the state output destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/consul.d/my_config.json:
+              file.serialize:
+                - dataset:
+                    datacenter: "east-aws"
+                    data_dir: "/opt/consul"
+                    log_level: "INFO"
+                    node_name: "foobar"
+                    server: true
+                    watches:
+                      - type: checks
+                        handler: "/usr/bin/health-check-handler.sh"
+                    telemetry:
+                      statsite_address: "127.0.0.1:2180"
+                - serializer: json
+                - check_cmd: consul validate
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
+
+        .. versionadded:: 3007.0
+
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. versionadded:: 3007.0
+
+    tmp_ext
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file extension.
+
+        .. versionadded:: 3007.0
 
     For example, this state:
 
@@ -8187,6 +8236,58 @@ def serialize(
             ret["result"] = True
             ret["comment"] = f"The file {name} is in the correct state"
     else:
+        if check_cmd:
+            tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
+
+            # if exists copy existing file to tmp to compare
+            if __salt__["file.file_exists"](name):
+                try:
+                    __salt__["file.copy"](name, tmp_filename)
+                except Exception as exc:  # pylint: disable=broad-except
+                    return _error(
+                        ret,
+                        f"Unable to copy file {name} to {tmp_filename}: {exc}",
+                    )
+
+            try:
+                check_ret = __salt__["file.manage_file"](
+                    name=tmp_filename,
+                    sfn="",
+                    ret=ret,
+                    source=None,
+                    source_sum={},
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    attrs=None,
+                    saltenv=__env__,
+                    backup=backup,
+                    makedirs=makedirs,
+                    template=None,
+                    show_changes=show_changes,
+                    encoding=encoding,
+                    encoding_errors=encoding_errors,
+                    contents=contents,
+                )
+
+                if check_ret["changes"]:
+                    check_cmd_opts = {}
+                    if "shell" in __grains__:
+                        check_cmd_opts["shell"] = __grains__["shell"]
+
+                    cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
+
+                    # dict return indicates check_cmd failure
+                    if isinstance(cret, dict):
+                        ret.update(cret)
+                        return ret
+
+            except Exception as exc:  # pylint: disable=broad-except
+                return _error(ret, f"Unable to check_cmd file: {exc}")
+
+            finally:
+                salt.utils.files.remove(tmp_filename)
+
         ret = __salt__["file.manage_file"](
             name=name,
             sfn="",
@@ -8398,8 +8499,8 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     """
     Execute the check_cmd logic.
 
-    Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
-    otherwise return True
+    Return True if ``check_cmd`` succeeds (check_cmd == 0)
+    otherwise return a result dict
     """
 
     log.debug("running our check_cmd")
