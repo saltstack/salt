@@ -660,6 +660,7 @@ packaging==22.0
     # via
     #   -r requirements/base.txt
     #   ansible-core
+    #   docker
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -931,6 +932,7 @@ tzlocal==2.1
 urllib3==1.26.6
     # via
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
