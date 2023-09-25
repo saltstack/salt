@@ -96,13 +96,13 @@ setproctitle==1.3.2
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via python-dateutil
-tempora==5.2.2
+tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/linux.in
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via pydantic
 urllib3==1.26.6
     # via requests

@@ -106,7 +106,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-salt-factories==1.0.0rc17
     # via -r requirements/static/ci/pkgtests.in
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
 pytest-skip-markers==1.4.1
     # via
@@ -141,7 +141,7 @@ tempora==5.3.0
     # via portend
 tomli==2.0.1
     # via pytest
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
 typing-extensions==4.6.3
     # via

@@ -26,6 +26,7 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
+from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
 
 try:
@@ -259,6 +260,15 @@ class ReqServerChannel:
         return False
 
     def _decode_payload(self, payload):
+        # Sometimes msgpack deserialization of random bytes could be successful,
+        # so we need to ensure payload in good shape to process this function.
+        if (
+            not isinstance(payload, dict)
+            or "enc" not in payload
+            or "load" not in payload
+        ):
+            raise SaltDeserializationError("bad load received on socket!")
+
         # we need to decrypt it
         if payload["enc"] == "aes":
             try:
