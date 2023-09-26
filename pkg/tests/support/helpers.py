@@ -272,9 +272,10 @@ class SaltPkgInstall:
                     ]
                     pkg_version = 1
                     for number in pkg_numbers:
-                        number = int(number.split("-")[1])
-                        if number > pkg_version:
-                            pkg_version = number
+                        if "-" in number:
+                            number = int(number.split("-")[1])
+                            if number > pkg_version:
+                                pkg_version = number
             major, minor = prev_version.split(".")
         if version_only:
             return version
