@@ -548,6 +548,24 @@ def combine_coverage(ctx: Context, name: str):
 
 
 @vm.command(
+    name="create-xml-coverage-reports",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+    },
+)
+def create_xml_coverage_reports(ctx: Context, name: str):
+    """
+    Create XML code coverage reports in the VM.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.create_xml_coverage_reports()
+    ctx.exit(returncode)
+
+
+@vm.command(
     name="download-artifacts",
     arguments={
         "name": {
@@ -1414,6 +1432,12 @@ class VM:
         Combine the code coverage databases
         """
         return self.run_nox("combine-coverage", session_args=[self.name])
+
+    def create_xml_coverage_reports(self):
+        """
+        Create XML coverage reports
+        """
+        return self.run_nox("create-xml-coverage-reports", session_args=[self.name])
 
     def compress_dependencies(self):
         """

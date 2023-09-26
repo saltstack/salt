@@ -367,9 +367,10 @@ def _install_coverage_requirement(session):
         )
 
 
-def _run_with_coverage(session, *test_cmd, env=None):
+def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
     _install_coverage_requirement(session)
-    session.run("coverage", "erase")
+    if on_rerun is False:
+        session.run("coverage", "erase")
 
     if env is None:
         env = {}
@@ -440,8 +441,8 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "xml",
                 "-o",
                 str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-                "--omit=salt/*",
-                "--include=tests/*",
+                "--omit=salt/*,artifacts/salt/*",
+                "--include=tests/*,pkg/tests/*",
                 env=coverage_base_env,
             )
             # Generate report for salt code coverage
@@ -450,8 +451,8 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "xml",
                 "-o",
                 str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-                "--omit=tests/*",
-                "--include=salt/*",
+                "--omit=tests/*,pkg/tests/*",
+                "--include=salt/*,artifacts/salt/*",
                 env=coverage_base_env,
             )
             # Generate html report for tests code coverage
@@ -460,8 +461,8 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "html",
                 "-d",
                 str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-                "--omit=salt/*",
-                "--include=tests/*",
+                "--omit=salt/*,artifacts/salt/*",
+                "--include=tests/*,pkg/tests/*",
                 env=coverage_base_env,
             )
             # Generate html report for salt code coverage
@@ -470,8 +471,8 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "html",
                 "-d",
                 str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-                "--omit=tests/*",
-                "--include=salt/*",
+                "--omit=tests/*,pkg/tests/*",
+                "--include=salt/*,artifacts/salt/*",
                 env=coverage_base_env,
             )
 
@@ -521,8 +522,8 @@ def _report_coverage(session):
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-salt.json"
         )
         cmd_args = [
-            "--omit=tests/*",
-            "--include=salt/*",
+            "--omit=tests/*,pkg/tests/*",
+            "--include=salt/*,artifacts/salt/*",
         ]
 
     elif report_section == "tests":
@@ -530,15 +531,15 @@ def _report_coverage(session):
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
         )
         cmd_args = [
-            "--omit=salt/*",
-            "--include=tests/*",
+            "--omit=salt/*,artifacts/salt/*",
+            "--include=tests/*,pkg/tests/*",
         ]
     else:
         json_coverage_file = (
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
         )
         cmd_args = [
-            "--include=salt/*,tests/*",
+            "--include=salt/*,artifacts/salt/*,tests/*,pkg/tests/*",
         ]
 
     session.run(
@@ -1020,7 +1021,7 @@ def pytest_tornado(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-def _pytest(session, coverage, cmd_args, env=None):
+def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
     # Create required artifacts directories
     _create_ci_directories()
 
@@ -1074,6 +1075,7 @@ def _pytest(session, coverage, cmd_args, env=None):
             "pytest",
             *args,
             env=env,
+            on_rerun=on_rerun,
         )
     else:
         session.run("python", "-m", "pytest", *args, env=env)
@@ -1166,7 +1168,13 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
+        _pytest(
+            session,
+            coverage=track_code_coverage,
+            cmd_args=pytest_args,
+            env=env,
+            on_rerun=True,
+        )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
@@ -1371,10 +1379,48 @@ def create_html_coverage_report(session):
         "html",
         "-d",
         str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-        "--include=salt/*,tests/*",
+        "--include=salt/*,artifacts/salt/*,tests/*,pkg/tests/*",
         "--show-contexts",
         env=env,
     )
+
+
+@nox.session(python="3", name="create-xml-coverage-reports")
+def create_xml_coverage_reports(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Generate report for tests code coverage
+    try:
+        session.run(
+            "coverage",
+            "xml",
+            "-o",
+            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
+            "--omit=salt/*,artifacts/salt/*",
+            "--include=tests/*,pkg/tests/*",
+            env=env,
+        )
+    except CommandFailed:
+        session_warn(session, "Failed to generate the tests XML code coverage report")
+
+    # Generate report for salt code coverage
+    try:
+        session.run(
+            "coverage",
+            "xml",
+            "-o",
+            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+            "--omit=tests/*,pkg/tests/*",
+            "--include=salt/*,artifacts/salt/*",
+            env=env,
+        )
+    except CommandFailed:
+        session_warn(session, "Failed to generate the source XML code coverage report")
 
 
 class Tee:
