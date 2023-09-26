@@ -818,12 +818,12 @@ def pkg_matrix(
             key_filter = (
                 f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
-        # objects = list(page_iterator.search(f"Contents[?contains(Key, '{key_filter}')][]"))
-        objects = page_iterator.search(key_filter)
-        # ctx.info(objects)
-        try:
-            first = next(objects)
-            ctx.info(f"Found {version} ({backend}) for {distro_slug}: {first['Key']}")
+        objects = list(page_iterator.search(key_filter))
+        # Testing using `any` because sometimes the paginator returns `[None]`
+        if any(objects):
+            ctx.info(
+                f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
+            )
             for session in ("upgrade", "downgrade"):
                 matrix.append(
                     {
@@ -833,7 +833,7 @@ def pkg_matrix(
                         "version": str(version),
                     }
                 )
-        except StopIteration:
+        else:
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
