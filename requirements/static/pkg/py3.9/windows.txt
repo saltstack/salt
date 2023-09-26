@@ -25,7 +25,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.3
+cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/windows.txt
@@ -130,7 +130,7 @@ tornado==6.3.2
     # via -r requirements/base.txt
 typing-extensions==4.6.3
     # via pydantic
-urllib3==1.26.6
+urllib3==1.26.14
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -138,7 +138,7 @@ wheel==0.38.4
     # via -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 zipp==3.15.0
     # via importlib-metadata
