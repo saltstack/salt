@@ -67,7 +67,7 @@ else:
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace"]
+pytest_plugins = ["helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -110,17 +110,6 @@ for handler in logging.root.handlers[:]:
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
-
-
-# ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
-def pytest_tempdir_basename():
-    """
-    Return the temporary directory basename for the salt test suite.
-    """
-    return "stsuite"
-
-
-# <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
@@ -171,8 +160,8 @@ def pytest_addoption(parser):
         "--no-fast",
         "--no-fast-tests",
         dest="fast",
-        action="store_false",
-        default=True,
+        action="store_true",
+        default=False,
         help="Don't run salt-fast tests. Default: %(default)s",
     )
     test_selection_group.addoption(
@@ -258,18 +247,19 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
-    # try:
-    #     assert config._onedir_check_complete
-    #     return
-    # except AttributeError:
-    #     if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-    #         if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
-    #             raise pytest.UsageError(
-    #                 "Apparently running the test suite against the onedir build "
-    #                 "of salt, however, the imported salt package is pointing to "
-    #                 "the respository checkout instead of the onedir package."
-    #             )
-    #     config._onedir_check_complete = True
+    try:
+        assert config._onedir_check_complete
+        return
+    except AttributeError:
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
+                raise pytest.UsageError(
+                    "Apparently running the test suite against the onedir build "
+                    "of salt, however, the imported salt package is pointing to "
+                    "the respository checkout instead of the onedir package.\n\n"
+                    f"  * sys.path: {sys.path}"
+                )
+        config._onedir_check_complete = True
 
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
@@ -577,33 +567,37 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
+    test_group_count = sum(
+        bool(item.get_closest_marker(group))
+        for group in ("core_test", "slow_test", "flaky_jail")
+    )
+    if item.get_closest_marker("core_test") and item.get_closest_marker("slow_test"):
+        raise pytest.UsageError(
+            "Tests can only be in one test group. ('core_test', 'slow_test')"
+        )
 
-    if item.get_closest_marker("core_test"):
-        if not item.config.getoption("--core-tests"):
-            raise pytest.skip.Exception(
-                "Core tests are disabled, pass '--core-tests' to enable them.",
-                _use_item_location=True,
-            )
-    if item.get_closest_marker("slow_test"):
-        if not item.config.getoption("--slow-tests"):
-            raise pytest.skip.Exception(
-                "Slow tests are disabled, pass '--run-slow' to enable them.",
-                _use_item_location=True,
-            )
     if item.get_closest_marker("flaky_jail"):
         if not item.config.getoption("--flaky-jail"):
             raise pytest.skip.Exception(
                 "flaky jail tests are disabled, pass '--flaky-jail' to enable them.",
                 _use_item_location=True,
             )
-    if (
-        not item.get_closest_marker("slow_test")
-        and not item.get_closest_marker("core_test")
-        and not item.get_closest_marker("flaky_jail")
-    ):
-        if not item.config.getoption("--no-fast-tests"):
+    else:
+        if item.get_closest_marker("core_test"):
+            if not item.config.getoption("--core-tests"):
+                raise pytest.skip.Exception(
+                    "Core tests are disabled, pass '--core-tests' to enable them.",
+                    _use_item_location=True,
+                )
+        if item.get_closest_marker("slow_test"):
+            if not item.config.getoption("--slow-tests"):
+                raise pytest.skip.Exception(
+                    "Slow tests are disabled, pass '--run-slow' to enable them.",
+                    _use_item_location=True,
+                )
+        if test_group_count == 0 and item.config.getoption("--no-fast-tests"):
             raise pytest.skip.Exception(
-                "Fast tests are disabled, dont pass '--no-fast-tests' to enable them.",
+                "Fast tests have been disabled by '--no-fast-tests'.",
                 _use_item_location=True,
             )
 
@@ -859,6 +853,22 @@ def groups_collection_modifyitems(config, items):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
+@pytest.fixture(scope="session")
+def salt_factories_default_root_dir(salt_factories_default_root_dir):
+    """
+    The root directory from where to base all salt-factories paths.
+
+    For example, in a salt system installation, this would be ``/``.
+
+    .. admonition:: Attention
+
+        If `root_dir` is returned on the `salt_factories_config()` fixture
+        dictionary, then that's the value used, and not the one returned by
+        this fixture.
+    """
+    return salt_factories_default_root_dir / "stsuite"
+
+
 @pytest.fixture(scope="session")
 def salt_factories_config():
     """

@@ -902,7 +902,8 @@ class SaltEvent:
                     data["success"] = False
                     data["return"] = "Error: {}.{}".format(tags[0], tags[-1])
                     data["fun"] = fun
-                    data["user"] = load["user"]
+                    if "user" in load:
+                        data["user"] = load["user"]
                     self.fire_event(
                         data,
                         tagify([load["jid"], "sub", load["id"], "error", fun], "job"),

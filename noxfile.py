@@ -456,6 +456,26 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "--include=salt/*",
                 env=coverage_base_env,
             )
+            # Generate html report for tests code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate html report for salt code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
@@ -1033,12 +1053,16 @@ def _pytest(session, coverage, cmd_args, env=None):
             return
 
     if coverage is True:
+        _coverage_cmd_args = []
+        if "COVERAGE_CONTEXT" in os.environ:
+            _coverage_cmd_args.append(f"--context={os.environ['COVERAGE_CONTEXT']}")
         _run_with_coverage(
             session,
             "python",
             "-m",
             "coverage",
             "run",
+            *_coverage_cmd_args,
             "-m",
             "pytest",
             *args,
@@ -1323,6 +1347,27 @@ def combine_coverage(session):
         # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
         # exception
         pass
+
+
+@nox.session(python="3", name="create-html-coverage-report")
+def create_html_coverage_report(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Generate html report for Salt and tests combined code coverage
+    session.run(
+        "coverage",
+        "html",
+        "-d",
+        str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+        "--include=salt/*,tests/*",
+        "--show-contexts",
+        env=env,
+    )
 
 
 class Tee:
@@ -1743,18 +1788,28 @@ def test_pkgs_onedir(session):
     chunks = {
         "install": ["pkg/tests/"],
         "upgrade": [
-            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
             "--upgrade",
             "--no-uninstall",
+            "pkg/tests/upgrade/",
         ],
         "upgrade-classic": [
-            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
             "--upgrade",
             "--no-uninstall",
+            "pkg/tests/upgrade/",
+        ],
+        "downgrade": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
+        ],
+        "downgrade-classic": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "pkg/tests/download/test_pkg_download.py",
+            "pkg/tests/download/",
         ],
     }
 
@@ -1793,7 +1848,7 @@ def test_pkgs_onedir(session):
         "PKG_TEST_TYPE": chunk,
     }
 
-    if chunk == "upgrade-classic":
+    if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
         # Workaround for installing and running classic packages from 3005.1
         # They can only run with importlib-metadata<5.0.0.
@@ -1802,22 +1857,31 @@ def test_pkgs_onedir(session):
     pytest_args = (
         cmd_args[:]
         + [
+            "-c",
+            str(REPO_ROOT / "pkg-tests-pytest.ini"),
             f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
             f"--log-file=artifacts/logs/{runtests_log_filename}.log",
         ]
         + session.posargs
     )
     _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
             cmd_args[:]
             + [
+                "-c",
+                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
                 f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
                 f"--log-file=artifacts/logs/{runtests_log_filename}.log",
             ]
             + session.posargs
         )
+        if "downgrade" in chunk:
+            pytest_args.append("--use-prev-version")
+        if chunk in ("upgrade-classic", "downgrade-classic"):
+            pytest_args.append("--classic")
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     sys.exit(0)

@@ -1,4 +1,5 @@
 # Lint requirements
+docker
 pylint==2.4.4
-SaltPyLint>=v2020.9.28
+SaltPyLint>=2023.3.8
 toml

@@ -31,7 +31,7 @@ def version(install_salt):
     """
     get version number from artifact
     """
-    return install_salt.get_version(version_only=True)
+    return install_salt.version
 
 
 @pytest.fixture(scope="session")
@@ -42,6 +42,32 @@ def sminion():
 @pytest.fixture(scope="session")
 def grains(sminion):
     return sminion.opts["grains"].copy()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _system_up_to_date(
+    grains,
+    shell,
+):
+    if grains["os_family"] == "Debian":
+        ret = shell.run("apt", "update")
+        assert ret.returncode == 0
+        env = os.environ.copy()
+        env["DEBIAN_FRONTEND"] = "noninteractive"
+        ret = shell.run(
+            "apt",
+            "upgrade",
+            "-y",
+            "-o",
+            "DPkg::Options::=--force-confdef",
+            "-o",
+            "DPkg::Options::=--force-confold",
+            env=env,
+        )
+        assert ret.returncode == 0
+    elif grains["os_family"] == "Redhat":
+        ret = shell.run("yum", "update", "-y")
+        assert ret.returncode == 0
 
 
 def pytest_addoption(parser):
@@ -60,6 +86,12 @@ def pytest_addoption(parser):
         default=False,
         action="store_true",
         help="Install previous version and then upgrade then run tests",
+    )
+    test_selection_group.addoption(
+        "--downgrade",
+        default=False,
+        action="store_true",
+        help="Install current version and then downgrade to the previous version and run tests",
     )
     test_selection_group.addoption(
         "--no-install",
@@ -83,6 +115,11 @@ def pytest_addoption(parser):
         "--prev-version",
         action="store",
         help="Test an upgrade from the version specified.",
+    )
+    test_selection_group.addoption(
+        "--use-prev-version",
+        action="store_true",
+        help="Tells the test suite to validate the version using the previous version (for downgrades)",
     )
     test_selection_group.addoption(
         "--download-pkgs",
@@ -142,10 +179,12 @@ def install_salt(request, salt_factories_root_dir):
         conf_dir=salt_factories_root_dir / "etc" / "salt",
         system_service=request.config.getoption("--system-service"),
         upgrade=request.config.getoption("--upgrade"),
+        downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
         classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
+        use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
         yield fixture
 
@@ -326,30 +365,30 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                 config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
                     "api_pidfile"
                 )
-                # verify files where set with correct owner/group
+                # verify files were set with correct owner/group
                 verify_files = [
-                    pathlib.Path("/var", "log", "salt"),
-                    pathlib.Path("/etc", "salt", "master"),
+                    pathlib.Path("/etc", "salt", "pki", "master"),
+                    pathlib.Path("/etc", "salt", "master.d"),
                     pathlib.Path("/var", "cache", "salt", "master"),
                 ]
                 for _file in verify_files:
                     assert _file.owner() == "salt"
                     assert _file.group() == "salt"
 
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
-        # For every minion started we have to accept it's key.
-        # On windows, using single binary, it has to decompress it and run the command. Too slow.
-        # So, just in this scenario, use open mode
-        config_overrides["open_mode"] = True
     master_script = False
     if platform.is_windows():
         if install_salt.classic:
             master_script = True
-        # this check will need to be changed to install_salt.relenv
-        # once the package version returns 3006 and not 3005 on master
+        if install_salt.relenv:
+            master_script = True
         elif not install_salt.upgrade:
             master_script = True
+        if (
+            not install_salt.relenv
+            and install_salt.use_prev_version
+            and not install_salt.classic
+        ):
+            master_script = False
 
     if master_script:
         salt_factories.system_install = False
@@ -360,6 +399,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         if install_salt.classic:
             python_executable = install_salt.bin_dir / "python.exe"
+        if install_salt.relenv:
+            python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
@@ -380,10 +421,17 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     if test_user:
         # Salt factories calls salt.utils.verify.verify_env
-        # which sets root perms on /var/log/salt since we are running
+        # which sets root perms on /etc/salt/pki/master since we are running
         # the test suite as root, but we want to run Salt master as salt
         # We ensure those permissions where set by the package earlier
-        shutil.chown(pathlib.Path("/var", "log", "salt"), "salt", "salt")
+        subprocess.run(
+            [
+                "chown",
+                "-R",
+                "salt:salt",
+                str(pathlib.Path("/etc", "salt", "pki", "master")),
+            ]
+        )
         # The engines_dirs is created in .nox path. We need to set correct perms
         # for the user running the Salt Master
         subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
@@ -402,8 +450,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
     Start up a minion
     """
     start_timeout = None
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
     minion_id = random_string("minion-")
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
@@ -494,8 +540,6 @@ def salt_api(salt_master, install_salt, extras_pypath):
     """
     shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
-    if platform.is_windows() and install_salt.singlebin:
-        start_timeout = 240
     factory = salt_master.salt_api_daemon()
     with factory.started(start_timeout=start_timeout):
         yield factory

@@ -8,7 +8,7 @@ adal==1.2.7
     # via
     #   azure-datalake-store
     #   msrestazure
-aiohttp==3.8.1
+aiohttp==3.8.5
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
@@ -336,9 +336,9 @@ backports.zoneinfo==0.2.1
     # via tzlocal
 bcrypt==3.2.0
     # via
+    #   -r requirements/static/ci/common.in
     #   paramiko
-    #   passlib
-boto3==1.21.46 ; python_version >= "3.6"
+boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -355,7 +355,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.12.7
+certifi==2023.07.22
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -364,7 +364,7 @@ certifi==2022.12.7
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.15.1
     # via
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
@@ -397,7 +397,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==39.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/static/pkg/linux.in
     #   adal
@@ -420,8 +420,8 @@ dnspython==2.1.0
     #   ciscoconfparse
     #   python-etcd
 docker==5.0.0
-    # via -r requirements/static/ci/common.in
-etcd3-py==0.1.6 ; python_version >= "3.6"
+    # via -r requirements/static/ci/lint.in
+etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
@@ -439,7 +439,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
@@ -450,7 +450,7 @@ idna==3.2
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.16
+immutables==0.19
     # via contextvars
 importlib-metadata==4.6.4
     # via -r requirements/static/pkg/linux.in
@@ -532,7 +532,7 @@ more-itertools==8.8.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1 ; python_version >= "3.6"
+moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
@@ -632,7 +632,7 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
-napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
+napalm==3.3.1 ; sys_platform != "win32" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.12
     # via
@@ -665,7 +665,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   ncclient
     #   netmiko
     #   scp
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
@@ -705,11 +705,13 @@ pylint==2.4.4
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.0.2 ; python_version > "3.5"
+pymysql==1.0.2
     # via -r requirements/static/ci/linux.in
-pynacl==1.4.0
-    # via paramiko
-pyopenssl==23.0.0
+pynacl==1.5.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   paramiko
+pyopenssl==23.2.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -740,7 +742,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
+python-telegram-bot==13.7
     # via -r requirements/static/ci/linux.in
 pytz==2022.1
     # via
@@ -751,7 +753,7 @@ pytz==2022.1
     #   twilio
 pyvmomi==7.0.2
     # via -r requirements/static/ci/common.in
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -805,7 +807,7 @@ rsa==4.7.2
     # via google-auth
 s3transfer==0.5.0
     # via boto3
-saltpylint==2020.9.28
+saltpylint==2023.8.3
     # via -r requirements/static/ci/lint.in
 scp==0.13.6
     # via
@@ -834,7 +836,6 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   paramiko
-    #   pynacl
     #   python-consul
     #   python-dateutil
     #   pyvmomi

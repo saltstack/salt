@@ -8,6 +8,7 @@ import fnmatch
 import logging
 import os
 import sys
+import time
 import traceback
 
 import salt.channel.client
@@ -259,6 +260,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         try:
+            start = time.monotonic()
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -266,6 +268,10 @@ class AsyncRemotePillar(RemotePillarMixin):
         except salt.crypt.AuthenticationError as exc:
             log.error(exc.message)
             raise SaltClientError("Exception getting pillar.")
+        except salt.exceptions.SaltReqTimeoutError:
+            raise SaltClientError(
+                f"Pillar timed out after {int(time.monotonic() - start)} seconds"
+            )
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
@@ -350,10 +356,23 @@ class RemotePillar(RemotePillarMixin):
         }
         if self.ext:
             load["ext"] = self.ext
-        ret_pillar = self.channel.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
+
+        try:
+            start = time.monotonic()
+            ret_pillar = self.channel.crypted_transfer_decode_dictentry(
+                load,
+                dictkey="pillar",
+            )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
+        except salt.exceptions.SaltReqTimeoutError:
+            raise SaltClientError(
+                f"Pillar timed out after {int(time.monotonic() - start)} seconds"
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Exception getting pillar:")
+            raise SaltClientError("Exception getting pillar.")
 
         if not isinstance(ret_pillar, dict):
             log.error(
@@ -925,7 +944,7 @@ class Pillar:
                 saltenv,
                 sls,
                 _pillar_rend=True,
-                **defaults
+                **defaults,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Rendering SLS '{}' failed, render error:\n{}".format(sls, exc)
@@ -1104,7 +1123,7 @@ class Pillar:
                     self.minion_id,
                     pillar,
                     extra_minion_data=self.extra_minion_data,
-                    **val
+                    **val,
                 )
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
@@ -1114,7 +1133,7 @@ class Pillar:
                     self.minion_id,
                     pillar,
                     *val,
-                    extra_minion_data=self.extra_minion_data
+                    extra_minion_data=self.extra_minion_data,
                 )
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, *val)

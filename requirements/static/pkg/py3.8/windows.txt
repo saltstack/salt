@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.8/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-certifi==2022.12.7
+certifi==2023.07.22
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -13,7 +13,7 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -23,7 +23,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -31,7 +31,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.35
     # via -r requirements/windows.txt
 idna==2.8
     # via requests
@@ -90,7 +90,7 @@ pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via -r requirements/windows.txt
 python-dateutil==2.8.1
     # via -r requirements/windows.txt
@@ -105,7 +105,7 @@ pywin32==305
     #   -r requirements/windows.txt
     #   cherrypy
     #   wmi
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt

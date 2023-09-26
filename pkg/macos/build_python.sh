@@ -23,6 +23,7 @@
 # TODO: is building
 
 # Locations
+SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYS_PY_BIN="$(which python3)"
 BUILD_DIR="$SCRIPT_DIR/build"
@@ -43,13 +44,14 @@ _usage() {
      echo "usage: ${0}"
      echo "             [-h|--help] [-v|--version]"
      echo ""
-     echo "  -h, --help      this message"
-     echo "  -b, --build     build python instead of fetching"
-     echo "  -v, --version   version of python to install, must be available with relenv"
-     echo "  -r, --relenv-version   version of python to install, must be available with relenv"
+     echo "  -h, --help             this message"
+     echo "  -b, --build            build python instead of fetching"
+     echo "  -v, --version          version of python to install, must be a"
+     echo "                         version available in relenv"
+     echo "  -r, --relenv-version   version of relenv to install"
      echo ""
-     echo "  To build python 3.10.11:"
-     echo "      example: $0 --version 3.10.11"
+     echo "  To build python 3.10.13 you need to use relenv 0.13.5:"
+     echo "      example: $0 --relenv-version 0.13.5 --version 3.10.13"
 }
 
 # _msg
@@ -72,6 +74,23 @@ _success() {
 _failure() {
     printf '\e[31m%s\e[0m\n' "Failure"
     exit 1
+}
+
+function _parse_yaml {
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
 }
 
 #-------------------------------------------------------------------------------
@@ -112,6 +131,17 @@ while true; do
     esac
 done
 
+# Get defaults from workflows. This defines $python_version and $relenv_version
+eval "$(_parse_yaml "$SRC_DIR/cicd/shared-gh-workflows-context.yml")"
+
+if [ -z "$PY_VERSION" ]; then
+    PY_VERSION=$python_version
+fi
+
+if [ -z "$RELENV_VERSION" ]; then
+    RELENV_VERSION=$relenv_version
+fi
+
 #-------------------------------------------------------------------------------
 # Script Start
 #-------------------------------------------------------------------------------
@@ -122,6 +152,7 @@ else
     echo "Fetch Python with Relenv"
 fi
 echo "- Python Version: $PY_VERSION"
+echo "- Relenv Version: $RELENV_VERSION"
 printf -- "-%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
@@ -191,28 +222,28 @@ fi
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
 if [ -n "${RELENV_VERSION}" ]; then
-    pip install relenv==${RELENV_VERSION} >/dev/null 2>&1
-    export RELENV_FETCH_VERSION=${RELENV_VERSION}
+    pip install relenv==${RELENV_VERSION}
 else
-    pip install relenv >/dev/null 2>&1
+    pip install relenv
 fi
 if [ -n "$(relenv --version)" ]; then
     _success
 else
     _failure
 fi
+export RELENV_FETCH_VERSION=$(relenv --version)
 
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
 if [ $BUILD -gt 0 ]; then
     echo "- Building python (relenv):"
-    relenv build --clean
+    relenv build --clean --python=$PY_VERSION
 else
     # We want to suppress the output here so it looks nice
     # To see the output, remove the output redirection
     _msg "Fetching python (relenv)"
-    relenv fetch --python $PY_VERSION >/dev/null 2>&1
+    relenv fetch --python=$PY_VERSION
     if [ -f "$RELENV_DIR/build/$PY_VERSION-x86_64-macos.tar.xz" ]; then
         _success
     else

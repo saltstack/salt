@@ -1747,21 +1747,29 @@ def _get_opts(line):
 
 def _split_repo_str(repo):
     """
-    Return APT source entry as a tuple.
+    Return APT source entry as a dictionary
     """
-    split = SourceEntry(repo)
+    entry = SourceEntry(repo)
+    invalid = entry.invalid
     if not HAS_APT:
-        signedby = split.signedby
+        signedby = entry.signedby
     else:
         signedby = _get_opts(line=repo)["signedby"].get("value", "")
-    return (
-        split.type,
-        split.architectures,
-        split.uri,
-        split.dist,
-        split.comps,
-        signedby,
-    )
+        if signedby:
+            # python3-apt does not support signedby. So if signedby
+            # is in the repo we have to check our code to see if the
+            # repo is invalid ourselves.
+            _, invalid, _, _ = _invalid(repo)
+
+    return {
+        "invalid": invalid,
+        "type": entry.type,
+        "architectures": entry.architectures,
+        "uri": entry.uri,
+        "dist": entry.dist,
+        "comps": entry.comps,
+        "signedby": signedby,
+    }
 
 
 def _consolidate_repo_sources(sources):
@@ -1972,19 +1980,12 @@ def get_repo(repo, **kwargs):
 
     if repos:
         try:
-            (
-                repo_type,
-                repo_architectures,
-                repo_uri,
-                repo_dist,
-                repo_comps,
-                repo_signedby,
-            ) = _split_repo_str(repo)
+            repo_entry = _split_repo_str(repo)
             if ppa_auth:
-                uri_match = re.search("(http[s]?://)(.+)", repo_uri)
+                uri_match = re.search("(http[s]?://)(.+)", repo_entry["uri"])
                 if uri_match:
                     if not uri_match.group(2).startswith(ppa_auth):
-                        repo_uri = "{}{}@{}".format(
+                        repo_entry["uri"] = "{}{}@{}".format(
                             uri_match.group(1), ppa_auth, uri_match.group(2)
                         )
         except SyntaxError:
@@ -1995,13 +1996,13 @@ def get_repo(repo, **kwargs):
         for source in repos.values():
             for sub in source:
                 if (
-                    sub["type"] == repo_type
-                    and sub["uri"] == repo_uri
-                    and sub["dist"] == repo_dist
+                    sub["type"] == repo_entry["type"]
+                    and sub["uri"].rstrip("/") == repo_entry["uri"].rstrip("/")
+                    and sub["dist"] == repo_entry["dist"]
                 ):
-                    if not repo_comps:
+                    if not repo_entry["comps"]:
                         return sub
-                    for comp in repo_comps:
+                    for comp in repo_entry["comps"]:
                         if comp in sub.get("comps", []):
                             return sub
     return {}
@@ -2049,14 +2050,7 @@ def del_repo(repo, **kwargs):
     if repos:
         deleted_from = dict()
         try:
-            (
-                repo_type,
-                repo_architectures,
-                repo_uri,
-                repo_dist,
-                repo_comps,
-                repo_signedby,
-            ) = _split_repo_str(repo)
+            repo_entry = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
                 "Error: repo '{}' not a well formatted definition".format(repo)
@@ -2064,15 +2058,15 @@ def del_repo(repo, **kwargs):
 
         for source in repos:
             if (
-                source.type == repo_type
-                and source.architectures == repo_architectures
-                and source.uri == repo_uri
-                and source.dist == repo_dist
+                source.type == repo_entry["type"]
+                and source.architectures == repo_entry["architectures"]
+                and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
+                and source.dist == repo_entry["dist"]
             ):
 
                 s_comps = set(source.comps)
-                r_comps = set(repo_comps)
-                if s_comps.intersection(r_comps):
+                r_comps = set(repo_entry["comps"])
+                if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
                     if not source.comps:
@@ -2085,15 +2079,15 @@ def del_repo(repo, **kwargs):
             # measure
             if (
                 is_ppa
-                and repo_type == "deb"
+                and repo_entry["type"] == "deb"
                 and source.type == "deb-src"
-                and source.uri == repo_uri
-                and source.dist == repo_dist
+                and source.uri == repo_entry["uri"]
+                and source.dist == repo_entry["dist"]
             ):
 
                 s_comps = set(source.comps)
-                r_comps = set(repo_comps)
-                if s_comps.intersection(r_comps):
+                r_comps = set(repo_entry["comps"])
+                if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
                     if not source.comps:
@@ -2749,23 +2743,22 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     mod_source = None
     try:
-        (
-            repo_type,
-            repo_architectures,
-            repo_uri,
-            repo_dist,
-            repo_comps,
-            repo_signedby,
-        ) = _split_repo_str(repo)
+        repo_entry = _split_repo_str(repo)
+        if repo_entry.get("invalid"):
+            raise SaltInvocationError(
+                f"Name {repo} is not valid. This must be the complete repo entry as seen in the sources file"
+            )
     except SyntaxError:
         raise SyntaxError(
             "Error: repo '{}' not a well formatted definition".format(repo)
         )
 
-    full_comp_list = {comp.strip() for comp in repo_comps}
+    full_comp_list = {comp.strip() for comp in repo_entry["comps"]}
     no_proxy = __salt__["config.option"]("no_proxy")
 
-    kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
+    kwargs["signedby"] = (
+        pathlib.Path(repo_entry["signedby"]) if repo_entry["signedby"] else ""
+    )
 
     if not aptkey and not kwargs["signedby"]:
         raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
@@ -2892,7 +2885,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if "architectures" in kwargs:
         kwargs["architectures"] = kwargs["architectures"].split(",")
     else:
-        kwargs["architectures"] = repo_architectures
+        kwargs["architectures"] = repo_entry["architectures"]
 
     if "disabled" in kwargs:
         kwargs["disabled"] = salt.utils.data.is_true(kwargs["disabled"])
@@ -2908,9 +2901,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            apt_source.type == repo_type
-            and apt_source.uri.rstrip("/") == repo_uri.rstrip("/")
-            and apt_source.dist == repo_dist
+            apt_source.type == repo_entry["type"]
+            and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
+            and apt_source.dist == repo_entry["dist"]
         )
         kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
 
@@ -2949,8 +2942,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
 
-    if mod_source.uri != repo_uri:
-        mod_source.uri = repo_uri
+    if mod_source.uri != repo_entry["uri"]:
+        mod_source.uri = repo_entry["uri"]
         mod_source.line = mod_source.str()
 
     sources.save()

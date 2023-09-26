@@ -4,13 +4,13 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.8/windows.txt --pip-args='--constraint=requirements/static/pkg/py3.8/windows.txt' requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.8.1
+aiohttp==3.8.5
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
 async-timeout==4.0.2
     # via aiohttp
-attrs==20.3.0
+attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
@@ -22,8 +22,8 @@ attrs==20.3.0
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==4.0.1
-    # via passlib
-boto3==1.21.46 ; python_version >= "3.6"
+    # via -r requirements/static/ci/common.in
+boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -38,19 +38,20 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.12.7
+certifi==2023.07.22
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
     #   kubernetes
     #   requests
-cffi==1.14.6
+cffi==1.15.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
     #   pygit2
+    #   pynacl
 charset-normalizer==2.0.12
     # via
     #   aiohttp
@@ -73,7 +74,7 @@ colorama==0.4.1
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -95,8 +96,8 @@ dnspython==1.16.0
 docker-pycreds==0.4.0
     # via docker
 docker==2.7.0
-    # via -r requirements/static/ci/common.in
-etcd3-py==0.1.6 ; python_version >= "3.6"
+    # via -r requirements/pytest.txt
+etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
     # via pytest
@@ -114,7 +115,7 @@ geomet==0.1.2
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.35
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -183,7 +184,7 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1 ; python_version >= "3.6"
+moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -199,7 +200,7 @@ packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
@@ -232,13 +233,15 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pygit2==1.9.1 ; python_version >= "3.7"
+pygit2==1.9.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==23.0.0
+pynacl==1.5.0
+    # via -r requirements/static/ci/common.in
+pyopenssl==23.2.0
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -255,11 +258,11 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc25
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.6.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.2.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -268,13 +271,9 @@ pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-tempdir==2019.10.12
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.2.0 ; python_version > "3.6"
+pytest==7.2.0
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -284,7 +283,6 @@ pytest==7.2.0 ; python_version > "3.6"
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
-    #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.1
     # via
@@ -312,11 +310,12 @@ pywin32==305
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
+    #   pytest-salt-factories
     #   yamllint
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via

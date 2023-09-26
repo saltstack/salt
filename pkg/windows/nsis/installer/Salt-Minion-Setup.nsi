@@ -1109,9 +1109,10 @@ Function ${un}uninstallSalt
         ${EndIf}
 
     # Remove files
-    Delete "$INSTDIR\uninst.exe"
-    Delete "$INSTDIR\ssm.exe"
+    Delete "$INSTDIR\multi-minion*"
     Delete "$INSTDIR\salt*"
+    Delete "$INSTDIR\ssm.exe"
+    Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\vcredist.exe"
     RMDir /r "$INSTDIR\DLLs"
     RMDir /r "$INSTDIR\Include"
@@ -1189,6 +1190,20 @@ Function ${un}uninstallSalt
 
     ${Else}
 
+        # Prompt for the removal of the Installation Directory which contains
+        # the extras directory and the Root Directory which contains the config
+        # and pki directories. These directories will not be removed during
+        # an upgrade.
+        ${IfNot} $DeleteRootDir == 1
+            MessageBox MB_YESNO|MB_DEFBUTTON2|MB_USERICON \
+                "Would you like to completely remove the entire Salt \
+                Installation? This includes the following:$\n\
+                - Extra Pip Packages ($INSTDIR\extras-3.##)$\n\
+                - Minion Config ($RootDir\conf)$\n\
+                - Minion PKIs ($RootDir\conf\pki)"\
+                /SD IDNO IDNO finished
+        ${EndIf}
+
         # New Method Installation
         # This makes the $APPDATA variable point to the ProgramData folder instead
         # of the current user's roaming AppData folder
@@ -1214,8 +1229,8 @@ Function ${un}uninstallSalt
         # Only delete Salt Project directory if it's in Program Files
         # Otherwise, we can't guess where the user may have installed salt
         ${GetParent} $INSTDIR $0  # Get parent directory (Salt Project)
-        ${If} $0 == "$ProgramFiles\Salt Project" # Make sure it's not ProgramFiles
-        ${OrIf} $0 == "$ProgramFiles64\Salt Project" # Make sure it's not Program Files (x86)
+        ${If} $0 == "$ProgramFiles\Salt Project" # Make sure it's ProgramFiles
+        ${OrIf} $0 == "$ProgramFiles64\Salt Project" # Make sure it's Program Files (x86)
             SetOutPath "$SysDrive"  # Can't remove CWD
             RMDir /r $0
         ${EndIf}
@@ -1227,15 +1242,6 @@ Function ${un}uninstallSalt
 
         # Expand any environment variables
         ExpandEnvStrings $RootDir $RootDir
-
-        # Prompt for the removal of the Root Directory which contains the config
-        # and pki directories
-        ${IfNot} $DeleteRootDir == 1
-            MessageBox MB_YESNO|MB_DEFBUTTON2|MB_USERICON \
-                "Would you like to completely remove the Root Directory \
-                ($RootDir) and all of its contents?" \
-                /SD IDNO IDNO finished
-        ${EndIf}
 
         # Remove the Salt Project directory in ProgramData
         # The Salt Project directory will only ever be in ProgramData
@@ -1837,8 +1843,8 @@ Function un.parseUninstallerCommandLineSwitches
         $\n$\t$\tare the same (C:\salt)\
         $\n\
         $\n/delete-root-dir$\tDelete the root directory that contains the config\
-        $\n$\t$\tand pki directories. Default is to not delete the root\
-        $\n$\t$\tdirectory\
+        $\n$\t$\tand pki directories. Also removes the installation directory\
+        $\n$\t$\tincluding the extras directory. Default is to not delete\
         $\n\
         $\n$\t$\tThis applies to new method installations where the\
         $\n$\t$\troot directory is in ProgramData and the installation\
