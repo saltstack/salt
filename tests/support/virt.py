@@ -54,7 +54,6 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.container_run_kwargs["volumes"].update(
             {
                 str(CODE_DIR): {"bind": "/salt", "mode": "z"},
-                str(CODE_DIR): {"bind": str(CODE_DIR), "mode": "z"},
             }
         )
         self.container_run_kwargs["working_dir"] = str(CODE_DIR)
