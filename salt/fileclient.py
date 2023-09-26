@@ -49,7 +49,17 @@ def get_file_client(opts, pillar=False):
     Read in the ``file_client`` option and return the correct type of file
     server
     """
-    client = opts.get("file_client", "remote")
+    ## client = opts.get("file_client", "remote")
+
+    # TBD DGM this is a big hack, if coming up initially, the first sync _grains
+    # doesn't have opts["master_uri"] set, so need to fake local, otherwise will
+    # throws an exception when attempting to retrieve opts["master_uri"] when
+    # retrieving the key for remote communication
+    if not opts.get("master_uri", None):
+        client = "local"
+    else:
+        client = opts.get("file_client", "remote")
+
     if pillar and client == "local":
         client = "pillar"
     return {"remote": RemoteClient, "local": FSClient, "pillar": PillarClient}.get(
