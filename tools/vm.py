@@ -821,7 +821,12 @@ class VM:
 
     def write_ssh_config(self):
         if self.ssh_config_file.exists():
-            return
+            if (
+                f"Hostname {self.instance.private_ip_address}"
+                in self.ssh_config_file.read_text()
+            ):
+                # If what's on config matches, then we're good
+                return
         if os.environ.get("CI") is not None:
             forward_agent = "no"
         else:
@@ -1128,6 +1133,7 @@ class VM:
             proc = None
             checks = 0
             last_error = None
+            connection_refused_or_reset = False
             while ssh_connection_timeout_progress <= ssh_connection_timeout:
                 start = time.time()
                 if proc is None:
@@ -1167,6 +1173,11 @@ class VM:
                         break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
+                    if connection_refused_or_reset is False and (
+                        "connection refused" in stderr.lower()
+                        or "connection reset" in stderr.lower()
+                    ):
+                        connection_refused_or_reset = True
                     if stderr:
                         stderr = f" Last Error: {stderr}"
                         last_error = stderr
@@ -1185,6 +1196,12 @@ class VM:
                     completed=ssh_connection_timeout_progress,
                     description=f"Waiting for SSH to become available at {host} ...{stderr or ''}",
                 )
+
+                if connection_refused_or_reset:
+                    # Since ssh is now running, and we're actually getting a connection
+                    # refused error message, let's try to ssh a little slower in order not
+                    # to get blocked
+                    time.sleep(10)
 
                 if checks >= 10 and proc is not None:
                     proc.kill()

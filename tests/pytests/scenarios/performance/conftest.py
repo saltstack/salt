@@ -51,8 +51,8 @@ def network():
 def host_docker_network_ip_address(network):
     sminion = create_sminion()
     network_name = network
-    network_subnet = "10.0.20.0/24"
-    network_gateway = "10.0.20.1"
+    network_subnet = "10.0.21.0/24"
+    network_gateway = "10.0.21.1"
     try:
         ret = sminion.states.docker_network.present(
             network_name,
@@ -63,7 +63,7 @@ def host_docker_network_ip_address(network):
         try:
             assert ret["result"]
         except AssertionError:
-            pytest.skip("Failed to create docker network: {}".format(ret))
+            pytest.skip(f"Failed to create docker network: {ret}")
         yield network_gateway
     finally:
         sminion.states.docker_network.absent(network_name)
@@ -147,5 +147,5 @@ def file_add_delete_sls(testfile_path, state_tree):
     """.format(
         path=testfile_path
     )
-    with pytest.helpers.temp_file("{}.sls".format(sls_name), sls_contents, state_tree):
+    with pytest.helpers.temp_file(f"{sls_name}.sls", sls_contents, state_tree):
         yield sls_name
