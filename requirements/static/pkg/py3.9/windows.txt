@@ -25,7 +25,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.3
+cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/windows.txt
@@ -34,7 +34,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/windows.txt
 idna==3.4
     # via requests
@@ -91,7 +91,7 @@ pydantic==1.10.8
     # via inflect
 pymssql==2.2.7
     # via -r requirements/windows.txt
-pymysql==1.0.2
+pymysql==1.0.3
     # via -r requirements/windows.txt
 pyopenssl==23.2.0
     # via -r requirements/windows.txt
@@ -122,15 +122,15 @@ six==1.15.0
     # via python-dateutil
 smmap==4.0.0
     # via gitdb
-tempora==5.2.2
+tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/windows.txt
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via -r requirements/base.txt
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via pydantic
-urllib3==1.26.6
+urllib3==1.26.14
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -138,7 +138,7 @@ wheel==0.38.4
     # via -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 zipp==3.15.0
     # via importlib-metadata

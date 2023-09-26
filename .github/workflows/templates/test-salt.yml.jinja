@@ -16,6 +16,7 @@
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
@@ -39,6 +40,7 @@
       nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
@@ -62,6 +64,7 @@
                                        ("opensuse-15", "Opensuse 15", "x86_64"),
                                        ("photonos-3", "Photon OS 3", "x86_64"),
                                        ("photonos-4", "Photon OS 4", "x86_64"),
+                                       ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64"),
                                        ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
                                        ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
                                        ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
@@ -80,6 +83,7 @@
       nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>
+      nox-version: <{ nox_version  }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>

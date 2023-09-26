@@ -707,6 +707,7 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -716,6 +717,22 @@ def pkg_matrix(
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
+        sessions.append("downgrade")
+
+    still_testing_3005 = False
+    for release_version in testing_releases:
+        if still_testing_3005:
+            break
+        if release_version < tools.utils.Version("3006.0"):
+            still_testing_3005 = True
+
+    if still_testing_3005 is False:
+        ctx.error(
+            f"No longer testing 3005.x releases please update {__file__} "
+            "and remove this error and the logic above the error"
+        )
+        ctx.exit(1)
+
     # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
@@ -725,17 +742,19 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
         # Packages for these OSs where never built for classic previously
         sessions.append("upgrade-classic")
+        sessions.append("downgrade-classic")
 
     for session in sessions:
         versions: list[str | None] = [None]
-        if session == "upgrade":
+        if session in ("upgrade", "downgrade"):
             versions = [str(version) for version in testing_releases]
-        elif session == "upgrade-classic":
+        elif session in ("upgrade-classic", "downgrade-classic"):
             versions = [
                 str(version)
                 for version in testing_releases
@@ -974,7 +993,7 @@ def get_testing_releases(
         ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
         # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-        threshold_major = 3006
+        threshold_major = 3005
         parsed_salt_version = tools.utils.Version(salt_version)
         # We want the latest 4 major versions, removing the oldest if this version is a new major
         num_major_versions = 4
@@ -996,16 +1015,6 @@ def get_testing_releases(
                 version for version in releases if version.major == major
             ]
             testing_releases.append(minors_of_major[-1])
-
-        # TODO: Remove this block when we reach version 3009.0
-        # Append the latest minor version of 3005 if we don't have enough major versions to test against
-        if len(testing_releases) != num_major_versions:
-            url = "https://repo.saltproject.io/salt/onedir/repo.json"
-            ret = ctx.web.get(url)
-            repo_data = ret.json()
-            latest = list(repo_data["latest"].keys())[0]
-            version = repo_data["latest"][latest]["version"]
-            testing_releases = [version] + testing_releases
 
         str_releases = [str(version) for version in testing_releases]
 
