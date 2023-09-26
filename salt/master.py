@@ -15,7 +15,6 @@ import stat
 import sys
 import threading
 import time
-import json
 
 import salt.acl
 import salt.auth
@@ -260,12 +259,15 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
         # load the presence data from the cache on disk
-        presence_fpath = os.path.join(self.opts["cachedir"], "presence-data")
+        presence_cache = salt.utils.cache.CacheFactory.factory(
+            "disk",
+            3600,
+            minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+        )
         try:
-            with salt.utils.files.fopen(presence_fpath, "rb") as fpath:
-                old_present = set(json.loads(fpath.read()))
-        except (FileNotFoundError, TypeError, json.JSONDecodeError):
-            old_present = set()
+            last_present = set(presence_cache["present"])
+        except KeyError:
+            last_present = set()
         while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
             if not last or (now - last) >= self.loop_interval:
@@ -277,7 +279,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
-            self.handle_presence(old_present)
+            self.handle_presence(last_present)
             self.handle_key_rotate(now)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
@@ -383,12 +385,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             old_present.update(present)
 
             # update the cache on disk
-            presence_fpath = os.path.join(self.opts["cachedir"], "presence-data")
-            with salt.utils.files.fopen(presence_fpath, "wb") as fpath:
-                fpath.write(
-                    salt.utils.stringutils.to_bytes(json.dumps(list(set(present))))
-                )
-
+            presence_cache = salt.utils.cache.CacheFactory.factory(
+                "disk",
+                3600,
+                minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+            )
+            presence_cache["present"] = list(set(present))
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     """
