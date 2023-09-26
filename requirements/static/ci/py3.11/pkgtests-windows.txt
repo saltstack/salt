@@ -18,7 +18,7 @@ cffi==1.15.1
     # via
     #   clr-loader
     #   cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -30,7 +30,7 @@ colorama==0.4.6
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.3
+cryptography==41.0.4
     # via -r requirements/crypto.txt
 distlib==0.3.6
     # via virtualenv
@@ -38,7 +38,7 @@ distro==1.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-skip-markers
-filelock==3.9.0
+filelock==3.12.4
     # via virtualenv
 idna==3.4
     # via requests
@@ -83,7 +83,7 @@ packaging==23.1
     # via
     #   -r requirements/base.txt
     #   pytest
-platformdirs==2.6.2
+platformdirs==3.5.3
     # via virtualenv
 pluggy==1.0.0
     # via pytest
@@ -153,11 +153,11 @@ typing-extensions==4.6.3
     #   pytest-system-statistics
 urllib3==1.26.14
     # via requests
-virtualenv==20.18.0
+virtualenv==20.23.0
     # via pytest-salt-factories
 wmi==1.5.1 ; sys_platform == "win32"
     # via -r requirements/static/ci/pkgtests-windows.in
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via cherrypy
 
 # The following packages are considered to be unsafe in a requirements file:

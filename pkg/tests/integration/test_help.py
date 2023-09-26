@@ -14,10 +14,6 @@ def test_help(install_salt):
             # Singlebin build, unable to get the version
             continue
 
-        # TODO: Remove this condition once the fixed 3005.x classic packages are released.
-        if "salt-proxy" in cmd[0] and platform.is_darwin() and install_salt.classic:
-            continue
-
         if "python" in cmd[0] and len(cmd) == 1:
             ret = install_salt.proc.run(
                 *cmd, "--version", stdout=subprocess.PIPE, stderr=subprocess.PIPE
