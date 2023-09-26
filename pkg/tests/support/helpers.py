@@ -755,8 +755,8 @@ class SaltPkgInstall:
 
             if not self.classic:
                 if not relenv:
-                    win_pkg = f"salt-{self.prev_version}-windows-amd64.{self.file_ext}"
-                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{self.prev_version}/{win_pkg}"
+                    win_pkg = f"salt-{self.prev_version}-{pkg_version}-windows-amd64.{self.file_ext}"
+                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
                 else:
                     if self.file_ext == "msi":
                         win_pkg = (
@@ -803,8 +803,8 @@ class SaltPkgInstall:
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
                 if not relenv:
-                    mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
-                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
+                    mac_pkg = f"salt-{self.prev_version}-{pkg_version}-macos-x86_64.pkg"
+                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
                 else:
                     mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
                     mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
