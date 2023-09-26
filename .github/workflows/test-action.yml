@@ -70,7 +70,6 @@ jobs:
       - x86_64
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
-      transport-matrix-include: ${{ steps.generate-transport-matrix.outputs.matrix }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -85,26 +84,13 @@ jobs:
           echo "$TEST_MATRIX"
           echo "matrix=$TEST_MATRIX" >> "$GITHUB_OUTPUT"
 
-      - name: Generate Transport Matrix
-        id: generate-transport-matrix
-        run: |
-          TRANSPORT_MATRIX=$(tools ci transport-matrix ${{ inputs.distro-slug }})
-          echo "$TRANSPORT_MATRIX"
-          echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
-
   dependencies:
     name: Setup Test Dependencies
-    needs:
-      - generate-matrix
     runs-on:
       - self-hosted
       - linux
       - bastion
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.transport-matrix-include) }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -114,7 +100,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -139,17 +125,6 @@ jobs:
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Define Nox Session
-        id: define-nox-session
-        run: |
-          if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
-            echo "nox-session=${{ inputs.nox-session}}" >> "$GITHUB_OUTPUT"
-          else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
-            echo "nox-session=${{ inputs.nox-session}}-tcp" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Get Salt Project GitHub Actions Bot Environment
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -177,7 +152,7 @@ jobs:
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -202,7 +177,7 @@ jobs:
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ steps.define-nox-session.outputs.nox-session }}
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
@@ -219,6 +194,8 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+    env:
+      SALT_TRANSPORT: ${{ matrix.transport }}
 
     steps:
       - name: Checkout Source Code
@@ -245,7 +222,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -255,14 +232,6 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Define Nox Session
-        run: |
-          if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
-          else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
-          fi
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -298,7 +267,7 @@ jobs:
       - name: Show System Info & Test Plan
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
       - name: Run Fast/Changed Tests
@@ -306,7 +275,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -315,7 +284,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -324,7 +293,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -333,7 +302,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Slow Tests
@@ -341,7 +310,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
 
       - name: Run Core Tests
@@ -349,7 +318,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
@@ -357,7 +326,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
@@ -365,7 +334,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests
 
       - name: Combine Coverage Reports
@@ -383,8 +352,8 @@ jobs:
           rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
           fi
 
       - name: Destroy VM
@@ -396,7 +365,7 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: |
             artifacts/coverage/
 
@@ -412,7 +381,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}
           path: |
             artifacts/xml-unittests-output/
 
@@ -420,52 +389,41 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
-          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}
           path: |
             artifacts/logs
 
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        # always run even if the previous steps fails
+        if: always() && inputs.skip-junit-reports == false
+        with:
+          check_name: Test Results(${{ inputs.distro-slug }}, transport=${{ matrix.transport }}, tests-chunk=${{ matrix.tests-chunk }})
+          report_paths: 'artifacts/xml-unittests-output/*.xml'
+          annotate_only: true
+
 
   report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
-    if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    name: Reports for ${{ inputs.distro-slug }}
+    if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on:
       - self-hosted
       - linux
       - x86_64
     needs:
-      - generate-matrix
       - test
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.transport-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
-
-      - name: Define Nox Session
-        run: |
-          if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
-          else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
-          fi
 
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v3
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
-
-      - name: Download JUnit XML Test Run Artifacts
-        uses: actions/download-artifact@v3
-        id: download-junit-artifacts
-        with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
-          path: artifacts/xml-unittests-output/
 
       - name: Show Downloaded Test Run Artifacts
         run: |
@@ -505,12 +463,3 @@ jobs:
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage
-
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
-        # always run even if the previous steps fails
-        if: always() && inputs.skip-junit-reports == false && steps.download-junit-artifacts.outcome == 'success'
-        with:
-          check_name: Test Results(${{ inputs.distro-slug }})
-          report_paths: 'artifacts/xml-unittests-output/*.xml'
-          annotate_only: true

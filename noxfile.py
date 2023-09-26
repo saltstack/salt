@@ -192,21 +192,12 @@ def _get_pydir(session):
     return "py{}.{}".format(*version_info)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     assert requirements_type in ("ci", "pkg")
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
         if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-windows.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
             _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "windows.txt"
             )
@@ -221,15 +212,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-darwin.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
@@ -243,15 +225,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-freebsd.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
@@ -264,15 +237,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error("Could not find a freebsd requirements file for {}".format(pydir))
     else:
         if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-linux.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
             _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "linux.txt"
             )
@@ -321,7 +285,6 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
 
 def _install_requirements(
     session,
-    transport,
     *extra_requirements,
     requirements_type="ci",
     onedir=False,
@@ -334,7 +297,7 @@ def _install_requirements(
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
-        session, transport, requirements_type=requirements_type
+        session, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -568,7 +531,7 @@ def test_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    if _install_requirements(session, transport):
+    if _install_requirements(session):
 
         if crypto:
             session_run_always(
@@ -585,7 +548,7 @@ def test_parametrized(session, coverage, transport, crypto):
             install_command = [
                 "--progress-bar=off",
                 "--constraint",
-                _get_pip_requirements_file(session, transport, crypto=True),
+                _get_pip_requirements_file(session, crypto=True),
             ]
             install_command.append(crypto)
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -984,7 +947,7 @@ def test_tornado(session, coverage):
     """
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session)
         session.install(
             "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
         )
@@ -1074,7 +1037,7 @@ def _pytest(session, coverage, cmd_args, env=None):
 
 def _ci_test(session, transport, onedir=False):
     # Install requirements
-    _install_requirements(session, transport, onedir=onedir)
+    _install_requirements(session, onedir=onedir)
     env = {}
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
@@ -1164,7 +1127,14 @@ def _ci_test(session, transport, onedir=False):
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
 def ci_test(session):
-    _ci_test(session, "zeromq")
+    transport = os.environ.get("SALT_TRANSPORT") or "zeromq"
+    valid_transports = ("zeromq", "tcp")
+    if transport not in valid_transports:
+        session.error(
+            "The value for the SALT_TRANSPORT environment variable can only be "
+            f"one of: {', '.join(valid_transports)}"
+        )
+    _ci_test(session, transport)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
@@ -1610,7 +1580,7 @@ def invoke(session):
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session)
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
