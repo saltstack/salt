@@ -1,4 +1,6 @@
 # Lint requirements
+--constraint=./py{py_version}/{platform}.txt
+
 docker
 pylint==2.4.4
 SaltPyLint>=2023.3.8
