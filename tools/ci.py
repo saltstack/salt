@@ -638,33 +638,6 @@ def matrix(ctx: Context, distro_slug: str):
 
 
 @ci.command(
-    name="transport-matrix",
-    arguments={
-        "distro_slug": {
-            "help": "The distribution slug to generate the matrix for",
-        },
-    },
-)
-def transport_matrix(ctx: Context, distro_slug: str):
-    """
-    Generate the test matrix.
-    """
-    _matrix = []
-    for transport in ("zeromq", "tcp"):
-        if transport == "tcp":
-            if distro_slug not in (
-                "centosstream-9",
-                "ubuntu-22.04",
-                "ubuntu-22.04-arm64",
-            ):
-                # Only run TCP transport tests on these distributions
-                continue
-        _matrix.append({"transport": transport})
-    print(json.dumps(_matrix))
-    ctx.exit(0)
-
-
-@ci.command(
     name="pkg-matrix",
     arguments={
         "distro_slug": {
