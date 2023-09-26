@@ -70,7 +70,10 @@ jobs:
 
   generate-matrix:
     name: Generate Matrix
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
