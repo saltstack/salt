@@ -8,11 +8,13 @@
 
 
 import os
+import string
 import tempfile
 
 import pytest
 
 import salt.utils.cloud as cloud
+from salt.exceptions import SaltCloudException
 from salt.utils.cloud import __ssh_gateway_arguments as ssh_gateway_arguments
 from tests.support.mock import MagicMock, patch
 
@@ -74,7 +76,7 @@ def create_class(tmp_path):
         os.chdir(old_cwd)
 
 
-def test_ssh_password_regex(create_class):
+def test_ssh_password_regex():
     """Test matching ssh password patterns"""
     for pattern in (
         "Password for root@127.0.0.1:",
@@ -125,7 +127,7 @@ def test_retrieve_password_from_keyring(create_class):
     assert pw_in_keyring == "fake_password_c8231"
 
 
-def test_sftp_file_with_content_under_python3(create_class):
+def test_sftp_file_with_content_under_python3():
     with pytest.raises(Exception) as context:
         cloud.sftp_file("/tmp/test", "ТЕSТ test content")
         # we successful pass the place with os.write(tmpfd, ...
@@ -133,7 +135,7 @@ def test_sftp_file_with_content_under_python3(create_class):
 
 
 @pytest.mark.skip_on_windows(reason="Not applicable for Windows.")
-def test_check_key_path_and_mode(create_class):
+def test_check_key_path_and_mode():
     with tempfile.NamedTemporaryFile() as f:
         key_file = f.name
 
@@ -657,3 +659,272 @@ def test_deploy_windows_master(master, expected):
         expected_args = "/S /master={} /minion-name=None".format(expected)
         assert mock.call_args_list[0].args[0] == expected_cmd
         assert mock.call_args_list[0].args[1] == expected_args
+
+
+def test__render_script():
+    pass
+
+
+def test___ssh_gateway_config_dict():
+    assert cloud.__ssh_gateway_config_dict(None) == {}
+    gate = {
+        "ssh_gateway": "Gozar",
+        "ssh_gateway_key": "Zuul",
+        "ssh_gateway_user": "Vinz Clortho",
+        "ssh_gateway_command": "Are you the keymaster?",
+    }
+    assert cloud.__ssh_gateway_config_dict(gate) == gate
+
+
+def test_os_script():
+    pass
+
+
+def test_gen_keys():
+    pass
+
+
+def test_accept_key():
+    pass
+
+
+def test_remove_key():
+    pass
+
+
+def test_rename_key():
+    pass
+
+
+def test_minion_config():
+    pass
+
+
+def test_master_config():
+    pass
+
+
+def test_salt_config_to_yaml():
+    pass
+
+
+def test_bootstrap():  # this will be the big one
+    pass
+
+
+def test_ssh_usernames():
+    pass
+
+
+def test_wait_for_fun():
+    pass
+
+
+def test_wait_for_passwd():
+    pass
+
+
+def test_run_inline_script():
+    pass
+
+
+def test_filter_event():
+    pass
+
+
+def test__exec_ssh_cmd():
+    pass
+
+
+def test_ssh_file():
+    pass
+
+
+def test_win_cmd():
+    pass
+
+
+def test_winrm_cmd():
+    pass
+
+
+def test_root_cmd():
+    pass
+
+
+def test_check_auth():
+    pass
+
+
+def test_ip_to_int():
+    assert cloud.ip_to_int("127.0.0.1") == 2130706433
+
+
+def test_is_public_ip():
+    assert cloud.is_public_ip("8.8.8.8") is True
+    assert cloud.is_public_ip("127.0.0.1") is False
+    assert cloud.is_public_ip("172.17.3.1") is False
+    assert cloud.is_public_ip("192.168.30.4") is False
+    assert cloud.is_public_ip("10.145.1.1") is False
+    assert cloud.is_public_ip("fe80::123:ffff:ffff:ffff") is False
+    assert cloud.is_public_ip("2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF") is True
+
+
+def test_check_name():
+    try:
+        cloud.check_name("test", string.ascii_letters)
+    except SaltCloudException as exc:
+        assert False, f"cloud.check_name rasied SaltCloudException: {exc}"
+
+    with pytest.raises(SaltCloudException):
+        cloud.check_name("test", string.digits)
+
+
+def test_remove_sshkey():
+    pass
+
+
+def test_wait_for_ip():
+    pass
+
+
+def test_list_nodes_select():
+    pass
+
+
+def test_lock_file():
+    pass
+
+
+def test_unlock_file():
+    pass
+
+
+def test_cachedir_index_del():
+    pass
+
+
+def test_init_cachedir():
+    pass
+
+
+def test_request_minion_cachedir():
+    pass
+
+
+def test_change_minion_cachedir():
+    pass
+
+
+def test_activate_minion_cachedir():
+    pass
+
+
+def test_delete_minion_cachedir():
+    pass
+
+
+def test_list_cache_nodes_full():
+    pass
+
+
+def test_update_bootstrap():
+    pass
+
+
+def test_cache_node_list():
+    pass
+
+
+def test_cache_node():
+    pass
+
+
+def test_missing_node_cache():
+    pass
+
+
+def test_diff_node_cache():
+    pass
+
+
+def test__strip_cache_events():
+    events = {
+        "test": "foobar",
+        "passwd": "fakepass",
+    }
+    events2 = {"test1": "foobar", "test2": "foobar"}
+    opts = {"cache_event_strip_fields": ["passwd"]}
+    assert cloud._strip_cache_events(events, opts) == {"test": "foobar"}
+    assert cloud._strip_cache_events(events2, opts) == events2
+
+
+def test_salt_cloud_force_asciii():
+    try:
+        "\u0411".encode("iso-8859-15")
+    except UnicodeEncodeError as exc:
+        with pytest.raises(UnicodeEncodeError):
+            cloud._salt_cloud_force_ascii(exc)
+
+    with pytest.raises(TypeError):
+        cloud._salt_cloud_force_ascii("not the thing")
+
+    try:
+        "\xa0\u2013".encode("iso-8859-15")
+    except UnicodeEncodeError as exc:
+        assert cloud._salt_cloud_force_ascii(exc) == ("-", 2)
+
+
+def test__unwrap_dict():
+    assert cloud._unwrap_dict({"a": {"b": {"c": "foobar"}}}, "a,b,c") == "foobar"
+
+
+def test_run_func_until_ret_arg():
+    pass
+
+
+def test_get_salt_interface():
+    with patch(
+        "salt.config.get_cloud_config_value",
+        MagicMock(side_effect=[False, "public_ips"]),
+    ) as cloud_config:
+        assert cloud.get_salt_interface({}, {}) == "public_ips"
+        assert cloud_config.call_count == 2
+    with patch(
+        "salt.config.get_cloud_config_value", MagicMock(return_value="private_ips")
+    ) as cloud_config:
+        assert cloud.get_salt_interface({}, {}) == "private_ips"
+        assert cloud_config.call_count == 1
+
+
+def test_userdata_template():
+    assert cloud.userdata_template(opts=None, vm_=None, userdata=None) is None
+    with patch("salt.config.get_cloud_config_value", MagicMock(return_value=False)):
+        assert cloud.userdata_template(opts=None, vm_=None, userdata="test") == "test"
+    with patch("salt.config.get_cloud_config_value", MagicMock(return_value=None)):
+        opts = {"userdata_template": None}
+        assert cloud.userdata_template(opts=opts, vm_=None, userdata="test") == "test"
+
+    renders = {"jinja": MagicMock(return_value="test")}
+
+    with patch("salt.config.get_cloud_config_value", MagicMock(return_value="jinja")):
+        with patch("salt.loader.render", MagicMock(return_value=renders)):
+            opts = {
+                "userdata_template": "test",
+                "renderer_blacklist": None,
+                "renderer_whitelist": None,
+                "renderer": "jinja",
+            }
+            assert cloud.userdata_template(opts=opts, vm_={}, userdata="test") == "test"
+
+    renders = {"jinja": MagicMock(return_value=True)}
+
+    with patch("salt.config.get_cloud_config_value", MagicMock(return_value="jinja")):
+        with patch("salt.loader.render", MagicMock(return_value=renders)):
+            opts = {
+                "userdata_template": "test",
+                "renderer_blacklist": None,
+                "renderer_whitelist": None,
+                "renderer": "jinja",
+            }
+            assert cloud.userdata_template(opts=opts, vm_={}, userdata="test") == "True"
