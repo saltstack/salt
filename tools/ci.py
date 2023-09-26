@@ -793,7 +793,7 @@ def pkg_matrix(
         version = parts[1]
         if name in ("debian", "ubuntu"):
             arch = "amd64"
-        elif name in ("centos", "centosstream", "amazonlinux"):
+        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
             arch = "x86_64"
         if len(parts) > 2:
             arch = parts[2]
