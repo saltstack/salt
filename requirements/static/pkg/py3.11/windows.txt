@@ -25,7 +25,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.3
+cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/windows.txt
