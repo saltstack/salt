@@ -57,9 +57,9 @@ def test_yum_list_pkgs(grains):
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 def test_yumpkg_remove_wildcard():
-    salt.modules.yumpkg.install(pkgs=["nginx-doc", "nginx-light"])
-    ret = salt.modules.yumpkg.remove(name="nginx-*")
-    assert not ret["nginx-light"]["new"]
-    assert ret["nginx-light"]["old"]
-    assert not ret["nginx-doc"]["new"]
-    assert ret["nginx-doc"]["old"]
+    salt.modules.yumpkg.install(pkgs=["httpd-devel", "httpd-tools"])
+    ret = salt.modules.yumpkg.remove(name="httpd-*")
+    assert not ret["httpd-devel"]["new"]
+    assert ret["httpd-devel"]["old"]
+    assert not ret["httpd-tools"]["new"]
+    assert ret["httpd-tools"]["old"]
