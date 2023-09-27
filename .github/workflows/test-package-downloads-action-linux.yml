@@ -53,7 +53,7 @@ on:
         required: false
         type: string
         description: The nox session to run
-        default: test-pkgs-onedir
+        default: ci-test-onedir
 
 
 env:
@@ -149,12 +149,6 @@ jobs:
         run: |
           tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
-      - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
-        with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download-${{ inputs.arch }}
-          path: nox.${{ inputs.distro-slug }}.tar.*
-
   test:
     name: Test
     runs-on:
@@ -233,7 +227,7 @@ jobs:
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- download-pkgs
+            --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
         env:
@@ -251,7 +245,7 @@ jobs:
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING  -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
+            --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'

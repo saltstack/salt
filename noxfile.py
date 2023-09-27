@@ -1820,10 +1820,25 @@ def build(session):
 
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
-    name="test-pkgs-onedir",
+    name="ci-test-onedir-pkgs",
     venv_params=["--system-site-packages"],
 )
-def test_pkgs_onedir(session):
+def ci_test_onedir_pkgs(session):
+    from nox.virtualenv import VirtualEnv
+
+    session_warn(session, "Replacing VirtualEnv instance...")
+
+    ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
+    session._runner.venv = VirtualEnv(
+        str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+        interpreter=session._runner.func.python,
+        reuse_existing=True,
+        venv=session._runner.venv.venv_or_virtualenv == "venv",
+        venv_params=session._runner.venv.venv_params,
+    )
+    os.environ["VIRTUAL_ENV"] = session._runner.venv.location
+    session._runner.venv.create()
+
     if not ONEDIR_ARTIFACT_PATH.exists():
         session.error(
             "The salt onedir artifact, expected to be in '{}', was not found".format(

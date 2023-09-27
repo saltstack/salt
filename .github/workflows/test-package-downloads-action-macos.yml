@@ -58,7 +58,7 @@ on:
         required: false
         type: string
         description: The nox session to run
-        default: test-pkgs-onedir
+        default: ci-test-onedir
 
 
 env:
@@ -138,12 +138,6 @@ jobs:
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
-      - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
-        with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download-${{ inputs.arch }}
-          path: nox.${{ inputs.distro-slug }}.tar.*
-
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
@@ -208,7 +202,7 @@ jobs:
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- download-pkgs
 
       - name: Run Package Download Tests
         env:
@@ -231,7 +225,7 @@ jobs:
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- download-pkgs
 
       - name: Fix file ownership
         run: |

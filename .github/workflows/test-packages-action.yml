@@ -44,7 +44,7 @@ on:
         required: false
         type: string
         description: The nox session to run
-        default: test-pkgs-onedir
+        default: ci-test-onedir
       skip-code-coverage:
         required: false
         type: boolean
@@ -173,20 +173,6 @@ jobs:
         run: |
           tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
-      - name: Define Nox Upload Artifact Name
-        id: nox-artifact-name
-        run: |
-          if [ "${{ contains(inputs.distro-slug, 'windows') }}" != "true" ]; then
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ steps.nox-artifact-name.outputs.name }}
-          path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
     name: Test
@@ -267,13 +253,13 @@ jobs:
       - name: Show System Info & Test Plan
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+            --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
             ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-          --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+          --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
           ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
