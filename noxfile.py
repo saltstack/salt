@@ -13,7 +13,6 @@ import os
 import pathlib
 import shutil
 import sqlite3
-import subprocess
 import sys
 import tarfile
 import tempfile
@@ -330,6 +329,73 @@ def _install_coverage_requirement(session):
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
+
+
+def _downgrade_importlib_metadata(session):
+    distro_data = session_run_always(
+        session,
+        "python",
+        "-c",
+        "import distro, json, sys; print(json.dumps(distro.linux_distribution()), file=sys.stdout, flush=True)",
+        stderr=None,
+        silent=True,
+        log=False,
+    )
+    distro_info = tuple(json.loads(distro_data.strip()))
+    session.log("Linux Distribution Details: {}".format(distro_info))
+    if (
+        ("amazon" in distro_info[0].lower() and distro_info[1] == "2")
+        or ("debian" in distro_info[0].lower() and distro_info[1] == "10")
+        or ("centos" in distro_info[0].lower() and distro_info[1] == "7")
+    ):
+        session.log("Downgrading importlib-metadata ...")
+        # Workaround for installing and running classic packages from 3005.1
+        # They can only run with importlib-metadata<5.0.0.
+        with tempfile.NamedTemporaryFile(suffix=".txt") as tfile:
+            with open(tfile.name, "w") as wfh:
+                wfh.write("importlib-metadata<5.0.0\n")
+            # We need to upgrade pip to be able to use `--use-feature`
+            session_run_always(
+                session,
+                "/usr/bin/python3",
+                "-m",
+                "pip",
+                "--version",
+            )
+            session_run_always(
+                session,
+                "/usr/bin/python3",
+                "-m",
+                "pip",
+                "install",
+                "--constraint={}".format(tfile.name),
+                "-U",
+                "pip>=21.0",
+                silent=False,
+                log=True,
+                external=True,
+            )
+            session_run_always(
+                session,
+                "/usr/bin/python3",
+                "-m",
+                "pip",
+                "--version",
+            )
+            # Properly downgrade importlib-metadata without breaking nox
+            session_run_always(
+                session,
+                "/usr/bin/python3",
+                "-m",
+                "pip",
+                "install",
+                "--constraint={}".format(tfile.name),
+                "-U",
+                "nox",
+                silent=False,
+                log=True,
+                external=True,
+            )
 
 
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
@@ -1892,9 +1958,9 @@ def ci_test_onedir_pkgs(session):
 
     if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
-        # Workaround for installing and running classic packages from 3005.1
-        # They can only run with importlib-metadata<5.0.0.
-        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
+
+        if IS_LINUX:
+            _downgrade_importlib_metadata(session)
 
     pytest_args = (
         cmd_args[:]
