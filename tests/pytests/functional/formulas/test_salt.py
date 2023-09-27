@@ -24,7 +24,7 @@ def minion_config_defaults():
     return {
         "pillar": {
             "salt": {
-                "py_ver": "py3",
+                "py_ver": "salt/py3",
             }
         }
     }
@@ -37,6 +37,18 @@ def minion_config_defaults():
 @pytest.mark.skipif(
     'grains["os_family"] == "Arch"',
     reason="Outdated archlinux-keyring package will cause failed package installs",
+)
+@pytest.mark.skipif(
+    'grains["os_family"] == "RedHat" and grains["osmajorrelease"] == 9',
+    reason="salt-formula points to incorrect GPG URL",
+)
+@pytest.mark.skipif(
+    'grains["osfinger"] == "Debian-10"',
+    reason="salt-formula uses wrong URL for Debian 10",
+)
+@pytest.mark.skipif(
+    'grains["osfinger"] == "Leap-15"',
+    reason="salt-formula points to missing Leap-15 metadata",
 )
 @pytest.mark.skipif(
     'grains["oscodename"] == "Photon"',
