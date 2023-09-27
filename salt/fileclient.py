@@ -44,18 +44,13 @@ log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
 
 
-def get_file_client(opts, pillar=False):
+def get_file_client(opts, pillar=False, force_local=False):
     """
     Read in the ``file_client`` option and return the correct type of file
     server
     """
     ## client = opts.get("file_client", "remote")
-
-    # TBD DGM this is a big hack, if coming up initially, the first sync _grains
-    # doesn't have opts["master_uri"] set, so need to fake local, otherwise will
-    # throws an exception when attempting to retrieve opts["master_uri"] when
-    # retrieving the key for remote communication
-    if not opts.get("master_uri", None):
+    if force_local:
         client = "local"
     else:
         client = opts.get("file_client", "remote")
