@@ -392,6 +392,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             )
             presence_cache["present"] = list(set(present))
 
+
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     """
     A process from which to update any dynamic fileserver backends
