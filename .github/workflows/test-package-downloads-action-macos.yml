@@ -77,6 +77,12 @@ jobs:
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
 
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - name: Checkout Source Code
         uses: actions/checkout@v3
 

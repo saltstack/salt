@@ -80,6 +80,12 @@ jobs:
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
       - name: Checkout Source Code
         uses: actions/checkout@v3
 

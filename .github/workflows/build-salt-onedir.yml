@@ -46,6 +46,12 @@ jobs:
       - linux
       - ${{ matrix.arch }}
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
 
       - name: Setup Python Tools Scripts
@@ -89,7 +95,14 @@ jobs:
           - amd64
     runs-on: windows-latest
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
@@ -135,6 +148,12 @@ jobs:
           - x86_64
     runs-on: macos-12
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
