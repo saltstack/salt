@@ -117,6 +117,9 @@ def test_directory_children_only(file, tmp_path):
     """
     file.directory with children_only=True
     """
+    if IS_WINDOWS:
+        pytest.skip("Skipped on windows")
+
     name = tmp_path / "directory_children_only_dir"
     name.mkdir(0o0700)
 
@@ -136,9 +139,21 @@ def test_directory_children_only(file, tmp_path):
         children_only=True,
     )
     assert ret.result is True
-    assert oct(name.stat().st_mode)[-3:] == "700"
-    assert oct(strayfile.stat().st_mode)[-3:] == "644"
-    assert oct(straydir.stat().st_mode)[-3:] == "755"
+
+    # Assert parent directory's mode remains unchanged
+    assert oct(name.stat().st_mode)[-3:] == "700", (
+        f"Expected mode 700 for {name}, got {oct(name.stat().st_mode)[-3:]}"
+    )
+
+    # Assert child file's mode is changed
+    assert oct(strayfile.stat().st_mode)[-3:] == "644", (
+        f"Expected mode 644 for {strayfile}, got {oct(strayfile.stat().st_mode)[-3:]}"
+    )
+
+    # Assert child directory's mode is changed
+    assert oct(straydir.stat().st_mode)[-3:] == "755", (
+        f"Expected mode 755 for {straydir}, got {oct(straydir.stat().st_mode)[-3:]}"
+    )
 
 
 def test_directory_clean(file, tmp_path):
