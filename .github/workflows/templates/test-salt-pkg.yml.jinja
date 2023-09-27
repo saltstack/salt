@@ -43,7 +43,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-<{ pkg_type }>-pkgs
+      - build-<{ pkg_type }>-pkgs-onedir
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
@@ -71,7 +71,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-macos-pkgs
+      - build-macos-pkgs-onedir
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -101,7 +101,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs
+      - build-windows-pkgs-onedir
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
