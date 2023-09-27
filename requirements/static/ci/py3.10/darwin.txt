@@ -664,7 +664,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pygit2==1.9.1 ; python_version >= "3.7"
+pygit2==1.13.1 ; python_version >= "3.8"
     # via -r requirements/static/ci/darwin.in
 pyjwt==2.4.0
     # via adal
