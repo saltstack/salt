@@ -29,6 +29,11 @@ on:
         type: string
         description: The backend to build the packages with
 
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
 jobs:
 
   build-pkgs:

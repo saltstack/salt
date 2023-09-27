@@ -57,7 +57,6 @@ on:
         description: Skip Publishing JUnit Reports
         default: false
 
-
 env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
