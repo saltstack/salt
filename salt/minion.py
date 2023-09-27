@@ -922,7 +922,17 @@ class SMinion(MinionBase):
         import salt.loader
 
         # need sync of custom grains as may be used in pillar compilation
-        salt.utils.extmods.sync(opts, "grains")
+        # if coming up initially and remote client, the first sync _grains
+        # doesn't have opts["master_uri"] set yeti during the sync, so need
+        # to force local, otherwise will throw an exception when attempting
+        # to retrieve opts["master_uri"] when retrieving key for remote communication
+
+        if opts.get("file_client", "remote") == "remote" and not opts.get(
+            "master_uri", None
+        ):
+            salt.utils.extmods.sync(opts, "grains", force_local=True)
+        else:
+            salt.utils.extmods.sync(opts, "grains")
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
