@@ -860,6 +860,7 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
+              PasswordAuthentication no
             """
         )
         self.ssh_config_file.write_text(ssh_config)
