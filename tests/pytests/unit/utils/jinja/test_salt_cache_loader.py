@@ -2,7 +2,6 @@
 Tests for salt.utils.jinja
 """
 
-import copy
 import os
 
 import pytest
@@ -25,7 +24,7 @@ def minion_opts(tmp_path, minion_opts):
             "file_buffer_size": 1048576,
             "cachedir": str(tmp_path),
             "file_roots": {"test": [str(tmp_path / "files" / "test")]},
-            "pillar_roots": {"test": [str(tmp_path / "files" / "test")]},
+            "pillar_roots": {"test": [str(tmp_path / "pillar" / "test")]},
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
@@ -108,7 +107,7 @@ def get_loader(mock_file_client, minion_opts):
         if opts is None:
             opts = minion_opts
         mock_file_client.opts = opts
-        loader = SaltCacheLoader(opts, saltenv, _file_client=mock_file_client)
+        loader = SaltCacheLoader(opts, saltenv, _file_client=mock_file_client, **kwargs)
         # Create a mock file client and attach it to the loader
         return loader
 
@@ -128,10 +127,27 @@ def test_searchpath(minion_opts, get_loader, tmp_path):
     """
     The searchpath is based on the cachedir option and the saltenv parameter
     """
-    opts = copy.deepcopy(minion_opts)
-    opts.update({"cachedir": str(tmp_path)})
-    loader = get_loader(opts=minion_opts, saltenv="test")
-    assert loader.searchpath == [str(tmp_path / "files" / "test")]
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    assert loader.searchpath == minion_opts["file_roots"][saltenv]
+
+
+def test_searchpath_pillar_rend(minion_opts, get_loader):
+    """
+    The searchpath is based on the pillar_rend if it is True
+    """
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv, pillar_rend=True)
+    assert loader.searchpath == minion_opts["pillar_roots"][saltenv]
+
+
+def test_searchpath_bad_pillar_rend(minion_opts, get_loader):
+    """
+    The searchpath is based on the pillar_rend if it is True
+    """
+    saltenv = "bad_env"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv, pillar_rend=True)
+    assert loader.searchpath == []
 
 
 def test_mockclient(minion_opts, template_dir, hello_simple, get_loader):
