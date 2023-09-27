@@ -136,9 +136,9 @@ def test_directory_children_only(file, tmp_path):
         children_only=True,
     )
     assert ret.result is True
-    assert name.stat().st_mode & 0o7777 == 0o0700
-    assert strayfile.stat().st_mode & 0o7777 == 0o0644
-    assert straydir.stat().st_mode & 0o7777 == 0o0755
+    assert oct(name.stat().st_mode)[-3:] == "700"
+    assert oct(strayfile.stat().st_mode)[-3:] == "644"
+    assert oct(straydir.stat().st_mode)[-3:] == "755"
 
 
 def test_directory_clean(file, tmp_path):
