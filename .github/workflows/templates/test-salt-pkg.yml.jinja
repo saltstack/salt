@@ -47,6 +47,7 @@
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -74,6 +75,7 @@
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: darwin
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -103,6 +105,7 @@
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: windows
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"

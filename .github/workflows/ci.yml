@@ -518,6 +518,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: amazonlinux-2
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -537,6 +538,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centos-7
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -556,6 +558,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centosstream-8
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -575,6 +578,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centosstream-9
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -594,6 +598,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-10
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -613,6 +618,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -632,6 +638,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -651,6 +658,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: photonos-3
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -670,6 +678,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: photonos-4
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -689,6 +698,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -708,6 +718,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -727,6 +738,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -746,6 +758,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -765,6 +778,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -784,6 +798,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
+      nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -803,6 +818,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2016
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -822,6 +838,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2016
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -841,6 +858,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2019
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -860,6 +878,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2019
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -879,6 +898,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2022
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -898,6 +918,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2022
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"

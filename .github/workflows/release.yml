@@ -233,6 +233,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: almalinux-8
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -254,6 +255,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: almalinux-8-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -275,6 +277,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: almalinux-9
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -296,6 +299,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: almalinux-9-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -317,6 +321,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: amazonlinux-2
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -338,6 +343,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -359,6 +365,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centos-7
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -380,6 +387,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centos-7-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -401,6 +409,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centosstream-8
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -422,6 +431,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centosstream-8-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -443,6 +453,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centosstream-9
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -464,6 +475,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: centosstream-9-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -485,6 +497,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: debian-10
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -506,6 +519,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: debian-11
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -527,6 +541,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -548,6 +563,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: fedora-37
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -569,6 +585,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: fedora-37-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -590,6 +607,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: fedora-38
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -611,6 +629,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: fedora-38-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -632,6 +651,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: photonos-3
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -653,6 +673,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: photonos-4
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -674,6 +695,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -695,6 +717,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-20.04
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -716,6 +739,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -737,6 +761,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -758,6 +783,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -779,6 +805,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -800,6 +827,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -821,6 +849,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: macos-12
+      nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -842,6 +871,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: macos-12
+      nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -863,6 +893,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: windows-2022
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       pkg-type: nsis
@@ -884,6 +915,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: windows-2022
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       pkg-type: msi
@@ -905,6 +937,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: windows-2022
+      nox-session: ci-test-onedir
       platform: windows
       arch: amd64
       pkg-type: onedir

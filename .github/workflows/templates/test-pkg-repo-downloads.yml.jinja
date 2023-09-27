@@ -51,6 +51,7 @@
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
@@ -88,6 +89,7 @@
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: darwin
       arch: <{ arch }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
@@ -124,6 +126,7 @@
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: windows
       arch: <{ arch }>
       pkg-type: <{ pkg_type.lower() }>
