@@ -5,10 +5,11 @@
                                                   ("macos", "macOS", "github-hosted"),
                                                 ) %>
 
-  <%- set job_name = "build-{}-pkgs".format(pkg_type) %>
+  <%- for backend in ("onedir", "src") %>
+  <%- set job_name = "build-{}-pkgs-{}".format(pkg_type, backend) %>
 
   <{ job_name }>:
-    name: Build <{ display_name }> Packages
+    name: Build <{ display_name }> Packages (<{ backend }>)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['<{ runner_type }>'] }}
     needs:
       - prepare-workflow
@@ -18,6 +19,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
+      source: "<{ backend }>"
     <%- if pkg_type in ("macos", "windows") and gh_environment %>
       environment: <{ gh_environment }>
       <%- if pkg_type == "macos" %>
@@ -28,4 +30,5 @@
     secrets: inherit
     <%- endif %>
 
+  <%- endfor %>
 <%- endfor %>

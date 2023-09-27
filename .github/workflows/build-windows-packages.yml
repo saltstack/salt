@@ -24,6 +24,10 @@ on:
         type: string
         description: The GitHub Environment where this workflow should run
         default: ci
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
 
 jobs:
 
@@ -37,9 +41,6 @@ jobs:
         arch:
           - x86
           - amd64
-        source:
-          - onedir
-          - src
 
     runs-on:
       - windows-latest
@@ -108,7 +109,7 @@ jobs:
       - name: Build Windows Packages
         run: |
           tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
-            matrix.source == 'onedir' &&
+            inputs.source == 'onedir' &&
             format(
               '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',
               inputs.salt-version,
@@ -123,7 +124,7 @@ jobs:
         id: set-artifact-name
         shell: bash
         run: |
-          if [ "${{ matrix.source }}" != "src" ]; then
+          if [ "${{ inputs.source }}" != "src" ]; then
             echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS" >> "$GITHUB_OUTPUT"
             echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI" >> "$GITHUB_OUTPUT"
           else
