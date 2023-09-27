@@ -700,7 +700,7 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyeapi==0.8.3
     # via napalm
-pygit2==1.0.3 ; python_version <= "3.8"
+pygit2==1.13.1 ; python_version >= "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
