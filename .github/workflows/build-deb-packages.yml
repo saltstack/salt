@@ -1,5 +1,5 @@
 ---
-name: Build Debian Packages
+name: Build DEB Packages
 
 on:
   workflow_call:
@@ -34,6 +34,8 @@ jobs:
         arch:
           - x86_64
           - aarch64
+        source:
+          - ${{ inputs.source }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12

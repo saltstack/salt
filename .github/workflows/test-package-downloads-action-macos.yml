@@ -70,81 +70,11 @@ env:
 
 jobs:
 
-  dependencies:
-    name: Setup Test Dependencies
-    runs-on: ${{ inputs.distro-slug }}
-    timeout-minutes: 90
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        id: nox-dependencies-cache
-        uses: actions/cache@v3
-        with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
-
-      - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Decompress Onedir Tarball
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-          cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.python-version }}
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v4
-        with:
-          python-version: "${{ inputs.python-version }}"
-          update-environment: true
-
-      - name: Install System Dependencies
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          brew install openssl@3
-
-      - name: Install Nox
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          python3 -m pip install 'nox==${{ inputs.nox-version }}'
-
-      - name: Install Dependencies
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        env:
-          PRINT_TEST_SELECTION: "0"
-          PRINT_SYSTEM_INFO: "0"
-        run: |
-          export PYCURL_SSL_LIBRARY=openssl
-          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
-          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
-          export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
-          nox --force-color --install-only -e ${{ inputs.nox-session }}
-
-      - name: Cleanup .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          nox --force-color -e "pre-archive-cleanup(pkg=False)"
-
-      - name: Compress .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
-
   test:
-    name: Test
+    name: Test Pkg Download
     runs-on: ${{ inputs.distro-slug }}
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
-    needs:
-      - dependencies
 
     steps:
       - name: Checkout Source Code
@@ -181,7 +111,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
+            }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -261,7 +193,7 @@ jobs:
             !artifacts/salt-*.tar.*
 
   report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ inputs.arch }})
+    name: Test Pkg Download Reports
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'

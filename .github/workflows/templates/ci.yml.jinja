@@ -301,15 +301,18 @@
   <%- include "build-packages.yml.jinja" %>
   <%- endif %>
 
+  <%- set pkg_tests_job_name = "pkg-tests" %>
+  <%- set salt_tests_job_name = "salt-tests" %>
+  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) %>
+  <%- include "build-ci-deps.yml.jinja" %>
+  <%- endif %>
 
-  <%- set job_name = "pkg-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(pkg_tests_job_name, True) %>
   <%- include "test-salt-pkg.yml.jinja" %>
   <%- endif %>
 
 
-  <%- set job_name = "salt-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(salt_tests_job_name, True) %>
   <%- include "test-salt.yml.jinja" %>
   <%- endif %>
 
