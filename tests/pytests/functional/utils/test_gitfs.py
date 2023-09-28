@@ -2,7 +2,6 @@ import os.path
 
 import pytest
 
-from salt.fileserver.gitfs import PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitFS, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 
@@ -61,12 +60,7 @@ def pygit2_gitfs_opts(gitfs_opts):
 
 
 def _get_gitfs(opts, *remotes):
-    return GitFS(
-        opts,
-        remotes,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-    )
+    return GitFS(opts, remotes)
 
 
 def _test_gitfs_simple(gitfs_opts):

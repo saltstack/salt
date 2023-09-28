@@ -321,7 +321,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 log.error("Found dropfile with incorrect permissions, ignoring...")
             os.remove(dfn)
-        except os.error:
+        except OSError:
             pass
 
         if self.opts.get("publish_session"):
@@ -665,9 +665,6 @@ class Master(SMaster):
                             git_pillar = salt.utils.gitfs.GitPillar(
                                 new_opts,
                                 repo["git"],
-                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                             )
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
@@ -698,7 +695,6 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["aes"] = {
@@ -884,7 +880,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     # Cannot delete read-only files on Windows.
                     os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
-            except os.error:
+            except OSError:
                 pass
 
         # Wait for kill should be less then parent's ProcessManager.
@@ -1572,7 +1568,7 @@ class AESFuncs(TransportMethods):
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"

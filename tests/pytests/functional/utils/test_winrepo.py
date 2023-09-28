@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitPython, Pygit2, WinRepo
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 
@@ -62,9 +61,6 @@ def _get_winrepo(opts, *remotes):
     return WinRepo(
         opts,
         remotes,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
     )
 
 

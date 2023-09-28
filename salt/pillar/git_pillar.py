@@ -398,10 +398,6 @@ import salt.utils.versions
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
-PER_REMOTE_OVERRIDES = ("base", "env", "root", "ssl_verify", "refspecs", "fallback")
-PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
-GLOBAL_ONLY = ("branch",)
-
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -438,9 +434,6 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     git_pillar = salt.utils.gitfs.GitPillar(
         opts,
         repos,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
     )
     if __opts__.get("__role") == "minion":
         # If masterless, fetch the remotes. We'll need to remove this once

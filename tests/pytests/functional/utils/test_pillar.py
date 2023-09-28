@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from salt.pillar.git_pillar import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitPillar, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 
@@ -59,13 +58,7 @@ def pygit2_pillar_opts(pillar_opts):
 
 
 def _get_pillar(opts, *remotes):
-    return GitPillar(
-        opts,
-        remotes,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
-    )
+    return GitPillar(opts, remotes)
 
 
 @skipif_no_gitpython

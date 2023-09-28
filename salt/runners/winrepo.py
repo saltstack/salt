@@ -20,16 +20,6 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 
 log = logging.getLogger(__name__)
 
-# Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback")
-
-# Fall back to default per-remote-only. This isn't technically needed since
-# salt.utils.gitfs.GitBase.__init__ will default to
-# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
-# runners and other modules that import salt.runners.winrepo.
-PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
-GLOBAL_ONLY = ("branch",)
-
 
 def _legacy_git():
     return not any(
@@ -228,9 +218,6 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                 winrepo = salt.utils.gitfs.WinRepo(
                     opts,
                     remotes,
-                    per_remote_overrides=PER_REMOTE_OVERRIDES,
-                    per_remote_only=PER_REMOTE_ONLY,
-                    global_only=GLOBAL_ONLY,
                     cache_root=base_dir,
                 )
                 winrepo.fetch_remotes()
