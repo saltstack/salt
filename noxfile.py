@@ -349,53 +349,29 @@ def _downgrade_importlib_metadata(session):
         or ("centos" in distro_info[0].lower() and distro_info[1] == "7")
     ):
         session.log("Downgrading importlib-metadata ...")
+        nox_version = session_run_always(
+            session,
+            "nox",
+            "--version",
+            silent=True,
+            log=False,
+        ).strip()
         # Workaround for installing and running classic packages from 3005.1
         # They can only run with importlib-metadata<5.0.0.
-        with tempfile.NamedTemporaryFile(suffix=".txt") as tfile:
-            with open(tfile.name, "w") as wfh:
-                wfh.write("importlib-metadata<5.0.0\n")
-            # We need to upgrade pip to be able to use `--use-feature`
-            session_run_always(
-                session,
-                "/usr/bin/python3",
-                "-m",
-                "pip",
-                "--version",
-            )
-            session_run_always(
-                session,
-                "/usr/bin/python3",
-                "-m",
-                "pip",
-                "install",
-                "--constraint={}".format(tfile.name),
-                "-U",
-                "pip>=21.0",
-                silent=False,
-                log=True,
-                external=True,
-            )
-            session_run_always(
-                session,
-                "/usr/bin/python3",
-                "-m",
-                "pip",
-                "--version",
-            )
-            # Properly downgrade importlib-metadata without breaking nox
-            session_run_always(
-                session,
-                "/usr/bin/python3",
-                "-m",
-                "pip",
-                "install",
-                "--constraint={}".format(tfile.name),
-                "-U",
-                "nox",
-                silent=False,
-                log=True,
-                external=True,
-            )
+        session_run_always(
+            session,
+            "/usr/bin/python3",
+            "-m",
+            "pip",
+            "install",
+            "-U",
+            "importlib-metadata<=4.13.0",
+            "virtualenv<=20.21.1",
+            "nox=={}".format(nox_version),
+            silent=False,
+            log=True,
+            external=True,
+        )
 
 
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
