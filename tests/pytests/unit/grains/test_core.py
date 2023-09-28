@@ -7,6 +7,7 @@ tests.pytests.unit.grains.test_core
 """
 
 import errno
+import locale
 import logging
 import os
 import pathlib
@@ -176,6 +177,15 @@ def test_network_grains_secondary_ip(tmp_path):
             "172.16.13.86",
             "2001:4860:4860::8888",
         ]
+
+    with patch("salt.utils.platform.is_proxy", return_value=True):
+        assert core.ip6_interfaces() == {}
+
+    with patch("salt.utils.platform.is_proxy", return_value=True):
+        assert core.ip4_interfaces() == {}
+
+    with patch("salt.utils.platform.is_proxy", return_value=True):
+        assert core.ip_interfaces() == {}
 
 
 def test_network_grains_cache(tmp_path):
@@ -1964,6 +1974,16 @@ def test_fqdn_return(ipv4_tuple, ipv6_tuple):
 
 
 @pytest.mark.skip_unless_on_linux
+def test_fqdn_proxy_return_empty():
+    """
+    test ip_fqdn returns empty for proxy minions
+    """
+
+    with patch.object(salt.utils.platform, "is_proxy", MagicMock(return_value=True)):
+        assert core.ip_fqdn() == {}
+
+
+@pytest.mark.skip_unless_on_linux
 def test_fqdn6_empty(ipv4_tuple, ipv6_tuple):
     """
     test when ip6 is empty
@@ -2107,6 +2127,19 @@ def test_dns_return(ipv4_tuple, ipv6_tuple):
             salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
         ):
             assert core.dns() == ret
+
+        with patch("os.path.exists", return_value=False), patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
+
+    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=True)):
+        assert core.dns() == {}
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=True)
+    ), patch("salt.grains.core.__opts__", {"proxyminion": True}):
+        assert core.dns() == {}
 
 
 def test_enable_fqdns_false():
@@ -2640,6 +2673,36 @@ def test_locale_info_no_tz_tzname():
         assert ret["locale_info"]["timezone"] == "unknown"
 
 
+def test_locale_info_proxy_empty():
+    with patch.object(salt.utils.platform, "is_proxy", return_value=True):
+        ret = core.locale_info()
+        assert ret == {"locale_info": {}}
+
+
+@pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
+def test_locale_getlocale_exception():
+    # mock datetime.now().tzname()
+    # cant just mock now because it is read only
+    tzname = Mock(return_value="MDT_FAKE")
+    now_ret_object = Mock(tzname=tzname)
+    now = Mock(return_value=now_ret_object)
+    datetime = Mock(now=now)
+
+    with patch.object(
+        core, "datetime", datetime=datetime
+    ) as datetime_module, patch.object(
+        core.dateutil.tz, "tzlocal", return_value=object
+    ) as tzlocal, patch.object(
+        salt.utils.platform, "is_proxy", return_value=False
+    ) as is_proxy, patch.object(
+        locale, "getlocale", side_effect=Exception()
+    ):
+        ret = core.locale_info()
+
+        assert ret["locale_info"]["defaultlanguage"] == "unknown"
+        assert ret["locale_info"]["defaultencoding"] == "unknown"
+
+
 def test_cwd_exists():
     cwd_grain = core.cwd()
 
@@ -2967,6 +3030,16 @@ def test_saltversioninfo():
         assert len(info) == 2
     assert all([x is not None for x in info])
     assert all([isinstance(x, int) for x in info])
+
+
+def test_saltversion():
+    """
+    test saltversion core grain.
+    """
+    ret = core.saltversion()
+    info = ret["saltversion"]
+    assert isinstance(ret, dict)
+    assert isinstance(info, str)
 
 
 def test_path():
@@ -3593,3 +3666,215 @@ def test_virtual_set_virtual_ec2():
 
         assert virtual_grains["virtual"] == "Nitro"
         assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+
+def test_append_domain():
+    """
+    test append_domain
+    """
+
+    assert core.append_domain() == {}
+
+    with patch.object(salt.utils.platform, "is_proxy", MagicMock(return_value=True)):
+        assert core.append_domain() == {}
+
+    with patch("salt.grains.core.__opts__", {"append_domain": "example.com"}):
+        assert core.append_domain() == {"append_domain": "example.com"}
+
+
+def test_hostname():
+    """
+    test append_domain
+    """
+
+    with patch.object(salt.utils.platform, "is_proxy", MagicMock(return_value=True)):
+        assert core.hostname() == {}
+
+    with patch("salt.grains.core.__FQDN__", None), patch(
+        "socket.gethostname", MagicMock(return_value=None)
+    ), patch("salt.utils.network.get_fqhostname", MagicMock(return_value=None)):
+        assert core.hostname() == {
+            "localhost": None,
+            "fqdn": "localhost.localdomain",
+            "host": "localhost",
+            "domain": "localdomain",
+        }
+
+
+def test_zmqversion():
+    """
+    test zmqversion
+    """
+
+    ret = core.zmqversion()
+    assert "zmqversion" in ret
+
+    with patch.dict("sys.modules", {"zmq": None}):
+        ret = core.zmqversion()
+        assert "zmqversion" not in ret
+
+
+def test_saltpath():
+    """
+    test saltpath
+    """
+
+    ret = core.saltpath()
+    assert "saltpath" in ret
+
+
+def test_pythonexecutable():
+    """
+    test pythonexecutable
+    """
+
+    ret = core.pythonexecutable()
+    assert "pythonexecutable" in ret
+
+
+def test_pythonpath():
+    """
+    test pythonpath
+    """
+
+    ret = core.pythonpath()
+    assert "pythonpath" in ret
+
+
+def test_pythonversion():
+    """
+    test pythonversion
+    """
+
+    ret = core.pythonversion()
+    assert "pythonversion" in ret
+
+
+def test_get_machine_id():
+    """
+    test get_machine_id
+    """
+
+    ret = core.get_machine_id()
+    assert "machine_id" in ret
+
+    with patch.object(os.path, "exists", return_value=False):
+        ret = core.get_machine_id()
+        assert ret == {}
+
+    with patch.object(platform, "system", return_value="AIX"):
+        with patch.object(core, "_aix_get_machine_id", return_value="AIX-MACHINE-ID"):
+            ret = core.get_machine_id()
+            assert ret == "AIX-MACHINE-ID"
+
+
+def test_hwaddr_interfaces():
+    """
+    test hwaddr_interfaces
+    """
+
+    mock_get_interfaces = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [],
+        },
+        "eth1": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "0.0.0.0",
+                    "netmask": "255.255.255.0",
+                    "broadcast": "0.0.0.0",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [],
+        },
+    }
+    with patch.object(core, "_get_interfaces", return_value=mock_get_interfaces):
+        ret = core.hwaddr_interfaces()
+        assert "hwaddr_interfaces" in ret
+        assert ret["hwaddr_interfaces"] == {
+            "lo": "00:00:00:00:00:00",
+            "eth1": "00:00:00:00:00:00",
+        }
+
+
+def test_id():
+    """
+    test id
+    """
+    ret = core.id_()
+    assert "id" in ret
+
+
+def test__linux_bin_exists():
+    """
+    test id
+    """
+    mock_retcode = [salt.exceptions.CommandExecutionError, 0]
+    with patch.dict(
+        core.__salt__, {"cmd.retcode": MagicMock(side_effect=mock_retcode)}
+    ):
+        ret = core._linux_bin_exists("ls")
+        assert ret
+
+    mock_retcode = salt.exceptions.CommandExecutionError
+    mock_runall = [
+        {"pid": 100, "retcode": 0, "stdout": "ls: /usr/bin/ls", "stderr": ""}
+    ]
+    with patch.dict(
+        core.__salt__, {"cmd.retcode": MagicMock(side_effect=mock_retcode)}
+    ):
+        with patch.dict(
+            core.__salt__, {"cmd.run_all": MagicMock(side_effect=mock_runall)}
+        ):
+            ret = core._linux_bin_exists("ls")
+            assert ret
+
+    mock_retcode = salt.exceptions.CommandExecutionError
+    mock_runall = salt.exceptions.CommandExecutionError
+
+    with patch.dict(
+        core.__salt__, {"cmd.retcode": MagicMock(side_effect=mock_retcode)}
+    ):
+        with patch.dict(
+            core.__salt__, {"cmd.run_all": MagicMock(side_effect=mock_runall)}
+        ):
+            ret = core._linux_bin_exists("ls")
+            assert not ret
+
+
+def test__parse_lsb_release():
+    """
+    test id
+    """
+    mock_lsb_file = """
+DISTRIB_ID="ManjaroLinux"
+DISTRIB_RELEASE="23.0.2"
+DISTRIB_CODENAME="Uranos"
+DISTRIB_DESCRIPTION="Manjaro Linux"
+"""
+
+    with patch("salt.utils.files.fopen", mock_open(read_data=mock_lsb_file)):
+        ret = core._parse_lsb_release()
+        assert ret == {
+            "lsb_distrib_id": "ManjaroLinux",
+            "lsb_distrib_release": "23.0.2",
+            "lsb_distrib_codename": "Uranos",
+            "lsb_distrib_description": "Manjaro Linux",
+        }
+
+    with patch("salt.utils.files.fopen", side_effect=OSError):
+        ret = core._parse_lsb_release()
+        assert ret == {}
