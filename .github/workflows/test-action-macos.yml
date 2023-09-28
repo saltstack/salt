@@ -77,7 +77,7 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -104,7 +104,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Salt Version
         run: |
@@ -385,7 +385,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v3

@@ -57,7 +57,7 @@
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Python Version
         id: get-python-version
@@ -215,7 +215,7 @@
       - prepare-release
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -329,7 +329,7 @@
       - <{ need }>
       <%- endfor %>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         if: ${{ github.event.repository.private == false }}

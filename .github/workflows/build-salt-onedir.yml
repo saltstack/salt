@@ -57,7 +57,7 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -106,7 +106,7 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -159,7 +159,7 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:

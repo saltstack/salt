@@ -39,7 +39,7 @@ jobs:
           # - pdf
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
