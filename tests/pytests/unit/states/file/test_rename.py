@@ -10,6 +10,7 @@ import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
+import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -152,10 +153,14 @@ def test_rename(tmp_path):
                     with patch.object(os.path, "islink", mock_f):
                         with patch.dict(filestate.__opts__, {"test": False}):
                             with patch.object(shutil, "move", MagicMock()):
+                                if salt.utils.platform.is_windows():
+                                    comt = "Drive C: is not mapped"
+                                else:
+                                    comt = "Drive  is not mapped"
                                 ret.update(
                                     {
                                         "name": name,
-                                        "comment": "Drive  is not mapped",
+                                        "comment": comt,
                                         "result": False,
                                         "changes": {},
                                     }
