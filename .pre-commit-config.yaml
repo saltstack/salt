@@ -46,7 +46,7 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.15.0"
+    rev: "0.18.1"
     hooks:
       - id: tools
         alias: check-changelog-entries
@@ -1196,7 +1196,7 @@ repos:
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.2
+    rev: v3.13.0
     hooks:
       - id: pyupgrade
         name: Upgrade code for Py3.8+
@@ -1250,7 +1250,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: 22.6.0
+    rev: 23.9.1
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
@@ -1263,7 +1263,7 @@ repos:
             )$
 
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.12.1
+    rev: 1.16.0
     hooks:
       - id: blacken-docs
         args: [--skip-errors]
@@ -1275,7 +1275,7 @@ repos:
 
   # ----- Security -------------------------------------------------------------------------------------------------->
   - repo: https://github.com/PyCQA/bandit
-    rev: "1.7.4"
+    rev: "1.7.5"
     hooks:
       - id: bandit
         alias: bandit-salt
@@ -1289,7 +1289,7 @@ repos:
             )$
         additional_dependencies: ['importlib_metadata<5']
   - repo: https://github.com/PyCQA/bandit
-    rev: "1.7.4"
+    rev: "1.7.5"
     hooks:
       - id: bandit
         alias: bandit-tests
@@ -1414,7 +1414,7 @@ repos:
           - looseversion
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.0
+    rev: v1.5.1
     hooks:
       - id: mypy
         alias: mypy-tools
@@ -1429,7 +1429,7 @@ repos:
           - types-requests
 
   - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2021.6.12
+    rev: v2022.11.21
     hooks:
       - id: nox
         alias: lint-salt
@@ -1449,7 +1449,7 @@ repos:
           - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2021.6.12
+    rev: v2022.11.21
     hooks:
       - id: nox
         alias: lint-tests
