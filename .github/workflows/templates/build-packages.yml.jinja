@@ -7,9 +7,12 @@
 
   <%- for backend in ("onedir", "src") %>
   <%- set job_name = "build-{}-pkgs-{}".format(pkg_type, backend) %>
+  <%- if backend == "src" %>
+    <%- do conclusion_needs.append(job_name) %>
+  <%- endif %>
 
   <{ job_name }>:
-    name: Build <{ display_name }> Packages (<{ backend }>)
+    name: Build Packages
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['<{ runner_type }>'] }}
     needs:
       - prepare-workflow

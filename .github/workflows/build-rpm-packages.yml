@@ -37,6 +37,8 @@ jobs:
         arch:
           - x86_64
           - aarch64
+        source:
+          - ${{ inputs.source }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9

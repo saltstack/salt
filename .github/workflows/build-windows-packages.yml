@@ -41,6 +41,8 @@ jobs:
         arch:
           - x86
           - amd64
+        source:
+          - ${{ inputs.source }}
 
     runs-on:
       - windows-latest

@@ -39,6 +39,8 @@ jobs:
       matrix:
         arch:
           - x86_64
+        source:
+          - ${{ inputs.source }}
 
     runs-on:
       - macos-12

@@ -58,6 +58,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: <{ pkg_type.lower() }>
@@ -97,6 +98,7 @@
       environment: <{ gh_environment }>
       skip-code-coverage: true
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: <{ pkg_type.lower() }>
     secrets: inherit
@@ -135,6 +137,7 @@
       environment: <{ gh_environment }>
       skip-code-coverage: true
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
     <%- endfor %>
