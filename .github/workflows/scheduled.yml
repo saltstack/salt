@@ -83,7 +83,7 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
@@ -299,7 +299,7 @@ jobs:
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Python Version
         id: get-python-version
@@ -431,7 +431,7 @@ jobs:
       - prepare-release
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -2148,7 +2148,7 @@ jobs:
       - ubuntu-2204
       - ubuntu-2204-arm64
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         if: ${{ github.event.repository.private == false }}

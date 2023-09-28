@@ -48,7 +48,7 @@ jobs:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3

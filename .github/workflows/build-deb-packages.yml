@@ -49,11 +49,11 @@ jobs:
 
     steps:
       # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Checkout here for the build process
       - name: Checkout in build directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path:
             pkgs/checkout/
