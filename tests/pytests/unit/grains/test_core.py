@@ -3776,18 +3776,22 @@ def test_pythonpath():
     """
     test pythonpath
     """
+    python_path = sys.path
 
     ret = core.pythonpath()
     assert "pythonpath" in ret
+    assert ret["pythonpath"] == python_path
 
 
 def test_pythonversion():
     """
     test pythonversion
     """
+    python_version = [*sys.version_info]
 
     ret = core.pythonversion()
     assert "pythonversion" in ret
+    assert ret["pythonversion"] == python_version
 
 
 def test_get_machine_id():
@@ -3856,6 +3860,11 @@ def test_id():
     """
     ret = core.id_()
     assert "id" in ret
+
+    with patch("salt.grains.core.__opts__", {"id": "test_id_minion_id"}):
+        ret = core.id_()
+        assert "id" in ret
+        assert ret["id"] == "test_id_minion_id"
 
 
 def test__linux_bin_exists():
