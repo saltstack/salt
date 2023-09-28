@@ -1195,7 +1195,7 @@ def decompress_dependencies(session):
             "Check cicd/images.yml for what's available."
         )
     distro_slug = session.posargs.pop(0)
-    if IS_WINDOWS:
+    if "windows" in distro_slug:
         nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
     else:
         nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
@@ -1212,7 +1212,7 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
-        if not IS_WINDOWS:
+        if "windows" not in distro_slug:
             scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
         else:
             scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
