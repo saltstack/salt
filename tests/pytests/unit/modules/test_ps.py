@@ -319,7 +319,6 @@ def mocked_proc():
         yield mocked_proc
 
 
-@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
 def test__get_proc_cmdline():
     cmdline = ["echo", "питон"]
     ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
@@ -336,7 +335,6 @@ def test__get_proc_cmdline():
         assert ret == []
 
 
-@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
 def test__get_proc_create_time():
     cmdline = ["echo", "питон"]
     create_time = 1694729500.1093624
@@ -364,7 +362,6 @@ def test__get_proc_create_time():
         assert ret is None
 
 
-@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
 def test__get_proc_name():
     cmdline = ["echo", "питон"]
     proc_name = "proc_name"
@@ -386,7 +383,6 @@ def test__get_proc_name():
         assert ret == []
 
 
-@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
 def test__get_proc_status():
     cmdline = ["echo", "питон"]
     proc_status = "sleeping"
@@ -408,7 +404,6 @@ def test__get_proc_status():
         assert ret is None
 
 
-@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
 def test__get_proc_username():
     cmdline = ["echo", "питон"]
     proc_username = "root"
