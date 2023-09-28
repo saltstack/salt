@@ -7,9 +7,6 @@ import pytest
 
 import salt.config
 import salt.exceptions
-import salt.fileserver.gitfs
-import salt.pillar.git_pillar
-import salt.runners.winrepo
 import salt.utils.configparser
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
@@ -321,9 +318,9 @@ def test_get_cachedir_basename_pygit2(_prepare_provider):
 @pytest.mark.parametrize(
     "overrides",
     (
-        salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-        salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-        salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.GITFS_PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.PILLAR_PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.WINREPO_PER_REMOTE_OVERRIDES,
     ),
 )
 def test_proxy_is_a_per_remote_override(overrides):

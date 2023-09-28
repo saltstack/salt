@@ -1064,9 +1064,6 @@ class Master(SMaster):
                             git_pillar = salt.utils.gitfs.GitPillar(
                                 new_opts,
                                 repo["git"],
-                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                             )
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
