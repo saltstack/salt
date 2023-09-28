@@ -3185,7 +3185,7 @@ def test_kernelparams_return_linux_non_utf8():
             assert core.kernelparams() == expected
 
 
-def test_linux_gpus():
+def test_linux_gpus(caplog):
     """
     Test GPU detection on Linux systems
     """
@@ -3250,6 +3250,15 @@ def test_linux_gpus():
             "intel",
         ],  # Display controller
     ]
+
+    with patch("salt.grains.core.__opts__", {"enable_lspci": False}):
+        ret = core._linux_gpu_data()
+        assert ret == {}
+
+    with patch("salt.grains.core.__opts__", {"enable_gpu_grains": False}):
+        ret = core._linux_gpu_data()
+        assert ret == {}
+
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
     ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}):
@@ -3261,6 +3270,37 @@ def test_linux_gpus():
             assert ret[count]["model"] == device[2]
             assert ret[count]["vendor"] == device[3]
             count += 1
+
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+        ret = core._linux_gpu_data()
+        assert ret == {"num_gpus": 0, "gpus": []}
+
+    bad_gpu_data = textwrap.dedent(
+        """
+        Class: VGA compatible controller
+        Vendor:	Advanced Micro Devices, Inc. [AMD/ATI]
+        Device:	Vega [Radeon RX Vega]]
+        SVendor; Evil Corp.
+        SDevice: Graphics XXL
+        Rev: c1
+        NUMANode:	0"""
+    )
+
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch.dict(
+        core.__salt__, {"cmd.run": MagicMock(return_value=bad_gpu_data)}
+    ), caplog.at_level(
+        logging.WARN
+    ):
+        core._linux_gpu_data()
+        assert (
+            "Error loading grains, unexpected linux_gpu_data output, "
+            "check that you have a valid shell configured and permissions "
+            "to run lspci command" in caplog.messages
+        )
 
 
 def test_get_server_id():
@@ -3878,3 +3918,42 @@ DISTRIB_DESCRIPTION="Manjaro Linux"
     with patch("salt.utils.files.fopen", side_effect=OSError):
         ret = core._parse_lsb_release()
         assert ret == {}
+
+
+def test__osx_gpudata():
+    """
+    test id
+    """
+    mock_gpudata = """
+Graphics/Displays:
+
+    NVIDIA GeForce 320M:
+
+      Chipset Model: NVIDIA GeForce 320M
+      Type: GPU
+      VRAM (Total): 256 MB
+      Vendor: NVIDIA (0x10de)
+      Device ID: 0x08a0
+      Revision ID: 0x00a2
+      ROM Revision: 3533
+      Displays:
+        Color LCD:
+          Display Type: LCD
+          Resolution: 1280 x 800
+          UI Looks like: 1280 x 800
+          Framebuffer Depth: 24-Bit Color (ARGB8888)
+          Main Display: Yes
+          Mirror: Off
+          Online: Yes
+          Automatically Adjust Brightness: Yes
+          Connection Type: Internal
+
+"""
+    with patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value=mock_gpudata)}):
+        ret = core._osx_gpudata()
+        assert ret["num_gpus"] == 1
+        assert ret["gpus"] == [{"vendor": "nvidia", "model": "GeForce 320M"}]
+
+    with patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+        ret = core._osx_gpudata()
+        assert ret == {"num_gpus": 0, "gpus": []}
