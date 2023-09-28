@@ -2,10 +2,14 @@
 Test for ssh_pre_flight roster option
 """
 
-import grp
+try:
+    import grp
+    import pwd
+except ImportError:
+    # windows stacktraces on import of these modules
+    pass
 import os
 import pathlib
-import pwd
 import shutil
 import subprocess
 
@@ -14,6 +18,8 @@ import yaml
 from saltfactories.utils import random_string
 
 import salt.utils.files
+
+pytestmark = pytest.mark.skip_on_windows(reason="Salt-ssh not available on Windows")
 
 
 def _custom_roster(roster_file, roster_data):
