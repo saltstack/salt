@@ -1,11 +1,13 @@
 import os
+
 import pytest
+
 from salt.modules import win_file
 
-
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.skip_unless_on_windows,
 ]
+
 
 def test_is_link(tmp_path):
     tmp_path = str(tmp_path)
