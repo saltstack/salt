@@ -170,3 +170,115 @@ def test_pkg_paths(
                     else:
                         assert file_path.owner() == "root"
                         assert file_path.group() == "root"
+
+
+def test_paths_log_rotation(
+    salt_master, salt_minion, salt_call_cli, install_salt, test_account
+):
+    """
+    Test the correct ownership is assigned when log rotation occurs
+    Change the user in the Salt Master, chage ownership, force logrotation
+    Check ownership and premissions.
+    Assumes test_pkg_paths successful
+    """
+    if packaging.version.parse(install_salt.version) <= packaging.version.parse(
+        "3006.2"
+    ):
+        pytest.skip("Package path ownership was changed in salt 3006.3")
+
+    # check that the salt_master is running
+    assert salt_master.is_running()
+    match = False
+    for proc in psutil.Process(salt_master.pid).children():
+        assert proc.username() == "salt"
+        match = True
+
+    assert match
+
+    # Paths created by package installs with adjustment for current conf_dir /etc/salt
+    log_pkg_paths = [
+        install_salt.conf_dir,
+        "/var/cache/salt",
+        "/var/log/salt",
+        "/var/run/salt",
+        "/opt/saltstack/salt",
+    ]
+
+    # stop the salt_master, so can change user
+    with salt_master.stopped():
+        assert salt_master.is_running() is False
+
+        # change the user in the master's config file.
+        ret = salt_call_cli.run(
+            "--local",
+            "file.replace",
+            f"{install_salt.conf_dir}/master",
+            "user: salt",
+            f"user: {test_account.username}",
+            "flags=['IGNORECASE']",
+            "append_if_not_found=True",
+        )
+        assert ret.returncode == 0
+
+        # change ownership of appropriate paths to user
+        for _path in log_pkg_paths:
+            chg_ownership_cmd = (
+                f"chown -R {test_account.username}:{test_account.username} {_path}"
+            )
+            ret = salt_call_cli.run("--local", "cmd.run", chg_ownership_cmd)
+            assert ret.returncode == 0
+
+        # restart the salt_master
+        with salt_master.started():
+            assert salt_master.is_running() is True
+
+            # ensure some data in files
+            log_files_list = [
+                "/var/log/salt/api",
+                "/var/log/salt/key",
+                "/var/log/salt/master",
+            ]
+            for _path in log_files_list:
+                log_path = pathlib.Path(_path)
+                assert log_path.exists()
+                with log_path.open("a") as f:
+                    f.write("This is a log rotation test\n")
+
+            # force log rotation
+            logr_conf_file = "/etc/logrotate.d/salt"
+            logr_conf_path = pathlib.Path(logr_conf_file)
+            # assert logr_conf_path.exists()
+            if not logr_conf_path.exists():
+                logr_conf_file = "/etc/logrotate.conf"
+                logr_conf_path = pathlib.Path(logr_conf_file)
+                assert logr_conf_path.exists()
+
+            for _path in log_files_list:
+                log_path = pathlib.Path(_path)
+                assert log_path.exists()
+                assert log_path.owner() == f"{test_account.username}"
+                assert log_path.group() == f"{test_account.username}"
+                assert log_path.stat().st_mode & 0o7777 == 0o640
+
+            # cleanup
+            # stop the salt_master
+            with salt_master.stopped():
+                assert salt_master.is_running() is False
+
+                # change the user in the master's config file.
+                ret = salt_call_cli.run(
+                    "--local",
+                    "file.replace",
+                    f"{install_salt.conf_dir}/master",
+                    f"user: {test_account.username}",
+                    "user: salt",
+                    "flags=['IGNORECASE']",
+                    "append_if_not_found=True",
+                )
+                assert ret.returncode == 0
+
+                # change ownership of appropriate paths to user
+                for _path in log_pkg_paths:
+                    chg_ownership_cmd = f"chown -R salt:salt {_path}"
+                    ret = salt_call_cli.run("--local", "cmd.run", chg_ownership_cmd)
+                    assert ret.returncode == 0
