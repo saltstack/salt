@@ -638,33 +638,6 @@ def matrix(ctx: Context, distro_slug: str):
 
 
 @ci.command(
-    name="transport-matrix",
-    arguments={
-        "distro_slug": {
-            "help": "The distribution slug to generate the matrix for",
-        },
-    },
-)
-def transport_matrix(ctx: Context, distro_slug: str):
-    """
-    Generate the test matrix.
-    """
-    _matrix = []
-    for transport in ("zeromq", "tcp"):
-        if transport == "tcp":
-            if distro_slug not in (
-                "centosstream-9",
-                "ubuntu-22.04",
-                "ubuntu-22.04-arm64",
-            ):
-                # Only run TCP transport tests on these distributions
-                continue
-        _matrix.append({"transport": transport})
-    print(json.dumps(_matrix))
-    ctx.exit(0)
-
-
-@ci.command(
     name="pkg-matrix",
     arguments={
         "distro_slug": {
@@ -706,6 +679,7 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -716,6 +690,21 @@ def pkg_matrix(
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
         sessions.append("downgrade")
+
+    still_testing_3005 = False
+    for release_version in testing_releases:
+        if still_testing_3005:
+            break
+        if release_version < tools.utils.Version("3006.0"):
+            still_testing_3005 = True
+
+    if still_testing_3005 is False:
+        ctx.error(
+            f"No longer testing 3005.x releases please update {__file__} "
+            "and remove this error and the logic above the error"
+        )
+        ctx.exit(1)
+
     # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
@@ -725,6 +714,7 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -749,6 +739,8 @@ def pkg_matrix(
                     "version": version,
                 }
             )
+            if distro_slug.startswith("windows"):
+                matrix[-1]["pkg-type"] = pkg_type.upper()
     ctx.info("Generated matrix:")
     ctx.print(matrix, soft_wrap=True)
 

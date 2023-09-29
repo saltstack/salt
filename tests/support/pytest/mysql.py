@@ -61,7 +61,7 @@ class MySQLCombo:
 
 def get_test_versions():
     test_versions = []
-    name = "mysql/mysql-server"
+    name = "mysql-server"
     for version in ("5.5", "5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
@@ -71,7 +71,7 @@ def get_test_versions():
             )
         )
     name = "mariadb"
-    for version in ("10.3", "10.4", "10.5", "10.6"):
+    for version in ("10.3", "10.4", "10.5"):
         test_versions.append(
             MySQLImage(
                 name=name,
@@ -80,7 +80,7 @@ def get_test_versions():
             )
         )
     name = "percona"
-    for version in ("5.5", "5.6", "5.7", "8.0"):
+    for version in ("5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
                 name=name,

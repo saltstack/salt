@@ -9,6 +9,7 @@
 <%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
+<%- set gh_actions_workflows_python_version = "3.10" %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -96,7 +97,7 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
