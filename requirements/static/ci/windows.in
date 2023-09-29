@@ -1,8 +1,7 @@
 # This is a compilation of requirements installed on salt-jenkins git.salt state run
 dmidecode
 patch
-pygit2>=1.10.1; python_version >= '3.7'
-pygit2>=1.13.1; python_version >= '3.8'
+pygit2>=1.10.1
 sed
 pywinrm>=0.4.1
 yamllint
