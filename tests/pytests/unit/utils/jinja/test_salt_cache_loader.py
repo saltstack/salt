@@ -5,7 +5,7 @@ Tests for salt.utils.jinja
 import os
 
 import pytest
-from jinja2 import Environment, exceptions
+from jinja2 import Environment, TemplateNotFound, exceptions
 
 # dateutils is needed so that the strftime jinja filter is loaded
 import salt.utils.dateutils  # pylint: disable=unused-import
@@ -14,7 +14,7 @@ import salt.utils.json  # pylint: disable=unused-import
 import salt.utils.stringutils  # pylint: disable=unused-import
 import salt.utils.yaml  # pylint: disable=unused-import
 from salt.utils.jinja import SaltCacheLoader
-from tests.support.mock import Mock, call, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -224,7 +224,7 @@ def test_cached_file_client(get_loader, minion_opts):
     """
     Multiple instantiations of SaltCacheLoader use the cached file client
     """
-    with patch("salt.channel.client.ReqChannel.factory", Mock()):
+    with patch("salt.channel.client.ReqChannel.factory", MagicMock()):
         loader_a = SaltCacheLoader(minion_opts)
         loader_b = SaltCacheLoader(minion_opts)
     assert loader_a._file_client is loader_b._file_client
@@ -246,7 +246,7 @@ def test_cache_loader_passed_file_client(minion_opts, mock_file_client):
     file_client does not have a destroy method
     """
     # Test SaltCacheLoader creating and destroying the file client created
-    file_client = Mock()
+    file_client = MagicMock()
     with patch("salt.fileclient.get_file_client", return_value=file_client):
         loader = SaltCacheLoader(minion_opts)
         assert loader._file_client is None
@@ -256,9 +256,9 @@ def test_cache_loader_passed_file_client(minion_opts, mock_file_client):
         assert file_client.mock_calls == [call.destroy()]
 
     # Test SaltCacheLoader reusing the file client passed
-    file_client = Mock()
+    file_client = MagicMock()
     file_client.opts = {"file_roots": minion_opts["file_roots"]}
-    with patch("salt.fileclient.get_file_client", return_value=Mock()):
+    with patch("salt.fileclient.get_file_client", return_value=MagicMock()):
         loader = SaltCacheLoader(minion_opts, _file_client=file_client)
         assert loader._file_client is file_client
         with loader:
@@ -270,9 +270,9 @@ def test_cache_loader_passed_file_client(minion_opts, mock_file_client):
     # passed because the "file_roots" option is different, and, as such,
     # the destroy method on the new file client is called, but not on the
     # file client passed in.
-    file_client = Mock()
+    file_client = MagicMock()
     file_client.opts = {"file_roots": ""}
-    new_file_client = Mock()
+    new_file_client = MagicMock()
     with patch("salt.fileclient.get_file_client", return_value=new_file_client):
         loader = SaltCacheLoader(minion_opts, _file_client=file_client)
         assert loader._file_client is file_client
@@ -282,3 +282,65 @@ def test_cache_loader_passed_file_client(minion_opts, mock_file_client):
         assert loader._file_client is None
         assert file_client.mock_calls == []
         assert new_file_client.mock_calls == [call.destroy()]
+
+
+def test_check_cache_miss(get_loader, minion_opts, hello_simple):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    with patch.object(loader, "cached", []):
+        with patch.object(loader, "cache_file") as cache_mock:
+            loader.check_cache(str(hello_simple))
+            cache_mock.assert_called_once()
+
+
+def test_check_cache_hit(get_loader, minion_opts, hello_simple):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    with patch.object(loader, "cached", [str(hello_simple)]):
+        with patch.object(loader, "cache_file") as cache_mock:
+            loader.check_cache(str(hello_simple))
+            cache_mock.assert_not_called()
+
+
+def test_get_source_no_environment(
+    get_loader, minion_opts, relative_rhello, relative_dir
+):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    with pytest.raises(TemplateNotFound):
+        loader.get_source(None, str(".." / relative_rhello.relative_to(relative_dir)))
+
+
+def test_get_source_relative_no_tpldir(
+    get_loader, minion_opts, relative_rhello, relative_dir
+):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    with pytest.raises(TemplateNotFound):
+        loader.get_source(
+            MagicMock(globals=[]), str(".." / relative_rhello.relative_to(relative_dir))
+        )
+
+
+def test_get_source_template_doesnt_exist(get_loader, minion_opts):
+    saltenv = "test"
+    fake_path = "fake_path"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    with pytest.raises(TemplateNotFound):
+        loader.get_source(None, fake_path)
+
+
+def test_get_source_template_removed(get_loader, minion_opts, hello_simple):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    contents, filepath, uptodate = loader.get_source(None, str(hello_simple))
+    hello_simple.unlink()
+    assert uptodate() is False
+
+
+def test_no_destroy_method_on_file_client(get_loader, minion_opts):
+    saltenv = "test"
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    loader._close_file_client = True
+    # This should fail silently, thus no error catching
+    loader.destroy()
