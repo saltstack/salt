@@ -29,6 +29,11 @@ on:
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
 
@@ -46,7 +51,13 @@ jobs:
       - linux
       - ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -89,7 +100,14 @@ jobs:
           - amd64
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
@@ -135,7 +153,13 @@ jobs:
           - x86_64
     runs-on: macos-12
     steps:
-      - uses: actions/checkout@v3
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:

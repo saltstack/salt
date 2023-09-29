@@ -548,6 +548,24 @@ def combine_coverage(ctx: Context, name: str):
 
 
 @vm.command(
+    name="create-xml-coverage-reports",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+    },
+)
+def create_xml_coverage_reports(ctx: Context, name: str):
+    """
+    Create XML code coverage reports in the VM.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.create_xml_coverage_reports()
+    ctx.exit(returncode)
+
+
+@vm.command(
     name="download-artifacts",
     arguments={
         "name": {
@@ -842,6 +860,7 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
+              PasswordAuthentication no
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -1312,6 +1331,7 @@ class VM:
         if not env:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
+        write_env["TOOLS_DISTRO_SLUG"] = self.name
         write_env_filename = ".ci-env"
         write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
@@ -1413,7 +1433,13 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir", session_args=[self.name])
+
+    def create_xml_coverage_reports(self):
+        """
+        Create XML coverage reports
+        """
+        return self.run_nox("create-xml-coverage-reports", session_args=[self.name])
 
     def compress_dependencies(self):
         """
