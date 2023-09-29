@@ -396,9 +396,10 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     return soft, hard
 
 
-def pytest_report_header():
+def pytest_report_header(config):
     soft, hard = set_max_open_files_limits()
-    return f"max open files; soft: {soft}; hard: {hard}"
+    transport = config.getoption("--transport")
+    return f"max open files: soft={soft}; hard={hard}\nsalt-transport: {transport}"
 
 
 def pytest_itemcollected(item):

@@ -13,7 +13,6 @@ import os
 import pathlib
 import shutil
 import sqlite3
-import subprocess
 import sys
 import tarfile
 import tempfile
@@ -190,21 +189,12 @@ def _get_pydir(session):
     return "py{}.{}".format(*version_info)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     assert requirements_type in ("ci", "pkg")
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
         if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                f"{transport}-windows.txt",
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
             _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "windows.txt"
             )
@@ -219,15 +209,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                f"{transport}-darwin.txt",
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
@@ -241,15 +222,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                f"{transport}-freebsd.txt",
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
@@ -262,15 +234,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error(f"Could not find a freebsd requirements file for {pydir}")
     else:
         if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                f"{transport}-linux.txt",
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
             _requirements_file = os.path.join(
                 "requirements", "static", requirements_type, pydir, "linux.txt"
             )
@@ -319,7 +282,6 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
 
 def _install_requirements(
     session,
-    transport,
     *extra_requirements,
     requirements_type="ci",
     onedir=False,
@@ -332,7 +294,7 @@ def _install_requirements(
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
-        session, transport, requirements_type=requirements_type
+        session, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -361,7 +323,19 @@ def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            coverage_requirement = "coverage==5.2"
+            coverage_requirement = "coverage==7.3.1"
+            if IS_LINUX:
+                distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
+                if distro_slug is not None and distro_slug in (
+                    "centos-7",
+                    "debian-10",
+                    "photonos-3",
+                ):
+                    # Keep the old coverage requirement version since the new one, on these
+                    # plaforms turns the test suite quite slow.
+                    # Unit tests don't finish before the 5 hours timeout when they should
+                    # finish within 1 to 2 hours.
+                    coverage_requirement = "coverage==5.2"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
@@ -567,7 +541,7 @@ def test_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    if _install_requirements(session, transport):
+    if _install_requirements(session):
 
         if crypto:
             session_run_always(
@@ -584,7 +558,7 @@ def test_parametrized(session, coverage, transport, crypto):
             install_command = [
                 "--progress-bar=off",
                 "--constraint",
-                _get_pip_requirements_file(session, transport, crypto=True),
+                _get_pip_requirements_file(session, crypto=True),
             ]
             install_command.append(crypto)
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -992,7 +966,7 @@ def test_tornado(session, coverage):
     """
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session)
         session.install(
             "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
         )
@@ -1083,7 +1057,7 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
 
 def _ci_test(session, transport, onedir=False):
     # Install requirements
-    _install_requirements(session, transport, onedir=onedir)
+    _install_requirements(session, onedir=onedir)
     env = {}
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
@@ -1179,7 +1153,14 @@ def _ci_test(session, transport, onedir=False):
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
 def ci_test(session):
-    _ci_test(session, "zeromq")
+    transport = os.environ.get("SALT_TRANSPORT") or "zeromq"
+    valid_transports = ("zeromq", "tcp")
+    if transport not in valid_transports:
+        session.error(
+            "The value for the SALT_TRANSPORT environment variable can only be "
+            f"one of: {', '.join(valid_transports)}"
+        )
+    _ci_test(session, transport)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
@@ -1232,7 +1213,7 @@ def decompress_dependencies(session):
             "Check cicd/images.yml for what's available."
         )
     distro_slug = session.posargs.pop(0)
-    if IS_WINDOWS:
+    if "windows" in distro_slug:
         nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
     else:
         nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
@@ -1249,7 +1230,7 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
-        if not IS_WINDOWS:
+        if "windows" not in distro_slug:
             scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
         else:
             scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
@@ -1348,6 +1329,28 @@ def pre_archive_cleanup(session, pkg):
 
 @nox.session(python="3", name="combine-coverage")
 def combine_coverage(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="combine-coverage-onedir",
+    venv_params=["--system-site-packages"],
+)
+def combine_coverage_onedir(session):
     _install_coverage_requirement(session)
     env = {
         # The full path to the .coverage data file. Makes sure we always write
@@ -1702,7 +1705,7 @@ def invoke(session):
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session)
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
@@ -1866,10 +1869,25 @@ def build(session):
 
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
-    name="test-pkgs-onedir",
+    name="ci-test-onedir-pkgs",
     venv_params=["--system-site-packages"],
 )
-def test_pkgs_onedir(session):
+def ci_test_onedir_pkgs(session):
+    from nox.virtualenv import VirtualEnv
+
+    session_warn(session, "Replacing VirtualEnv instance...")
+
+    ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
+    session._runner.venv = VirtualEnv(
+        str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+        interpreter=session._runner.func.python,
+        reuse_existing=True,
+        venv=session._runner.venv.venv_or_virtualenv == "venv",
+        venv_params=session._runner.venv.venv_params,
+    )
+    os.environ["VIRTUAL_ENV"] = session._runner.venv.location
+    session._runner.venv.create()
+
     if not ONEDIR_ARTIFACT_PATH.exists():
         session.error(
             "The salt onedir artifact, expected to be in '{}', was not found".format(
@@ -1923,18 +1941,7 @@ def test_pkgs_onedir(session):
 
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
-        if IS_WINDOWS:
-            file_name = "pkgtests-windows.txt"
-        else:
-            file_name = "pkgtests.txt"
-
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, file_name
-        )
-
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
+        _install_requirements(session, "zeromq")
     env = {
         "ONEDIR_TESTRUN": "1",
         "PKG_TEST_TYPE": chunk,
@@ -1942,9 +1949,6 @@ def test_pkgs_onedir(session):
 
     if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
-        # Workaround for installing and running classic packages from 3005.1
-        # They can only run with importlib-metadata<5.0.0.
-        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
 
     pytest_args = (
         cmd_args[:]

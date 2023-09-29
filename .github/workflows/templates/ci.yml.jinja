@@ -57,7 +57,7 @@
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Python Version
         id: get-python-version
@@ -220,7 +220,7 @@
       - prepare-release
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -306,15 +306,18 @@
   <%- include "build-packages.yml.jinja" %>
   <%- endif %>
 
+  <%- set pkg_tests_job_name = "pkg-tests" %>
+  <%- set salt_tests_job_name = "salt-tests" %>
+  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) %>
+  <%- include "build-ci-deps.yml.jinja" %>
+  <%- endif %>
 
-  <%- set job_name = "pkg-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(pkg_tests_job_name, True) %>
   <%- include "test-salt-pkg.yml.jinja" %>
   <%- endif %>
 
 
-  <%- set job_name = "salt-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(salt_tests_job_name, True) %>
   <%- include "test-salt.yml.jinja" %>
   <%- endif %>
 
@@ -331,7 +334,7 @@
       - <{ need }>
       <%- endfor %>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         if: ${{ github.event.repository.private == false }}
