@@ -1269,7 +1269,7 @@ repos:
         args: [--skip-errors]
         files: ^doc/.*\.rst
         additional_dependencies:
-          - black==22.6.0
+          - black==23.9.1
 
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 

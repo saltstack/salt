@@ -129,6 +129,9 @@ jobs:
                 - *salt_added_modified
                 - *tests_added_modified
                 - *pkg_tests_added_modified
+            pre-commit:
+              - added|modified:
+                - .pre-commit-config.yaml
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4

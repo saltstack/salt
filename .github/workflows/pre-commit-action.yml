@@ -50,14 +50,14 @@ jobs:
           cache-seed: ${{ inputs.cache-seed }}
 
       - name: Check ALL Files On Branch
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['pre-commit']
         env:
           SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo']
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] && fromJSON(inputs.changed-files)['pre-commit'] == false
         env:
           SKIP: lint-salt,lint-tests
           GH_ACTIONS_ANNOTATE: "1"
