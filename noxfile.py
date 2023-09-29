@@ -331,49 +331,6 @@ def _install_coverage_requirement(session):
         )
 
 
-def _downgrade_importlib_metadata(session):
-    distro_data = session_run_always(
-        session,
-        "python",
-        "-c",
-        "import distro, json, sys; print(json.dumps(distro.linux_distribution()), file=sys.stdout, flush=True)",
-        stderr=None,
-        silent=True,
-        log=False,
-    )
-    distro_info = tuple(json.loads(distro_data.strip()))
-    session.log("Linux Distribution Details: {}".format(distro_info))
-    if (
-        ("amazon" in distro_info[0].lower() and distro_info[1] == "2")
-        or ("debian" in distro_info[0].lower() and distro_info[1] == "10")
-        or ("centos" in distro_info[0].lower() and distro_info[1] == "7")
-    ):
-        session.log("Downgrading importlib-metadata ...")
-        nox_version = session_run_always(
-            session,
-            "nox",
-            "--version",
-            silent=True,
-            log=False,
-        ).strip()
-        # Workaround for installing and running classic packages from 3005.1
-        # They can only run with importlib-metadata<5.0.0.
-        session_run_always(
-            session,
-            "/usr/bin/python3",
-            "-m",
-            "pip",
-            "install",
-            "-U",
-            "importlib-metadata<=4.13.0",
-            "virtualenv<=20.21.1",
-            "nox=={}".format(nox_version),
-            silent=False,
-            log=True,
-            external=True,
-        )
-
-
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
     _install_coverage_requirement(session)
     if on_rerun is False:
@@ -1934,9 +1891,6 @@ def ci_test_onedir_pkgs(session):
 
     if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
-
-        if IS_LINUX:
-            _downgrade_importlib_metadata(session)
 
     pytest_args = (
         cmd_args[:]
