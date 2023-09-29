@@ -20,7 +20,7 @@
     needs:
       - prepare-workflow
       <%- if needs_pkg %>
-      - build-<{ type }>-pkgs
+      - build-<{ type }>-pkgs-onedir
       <%- else %>
       - build-salt-onedir
       <%- endif %>

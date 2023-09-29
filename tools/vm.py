@@ -860,6 +860,7 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
+              PasswordAuthentication no
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -1330,6 +1331,7 @@ class VM:
         if not env:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
+        write_env["TOOLS_DISTRO_SLUG"] = self.name
         write_env_filename = ".ci-env"
         write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
@@ -1431,7 +1433,7 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir", session_args=[self.name])
 
     def create_xml_coverage_reports(self):
         """

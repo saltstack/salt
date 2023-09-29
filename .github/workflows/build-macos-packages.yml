@@ -24,6 +24,15 @@ on:
         type: string
         description: The GitHub Environment where this workflow should run
         default: ci
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
 
@@ -36,8 +45,7 @@ jobs:
         arch:
           - x86_64
         source:
-          - onedir
-          - src
+          - ${{ inputs.source }}
 
     runs-on:
       - macos-12
@@ -66,7 +74,7 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.9
@@ -114,7 +122,7 @@ jobs:
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
         run: |
           tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
-              matrix.source == 'onedir' &&
+              inputs.source == 'onedir' &&
               format(
                 '--onedir salt-{0}-onedir-darwin-{1}.tar.xz --salt-version {0} {2}',
                 inputs.salt-version,
@@ -128,7 +136,7 @@ jobs:
       - name: Set Artifact Name
         id: set-artifact-name
         run: |
-          if [ "${{ matrix.source }}" != "src" ]; then
+          if [ "${{ inputs.source }}" != "src" ]; then
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos" >> "$GITHUB_OUTPUT"
           else
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-from-src" >> "$GITHUB_OUTPUT"

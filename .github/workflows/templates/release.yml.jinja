@@ -87,7 +87,7 @@ permissions:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
@@ -173,7 +173,7 @@ permissions:
           - platform: darwin
             arch: x86_64
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -210,7 +210,7 @@ permissions:
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Rclone
         uses: AnimMouse/setup-rclone@v1
@@ -240,7 +240,7 @@ permissions:
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -280,7 +280,7 @@ permissions:
     environment: <{ gh_environment }>
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
@@ -391,7 +391,7 @@ permissions:
     environment: <{ gh_environment }>
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
@@ -422,7 +422,7 @@ permissions:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

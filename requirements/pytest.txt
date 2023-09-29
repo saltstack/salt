@@ -2,7 +2,7 @@ mock >= 3.0.0
 # PyTest
 docker
 pytest >= 7.2.0
-pytest-salt-factories >= 1.0.0rc26
+pytest-salt-factories >= 1.0.0rc27
 pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
 pytest-timeout

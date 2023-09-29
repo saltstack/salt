@@ -51,12 +51,14 @@
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: <{ pkg_type.lower() }>
@@ -88,6 +90,7 @@
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: darwin
       arch: <{ arch }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
@@ -95,6 +98,7 @@
       environment: <{ gh_environment }>
       skip-code-coverage: true
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
       pkg-type: <{ pkg_type.lower() }>
     secrets: inherit
@@ -124,6 +128,7 @@
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
       platform: windows
       arch: <{ arch }>
       pkg-type: <{ pkg_type.lower() }>
@@ -132,6 +137,7 @@
       environment: <{ gh_environment }>
       skip-code-coverage: true
       nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
     <%- endfor %>
