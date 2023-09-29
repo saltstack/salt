@@ -78,8 +78,6 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.main_class = salt.utils.gitfs.GitFS(
             self.opts,
             self.opts["gitfs_remotes"],
-            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
             git_providers=git_providers,
         )
 

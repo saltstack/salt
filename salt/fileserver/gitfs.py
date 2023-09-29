@@ -53,26 +53,6 @@ import logging
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
 
-PER_REMOTE_OVERRIDES = (
-    "base",
-    "fallback",
-    "mountpoint",
-    "root",
-    "ssl_verify",
-    "saltenv_whitelist",
-    "saltenv_blacklist",
-    "refspecs",
-    "disable_saltenv_mapping",
-    "ref_types",
-    "update_interval",
-)
-PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
-
-# Auth support (auth params can be global or per-remote, too)
-AUTH_PROVIDERS = ("pygit2",)
-AUTH_PARAMS = ("user", "password", "pubkey", "privkey", "passphrase", "insecure_auth")
-
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -84,8 +64,6 @@ def _gitfs(init_remotes=True):
     return salt.utils.gitfs.GitFS(
         __opts__,
         __opts__["gitfs_remotes"],
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
         init_remotes=init_remotes,
     )
 

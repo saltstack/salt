@@ -41,7 +41,6 @@ import salt.utils.user
 import salt.utils.verify
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.pillar import git_pillar
 
 try:
     import pwd
@@ -65,13 +64,7 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get("ext_pillar", [])]:
         if "git" in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(
-                    opts,
-                    opts_dict["git"],
-                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
-                    global_only=git_pillar.GLOBAL_ONLY,
-                )
+                pillar = salt.utils.gitfs.GitPillar(opts, opts_dict["git"])
                 ret.append(pillar)
             except salt.exceptions.FileserverConfigError:
                 if opts.get("git_pillar_verify_config", True):
@@ -132,7 +125,7 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(auth_cache):
+            for dirpath, dirnames, filenames in salt.utils.path.os_walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
@@ -724,7 +717,7 @@ class RemoteFuncs:
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"

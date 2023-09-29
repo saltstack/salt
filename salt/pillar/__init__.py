@@ -1161,16 +1161,9 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.pillar.git_pillar
                 import salt.utils.gitfs
 
-                git_pillar = salt.utils.gitfs.GitPillar(
-                    self.opts,
-                    self.ext["git"],
-                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
-                )
+                git_pillar = salt.utils.gitfs.GitPillar(self.opts, self.ext["git"])
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar
