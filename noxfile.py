@@ -326,6 +326,18 @@ def _install_coverage_requirement(session):
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"
+            if IS_LINUX:
+                distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
+                if distro_slug is not None and distro_slug in (
+                    "centos-7",
+                    "debian-10",
+                    "photonos-3",
+                ):
+                    # Keep the old coverage requirement version since the new one, on these
+                    # plaforms turns the test suite quite slow.
+                    # Unit tests don't finish before the 5 hours timeout when they should
+                    # finish within 1 to 2 hours.
+                    coverage_requirement = "coverage==5.2"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
