@@ -500,6 +500,17 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="avg_not_list",
+            expected={"ret": 2.0},
+            sls="""
+            {% set result = 2 | avg() %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
             name="difference",
             expected={"ret": [1, 3]},
             sls="""
@@ -647,6 +658,17 @@ def _filter_id(value):
             expected={"ret": [1, 2, 3, 4, 6]},
             sls="""
             {% set result = [1, 2, 3, 4] | union([2, 4, 6]) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="union_hashable",
+            expected={"ret": [1, 2, 3, 4, 6]},
+            sls="""
+            {% set result = (1, 2, 3, 4) | union((2, 4, 6)) | list %}
             test:
               module.run:
                 - name: test.echo
@@ -929,6 +951,109 @@ def _filter_id(value):
                 - text: {{ result }}
             """,
         ),
+        Filter(
+            name="raise",
+            expected={"ret": {"Question": "Quieres Café?"}},
+            sls="""
+            {{ raise('Custom Error') }}
+            """,
+        ),
+        Filter(
+            name="match",
+            expected={"ret": "match"},
+            sls="""
+            {% if 'a' is match('[a-b]') %}
+              {% set result = 'match' %}
+            {% else %}
+              {% set result = 'no_match' %}
+            {% endif %}
+
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="no_match",
+            expected={"ret": "no match"},
+            sls="""
+            {% if 'c' is match('[a-b]') %}
+              {% set result = 'match' %}
+            {% else %}
+              {% set result = 'no match' %}
+            {% endif %}
+
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="match_ignorecase",
+            expected={"ret": "match"},
+            sls="""
+            {% if 'A' is match('[a-b]', True) %}
+              {% set result = 'match' %}
+            {% else %}
+              {% set result = 'no_match' %}
+            {% endif %}
+
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        # The muiltiline flag doesn't make sense for `match`, we should deprecate it
+        Filter(
+            name="match_multiline",
+            expected={"ret": "match"},
+            sls="""
+            {% set ml_string = 'this is a multiline\nstring' %}
+            {% if ml_string is match('.*\n^string', False, True) %}
+              {% set result = 'match' %}
+            {% else %}
+              {% set result = 'no_match' %}
+            {% endif %}
+
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="equalto",
+            expected={"ret": "equal"},
+            sls="""
+            {% if 1 is equalto(1) %}
+              {% set result = 'equal' %}
+            {% else %}
+              {% set result = 'not equal' %}
+            {% endif %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="un_equalto",
+            expected={"ret": "not equal"},
+            sls="""
+            {% if 1 is equalto(2) %}
+              {% set result = 'equal' %}
+            {% else %}
+              {% set result = 'not equal' %}
+            {% endif %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
     ],
     ids=_filter_id,
 )
@@ -945,7 +1070,11 @@ def test_filter(state, state_tree, filter, grains):
     with filter(state_tree):
         ret = state.sls("filter")
         log.debug("state.sls returned: %s", ret)
-        assert not ret.failed
-        for state_result in ret:
-            assert state_result.result is True
-            filter.assert_result(state_result.changes)
+        if filter.name == "raise":
+            assert ret.failed
+            assert "TemplateError" in ret.errors[0]
+        else:
+            assert not ret.failed
+            for state_result in ret:
+                assert state_result.result is True
+                filter.assert_result(state_result.changes)
