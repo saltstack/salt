@@ -1381,8 +1381,7 @@ def create_html_coverage_report(session):
     )
 
 
-@nox.session(python="3", name="create-xml-coverage-reports")
-def create_xml_coverage_reports(session):
+def _create_xml_coverage_reports(session):
     _install_coverage_requirement(session)
     env = {
         # The full path to the .coverage data file. Makes sure we always write
@@ -1417,6 +1416,20 @@ def create_xml_coverage_reports(session):
         )
     except CommandFailed:
         session_warn(session, "Failed to generate the source XML code coverage report")
+
+
+@nox.session(python="3", name="create-xml-coverage-reports")
+def create_xml_coverage_reports(session):
+    _create_xml_coverage_reports(session)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="create-xml-coverage-reports-onedir",
+    venv_params=["--system-site-packages"],
+)
+def create_xml_coverage_reports_onedir(session):
+    _create_xml_coverage_reports(session)
 
 
 class Tee:
