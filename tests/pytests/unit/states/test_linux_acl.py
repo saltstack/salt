@@ -337,7 +337,7 @@ def test_present_conditional_x():
         # Update - test=False
         with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Updated permissions for {}".format(acl_name)
+                comt = f"Updated permissions for {acl_name}"
                 ret = {
                     "name": name,
                     "comment": comt,
