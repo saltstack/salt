@@ -266,6 +266,7 @@ def test_present():
                     == ret
                 )
 
+
 def test_present_conditional_x():
     """
     Test to ensure a Linux ACL containing a conditional X is applied correctly
