@@ -1174,6 +1174,14 @@ def ci_test_onedir(session):
             )
         )
 
+    transport = os.environ.get("SALT_TRANSPORT") or "zeromq"
+    valid_transports = ("zeromq", "tcp")
+    if transport not in valid_transports:
+        session.error(
+            "The value for the SALT_TRANSPORT environment variable can only be "
+            f"one of: {', '.join(valid_transports)}"
+        )
+
     _ci_test(session, "zeromq", onedir=True)
 
 
