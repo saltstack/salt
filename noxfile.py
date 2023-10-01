@@ -337,7 +337,7 @@ def _install_coverage_requirement(session):
                     # plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
-                    coverage_requirement = "coverage==6.2"
+                    coverage_requirement = "coverage==5.5"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
