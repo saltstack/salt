@@ -81,9 +81,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          TEST_MATRIX=$(tools ci matrix ${{ inputs.distro-slug }})
-          echo "$TEST_MATRIX"
-          echo "matrix=$TEST_MATRIX" >> "$GITHUB_OUTPUT"
+          tools ci matrix ${{ inputs.distro-slug }}
 
       - name: Generate Transport Matrix
         id: generate-transport-matrix

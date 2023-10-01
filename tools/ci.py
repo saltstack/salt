@@ -633,7 +633,14 @@ def matrix(ctx: Context, distro_slug: str):
             if "macos" in distro_slug and chunk == "scenarios":
                 continue
             _matrix.append({"transport": transport, "tests-chunk": chunk})
-    print(json.dumps(_matrix))
+
+    ctx.info("Generated matrix:")
+    ctx.print(_matrix, soft_wrap=True)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
 
 
@@ -694,7 +701,7 @@ def pkg_matrix(
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     if TYPE_CHECKING:
         assert testing_releases
-    matrix = []
+    _matrix = []
     sessions = [
         "install",
     ]
@@ -741,18 +748,20 @@ def pkg_matrix(
                 if version < tools.utils.Version("3006.0")
             ]
         for version in versions:
-            matrix.append(
+            _matrix.append(
                 {
                     "test-chunk": session,
                     "version": version,
                 }
             )
+            if distro_slug.startswith("windows"):
+                _matrix[-1]["pkg-type"] = pkg_type.upper()
     ctx.info("Generated matrix:")
-    ctx.print(matrix, soft_wrap=True)
+    ctx.print(_matrix, soft_wrap=True)
 
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(matrix)}\n")
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
 
 
