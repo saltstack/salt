@@ -917,7 +917,7 @@ def junos_facts(**kwargs):
 
 
 @proxy_napalm_wrap
-def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
+def junos_cli(command, format=None, dest=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -928,9 +928,6 @@ def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
 
     format: ``text``
         Format in which to get the CLI output (either ``text`` or ``xml``).
-
-    dev_timeout: ``30``
-        The NETCONF RPC timeout (in seconds).
 
     dest
         Destination file where the RPC output is stored. Note that the file will
@@ -947,7 +944,7 @@ def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
     if not prep["result"]:
         return prep
     return __salt__["junos.cli"](
-        command, format=format, dev_timeout=dev_timeout, dest=dest, **kwargs
+        command, format=format, dest=dest, **kwargs
     )
 
 

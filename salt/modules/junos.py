@@ -150,75 +150,48 @@ class HandleFileCopy:
             log.debug("Deleted cached folder: %s", self._cached_folder)
 
 
-def _timeout_decorator(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
-            conn = __proxy__["junos.conn"]()
-            restore_timeout = conn.timeout
-            conn.timeout = ldev_timeout
-            try:
-                result = function(*args, **kwargs)
-                conn.timeout = restore_timeout
-                return result
-            except Exception:  # pylint: disable=broad-except
-                conn.timeout = restore_timeout
-                raise
-        else:
-            return function(*args, **kwargs)
-
-    return wrapper
-
-
 def _timeout_decorator_cleankwargs(function):
+    """
+    Removing __pub kwargs during run and adding it back after to ensure non exposure.
+    Setting the timeout for the connection during run and then resetting the timeout.
+    Timeout has to be re-added for proxys running on the actual juniper
+    """
+
     @wraps(function)
     def wrapper(*args, **kwargs):
+        timeout_changed = False
+        old_kwargs = kwargs
+        # Loop through the kwargs and remove all __pub
+        del_kwargs = []
+        for key in kwargs:
+            if key.startswith("__pub"):
+                del_kwargs.append(key)
+        for del_kwarg in del_kwargs:
+            kwargs.pop(del_kwarg)
+
+        # Handle the timeout
         if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
-            restore_timeout = conn.timeout
+            old_timeout = conn.timeout
+            # Default timeout is 60
+            # the int(x or 60) solves the problem where None is provided
+            ldev_timeout = max(
+                int(kwargs.pop("dev_timeout", 0) or 60),
+                int(kwargs.pop("timeout", 0) or 60),
+            )
             conn.timeout = ldev_timeout
-            try:
-                restore_kwargs = False
-                del_list = []
-                op = {}
-                op.update(kwargs)
-                for keychk in kwargs:
-                    if keychk.startswith("__pub"):
-                        del_list.append(keychk)
-                if del_list:
-                    restore_kwargs = True
-                    for delkey in del_list:
-                        kwargs.pop(delkey)
+            timeout_changed = True
 
-                result = function(*args, **kwargs)
-                if restore_kwargs:
-                    kwargs.update(op)
+        # Run the function
+        try:
+            result = function(*args, **kwargs)
+        finally:
+            # Set back the old kwargs and reset timeout if it has changed
+            kwargs = old_kwargs
+            if timeout_changed:
+                conn.timeout = old_timeout
 
-                conn.timeout = restore_timeout
-                return result
-            except Exception:  # pylint: disable=broad-except
-                conn.timeout = restore_timeout
-                raise
-        else:
-            restore_kwargs = False
-            del_list = []
-            op = {}
-            op.update(kwargs)
-            for keychk in kwargs:
-                if keychk.startswith("__pub"):
-                    del_list.append(keychk)
-            if del_list:
-                restore_kwargs = True
-                for delkey in del_list:
-                    kwargs.pop(delkey)
-
-            ret = function(*args, **kwargs)
-            if restore_kwargs:
-                kwargs.update(op)
-
-            return ret
+        return result
 
     return wrapper
 
@@ -293,7 +266,7 @@ def facts():
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def rpc(cmd=None, dest=None, **kwargs):
     """
     This function executes the RPC provided as arguments on the junos device.
@@ -411,7 +384,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def set_hostname(hostname=None, **kwargs):
     """
     Set the device's hostname
@@ -503,7 +476,7 @@ def set_hostname(hostname=None, **kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def commit(**kwargs):
     """
     To commit the changes loaded in the candidate configuration.
@@ -602,7 +575,7 @@ def commit(**kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def rollback(**kwargs):
     """
     Roll back the last committed configuration changes and commit
@@ -722,7 +695,7 @@ def rollback(**kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def diff(**kwargs):
     """
     Returns the difference between the candidate and the current configuration
@@ -777,7 +750,7 @@ def diff(**kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def ping(dest_ip=None, **kwargs):
     """
     Send a ping RPC to a device
@@ -842,7 +815,7 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def cli(command=None, **kwargs):
     """
     Executes the CLI commands and returns the output in specified format. \
@@ -916,7 +889,7 @@ def cli(command=None, **kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def shutdown(**kwargs):
     """
     Shut down (power off) or reboot a device running Junos OS. This includes
@@ -992,7 +965,7 @@ def shutdown(**kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def install_config(path=None, **kwargs):
     """
     Installs the given configuration file into the candidate configuration.
@@ -1306,7 +1279,7 @@ def zeroize():
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def install_os(path=None, **kwargs):
     """
     Installs the given image on the device. After the installation is complete
@@ -1601,7 +1574,7 @@ def unlock():
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def load(path=None, **kwargs):
     """
     Loads the configuration from the file provided onto the device.
@@ -1957,7 +1930,7 @@ def _recursive_dict(node):
     return result
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def rpc_file_list(path, **kwargs):
     """
     Use the Junos RPC interface to get a list of files and return
@@ -2050,7 +2023,7 @@ def _make_source_list(dir):
     return dir_list
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def file_compare(file1, file2, **kwargs):
     """
     Compare two files and return a dictionary indicating if they
@@ -2112,7 +2085,7 @@ def file_compare(file1, file2, **kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def fsentry_exists(dir, **kwargs):
     """
     Returns a dictionary indicating if `dir` refers to a file
@@ -2210,7 +2183,7 @@ def _find_routing_engines():
     return engine
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def routing_engine(**kwargs):
     """
     Returns a dictionary containing the routing engines on the device and
@@ -2257,7 +2230,7 @@ def routing_engine(**kwargs):
     return ret
 
 
-@_timeout_decorator
+@_timeout_decorator_cleankwargs
 def dir_copy(source, dest, force=False, **kwargs):
     """
     Copy a directory and recursively its contents from source to dest.
