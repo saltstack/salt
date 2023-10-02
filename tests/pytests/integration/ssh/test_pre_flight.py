@@ -12,9 +12,11 @@ import os
 import pathlib
 import shutil
 import subprocess
+import tempfile
 
 import pytest
 import salt.utils.files
+import salt.utils.platform
 import yaml
 from saltfactories.utils import random_string
 
@@ -240,15 +242,22 @@ def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
     on target when user sets wrong permissions (777) on
     ssh_pre_flight script.
     """
+    is_darwin = salt.utils.platform.is_darwin()
     try:
         script = pathlib.Path("/tmp", "itworked")
         preflight = pathlib.Path("/ssh_pre_flight.sh")
+        if is_darwin:
+            preflight = pathlib.Path("/etc/ssh_pre_flight.sh")
         preflight.write_text(f"touch {str(script)}")
         tmp_preflight = pathlib.Path("/tmp", preflight.name)
+        if is_darwin:
+            tmp_preflight = pathlib.Path(tempfile.gettempdir(), preflight.name)
 
         _custom_roster(salt_ssh_cli.roster_file, {"ssh_pre_flight": str(preflight)})
         preflight.chmod(0o0777)
         run_script = pathlib.Path("/run_script")
+        if is_darwin:
+            run_script = pathlib.Path("/etc/run_script")
         run_script.write_text(
             f"""
         x=1
@@ -291,12 +300,16 @@ def test_ssh_run_pre_flight_target_file_perms(salt_ssh_cli, _create_roster, tmp_
     test ssh_pre_flight to ensure the target pre flight script
     has the correct perms
     """
+    is_darwin = salt.utils.platform.is_darwin()
+    stat_cmd = 'stat -L -c "%a %G %U"'
+    if is_darwin:
+        stat_cmd = 'stat -L -f"%p %g %u"'
     perms_file = tmp_path / "perms"
     with salt.utils.files.fopen(_create_roster["data"]["ssh_pre_flight"], "w") as fp_:
         fp_.write(
             f"""
         SCRIPT_NAME=$0
-        stat -L -c "%a %G %U" $SCRIPT_NAME > {perms_file}
+        {stat_cmd} $SCRIPT_NAME > {perms_file}
         """
         )
 
@@ -307,8 +320,15 @@ def test_ssh_run_pre_flight_target_file_perms(salt_ssh_cli, _create_roster, tmp_
     assert ret.returncode == 0
     with salt.utils.files.fopen(perms_file) as fp:
         data = fp.read()
-    assert data.split()[0] == "600"
+    if is_darwin:
+        assert data.split()[0] == "100600"
+    else:
+        assert data.split()[0] == "600"
     uid = os.getuid()
     gid = os.getgid()
-    assert data.split()[1] == grp.getgrgid(gid).gr_name
-    assert data.split()[2] == pwd.getpwuid(uid).pw_name
+    if is_darwin:
+        assert int(data.split()[1]) == gid
+        assert int(data.split()[2]) == uid
+    else:
+        assert data.split()[1] == grp.getgrgid(gid).gr_name
+        assert data.split()[2] == pwd.getpwuid(uid).pw_name
