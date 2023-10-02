@@ -78,7 +78,9 @@ include:
 
                 ret = salt_call_cli.run("state.show_low_sls", "includetest")
                 assert "__sls_included_from__" in ret.data[0]
-                assert "includetest.only-include" in ret.data[0]["__included_from__"]
+                assert (
+                    "includetest.only-include" in ret.data[0]["__sls_included_from__"]
+                )
 
 
 @pytest.mark.slow_test
