@@ -1065,6 +1065,8 @@ def _ci_test(session, transport, onedir=False):
         "scenarios": ["tests/pytests/scenarios"],
     }
 
+    test_group_number = os.environ.get("TEST_GROUP") or "1"
+
     if not session.posargs:
         chunk_cmd = []
         junit_report_filename = "test-results"
@@ -1081,20 +1083,20 @@ def _ci_test(session, transport, onedir=False):
                 for values in chunks.values():
                     for value in values:
                         chunk_cmd.append(f"--ignore={value}")
-                junit_report_filename = f"test-results-{chunk}"
-                runtests_log_filename = f"runtests-{chunk}"
+                junit_report_filename = f"test-results-{chunk}-grp{test_group_number}"
+                runtests_log_filename = f"runtests-{chunk}-grp{test_group_number}"
             else:
                 chunk_cmd = chunks[chunk]
-                junit_report_filename = f"test-results-{chunk}"
-                runtests_log_filename = f"runtests-{chunk}"
+                junit_report_filename = f"test-results-{chunk}-grp{test_group_number}"
+                runtests_log_filename = f"runtests-{chunk}-grp{test_group_number}"
             if session.posargs:
                 if session.posargs[0] == "--":
                     session.posargs.pop(0)
                 chunk_cmd.extend(session.posargs)
         else:
             chunk_cmd = [chunk] + session.posargs
-            junit_report_filename = "test-results"
-            runtests_log_filename = "runtests"
+            junit_report_filename = f"test-results-grp{test_group_number}"
+            runtests_log_filename = f"runtests-grp{test_group_number}"
 
     rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
     track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
