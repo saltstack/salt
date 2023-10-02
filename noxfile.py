@@ -405,7 +405,9 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
             # Always combine and generate the XML coverage report
             try:
                 session.run(
-                    "coverage", "combine", "--debug=pathmap", env=coverage_base_env
+                    "coverage",
+                    "combine",
+                    env=coverage_base_env,
                 )
             except CommandFailed:
                 # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
@@ -417,7 +419,7 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
                 "xml",
                 "-o",
                 str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-                "--omit=salt/*,artifacts/salt/*",
+                "--omit=salt/*",
                 "--include=tests/*,pkg/tests/*",
                 env=coverage_base_env,
             )
@@ -428,7 +430,7 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
                 "-o",
                 str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
                 "--omit=tests/*,pkg/tests/*",
-                "--include=salt/*,artifacts/salt/*",
+                "--include=salt/*",
                 env=coverage_base_env,
             )
             # Generate html report for tests code coverage
@@ -437,7 +439,7 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
                 "html",
                 "-d",
                 str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-                "--omit=salt/*,artifacts/salt/*",
+                "--omit=salt/*",
                 "--include=tests/*,pkg/tests/*",
                 env=coverage_base_env,
             )
@@ -448,7 +450,7 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
                 "-d",
                 str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
                 "--omit=tests/*,pkg/tests/*",
-                "--include=salt/*,artifacts/salt/*",
+                "--include=salt/*",
                 env=coverage_base_env,
             )
 
@@ -499,7 +501,7 @@ def _report_coverage(session):
         )
         cmd_args = [
             "--omit=tests/*,pkg/tests/*",
-            "--include=salt/*,artifacts/salt/*",
+            "--include=salt/*",
         ]
 
     elif report_section == "tests":
@@ -507,7 +509,7 @@ def _report_coverage(session):
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
         )
         cmd_args = [
-            "--omit=salt/*,artifacts/salt/*",
+            "--omit=salt/*",
             "--include=tests/*,pkg/tests/*",
         ]
     else:
@@ -515,20 +517,21 @@ def _report_coverage(session):
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
         )
         cmd_args = [
-            "--include=salt/*,artifacts/salt/*,tests/*,pkg/tests/*",
+            "--include=salt/*,tests/*,pkg/tests/*",
         ]
+
+    session.run(
+        "coverage",
+        "report",
+        *cmd_args,
+        env=env,
+    )
 
     session.run(
         "coverage",
         "json",
         "-o",
         str(json_coverage_file),
-        *cmd_args,
-        env=env,
-    )
-    session.run(
-        "coverage",
-        "report",
         *cmd_args,
         env=env,
     )
@@ -1379,14 +1382,71 @@ def create_html_coverage_report(session):
         "COVERAGE_FILE": str(COVERAGE_FILE),
     }
 
+    report_section = None
+    if session.posargs:
+        report_section = session.posargs.pop(0)
+        if report_section not in ("salt", "tests"):
+            session.error("The report section can only be one of 'salt', 'tests'.")
+        if session.posargs:
+            session.error(
+                "Only one argument can be passed to the session, which is optional "
+                "and is one of 'salt', 'tests'."
+            )
+
+    if not IS_WINDOWS:
+        # The coverage file might have come from a windows machine, fix paths
+        with sqlite3.connect(COVERAGE_FILE) as db:
+            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
+            if res.fetchone():
+                session_warn(
+                    session,
+                    "Replacing backwards slashes with forward slashes on file "
+                    "paths in the coverage database",
+                )
+                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
+
+    if report_section == "salt":
+        report_dir = str(
+            COVERAGE_OUTPUT_DIR.joinpath("html", "salt").relative_to(REPO_ROOT)
+        )
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-salt.json"
+        )
+        cmd_args = [
+            "--omit=tests/*,pkg/tests/*",
+            "--include=salt/*",
+        ]
+
+    elif report_section == "tests":
+        report_dir = str(
+            COVERAGE_OUTPUT_DIR.joinpath("html", "tests").relative_to(REPO_ROOT)
+        )
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
+        )
+        cmd_args = [
+            "--omit=salt/*",
+            "--include=tests/*,pkg/tests/*",
+        ]
+    else:
+        report_dir = str(
+            COVERAGE_OUTPUT_DIR.joinpath("html", "full").relative_to(REPO_ROOT)
+        )
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
+        )
+        cmd_args = [
+            "--include=salt/*,tests/*,pkg/tests/*",
+        ]
+
     # Generate html report for Salt and tests combined code coverage
     session.run(
         "coverage",
         "html",
         "-d",
-        str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-        "--include=salt/*,artifacts/salt/*,tests/*,pkg/tests/*",
+        report_dir,
         "--show-contexts",
+        *cmd_args,
         env=env,
     )
 
@@ -1406,7 +1466,7 @@ def _create_xml_coverage_reports(session):
             "xml",
             "-o",
             str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-            "--omit=salt/*,artifacts/salt/*",
+            "--omit=salt/*",
             "--include=tests/*,pkg/tests/*",
             env=env,
         )
@@ -1421,7 +1481,7 @@ def _create_xml_coverage_reports(session):
             "-o",
             str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
             "--omit=tests/*,pkg/tests/*",
-            "--include=salt/*,artifacts/salt/*",
+            "--include=salt/*",
             env=env,
         )
     except CommandFailed:
