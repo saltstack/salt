@@ -324,7 +324,6 @@ jobs:
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
           fi
 
       - name: Upload Code Coverage Test Run Artifacts
