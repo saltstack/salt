@@ -1439,7 +1439,9 @@ class VM:
         """
         Create XML coverage reports
         """
-        return self.run_nox("create-xml-coverage-reports", session_args=[self.name])
+        return self.run_nox(
+            "create-xml-coverage-reports-onedir", session_args=[self.name]
+        )
 
     def compress_dependencies(self):
         """

@@ -316,11 +316,6 @@ jobs:
         run: |
           nox -e combine-coverage
 
-      - name: Create XML Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
-        run: |
-          nox -e create-xml-coverage-reports
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && job.status != 'cancelled'
