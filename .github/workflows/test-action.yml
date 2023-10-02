@@ -107,6 +107,7 @@ jobs:
         include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
+      TEST_GROUP: ${{ matrix.test-group || 1 }}
 
     steps:
       - name: Checkout Source Code
@@ -248,8 +249,8 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
-            --test-group-count=${{ matrix.test-chunk-total || 1 }} --test-group=${{ matrix.test-chunk-no || 1 }}
+            -E TEST_GROUP ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
+            --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
@@ -266,7 +267,7 @@ jobs:
           rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.${{ matrix.test-chunk-no || '1' }}
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}
           fi
 
       - name: Destroy VM
@@ -311,7 +312,7 @@ jobs:
         # always run even if the previous steps fails
         if: always() && inputs.skip-junit-reports == false
         with:
-          check_name: Test Results(${{ inputs.distro-slug }}, transport=${{ matrix.transport }}, tests-chunk=${{ matrix.tests-chunk }})
+          check_name: Test Results(${{ inputs.distro-slug }}, transport=${{ matrix.transport }}, tests-chunk=${{ matrix.tests-chunk }}, group=${{ matrix.test-group || '1' }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true
 

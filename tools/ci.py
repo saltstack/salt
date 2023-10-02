@@ -619,6 +619,12 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
     Generate the test matrix.
     """
     _matrix = []
+    _splits = {
+        "functional": 4,
+        "integration": 6,
+        "scenarios": 2,
+        "unit": 3,
+    }
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
@@ -635,14 +641,15 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
                 continue
             if "macos" in distro_slug and chunk == "scenarios":
                 continue
-            if full and chunk == "integration":
-                for idx in range(1, 3):
+            splits = _splits.get(chunk) or 1
+            if full and splits > 1:
+                for split in range(1, splits + 1):
                     _matrix.append(
                         {
                             "transport": transport,
                             "tests-chunk": chunk,
-                            "test-chunk-no": idx,
-                            "test-chunk-total": 2,
+                            "test-group": split,
+                            "test-group-count": splits,
                         }
                     )
             else:
