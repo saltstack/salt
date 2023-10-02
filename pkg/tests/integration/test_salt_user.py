@@ -197,88 +197,164 @@ def test_paths_log_rotation(
 
     # Paths created by package installs with adjustment for current conf_dir /etc/salt
     log_pkg_paths = [
-        install_salt.conf_dir,
-        "/var/cache/salt",
-        "/var/log/salt",
-        "/var/run/salt",
-        "/opt/saltstack/salt",
+        install_salt.conf_dir,  # "bkup0"
+        "/var/cache/salt",  # "bkup1"
+        "/var/log/salt",  # "bkup2"
+        "/var/run/salt",  # "bkup3"
+        "/opt/saltstack/salt",  # "bkup4"
     ]
 
-    # stop the salt_master, so can change user
-    with salt_master.stopped():
-        assert salt_master.is_running() is False
+    # backup those about to change
+    bkup_count = 0
+    bkup_count_max = 5
+    with temp_directory("bkup0") as temp_dir_path_0:
+        with temp_directory("bkup1") as temp_dir_path_1:
+            with temp_directory("bkup2") as temp_dir_path_2:
+                with temp_directory("bkup3") as temp_dir_path_3:
+                    with temp_directory("bkup4") as temp_dir_path_4:
 
-        # change the user in the master's config file.
-        ret = salt_call_cli.run(
-            "--local",
-            "file.replace",
-            f"{install_salt.conf_dir}/master",
-            "user: salt",
-            f"user: {test_account.username}",
-            "flags=['IGNORECASE']",
-            "append_if_not_found=True",
-        )
-        assert ret.returncode == 0
+                        assert temp_dir_path_0.is_dir()
+                        assert temp_dir_path_1.is_dir()
+                        assert temp_dir_path_2.is_dir()
+                        assert temp_dir_path_3.is_dir()
+                        assert temp_dir_path_4.is_dir()
 
-        # change ownership of appropriate paths to user
-        for _path in log_pkg_paths:
-            chg_ownership_cmd = (
-                f"chown -R {test_account.username}:{test_account.username} {_path}"
-            )
-            ret = salt_call_cli.run("--local", "cmd.run", chg_ownership_cmd)
-            assert ret.returncode == 0
+                        # stop the salt_master, so can change user
+                        with salt_master.stopped():
+                            assert salt_master.is_running() is False
 
-        # restart the salt_master
-        with salt_master.started():
-            assert salt_master.is_running() is True
+                            for _path in log_pkg_paths:
+                                if bkup_count == 0:
+                                    cmd_to_run = (
+                                        f"cp -a {_path}/* {str(temp_dir_path_0)}/"
+                                    )
+                                elif bkup_count == 1:
+                                    cmd_to_run = (
+                                        f"cp -a {_path}/* {str(temp_dir_path_1)}/"
+                                    )
+                                elif bkup_count == 2:
+                                    cmd_to_run = (
+                                        f"cp -a {_path}/* {str(temp_dir_path_2)}/"
+                                    )
+                                elif bkup_count == 3:
+                                    cmd_to_run = (
+                                        f"cp -a {_path}/* {str(temp_dir_path_3)}/"
+                                    )
+                                elif bkup_count == 4:
+                                    cmd_to_run = (
+                                        f"cp -a {_path}/* {str(temp_dir_path_4)}/"
+                                    )
+                                elif bkup_count > 5:
+                                    assert bkupcount < bkup_count_max  # force assertion
 
-            # ensure some data in files
-            log_files_list = [
-                "/var/log/salt/api",
-                "/var/log/salt/key",
-                "/var/log/salt/master",
-            ]
-            for _path in log_files_list:
-                log_path = pathlib.Path(_path)
-                assert log_path.exists()
-                with log_path.open("a") as f:
-                    f.write("This is a log rotation test\n")
+                                ret = salt_call_cli.run(
+                                    "--local", "cmd.run", cmd_to_run
+                                )
+                                bkup_count += 1
+                                assert ret.returncode == 0
 
-            # force log rotation
-            logr_conf_file = "/etc/logrotate.d/salt"
-            logr_conf_path = pathlib.Path(logr_conf_file)
-            # assert logr_conf_path.exists()
-            if not logr_conf_path.exists():
-                logr_conf_file = "/etc/logrotate.conf"
-                logr_conf_path = pathlib.Path(logr_conf_file)
-                assert logr_conf_path.exists()
+                            # change the user in the master's config file.
+                            ret = salt_call_cli.run(
+                                "--local",
+                                "file.replace",
+                                f"{install_salt.conf_dir}/master",
+                                "user: salt",
+                                f"user: {test_account.username}",
+                                "flags=['IGNORECASE']",
+                                "append_if_not_found=True",
+                            )
+                            assert ret.returncode == 0
 
-            for _path in log_files_list:
-                log_path = pathlib.Path(_path)
-                assert log_path.exists()
-                assert log_path.owner() == f"{test_account.username}"
-                assert log_path.group() == f"{test_account.username}"
-                assert log_path.stat().st_mode & 0o7777 == 0o640
+                            # change ownership of appropriate paths to user
+                            for _path in log_pkg_paths:
+                                chg_ownership_cmd = f"chown -R {test_account.username}:{test_account.username} {_path}"
+                                ret = salt_call_cli.run(
+                                    "--local", "cmd.run", chg_ownership_cmd
+                                )
+                                assert ret.returncode == 0
 
-            # cleanup
-            # stop the salt_master
-            with salt_master.stopped():
-                assert salt_master.is_running() is False
+                            # restart the salt_master
+                            with salt_master.started():
+                                assert salt_master.is_running() is True
 
-                # change the user in the master's config file.
-                ret = salt_call_cli.run(
-                    "--local",
-                    "file.replace",
-                    f"{install_salt.conf_dir}/master",
-                    f"user: {test_account.username}",
-                    "user: salt",
-                    "flags=['IGNORECASE']",
-                    "append_if_not_found=True",
-                )
-                assert ret.returncode == 0
+                                # ensure some data in files
+                                log_files_list = [
+                                    "/var/log/salt/api",
+                                    "/var/log/salt/key",
+                                    "/var/log/salt/master",
+                                ]
+                                for _path in log_files_list:
+                                    log_path = pathlib.Path(_path)
+                                    assert log_path.exists()
+                                    with log_path.open("a") as f:
+                                        f.write("This is a log rotation test\n")
 
-                # change ownership of appropriate paths to user
-                for _path in log_pkg_paths:
-                    chg_ownership_cmd = f"chown -R salt:salt {_path}"
-                    ret = salt_call_cli.run("--local", "cmd.run", chg_ownership_cmd)
-                    assert ret.returncode == 0
+                                # force log rotation
+                                logr_conf_file = "/etc/logrotate.d/salt"
+                                logr_conf_path = pathlib.Path(logr_conf_file)
+                                # assert logr_conf_path.exists()
+                                if not logr_conf_path.exists():
+                                    logr_conf_file = "/etc/logrotate.conf"
+                                    logr_conf_path = pathlib.Path(logr_conf_file)
+                                    assert logr_conf_path.exists()
+
+                                # force log rotation
+                                log_rotate_cmd = f"logrotate -f  {str(logr_conf_file)}"
+                                ret = salt_call_cli.run(
+                                    "--local", "cmd.run", log_rotate_cmd
+                                )
+                                assert ret.returncode == 0
+
+                                for _path in log_files_list:
+                                    log_path = pathlib.Path(_path)
+                                    str_log_path = str(log_path)
+                                    ret = salt_call_cli.run(
+                                        "--local", "cmd.run", f"ls -alh {str_log_path}"
+                                    )
+                                    assert log_path.exists()
+                                    assert (
+                                        log_path.owner() == f"{test_account.username}"
+                                    )
+                                    assert (
+                                        log_path.group() == f"{test_account.username}"
+                                    )
+                                    assert log_path.stat().st_mode & 0o7777 == 0o640
+
+                            # cleanup
+                            assert salt_master.is_running() is False
+
+                            # change the user in the master's config file.
+                            ret = salt_call_cli.run(
+                                "--local",
+                                "file.replace",
+                                f"{install_salt.conf_dir}/master",
+                                f"user: {test_account.username}",
+                                "user: salt",
+                                "flags=['IGNORECASE']",
+                                "append_if_not_found=True",
+                            )
+                            assert ret.returncode == 0
+
+                            # restore from backed up
+                            bkup_count = 0
+                            for _path in log_pkg_paths:
+                                if bkup_count == 0:
+                                    cmd_to_run = f"cp -a --force {str(temp_dir_path_0)}/* {_path}/"
+                                elif bkup_count == 1:
+                                    cmd_to_run = f"cp -a --force {str(temp_dir_path_1)}/* {_path}/"
+                                elif bkup_count == 2:
+                                    cmd_to_run = f"cp -a --force {str(temp_dir_path_2)}/* {_path}/"
+                                elif bkup_count == 3:
+                                    cmd_to_run = f"cp -a --force {str(temp_dir_path_3)}/* {_path}/"
+                                elif bkup_count == 4:
+                                    # use --update since /opt/saltstack/salt and would get SIGSEGV since mucking with running code
+                                    cmd_to_run = f"cp -a --update --force {str(temp_dir_path_4)}/* {_path}/"
+                                elif bkup_count > 5:
+                                    assert bkupcount < bkup_count_max  # force assertion
+
+                                ret = salt_call_cli.run(
+                                    "--local", "cmd.run", cmd_to_run
+                                )
+
+                                bkup_count += 1
+                                assert ret.returncode == 0
