@@ -6,12 +6,20 @@
 Add release specific details below
 -->
 
+## Python 3.11
+Salt's onedir packages now use Python 3.11
+
 ## Python 3.7 Support Dropped
 Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2023.
 
 ## Azure Salt Extension
 
 Starting from Salt version 3007.0, the Azure functionality previously available in the Salt code base is fully removed. To continue using Salt's features for interacting with Azure resources, users are required to utilize the Azure Salt extension. For more information, refer to the [Azure Salt Extension GitHub repository](https://github.com/salt-extensions/saltext-azurerm).
+
+## New Package Grain
+A new ``package`` grain was added in 3007.0 This detects how Salt was installed using the ``_pkg.txt`` in the root of
+the directory. If you are building packages of Salt you need to ensure this file is set to the correct package type
+that you are building. The options are ``pip``, ``onedir``, or ``system``. By default this file is already set to ``pip``.
 
 <!--
 Do not edit the changelog below.

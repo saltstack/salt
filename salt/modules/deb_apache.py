@@ -16,6 +16,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "apache"
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 SITE_ENABLED_DIR = "/etc/apache2/sites-enabled"
 
 
@@ -59,12 +65,10 @@ def check_site_enabled(site):
     if site.endswith(".conf"):
         site_file = site
     else:
-        site_file = "{}.conf".format(site)
-    if os.path.islink("{}/{}".format(SITE_ENABLED_DIR, site_file)):
+        site_file = f"{site}.conf"
+    if os.path.islink(f"{SITE_ENABLED_DIR}/{site_file}"):
         return True
-    elif site == "default" and os.path.islink(
-        "{}/000-{}".format(SITE_ENABLED_DIR, site_file)
-    ):
+    elif site == "default" and os.path.islink(f"{SITE_ENABLED_DIR}/000-{site_file}"):
         return True
     else:
         return False
@@ -95,9 +99,9 @@ def a2ensite(site):
     ret["Site"] = site
 
     if status == 1:
-        ret["Status"] = "Site {} Not found".format(site)
+        ret["Status"] = f"Site {site} Not found"
     elif status == 0:
-        ret["Status"] = "Site {} enabled".format(site)
+        ret["Status"] = f"Site {site} enabled"
     else:
         ret["Status"] = status
 
@@ -129,9 +133,9 @@ def a2dissite(site):
     ret["Site"] = site
 
     if status == 256:
-        ret["Status"] = "Site {} Not found".format(site)
+        ret["Status"] = f"Site {site} Not found"
     elif status == 0:
-        ret["Status"] = "Site {} disabled".format(site)
+        ret["Status"] = f"Site {site} disabled"
     else:
         ret["Status"] = status
 
@@ -156,8 +160,8 @@ def check_mod_enabled(mod):
     if mod.endswith(".load") or mod.endswith(".conf"):
         mod_file = mod
     else:
-        mod_file = "{}.load".format(mod)
-    return os.path.islink("/etc/apache2/mods-enabled/{}".format(mod_file))
+        mod_file = f"{mod}.load"
+    return os.path.islink(f"/etc/apache2/mods-enabled/{mod_file}")
 
 
 def a2enmod(mod):
@@ -185,9 +189,9 @@ def a2enmod(mod):
     ret["Mod"] = mod
 
     if status == 1:
-        ret["Status"] = "Mod {} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {} enabled".format(mod)
+        ret["Status"] = f"Mod {mod} enabled"
     else:
         ret["Status"] = status
 
@@ -219,9 +223,9 @@ def a2dismod(mod):
     ret["Mod"] = mod
 
     if status == 256:
-        ret["Status"] = "Mod {} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {} disabled".format(mod)
+        ret["Status"] = f"Mod {mod} disabled"
     else:
         ret["Status"] = status
 
@@ -247,8 +251,8 @@ def check_conf_enabled(conf):
     if conf.endswith(".conf"):
         conf_file = conf
     else:
-        conf_file = "{}.conf".format(conf)
-    return os.path.islink("/etc/apache2/conf-enabled/{}".format(conf_file))
+        conf_file = f"{conf}.conf"
+    return os.path.islink(f"/etc/apache2/conf-enabled/{conf_file}")
 
 
 @salt.utils.decorators.path.which("a2enconf")
@@ -279,9 +283,9 @@ def a2enconf(conf):
     ret["Conf"] = conf
 
     if status == 1:
-        ret["Status"] = "Conf {} Not found".format(conf)
+        ret["Status"] = f"Conf {conf} Not found"
     elif status == 0:
-        ret["Status"] = "Conf {} enabled".format(conf)
+        ret["Status"] = f"Conf {conf} enabled"
     else:
         ret["Status"] = status
 
@@ -316,9 +320,9 @@ def a2disconf(conf):
     ret["Conf"] = conf
 
     if status == 256:
-        ret["Status"] = "Conf {} Not found".format(conf)
+        ret["Status"] = f"Conf {conf} Not found"
     elif status == 0:
-        ret["Status"] = "Conf {} disabled".format(conf)
+        ret["Status"] = f"Conf {conf} disabled"
     else:
         ret["Status"] = status
 

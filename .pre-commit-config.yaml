@@ -56,7 +56,7 @@ repos:
           - pre-commit-checks
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
           - virustotal3==1.0.8
@@ -70,7 +70,7 @@ repos:
           - generate-workflows
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
           - virustotal3==1.0.8
@@ -85,7 +85,7 @@ repos:
           - actionlint
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
           - virustotal3==1.0.8
@@ -1124,6 +1124,32 @@ repos:
           - --include=requirements/zeromq.txt
           - requirements/static/ci/pkgtests-windows.in
 
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.11-requirements
+        name: PKG tests CI Py3.11 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.11/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.11
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.11-requirements
+        name: PKG tests Windows CI Py3.11 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.11/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.11
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+
   # <---- PKG ci requirements-----------------------------------------------------------------------------------------
 
 
@@ -1191,13 +1217,13 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 2.4.4
+    rev: 2.5.2
     hooks:
       - id: salt-rewrite
-        alias: rewrite-docstrings
-        name: Salt docstrings auto-fixes
+        alias: rewrite-salt
+        name: Salt code auto-fixes
         files: ^salt/.*\.py$
-        args: [--silent, -F, fix_docstrings]
+        args: [--silent, -F, fix_docstrings, -F, fix_warn_until]
         exclude: >
             (?x)^(
                 salt/ext/.*
@@ -1286,7 +1312,7 @@ repos:
           - docs.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1306,7 +1332,7 @@ repos:
           - filemap.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1330,7 +1356,7 @@ repos:
           - loader.check-virtual
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1354,7 +1380,7 @@ repos:
           - docstrings.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1380,7 +1406,7 @@ repos:
           - --error-on-known-failures
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3

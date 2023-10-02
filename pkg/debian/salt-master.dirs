@@ -1,4 +1,5 @@
 /etc/salt/master.d
+/etc/ufw/applications.d/salt-master
 /etc/salt/pki/master/minions
 /etc/salt/pki/master/minions_autosign
 /etc/salt/pki/master/minions_denied
@@ -12,3 +13,4 @@
 /var/cache/salt/master/roots
 /var/cache/salt/master/syndics
 /var/cache/salt/master/tokens
+/var/run/salt/master

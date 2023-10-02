@@ -672,7 +672,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
             netmask += "255"
             cidr_bits -= 8
         else:
-            netmask += "{:d}".format(256 - (2 ** (8 - cidr_bits)))
+            netmask += f"{256 - (2 ** (8 - cidr_bits)):d}"
             cidr_bits = 0
     return netmask
 
@@ -839,11 +839,7 @@ def _interfaces_ifconfig(out):
                 if salt.utils.platform.is_sunos():
                     expand_mac = []
                     for chunk in data["hwaddr"].split(":"):
-                        expand_mac.append(
-                            "0{}".format(chunk)
-                            if len(chunk) < 2
-                            else "{}".format(chunk)
-                        )
+                        expand_mac.append(f"0{chunk}" if len(chunk) < 2 else f"{chunk}")
                     data["hwaddr"] = ":".join(expand_mac)
             if mip:
                 if "inet" not in data:
@@ -1187,7 +1183,7 @@ def get_net_start(ipaddr, netmask):
     """
     Return the address of the network
     """
-    net = ipaddress.ip_network("{}/{}".format(ipaddr, netmask), strict=False)
+    net = ipaddress.ip_network(f"{ipaddr}/{netmask}", strict=False)
     return str(net.network_address)
 
 
@@ -1209,7 +1205,7 @@ def calc_net(ipaddr, netmask=None):
     (The IP can be any IP inside the subnet)
     """
     if netmask is not None:
-        ipaddr = "{}/{}".format(ipaddr, netmask)
+        ipaddr = f"{ipaddr}/{netmask}"
 
     return str(ipaddress.ip_network(ipaddr, strict=False))
 
@@ -1480,7 +1476,7 @@ def _ip_networks(
         _net = addr.get("netmask" if proto == "inet" else "prefixlen")
         if _ip and _net:
             try:
-                ip_net = ipaddress.ip_network("{}/{}".format(_ip, _net), strict=False)
+                ip_net = ipaddress.ip_network(f"{_ip}/{_net}", strict=False)
             except Exception:  # pylint: disable=broad-except
                 continue
             if not ip_net.is_loopback or include_loopback:
@@ -1589,8 +1585,8 @@ def mac2eui64(mac, prefix=None):
     else:
         try:
             net = ipaddress.ip_network(prefix, strict=False)
-            euil = int("0x{}".format(eui64), 16)
-            return "{}/{}".format(net[euil], net.prefixlen)
+            euil = int(f"0x{eui64}", 16)
+            return f"{net[euil]}/{net.prefixlen}"
         except Exception:  # pylint: disable=broad-except
             return
 
@@ -1716,7 +1712,7 @@ def _netlink_tool_remote_on(port, which_end):
     tcp_end = "dst" if which_end == "remote_port" else "src"
     try:
         data = subprocess.check_output(
-            ["ss", "-ant", tcp_end, ":{}".format(port)]
+            ["ss", "-ant", tcp_end, f":{port}"]
         )  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error("Failed ss")
@@ -1810,7 +1806,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.args.shlex_split("sockstat -4 -c -p {}".format(port))
+        cmd = salt.utils.args.shlex_split(f"sockstat -4 -c -p {port}")
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = %s', ex.returncode)
@@ -1872,7 +1868,7 @@ def _netbsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.args.shlex_split("sockstat -4 -c -n -p {}".format(port))
+        cmd = salt.utils.args.shlex_split(f"sockstat -4 -c -n -p {port}")
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = %s', ex.returncode)
@@ -2014,7 +2010,7 @@ def _linux_remotes_on(port, which_end):
         data = subprocess.check_output(
             [
                 lsof_binary,
-                "-iTCP:{:d}".format(port),
+                f"-iTCP:{port:d}",
                 "-n",
                 "-P",
             ]  # pylint: disable=minimum-python-version
@@ -2219,7 +2215,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
             error = True
 
     if not ip_addrs:
-        err = "DNS lookup or connection check of '{}' failed.".format(addr)
+        err = f"DNS lookup or connection check of '{addr}' failed."
         if safe:
             log.error(err)
             raise SaltClientError()
@@ -2241,17 +2237,18 @@ def _test_addrs(addrinfo, port):
         if ip_addr in ip_addrs:
             continue
         ip_addrs.append(ip_addr)
-
+        s = None
         try:
             s = socket.socket(ip_family, socket.SOCK_STREAM)
             s.settimeout(2)
             s.connect((ip_addr, port))
-            s.close()
-
             ip_addrs = [ip_addr]
             break
         except OSError:
             pass
+        finally:
+            if s is not None:
+                s.close()
     return ip_addrs
 
 
@@ -2283,9 +2280,7 @@ def parse_host_port(host_port):
                 port = int(_s_.lstrip(":"))
             else:
                 if len(_s_) > 1:
-                    raise ValueError(
-                        'found ambiguous "{}" port in "{}"'.format(_s_, host_port)
-                    )
+                    raise ValueError(f'found ambiguous "{_s_}" port in "{host_port}"')
     else:
         if _s_.count(":") == 1:
             host, _hostport_separator_, port = _s_.partition(":")
@@ -2307,7 +2302,7 @@ def parse_host_port(host_port):
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
         if host != sanitize_host(host):
             log.error('bad hostname: "%s"', host)
-            raise ValueError('bad hostname: "{}"'.format(host))
+            raise ValueError(f'bad hostname: "{host}"')
 
     return host, port
 
@@ -2338,7 +2333,7 @@ def filter_by_networks(values, networks):
         elif isinstance(values, Sequence):
             return _filter(values, networks)
         else:
-            raise ValueError("Do not know how to filter a {}".format(type(values)))
+            raise ValueError(f"Do not know how to filter a {type(values)}")
     else:
         return values
 

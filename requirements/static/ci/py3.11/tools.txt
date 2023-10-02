@@ -14,9 +14,9 @@ botocore==1.29.152
     # via
     #   boto3
     #   s3transfer
-certifi==2023.5.7
+certifi==2023.07.22
     # via requests
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 idna==3.4
     # via requests
@@ -38,9 +38,9 @@ pygments==2.15.1
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.17.0
+python-tools-scripts==0.18.1
     # via -r requirements/static/ci/tools.in
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/static/ci/tools.in
 requests==2.31.0
     # via
@@ -52,7 +52,7 @@ s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via python-dateutil
-urllib3==1.26.16
+urllib3==1.26.14
     # via
     #   botocore
     #   requests

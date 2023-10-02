@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/darwin.txt requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-aiohttp==3.8.4
+aiohttp==3.8.5
     # via etcd3-py
 aiosignal==1.3.1
     # via aiohttp
@@ -34,8 +34,8 @@ autocommand==2.2.2
     #   jaraco.text
 bcrypt==4.0.1
     # via
+    #   -r requirements/static/ci/common.in
     #   paramiko
-    #   passlib
 boto3==1.26.152
     # via
     #   -r requirements/static/ci/common.in
@@ -51,7 +51,7 @@ cachetools==5.3.1
     # via google-auth
 cassandra-driver==3.28.0
     # via -r requirements/static/ci/common.in
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/static/ci/common.in
@@ -67,7 +67,7 @@ cffi==1.15.1
     #   napalm
     #   pygit2
     #   pynacl
-charset-normalizer==2.1.1
+charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   aiohttp
@@ -93,10 +93,11 @@ contextvars==2.4
     #   -r requirements/base.txt
 croniter==1.3.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==40.0.2
+cryptography==41.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/crypto.txt
+    #   -r requirements/darwin.txt
     #   etcd3-py
     #   moto
     #   paramiko
@@ -114,14 +115,12 @@ dnspython==2.3.0
     #   -r requirements/static/ci/common.in
     #   python-etcd
 docker==6.1.3
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest-salt-factories
+    # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.1.1
     # via pytest
-filelock==3.12.1
+filelock==3.12.4
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
@@ -141,7 +140,7 @@ gitdb==4.0.10
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/darwin.txt
@@ -273,7 +272,7 @@ netaddr==0.8.0
     #   pyeapi
 netmiko==4.2.0
     # via napalm
-netutils==1.4.1
+netutils==1.6.0
     # via napalm
 ntc-templates==3.4.0
     # via netmiko
@@ -292,7 +291,7 @@ paramiko==3.2.0
     #   ncclient
     #   netmiko
     #   scp
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.11.1
     # via yamllint
@@ -336,7 +335,9 @@ pyeapi==1.0.0
 pygit2==1.12.1
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
-    # via paramiko
+    # via
+    #   -r requirements/static/ci/common.in
+    #   paramiko
 pyopenssl==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
@@ -359,11 +360,11 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
+pytest-salt-factories==1.0.0rc26
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -372,10 +373,6 @@ pytest-subtests==0.11.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-tempdir==2019.10.12
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-salt-factories
 pytest-timeout==2.1.0
     # via -r requirements/pytest.txt
 pytest==7.3.2
@@ -388,7 +385,6 @@ pytest==7.3.2
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
-    #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.2
     # via
@@ -411,7 +407,7 @@ pytz==2023.3
     #   tempora
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/base.txt
@@ -420,6 +416,7 @@ pyyaml==6.0
     #   kubernetes
     #   napalm
     #   netmiko
+    #   pytest-salt-factories
     #   responses
     #   yamllint
     #   yamlordereddictloader
@@ -488,7 +485,7 @@ sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
-tempora==5.2.2
+tempora==5.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   portend
@@ -505,7 +502,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/base.txt
@@ -513,20 +510,20 @@ transitions==0.9.0
     # via junos-eznc
 ttp-templates==0.3.5
     # via napalm
-ttp==0.9.4
+ttp==0.9.5
     # via
     #   napalm
     #   ttp-templates
-types-pyyaml==6.0.12.10
+types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   napalm
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.6
+urllib3==1.26.14
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   botocore
@@ -568,7 +565,7 @@ yamlordereddictloader==0.4.0
     # via junos-eznc
 yarl==1.9.2
     # via aiohttp
-zc.lockfile==2.0
+zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   cherrypy

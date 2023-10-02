@@ -14,6 +14,8 @@ Support for YUM/DNF
 
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
+.. versionadded:: 3007.0
+    Support for ``dnf5``` on Fedora 39
 """
 
 
@@ -122,12 +124,12 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
     dnf ==> vim-enhanced-2:7.4.827-1.fc22.*
     """
     if full:
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             lock_re = rf"({pattern}-\S+)"
         else:
             lock_re = rf"(\d+:{pattern}-\S+)"
     else:
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             lock_re = rf"({pattern}-\S+)"
         else:
             lock_re = rf"\d+:({pattern}-\S+)"
@@ -145,7 +147,7 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 
 def _yum():
     """
-    Determine package manager name (yum or dnf),
+    Determine package manager name (yum or dnf[5]),
     depending on the executable existence in $PATH.
     """
 
@@ -168,7 +170,10 @@ def _yum():
     contextkey = "yum_bin"
     if contextkey not in context:
         for dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
-            if _check(os.path.join(dir, "dnf")):
+            if _check(os.path.join(dir, "dnf5")):
+                context[contextkey] = "dnf5"
+                break
+            elif _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
             elif _check(os.path.join(dir, "tdnf")):
@@ -211,7 +216,7 @@ def _yum_pkginfo(output):
     keys = itertools.cycle(("name", "version", "repoid"))
     values = salt.utils.itertools.split(_strip_headers(output))
     osarch = __grains__["osarch"]
-    for (key, value) in zip(keys, values):
+    for key, value in zip(keys, values):
         if key == "name":
             try:
                 cur["name"], cur["arch"] = value.rsplit(".", 1)
@@ -245,7 +250,8 @@ def _versionlock_pkg(grains=None):
     """
     if grains is None:
         grains = __grains__
-    if _yum() == "dnf":
+
+    if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
                 "python3-dnf-plugin-versionlock"
@@ -258,11 +264,7 @@ def _versionlock_pkg(grains=None):
     elif _yum() == "tdnf":
         raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
-        return (
-            "yum-versionlock"
-            if int(grains.get("osmajorrelease")) == 5
-            else "yum-plugin-versionlock"
-        )
+        return "yum-plugin-versionlock"
 
 
 def _check_versionlock():
@@ -276,10 +278,11 @@ def _check_versionlock():
 
 def _get_options(**kwargs):
     """
-    Returns a list of options to be used in the yum/dnf command, based on the
+    Returns a list of options to be used in the yum/dnf[5] command, based on the
     kwargs passed.
     """
     # Get repo options from the kwargs
+    # dnf5 aliases dnf options, so no need to change
     fromrepo = kwargs.pop("fromrepo", "")
     repo = kwargs.pop("repo", "")
     disablerepo = kwargs.pop("disablerepo", "")
@@ -744,6 +747,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = [
         "rpm",
         "-qa",
+        "--nodigest",
+        "--nosignature",
         "--queryformat",
         salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
     ]
@@ -1057,7 +1062,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "upgrades" if _yum() == "dnf" else "updates"])
+    cmd.extend(["list", "upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -1712,7 +1717,8 @@ def install(
         if skip_verify:
             cmd.append("--nogpgcheck")
         if downloadonly:
-            cmd.append("--downloadonly")
+            if _yum() != "dnf5":
+                cmd.append("--downloadonly")
 
     try:
         holds = list_holds(full=False)
@@ -1773,6 +1779,8 @@ def install(
                 cmd.extend(["--best", "--allowerasing"])
             _add_common_args(cmd)
             cmd.append("install" if pkg_type != "advisory" else "update")
+            if _yum() == "dnf5":
+                cmd.extend(["--best", "--allowerasing"])
             cmd.extend(targets)
             out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out["retcode"] != 0:
@@ -2006,7 +2014,7 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
-    if _yum() == "dnf" and not obsoletes:
+    if _yum() in ("dnf", "dnf5") and not obsoletes:
         # for dnf we can just disable obsoletes
         _setopt = [
             opt
@@ -2044,7 +2052,7 @@ def upgrade(
         cmd.append("upgrade" if not minimal else "upgrade-minimal")
     else:
         # do not force the removal of obsolete packages
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2400,7 +2408,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             search_locks = [x for x in current_locks if x == target]
         else:
             # To accommodate yum versionlock's lack of support for removing
@@ -2566,7 +2574,7 @@ def group_list():
     return ret
 
 
-def group_info(name, expand=False, ignore_groups=None):
+def group_info(name, expand=False, ignore_groups=None, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0,3001
@@ -2577,6 +2585,10 @@ def group_info(name, expand=False, ignore_groups=None):
         to ``mandatory``, ``optional``, and ``default`` for accuracy, as
         environment groups include other groups, and not packages. Finally,
         this function now properly identifies conditional packages.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists packages belonging to a certain group
 
@@ -2597,18 +2609,46 @@ def group_info(name, expand=False, ignore_groups=None):
 
         .. versionadded:: 3001
 
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_info 'Perl Support'
+        salt '*' pkg.group_info 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_info 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
     for pkgtype in pkgtypes:
         ret[pkgtype] = set()
 
-    cmd = [_yum(), "--quiet", "groupinfo", name]
+    options = _get_options(
+        **{
+            key: val
+            for key, val in kwargs.items()
+            if key in ("fromrepo", "enablerepo", "disablerepo")
+        }
+    )
+
+    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2676,22 +2716,49 @@ def group_info(name, expand=False, ignore_groups=None):
     return ret
 
 
-def group_diff(name):
+def group_diff(name, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists which of a group's packages are installed and which are not
     installed
+
+    name
+        The name of the group to check
+
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_diff 'Perl Support'
+        salt '*' pkg.group_diff 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_diff 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
@@ -2699,7 +2766,7 @@ def group_diff(name):
         ret[pkgtype] = {"installed": [], "not installed": []}
 
     pkgs = list_pkgs()
-    group_pkgs = group_info(name, expand=True)
+    group_pkgs = group_info(name, expand=True, **kwargs)
     for pkgtype in pkgtypes:
         for member in group_pkgs.get(pkgtype, []):
             if member in pkgs:
@@ -3036,7 +3103,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         if use_copr:
             # Is copr plugin installed?
             copr_plugin_name = ""
-            if _yum() == "dnf":
+            if _yum() in ("dnf", "dnf5"):
                 copr_plugin_name = "dnf-plugins-core"
             else:
                 copr_plugin_name = "yum-plugin-copr"

@@ -3699,7 +3699,7 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path, force=False, atomic=False):
+def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
     """
     Create a symbolic link (symlink, soft link) to a file
 
@@ -3717,6 +3717,11 @@ def symlink(src, path, force=False, atomic=False):
             Use atomic file operations to create the symlink
             .. versionadded:: 3006.0
 
+        follow_symlinks (bool):
+            If set to ``False``, use ``os.path.lexists()`` for existence checks
+            instead of ``os.path.exists()``.
+            .. versionadded:: 3007.0
+
     Returns:
         bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
@@ -3727,6 +3732,11 @@ def symlink(src, path, force=False, atomic=False):
         salt '*' file.symlink /path/to/file /path/to/link
     """
     path = os.path.expanduser(path)
+
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
 
     if not os.path.isabs(path):
         raise SaltInvocationError(f"Link path must be absolute: {path}")
@@ -3745,11 +3755,11 @@ def symlink(src, path, force=False, atomic=False):
             msg = f"Found existing symlink: {path}"
             raise CommandExecutionError(msg)
 
-    if os.path.exists(path) and not force and not atomic:
+    if exists(path) and not force and not atomic:
         msg = f"Existing path is not a symlink: {path}"
         raise CommandExecutionError(msg)
 
-    if (os.path.islink(path) or os.path.exists(path)) and force and not atomic:
+    if (os.path.islink(path) or exists(path)) and force and not atomic:
         os.unlink(path)
     elif atomic:
         link_dir = os.path.dirname(path)

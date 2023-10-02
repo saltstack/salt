@@ -9,14 +9,13 @@ boto3>=1.21.46
 boto>=2.46.0
 cassandra-driver>=2.0
 certifi>=2022.12.07
-cffi>=1.12.2
+cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
-docker
 etcd3-py==0.1.6
-gitpython>=3.1.30
+gitpython>=3.1.35
 jmespath
 jsonschema
 junos-eznc; sys_platform != 'win32'
@@ -29,7 +28,11 @@ libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
 moto>=2.0.0
 napalm; sys_platform != 'win32'
 paramiko>=2.10.1; sys_platform != 'win32' and sys_platform != 'darwin'
-passlib[bcrypt]>=1.7.4
+# bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
+# since that will break using the compiled static requirements files as contraints file
+bcrypt
+passlib>=1.7.4
+pynacl>=1.5.0
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi

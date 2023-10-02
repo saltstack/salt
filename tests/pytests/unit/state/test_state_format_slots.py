@@ -35,7 +35,6 @@ def test_format_slots_no_slots(state_obj):
     assert cdata == {"args": ["arg"], "kwargs": {"key": "val"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_arg(state_obj):
     """
     Test the format slots is calling a slot specified in args with corresponding arguments.
@@ -51,7 +50,6 @@ def test_format_slots_arg(state_obj):
     assert cdata == {"args": ["fun_return"], "kwargs": {"key": "val"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_dict_arg(state_obj):
     """
     Test the format slots is calling a slot specified in dict arg.
@@ -67,7 +65,6 @@ def test_format_slots_dict_arg(state_obj):
     assert cdata == {"args": [{"subarg": "fun_return"}], "kwargs": {"key": "val"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_listdict_arg(state_obj):
     """
     Test the format slots is calling a slot specified in list containing a dict.
@@ -83,7 +80,6 @@ def test_format_slots_listdict_arg(state_obj):
     assert cdata == {"args": [[{"subarg": "fun_return"}]], "kwargs": {"key": "val"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_liststr_arg(state_obj):
     """
     Test the format slots is calling a slot specified in list containing a dict.
@@ -99,7 +95,6 @@ def test_format_slots_liststr_arg(state_obj):
     assert cdata == {"args": [["fun_return"]], "kwargs": {"key": "val"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_kwarg(state_obj):
     """
     Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -115,7 +110,6 @@ def test_format_slots_kwarg(state_obj):
     assert cdata == {"args": ["arg"], "kwargs": {"key": "fun_return"}}
 
 
-@pytest.mark.slow_test
 def test_format_slots_multi(state_obj):
     """
     Test the format slots is calling all slots with corresponding arguments when multiple slots
@@ -155,7 +149,6 @@ def test_format_slots_multi(state_obj):
     }
 
 
-@pytest.mark.slow_test
 def test_format_slots_malformed(state_obj):
     """
     Test the format slots keeps malformed slots untouched.
@@ -186,7 +179,6 @@ def test_format_slots_malformed(state_obj):
     assert cdata == sls_data
 
 
-@pytest.mark.slow_test
 def test_slot_traverse_dict(state_obj):
     """
     Test the slot parsing of dict response.
@@ -203,7 +195,6 @@ def test_slot_traverse_dict(state_obj):
     assert cdata == {"args": ["arg"], "kwargs": {"key": "value1"}}
 
 
-@pytest.mark.slow_test
 def test_slot_append(state_obj):
     """
     Test the slot parsing of dict response.
