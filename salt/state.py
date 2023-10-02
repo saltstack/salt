@@ -106,7 +106,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__env__",
         "__sls__",
         "__id__",
-        "__included__",
+        "__sls_included_from__",
         "__orchestration_jid__",
         "__pub_user",
         "__pub_arg",
@@ -649,8 +649,8 @@ class Compiler:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
                     chunk["__env__"] = body["__env__"]
-                if "__included__" in body:
-                    chunk["__included__"] = body["__included__"]
+                if "__sls_included_from__" in body:
+                    chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = name
                 for arg in run:
                     if isinstance(arg, str):
@@ -1679,8 +1679,8 @@ class State:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
                     chunk["__env__"] = body["__env__"]
-                if "__included__" in body:
-                    chunk["__included__"] = body["__included__"]
+                if "__sls_included_from__" in body:
+                    chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = name
                 for arg in run:
                     if isinstance(arg, str):
@@ -2892,7 +2892,7 @@ class State:
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(
                                 chunk["__sls__"], req_val
-                            ) or req_val in chunk.get("__included__", []):
+                            ) or req_val in chunk.get("__sls_included_from__", []):
                                 found = True
                                 reqs[r_state].append(chunk)
                             continue
@@ -3109,7 +3109,7 @@ class State:
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(
                                 chunk["__sls__"], req_val
-                            ) or req_val in chunk.get("__included__", []):
+                            ) or req_val in chunk.get("__sls_included_from__", []):
                                 if requisite == "prereq":
                                     chunk["__prereq__"] = True
                                 reqs.append(chunk)
@@ -4410,11 +4410,12 @@ class BaseHighState:
                                     context=context,
                                 )
                                 if nstate:
-                                    if empty_state_dict:
-                                        for item in nstate:
-                                            if "__included__" not in nstate[item]:
-                                                nstate[item]["__included__"] = []
-                                            nstate[item]["__included__"].append(sls)
+                                    for item in nstate:
+                                        if "__sls_included_from__" not in nstate[item]:
+                                            nstate[item]["__sls_included_from__"] = []
+                                        nstate[item]["__sls_included_from__"].append(
+                                            sls
+                                        )
 
                                     self.merge_included_states(state, nstate, errors)
                                     state.update(nstate)
