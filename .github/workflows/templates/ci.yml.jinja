@@ -278,18 +278,18 @@
 
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
+  <%- for platform in ("linux", "windows", "macos") %>
+    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
+  <{ platform_job_name }>:
+    <%- do conclusion_needs.append(platform_job_name) %>
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      <%- for platform in ("linux", "windows", "macos") %>
       - build-deps-onedir-<{ platform }>
-      <%- endfor %>
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
+    uses: ./.github/workflows/build-salt-onedir-<{ platform }>.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -298,6 +298,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
+  <%- endfor %>
   <%- endif %>
 
 

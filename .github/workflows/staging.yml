@@ -517,16 +517,46 @@ jobs:
       relenv-version: "0.13.11"
       python-version: "3.10.13"
 
-  build-salt-onedir:
+  build-salt-onedir-linux:
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-linux
+      - build-source-tarball
+    uses: ./.github/workflows/build-salt-onedir-linux.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.13.11"
+      python-version: "3.10.13"
+
+  build-salt-onedir-windows:
+    name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
+    needs:
+      - prepare-workflow
       - build-deps-onedir-windows
+      - build-source-tarball
+    uses: ./.github/workflows/build-salt-onedir-windows.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.13.11"
+      python-version: "3.10.13"
+
+  build-salt-onedir-macos:
+    name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
+    needs:
+      - prepare-workflow
       - build-deps-onedir-macos
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
+    uses: ./.github/workflows/build-salt-onedir-macos.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -540,7 +570,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -553,7 +583,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -566,7 +596,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -579,7 +609,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -592,7 +622,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -608,7 +638,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -624,7 +654,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-macos
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -640,7 +670,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-macos
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -656,7 +686,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: windows-2016
@@ -673,7 +703,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: windows-2019
@@ -690,7 +720,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: windows-2022
@@ -707,7 +737,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-macos
     uses: ./.github/workflows/build-deps-ci-action-macos.yml
     with:
       distro-slug: macos-12
@@ -724,7 +754,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: almalinux-8
@@ -741,7 +771,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: almalinux-8-arm64
@@ -758,7 +788,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: almalinux-9
@@ -775,7 +805,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: almalinux-9-arm64
@@ -792,7 +822,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: amazonlinux-2
@@ -809,7 +839,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: amazonlinux-2-arm64
@@ -826,7 +856,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: archlinux-lts
@@ -843,7 +873,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centos-7
@@ -860,7 +890,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centos-7-arm64
@@ -877,7 +907,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centosstream-8
@@ -894,7 +924,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centosstream-8-arm64
@@ -911,7 +941,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centosstream-9
@@ -928,7 +958,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: centosstream-9-arm64
@@ -945,7 +975,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: debian-10
@@ -962,7 +992,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: debian-11
@@ -979,7 +1009,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: debian-11-arm64
@@ -996,7 +1026,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: fedora-37
@@ -1013,7 +1043,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: fedora-37-arm64
@@ -1030,7 +1060,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: fedora-38
@@ -1047,7 +1077,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: fedora-38-arm64
@@ -1064,7 +1094,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: opensuse-15
@@ -1081,7 +1111,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-3
@@ -1098,7 +1128,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-4
@@ -1115,7 +1145,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-4-arm64
@@ -1132,7 +1162,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: ubuntu-20.04
@@ -1149,7 +1179,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -1166,7 +1196,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: ubuntu-22.04
@@ -1183,7 +1213,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -2146,7 +2176,6 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-salt-onedir
     steps:
       - uses: actions/checkout@v4
 
@@ -2665,7 +2694,6 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-salt-onedir
     steps:
       - uses: actions/checkout@v4
 
@@ -3788,7 +3816,9 @@ jobs:
       - build-deps-onedir-linux
       - build-deps-onedir-windows
       - build-deps-onedir-macos
-      - build-salt-onedir
+      - build-salt-onedir-linux
+      - build-salt-onedir-windows
+      - build-salt-onedir-macos
       - build-rpm-pkgs-src
       - build-deb-pkgs-src
       - build-windows-pkgs-src
