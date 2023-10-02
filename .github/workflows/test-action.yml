@@ -90,7 +90,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix ${{ inputs.distro-slug }}
+          tools ci matrix ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.distro-slug }}
 
   test:
     name: Test
@@ -248,7 +248,8 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests
+            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
+            --test-group-count=${{ matrix.test-chunk-total || 1 }} --test-group=${{ matrix.test-chunk-no || 1 }}
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
@@ -265,8 +266,7 @@ jobs:
           rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.${{ matrix.test-chunk-no || '1' }}
           fi
 
       - name: Destroy VM

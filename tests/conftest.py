@@ -835,6 +835,10 @@ def groups_collection_modifyitems(config, items):
         # We're not selection tests using groups, don't do any filtering
         return
 
+    if group_count == 1:
+        # Just one group, don't do any filtering
+        return
+
     total_items = len(items)
 
     tests_in_group, deselected = get_group(items, group_count, group_id)
@@ -845,7 +849,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} tests)\n",
         yellow=True,
     )
 

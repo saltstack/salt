@@ -609,9 +609,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "distro_slug": {
             "help": "The distribution slug to generate the matrix for",
         },
+        "full": {
+            "help": "Full test run",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str):
+def matrix(ctx: Context, distro_slug: str, full: bool = False):
     """
     Generate the test matrix.
     """
@@ -632,7 +635,18 @@ def matrix(ctx: Context, distro_slug: str):
                 continue
             if "macos" in distro_slug and chunk == "scenarios":
                 continue
-            _matrix.append({"transport": transport, "tests-chunk": chunk})
+            if full and chunk == "integration":
+                for idx in range(1, 3):
+                    _matrix.append(
+                        {
+                            "transport": transport,
+                            "tests-chunk": chunk,
+                            "test-chunk-no": idx,
+                            "test-chunk-total": 2,
+                        }
+                    )
+            else:
+                _matrix.append({"transport": transport, "tests-chunk": chunk})
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
