@@ -4411,6 +4411,9 @@ class BaseHighState:
                                 )
                                 if nstate:
                                     for item in nstate:
+                                        # Skip existing state keywords
+                                        if item.startswith("__"):
+                                            continue
                                         if "__sls_included_from__" not in nstate[item]:
                                             nstate[item]["__sls_included_from__"] = []
                                         nstate[item]["__sls_included_from__"].append(
