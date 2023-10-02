@@ -337,7 +337,7 @@ def _install_coverage_requirement(session):
                     # plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
-                    coverage_requirement = "coverage==5.2"
+                    coverage_requirement = "coverage==6.2"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
@@ -1174,6 +1174,14 @@ def ci_test_onedir(session):
             )
         )
 
+    transport = os.environ.get("SALT_TRANSPORT") or "zeromq"
+    valid_transports = ("zeromq", "tcp")
+    if transport not in valid_transports:
+        session.error(
+            "The value for the SALT_TRANSPORT environment variable can only be "
+            f"one of: {', '.join(valid_transports)}"
+        )
+
     _ci_test(session, "zeromq", onedir=True)
 
 
@@ -1381,8 +1389,7 @@ def create_html_coverage_report(session):
     )
 
 
-@nox.session(python="3", name="create-xml-coverage-reports")
-def create_xml_coverage_reports(session):
+def _create_xml_coverage_reports(session):
     _install_coverage_requirement(session)
     env = {
         # The full path to the .coverage data file. Makes sure we always write
@@ -1417,6 +1424,20 @@ def create_xml_coverage_reports(session):
         )
     except CommandFailed:
         session_warn(session, "Failed to generate the source XML code coverage report")
+
+
+@nox.session(python="3", name="create-xml-coverage-reports")
+def create_xml_coverage_reports(session):
+    _create_xml_coverage_reports(session)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="create-xml-coverage-reports-onedir",
+    venv_params=["--system-site-packages"],
+)
+def create_xml_coverage_reports_onedir(session):
+    _create_xml_coverage_reports(session)
 
 
 class Tee:
