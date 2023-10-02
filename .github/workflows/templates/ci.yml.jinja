@@ -355,15 +355,27 @@
         run: |
           nox --force-color -e combine-coverage
 
-      - name: Create Code Coverage HTML Report
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Upload Salt Code Coverage HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-salt-html-report
+          path: artifacts/coverage/html/salt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Full Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report
 
-      - name: Upload Code Coverage HTML Report
+      - name: Upload Full Code Coverage HTML Report
         uses: actions/upload-artifact@v3
         with:
-          name: code-coverage-html-report
-          path: artifacts/coverage/html
+          name: code-coverage-full-html-report
+          path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
   <%- endif %>

@@ -7,11 +7,13 @@ relative_files = True
 omit =
   setup.py
   .nox/*
-source =
-  pkg
+source_pkgs =
+  pkg.tests
   salt
   tests
   tools
+disable_warnings = module-not-imported
+
 
 [report]
 # Regexes for lines to exclude from consideration
