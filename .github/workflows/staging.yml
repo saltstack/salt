@@ -475,12 +475,40 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-  build-deps-onedir:
+  build-deps-onedir-linux:
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
+    uses: ./.github/workflows/build-deps-onedir-linux.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.13.11"
+      python-version: "3.10.13"
+
+  build-deps-onedir-windows:
+    name: Build Dependencies Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+    uses: ./.github/workflows/build-deps-onedir-windows.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.13.11"
+      python-version: "3.10.13"
+
+  build-deps-onedir-macos:
+    name: Build Dependencies Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+    uses: ./.github/workflows/build-deps-onedir-macos.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -494,7 +522,9 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
+      - build-deps-onedir-linux
+      - build-deps-onedir-windows
+      - build-deps-onedir-macos
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
@@ -3755,7 +3785,9 @@ jobs:
       - pre-commit
       - lint
       - build-docs
-      - build-deps-onedir
+      - build-deps-onedir-linux
+      - build-deps-onedir-windows
+      - build-deps-onedir-macos
       - build-salt-onedir
       - build-rpm-pkgs-src
       - build-deb-pkgs-src
