@@ -858,7 +858,7 @@ typing-extensions==4.2.0
     # via
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   docker

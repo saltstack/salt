@@ -897,7 +897,7 @@ typing-extensions==4.6.3
     #   yarl
 tzlocal==3.0
     # via apscheduler
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   docker

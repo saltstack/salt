@@ -145,7 +145,7 @@ typing-extensions==4.4.0
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.14
+urllib3==2.0.6
     # via
     #   docker
     #   requests

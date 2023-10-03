@@ -920,7 +920,7 @@ typing-extensions==3.10.0.0
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   yarl
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   docker
