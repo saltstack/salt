@@ -521,10 +521,32 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="difference_hashable",
+            expected={"ret": [1, 3]},
+            sls="""
+            {% set result = (1, 2, 3, 4) | difference((2, 4, 6)) | list %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
             name="intersect",
             expected={"ret": [2, 4]},
             sls="""
             {% set result = [1, 2, 3, 4] | intersect([2, 4, 6]) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="intersect_hashable",
+            expected={"ret": [2, 4]},
+            sls="""
+            {% set result = (1, 2, 3, 4) | intersect((2, 4, 6)) | list %}
             test:
               module.run:
                 - name: test.echo
@@ -579,7 +601,40 @@ def _filter_id(value):
             name="regex_match",
             expected={"ret": "('a', 'd')"},
             sls="""
+            {% set result = 'abcd' | regex_match('^(.*)bc(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_match_no_match",
+            expected={"ret": "None"},
+            sls="""
+            {% set result = 'abcd' | regex_match('^(.*)BC(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_match_ignorecase",
+            expected={"ret": "('a', 'd')"},
+            sls="""
             {% set result = 'abcd' | regex_match('^(.*)BC(.*)$', ignorecase=True) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_match_multiline",
+            expected={"ret": "('foo1',)"},
+            sls="""
+            {% set result = 'foo1\nfoo2\n' | regex_match('(foo.$)', multiline=True) %}
             test:
               module.run:
                 - name: test.echo
@@ -598,10 +653,76 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="regex_replace_no_match",
+            expected={"ret": "lets replace spaces"},
+            sls=r"""
+            {% set result = 'lets replace spaces' | regex_replace('\s+$', '__') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_replace_ignorecase",
+            expected={"ret": "barbar"},
+            sls=r"""
+            {% set result = 'FOO1foo2' | regex_replace('foo.', 'bar', ignorecase=True) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_replace_multiline",
+            expected={"ret": "bar bar "},
+            sls=r"""
+            {% set result = 'FOO1\nfoo2\n' | regex_replace('^foo.$', 'bar', ignorecase=True, multiline=True) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: '{{ result }}'
+            """,
+        ),
+        Filter(
             name="regex_search",
             expected={"ret": "('a', 'd')"},
             sls="""
+            {% set result = 'abcd' | regex_search('^(.*)bc(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_search_no_match",
+            expected={"ret": "None"},
+            sls="""
+            {% set result = 'abcd' | regex_search('^(.*)BC(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_search_ignorecase",
+            expected={"ret": "('a', 'd')"},
+            sls="""
             {% set result = 'abcd' | regex_search('^(.*)BC(.*)$', ignorecase=True) %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_search_multiline",
+            expected={"ret": "('foo1',)"},
+            sls="""
+            {% set result = 'foo1\nfoo2\n' | regex_search('(foo.$)', multiline=True) %}
             test:
               module.run:
                 - name: test.echo
@@ -642,6 +763,17 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="symmetric_difference_hashable",
+            expected={"ret": [1, 3, 6]},
+            sls="""
+            {% set result = (1, 2, 3, 4) | symmetric_difference((2, 4, 6)) | list %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
             name="to_bool",
             expected={"ret": True},
             sls="""
@@ -650,6 +782,39 @@ def _filter_id(value):
               module.run:
                 - name: test.echo
                 - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="to_bool_none",
+            expected={"ret": "False"},
+            sls="""
+            {% set result = 'None' | to_bool() %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: '{{ result }}'
+            """,
+        ),
+        Filter(
+            name="to_bool_given_bool",
+            expected={"ret": "True"},
+            sls="""
+            {% set result = true | to_bool() %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: '{{ result }}'
+            """,
+        ),
+        Filter(
+            name="to_bool_not_hashable",
+            expected={"ret": "True"},
+            sls="""
+            {% set result = ['hello', 'world'] | to_bool() %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: '{{ result }}'
             """,
         ),
         Filter(
@@ -1005,7 +1170,6 @@ def _filter_id(value):
                 - text: {{ result }}
             """,
         ),
-        # The muiltiline flag doesn't make sense for `match`, we should deprecate it
         Filter(
             name="match_multiline",
             expected={"ret": "match"},
