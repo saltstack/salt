@@ -867,7 +867,7 @@ twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 tzlocal==3.0
     # via apscheduler
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   kubernetes

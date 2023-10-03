@@ -890,7 +890,7 @@ typing-extensions==3.10.0.2
     # via
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   kubernetes

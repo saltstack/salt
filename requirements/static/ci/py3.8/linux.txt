@@ -919,7 +919,7 @@ typing-extensions==4.2.0
     #   pytest-system-statistics
 tzlocal==2.1
     # via apscheduler
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   botocore
     #   kubernetes
