@@ -1,8 +1,6 @@
 """
 Tests for the salt fileclient
 """
-
-
 import errno
 import logging
 import os
@@ -11,7 +9,7 @@ import pytest
 
 import salt.utils.files
 from salt import fileclient
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import AsyncMock, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
 
@@ -119,20 +117,17 @@ def test_fileclient_timeout(minion_opts, master_opts):
         }
     )
 
-    async def mock_auth():
-        return True
-
     def mock_dumps(*args):
         return b"meh"
 
     with fileclient.get_file_client(minion_opts) as client:
         # Authenticate must return true
-        client.auth.authenticate = mock_auth
-        # Crypticle must return bytes to pass to transport.RequestClient.send
-        client.auth._crypticle = Mock()
-        client.auth._crypticle.dumps = mock_dumps
-        with pytest.raises(salt.exceptions.SaltClientError):
-            client.file_list()
+        with patch.object(client.auth, "authenticate", AsyncMock(return_value=True)):
+            # Crypticle must return bytes to pass to transport.RequestClient.send
+            client.auth._crypticle = Mock()
+            client.auth._crypticle.dumps = mock_dumps
+            with pytest.raises(salt.exceptions.SaltClientError):
+                client.file_list()
 
 
 def test_cache_skips_makedirs_on_race_condition(client_opts):
