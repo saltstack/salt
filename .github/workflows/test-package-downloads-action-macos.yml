@@ -171,11 +171,6 @@ jobs:
         run: |
           nox --force-color -e combine-coverage
 
-      - name: Create XML Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
-        run: |
-          tools --timestamps vm create-xml-coverage-reports ${{ inputs.distro-slug }}
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && job.status != 'cancelled'
