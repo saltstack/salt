@@ -518,7 +518,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mock==4.0.3
+mock==5.1.0
     # via -r requirements/pytest.txt
 more-itertools==8.8.0
     # via

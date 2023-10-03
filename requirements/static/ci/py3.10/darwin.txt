@@ -505,7 +505,7 @@ markupsafe==2.1.2
     #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/darwin.in
-mock==3.0.5
+mock==5.1.0
     # via -r requirements/pytest.txt
 more-itertools==8.2.0
     # via
@@ -809,7 +809,6 @@ six==1.16.0
     #   jsonschema
     #   junos-eznc
     #   kubernetes
-    #   mock
     #   msrestazure
     #   ncclient
     #   paramiko
