@@ -19,38 +19,15 @@ def test_salt_ufw(salt_master, salt_call_cli, install_salt):
     if install_salt.distro_id not in ("debian", "ubuntu"):
         pytest.skip("Only tests Debian / Ubuntu packages")
 
-    pkg = [x for x in install_salt.pkgs if "deb" in x and "master" in x]
-    if not pkg:
-        pytest.skip("Not testing deb packages")
-    pkg_master = pkg[0]
-
-    pkg = [x for x in install_salt.pkgs if "deb" in x and "common" in x]
-    if not pkg:
-        pytest.skip("Not testing deb packages")
-    pkg_common = pkg[0]
-    log.warning(f"DGM test_salt_ufw pkg_common '{pkg_common}'")
-
-    pkg_mngr = install_salt.pkg_mngr
-    log.warning(
-        f"DGM test_salt_ufw pkg_mngr '{pkg_mngr}', pkg_common '{pkg_common}', pkg_master '{pkg_master}'"
-    )
-
-    install_common_cmd = f"{pkg_mngr} -y install {pkg_common}"
-    install_master_cmd = f"{pkg_mngr} -y install {pkg_master}"
-    ## ret = salt_call_cli.run("--local", "cmd.run", pkg_mngr, "-y", "install", pkg_to_install)
-    ret = salt_call_cli.run("--local", "cmd.run", install_common_cmd)
-    log.warning(f"DGM test_salt_ufw salt_common post install '{ret}'")
-    assert ret.returncode == 0
-
-    ret = salt_call_cli.run("--local", "cmd.run", install_master_cmd)
-    log.warning(f"DGM test_salt_ufw salt_master post install '{ret}'")
-    assert ret.returncode == 0
+    # check that the salt_master is running
+    assert salt_master.is_running()
 
     ufw_master_path = pathlib.Path("/etc/ufw/applications.d/salt-master")
     assert ufw_master_path.exists()
 
-    # cleanup
-    remove_cmd = f"{pkg_mngr} -y remove salt-common"
-    ret = salt_call_cli.run("--local", "cmd.run", remove_cmd)
-    log.warning(f"DGM test_salt_ufw salt_master post remove '{ret}'")
+    etc_ufw_path = pathlib.Path("/etc/ufw/applications.d")
+    str_etc_ufw_path = str(etc_ufw_path)
+    log.warning(f"DGM test_salt_ufw etc ufw contents '{etc_ufw_path}'")
+    ret = salt_call_cli.run("--local", "cmd.run", f"ls -alh {etc_ufw_path}/")
+    log.warning(f"DGM test_salt_ufw etc ufw contents, ls -alh file, returned '{ret}'")
     assert ret.returncode == 0
