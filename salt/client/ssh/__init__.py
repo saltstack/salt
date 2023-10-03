@@ -1025,20 +1025,18 @@ class Single:
             except OSError as err:
                 return (
                     "",
-                    f"Could not copy pre flight script {self.ssh_pre_flight} to temporary path",
+                    "Could not copy pre flight script to temporary path",
                     1,
                 )
             target_script = f".{pathlib.Path(temp.name).name}"
-            log.trace(f"Copying the pre flight script {self.ssh_pre_file} to target")
+            log.trace("Copying the pre flight script to target")
             stdout, stderr, retcode = self.shell.send(temp.name, target_script)
             if retcode != 0:
                 # We could not copy the script to the target
-                log.error(
-                    f"Could not copy the pre flight script {self.ssh_pre_file} to target"
-                )
+                log.error("Could not copy the pre flight script to target")
                 return stdout, stderr, retcode
 
-            log.trace(f"Executing the pre flight script {self.ssh_pre_file} on target")
+            log.trace("Executing the pre flight script on target")
             return self.execute_script(
                 target_script, script_args=self.ssh_pre_flight_args
             )
@@ -1430,7 +1428,7 @@ ARGS = {arguments}\n'''.format(
             shim_tmp_file.name, target_shim_file, makedirs=True
         )
         if retcode != 0:
-            log.error(f"Could not copy the shim script to target")
+            log.error("Could not copy the shim script to target")
             return stdout, stderr, retcode
 
         # Remove our shim file
