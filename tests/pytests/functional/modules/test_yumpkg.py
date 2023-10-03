@@ -6,6 +6,11 @@ import salt.modules.pkg_resource
 import salt.modules.yumpkg
 import salt.utils.pkg.rpm
 
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("rpm", "yum"),
+    pytest.mark.slow_test,
+]
+
 
 @pytest.fixture
 def configure_loader_modules(minion_opts, grains):
@@ -34,14 +39,11 @@ def configure_loader_modules(minion_opts, grains):
     }
 
 
-@pytest.mark.slow_test
 def test_yum_list_pkgs(grains):
     """
     compare the output of rpm -qa vs the return of yumpkg.list_pkgs,
     make sure that any changes to ympkg.list_pkgs still returns.
     """
-    if grains["os_family"] != "RedHat":
-        pytest.skip("Skip if not RedHat")
     cmd = [
         "rpm",
         "-qa",
