@@ -81,13 +81,10 @@ def test_fileclient_context_manager_closes(minion_opts, master_opts):
             "auth_timeout": 5,
             "master_ip": "127.0.0.1",
             "master_port": master_opts["ret_port"],
-            "master_uri": "tcp://127.0.0.1:{}".format(master_opts["ret_port"]),
+            "master_uri": f"tcp://127.0.0.1:{master_opts['ret_port']}",
             "request_channel_timeout": 1,
             "request_channel_tries": 1,
         }
-    )
-    master_uri = "tcp://{master_ip}:{master_port}".format(
-        master_ip="localhost", master_port=minion_opts["master_port"]
     )
     mock_reqchannel = MockReqChannel()
     patch_reqchannel = patch.object(
@@ -116,13 +113,10 @@ def test_fileclient_timeout(minion_opts, master_opts):
             "auth_timeout": 5,
             "master_ip": "127.0.0.1",
             "master_port": master_opts["ret_port"],
-            "master_uri": "tcp://127.0.0.1:{}".format(master_opts["ret_port"]),
+            "master_uri": f"tcp://127.0.0.1:{master_opts['ret_port']}",
             "request_channel_timeout": 1,
             "request_channel_tries": 1,
         }
-    )
-    master_uri = "tcp://{master_ip}:{master_port}".format(
-        master_ip="localhost", master_port=minion_opts["master_port"]
     )
 
     async def mock_auth():
