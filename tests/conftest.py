@@ -15,6 +15,7 @@ from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
+import more_itertools
 import psutil
 import pytest
 
@@ -800,33 +801,6 @@ def pytest_runtest_setup(item):
 
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
-def get_group_size_and_start(total_items, total_groups, group_id):
-    """
-    Calculate group size and start index.
-    """
-    base_size = total_items // total_groups
-    rem = total_items % total_groups
-
-    start = base_size * (group_id - 1) + min(group_id - 1, rem)
-    size = base_size + 1 if group_id <= rem else base_size
-
-    return (start, size)
-
-
-def get_group(items, total_groups, group_id):
-    """
-    Get the items from the passed in group based on group size.
-    """
-    if not 0 < group_id <= total_groups:
-        raise ValueError("Invalid test-group argument")
-
-    start, size = get_group_size_and_start(len(items), total_groups, group_id)
-    selected = items[start : start + size]
-    deselected = items[:start] + items[start + size :]
-    assert len(selected) + len(deselected) == len(items)
-    return selected, deselected
-
-
 def groups_collection_modifyitems(config, items):
     group_count = config.getoption("test-group-count")
     group_id = config.getoption("test-group")
@@ -841,7 +815,14 @@ def groups_collection_modifyitems(config, items):
 
     total_items = len(items)
 
-    tests_in_group, deselected = get_group(items, group_count, group_id)
+    # Devide into test groups
+    test_groups = more_itertools.divide(group_count, items)
+    # Pick the right group
+    tests_in_group = list(test_groups.pop(group_id - 1))
+    # The rest are deselected tests
+    deselected = list(more_itertools.collapse(test_groups))
+    # Sanity check
+    assert len(tests_in_group) + len(deselected) == total_items
     # Replace all items in the list
     items[:] = tests_in_group
     if deselected:
@@ -849,7 +830,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} tests)\n",
+        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
     )
 
