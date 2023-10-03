@@ -6,6 +6,7 @@ import sys
 import packaging.version
 import psutil
 import pytest
+from saltfactories.utils.tempfiles import temp_directory
 
 pytestmark = [
     pytest.mark.skip_on_windows,
