@@ -210,7 +210,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mock==3.0.5
+mock==5.1.0
     # via -r requirements/pytest.txt
 more-itertools==8.2.0
     # via
@@ -423,7 +423,6 @@ six==1.15.0
     #   google-auth
     #   jsonschema
     #   kubernetes
-    #   mock
     #   python-dateutil
     #   pyvmomi
     #   pywinrm

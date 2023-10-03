@@ -543,7 +543,7 @@ markupsafe==2.1.2
     #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/linux.in
-mock==3.0.5
+mock==5.1.0
     # via -r requirements/pytest.txt
 more-itertools==5.0.0
     # via
@@ -889,7 +889,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   mock
     #   more-itertools
     #   ncclient
     #   paramiko
