@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.auth
@@ -9,6 +11,8 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.windows_whitelisted,
 ]
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -150,3 +154,14 @@ def test_invalid_kwargs_are_ignored(client, auth_creds):
     ret = client.cmd_sync(low.copy())
     assert ret
     assert ret[0] == "foo"
+
+
+def test_get_docs(client, auth_creds):
+    ret = client.get_docs(arg="*")
+    assert "auth.del_token" in ret
+    assert "auth.mk_token" in ret
+    assert "cache.clear_pillar" in ret
+    assert "cache.grains" in ret
+    assert "state.soft_kill" in ret
+    assert "virt.start" in ret
+    assert "test.arg" in ret
