@@ -302,6 +302,24 @@ jobs:
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
+
+      - name: Install Codecov CLI
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Save Commit Metadata In Codecov
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-commit --git-service github --sha ${{ github.sha }}
+
+      - name: Create Codecov Coverage Report
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-report --git-service github --sha ${{ github.sha }}
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 
