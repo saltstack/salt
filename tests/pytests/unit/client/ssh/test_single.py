@@ -410,11 +410,8 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog):
     with caplog.at_level(logging.TRACE):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
-    assert f"Copying the pre flight script {pre_flight.name}" in caplog.text
-    assert (
-        f"Could not copy the pre flight script {pre_flight.name} to target"
-        in caplog.text
-    )
+    assert "Copying the pre flight script" in caplog.text
+    assert "Could not copy the pre flight script to target" in caplog.text
     assert ret == ret_send
     assert send_mock.call_args_list[0][0][0] == tmp_file
     target_script = send_mock.call_args_list[0][0][1]
@@ -505,7 +502,7 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 
-    assert f"Executing the pre flight script {pre_flight.name} on target" in caplog.text
+    assert "Executing the pre flight script on target" in caplog.text
     assert ret == ret_exec_cmd
     assert send_mock.call_args_list[0][0][0] == tmp_file
     target_script = send_mock.call_args_list[0][0][1]
@@ -550,7 +547,7 @@ def test_run_ssh_pre_flight_shutil_fails(opts, target, tmp_path):
 
     assert ret == (
         "",
-        f"Could not copy pre flight script {pre_flight} to temporary path",
+        "Could not copy pre flight script to temporary path",
         1,
     )
     mock_exec_cmd.assert_not_called()
