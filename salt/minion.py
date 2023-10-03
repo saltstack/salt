@@ -114,6 +114,29 @@ log = logging.getLogger(__name__)
 # 6. Handle publications
 
 
+def _sync_grains(opts):
+    # need sync of custom grains as may be used in pillar compilation
+    # if coming up initially and remote client, the first sync _grains
+    # doesn't have opts["master_uri"] set yet during the sync, so need
+    # to force local, otherwise will throw an exception when attempting
+    # to retrieve opts["master_uri"] when retrieving key for remote communication
+    # in addition opts sometimes does not contain extmod_whitelist and extmod_blacklist
+    # hence set those to defaults, empty dict, if not part of opts, as ref'd in
+    # salt.utils.extmod sync function
+    if opts.get("extmod_whitelist", None) is None:
+        opts["extmod_whitelist"] = {}
+
+    if opts.get("extmod_blacklist", None) is None:
+        opts["extmod_blacklist"] = {}
+
+    if opts.get("file_client", "remote") == "remote" and not opts.get(
+        "master_uri", None
+    ):
+        salt.utils.extmods.sync(opts, "grains", force_local=True)
+    else:
+        salt.utils.extmods.sync(opts, "grains")
+
+
 def resolve_dns(opts, fallback=True):
     """
     Resolves the master_ip and master_uri options
@@ -921,18 +944,7 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
-        # need sync of custom grains as may be used in pillar compilation
-        # if coming up initially and remote client, the first sync _grains
-        # doesn't have opts["master_uri"] set yeti during the sync, so need
-        # to force local, otherwise will throw an exception when attempting
-        # to retrieve opts["master_uri"] when retrieving key for remote communication
-
-        if opts.get("file_client", "remote") == "remote" and not opts.get(
-            "master_uri", None
-        ):
-            salt.utils.extmods.sync(opts, "grains", force_local=True)
-        else:
-            salt.utils.extmods.sync(opts, "grains")
+        _sync_grains(opts)
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
