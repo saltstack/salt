@@ -806,7 +806,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mock==3.0.5
+mock==5.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
@@ -1256,7 +1256,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   mock
     #   more-itertools
     #   ncclient
     #   paramiko
