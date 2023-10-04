@@ -49,6 +49,18 @@ def _system_up_to_date(
     grains,
     shell,
 ):
+    if grains["os"] == "Ubuntu" and grains["osarch"] == "amd64":
+        # The grub-efi-amd64-signed package seems to be a problem
+        # right now when updating the system
+        env = os.environ.copy()
+        env["DEBIAN_FRONTEND"] = "noninteractive"
+        ret = shell.run(
+            "apt-mark",
+            "hold",
+            "grub-efi-amd64-signed",
+            env=env,
+        )
+        assert ret.returncode == 0
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
