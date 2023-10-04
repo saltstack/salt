@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 
 import salt.auth
@@ -11,8 +9,6 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.windows_whitelisted,
 ]
-
-log = logging.getLogger(__name__)
 
 
 @pytest.fixture
