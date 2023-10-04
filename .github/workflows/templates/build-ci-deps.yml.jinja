@@ -9,7 +9,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-windows
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: <{ slug }>
@@ -31,7 +31,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-macos
     uses: ./.github/workflows/build-deps-ci-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -80,7 +80,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: <{ slug }>

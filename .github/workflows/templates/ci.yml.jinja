@@ -259,14 +259,16 @@
 
   <%- set job_name = "build-deps-onedir" %>
   <%- if includes.get(job_name, True) %>
+  <%- for platform in ("linux", "windows", "macos") %>
+    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
+  <{ platform_job_name }>:
+    <%- do conclusion_needs.append(platform_job_name) %>
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
+    uses: ./.github/workflows/build-deps-onedir-<{ platform }>.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -275,21 +277,24 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
+  <%- endfor %>
   <%- endif %>
 
 
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
+  <%- for platform in ("linux", "windows", "macos") %>
+    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
+  <{ platform_job_name }>:
+    <%- do conclusion_needs.append(platform_job_name) %>
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
+      - build-deps-onedir-<{ platform }>
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
+    uses: ./.github/workflows/build-salt-onedir-<{ platform }>.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -298,6 +303,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
+  <%- endfor %>
   <%- endif %>
 
 
@@ -360,15 +366,27 @@
         run: |
           nox --force-color -e combine-coverage
 
-      - name: Create Code Coverage HTML Report
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Upload Salt Code Coverage HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-salt-html-report
+          path: artifacts/coverage/html/salt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Full Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report
 
-      - name: Upload Code Coverage HTML Report
+      - name: Upload Full Code Coverage HTML Report
         uses: actions/upload-artifact@v3
         with:
-          name: code-coverage-html-report
-          path: artifacts/coverage/html
+          name: code-coverage-full-html-report
+          path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
   <%- endif %>

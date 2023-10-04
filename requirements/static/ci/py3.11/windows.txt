@@ -216,11 +216,12 @@ markupsafe==2.1.2
     #   jinja2
     #   mako
     #   werkzeug
-mock==5.0.2
+mock==5.1.0
     # via -r requirements/pytest.txt
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
+    #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
