@@ -6684,8 +6684,8 @@ def prepend(
         Set this option to ``False`` if you want to change this behavior.
 
     header
-        Forces the text to be prepended if it exists in the file but not at
-        the beginning.
+        Forces the text to be prepended. If it exists in the file but not at
+        the beginning, then it prepends a duplicate.
 
     Multi-line example:
 
