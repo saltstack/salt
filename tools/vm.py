@@ -949,7 +949,7 @@ class VM:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
-            log.info("Starting Developer configured VM")
+            log.info(f"Starting Developer configured VM In Environment '{environment}'")
             security_group_filters = [
                 {
                     "Name": "vpc-id",
