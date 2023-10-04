@@ -3185,6 +3185,24 @@ def test_kernelparams_return_linux_non_utf8():
             assert core.kernelparams() == expected
 
 
+@pytest.mark.skip_unless_on_linux
+def test_kernelparams_file_not_found_error():
+    with patch("salt.utils.files.fopen", MagicMock()) as fopen_mock:
+        fopen_mock.side_effect = FileNotFoundError()
+        ret = core.kernelparams()
+        assert ret == {}
+
+
+@pytest.mark.skip_unless_on_linux
+def test_kernelparams_oserror(caplog):
+    with patch("salt.utils.files.fopen", MagicMock()) as fopen_mock:
+        with caplog.at_level(logging.DEBUG):
+            fopen_mock.side_effect = OSError()
+            ret = core.kernelparams()
+            assert ret == {}
+            assert "Failed to read /proc/cmdline: " in caplog.messages
+
+
 def test_linux_gpus(caplog):
     """
     Test GPU detection on Linux systems
