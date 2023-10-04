@@ -260,14 +260,12 @@ def purge(**kwargs):
 
         if "test" in kwargs and kwargs["test"]:
             ret["result"] = True
-            ret["comment"].append(
-                "Job: {} would be deleted from schedule.".format(name)
-            )
+            ret["comment"].append(f"Job: {name} would be deleted from schedule.")
         else:
             if kwargs.get("offline"):
                 del current_schedule[name]
 
-                ret["comment"].append("Deleted job: {} from schedule.".format(name))
+                ret["comment"].append(f"Deleted job: {name} from schedule.")
                 ret["changes"][name] = "removed"
 
             else:
@@ -291,7 +289,7 @@ def purge(**kwargs):
                                     ret["result"] = True
                                     ret["changes"][name] = "removed"
                                     ret["comment"].append(
-                                        "Deleted job: {} from schedule.".format(name)
+                                        f"Deleted job: {name} from schedule."
                                     )
                                 else:
                                     ret["comment"].append(
@@ -342,7 +340,7 @@ def delete(name, **kwargs):
     """
 
     ret = {
-        "comment": "Failed to delete job {} from schedule.".format(name),
+        "comment": f"Failed to delete job {name} from schedule.",
         "result": False,
         "changes": {},
     }
@@ -351,7 +349,7 @@ def delete(name, **kwargs):
         ret["comment"] = "Job name is required."
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be deleted from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be deleted from schedule."
         ret["result"] = True
     else:
         if kwargs.get("offline"):
@@ -380,7 +378,7 @@ def delete(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Deleted Job {} from schedule.".format(name)
+            ret["comment"] = f"Deleted Job {name} from schedule."
             ret["changes"][name] = "removed"
         else:
             persist = kwargs.get("persist", True)
@@ -405,7 +403,7 @@ def delete(name, **kwargs):
                     "persist": False,
                 }
             else:
-                ret["comment"] = "Job {} does not exist.".format(name)
+                ret["comment"] = f"Job {name} does not exist."
                 return ret
 
             try:
@@ -589,7 +587,7 @@ def add(name, **kwargs):
     """
 
     ret = {
-        "comment": "Failed to add job {} to schedule.".format(name),
+        "comment": f"Failed to add job {name} to schedule.",
         "result": False,
         "changes": {},
     }
@@ -598,7 +596,7 @@ def add(name, **kwargs):
     )
 
     if name in current_schedule:
-        ret["comment"] = "Job {} already exists in schedule.".format(name)
+        ret["comment"] = f"Job {name} already exists in schedule."
         ret["result"] = False
         return ret
 
@@ -634,7 +632,7 @@ def add(name, **kwargs):
     schedule_data[name] = _new
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be added to schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be added to schedule."
         ret["result"] = True
     else:
         if kwargs.get("offline"):
@@ -656,7 +654,7 @@ def add(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Added job: {} to schedule.".format(name)
+            ret["comment"] = f"Added job: {name} to schedule."
             ret["changes"][name] = "added"
         else:
             try:
@@ -733,7 +731,7 @@ def modify(name, **kwargs):
     )
 
     if name not in current_schedule:
-        ret["comment"] = "Job {} does not exist in schedule.".format(name)
+        ret["comment"] = f"Job {name} does not exist in schedule."
         ret["result"] = False
         return ret
 
@@ -756,7 +754,7 @@ def modify(name, **kwargs):
         return _new
 
     if _new == _current:
-        ret["comment"] = "Job {} in correct state".format(name)
+        ret["comment"] = f"Job {name} in correct state"
         return ret
 
     ret["changes"][name] = {
@@ -765,7 +763,7 @@ def modify(name, **kwargs):
     }
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be modified in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be modified in schedule."
     else:
         if kwargs.get("offline"):
             current_schedule[name].update(_new)
@@ -786,7 +784,7 @@ def modify(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Modified job: {} in schedule.".format(name)
+            ret["comment"] = f"Modified job: {name} in schedule."
 
         else:
             persist = kwargs.get("persist", True)
@@ -808,9 +806,9 @@ def modify(name, **kwargs):
 
             out = __salt__["event.fire"](event_data, "manage_schedule")
             if out:
-                ret["comment"] = "Modified job: {} in schedule.".format(name)
+                ret["comment"] = f"Modified job: {name} in schedule."
             else:
-                ret["comment"] = "Failed to modify job {} in schedule.".format(name)
+                ret["comment"] = f"Failed to modify job {name} in schedule."
                 ret["result"] = False
     return ret
 
@@ -839,18 +837,18 @@ def run_job(name, force=False):
     if name in schedule:
         data = schedule[name]
         if "enabled" in data and not data["enabled"] and not force:
-            ret["comment"] = "Job {} is disabled.".format(name)
+            ret["comment"] = f"Job {name} is disabled."
         else:
             out = __salt__["event.fire"](
                 {"name": name, "func": "run_job"}, "manage_schedule"
             )
             if out:
-                ret["comment"] = "Scheduling Job {} on minion.".format(name)
+                ret["comment"] = f"Scheduling Job {name} on minion."
             else:
-                ret["comment"] = "Failed to run job {} on minion.".format(name)
+                ret["comment"] = f"Failed to run job {name} on minion."
                 ret["result"] = False
     else:
-        ret["comment"] = "Job {} does not exist.".format(name)
+        ret["comment"] = f"Job {name} does not exist."
         ret["result"] = False
     return ret
 
@@ -873,7 +871,7 @@ def enable_job(name, **kwargs):
         ret["result"] = False
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be enabled in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be enabled in schedule."
     else:
         persist = kwargs.get("persist", True)
 
@@ -887,7 +885,7 @@ def enable_job(name, **kwargs):
                 "persist": False,
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -904,13 +902,11 @@ def enable_job(name, **kwargs):
                         # check item exists in schedule and is enabled
                         if name in schedule and schedule[name]["enabled"]:
                             ret["result"] = True
-                            ret["comment"] = "Enabled Job {} in schedule.".format(name)
+                            ret["comment"] = f"Enabled Job {name} in schedule."
                             ret["changes"][name] = "enabled"
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to enable job {} in schedule.".format(name)
+                            ret["comment"] = f"Failed to enable job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -936,7 +932,7 @@ def disable_job(name, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be disabled in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be disabled in schedule."
     else:
         persist = kwargs.get("persist", True)
 
@@ -950,7 +946,7 @@ def disable_job(name, **kwargs):
                 "persist": False,
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -967,13 +963,13 @@ def disable_job(name, **kwargs):
                         # check item exists in schedule and is enabled
                         if name in schedule and not schedule[name]["enabled"]:
                             ret["result"] = True
-                            ret["comment"] = "Disabled Job {} in schedule.".format(name)
+                            ret["comment"] = f"Disabled Job {name} in schedule."
                             ret["changes"][name] = "disabled"
                         else:
                             ret["result"] = False
                             ret[
                                 "comment"
-                            ] = "Failed to disable job {} in schedule.".format(name)
+                            ] = f"Failed to disable job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1138,9 +1134,7 @@ def reload_():
             try:
                 schedule = salt.utils.yaml.safe_load(fp_)
             except salt.utils.yaml.YAMLError as exc:
-                ret["comment"].append(
-                    "Unable to read existing schedule file: {}".format(exc)
-                )
+                ret["comment"].append(f"Unable to read existing schedule file: {exc}")
 
         if schedule:
             if "schedule" in schedule and schedule["schedule"]:
@@ -1188,7 +1182,7 @@ def move(name, target, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be moved from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be moved from schedule."
     else:
         opts_schedule = list_(show_all=True, where="opts", return_yaml=False)
         pillar_schedule = list_(show_all=True, where="pillar", return_yaml=False)
@@ -1200,13 +1194,13 @@ def move(name, target, **kwargs):
             schedule_data = pillar_schedule[name]
             where = "pillar"
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
         schedule_opts = []
         for key, value in schedule_data.items():
-            temp = "{}={}".format(key, value)
+            temp = f"{key}={value}"
             schedule_opts.append(temp)
         response = __salt__["publish.publish"](target, "schedule.add", schedule_opts)
 
@@ -1229,7 +1223,7 @@ def move(name, target, **kwargs):
         else:
             delete(name, where=where)
             ret["result"] = True
-            ret["comment"] = "Moved Job {} from schedule.".format(name)
+            ret["comment"] = f"Moved Job {name} from schedule."
             ret["minions"] = minions
             return ret
     return ret
@@ -1253,7 +1247,7 @@ def copy(name, target, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be copied from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be copied from schedule."
     else:
         opts_schedule = list_(show_all=True, where="opts", return_yaml=False)
         pillar_schedule = list_(show_all=True, where="pillar", return_yaml=False)
@@ -1263,13 +1257,13 @@ def copy(name, target, **kwargs):
         elif name in pillar_schedule:
             schedule_data = pillar_schedule[name]
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
         schedule_opts = []
         for key, value in schedule_data.items():
-            temp = "{}={}".format(key, value)
+            temp = f"{key}={value}"
             schedule_opts.append(temp)
         response = __salt__["publish.publish"](target, "schedule.add", schedule_opts)
 
@@ -1291,7 +1285,7 @@ def copy(name, target, **kwargs):
             return ret
         else:
             ret["result"] = True
-            ret["comment"] = "Copied Job {} from schedule to minion(s).".format(name)
+            ret["comment"] = f"Copied Job {name} from schedule to minion(s)."
             ret["minions"] = minions
             return ret
     return ret
@@ -1354,7 +1348,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
             return ret
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be postponed in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be postponed in schedule."
     else:
 
         if name in list_(show_all=True, where="opts", return_yaml=False):
@@ -1375,7 +1369,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
                 "func": "postpone_job",
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -1399,7 +1393,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
                             ret["result"] = False
                             ret[
                                 "comment"
-                            ] = "Failed to postpone job {} in schedule.".format(name)
+                            ] = f"Failed to postpone job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1445,7 +1439,7 @@ def skip_job(name, current_time, **kwargs):
             return ret
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be skipped in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be skipped in schedule."
     else:
 
         if name in list_(show_all=True, where="opts", return_yaml=False):
@@ -1464,7 +1458,7 @@ def skip_job(name, current_time, **kwargs):
                 "func": "skip_job",
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -1486,9 +1480,7 @@ def skip_job(name, current_time, **kwargs):
                             )
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to skip job {} in schedule.".format(name)
+                            ret["comment"] = f"Failed to skip job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
