@@ -186,6 +186,7 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
 
 # This test is flaky on FreeBSD
 @pytest.mark.skip_on_freebsd
+@pytest.mark.slow_test
 @pytest.mark.skip_on_spawning_platform(
     reason="The '__low__' global is not populated on spawning platforms"
 )
