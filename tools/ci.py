@@ -370,6 +370,7 @@ def define_jobs(
     required_pkg_test_changes: set[str] = {
         changed_files_contents["pkg_tests"],
         changed_files_contents["workflows"],
+        changed_files_contents["golden_images"],
     }
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
         if "test:pkg" in labels:
