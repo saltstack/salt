@@ -489,3 +489,13 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
             pillar_items = ret.data
             assert "mypillar" in pillar_items
             assert pillar_items["mypillar"] == "test_value"
+
+
+def test_salt_call_versions(salt_call_cli):
+    """
+    Call test.versions without '--local' to test grains
+    are sync'd without any missing keys in opts
+    """
+    ret = salt_call_cli.run("test.versions")
+    assert ret.returncode == 0
+    assert ret.data[0] == 2
