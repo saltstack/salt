@@ -8,7 +8,19 @@ from tests.support.mock import sentinel as s
 
 @pytest.fixture
 def configure_loader_modules():
-    return {saltutil: {"__opts__": {"file_client": "local"}}}
+    return {
+        saltutil: {
+            "__opts__": {
+                "file_client": "local",
+                "cachedir": "/tmp",
+                "pki_dir": "/tmp/pki_dir",
+                "id": "minion",
+                "master_uri": "tcp://127.0.0.1:4505",
+                "__role": "minion",
+                "keysize": 2048,
+            }
+        }
+    }
 
 
 def test_exec_kwargs():
@@ -90,10 +102,22 @@ def test_refresh_grains_default_clean_pillar_cache():
         refresh_pillar.assert_called_with(clean_cache=False)
 
 
+def test_refresh_grains_default_clean_pillar_cache_with_refresh_false():
+    with patch("salt.modules.saltutil.refresh_modules") as refresh_modules:
+        saltutil.refresh_grains(refresh_pillar=False)
+        refresh_modules.assert_called()
+
+
 def test_refresh_grains_clean_pillar_cache():
     with patch("salt.modules.saltutil.refresh_pillar") as refresh_pillar:
         saltutil.refresh_grains(clean_pillar_cache=True)
         refresh_pillar.assert_called_with(clean_cache=True)
+
+
+def test_refresh_grains_clean_pillar_cache_with_refresh_false():
+    with patch("salt.modules.saltutil.refresh_modules") as refresh_modules:
+        saltutil.refresh_grains(clean_pillar_cache=True, refresh_pillar=False)
+        refresh_modules.assert_called()
 
 
 def test_sync_grains_default_clean_pillar_cache():
@@ -136,3 +160,46 @@ def test_sync_all_clean_pillar_cache():
         with patch("salt.modules.saltutil.refresh_pillar") as refresh_pillar:
             saltutil.sync_all(clean_pillar_cache=True)
             refresh_pillar.assert_called_with(clean_cache=True)
+
+
+@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
+def test_list_extmods(salt_call_cli):
+    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/extmods/dummydir")
+    assert ret.returncode == 0
+
+    ret = saltutil.list_extmods()
+    assert "dummydir" in ret
+    assert ret["dummydir"] == []
+
+
+def test_refresh_beacons():
+    ret = saltutil.refresh_beacons()
+    assert ret is False
+
+
+def test_refresh_matchers():
+    ret = saltutil.refresh_matchers()
+    assert ret is False
+
+
+def test_refresh_modules_async_false():
+    ## ret = saltutil.refresh_modules( kwargs({"async": False}) )
+    kwargs = {"async": False}
+    ret = saltutil.refresh_modules(**kwargs)
+    assert ret is False
+
+
+def test_clear_job_cache(salt_call_cli):
+    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/minion_jobs/dummydir")
+    assert ret.returncode == 0
+
+    ret = saltutil.clear_job_cache(hours=1)
+    assert ret is True
+
+
+@pytest.mark.destructive_test
+def test_regen_keys(salt_call_cli):
+    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/pki_dir/dummydir")
+    assert ret.returncode == 0
+
+    saltutil.regen_keys()
