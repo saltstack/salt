@@ -215,7 +215,7 @@ def test_persist_no_conf_failure():
         ):
             with pytest.raises(CommandExecutionError):
                 linux_sysctl.persist("net.ipv4.ip_forward", 42, config=None)
-    fopen_mock.called_once()
+    fopen_mock.assert_called_once()
 
 
 def test_persist_no_conf_success():
@@ -353,7 +353,7 @@ def test_persist_value_with_spaces_already_set(tmp_path):
     """
     config = str(tmp_path / "existing_sysctl_with_spaces.conf")
     value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
-    config_file_content = "kernel.core_pattern = {}\n".format(value)
+    config_file_content = f"kernel.core_pattern = {value}\n"
     with fopen(config, "w", encoding="utf-8") as config_file:
         config_file.write(config_file_content)
     mock_run = MagicMock(return_value=value)
@@ -383,7 +383,7 @@ def test_persist_value_with_spaces_already_configured(tmp_path):
     """
     config = str(tmp_path / "existing_sysctl_with_spaces.conf")
     value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
-    config_file_content = "kernel.core_pattern = {}\n".format(value)
+    config_file_content = f"kernel.core_pattern = {value}\n"
     with fopen(config, "w", encoding="utf-8") as config_file:
         config_file.write(config_file_content)
     mock_run = MagicMock(return_value="")
@@ -451,7 +451,7 @@ def test_persist_value_with_spaces_update_config(tmp_path):
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
-    assert written == "kernel.core_pattern = {}\n".format(value)
+    assert written == f"kernel.core_pattern = {value}\n"
 
 
 def test_persist_value_with_spaces_new_file(tmp_path):
