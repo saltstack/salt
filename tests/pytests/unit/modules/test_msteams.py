@@ -24,8 +24,10 @@ def test_post_card():
     with patch("salt.utils.http.query", http_mock):
         ret = msteams.post_card("test")
         assert ret
-        assert http_mock.called_once_with(
+        http_mock.assert_called_once_with(
+            "https://example.com/web_hook",
             method="POST",
             header_dict={"Content-Type": "application/json"},
-            data='{"text": "test", "title": Null, "themeColor": Null}',
+            data='{"text": "test", "title": null, "themeColor": null}',
+            status=True,
         )
