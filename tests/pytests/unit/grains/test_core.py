@@ -3329,6 +3329,9 @@ def test_get_server_id():
     with patch.dict(core.__opts__, {"id": "otherid"}):
         assert core.get_server_id() != expected
 
+    with patch.object(salt.utils.platform, "is_proxy", MagicMock(return_value=True)):
+        assert core.get_server_id() == {}
+
 
 def test_linux_cpudata_ppc64le():
     cpuinfo = """processor	: 0
@@ -3984,3 +3987,16 @@ Graphics/Displays:
     with patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
         ret = core._osx_gpudata()
         assert ret == {"num_gpus": 0, "gpus": []}
+
+
+def test_get_master():
+    """
+    test get_master
+    """
+    ret = core.get_master()
+    assert "master" in ret
+
+    with patch("salt.grains.core.__opts__", {"master": "test_master_id"}):
+        ret = core.get_master()
+        assert "master" in ret
+        assert ret["master"] == "test_master_id"
