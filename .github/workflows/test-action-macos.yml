@@ -85,9 +85,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          TEST_MATRIX=$(tools ci matrix ${{ inputs.distro-slug }})
-          echo "$TEST_MATRIX"
-          echo "matrix=$TEST_MATRIX" >> "$GITHUB_OUTPUT"
+          tools ci matrix ${{ inputs.distro-slug }}
 
   test:
     name: Test
@@ -326,7 +324,6 @@ jobs:
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
           fi
 
       - name: Upload Code Coverage Test Run Artifacts
