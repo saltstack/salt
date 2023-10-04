@@ -69,6 +69,44 @@ Here is an example of result parsing and appending:
         - name: __slot__:salt:user.info(someuser).home ~ /subdirectory
         - source: salt://somefile
 
+Example Usage
+-------------
+
+In Salt, slots are a powerful feature that allows you to populate information
+dynamically within your Salt states. One of the best use cases for slots is when
+you need to reference data that is created or modified during the course of a
+Salt run.
+
+Consider the following example, where we aim to add a user named 'foobar' to a
+group named 'known_users' with specific user and group IDs. To achieve this, we
+utilize slots to retrieve the group ID of 'known_users' as it is created or
+modified during the Salt run.
+
+.. code-block:: yaml
+
+    add_group_known_users:
+      group.present:
+        - name: known_users
+
+    add_user:
+      user.present:
+        - name: foobar
+        - uid: 600
+        - gid: __slot__:salt:group.info("known_users").gid
+        - require:
+          - group: add_group_known_users
+
+In this example, the ``add_group_known_users`` state ensures the presence of the
+'known_users' group. Then, within the ``add_user`` state, we use the slot
+``__slot__:salt:group.info("known_users").gid`` to dynamically retrieve the
+group ID of 'known_users,' which may have been modified during the execution of
+the previous state. This approach ensures that our user 'foobar' is associated
+with the correct group, even if the group information changes during the Salt
+run.
+
+Slots offer a flexible way to work with changing data and dynamically populate
+your Salt states, making your configurations adaptable and robust.
+
 Execution module returns as file contents or data
 -------------------------------------------------
 
