@@ -90,7 +90,9 @@ jobs:
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
-    timeout-minutes: 360  # 6 Hours
+    # Full test runs. Each chunk should never take more than 2 hours.
+    # Partial test runs(no chunk parallelization), 5 Hours
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 120 || 300 }}
     needs:
       - generate-matrix
     strategy:
