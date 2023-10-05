@@ -400,12 +400,6 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Combine Code Coverage
-        if: ${{ inputs.skip-code-coverage == false }}
-        continue-on-error: true
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
@@ -493,12 +487,6 @@ jobs:
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
-
-      - name: Report Tests Code Coverage
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
