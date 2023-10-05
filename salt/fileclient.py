@@ -49,7 +49,6 @@ def get_file_client(opts, pillar=False, force_local=False):
     Read in the ``file_client`` option and return the correct type of file
     server
     """
-    ## client = opts.get("file_client", "remote")
     if force_local:
         client = "local"
     else:
