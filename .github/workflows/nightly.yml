@@ -2838,6 +2838,9 @@ jobs:
       - repo-nightly
     needs:
       - prepare-workflow
+      - build-salt-onedir-linux
+      - build-salt-onedir-macos
+      - build-salt-onedir-windows
     steps:
       - uses: actions/checkout@v4
 
