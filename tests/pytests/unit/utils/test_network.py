@@ -11,6 +11,11 @@ import salt.utils.network as network
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
+
 log = logging.getLogger(__name__)
 
 LINUX = """\
@@ -179,16 +184,13 @@ def test_host_to_ips():
     with patch.object(socket, "getaddrinfo", getaddrinfo_mock):
         # Test host that can be resolved
         ret = network.host_to_ips("github.com")
-        log.warning(f"DGM test_host_to_ips ipv4, ret '{ret}'")
         assert ret == ["192.30.255.112", "192.30.255.113"]
 
         # Test ipv6
         ret = network.host_to_ips("ipv6host.foo")
-        log.warning(f"DGM test_host_to_ips ipv6, ret '{ret}'")
         assert ret == ["2001:a71::1"]
         # Test host that can't be resolved
         ret = network.host_to_ips("someothersite.com")
-        log.warning(f"DGM test_host_to_ips ipv6 2, ret '{ret}'")
         assert ret is None
 
 
@@ -830,519 +832,570 @@ def test_generate_minion_id_platform_localhost_filtered():
         assert network.generate_minion_id() == "hostname.domainname.blank"
 
 
-## def test_generate_minion_id_platform_localhost_filtered_all():
-##     """
-##     Test if any of the localhost is filtered from everywhere.
-##
-##     :return:
-##     """
-##     with patch("platform.node", MagicMock(return_value="localhost")), patch(
-##         "socket.gethostname", MagicMock(return_value="ip6-loopback")
-##     ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
-##     ), patch(
-##         "salt.utils.files.fopen", mock_open()
-##     ), patch(
-##         "salt.utils.network.ip_addrs",
-##         MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1", "1.2.3.4"]),
-##     ):
-##         assert network.generate_minion_id() == "1.2.3.4"
-##
-##
-## def test_generate_minion_id_platform_localhost_only():
-##     """
-##     Test if there is no other choice but localhost.
-##
-##     :return:
-##     """
-##     with patch("platform.node", MagicMock(return_value="localhost")), patch(
-##         "socket.gethostname", MagicMock(return_value="ip6-loopback")
-##     ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
-##     ), patch(
-##         "salt.utils.files.fopen", mock_open()
-##     ), patch(
-##         "salt.utils.network.ip_addrs",
-##         MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
-##     ):
-##         assert network.generate_minion_id() == "localhost"
-##
-##
-## def test_generate_minion_id_platform_fqdn():
-##     """
-##     Test if fqdn is picked up.
-##
-##     :return:
-##     """
-##     with patch("platform.node", MagicMock(return_value="localhost")), patch(
-##         "socket.gethostname", MagicMock(return_value="ip6-loopback")
-##     ), patch("socket.getfqdn", MagicMock(return_value="pick.me")), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
-##     ), patch(
-##         "salt.utils.files.fopen", mock_open()
-##     ), patch(
-##         "salt.utils.network.ip_addrs",
-##         MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
-##     ):
-##         assert network.generate_minion_id() == "pick.me"
-##
-##
-## def test_generate_minion_id_platform_localhost_addrinfo():
-##     """
-##     Test if addinfo is picked up.
-##
-##     :return:
-##     """
-##     with patch("platform.node", MagicMock(return_value="localhost")), patch(
-##         "socket.gethostname", MagicMock(return_value="ip6-loopback")
-##     ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "pick.me", ("127.0.1.1", 0))]),
-##     ), patch(
-##         "salt.utils.files.fopen", mock_open()
-##     ), patch(
-##         "salt.utils.network.ip_addrs",
-##         MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
-##     ):
-##         assert network.generate_minion_id() == "pick.me"
-##
-##
-## def test_generate_minion_id_platform_ip_addr_only():
-##     """
-##     Test if IP address is the only what is used as a Minion ID in case no DNS name.
-##
-##     :return:
-##     """
-##     with patch("platform.node", MagicMock(return_value="localhost")), patch(
-##         "socket.gethostname", MagicMock(return_value="ip6-loopback")
-##     ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
-##     ), patch(
-##         "salt.utils.files.fopen", mock_open()
-##     ), patch(
-##         "salt.utils.network.ip_addrs",
-##         MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1", "1.2.3.4"]),
-##     ):
-##         assert network.generate_minion_id() == "1.2.3.4"
-##
-##
-## def test_gen_mac():
-##     with patch("random.randint", return_value=1) as random_mock:
-##         assert random_mock.return_value == 1
-##         ret = network.gen_mac("00:16:3E")
-##         expected_mac = "00:16:3E:01:01:01"
-##         assert ret == expected_mac
-##
-##
-## def test_mac_str_to_bytes():
-##     pytest.raises(ValueError, network.mac_str_to_bytes, "31337")
-##     pytest.raises(ValueError, network.mac_str_to_bytes, "0001020304056")
-##     pytest.raises(ValueError, network.mac_str_to_bytes, "00:01:02:03:04:056")
-##     pytest.raises(ValueError, network.mac_str_to_bytes, "a0:b0:c0:d0:e0:fg")
-##     assert b"\x10\x08\x06\x04\x02\x00" == network.mac_str_to_bytes("100806040200")
-##     assert b"\xf8\xe7\xd6\xc5\xb4\xa3" == network.mac_str_to_bytes("f8e7d6c5b4a3")
-##
-##
-## @pytest.mark.slow_test
-## def test_generate_minion_id_with_long_hostname():
-##     """
-##     Validate the fix for:
-##
-##     https://github.com/saltstack/salt/issues/51160
-##     """
-##     long_name = "localhost-abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz"
-##     with patch("socket.gethostname", MagicMock(return_value=long_name)):
-##         # An exception is raised if unicode is passed to socket.getfqdn
-##         minion_id = network.generate_minion_id()
-##     assert minion_id != "", minion_id
-##
-##
-## def test_filter_by_networks_with_no_filter():
-##     ips = ["10.0.123.200", "10.10.10.10"]
-##     with pytest.raises(TypeError):
-##         network.filter_by_networks(ips)  # pylint: disable=no-value-for-parameter
-##
-##
-## def test_filter_by_networks_empty_filter():
-##     ips = ["10.0.123.200", "10.10.10.10"]
-##     assert network.filter_by_networks(ips, []) == []
-##
-##
-## def test_filter_by_networks_ips_list():
-##     ips = [
-##         "10.0.123.200",
-##         "10.10.10.10",
-##         "193.124.233.5",
-##         "fe80::d210:cf3f:64e7:5423",
-##     ]
-##     networks = ["10.0.0.0/8", "fe80::/64"]
-##     assert network.filter_by_networks(ips, networks) == [
-##         "10.0.123.200",
-##         "10.10.10.10",
-##         "fe80::d210:cf3f:64e7:5423",
-##     ]
-##
-##
-## def test_filter_by_networks_interfaces_dict():
-##     interfaces = {
-##         "wlan0": ["192.168.1.100", "217.5.140.67", "2001:db8::ff00:42:8329"],
-##         "eth0": [
-##             "2001:0DB8:0:CD30:123:4567:89AB:CDEF",
-##             "192.168.1.101",
-##             "10.0.123.201",
-##         ],
-##     }
-##     assert network.filter_by_networks(
-##         interfaces, ["192.168.1.0/24", "2001:db8::/48"]
-##     ) == {
-##         "wlan0": ["192.168.1.100", "2001:db8::ff00:42:8329"],
-##         "eth0": ["2001:0DB8:0:CD30:123:4567:89AB:CDEF", "192.168.1.101"],
-##     }
-##
-##
-## def test_filter_by_networks_catch_all():
-##     ips = [
-##         "10.0.123.200",
-##         "10.10.10.10",
-##         "193.124.233.5",
-##         "fe80::d210:cf3f:64e7:5423",
-##     ]
-##     assert ips == network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"])
-##
-##
-## def test_ip_networks():
-##     # We don't need to test with each platform's ifconfig/iproute2 output,
-##     # since this test isn't testing getting the interfaces. We already have
-##     # tests for that.
-##     interface_data = network._interfaces_ifconfig(LINUX)
-##
-##     # Without loopback
-##     ret = network.ip_networks(interface_data=interface_data)
-##     assert ret == ["10.10.8.0/22"], ret
-##     # Without loopback, specific interface
-##     ret = network.ip_networks(interface="eth0", interface_data=interface_data)
-##     assert ret == ["10.10.8.0/22"], ret
-##     # Without loopback, multiple specific interfaces
-##     ret = network.ip_networks(interface="eth0,lo", interface_data=interface_data)
-##     assert ret == ["10.10.8.0/22"], ret
-##     # Without loopback, specific interface (not present)
-##     ret = network.ip_networks(interface="eth1", interface_data=interface_data)
-##     assert ret == [], ret
-##     # With loopback
-##     ret = network.ip_networks(include_loopback=True, interface_data=interface_data)
-##     assert ret == ["10.10.8.0/22", "127.0.0.0/8"], ret
-##     # With loopback, specific interface
-##     ret = network.ip_networks(
-##         interface="eth0", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == ["10.10.8.0/22"], ret
-##     # With loopback, multiple specific interfaces
-##     ret = network.ip_networks(
-##         interface="eth0,lo", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == ["10.10.8.0/22", "127.0.0.0/8"], ret
-##     # With loopback, specific interface (not present)
-##     ret = network.ip_networks(
-##         interface="eth1", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == [], ret
-##
-##     # Verbose, without loopback
-##     ret = network.ip_networks(verbose=True, interface_data=interface_data)
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##     }, ret
-##     # Verbose, without loopback, specific interface
-##     ret = network.ip_networks(
-##         interface="eth0", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##     }, ret
-##     # Verbose, without loopback, multiple specific interfaces
-##     ret = network.ip_networks(
-##         interface="eth0,lo", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##     }, ret
-##     # Verbose, without loopback, specific interface (not present)
-##     ret = network.ip_networks(
-##         interface="eth1", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {}, ret
-##     # Verbose, with loopback
-##     ret = network.ip_networks(
-##         include_loopback=True, verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##         "127.0.0.0/8": {
-##             "prefixlen": 8,
-##             "netmask": "255.0.0.0",
-##             "num_addresses": 16777216,
-##             "address": "127.0.0.0",
-##         },
-##     }, ret
-##     # Verbose, with loopback, specific interface
-##     ret = network.ip_networks(
-##         interface="eth0",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##     }, ret
-##     # Verbose, with loopback, multiple specific interfaces
-##     ret = network.ip_networks(
-##         interface="eth0,lo",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {
-##         "10.10.8.0/22": {
-##             "prefixlen": 22,
-##             "netmask": "255.255.252.0",
-##             "num_addresses": 1024,
-##             "address": "10.10.8.0",
-##         },
-##         "127.0.0.0/8": {
-##             "prefixlen": 8,
-##             "netmask": "255.0.0.0",
-##             "num_addresses": 16777216,
-##             "address": "127.0.0.0",
-##         },
-##     }, ret
-##     # Verbose, with loopback, specific interface (not present)
-##     ret = network.ip_networks(
-##         interface="eth1",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {}, ret
-##
-##
-## def test_ip_networks6():
-##     # We don't need to test with each platform's ifconfig/iproute2 output,
-##     # since this test isn't testing getting the interfaces. We already have
-##     # tests for that.
-##     interface_data = network._interfaces_ifconfig(LINUX)
-##
-##     # Without loopback
-##     ret = network.ip_networks6(interface_data=interface_data)
-##     assert ret == ["fe80::/64"], ret
-##     # Without loopback, specific interface
-##     ret = network.ip_networks6(interface="eth0", interface_data=interface_data)
-##     assert ret == ["fe80::/64"], ret
-##     # Without loopback, multiple specific interfaces
-##     ret = network.ip_networks6(interface="eth0,lo", interface_data=interface_data)
-##     assert ret == ["fe80::/64"], ret
-##     # Without loopback, specific interface (not present)
-##     ret = network.ip_networks6(interface="eth1", interface_data=interface_data)
-##     assert ret == [], ret
-##     # With loopback
-##     ret = network.ip_networks6(include_loopback=True, interface_data=interface_data)
-##     assert ret == ["::1/128", "fe80::/64"], ret
-##     # With loopback, specific interface
-##     ret = network.ip_networks6(
-##         interface="eth0", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == ["fe80::/64"], ret
-##     # With loopback, multiple specific interfaces
-##     ret = network.ip_networks6(
-##         interface="eth0,lo", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == ["::1/128", "fe80::/64"], ret
-##     # With loopback, specific interface (not present)
-##     ret = network.ip_networks6(
-##         interface="eth1", include_loopback=True, interface_data=interface_data
-##     )
-##     assert ret == [], ret
-##
-##     # Verbose, without loopback
-##     ret = network.ip_networks6(verbose=True, interface_data=interface_data)
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##     }, ret
-##     # Verbose, without loopback, specific interface
-##     ret = network.ip_networks6(
-##         interface="eth0", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##     }, ret
-##     # Verbose, without loopback, multiple specific interfaces
-##     ret = network.ip_networks6(
-##         interface="eth0,lo", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##     }, ret
-##     # Verbose, without loopback, specific interface (not present)
-##     ret = network.ip_networks6(
-##         interface="eth1", verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {}, ret
-##     # Verbose, with loopback
-##     ret = network.ip_networks6(
-##         include_loopback=True, verbose=True, interface_data=interface_data
-##     )
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##         "::1/128": {
-##             "prefixlen": 128,
-##             "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-##             "num_addresses": 1,
-##             "address": "::1",
-##         },
-##     }, ret
-##     # Verbose, with loopback, specific interface
-##     ret = network.ip_networks6(
-##         interface="eth0",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##     }, ret
-##     # Verbose, with loopback, multiple specific interfaces
-##     ret = network.ip_networks6(
-##         interface="eth0,lo",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {
-##         "fe80::/64": {
-##             "prefixlen": 64,
-##             "netmask": "ffff:ffff:ffff:ffff::",
-##             "num_addresses": 18446744073709551616,
-##             "address": "fe80::",
-##         },
-##         "::1/128": {
-##             "prefixlen": 128,
-##             "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
-##             "num_addresses": 1,
-##             "address": "::1",
-##         },
-##     }, ret
-##     # Verbose, with loopback, specific interface (not present)
-##     ret = network.ip_networks6(
-##         interface="eth1",
-##         include_loopback=True,
-##         verbose=True,
-##         interface_data=interface_data,
-##     )
-##     assert ret == {}, ret
-##
-##
-## def test_get_fqhostname_return():
-##     """
-##     Test if proper hostname is used when RevDNS differ from hostname
-##
-##     :return:
-##     """
-##     with patch("socket.gethostname", MagicMock(return_value="hostname")), patch(
-##         "socket.getfqdn",
-##         MagicMock(return_value="very.long.and.complex.domain.name"),
-##     ), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(return_value=[(2, 3, 0, "hostname", ("127.0.1.1", 0))]),
-##     ):
-##         assert network.get_fqhostname() == "hostname"
-##
-##
-## def test_get_fqhostname_return_empty_hostname():
-##     """
-##     Test if proper hostname is used when hostname returns empty string
-##     """
-##     host = "hostname"
-##     with patch("socket.gethostname", MagicMock(return_value=host)), patch(
-##         "socket.getfqdn",
-##         MagicMock(return_value="very.long.and.complex.domain.name"),
-##     ), patch(
-##         "socket.getaddrinfo",
-##         MagicMock(
-##             return_value=[
-##                 (2, 3, 0, host, ("127.0.1.1", 0)),
-##                 (2, 3, 0, "", ("127.0.1.1", 0)),
-##             ]
-##         ),
-##     ):
-##         assert network.get_fqhostname() == host
-##
-##
-## def test_ip_bracket():
-##     test_ipv4 = "127.0.0.1"
-##     test_ipv6 = "::1"
-##     test_ipv6_uri = "[::1]"
-##     assert test_ipv4 == network.ip_bracket(test_ipv4)
-##     assert test_ipv6 == network.ip_bracket(test_ipv6_uri, strip=True)
-##     assert "[{}]".format(test_ipv6) == network.ip_bracket(test_ipv6)
-##     assert "[{}]".format(test_ipv6) == network.ip_bracket(test_ipv6_uri)
-##
-##     ip_addr_obj = ipaddress.ip_address(test_ipv4)
-##     assert test_ipv4 == network.ip_bracket(ip_addr_obj)
-##
-##
-## def test_junos_ifconfig_output_parsing():
-##     ret = network._junos_interfaces_ifconfig("inet mtu 0 local=" + " " * 3456)
-##     assert ret == {"inet": {"up": False}}
+def test_generate_minion_id_platform_localhost_filtered_all():
+    """
+    Test if any of the localhost is filtered from everywhere.
+
+    :return:
+    """
+    with patch("platform.node", MagicMock(return_value="localhost")), patch(
+        "socket.gethostname", MagicMock(return_value="ip6-loopback")
+    ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.utils.network.ip_addrs",
+        MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1", "1.2.3.4"]),
+    ):
+        assert network.generate_minion_id() == "1.2.3.4"
+
+
+def test_generate_minion_id_platform_localhost_only():
+    """
+    Test if there is no other choice but localhost.
+
+    :return:
+    """
+    with patch("platform.node", MagicMock(return_value="localhost")), patch(
+        "socket.gethostname", MagicMock(return_value="ip6-loopback")
+    ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.utils.network.ip_addrs",
+        MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
+    ):
+        assert network.generate_minion_id() == "localhost"
+
+
+def test_generate_minion_id_platform_fqdn():
+    """
+    Test if fqdn is picked up.
+
+    :return:
+    """
+    with patch("platform.node", MagicMock(return_value="localhost")), patch(
+        "socket.gethostname", MagicMock(return_value="ip6-loopback")
+    ), patch("socket.getfqdn", MagicMock(return_value="pick.me")), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.utils.network.ip_addrs",
+        MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
+    ):
+        assert network.generate_minion_id() == "pick.me"
+
+
+def test_generate_minion_id_platform_localhost_addrinfo():
+    """
+    Test if addinfo is picked up.
+
+    :return:
+    """
+    with patch("platform.node", MagicMock(return_value="localhost")), patch(
+        "socket.gethostname", MagicMock(return_value="ip6-loopback")
+    ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "pick.me", ("127.0.1.1", 0))]),
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.utils.network.ip_addrs",
+        MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1"]),
+    ):
+        assert network.generate_minion_id() == "pick.me"
+
+
+def test_generate_minion_id_platform_ip_addr_only():
+    """
+    Test if IP address is the only what is used as a Minion ID in case no DNS name.
+
+    :return:
+    """
+    with patch("platform.node", MagicMock(return_value="localhost")), patch(
+        "socket.gethostname", MagicMock(return_value="ip6-loopback")
+    ), patch("socket.getfqdn", MagicMock(return_value="ip6-localhost")), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "localhost", ("127.0.1.1", 0))]),
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.utils.network.ip_addrs",
+        MagicMock(return_value=["127.0.0.1", "::1", "fe00::0", "fe02::1", "1.2.3.4"]),
+    ):
+        assert network.generate_minion_id() == "1.2.3.4"
+
+
+def test_gen_mac():
+    with patch("random.randint", return_value=1) as random_mock:
+        assert random_mock.return_value == 1
+        ret = network.gen_mac("00:16:3E")
+        expected_mac = "00:16:3E:01:01:01"
+        assert ret == expected_mac
+
+
+def test_mac_str_to_bytes():
+    pytest.raises(ValueError, network.mac_str_to_bytes, "31337")
+    pytest.raises(ValueError, network.mac_str_to_bytes, "0001020304056")
+    pytest.raises(ValueError, network.mac_str_to_bytes, "00:01:02:03:04:056")
+    pytest.raises(ValueError, network.mac_str_to_bytes, "a0:b0:c0:d0:e0:fg")
+    assert b"\x10\x08\x06\x04\x02\x00" == network.mac_str_to_bytes("100806040200")
+    assert b"\xf8\xe7\xd6\xc5\xb4\xa3" == network.mac_str_to_bytes("f8e7d6c5b4a3")
+
+
+@pytest.mark.slow_test
+def test_generate_minion_id_with_long_hostname():
+    """
+    Validate the fix for:
+
+    https://github.com/saltstack/salt/issues/51160
+    """
+    long_name = "localhost-abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz"
+    with patch("socket.gethostname", MagicMock(return_value=long_name)):
+        # An exception is raised if unicode is passed to socket.getfqdn
+        minion_id = network.generate_minion_id()
+    assert minion_id != "", minion_id
+
+
+def test_filter_by_networks_with_no_filter():
+    ips = ["10.0.123.200", "10.10.10.10"]
+    with pytest.raises(TypeError):
+        network.filter_by_networks(ips)  # pylint: disable=no-value-for-parameter
+
+
+def test_filter_by_networks_empty_filter():
+    ips = ["10.0.123.200", "10.10.10.10"]
+    assert network.filter_by_networks(ips, []) == []
+
+
+def test_filter_by_networks_ips_list():
+    ips = [
+        "10.0.123.200",
+        "10.10.10.10",
+        "193.124.233.5",
+        "fe80::d210:cf3f:64e7:5423",
+    ]
+    networks = ["10.0.0.0/8", "fe80::/64"]
+    assert network.filter_by_networks(ips, networks) == [
+        "10.0.123.200",
+        "10.10.10.10",
+        "fe80::d210:cf3f:64e7:5423",
+    ]
+
+
+def test_filter_by_networks_interfaces_dict():
+    interfaces = {
+        "wlan0": ["192.168.1.100", "217.5.140.67", "2001:db8::ff00:42:8329"],
+        "eth0": [
+            "2001:0DB8:0:CD30:123:4567:89AB:CDEF",
+            "192.168.1.101",
+            "10.0.123.201",
+        ],
+    }
+    assert network.filter_by_networks(
+        interfaces, ["192.168.1.0/24", "2001:db8::/48"]
+    ) == {
+        "wlan0": ["192.168.1.100", "2001:db8::ff00:42:8329"],
+        "eth0": ["2001:0DB8:0:CD30:123:4567:89AB:CDEF", "192.168.1.101"],
+    }
+
+
+def test_filter_by_networks_catch_all():
+    ips = [
+        "10.0.123.200",
+        "10.10.10.10",
+        "193.124.233.5",
+        "fe80::d210:cf3f:64e7:5423",
+    ]
+    assert ips == network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"])
+
+
+def test_ip_networks():
+    # We don't need to test with each platform's ifconfig/iproute2 output,
+    # since this test isn't testing getting the interfaces. We already have
+    # tests for that.
+    interface_data = network._interfaces_ifconfig(LINUX)
+
+    # Without loopback
+    ret = network.ip_networks(interface_data=interface_data)
+    assert ret == ["10.10.8.0/22"], ret
+    # Without loopback, specific interface
+    ret = network.ip_networks(interface="eth0", interface_data=interface_data)
+    assert ret == ["10.10.8.0/22"], ret
+    # Without loopback, multiple specific interfaces
+    ret = network.ip_networks(interface="eth0,lo", interface_data=interface_data)
+    assert ret == ["10.10.8.0/22"], ret
+    # Without loopback, specific interface (not present)
+    ret = network.ip_networks(interface="eth1", interface_data=interface_data)
+    assert ret == [], ret
+    # With loopback
+    ret = network.ip_networks(include_loopback=True, interface_data=interface_data)
+    assert ret == ["10.10.8.0/22", "127.0.0.0/8"], ret
+    # With loopback, specific interface
+    ret = network.ip_networks(
+        interface="eth0", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == ["10.10.8.0/22"], ret
+    # With loopback, multiple specific interfaces
+    ret = network.ip_networks(
+        interface="eth0,lo", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == ["10.10.8.0/22", "127.0.0.0/8"], ret
+    # With loopback, specific interface (not present)
+    ret = network.ip_networks(
+        interface="eth1", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == [], ret
+
+    # Verbose, without loopback
+    ret = network.ip_networks(verbose=True, interface_data=interface_data)
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+    }, ret
+    # Verbose, without loopback, specific interface
+    ret = network.ip_networks(
+        interface="eth0", verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+    }, ret
+    # Verbose, without loopback, multiple specific interfaces
+    ret = network.ip_networks(
+        interface="eth0,lo", verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+    }, ret
+    # Verbose, without loopback, specific interface (not present)
+    ret = network.ip_networks(
+        interface="eth1", verbose=True, interface_data=interface_data
+    )
+    assert ret == {}, ret
+    # Verbose, with loopback
+    ret = network.ip_networks(
+        include_loopback=True, verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+        "127.0.0.0/8": {
+            "prefixlen": 8,
+            "netmask": "255.0.0.0",
+            "num_addresses": 16777216,
+            "address": "127.0.0.0",
+        },
+    }, ret
+    # Verbose, with loopback, specific interface
+    ret = network.ip_networks(
+        interface="eth0",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+    }, ret
+    # Verbose, with loopback, multiple specific interfaces
+    ret = network.ip_networks(
+        interface="eth0,lo",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {
+        "10.10.8.0/22": {
+            "prefixlen": 22,
+            "netmask": "255.255.252.0",
+            "num_addresses": 1024,
+            "address": "10.10.8.0",
+        },
+        "127.0.0.0/8": {
+            "prefixlen": 8,
+            "netmask": "255.0.0.0",
+            "num_addresses": 16777216,
+            "address": "127.0.0.0",
+        },
+    }, ret
+    # Verbose, with loopback, specific interface (not present)
+    ret = network.ip_networks(
+        interface="eth1",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {}, ret
+
+
+def test_ip_networks6():
+    # We don't need to test with each platform's ifconfig/iproute2 output,
+    # since this test isn't testing getting the interfaces. We already have
+    # tests for that.
+    interface_data = network._interfaces_ifconfig(LINUX)
+
+    # Without loopback
+    ret = network.ip_networks6(interface_data=interface_data)
+    assert ret == ["fe80::/64"], ret
+    # Without loopback, specific interface
+    ret = network.ip_networks6(interface="eth0", interface_data=interface_data)
+    assert ret == ["fe80::/64"], ret
+    # Without loopback, multiple specific interfaces
+    ret = network.ip_networks6(interface="eth0,lo", interface_data=interface_data)
+    assert ret == ["fe80::/64"], ret
+    # Without loopback, specific interface (not present)
+    ret = network.ip_networks6(interface="eth1", interface_data=interface_data)
+    assert ret == [], ret
+    # With loopback
+    ret = network.ip_networks6(include_loopback=True, interface_data=interface_data)
+    assert ret == ["::1/128", "fe80::/64"], ret
+    # With loopback, specific interface
+    ret = network.ip_networks6(
+        interface="eth0", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == ["fe80::/64"], ret
+    # With loopback, multiple specific interfaces
+    ret = network.ip_networks6(
+        interface="eth0,lo", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == ["::1/128", "fe80::/64"], ret
+    # With loopback, specific interface (not present)
+    ret = network.ip_networks6(
+        interface="eth1", include_loopback=True, interface_data=interface_data
+    )
+    assert ret == [], ret
+
+    # Verbose, without loopback
+    ret = network.ip_networks6(verbose=True, interface_data=interface_data)
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+    }, ret
+    # Verbose, without loopback, specific interface
+    ret = network.ip_networks6(
+        interface="eth0", verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+    }, ret
+    # Verbose, without loopback, multiple specific interfaces
+    ret = network.ip_networks6(
+        interface="eth0,lo", verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+    }, ret
+    # Verbose, without loopback, specific interface (not present)
+    ret = network.ip_networks6(
+        interface="eth1", verbose=True, interface_data=interface_data
+    )
+    assert ret == {}, ret
+    # Verbose, with loopback
+    ret = network.ip_networks6(
+        include_loopback=True, verbose=True, interface_data=interface_data
+    )
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+        "::1/128": {
+            "prefixlen": 128,
+            "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+            "num_addresses": 1,
+            "address": "::1",
+        },
+    }, ret
+    # Verbose, with loopback, specific interface
+    ret = network.ip_networks6(
+        interface="eth0",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+    }, ret
+    # Verbose, with loopback, multiple specific interfaces
+    ret = network.ip_networks6(
+        interface="eth0,lo",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {
+        "fe80::/64": {
+            "prefixlen": 64,
+            "netmask": "ffff:ffff:ffff:ffff::",
+            "num_addresses": 18446744073709551616,
+            "address": "fe80::",
+        },
+        "::1/128": {
+            "prefixlen": 128,
+            "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+            "num_addresses": 1,
+            "address": "::1",
+        },
+    }, ret
+    # Verbose, with loopback, specific interface (not present)
+    ret = network.ip_networks6(
+        interface="eth1",
+        include_loopback=True,
+        verbose=True,
+        interface_data=interface_data,
+    )
+    assert ret == {}, ret
+
+
+def test_get_fqhostname_return():
+    """
+    Test if proper hostname is used when RevDNS differ from hostname
+
+    :return:
+    """
+    with patch("socket.gethostname", MagicMock(return_value="hostname")), patch(
+        "socket.getfqdn",
+        MagicMock(return_value="very.long.and.complex.domain.name"),
+    ), patch(
+        "socket.getaddrinfo",
+        MagicMock(return_value=[(2, 3, 0, "hostname", ("127.0.1.1", 0))]),
+    ):
+        assert network.get_fqhostname() == "hostname"
+
+
+def test_get_fqhostname_return_empty_hostname():
+    """
+    Test if proper hostname is used when hostname returns empty string
+    """
+    host = "hostname"
+    with patch("socket.gethostname", MagicMock(return_value=host)), patch(
+        "socket.getfqdn",
+        MagicMock(return_value="very.long.and.complex.domain.name"),
+    ), patch(
+        "socket.getaddrinfo",
+        MagicMock(
+            return_value=[
+                (2, 3, 0, host, ("127.0.1.1", 0)),
+                (2, 3, 0, "", ("127.0.1.1", 0)),
+            ]
+        ),
+    ):
+        assert network.get_fqhostname() == host
+
+
+def test_ip_bracket():
+    test_ipv4 = "127.0.0.1"
+    test_ipv6 = "::1"
+    test_ipv6_uri = "[::1]"
+    assert test_ipv4 == network.ip_bracket(test_ipv4)
+    assert test_ipv6 == network.ip_bracket(test_ipv6_uri, strip=True)
+    assert "[{}]".format(test_ipv6) == network.ip_bracket(test_ipv6)
+    assert "[{}]".format(test_ipv6) == network.ip_bracket(test_ipv6_uri)
+
+    ip_addr_obj = ipaddress.ip_address(test_ipv4)
+    assert test_ipv4 == network.ip_bracket(ip_addr_obj)
+
+
+def test_junos_ifconfig_output_parsing():
+    ret = network._junos_interfaces_ifconfig("inet mtu 0 local=" + " " * 3456)
+    assert ret == {"inet": {"up": False}}
+
+
+def test_isportopen_false():
+    ret = network.isportopen("127.0.0.1", "66000")
+    assert ret is False
+
+
+def test_isportopen():
+    ret = network.isportopen("127.0.0.1", "22")
+    assert ret == 0
+
+
+def test_get_socket():
+    ret = network.get_socket("127.0.0.1")
+    assert ret.family == socket.AF_INET
+    assert ret.type == socket.SOCK_STREAM
+
+    ret = network.get_socket("2001:a71::1")
+    assert ret.family == socket.AF_INET6
+    assert ret.type == socket.SOCK_STREAM
+
+
+def test_ip_to_host():
+    ret = network.ip_to_host("127.0.0.1")
+    assert ret == "localhost"
+
+    ret = network.ip_to_host("2001:a71::1")
+    assert ret is None
+
+    ret = network.ip_to_host("::1")
+    assert ret == "ip6-localhost"
+
+
+def test_natural_ipv4_netmask():
+    ret = network.natural_ipv4_netmask("192.168.0.115")
+    assert ret == "/24"
+
+    ret = network.natural_ipv4_netmask("192.168.1.80")
+    assert ret == "/24"
+
+    ret = network.natural_ipv4_netmask("10.10.10.250")
+    assert ret == "/8"
+
+    ret = network.natural_ipv4_netmask("192.168.0.115", fmt="netmask")
+    assert ret == "255.255.255.0"
+
+    ret = network.natural_ipv4_netmask("192.168.1.80", fmt="netmask")
+    assert ret == "255.255.255.0"
+
+    ret = network.natural_ipv4_netmask("10.10.10.250", fmt="netmask")
+    assert ret == "255.0.0.0"
