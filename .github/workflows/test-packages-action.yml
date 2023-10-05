@@ -112,6 +112,12 @@ jobs:
         include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
 
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
