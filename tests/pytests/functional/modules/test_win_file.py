@@ -117,15 +117,45 @@ def test_get_attributes(tmp_path):
 
 
 def test_set_attributes(tmp_path):
-    win_file.set_attributes(
-        path,
-        archive=None,
-        hidden=None,
-        normal=None,
-        notIndexed=None,
-        readonly=None,
-        system=None,
-        temporary=None)
+    tmp_path = str(tmp_path)
+    file = os.path.join(tmp_path, "t.txt")
+    with salt.utils.files.fopen(file, "w"):
+        pass
+    assert os.path.isfile(file) is True
+    assert win_file.set_attributes(
+        file,
+        archive=True,
+        hidden=True,
+        normal=False,
+        notIndexed=True,
+        readonly=True,
+        system=True,
+        temporary=True) is True
+    attributes = win_file.get_attributes(file)
+    assert attributes["archive"] is True
+    assert attributes["hidden"] is True
+    assert attributes["normal"] is False
+    assert attributes["notIndexed"] is True
+    assert attributes["readonly"] is True
+    assert attributes["system"] is True
+    assert attributes["temporary"] is True
+    assert win_file.set_attributes(
+        file,
+        archive=False,
+        hidden=False,
+        normal=True,
+        notIndexed=False,
+        readonly=False,
+        system=False,
+        temporary=False) is True
+    attributes = win_file.get_attributes(file)
+    assert attributes["archive"] is False
+    assert attributes["hidden"] is False
+    assert attributes["normal"] is True
+    assert attributes["notIndexed"] is False
+    assert attributes["readonly"] is False
+    assert attributes["system"] is False
+    assert attributes["temporary"] is False
 
 def test_remove(tmp_path):
     tmp_path = str(tmp_path)
