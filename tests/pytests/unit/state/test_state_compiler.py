@@ -1143,3 +1143,162 @@ def test_verify_high_too_many_functions_declared_error_message(
         res = state_obj.verify_high(high)
         assert isinstance(res, list)
         assert any(err_msg in x for x in res)
+
+
+def test_load_modules_pkg(minion_opts):
+    """
+    Test load_modules when using this state:
+    nginx:
+      pkg.installed:
+        - provider: pacmanpkg
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": "pacmanpkg",
+        "order": 10000,
+        "fun": "installed",
+    }
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(data)
+        for func in [
+            "pkg.available_version",
+            "pkg.file_list",
+            "pkg.group_diff",
+            "pkg.group_info",
+        ]:
+            assert func in state_obj.functions
+
+
+def test_load_modules_list(minion_opts):
+    """
+    Test load_modules when using providers in state
+    as a list, with this state:
+    nginx:
+      pkg.installed:
+        - provider:
+          - cmd: cmdmod
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": [OrderedDict([("cmd", "cmdmod")])],
+        "order": 10000,
+        "fun": "installed",
+    }
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(data)
+        for func in ["cmd.exec_code", "cmd.run", "cmd.script"]:
+            assert func in state_obj.functions
+
+
+def test_load_modules_dict(minion_opts):
+    """
+    Test load_modules when providers is a dict, which is
+    not valid. Testing this state:
+    nginx:
+      pkg.installed:
+        - provider: {cmd: test}
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": OrderedDict([("cmd", "test")]),
+        "order": 10000,
+        "fun": "installed",
+    }
+    mock_raw_mod = MagicMock()
+    patch_raw_mod = patch("salt.loader.raw_mod", mock_raw_mod)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_raw_mod:
+            state_obj = salt.state.State(minion_opts)
+            state_obj.load_modules(data)
+            mock_raw_mod.assert_not_called()
+
+
+def test_check_refresh_grains(minion_opts):
+    """
+    Test check_refresh when using this state:
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+    Ensure that the grains are loaded when reload_grains
+    is set.
+    """
+    data = {
+        "state": "module",
+        "name": "saltutil.refresh_grains",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "grains_refresh",
+        "reload_grains": True,
+        "order": 10000,
+        "fun": "run",
+    }
+    ret = {
+        "name": "saltutil.refresh_grains",
+        "changes": {"ret": True},
+        "comment": "Module function saltutil.refresh_grains executed",
+        "result": True,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_refresh:
+            state_obj = salt.state.State(minion_opts)
+            state_obj.check_refresh(data, ret)
+            mock_refresh.assert_called_once()
+            assert "cwd" in state_obj.opts["grains"]
+
+
+def test_check_refresh_pillar(minion_opts, caplog):
+    """
+    Test check_refresh when using this state:
+    pillar_refresh:
+      module.run:
+       - name: saltutil.refresh_pillar
+       - reload_pillar: true
+    Ensure the pillar is refreshed.
+    """
+    data = {
+        "state": "module",
+        "name": "saltutil.refresh_pillar",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "pillar_refresh",
+        "reload_pillar": True,
+        "order": 10000,
+        "fun": "run",
+    }
+    ret = {
+        "name": "saltutil.refresh_pillar",
+        "changes": {"ret": False},
+        "comment": "Module function saltutil.refresh_pillar executed",
+        "result": False,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    mock_pillar = MagicMock()
+    patch_pillar = patch("salt.state.State._gather_pillar", mock_pillar)
+    with patch_pillar, patch_refresh:
+        with caplog.at_level(logging.DEBUG):
+            state_obj = salt.state.State(minion_opts)
+            state_obj.check_refresh(data, ret)
+            mock_refresh.assert_called_once()
+            assert "Refreshing pillar..." in caplog.text
