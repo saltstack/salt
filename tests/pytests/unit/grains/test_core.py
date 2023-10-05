@@ -4000,3 +4000,60 @@ def test_get_master():
         ret = core.get_master()
         assert "master" in ret
         assert ret["master"] == "test_master_id"
+
+
+def test__selinux():
+    """
+    test _selinux
+    """
+    with patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": MagicMock(return_value="Enforcing"),
+            "cmd.retcode": MagicMock(return_value=1),
+        },
+    ), patch.object(core, "_linux_bin_exists", MagicMock(return_value=False)):
+        ret = core._selinux()
+        assert ret == {"enabled": False}
+
+    with patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": MagicMock(return_value="Enforcing"),
+            "cmd.retcode": MagicMock(return_value=0),
+        },
+    ), patch.object(core, "_linux_bin_exists", MagicMock(return_value=True)):
+        ret = core._selinux()
+        assert ret == {"enabled": True, "enforced": "Enforcing"}
+
+    with patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": MagicMock(return_value="Disabled"),
+            "cmd.retcode": MagicMock(return_value=0),
+        },
+    ), patch.object(core, "_linux_bin_exists", MagicMock(return_value=True)):
+        ret = core._selinux()
+        assert ret == {"enabled": True, "enforced": "Disabled"}
+
+
+def test__systemd():
+    """
+    test _systemd
+    """
+    with patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": MagicMock(
+                return_value="systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
+            ),
+        },
+    ):
+        ret = core._systemd()
+        assert "version" in ret
+        assert "features" in ret
+        assert ret["version"] == "254"
+        assert (
+            ret["features"]
+            == "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
+        )
