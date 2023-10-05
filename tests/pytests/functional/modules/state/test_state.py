@@ -7,10 +7,16 @@ import time
 import pytest
 
 import salt.loader
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.state as state_util
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -20,6 +26,32 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+            "__utils__": {"state.check_result": state_util.check_result},
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
 
 
 def _check_skip(grains):
@@ -1034,3 +1066,20 @@ def test_state_sls_defaults(state, state_tree):
             for state_return in ret:
                 assert state_return.result is True
                 assert "echo 1" in state_return.comment
+
+
+def test_state_sls_mock_ret(state_tree):
+    """
+    test state.sls when mock=True is passed
+    """
+    sls_contents = """
+    echo1:
+      cmd.run:
+        - name: "echo 'This is a test!'"
+    """
+    with pytest.helpers.temp_file("mock.sls", sls_contents, state_tree):
+        ret = state_mod.sls("mock", mock=True)
+        assert (
+            ret["cmd_|-echo1_|-echo 'This is a test!'_|-run"]["comment"]
+            == "Not called, mocked"
+        )

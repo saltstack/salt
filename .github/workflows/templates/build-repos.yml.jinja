@@ -1,11 +1,11 @@
-<%- for type, display_name, needs_pkg in (
-                                          ("src", "Source", False),
-                                          ("deb", "DEB", True),
-                                          ("rpm", "RPM", True),
-                                          ("windows", "Windows", True),
-                                          ("macos", "macOS", True),
-                                          ("onedir", "Onedir", False),
-                                        ) %>
+<%- for platform, type, display_name, needs_pkg in (
+                                                    (None, "src", "Source", False),
+                                                    ("linux", "deb", "DEB", True),
+                                                    ("linux", "rpm", "RPM", True),
+                                                    ("windows", "windows", "Windows", True),
+                                                    ("macos", "macos", "macOS", True),
+                                                    (None, "onedir", "Onedir", False),
+                                                  ) %>
 
   <%- set job_name = "build-{}-repo".format(type) %>
     <%- do build_repo_needs.append(job_name) %>
@@ -20,9 +20,9 @@
     needs:
       - prepare-workflow
       <%- if needs_pkg %>
-      - build-<{ type }>-pkgs
-      <%- else %>
-      - build-salt-onedir
+      - build-<{ type }>-pkgs-onedir
+      <%- elif platform %>
+      - build-salt-onedir-<{ platform }>
       <%- endif %>
     <%- include "build-{}-repo.yml.jinja".format(type) %>
 

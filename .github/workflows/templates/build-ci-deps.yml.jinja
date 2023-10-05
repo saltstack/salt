@@ -1,0 +1,95 @@
+
+  <%- for slug, display_name, arch in (("windows-2016", "Windows 2016", "amd64"),
+                                       ("windows-2019", "Windows 2019", "amd64"),
+                                       ("windows-2022", "Windows 2022", "amd64")) %>
+
+  <{ slug.replace(".", "") }>-ci-deps:
+    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
+    name: <{ display_name }>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-windows
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+
+  <%- endfor %>
+
+  <%- for slug, display_name, arch in (("macos-12", "macOS 12", "x86_64"),) %>
+
+  <{ slug.replace(".", "") }>-ci-deps:
+    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
+    name: <{ display_name }>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-macos
+    uses: ./.github/workflows/build-deps-ci-action-macos.yml
+    with:
+      distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+
+  <%- endfor %>
+
+  <%- for slug, display_name, arch in (("almalinux-8", "Alma Linux 8", "x86_64"),
+                                       ("almalinux-8-arm64", "Alma Linux 8 Arm64", "aarch64"),
+                                       ("almalinux-9", "Alma Linux 9", "x86_64"),
+                                       ("almalinux-9-arm64", "Alma Linux 9 Arm64", "aarch64"),
+                                       ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
+                                       ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64"),
+                                       ("archlinux-lts", "Arch Linux LTS", "x86_64"),
+                                       ("centos-7", "CentOS 7", "x86_64"),
+                                       ("centos-7-arm64", "CentOS 7 Arm64", "aarch64"),
+                                       ("centosstream-8", "CentOS Stream 8", "x86_64"),
+                                       ("centosstream-8-arm64", "CentOS Stream 8 Arm64", "aarch64"),
+                                       ("centosstream-9", "CentOS Stream 9", "x86_64"),
+                                       ("centosstream-9-arm64", "CentOS Stream 9 Arm64", "aarch64"),
+                                       ("debian-10", "Debian 10", "x86_64"),
+                                       ("debian-11", "Debian 11", "x86_64"),
+                                       ("debian-11-arm64", "Debian 11 Arm64", "aarch64"),
+                                       ("fedora-37", "Fedora 37", "x86_64"),
+                                       ("fedora-37-arm64", "Fedora 37 Arm64", "aarch64"),
+                                       ("fedora-38", "Fedora 38", "x86_64"),
+                                       ("fedora-38-arm64", "Fedora 38 Arm64", "aarch64"),
+                                       ("opensuse-15", "Opensuse 15", "x86_64"),
+                                       ("photonos-3", "Photon OS 3", "x86_64"),
+                                       ("photonos-4", "Photon OS 4", "x86_64"),
+                                       ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64"),
+                                       ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
+                                       ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
+                                       ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
+                                       ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64")) %>
+
+  <{ slug.replace(".", "") }>-ci-deps:
+    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
+    name: <{ display_name }>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: <{ slug }>
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: <{ arch }>
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+
+  <%- endfor %>

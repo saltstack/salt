@@ -9,13 +9,18 @@ import pytest
 import salt.loader
 import salt.modules.dockermod as docker_mod
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
 
-pytest.importorskip(
+docker = pytest.importorskip(
     "docker", reason="The python 'docker' package must be installed to run these tests"
+)
+docker_older_than_1_5_0_skip_marker = pytest.mark.skipif(
+    salt.utils.versions.Version(docker.__version__) < "1.5.0",
+    reason="docker module must be installed to run this test or is too old. <=1.5.0",
 )
 
 
@@ -354,10 +359,7 @@ def test_update_mine():
         mine_mock.assert_called_once()
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_list_networks():
     """
     test list networks.
@@ -378,10 +380,7 @@ def test_list_networks():
     client.networks.assert_called_once_with(names=["foo"], ids=["01234"])
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_create_network():
     """
     test create network.
@@ -422,10 +421,7 @@ def test_create_network():
     )
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_remove_network():
     """
     test remove network.
@@ -444,10 +440,7 @@ def test_remove_network():
     client.remove_network.assert_called_once_with("foo")
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_inspect_network():
     """
     test inspect network.
@@ -466,10 +459,7 @@ def test_inspect_network():
     client.inspect_network.assert_called_once_with("foo")
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_connect_container_to_network():
     """
     test connect_container_to_network
@@ -491,10 +481,7 @@ def test_connect_container_to_network():
     client.connect_container_to_network.assert_called_once_with("container", "foo")
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_disconnect_container_from_network():
     """
     test disconnect_container_from_network
@@ -513,10 +500,7 @@ def test_disconnect_container_from_network():
     client.disconnect_container_from_network.assert_called_once_with("container", "foo")
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_list_volumes():
     """
     test list volumes.
@@ -539,10 +523,7 @@ def test_list_volumes():
     )
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_create_volume():
     """
     test create volume.
@@ -569,10 +550,7 @@ def test_create_volume():
     )
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_remove_volume():
     """
     test remove volume.
@@ -591,10 +569,7 @@ def test_remove_volume():
     client.remove_volume.assert_called_once_with("foo")
 
 
-@pytest.mark.skipif(
-    docker_mod.docker.version_info < (1, 5, 0),
-    reason="docker module must be installed to run this test or is too old. >=1.5.0",
-)
+@docker_older_than_1_5_0_skip_marker
 def test_inspect_volume():
     """
     test inspect volume.

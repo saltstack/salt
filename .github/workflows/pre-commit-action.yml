@@ -37,7 +37,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-actionlint
         with:
           cache-seed: ${{ inputs.cache-seed }}

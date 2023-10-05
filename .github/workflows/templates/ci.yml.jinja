@@ -57,7 +57,7 @@
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Python Version
         id: get-python-version
@@ -215,7 +215,7 @@
       - prepare-release
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -254,14 +254,16 @@
 
   <%- set job_name = "build-deps-onedir" %>
   <%- if includes.get(job_name, True) %>
+  <%- for platform in ("linux", "windows", "macos") %>
+    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
+  <{ platform_job_name }>:
+    <%- do conclusion_needs.append(platform_job_name) %>
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
+    uses: ./.github/workflows/build-deps-onedir-<{ platform }>.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -270,21 +272,24 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
+  <%- endfor %>
   <%- endif %>
 
 
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
+  <%- for platform in ("linux", "windows", "macos") %>
+    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
+  <{ platform_job_name }>:
+    <%- do conclusion_needs.append(platform_job_name) %>
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
+      - build-deps-onedir-<{ platform }>
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
+    uses: ./.github/workflows/build-salt-onedir-<{ platform }>.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -293,6 +298,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
+  <%- endfor %>
   <%- endif %>
 
 
@@ -301,15 +307,18 @@
   <%- include "build-packages.yml.jinja" %>
   <%- endif %>
 
+  <%- set pkg_tests_job_name = "pkg-tests" %>
+  <%- set salt_tests_job_name = "salt-tests" %>
+  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) %>
+  <%- include "build-ci-deps.yml.jinja" %>
+  <%- endif %>
 
-  <%- set job_name = "pkg-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(pkg_tests_job_name, True) %>
   <%- include "test-salt-pkg.yml.jinja" %>
   <%- endif %>
 
 
-  <%- set job_name = "salt-tests" %>
-  <%- if includes.get(job_name, True) %>
+  <%- if includes.get(salt_tests_job_name, True) %>
   <%- include "test-salt.yml.jinja" %>
   <%- endif %>
 
@@ -326,7 +335,7 @@
       - <{ need }>
       <%- endfor %>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
         if: ${{ github.event.repository.private == false }}
@@ -352,15 +361,27 @@
         run: |
           nox --force-color -e combine-coverage
 
-      - name: Create Code Coverage HTML Report
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Upload Salt Code Coverage HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-salt-html-report
+          path: artifacts/coverage/html/salt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Full Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report
 
-      - name: Upload Code Coverage HTML Report
+      - name: Upload Full Code Coverage HTML Report
         uses: actions/upload-artifact@v3
         with:
-          name: code-coverage-html-report
-          path: artifacts/coverage/html
+          name: code-coverage-full-html-report
+          path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
   <%- endif %>

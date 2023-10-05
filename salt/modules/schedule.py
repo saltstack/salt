@@ -521,8 +521,7 @@ def build_schedule_item(name, **kwargs):
     else:
         schedule[name]["enabled"] = True
 
-    if "jid_include" not in kwargs or kwargs["jid_include"]:
-        schedule[name]["jid_include"] = True
+    schedule[name]["jid_include"] = kwargs.get("jid_include", True)
 
     if "splay" in kwargs:
         if isinstance(kwargs["splay"], dict):

@@ -15,6 +15,7 @@ from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
+import more_itertools
 import psutil
 import pytest
 
@@ -67,7 +68,7 @@ else:
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace"]
+pytest_plugins = ["helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -110,17 +111,6 @@ for handler in logging.root.handlers[:]:
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
-
-
-# ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
-def pytest_tempdir_basename():
-    """
-    Return the temporary directory basename for the salt test suite.
-    """
-    return "stsuite"
-
-
-# <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
@@ -258,18 +248,19 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
-    # try:
-    #     assert config._onedir_check_complete
-    #     return
-    # except AttributeError:
-    #     if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-    #         if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
-    #             raise pytest.UsageError(
-    #                 "Apparently running the test suite against the onedir build "
-    #                 "of salt, however, the imported salt package is pointing to "
-    #                 "the respository checkout instead of the onedir package."
-    #             )
-    #     config._onedir_check_complete = True
+    try:
+        assert config._onedir_check_complete
+        return
+    except AttributeError:
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
+                raise pytest.UsageError(
+                    "Apparently running the test suite against the onedir build "
+                    "of salt, however, the imported salt package is pointing to "
+                    "the respository checkout instead of the onedir package.\n\n"
+                    f"  * sys.path: {sys.path}"
+                )
+        config._onedir_check_complete = True
 
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
@@ -406,9 +397,10 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     return soft, hard
 
 
-def pytest_report_header():
+def pytest_report_header(config):
     soft, hard = set_max_open_files_limits()
-    return "max open files; soft: {}; hard: {}".format(soft, hard)
+    transport = config.getoption("--transport")
+    return f"max open files: soft={soft}; hard={hard}\nsalt-transport: {transport}"
 
 
 def pytest_itemcollected(item):
@@ -809,33 +801,6 @@ def pytest_runtest_setup(item):
 
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
-def get_group_size_and_start(total_items, total_groups, group_id):
-    """
-    Calculate group size and start index.
-    """
-    base_size = total_items // total_groups
-    rem = total_items % total_groups
-
-    start = base_size * (group_id - 1) + min(group_id - 1, rem)
-    size = base_size + 1 if group_id <= rem else base_size
-
-    return (start, size)
-
-
-def get_group(items, total_groups, group_id):
-    """
-    Get the items from the passed in group based on group size.
-    """
-    if not 0 < group_id <= total_groups:
-        raise ValueError("Invalid test-group argument")
-
-    start, size = get_group_size_and_start(len(items), total_groups, group_id)
-    selected = items[start : start + size]
-    deselected = items[:start] + items[start + size :]
-    assert len(selected) + len(deselected) == len(items)
-    return selected, deselected
-
-
 def groups_collection_modifyitems(config, items):
     group_count = config.getoption("test-group-count")
     group_id = config.getoption("test-group")
@@ -844,9 +809,20 @@ def groups_collection_modifyitems(config, items):
         # We're not selection tests using groups, don't do any filtering
         return
 
+    if group_count == 1:
+        # Just one group, don't do any filtering
+        return
+
     total_items = len(items)
 
-    tests_in_group, deselected = get_group(items, group_count, group_id)
+    # Devide into test groups
+    test_groups = more_itertools.divide(group_count, items)
+    # Pick the right group
+    tests_in_group = list(test_groups.pop(group_id - 1))
+    # The rest are deselected tests
+    deselected = list(more_itertools.collapse(test_groups))
+    # Sanity check
+    assert len(tests_in_group) + len(deselected) == total_items
     # Replace all items in the list
     items[:] = tests_in_group
     if deselected:
@@ -854,7 +830,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
     )
 
@@ -863,6 +839,22 @@ def groups_collection_modifyitems(config, items):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
+@pytest.fixture(scope="session")
+def salt_factories_default_root_dir(salt_factories_default_root_dir):
+    """
+    The root directory from where to base all salt-factories paths.
+
+    For example, in a salt system installation, this would be ``/``.
+
+    .. admonition:: Attention
+
+        If `root_dir` is returned on the `salt_factories_config()` fixture
+        dictionary, then that's the value used, and not the one returned by
+        this fixture.
+    """
+    return salt_factories_default_root_dir / "stsuite"
+
+
 @pytest.fixture(scope="session")
 def salt_factories_config():
     """
