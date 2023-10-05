@@ -2,7 +2,7 @@ codecov:
   ci:
     - github.com
 
-  max_report_age: 24          # The age you want coverage reports to expire at, or if you
+  max_report_age: 72          # The age, in hours, you want coverage reports to expire at, or if you
                               # want to disable this check. Expired reports will not be processed by codecov.
   require_ci_to_pass: false
 
