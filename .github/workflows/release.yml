@@ -729,6 +729,52 @@ jobs:
       pkg-type: package
     secrets: inherit
 
+  photonos-5-package-download-tests:
+    name: Test Photon OS 5 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-5-arm64-package-download-tests:
+    name: Test Photon OS 5 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
   ubuntu-2004-package-download-tests:
     name: Test Ubuntu 20.04 package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
@@ -1015,6 +1061,8 @@ jobs:
       - photonos-3-package-download-tests
       - photonos-4-package-download-tests
       - photonos-4-arm64-package-download-tests
+      - photonos-5-package-download-tests
+      - photonos-5-arm64-package-download-tests
       - ubuntu-2004-package-download-tests
       - ubuntu-2004-arm64-package-download-tests
       - ubuntu-2204-package-download-tests

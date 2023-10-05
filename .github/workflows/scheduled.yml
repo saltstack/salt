@@ -1135,6 +1135,40 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  photonos-5-ci-deps:
+    name: Photon OS 5
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-arm64-ci-deps:
+    name: Photon OS 5 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   ubuntu-2004-ci-deps:
     name: Ubuntu 20.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1411,6 +1445,50 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-5-pkg-tests:
+    name: Photon OS 5
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - photonos-5-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-5-arm64-pkg-tests:
+    name: Photon OS 5 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - photonos-5-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -2065,6 +2143,46 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
 
+  photonos-5:
+    name: Photon OS 5
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-5-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+
+  photonos-5-arm64:
+    name: Photon OS 5 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-5-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+
   ubuntu-2004:
     name: Ubuntu 20.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2179,6 +2297,8 @@ jobs:
       - photonos-3-ci-deps
       - photonos-4-ci-deps
       - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2204-ci-deps
@@ -2203,6 +2323,8 @@ jobs:
       - photonos-3
       - photonos-4
       - photonos-4-arm64
+      - photonos-5
+      - photonos-5-arm64
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
@@ -2310,6 +2432,8 @@ jobs:
       - photonos-3-ci-deps
       - photonos-4-ci-deps
       - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2204-ci-deps
@@ -2334,6 +2458,8 @@ jobs:
       - photonos-3
       - photonos-4
       - photonos-4-arm64
+      - photonos-5
+      - photonos-5-arm64
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
@@ -2348,6 +2474,8 @@ jobs:
       - photonos-3-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
+      - photonos-5-pkg-tests
+      - photonos-5-arm64-pkg-tests
       - ubuntu-2004-pkg-tests
       - ubuntu-2004-arm64-pkg-tests
       - ubuntu-2204-pkg-tests

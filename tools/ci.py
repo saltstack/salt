@@ -709,6 +709,8 @@ def pkg_matrix(
             "photonos-3",
             "photonos-4",
             "photonos-4-arm64",
+            "photonos-5",
+            "photonos-5-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -744,6 +746,8 @@ def pkg_matrix(
             "photonos-3",
             "photonos-4",
             "photonos-4-arm64",
+            "photonos-5",
+            "photonos-5-arm64",
         ]
         and pkg_type != "MSI"
     ):
