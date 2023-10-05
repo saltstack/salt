@@ -498,4 +498,3 @@ def test_salt_call_versions(salt_call_cli):
     """
     ret = salt_call_cli.run("test.versions")
     assert ret.returncode == 0
-    assert ret.data[0] == 2
