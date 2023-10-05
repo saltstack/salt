@@ -661,10 +661,6 @@ def test_deploy_windows_master(master, expected):
         assert mock.call_args_list[0].args[1] == expected_args
 
 
-def test__render_script():
-    pass
-
-
 def test___ssh_gateway_config_dict():
     assert cloud.__ssh_gateway_config_dict(None) == {}
     gate = {
@@ -674,86 +670,6 @@ def test___ssh_gateway_config_dict():
         "ssh_gateway_command": "Are you the keymaster?",
     }
     assert cloud.__ssh_gateway_config_dict(gate) == gate
-
-
-def test_os_script():
-    pass
-
-
-def test_gen_keys():
-    pass
-
-
-def test_accept_key():
-    pass
-
-
-def test_remove_key():
-    pass
-
-
-def test_rename_key():
-    pass
-
-
-def test_minion_config():
-    pass
-
-
-def test_master_config():
-    pass
-
-
-def test_salt_config_to_yaml():
-    pass
-
-
-def test_bootstrap():  # this will be the big one
-    pass
-
-
-def test_ssh_usernames():
-    pass
-
-
-def test_wait_for_fun():
-    pass
-
-
-def test_wait_for_passwd():
-    pass
-
-
-def test_run_inline_script():
-    pass
-
-
-def test_filter_event():
-    pass
-
-
-def test__exec_ssh_cmd():
-    pass
-
-
-def test_ssh_file():
-    pass
-
-
-def test_win_cmd():
-    pass
-
-
-def test_winrm_cmd():
-    pass
-
-
-def test_root_cmd():
-    pass
-
-
-def test_check_auth():
-    pass
 
 
 def test_ip_to_int():
@@ -778,74 +694,6 @@ def test_check_name():
 
     with pytest.raises(SaltCloudException):
         cloud.check_name("test", string.digits)
-
-
-def test_remove_sshkey():
-    pass
-
-
-def test_wait_for_ip():
-    pass
-
-
-def test_list_nodes_select():
-    pass
-
-
-def test_lock_file():
-    pass
-
-
-def test_unlock_file():
-    pass
-
-
-def test_cachedir_index_del():
-    pass
-
-
-def test_init_cachedir():
-    pass
-
-
-def test_request_minion_cachedir():
-    pass
-
-
-def test_change_minion_cachedir():
-    pass
-
-
-def test_activate_minion_cachedir():
-    pass
-
-
-def test_delete_minion_cachedir():
-    pass
-
-
-def test_list_cache_nodes_full():
-    pass
-
-
-def test_update_bootstrap():
-    pass
-
-
-def test_cache_node_list():
-    pass
-
-
-def test_cache_node():
-    pass
-
-
-def test_missing_node_cache():
-    pass
-
-
-def test_diff_node_cache():
-    pass
 
 
 def test__strip_cache_events():
@@ -877,10 +725,6 @@ def test_salt_cloud_force_asciii():
 
 def test__unwrap_dict():
     assert cloud._unwrap_dict({"a": {"b": {"c": "foobar"}}}, "a,b,c") == "foobar"
-
-
-def test_run_func_until_ret_arg():
-    pass
 
 
 def test_get_salt_interface():
