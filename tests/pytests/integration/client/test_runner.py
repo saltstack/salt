@@ -152,7 +152,7 @@ def test_invalid_kwargs_are_ignored(client, auth_creds):
     assert ret[0] == "foo"
 
 
-def test_get_docs(client, auth_creds):
+def test_get_docs(client):
     ret = client.get_docs(arg="*")
     assert "auth.del_token" in ret
     assert "auth.mk_token" in ret
