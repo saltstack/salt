@@ -185,6 +185,11 @@ jobs:
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
 
+      - name: Combine Coverage Reports
+        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success'
+        run: |
+          tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
+
       - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
