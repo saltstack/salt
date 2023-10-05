@@ -707,6 +707,7 @@ def pkg_matrix(
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
+            "photonos-3-arm64",
             "photonos-4",
             "photonos-4-arm64",
         ]
