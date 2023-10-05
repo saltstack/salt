@@ -16,6 +16,7 @@ import socket
 import sys
 import tempfile
 import textwrap
+import uuid
 from collections import namedtuple
 
 import pytest
@@ -4057,3 +4058,62 @@ def test__systemd():
             ret["features"]
             == "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
         )
+
+
+def test__clean_value(caplog):
+    """
+    test _clean_value
+    """
+    ret = core._clean_value("key", None)
+    assert not ret
+
+    ret = core._clean_value("uuid", "49e40e2a-63b4-11ee-8c99-0242ac120002")
+    assert ret == "49e40e2a-63b4-11ee-8c99-0242ac120002"
+
+    with patch.object(uuid, "UUID", MagicMock()) as mock_uuid:
+        with caplog.at_level(logging.TRACE):
+            mock_uuid.side_effect = ValueError()
+            ret = core._clean_value("uuid", "49e40e2a-63b4-11ee-8c99-0242ac120002")
+            assert not ret
+            assert (
+                "HW uuid value 49e40e2a-63b4-11ee-8c99-0242ac120002 is an invalid UUID"
+                in caplog.messages
+            )
+
+    values = [
+        ["kernelrelease", "10.0.14393", "10.0.14393"],
+        ["kernelversion", "10.0.14393", "10.0.14393"],
+        ["osversion", "10.0.14393", "10.0.14393"],
+        ["osrelease", "2016Server", "2016Server"],
+        ["osrelease", "to be filled", None],
+        ["osmanufacturer", "Microsoft Corporation", "Microsoft Corporation"],
+        ["manufacturer", "innotek GmbH", "innotek GmbH"],
+        ["manufacturer", "to be filled", None],
+        ["productname", "VirtualBox", "VirtualBox"],
+        ["biosversion", "Default System BIOS", "Default System BIOS"],
+        ["serialnumber", "0", None],
+        [
+            "osfullname",
+            "Microsoft Windows Server 2016 Datacenter",
+            "Microsoft Windows Server 2016 Datacenter",
+        ],
+        [
+            "timezone",
+            "(UTC-08:00) Pacific Time (US & Canada)",
+            "(UTC-08:00) Pacific Time (US & Canada)",
+        ],
+        [
+            "uuid",
+            "d013f373-7331-4a9f-848b-72e379fbe7bf",
+            "d013f373-7331-4a9f-848b-72e379fbe7bf",
+        ],
+        ["windowsdomain", "WORKGROUP", "WORKGROUP"],
+        ["windowsdomaintype", "Workgroup", "Workgroup"],
+        ["motherboard.productname", "VirtualBox", "VirtualBox"],
+        ["motherboard.serialnumber", "0", None],
+        ["model_name", "Macbook Pro", "Macbook Pro"],
+        ["system_serialnumber", "W80322MWATM", "W80322MWATM"],
+    ]
+    for value in values:
+        ret = core._clean_value(value[0], value[1])
+        assert ret == value[2]
