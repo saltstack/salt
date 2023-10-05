@@ -71,7 +71,7 @@ env:
 jobs:
 
   generate-matrix:
-    name: Test ${{ inputs.pkg-type }} Pkg Matrix
+    name: Generate Matrix
     runs-on:
       - self-hosted
       - linux
@@ -98,7 +98,7 @@ jobs:
 
 
   test:
-    name: Test Pkg
+    name: Test
     runs-on:
       - self-hosted
       - linux
@@ -218,7 +218,7 @@ jobs:
             !artifacts/salt-*.tar.*
 
   report:
-    name: Test Pkg Reports
+    name: Report
     runs-on:
       - self-hosted
       - linux

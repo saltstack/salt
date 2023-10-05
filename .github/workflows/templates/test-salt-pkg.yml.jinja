@@ -1,4 +1,3 @@
-
   <%- set linux_pkg_tests = (
                                ("almalinux-8", "Alma Linux 8", "x86_64", "rpm"),
                                ("almalinux-9", "Alma Linux 9", "x86_64", "rpm"),
@@ -39,7 +38,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }>
+    name: <{ display_name }> Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -69,7 +68,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }>
+    name: <{ display_name }> Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -101,7 +100,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }>
+    name: <{ display_name }> <{ pkg_type }> Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow

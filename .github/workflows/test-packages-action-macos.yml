@@ -69,7 +69,7 @@ env:
 jobs:
 
   generate-matrix:
-    name: Test Pkg Matrix
+    name: Generate Matrix
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
@@ -93,7 +93,7 @@ jobs:
 
 
   test:
-    name: Test Pkg
+    name: Test
     runs-on: ${{ inputs.distro-slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
@@ -207,7 +207,7 @@ jobs:
             !artifacts/salt-*.tar.*
 
   report:
-    name: Test Pkg Reports
+    name: Report
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:

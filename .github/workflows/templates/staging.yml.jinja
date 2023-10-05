@@ -158,7 +158,7 @@ concurrency:
           if-no-files-found: error
 
   <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-pkg-repo-downloads.yml.jinja" %>
+  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   publish-pypi:
