@@ -195,7 +195,7 @@ jobs:
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && job.status != 'cancelled'
+        if: always()
         run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
@@ -203,7 +203,7 @@ jobs:
           tree -a artifacts
 
       - name: Upload Test Run Artifacts
-        if: always() && job.status != 'cancelled'
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
