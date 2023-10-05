@@ -2204,6 +2204,14 @@ jobs:
         run: |
           nox --force-color -e combine-coverage
 
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
       - name: Create Salt Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report -- salt
@@ -2216,11 +2224,27 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - name: Create Full Code Coverage HTML Report
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e coverage-report
+
+      - name: Create Combined Code Coverage JSON Report
+        run: |
+          nox --force-color -e create-json-coverage-reports
+
+      - name: Upload Combined Code Coverage JSON Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-full-json-report
+          path: artifacts/coverage/coverage.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Combined Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report
 
-      - name: Upload Full Code Coverage HTML Report
+      - name: Upload Combined Code Coverage HTML Report
         uses: actions/upload-artifact@v3
         with:
           name: code-coverage-full-html-report

@@ -166,10 +166,10 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
+      - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
         run: |
-          nox --force-color -e combine-coverage
+          nox --force-color -e create-xml-coverage-reports
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
