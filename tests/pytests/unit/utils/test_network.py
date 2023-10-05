@@ -157,31 +157,38 @@ def test_host_to_ips():
     assertion.
     """
 
-    _side_effect_ipv4 = {
-        "github.com": [
-            (2, 1, 6, "", ("192.30.255.112", 0)),
-            (2, 1, 6, "", ("192.30.255.113", 0)),
-        ],
-    }
+    # pylint doesn't like the }[host] below, disable typecheck
+    # pylint: disable=all
+    def getaddrinfo_side_effect(host, *args):
+        try:
+            return {
+                "github.com": [
+                    (2, 1, 6, "", ("192.30.255.112", 0)),
+                    (2, 1, 6, "", ("192.30.255.113", 0)),
+                ],
+                "ipv6host.foo": [
+                    (socket.AF_INET6, 1, 6, "", ("2001:a71::1", 0, 0, 0)),
+                ],
+            }[host]
+        except KeyError:
+            raise socket.gaierror(-2, "Name or service not known")
 
-    _side_effect_ipv6 = {
-        "ipv6host.foo": [
-            (socket.AF_INET6, 1, 6, "", ("2001:a71::1", 0, 0, 0)),
-        ],
-    }
-    ## getaddrinfo_mock = MagicMock(side_effect=_side_effect)
-    ## with patch.object(socket, "getaddrinfo", getaddrinfo_mock):
-    with patch.object(socket, "getaddrinfo", MagicMock(side_effect=_side_effect_ipv4)):
-        # Test host that can be resolved, ipv4
+    # pylint: enable=all
+
+    getaddrinfo_mock = MagicMock(side_effect=getaddrinfo_side_effect)
+    with patch.object(socket, "getaddrinfo", getaddrinfo_mock):
+        # Test host that can be resolved
         ret = network.host_to_ips("github.com")
+        log.warning(f"DGM test_host_to_ips ipv4, ret '{ret}'")
         assert ret == ["192.30.255.112", "192.30.255.113"]
 
-    with patch.object(socket, "getaddrinfo", MagicMock(side_effect=_side_effect_ipv6)):
         # Test ipv6
         ret = network.host_to_ips("ipv6host.foo")
+        log.warning(f"DGM test_host_to_ips ipv6, ret '{ret}'")
         assert ret == ["2001:a71::1"]
         # Test host that can't be resolved
         ret = network.host_to_ips("someothersite.com")
+        log.warning(f"DGM test_host_to_ips ipv6 2, ret '{ret}'")
         assert ret is None
 
 
