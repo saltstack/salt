@@ -68,10 +68,17 @@ env:
 jobs:
 
   test:
-    name: Test Pkg Download
+    name: Test
     runs-on: ${{ inputs.distro-slug }}
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - ${{ inputs.arch }}
+        pkg-type:
+          - ${{ inputs.pkg-type }}
 
     steps:
 
