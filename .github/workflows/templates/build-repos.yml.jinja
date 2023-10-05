@@ -23,6 +23,10 @@
       - build-<{ type }>-pkgs-onedir
       <%- elif platform %>
       - build-salt-onedir-<{ platform }>
+      <%- elif type == 'onedir' %>
+      - build-salt-onedir-linux
+      - build-salt-onedir-macos
+      - build-salt-onedir-windows
       <%- endif %>
     <%- include "build-{}-repo.yml.jinja".format(type) %>
 
