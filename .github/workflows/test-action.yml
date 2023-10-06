@@ -438,13 +438,6 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Code Coverage DB
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage
-          path: artifacts/coverage
-
       - name: Report Salt Code Coverage
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
@@ -456,3 +449,16 @@ jobs:
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage
+
+      - name: Rename Code Coverage DB
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
+
+      - name: Upload Code Coverage DB
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: artifacts/coverage
