@@ -386,14 +386,14 @@ jobs:
           #  do-upload --git-service github --sha ${{ github.sha }} \
           #  --file artifacts/coverage/salt.xml \
           #  --flag salt --flag ${{ inputs.distro-slug }} \
-          #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}
+          #  --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
           n=0
           until [ "$n" -ge 5 ]
           do
           if ./codecov --file artifacts/coverage/salt.xml \
               --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
               --flags salt,${{ inputs.distro-slug }} \
-              --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }} --nonZero; then
+              --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }} --nonZero; then
               rc=$?
               break
           fi
@@ -418,14 +418,14 @@ jobs:
           #  do-upload --git-service github --sha ${{ github.sha }} \
           #  --file artifacts/coverage/tests.xml \
           #  --flag tests --flag ${{ inputs.distro-slug }} \
-          #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}
+          #  --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
           n=0
           until [ "$n" -ge 5 ]
           do
           if ./codecov --file artifacts/coverage/tests.xml \
               --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
               --flags tests,${{ inputs.distro-slug }} \
-              --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }} --nonZero; then
+              --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }} --nonZero; then
               rc=$?
               break
           fi
