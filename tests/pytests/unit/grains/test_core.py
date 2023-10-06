@@ -3816,6 +3816,7 @@ def test_pythonversion():
     assert ret["pythonversion"] == python_version
 
 
+@pytest.mark.skip_unless_on_linux
 def test_get_machine_id():
     """
     test get_machine_id
