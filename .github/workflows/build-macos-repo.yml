@@ -1,5 +1,52 @@
+---
+name: Build DEB Repository
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: The environment to run against
+      gpg_key_id:
+        type: string
+        required: true
+        description: The GPG key ID to use
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version of the packages to install and test
+
+env:
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+jobs:
+
+  build-repo:
+    name: MacOS
+    environment: ${{ inputs.environment }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-${{ inputs.environment }}
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - macos
 
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
@@ -11,46 +58,10 @@
           SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
-      - name: Download Linux x86_64 Onedir Archive
+      - name: Download macOS x86_64 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-x86_64.tar.xz
-          path: artifacts/pkgs/incoming
-
-      - name: Download Linux aarch64 Onedir Archive
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-aarch64.tar.xz
-          path: artifacts/pkgs/incoming
-
-      - name: Download macOS x86_64 Onedir Archive
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-x86_64.tar.xz
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows amd64 Onedir Archive
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-amd64.tar.xz
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows amd64 Onedir Archive(zip)
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-amd64.zip
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows x86 Onedir Archive
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-x86.tar.xz
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows amd64 Onedir Archive(zip)
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-x86.zip
+          name: salt-${{ inputs.salt-version }}-x86_64-macos
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -88,15 +99,14 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create onedir --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
+          tools pkg repo create macos --key-id=${{ inputs.gpg_key_id }} ${{ inputs.environment == 'nightly' && format('--nightly-build-from={0}', github.ref_name) || '' }} \
+            --salt-version=${{ inputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
-          archive-name: onedir-repo
