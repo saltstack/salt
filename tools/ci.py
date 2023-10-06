@@ -778,6 +778,69 @@ def pkg_matrix(
 
 
 @ci.command(
+    name="pkg-repo-matrix",
+    arguments={
+        "pkg_type": {
+            "help": "The package type",
+        },
+    },
+)
+def pkg_repo_matrix(ctx: Context, pkg_type: str):
+    """
+    Generate the matrix for the package repository builds
+    """
+    _matrix = []
+    if pkg_type == "deb":
+        for distro in ("debian", "ubuntu"):
+            if distro == "debian":
+                versions = ["10", "11"]
+            else:
+                versions = ["20.04", "22.04"]
+            for arch in ("x86_64", "aarch64"):
+                for version in versions:
+                    _matrix.append(
+                        {
+                            "distro": distro,
+                            "version": version,
+                            "arch": arch,
+                        }
+                    )
+    elif pkg_type == "rpm":
+        for distro in ("amazon", "redhat", "fedora", "photon"):
+            if distro == "amazon":
+                versions = ["2"]
+            elif distro == "redhat":
+                versions = ["7", "8", "9"]
+            elif distro == "fedora":
+                versions = ["36", "37", "38"]
+            elif distro == "photon":
+                versions = ["3", "4"]
+            else:
+                ctx.error(f"Don't know how to handle distro {distro}")
+                ctx.exit(1)
+            for arch in ("x86_64", "aarch64"):
+                for version in versions:
+                    _matrix.append(
+                        {
+                            "distro": distro,
+                            "version": version,
+                            "arch": arch,
+                        }
+                    )
+    else:
+        _matrix.append({"pkg_type": pkg_type})
+
+    ctx.info("Generated matrix:")
+    ctx.print(_matrix, soft_wrap=True)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    ctx.exit(0)
+
+
+@ci.command(
     name="get-releases",
     arguments={
         "repository": {
