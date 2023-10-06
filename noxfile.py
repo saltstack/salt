@@ -1357,9 +1357,18 @@ def create_html_coverage_report(session):
     _report_coverage(session, combine=True, cli_report=False, html_report=True)
 
 
+def _create_xml_coverage_reports(session):
+    if session.posargs:
+        session.error("No arguments are acceptable to this nox session.")
+    session.posargs.append("salt")
+    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
+    session.posargs.append("tests")
+    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
+
+
 @nox.session(python="3", name="create-xml-coverage-reports")
 def create_xml_coverage_reports(session):
-    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
+    _create_xml_coverage_reports(session)
 
 
 @nox.session(
@@ -1368,7 +1377,7 @@ def create_xml_coverage_reports(session):
     venv_params=["--system-site-packages"],
 )
 def create_xml_coverage_reports_onedir(session):
-    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
+    _create_xml_coverage_reports(session)
 
 
 @nox.session(python="3", name="create-json-coverage-reports")
