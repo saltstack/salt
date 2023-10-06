@@ -221,7 +221,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
               - set "service-name[. = 'zabbix-agent']/protocol" tcp
               - set "service-name[. = 'zabbix-agent']/#comment" "Zabbix Agent service"
               - rm "service-name[. = 'im-obsolete']"
-            - unless: grep "zabbix-agent" /etc/services
+            - unless: grep '^zabbix-agent\\s' /etc/services
 
     .. warning::
 
