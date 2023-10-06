@@ -346,6 +346,16 @@ def test_parse_cpe_name_wfn(cpe, cpe_ret):
                 "part": None,
             },
         ),
+        (
+            "cpe:2.3:o:microsoft:windows_xp:5.1.601",
+            {
+                "phase": None,
+                "version": "5.1.601",
+                "product": "windows_xp",
+                "vendor": "microsoft",
+                "part": "operating system",
+            },
+        ),
     ),
 )
 def test_parse_cpe_name_v23(cpe, cpe_ret):
