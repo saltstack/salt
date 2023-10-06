@@ -1,71 +1,32 @@
----
-name: Build RPM Repository
 
-on:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-        description: The environment to run against
-      gpg_key_id:
-        type: string
-        required: true
-        description: The GPG key ID to use
-      salt-version:
-        type: string
-        required: true
-        description: The Salt version of the packages to install and test
-
-env:
-  RELENV_DATA: "${{ github.workspace }}/.relenv"
-  COLUMNS: 190
-  AWS_MAX_ATTEMPTS: "10"
-  AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-
-jobs:
-
-  generate-matrix:
-    name: RPM (matrix)
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
-    outputs:
-      repo-matrix-include: ${{ steps.generate-pkg-repo-matrix.outputs.matrix }}
-    steps:
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Generate Package Repo Matrix
-        id: generate-pkg-repo-matrix
-        run: |
-          tools ci pkg-repo-matrix rpm
-
-  build-repo:
-    name: RPM
-    environment: ${{ inputs.environment }}
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-${{ inputs.environment }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.repo-matrix-include) }}
+        include:
+        <%- for distro, version, arch in (
+                                            ("amazon", "2", "x86_64"),
+                                            ("amazon", "2", "aarch64"),
+                                            ("redhat", "7", "x86_64"),
+                                            ("redhat", "7", "aarch64"),
+                                            ("redhat", "8", "x86_64"),
+                                            ("redhat", "8", "aarch64"),
+                                            ("redhat", "9", "x86_64"),
+                                            ("redhat", "9", "aarch64"),
+                                            ("fedora", "36", "x86_64"),
+                                            ("fedora", "36", "aarch64"),
+                                            ("fedora", "37", "x86_64"),
+                                            ("fedora", "37", "aarch64"),
+                                            ("fedora", "38", "x86_64"),
+                                            ("fedora", "38", "aarch64"),
+                                            ("photon", "3", "x86_64"),
+                                            ("photon", "3", "aarch64"),
+                                            ("photon", "4", "x86_64"),
+                                            ("photon", "4", "aarch64"),
+                                        ) %>
+          - distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
 
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +48,7 @@ jobs:
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -125,20 +86,22 @@ jobs:
 
       - name: Create Repository
         env:
+          <%- if gh_environment == 'staging' %>
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          <%- endif %>
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
-          tools pkg repo create rpm --key-id=${{ inputs.gpg_key_id }} --distro-arch=${{ matrix.arch }} ${{ inputs.environment == 'nightly' && format('--nightly-build-from={0}', github.ref_name) || '' }} \
-            --salt-version=${{ inputs.salt-version }} \
+          tools pkg repo create rpm --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

@@ -1,78 +1,24 @@
----
-name: Build DEB Repository
 
-on:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-        description: The environment to run against
-      gpg_key_id:
-        type: string
-        required: true
-        description: The GPG key ID to use
-      salt-version:
-        type: string
-        required: true
-        description: The Salt version of the packages to install and test
-
-env:
-  RELENV_DATA: "${{ github.workspace }}/.relenv"
-  COLUMNS: 190
-  AWS_MAX_ATTEMPTS: "10"
-  AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-
-jobs:
-
-  generate-matrix:
-    name: DEB (matrix)
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
-    outputs:
-      repo-matrix-include: ${{ steps.generate-pkg-repo-matrix.outputs.matrix }}
-    steps:
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Generate Package Repo Matrix
-        id: generate-pkg-repo-matrix
-        run: |
-          tools ci pkg-repo-matrix deb
-
-  build-deb-repo:
-    name: DEB
-    environment: ${{ inputs.environment }}
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-${{ inputs.environment }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.repo-matrix-include) }}
+        include:
+        <%- for distro, version, arch in (
+                                            ("debian", "10", "x86_64"),
+                                            ("debian", "10", "aarch64"),
+                                            ("debian", "11", "x86_64"),
+                                            ("debian", "11", "aarch64"),
+                                            ("ubuntu", "20.04", "x86_64"),
+                                            ("ubuntu", "20.04", "aarch64"),
+                                            ("ubuntu", "22.04", "x86_64"),
+                                            ("ubuntu", "22.04", "aarch64"),
+                                        ) %>
+          - distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
+
     steps:
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
-
       - uses: actions/checkout@v4
 
       - name: Download System Dependencies
@@ -92,7 +38,7 @@ jobs:
       - name: Download DEB Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -130,15 +76,15 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create deb --key-id=${{ inputs.gpg_key_id }} --distro-arch=${{ matrix.arch }} ${{ inputs.environment == 'nightly' && format('--nightly-build-from={0}', github.ref_name) || '' }} \
-            --salt-version=${{ inputs.salt-version }} \
+          tools pkg repo create deb --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
