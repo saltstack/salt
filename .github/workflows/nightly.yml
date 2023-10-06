@@ -2314,7 +2314,7 @@ jobs:
           if-no-files-found: error
 
   build-src-repo:
-    name: Build Source Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2322,6 +2322,13 @@ jobs:
       - repo-nightly
     needs:
       - prepare-workflow
+      - build-source-tarball
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - src
+
     steps:
       - uses: actions/checkout@v4
 
@@ -2405,7 +2412,7 @@ jobs:
           archive-name: src-repo
 
   build-deb-repo:
-    name: Build DEB Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2418,28 +2425,36 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: debian
+          - pkg-type: deb
+            distro: debian
             version: "10"
             arch: x86_64
-          - distro: debian
+          - pkg-type: deb
+            distro: debian
             version: "10"
             arch: aarch64
-          - distro: debian
+          - pkg-type: deb
+            distro: debian
             version: "11"
             arch: x86_64
-          - distro: debian
+          - pkg-type: deb
+            distro: debian
             version: "11"
             arch: aarch64
-          - distro: ubuntu
+          - pkg-type: deb
+            distro: ubuntu
             version: "20.04"
             arch: x86_64
-          - distro: ubuntu
+          - pkg-type: deb
+            distro: ubuntu
             version: "20.04"
             arch: aarch64
-          - distro: ubuntu
+          - pkg-type: deb
+            distro: ubuntu
             version: "22.04"
             arch: x86_64
-          - distro: ubuntu
+          - pkg-type: deb
+            distro: ubuntu
             version: "22.04"
             arch: aarch64
 
@@ -2516,7 +2531,7 @@ jobs:
           archive-name: ${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}-repo
 
   build-rpm-repo:
-    name: Build RPM Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2529,58 +2544,76 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: amazon
+          - pkg-type: rpm
+            distro: amazon
             version: "2"
             arch: x86_64
-          - distro: amazon
+          - pkg-type: rpm
+            distro: amazon
             version: "2"
             arch: aarch64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "7"
             arch: x86_64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "7"
             arch: aarch64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "8"
             arch: x86_64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "8"
             arch: aarch64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "9"
             arch: x86_64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "9"
             arch: aarch64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "36"
             arch: x86_64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "36"
             arch: aarch64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "37"
             arch: x86_64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "37"
             arch: aarch64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "38"
             arch: x86_64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "38"
             arch: aarch64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "3"
             arch: x86_64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "3"
             arch: aarch64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "4"
             arch: x86_64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "4"
             arch: aarch64
 
@@ -2660,7 +2693,7 @@ jobs:
           archive-name: ${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}-repo
 
   build-windows-repo:
-    name: Build Windows Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2669,6 +2702,12 @@ jobs:
     needs:
       - prepare-workflow
       - build-windows-pkgs-onedir
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - windows
+
     steps:
       - uses: actions/checkout@v4
 
@@ -2754,7 +2793,7 @@ jobs:
           archive-name: windows-repo
 
   build-macos-repo:
-    name: Build macOS Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2763,6 +2802,12 @@ jobs:
     needs:
       - prepare-workflow
       - build-macos-pkgs-onedir
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - macos
+
     steps:
       - uses: actions/checkout@v4
 
@@ -2830,7 +2875,7 @@ jobs:
           archive-name: macos-repo
 
   build-onedir-repo:
-    name: Build Onedir Repository
+    name: Build Repository
     environment: nightly
     runs-on:
       - self-hosted
@@ -2841,6 +2886,12 @@ jobs:
       - build-salt-onedir-linux
       - build-salt-onedir-macos
       - build-salt-onedir-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - onedir
+
     steps:
       - uses: actions/checkout@v4
 
