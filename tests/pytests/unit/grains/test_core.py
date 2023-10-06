@@ -2864,6 +2864,10 @@ def test_virtual_has_virtual_grain():
             {"kernel": "Windows", "manufacturer": "Parallels Software"},
             {"virtual": "Parallels"},
         ),
+        (
+            {"kernel": "Windows", "manufacturer": None, "productname": None},
+            {"virtual": "physical"},
+        ),
     ],
 )
 def test__windows_virtual(osdata, expected):
