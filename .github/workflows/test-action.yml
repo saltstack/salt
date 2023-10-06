@@ -377,6 +377,10 @@ jobs:
       - name: Upload Source Code Coverage To Codecov
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
+          if [ ! -s artifacts/coverage/salt.xml ]; then
+            echo "The artifacts/coverage/salt.xml file does not exist"
+            exit 1
+          fi
           # We can't yet use tokenless uploads with the codecov CLI
           #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
           #  do-upload --git-service github --sha ${{ github.sha }} \
@@ -405,6 +409,10 @@ jobs:
       - name: Upload Tests Code Coverage To Codecov
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
+          if [ ! -s artifacts/coverage/tests.xml ]; then
+            echo "The artifacts/coverage/tests.xml file does not exist"
+            exit 1
+          fi
           # We can't yet use tokenless uploads with the codecov CLI
           #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
           #  do-upload --git-service github --sha ${{ github.sha }} \
