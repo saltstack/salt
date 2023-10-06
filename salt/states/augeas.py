@@ -54,7 +54,7 @@ def _check_filepath(changes):
             cmd, arg = change_.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                error = "Command {} is not supported (yet)".format(cmd)
+                error = f"Command {cmd} is not supported (yet)"
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
             parts = salt.utils.args.shlex_split(arg)
@@ -260,7 +260,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret["comment"] = "Error: {}".format(err)
+            ret["comment"] = f"Error: {err}"
             return ret
     else:
         filename = re.sub("^/files|/$", "", context)
@@ -269,7 +269,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         ret["result"] = True
         ret["comment"] = "Executing commands"
         if context:
-            ret["comment"] += ' in file "{}":\n'.format(context)
+            ret["comment"] += f' in file "{context}":\n'
         ret["comment"] += "\n".join(changes)
         return ret
 
