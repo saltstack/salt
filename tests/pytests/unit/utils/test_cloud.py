@@ -461,8 +461,8 @@ def test_ssh_gateway_arguments_default_alive_args():
     server_alive_interval = 60
     server_alive_count_max = 3
     arguments = ssh_gateway_arguments({"ssh_gateway": "host"})
-    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
-    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
+    assert f"-oServerAliveInterval={server_alive_interval}" in arguments
+    assert f"-oServerAliveCountMax={server_alive_count_max}" in arguments
 
 
 def test_ssh_gateway_arguments_alive_args():
@@ -475,8 +475,8 @@ def test_ssh_gateway_arguments_alive_args():
             "server_alive_count_max": server_alive_count_max,
         }
     )
-    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
-    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
+    assert f"-oServerAliveInterval={server_alive_interval}" in arguments
+    assert f"-oServerAliveCountMax={server_alive_count_max}" in arguments
 
 
 def test_wait_for_port_default_alive_args():
@@ -491,8 +491,8 @@ def test_wait_for_port_default_alive_args():
         )
         assert exec_ssh_cmd.call_count == 2
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_wait_for_port_alive_args():
@@ -509,8 +509,8 @@ def test_wait_for_port_alive_args():
         )
         assert exec_ssh_cmd.call_count == 2
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_scp_file_default_alive_args():
@@ -527,8 +527,8 @@ def test_scp_file_default_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_scp_file_alive_args():
@@ -550,8 +550,8 @@ def test_scp_file_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_sftp_file_default_alive_args():
@@ -568,8 +568,8 @@ def test_sftp_file_default_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_sftp_file_alive_args():
@@ -591,8 +591,8 @@ def test_sftp_file_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
-        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+        assert f"-oServerAliveInterval={server_alive_interval}" in ssh_call
+        assert f"-oServerAliveCountMax={server_alive_count_max}" in ssh_call
 
 
 def test_deploy_script_ssh_timeout():
@@ -656,7 +656,7 @@ def test_deploy_windows_master(master, expected):
     ) as mock:
         cloud.deploy_windows(host="test", win_installer="install.exe", master=master)
         expected_cmd = "c:\\salttemp\\install.exe"
-        expected_args = "/S /master={} /minion-name=None".format(expected)
+        expected_args = f"/S /master={expected} /minion-name=None"
         assert mock.call_args_list[0].args[0] == expected_cmd
         assert mock.call_args_list[0].args[1] == expected_args
 
