@@ -68,10 +68,17 @@ env:
 jobs:
 
   test:
-    name: Test Pkg Download
+    name: Test
     runs-on: ${{ inputs.distro-slug }}
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - ${{ inputs.arch }}
+        pkg-type:
+          - ${{ inputs.pkg-type }}
 
     steps:
 
@@ -166,22 +173,100 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
+      - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
         run: |
-          nox --force-color -e combine-coverage
+          nox --force-color -e create-xml-coverage-reports
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && job.status != 'cancelled'
+        if: always()
         run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
 
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/macos/codecov
+          curl -Os https://uploader.codecov.io/latest/macos/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/macos/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/salt.xml ]; then
+            echo "The artifacts/coverage/salt.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/salt.xml \
+          #  --flag salt --flag ${{ inputs.distro-slug }} --flag pkg \
+          #  --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/salt.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags salt,${{ inputs.distro-slug }},pkg \
+              --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/tests.xml ]; then
+            echo "The artifacts/coverage/tests.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/tests.xml \
+          #  --flag tests --flag ${{ inputs.distro-slug }} --flag pkg \
+          #  --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/tests.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags tests,${{ inputs.distro-slug }},pkg \
+              --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
       - name: Upload Test Run Artifacts
-        if: always() && job.status != 'cancelled'
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}

@@ -224,7 +224,7 @@ jobs:
           tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
   almalinux-8-package-download-tests:
-    name: Test Alma Linux 8 package Downloads
+    name: Alma Linux 8 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -247,7 +247,7 @@ jobs:
     secrets: inherit
 
   almalinux-8-arm64-package-download-tests:
-    name: Test Alma Linux 8 Arm64 package Downloads
+    name: Alma Linux 8 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -270,7 +270,7 @@ jobs:
     secrets: inherit
 
   almalinux-9-package-download-tests:
-    name: Test Alma Linux 9 package Downloads
+    name: Alma Linux 9 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -293,7 +293,7 @@ jobs:
     secrets: inherit
 
   almalinux-9-arm64-package-download-tests:
-    name: Test Alma Linux 9 Arm64 package Downloads
+    name: Alma Linux 9 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -316,7 +316,7 @@ jobs:
     secrets: inherit
 
   amazonlinux-2-package-download-tests:
-    name: Test Amazon Linux 2 package Downloads
+    name: Amazon Linux 2 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -339,7 +339,7 @@ jobs:
     secrets: inherit
 
   amazonlinux-2-arm64-package-download-tests:
-    name: Test Amazon Linux 2 Arm64 package Downloads
+    name: Amazon Linux 2 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -362,7 +362,7 @@ jobs:
     secrets: inherit
 
   centos-7-package-download-tests:
-    name: Test CentOS 7 package Downloads
+    name: CentOS 7 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -385,7 +385,7 @@ jobs:
     secrets: inherit
 
   centos-7-arm64-package-download-tests:
-    name: Test CentOS 7 Arm64 package Downloads
+    name: CentOS 7 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -408,7 +408,7 @@ jobs:
     secrets: inherit
 
   centosstream-8-package-download-tests:
-    name: Test CentOS Stream 8 package Downloads
+    name: CentOS Stream 8 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -431,7 +431,7 @@ jobs:
     secrets: inherit
 
   centosstream-8-arm64-package-download-tests:
-    name: Test CentOS Stream 8 Arm64 package Downloads
+    name: CentOS Stream 8 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -454,7 +454,7 @@ jobs:
     secrets: inherit
 
   centosstream-9-package-download-tests:
-    name: Test CentOS Stream 9 package Downloads
+    name: CentOS Stream 9 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -477,7 +477,7 @@ jobs:
     secrets: inherit
 
   centosstream-9-arm64-package-download-tests:
-    name: Test CentOS Stream 9 Arm64 package Downloads
+    name: CentOS Stream 9 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -500,7 +500,7 @@ jobs:
     secrets: inherit
 
   debian-10-package-download-tests:
-    name: Test Debian 10 package Downloads
+    name: Debian 10 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -523,7 +523,7 @@ jobs:
     secrets: inherit
 
   debian-11-package-download-tests:
-    name: Test Debian 11 package Downloads
+    name: Debian 11 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -546,7 +546,7 @@ jobs:
     secrets: inherit
 
   debian-11-arm64-package-download-tests:
-    name: Test Debian 11 Arm64 package Downloads
+    name: Debian 11 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -569,7 +569,7 @@ jobs:
     secrets: inherit
 
   fedora-37-package-download-tests:
-    name: Test Fedora 37 package Downloads
+    name: Fedora 37 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -592,7 +592,7 @@ jobs:
     secrets: inherit
 
   fedora-37-arm64-package-download-tests:
-    name: Test Fedora 37 Arm64 package Downloads
+    name: Fedora 37 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -615,7 +615,7 @@ jobs:
     secrets: inherit
 
   fedora-38-package-download-tests:
-    name: Test Fedora 38 package Downloads
+    name: Fedora 38 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -638,7 +638,7 @@ jobs:
     secrets: inherit
 
   fedora-38-arm64-package-download-tests:
-    name: Test Fedora 38 Arm64 package Downloads
+    name: Fedora 38 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -661,7 +661,7 @@ jobs:
     secrets: inherit
 
   photonos-3-package-download-tests:
-    name: Test Photon OS 3 package Downloads
+    name: Photon OS 3 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -684,7 +684,7 @@ jobs:
     secrets: inherit
 
   photonos-4-package-download-tests:
-    name: Test Photon OS 4 package Downloads
+    name: Photon OS 4 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -707,7 +707,7 @@ jobs:
     secrets: inherit
 
   photonos-4-arm64-package-download-tests:
-    name: Test Photon OS 4 Arm64 package Downloads
+    name: Photon OS 4 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -730,7 +730,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2004-package-download-tests:
-    name: Test Ubuntu 20.04 package Downloads
+    name: Ubuntu 20.04 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -753,7 +753,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2004-arm64-package-download-tests:
-    name: Test Ubuntu 20.04 Arm64 package Downloads
+    name: Ubuntu 20.04 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -776,7 +776,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2204-package-download-tests:
-    name: Test Ubuntu 22.04 package Downloads
+    name: Ubuntu 22.04 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -799,7 +799,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2204-arm64-package-download-tests:
-    name: Test Ubuntu 22.04 Arm64 package Downloads
+    name: Ubuntu 22.04 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -822,7 +822,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2204-onedir-download-tests:
-    name: Test Ubuntu 22.04 onedir Downloads
+    name: Ubuntu 22.04 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -845,7 +845,7 @@ jobs:
     secrets: inherit
 
   ubuntu-2204-arm64-onedir-download-tests:
-    name: Test Ubuntu 22.04 Arm64 onedir Downloads
+    name: Ubuntu 22.04 Arm64 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -867,8 +867,8 @@ jobs:
       pkg-type: onedir
     secrets: inherit
 
-  macos-12-Package-download-tests:
-    name: Test macOS 12 Package Downloads
+  macos-12-package-download-tests:
+    name: macOS 12 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -890,8 +890,8 @@ jobs:
       pkg-type: package
     secrets: inherit
 
-  macos-12-Onedir-download-tests:
-    name: Test macOS 12 Onedir Downloads
+  macos-12-onedir-download-tests:
+    name: macOS 12 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
@@ -913,9 +913,9 @@ jobs:
       pkg-type: onedir
     secrets: inherit
 
-  windows-2022-NSIS-amd64-download-tests:
+  windows-2022-nsis-amd64-download-tests:
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
-    name: Test Windows 2022 amd64 NSIS Package Downloads
+    name: Windows 2022 Package Download
     needs:
       - prepare-workflow
       - publish-repositories
@@ -936,9 +936,9 @@ jobs:
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
-  windows-2022-MSI-amd64-download-tests:
+  windows-2022-msi-amd64-download-tests:
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
-    name: Test Windows 2022 amd64 MSI Package Downloads
+    name: Windows 2022 Package Download
     needs:
       - prepare-workflow
       - publish-repositories
@@ -959,9 +959,9 @@ jobs:
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
-  windows-2022-Onedir-amd64-download-tests:
+  windows-2022-onedir-amd64-download-tests:
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
-    name: Test Windows 2022 amd64 Onedir Package Downloads
+    name: Windows 2022 Package Download
     needs:
       - prepare-workflow
       - publish-repositories
@@ -1021,11 +1021,11 @@ jobs:
       - ubuntu-2204-arm64-package-download-tests
       - ubuntu-2204-onedir-download-tests
       - ubuntu-2204-arm64-onedir-download-tests
-      - macos-12-Package-download-tests
-      - macos-12-Onedir-download-tests
-      - windows-2022-NSIS-amd64-download-tests
-      - windows-2022-MSI-amd64-download-tests
-      - windows-2022-Onedir-amd64-download-tests
+      - macos-12-package-download-tests
+      - macos-12-onedir-download-tests
+      - windows-2022-nsis-amd64-download-tests
+      - windows-2022-msi-amd64-download-tests
+      - windows-2022-onedir-amd64-download-tests
     environment: release
     steps:
       - name: Clone The Salt Repository

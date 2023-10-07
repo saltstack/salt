@@ -244,6 +244,8 @@ jobs:
         id: get-release-changelog-target
         run: |
           tools ci get-release-changelog-target ${{ github.event_name }}
+
+
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -1191,7 +1193,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-pkg-tests:
-    name: Amazon Linux 2
+    name: Amazon Linux 2 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1213,7 +1215,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centos-7-pkg-tests:
-    name: CentOS 7
+    name: CentOS 7 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1235,7 +1237,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-8-pkg-tests:
-    name: CentOS Stream 8
+    name: CentOS Stream 8 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1257,7 +1259,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-9-pkg-tests:
-    name: CentOS Stream 9
+    name: CentOS Stream 9 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1279,7 +1281,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-10-pkg-tests:
-    name: Debian 10
+    name: Debian 10 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1301,7 +1303,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-pkg-tests:
-    name: Debian 11
+    name: Debian 11 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1323,7 +1325,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-arm64-pkg-tests:
-    name: Debian 11 Arm64
+    name: Debian 11 Arm64 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1345,7 +1347,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-3-pkg-tests:
-    name: Photon OS 3
+    name: Photon OS 3 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1367,7 +1369,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-4-pkg-tests:
-    name: Photon OS 4
+    name: Photon OS 4 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1389,7 +1391,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-4-arm64-pkg-tests:
-    name: Photon OS 4 Arm64
+    name: Photon OS 4 Arm64 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1411,7 +1413,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-pkg-tests:
-    name: Ubuntu 20.04
+    name: Ubuntu 20.04 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1433,7 +1435,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-arm64-pkg-tests:
-    name: Ubuntu 20.04 Arm64
+    name: Ubuntu 20.04 Arm64 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1455,7 +1457,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-pkg-tests:
-    name: Ubuntu 22.04
+    name: Ubuntu 22.04 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1477,7 +1479,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-arm64-pkg-tests:
-    name: Ubuntu 22.04 Arm64
+    name: Ubuntu 22.04 Arm64 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1499,7 +1501,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   macos-12-pkg-tests:
-    name: macOS 12
+    name: macOS 12 Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -1521,7 +1523,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-nsis-pkg-tests:
-    name: Windows 2016
+    name: Windows 2016 NSIS Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1543,7 +1545,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-msi-pkg-tests:
-    name: Windows 2016
+    name: Windows 2016 MSI Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1565,7 +1567,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-nsis-pkg-tests:
-    name: Windows 2019
+    name: Windows 2019 NSIS Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1587,7 +1589,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-msi-pkg-tests:
-    name: Windows 2019
+    name: Windows 2019 MSI Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1609,7 +1611,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-nsis-pkg-tests:
-    name: Windows 2022
+    name: Windows 2022 NSIS Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1631,7 +1633,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-msi-pkg-tests:
-    name: Windows 2022
+    name: Windows 2022 MSI Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2207,6 +2209,8 @@ jobs:
         run: |
           python3 -m pip install 'nox==2022.8.7'
 
+
+
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
@@ -2221,6 +2225,14 @@ jobs:
         run: |
           nox --force-color -e combine-coverage
 
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
       - name: Create Salt Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report -- salt
@@ -2233,11 +2245,27 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - name: Create Full Code Coverage HTML Report
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e coverage-report
+
+      - name: Create Combined Code Coverage JSON Report
+        run: |
+          nox --force-color -e create-json-coverage-reports
+
+      - name: Upload Combined Code Coverage JSON Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-full-json-report
+          path: artifacts/coverage/coverage.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Combined Code Coverage HTML Report
         run: |
           nox --force-color -e create-html-coverage-report
 
-      - name: Upload Full Code Coverage HTML Report
+      - name: Upload Combined Code Coverage HTML Report
         uses: actions/upload-artifact@v3
         with:
           name: code-coverage-full-html-report

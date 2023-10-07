@@ -622,10 +622,10 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
     """
     _matrix = []
     _splits = {
-        "functional": 4,
-        "integration": 6,
+        "functional": 5,
+        "integration": 7,
         "scenarios": 2,
-        "unit": 3,
+        "unit": 4,
     }
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
@@ -769,8 +769,6 @@ def pkg_matrix(
                     "version": version,
                 }
             )
-            if distro_slug.startswith("windows"):
-                _matrix[-1]["pkg-type"] = pkg_type.upper()
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 
