@@ -6,7 +6,7 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -28,7 +28,7 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-macos
@@ -77,7 +77,7 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux

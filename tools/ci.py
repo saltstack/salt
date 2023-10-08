@@ -276,6 +276,7 @@ def define_jobs(
 
     jobs = {
         "lint": True,
+        "deps": True,
         "test": True,
         "test-pkg": True,
         "test-pkg-download": True,
@@ -293,6 +294,11 @@ def define_jobs(
         jobs["test-pkg"] = False
     if skip_pkg_download_tests:
         jobs["test-pkg-download"] = False
+
+    if {skip_tests, skip_pkg_tests, skip_pkg_download_tests} == {False}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'deps' job.\n")
+        jobs["deps"] = False
 
     if event_name != "pull_request":
         # In this case, all defined jobs should run
