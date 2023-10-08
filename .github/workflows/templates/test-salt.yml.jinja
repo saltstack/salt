@@ -3,7 +3,7 @@
 
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }>
+    name: <{ display_name }> Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -29,7 +29,7 @@
 
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }>
+    name: <{ display_name }> Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -55,7 +55,7 @@
 
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }>
+    name: <{ display_name }> Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
