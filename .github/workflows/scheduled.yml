@@ -1668,7 +1668,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016:
-    name: Windows 2016
+    name: Windows 2016 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1688,7 +1688,7 @@ jobs:
       skip-junit-reports: false
 
   windows-2019:
-    name: Windows 2019
+    name: Windows 2019 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1708,7 +1708,7 @@ jobs:
       skip-junit-reports: false
 
   windows-2022:
-    name: Windows 2022
+    name: Windows 2022 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1728,7 +1728,7 @@ jobs:
       skip-junit-reports: false
 
   macos-12:
-    name: macOS 12
+    name: macOS 12 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -1748,7 +1748,7 @@ jobs:
       skip-junit-reports: false
 
   almalinux-8:
-    name: Alma Linux 8
+    name: Alma Linux 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1768,7 +1768,7 @@ jobs:
       skip-junit-reports: false
 
   almalinux-9:
-    name: Alma Linux 9
+    name: Alma Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1788,7 +1788,7 @@ jobs:
       skip-junit-reports: false
 
   amazonlinux-2:
-    name: Amazon Linux 2
+    name: Amazon Linux 2 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1808,7 +1808,7 @@ jobs:
       skip-junit-reports: false
 
   archlinux-lts:
-    name: Arch Linux LTS
+    name: Arch Linux LTS Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1828,7 +1828,7 @@ jobs:
       skip-junit-reports: false
 
   centos-7:
-    name: CentOS 7
+    name: CentOS 7 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1848,7 +1848,7 @@ jobs:
       skip-junit-reports: false
 
   centosstream-8:
-    name: CentOS Stream 8
+    name: CentOS Stream 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1868,7 +1868,7 @@ jobs:
       skip-junit-reports: false
 
   centosstream-9:
-    name: CentOS Stream 9
+    name: CentOS Stream 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1888,7 +1888,7 @@ jobs:
       skip-junit-reports: false
 
   debian-10:
-    name: Debian 10
+    name: Debian 10 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1908,7 +1908,7 @@ jobs:
       skip-junit-reports: false
 
   debian-11:
-    name: Debian 11
+    name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1928,7 +1928,7 @@ jobs:
       skip-junit-reports: false
 
   debian-11-arm64:
-    name: Debian 11 Arm64
+    name: Debian 11 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1948,7 +1948,7 @@ jobs:
       skip-junit-reports: false
 
   fedora-37:
-    name: Fedora 37
+    name: Fedora 37 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1968,7 +1968,7 @@ jobs:
       skip-junit-reports: false
 
   fedora-38:
-    name: Fedora 38
+    name: Fedora 38 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1988,7 +1988,7 @@ jobs:
       skip-junit-reports: false
 
   opensuse-15:
-    name: Opensuse 15
+    name: Opensuse 15 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2008,7 +2008,7 @@ jobs:
       skip-junit-reports: false
 
   photonos-3:
-    name: Photon OS 3
+    name: Photon OS 3 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2028,7 +2028,7 @@ jobs:
       skip-junit-reports: false
 
   photonos-4:
-    name: Photon OS 4
+    name: Photon OS 4 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2048,7 +2048,7 @@ jobs:
       skip-junit-reports: false
 
   photonos-4-arm64:
-    name: Photon OS 4 Arm64
+    name: Photon OS 4 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2068,7 +2068,7 @@ jobs:
       skip-junit-reports: false
 
   ubuntu-2004:
-    name: Ubuntu 20.04
+    name: Ubuntu 20.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2088,7 +2088,7 @@ jobs:
       skip-junit-reports: false
 
   ubuntu-2004-arm64:
-    name: Ubuntu 20.04 Arm64
+    name: Ubuntu 20.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2108,7 +2108,7 @@ jobs:
       skip-junit-reports: false
 
   ubuntu-2204:
-    name: Ubuntu 22.04
+    name: Ubuntu 22.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2128,7 +2128,7 @@ jobs:
       skip-junit-reports: false
 
   ubuntu-2204-arm64:
-    name: Ubuntu 22.04 Arm64
+    name: Ubuntu 22.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
