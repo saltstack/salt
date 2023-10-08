@@ -186,11 +186,15 @@ def generate_workflows(ctx: Context):
     for slug, display_name, arch in build_ci_deps_listing["linux"]:
         if slug in ("archlinux-lts", "opensuse-15"):
             continue
-        for pkg_type in ("package", "onedir"):
-            test_salt_pkg_downloads_listing["linux"].append((slug, arch, pkg_type))
+        test_salt_pkg_downloads_listing["linux"].append((slug, arch, "package"))
+    for slug, display_name, arch in build_ci_deps_listing["linux"][-2:]:
+        if slug in ("archlinux-lts", "opensuse-15"):
+            continue
+        test_salt_pkg_downloads_listing["linux"].append((slug, arch, "onedir"))
     for slug, display_name, arch in build_ci_deps_listing["macos"]:
-        for pkg_type in ("package", "onedir"):
-            test_salt_pkg_downloads_listing["macos"].append((slug, arch, pkg_type))
+        test_salt_pkg_downloads_listing["macos"].append((slug, arch, "package"))
+    for slug, display_name, arch in build_ci_deps_listing["macos"][-1:]:
+        test_salt_pkg_downloads_listing["macos"].append((slug, arch, "onedir"))
     for slug, display_name, arch in build_ci_deps_listing["windows"][-1:]:
         for pkg_type in ("nsis", "msi", "onedir"):
             test_salt_pkg_downloads_listing["windows"].append((slug, arch, pkg_type))
