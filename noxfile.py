@@ -6,7 +6,9 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
+import contextlib
 import datetime
+import glob
 import gzip
 import json
 import os
@@ -351,8 +353,6 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
     if env is None:
         env = {}
 
-    coverage_base_env = {}
-
     sitecustomize_dir = session.run(
         "salt-factories", "--coverage", silent=True, log=True, stderr=None
     )
@@ -384,79 +384,35 @@ def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
             python_path_entries.insert(0, str(sitecustomize_dir))
             python_path_env_var = os.pathsep.join(python_path_entries)
 
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        coverage_base_env["COVERAGE_FILE"] = COVERAGE_FILE
-
         env.update(
             {
                 # The updated python path so that sitecustomize is importable
                 "PYTHONPATH": python_path_env_var,
                 # Instruct sub processes to also run under coverage
                 "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
-            },
-            **coverage_base_env,
+                # The full path to the .coverage data file. Makes sure we always write
+                # them to the same directory
+                "COVERAGE_FILE": COVERAGE_FILE,
+            }
         )
 
-    try:
-        session.run(*test_cmd, env=env)
-    finally:
-        if os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0":
-            # Always combine and generate the XML coverage report
-            try:
-                session.run(
-                    "coverage",
-                    "combine",
-                    env=coverage_base_env,
-                )
-            except CommandFailed:
-                # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-                # exception
-                pass
-            # Generate report for tests code coverage
-            session.run(
-                "coverage",
-                "xml",
-                "-o",
-                str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-                "--omit=salt/*",
-                "--include=tests/*,pkg/tests/*",
-                env=coverage_base_env,
-            )
-            # Generate report for salt code coverage
-            session.run(
-                "coverage",
-                "xml",
-                "-o",
-                str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-                "--omit=tests/*,pkg/tests/*",
-                "--include=salt/*",
-                env=coverage_base_env,
-            )
-            # Generate html report for tests code coverage
-            session.run(
-                "coverage",
-                "html",
-                "-d",
-                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-                "--omit=salt/*",
-                "--include=tests/*,pkg/tests/*",
-                env=coverage_base_env,
-            )
-            # Generate html report for salt code coverage
-            session.run(
-                "coverage",
-                "html",
-                "-d",
-                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
-                "--omit=tests/*,pkg/tests/*",
-                "--include=salt/*",
-                env=coverage_base_env,
-            )
+    session.run(*test_cmd, env=env)
 
 
-def _report_coverage(session):
+def _report_coverage(
+    session,
+    combine=True,
+    cli_report=True,
+    html_report=False,
+    xml_report=False,
+    json_report=False,
+):
     _install_coverage_requirement(session)
+
+    if not any([combine, cli_report, html_report, xml_report, json_report]):
+        session.error(
+            "At least one of combine, cli_report, html_report, xml_report, json_report needs to be True"
+        )
 
     env = {
         # The full path to the .coverage data file. Makes sure we always write
@@ -468,45 +424,56 @@ def _report_coverage(session):
     if session.posargs:
         report_section = session.posargs.pop(0)
         if report_section not in ("salt", "tests"):
-            session.error("The report section can only be one of 'salt', 'tests'.")
+            session.error(
+                f"The report section can only be one of 'salt', 'tests', not: {report_section}"
+            )
         if session.posargs:
             session.error(
                 "Only one argument can be passed to the session, which is optional "
                 "and is one of 'salt', 'tests'."
             )
 
-    # Always combine and generate the XML coverage report
-    try:
-        session.run("coverage", "combine", env=env)
-    except CommandFailed:
-        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-        # exception
-        pass
+    if combine is True:
+        coverage_db_files = glob.glob(f"{COVERAGE_FILE}.*")
+        if coverage_db_files:
+            with contextlib.suppress(CommandFailed):
+                # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+                # exception
+                session.run("coverage", "combine", env=env)
+        elif os.path.exists(COVERAGE_FILE):
+            session_warn(session, "Coverage files already combined.")
 
-    if not IS_WINDOWS:
-        # The coverage file might have come from a windows machine, fix paths
-        with sqlite3.connect(COVERAGE_FILE) as db:
-            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
-            if res.fetchone():
-                session_warn(
-                    session,
-                    "Replacing backwards slashes with forward slashes on file "
-                    "paths in the coverage database",
-                )
-                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
+        if os.path.exists(COVERAGE_FILE) and not IS_WINDOWS:
+            # Some coverage files might have come from a windows machine, fix paths
+            with sqlite3.connect(COVERAGE_FILE) as db:
+                res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
+                if res.fetchone():
+                    session_warn(
+                        session,
+                        "Replacing backwards slashes with forward slashes on file "
+                        "paths in the coverage database",
+                    )
+                    db.execute(
+                        r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');"
+                    )
+
+    if not os.path.exists(COVERAGE_FILE):
+        session.error("No coverage files found.")
 
     if report_section == "salt":
-        json_coverage_file = (
-            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-salt.json"
-        )
+        json_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "salt.json"
+        xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "salt.xml"
+        html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "salt"
         cmd_args = [
             "--omit=tests/*,pkg/tests/*",
             "--include=salt/*",
         ]
 
     elif report_section == "tests":
-        json_coverage_file = (
-            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
+        json_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "tests.json"
+        xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "tests.xml"
+        html_coverage_dir = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "tests"
         )
         cmd_args = [
             "--omit=salt/*",
@@ -516,25 +483,58 @@ def _report_coverage(session):
         json_coverage_file = (
             COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
         )
+        xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.xml"
+        html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "full"
         cmd_args = [
             "--include=salt/*,tests/*,pkg/tests/*",
         ]
 
-    session.run(
-        "coverage",
-        "report",
-        *cmd_args,
-        env=env,
-    )
+    if cli_report:
+        session.run(
+            "coverage",
+            "report",
+            "--precision=2",
+            *cmd_args,
+            env=env,
+        )
 
-    session.run(
-        "coverage",
-        "json",
-        "-o",
-        str(json_coverage_file),
-        *cmd_args,
-        env=env,
-    )
+    if html_report:
+        session.run(
+            "coverage",
+            "html",
+            "-d",
+            str(html_coverage_dir),
+            "--show-contexts",
+            "--precision=2",
+            *cmd_args,
+            env=env,
+        )
+
+    if xml_report:
+        try:
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(xml_coverage_file),
+                *cmd_args,
+                env=env,
+            )
+        except CommandFailed:
+            session_warn(
+                session, "Failed to generate the source XML code coverage report"
+            )
+
+    if json_report:
+        session.run(
+            "coverage",
+            "json",
+            "-o",
+            str(json_coverage_file),
+            "--show-contexts",
+            *cmd_args,
+            env=env,
+        )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-parametrized")
@@ -1208,7 +1208,12 @@ def ci_test_onedir_tcp(session):
 
 @nox.session(python="3", name="report-coverage")
 def report_coverage(session):
-    _report_coverage(session)
+    _report_coverage(session, combine=True, cli_report=True)
+
+
+@nox.session(python="3", name="coverage-report")
+def coverage_report(session):
+    _report_coverage(session, combine=True, cli_report=True)
 
 
 @nox.session(python=False, name="decompress-dependencies")
@@ -1335,20 +1340,7 @@ def pre_archive_cleanup(session, pkg):
 
 @nox.session(python="3", name="combine-coverage")
 def combine_coverage(session):
-    _install_coverage_requirement(session)
-    env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_FILE),
-    }
-
-    # Always combine and generate the XML coverage report
-    try:
-        session.run("coverage", "combine", env=env)
-    except CommandFailed:
-        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-        # exception
-        pass
+    _report_coverage(session, combine=True, cli_report=False)
 
 
 @nox.session(
@@ -1357,135 +1349,21 @@ def combine_coverage(session):
     venv_params=["--system-site-packages"],
 )
 def combine_coverage_onedir(session):
-    _install_coverage_requirement(session)
-    env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_FILE),
-    }
-
-    # Always combine and generate the XML coverage report
-    try:
-        session.run("coverage", "combine", env=env)
-    except CommandFailed:
-        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-        # exception
-        pass
+    _report_coverage(session, combine=True, cli_report=False)
 
 
 @nox.session(python="3", name="create-html-coverage-report")
 def create_html_coverage_report(session):
-    _install_coverage_requirement(session)
-    env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_FILE),
-    }
-
-    report_section = None
-    if session.posargs:
-        report_section = session.posargs.pop(0)
-        if report_section not in ("salt", "tests"):
-            session.error("The report section can only be one of 'salt', 'tests'.")
-        if session.posargs:
-            session.error(
-                "Only one argument can be passed to the session, which is optional "
-                "and is one of 'salt', 'tests'."
-            )
-
-    if not IS_WINDOWS:
-        # The coverage file might have come from a windows machine, fix paths
-        with sqlite3.connect(COVERAGE_FILE) as db:
-            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
-            if res.fetchone():
-                session_warn(
-                    session,
-                    "Replacing backwards slashes with forward slashes on file "
-                    "paths in the coverage database",
-                )
-                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
-
-    if report_section == "salt":
-        report_dir = str(
-            COVERAGE_OUTPUT_DIR.joinpath("html", "salt").relative_to(REPO_ROOT)
-        )
-        json_coverage_file = (
-            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-salt.json"
-        )
-        cmd_args = [
-            "--omit=tests/*,pkg/tests/*",
-            "--include=salt/*",
-        ]
-
-    elif report_section == "tests":
-        report_dir = str(
-            COVERAGE_OUTPUT_DIR.joinpath("html", "tests").relative_to(REPO_ROOT)
-        )
-        json_coverage_file = (
-            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
-        )
-        cmd_args = [
-            "--omit=salt/*",
-            "--include=tests/*,pkg/tests/*",
-        ]
-    else:
-        report_dir = str(
-            COVERAGE_OUTPUT_DIR.joinpath("html", "full").relative_to(REPO_ROOT)
-        )
-        json_coverage_file = (
-            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
-        )
-        cmd_args = [
-            "--include=salt/*,tests/*,pkg/tests/*",
-        ]
-
-    # Generate html report for Salt and tests combined code coverage
-    session.run(
-        "coverage",
-        "html",
-        "-d",
-        report_dir,
-        "--show-contexts",
-        *cmd_args,
-        env=env,
-    )
+    _report_coverage(session, combine=True, cli_report=False, html_report=True)
 
 
 def _create_xml_coverage_reports(session):
-    _install_coverage_requirement(session)
-    env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_FILE),
-    }
-
-    # Generate report for tests code coverage
-    try:
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-            "--omit=salt/*",
-            "--include=tests/*,pkg/tests/*",
-            env=env,
-        )
-    except CommandFailed:
-        session_warn(session, "Failed to generate the tests XML code coverage report")
-
-    # Generate report for salt code coverage
-    try:
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-            "--omit=tests/*,pkg/tests/*",
-            "--include=salt/*",
-            env=env,
-        )
-    except CommandFailed:
-        session_warn(session, "Failed to generate the source XML code coverage report")
+    if session.posargs:
+        session.error("No arguments are acceptable to this nox session.")
+    session.posargs.append("salt")
+    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
+    session.posargs.append("tests")
+    _report_coverage(session, combine=True, cli_report=False, xml_report=True)
 
 
 @nox.session(python="3", name="create-xml-coverage-reports")
@@ -1500,6 +1378,20 @@ def create_xml_coverage_reports(session):
 )
 def create_xml_coverage_reports_onedir(session):
     _create_xml_coverage_reports(session)
+
+
+@nox.session(python="3", name="create-json-coverage-reports")
+def create_json_coverage_reports(session):
+    _report_coverage(session, combine=True, cli_report=False, json_report=True)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="create-json-coverage-reports-onedir",
+    venv_params=["--system-site-packages"],
+)
+def create_json_coverage_reports_onedir(session):
+    _report_coverage(session, combine=True, cli_report=False, json_report=True)
 
 
 class Tee:

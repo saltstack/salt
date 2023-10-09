@@ -285,6 +285,7 @@ def define_jobs(
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
+        "build-deps-ci": True,
     }
 
     if skip_tests:
@@ -392,6 +393,7 @@ def define_jobs(
     if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
+                "build-deps-ci",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
@@ -621,10 +623,10 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
     """
     _matrix = []
     _splits = {
-        "functional": 4,
-        "integration": 6,
+        "functional": 5,
+        "integration": 7,
         "scenarios": 2,
-        "unit": 3,
+        "unit": 4,
     }
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
@@ -768,8 +770,6 @@ def pkg_matrix(
                     "version": version,
                 }
             )
-            if distro_slug.startswith("windows"):
-                _matrix[-1]["pkg-type"] = pkg_type.upper()
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 

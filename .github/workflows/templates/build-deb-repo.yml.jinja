@@ -13,7 +13,8 @@
                                             ("ubuntu", "22.04", "x86_64"),
                                             ("ubuntu", "22.04", "aarch64"),
                                         ) %>
-          - distro: <{ distro }>
+          - pkg-type: deb
+            distro: <{ distro }>
             version: "<{ version }>"
             arch: <{ arch }>
         <%- endfor %>

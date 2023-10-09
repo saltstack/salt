@@ -1,5 +1,5 @@
 ---
-name: Test Dependencies
+name: Install Test Dependencies
 
 on:
   workflow_call:
@@ -48,11 +48,12 @@ env:
   COLUMNS: 190
   PIP_INDEX_URL: "https://pypi-proxy.saltstack.net/root/local/+simple/"
   PIP_EXTRA_INDEX_URL: "https://pypi.org/simple"
+  GITHUB_ACTIONS_PIPELINE: "1"
 
 jobs:
 
   dependencies:
-    name: Test Dependencies
+    name: Install
     runs-on: ${{ inputs.distro-slug }}
     timeout-minutes: 90
     steps:
