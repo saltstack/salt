@@ -23,6 +23,7 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
+from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 
 try:
@@ -275,6 +276,41 @@ def test_add_repo_key(repo_keys_var):
             )
 
 
+def test_add_repo_key_none_specified(repo_keys_var):
+    """
+    Test - Add a repo key when we do not specify any arguments
+    """
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+        with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+            with pytest.raises(TypeError) as err:
+                aptpkg.add_repo_key()
+        assert err.value.args[0] == "add_repo_key() takes at least 1 argument (0 given)"
+
+
+def test_add_repo_key_no_keyfile(repo_keys_var, caplog, tmp_path):
+    """
+    Test - Add a repo key when aptkey is false
+    and keyfile not specified when using a keyserver
+    """
+    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+        with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+            ret = aptpkg.add_repo_key(
+                keyserver="keyserver.ubuntu.com",
+                keyid="FBB75451",
+                keydir=tmp_path,
+                aptkey=False,
+            )
+            assert ret is False
+            assert (
+                "You must define the name of the key file to save the key"
+                in caplog.text
+            )
+
+
 def test_add_repo_key_failed(repo_keys_var):
     """
     Test - Add a repo key using incomplete input data.
@@ -287,6 +323,56 @@ def test_add_repo_key_failed(repo_keys_var):
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
             with pytest.raises(SaltInvocationError):
                 aptpkg.add_repo_key(**kwargs)
+
+
+def test_add_repo_key_keydir_not_exists(repo_keys_var, tmp_path, caplog):
+    """
+    Test - Add a repo key when aptkey is False
+    and the keydir does not exist
+    """
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+        with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+            ret = aptpkg.add_repo_key(
+                keyserver="keyserver.ubuntu.com",
+                keyid="FBB75451",
+                keyfile="test-key.gpg",
+                aptkey=False,
+                keydir=str(tmp_path / "doesnotexist"),
+            )
+            assert "does not exist. Please create this directory" in caplog.text
+            assert ret is False
+
+
+@pytest.mark.parametrize(
+    "kwargs, err_msg",
+    [
+        (
+            {"keyid": "FBB75451", "keyfile": "test-key.gpg"},
+            "No keyserver specified for keyid",
+        ),
+        (
+            {"keyserver": "keyserver.ubuntu.com", "keyfile": "test-key.gpg"},
+            "No keyid or keyid too short for keyserver",
+        ),
+    ],
+)
+def test_add_repo_key_keyserver_keyid_not_sepcified(
+    repo_keys_var, tmp_path, caplog, kwargs, err_msg
+):
+    """
+    Test - Add a repo key when and keyid is set without a keyserver
+    Also test when keyserver is set but without keyid
+    """
+    short_key = list(repo_keys_var.keys())[0][-8:]
+    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+        with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+            with pytest.raises(SaltInvocationError) as err:
+                aptpkg.add_repo_key(**kwargs)
+        assert err_msg in err.value.message
 
 
 def test_get_repo_keys(repo_keys_var):
@@ -1120,6 +1206,20 @@ def test_expand_repo_def_cdrom():
     )
 
 
+def test__expand_repo_def_not_repo():
+    """
+    Checks results from _expand_repo_def
+    when repo is not in kwargs
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        aptpkg._expand_repo_def(
+            os_name="debian",
+            os_codename="stretch",
+            architectures="amd64",
+        )
+    assert err.value.message == "missing 'repo' argument"
+
+
 def test_list_pkgs():
     """
     Test packages listing.
@@ -1409,3 +1509,551 @@ def test_sourceslist_architectures(repo_line):
                     assert source.architectures == ["amd64", "armel"]
                 else:
                     assert source.architectures == ["amd64"]
+
+
+@pytest.mark.parametrize(
+    "pkg,arch",
+    [
+        ("zsh", "amd64"),
+        ("php", "x8664"),
+    ],
+)
+def test_parse_arch(pkg, arch):
+    """
+    Test parse_arch when we pass in
+    valid package and arch names
+    """
+    ret = aptpkg.parse_arch(f"{pkg}:{arch}")
+    assert ret == {"name": pkg, "arch": arch}
+
+
+@pytest.mark.parametrize(
+    "pkg",
+    [
+        ("php"),
+    ],
+)
+def test_parse_arch_invalid(pkg):
+    """
+    Test parse_arch when we pass in
+    invalid package and arch names
+    """
+    ret = aptpkg.parse_arch(f"{pkg}")
+    assert ret == {"name": pkg, "arch": None}
+
+
+def test_latest_version_repo_kwarg():
+    """
+    Test latest_version when `repo` is passed in as a kwarg
+    """
+    with pytest.raises(SaltInvocationError) as exc:
+        aptpkg.latest_version("php", **{"repo": "https://repo.com"})
+    assert exc.value.message == "The 'repo' argument is invalid, use 'fromrepo' instead"
+
+
+def test_latest_version_names_empty():
+    """
+    Test latest_version when names is empty
+    """
+    ret = aptpkg.latest_version(*[])
+    assert ret == ""
+
+
+def test_hold():
+    """
+    test aptpkg.hold() when passing in the name of a package
+    """
+    set_sel = {"vim": {"old": "install", "new": "hold"}}
+    get_sel = {"hold": []}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.hold("vim")
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {"old": "install", "new": "hold"},
+            "result": True,
+            "comment": "Package vim is now being held.",
+        }
+    }
+
+
+def test_hold_no_name_pkgs():
+    """
+    test aptpkg.hold when we do not pass in a name or list of pkgs
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        aptpkg.hold()
+    assert err.value.message == "One of name, pkgs, or sources must be specified."
+
+
+def test_hold_pkgs_sources():
+    """
+    test aptpkg.hold when we we set sources and a list of pkgs.
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        aptpkg.hold(
+            pkgs=["vim", "apache2"], sources=["http://source1", "http://source2"]
+        )
+    assert err.value.message == "Only one of pkgs or sources can be specified."
+
+
+def test_hold_sources():
+    """
+    test aptpkg.hold when using sources
+    """
+    sources = [
+        OrderedDict(
+            [
+                (
+                    "vim",
+                    "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+                )
+            ]
+        )
+    ]
+    set_sel = {"vim": {"old": "install", "new": "hold"}}
+    get_sel = {"hold": []}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.hold(sources=sources)
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {"old": "install", "new": "hold"},
+            "result": True,
+            "comment": "Package vim is now being held.",
+        }
+    }
+
+
+def test_hold_true():
+    """
+    test aptpkg.hold() when passing in the name of a package
+    and test is True
+    """
+    set_sel = {"vim": {"old": "install", "new": "hold"}}
+    get_sel = {"hold": []}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        with patch.dict(aptpkg.__opts__, {"test": True}):
+            ret = aptpkg.hold("vim")
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {},
+            "result": None,
+            "comment": "Package vim is set to be held.",
+        }
+    }
+
+
+def test_hold_already_set():
+    """
+    test aptpkg.hold() when the pkg is already set
+    """
+    get_sel = {"hold": ["vim"]}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    with patch_get_sel:
+        ret = aptpkg.hold("vim")
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {},
+            "result": True,
+            "comment": "Package vim is already set to be held.",
+        }
+    }
+
+
+def test_hold_pkgs():
+    """
+    test aptpkg.hold() when passing in pkgs
+    """
+    get_sel = {"hold": []}
+    mock_set_sel = MagicMock()
+    mock_set_sel.side_effect = [
+        {"vim": {"old": "install", "new": "hold"}},
+        {"vim-nox": {"old": "install", "new": "hold"}},
+    ]
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", mock_set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.hold(pkgs=["vim", "vim-nox"])
+        assert ret == {
+            "vim": {
+                "name": "vim",
+                "changes": {"old": "install", "new": "hold"},
+                "result": True,
+                "comment": "Package vim is now being held.",
+            },
+            "vim-nox": {
+                "name": "vim-nox",
+                "changes": {"old": "install", "new": "hold"},
+                "result": True,
+                "comment": "Package vim-nox is now being held.",
+            },
+        }
+
+
+def test_unhold():
+    """
+    test aptpkg.unhold when passing pacakge as name
+    """
+    set_sel = {"vim": {"old": "hold", "new": "install"}}
+    get_sel = {"hold": ["vim"]}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.unhold("vim")
+        assert ret == {
+            "vim": {
+                "name": "vim",
+                "changes": {"old": "hold", "new": "install"},
+                "result": True,
+                "comment": "Package vim is no longer being held.",
+            }
+        }
+
+
+def test_unhold_no_name_pkgs():
+    """
+    test aptpkg.unhold when we do not pass in a name or list of pkgs
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        aptpkg.unhold()
+    assert err.value.message == "One of name, pkgs, or sources must be specified."
+
+
+def test_unhold_pkgs_sources():
+    """
+    test aptpkg.unhold when we we set sources and a list of pkgs.
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        aptpkg.unhold(
+            pkgs=["vim", "apache2"], sources=["http://source1", "http://source2"]
+        )
+    assert err.value.message == "Only one of pkgs or sources can be specified."
+
+
+def test_unhold_sources():
+    """
+    test aptpkg.unhold when using sources
+    """
+    sources = [
+        OrderedDict(
+            [
+                (
+                    "vim",
+                    "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+                )
+            ]
+        )
+    ]
+    set_sel = {"vim": {"old": "hold", "new": "install"}}
+    get_sel = {"hold": ["vim"]}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.unhold(sources=sources)
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {"old": "hold", "new": "install"},
+            "result": True,
+            "comment": "Package vim is no longer being held.",
+        }
+    }
+
+
+def test_unhold_true():
+    """
+    test aptpkg.unhold() when passing in the name of a package
+    and test is True
+    """
+    set_sel = {"vim": {"old": "install", "new": "hold"}}
+    get_sel = {"hold": ["vim"]}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", return_value=set_sel)
+    with patch_get_sel, patch_set_sel:
+        with patch.dict(aptpkg.__opts__, {"test": True}):
+            ret = aptpkg.unhold("vim")
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {},
+            "result": None,
+            "comment": "Package vim is set not to be held.",
+        }
+    }
+
+
+def test_unhold_already_set():
+    """
+    test aptpkg.unhold() when the pkg is already set
+    """
+    get_sel = {"install": ["vim"]}
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
+    with patch_get_sel:
+        ret = aptpkg.unhold("vim")
+    assert ret == {
+        "vim": {
+            "name": "vim",
+            "changes": {},
+            "result": True,
+            "comment": "Package vim is already set not to be held.",
+        }
+    }
+
+
+def test_unhold_pkgs():
+    """
+    test aptpkg.hold() when passing in pkgs
+    """
+    mock_get_sel = MagicMock()
+    mock_get_sel.side_effect = [{"hold": ["vim"]}, {"hold": ["vim-nox"]}]
+    mock_set_sel = MagicMock()
+    mock_set_sel.side_effect = [
+        {"vim": {"old": "hold", "new": "install"}},
+        {"vim-nox": {"old": "hold", "new": "install"}},
+    ]
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    patch_set_sel = patch("salt.modules.aptpkg.set_selections", mock_set_sel)
+    with patch_get_sel, patch_set_sel:
+        ret = aptpkg.unhold(pkgs=["vim", "vim-nox"])
+        assert ret == {
+            "vim": {
+                "name": "vim",
+                "changes": {"old": "hold", "new": "install"},
+                "result": True,
+                "comment": "Package vim is no longer being held.",
+            },
+            "vim-nox": {
+                "name": "vim-nox",
+                "changes": {"old": "hold", "new": "install"},
+                "result": True,
+                "comment": "Package vim-nox is no longer being held.",
+            },
+        }
+
+
+def test_get_key_from_id_keylength_not_valid(tmp_path, caplog):
+    """
+    test _get_key_from_id when the keyid lenght is not valid
+    """
+    ret = aptpkg._get_key_from_id(tmp_path, "FBB754512")
+    assert ret is False
+    assert "The keyid needs to be either 8 or 16 characters" in caplog.text
+
+
+def test_get_key_from_id_not_added(tmp_path, caplog):
+    """
+    test _get_key_from_id when the keyfile is not added
+    """
+    ret = aptpkg._get_key_from_id(tmp_path, "FBB75451")
+    assert ret is False
+    assert "Could not find the key file for keyid" in caplog.text
+
+
+def test_del_repo_key_keydir_doesnotexist(tmp_path, caplog):
+    """
+    test del_repo_key when keydir does not exist and aptkey is False
+    """
+    ret = aptpkg.del_repo_key(
+        keyid="0E08A149DE57BFBE", keydir=str(tmp_path / "keydir"), aptkey=False
+    )
+    assert ret is False
+    assert "does not exist. Please create this directory" in caplog.text
+
+
+def test_del_repo_key_keyid_doesnotexist(tmp_path, caplog):
+    """
+    test del_repo_key when keyid is not passed in
+    """
+    with patch("salt.utils.path.which", return_value=False):
+        with pytest.raises(SaltInvocationError) as err:
+            ret = aptpkg.del_repo_key(keydir=tmp_path, aptkey=False)
+
+    assert err.value.message == "keyid or keyid_ppa and PPA name must be passed"
+
+
+def test_del_repo_key_keyfile_doesnotexist(tmp_path, caplog):
+    """
+    test del_repo_key when keyfile does not exist
+    """
+    with patch("salt.utils.path.which", return_value=False):
+        ret = aptpkg.del_repo_key(
+            keyid="0E08A149DE57BFBE", keydir=tmp_path, aptkey=False
+        )
+        assert ret is False
+
+
+def test_set_selections():
+    """
+    test set_selections() with valid state
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        ret = aptpkg.set_selections(selection=f'{{"hold": [{pkg}]}}')
+    assert ret == {pkg: {"old": "install", "new": "hold"}}
+
+
+def test_set_selections_no_path_selection():
+    """
+    test set_selections() when path or selection are not passed
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        ret = aptpkg.set_selections()
+    assert ret == {}
+
+
+def test_set_selections_path_and_selection(tmp_path):
+    """
+    test set_selections() when path and selection are passed
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        with pytest.raises(SaltInvocationError) as err:
+            ret = aptpkg.set_selections(selection=f'{{"hold": [{pkg}]}}', path=tmp_path)
+    assert "The 'selection' and 'path' arguments" in err.value.message
+
+
+def test_set_selections_invalid_yaml():
+    """
+    test set_selections() with invalid yaml with selections
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        with pytest.raises(SaltInvocationError) as err:
+            aptpkg.set_selections(selection='{{"hold": [{pkg}]}')
+    assert "Improperly-formatted selection" in err.value.message
+
+
+def test_set_selections_path(tmp_path):
+    """
+    test set_selections() with path
+    """
+    pkg = "salt-minion"
+    select_file = tmp_path / "select"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    patch_salt = patch.dict(
+        aptpkg.__salt__, {"cp.cache_file": MagicMock(return_value=select_file)}
+    )
+
+    with salt.utils.files.fopen(select_file, "w") as fp:
+        fp.write("salt-minion hold\n adduser hold")
+    with patch_get_sel, patch_call_apt, patch_opts, patch_salt:
+        ret = aptpkg.set_selections(path=str(select_file))
+        assert ret == {
+            pkg: {"old": "install", "new": "hold"},
+            "adduser": {"old": "install", "new": "hold"},
+        }
+
+
+def test_set_selections_invalid_state():
+    """
+    test set_selections() with invalid state
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": False})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        with pytest.raises(SaltInvocationError) as err:
+            aptpkg.set_selections(selection=f'{{"doesnotexist": [{pkg}]}}')
+
+    assert err.value.message == "Invalid state(s): doesnotexist"
+
+
+def test_set_selections_test():
+    """
+    test set_selections() with valid state and test is True in opts
+    """
+    pkg = "salt-minion"
+    mock_get_sel = MagicMock(
+        return_value={
+            "install": ["adduser", pkg, "apparmor"],
+            "deinstall": ["python3-json-pointer"],
+        }
+    )
+    patch_get_sel = patch("salt.modules.aptpkg.get_selections", mock_get_sel)
+    mock_call_apt = MagicMock(
+        return_value={"pid": 8748, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_call_apt = patch("salt.modules.aptpkg._call_apt", mock_call_apt)
+    patch_opts = patch.dict(aptpkg.__opts__, {"test": True})
+    with patch_get_sel, patch_call_apt, patch_opts:
+        ret = aptpkg.set_selections(selection=f'{{"hold": [{pkg}]}}')
+    assert ret == {}
