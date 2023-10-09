@@ -80,6 +80,9 @@ def generate_workflows(ctx: Context):
                 "test-pkg-downloads": True,
             },
         },
+        "Test Package Downloads": {
+            "template": "test-package-downloads-action.yml",
+        },
     }
     test_salt_listing = {
         "linux": (
@@ -136,7 +139,7 @@ def generate_workflows(ctx: Context):
         ),
     }
     build_ci_deps_listing = {
-        "linux": (
+        "linux": [
             ("almalinux-8", "Alma Linux 8", "x86_64"),
             ("almalinux-8-arm64", "Alma Linux 8 Arm64", "aarch64"),
             ("almalinux-9", "Alma Linux 9", "x86_64"),
@@ -165,14 +168,38 @@ def generate_workflows(ctx: Context):
             ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
             ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64"),
-        ),
-        "macos": (("macos-12", "macOS 12", "x86_64"),),
-        "windows": (
+        ],
+        "macos": [
+            ("macos-12", "macOS 12", "x86_64"),
+        ],
+        "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
             ("windows-2019", "Windows 2019", "amd64"),
             ("windows-2022", "Windows 2022", "amd64"),
-        ),
+        ],
     }
+    test_salt_pkg_downloads_listing: dict[str, list[tuple[str, str, str]]] = {
+        "linux": [],
+        "macos": [],
+        "windows": [],
+    }
+    for slug, display_name, arch in build_ci_deps_listing["linux"]:
+        if slug in ("archlinux-lts", "opensuse-15"):
+            continue
+        for pkg_type in ("package", "onedir"):
+            test_salt_pkg_downloads_listing["linux"].append((slug, arch, pkg_type))
+    for slug, display_name, arch in build_ci_deps_listing["macos"]:
+        for pkg_type in ("package", "onedir"):
+            test_salt_pkg_downloads_listing["macos"].append((slug, arch, pkg_type))
+    for slug, display_name, arch in build_ci_deps_listing["windows"][-1:]:
+        for pkg_type in ("nsis", "msi", "onedir"):
+            test_salt_pkg_downloads_listing["windows"].append((slug, arch, pkg_type))
+
+    test_salt_pkg_downloads_needs_slugs = set()
+    for platform in test_salt_pkg_downloads_listing:
+        for slug, _, _ in test_salt_pkg_downloads_listing[platform]:
+            test_salt_pkg_downloads_needs_slugs.add(f"{slug.replace('.', '')}-ci-deps")
+
     env = Environment(
         block_start_string="<%",
         block_end_string="%>",
@@ -210,6 +237,10 @@ def generate_workflows(ctx: Context):
             "test_salt_listing": test_salt_listing,
             "test_salt_pkg_listing": test_salt_pkg_listing,
             "build_ci_deps_listing": build_ci_deps_listing,
+            "test_salt_pkg_downloads_listing": test_salt_pkg_downloads_listing,
+            "test_salt_pkg_downloads_needs_slugs": sorted(
+                test_salt_pkg_downloads_needs_slugs
+            ),
         }
         shared_context_file = (
             tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
