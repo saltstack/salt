@@ -223,22 +223,762 @@ jobs:
         run: |
           tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  pkg-download-tests:
-    name: Package Downloads
+  almalinux-8-package-download-tests:
+    name: Alma Linux 8 Package Download
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
       - publish-repositories
       - download-onedir-artifact
-    uses: ./.github/workflows/test-package-downloads-action.yml
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
+      distro-slug: almalinux-8
       nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       nox-version: 2022.8.7
       python-version: "3.10"
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-8-arm64-package-download-tests:
+    name: Alma Linux 8 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-9-package-download-tests:
+    name: Alma Linux 9 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-9-arm64-package-download-tests:
+    name: Alma Linux 9 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  amazonlinux-2-package-download-tests:
+    name: Amazon Linux 2 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: amazonlinux-2
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  amazonlinux-2-arm64-package-download-tests:
+    name: Amazon Linux 2 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centos-7-package-download-tests:
+    name: CentOS 7 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centos-7
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centos-7-arm64-package-download-tests:
+    name: CentOS 7 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centos-7-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-8-package-download-tests:
+    name: CentOS Stream 8 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-8-arm64-package-download-tests:
+    name: CentOS Stream 8 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-9-package-download-tests:
+    name: CentOS Stream 9 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-9-arm64-package-download-tests:
+    name: CentOS Stream 9 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-10-package-download-tests:
+    name: Debian 10 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-10
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-11-package-download-tests:
+    name: Debian 11 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-11
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-11-arm64-package-download-tests:
+    name: Debian 11 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-37-package-download-tests:
+    name: Fedora 37 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-37
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-37-arm64-package-download-tests:
+    name: Fedora 37 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-37-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-38-package-download-tests:
+    name: Fedora 38 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-38
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-38-arm64-package-download-tests:
+    name: Fedora 38 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-38-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-3-package-download-tests:
+    name: Photon OS 3 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-3
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-4-package-download-tests:
+    name: Photon OS 4 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-4-arm64-package-download-tests:
+    name: Photon OS 4 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2004-package-download-tests:
+    name: Ubuntu 20.04 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-20.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2004-arm64-package-download-tests:
+    name: Ubuntu 20.04 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-package-download-tests:
+    name: Ubuntu 22.04 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-arm64-package-download-tests:
+    name: Ubuntu 22.04 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-onedir-download-tests:
+    name: Ubuntu 22.04 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  ubuntu-2204-arm64-onedir-download-tests:
+    name: Ubuntu 22.04 Arm64 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  macos-12-package-download-tests:
+    name: macOS 12 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  macos-12-onedir-download-tests:
+    name: macOS 12 Package Download
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  windows-2022-nsis-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Windows 2022 Package Download
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      pkg-type: nsis
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
+
+  windows-2022-msi-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Windows 2022 Package Download
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      pkg-type: msi
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
+
+  windows-2022-onedir-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Windows 2022 Package Download
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      pkg-type: onedir
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      nox-version: 2022.8.7
+      python-version: "3.10"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
@@ -253,7 +993,39 @@ jobs:
       - prepare-workflow
       - backup
       - publish-repositories
-      - pkg-download-tests
+      - almalinux-8-package-download-tests
+      - almalinux-8-arm64-package-download-tests
+      - almalinux-9-package-download-tests
+      - almalinux-9-arm64-package-download-tests
+      - amazonlinux-2-package-download-tests
+      - amazonlinux-2-arm64-package-download-tests
+      - centos-7-package-download-tests
+      - centos-7-arm64-package-download-tests
+      - centosstream-8-package-download-tests
+      - centosstream-8-arm64-package-download-tests
+      - centosstream-9-package-download-tests
+      - centosstream-9-arm64-package-download-tests
+      - debian-10-package-download-tests
+      - debian-11-package-download-tests
+      - debian-11-arm64-package-download-tests
+      - fedora-37-package-download-tests
+      - fedora-37-arm64-package-download-tests
+      - fedora-38-package-download-tests
+      - fedora-38-arm64-package-download-tests
+      - photonos-3-package-download-tests
+      - photonos-4-package-download-tests
+      - photonos-4-arm64-package-download-tests
+      - ubuntu-2004-package-download-tests
+      - ubuntu-2004-arm64-package-download-tests
+      - ubuntu-2204-package-download-tests
+      - ubuntu-2204-arm64-package-download-tests
+      - ubuntu-2204-onedir-download-tests
+      - ubuntu-2204-arm64-onedir-download-tests
+      - macos-12-package-download-tests
+      - macos-12-onedir-download-tests
+      - windows-2022-nsis-amd64-download-tests
+      - windows-2022-msi-amd64-download-tests
+      - windows-2022-onedir-amd64-download-tests
     environment: release
     steps:
       - name: Clone The Salt Repository
@@ -413,7 +1185,6 @@ jobs:
       - check-requirements
       - prepare-workflow
       - publish-repositories
-      - pkg-download-tests
       - release
       - publish-pypi
     steps:
