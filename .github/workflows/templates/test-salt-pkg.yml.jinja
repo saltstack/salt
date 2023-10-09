@@ -3,7 +3,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package
+    name: <{ display_name }> Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -33,7 +33,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package
+    name: <{ display_name }> Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -63,7 +63,7 @@
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> <{ pkg_type }> Package
+    name: <{ display_name }> <{ pkg_type }> Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
