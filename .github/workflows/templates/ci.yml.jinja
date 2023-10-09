@@ -309,7 +309,7 @@
 
   <%- set pkg_tests_job_name = "pkg-tests" %>
   <%- set salt_tests_job_name = "salt-tests" %>
-  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) or includes.get("test-pkg-downloads", True) %>
+  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) %>
   <%- include "build-ci-deps.yml.jinja" %>
   <%- endif %>
 
