@@ -285,6 +285,7 @@ def define_jobs(
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
+        "build-deps-ci": True,
     }
 
     if skip_tests:
@@ -392,6 +393,7 @@ def define_jobs(
     if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
+                "build-deps-ci",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
