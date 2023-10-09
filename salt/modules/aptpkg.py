@@ -203,16 +203,27 @@ if not HAS_APT:
                 repo_line.append("#")
 
             repo_line.append(self.type)
-            opts = []
+            opts = _get_opts(self.line)
             if self.architectures:
-                opts.append("arch={}".format(",".join(self.architectures)))
+                archs = ",".join(self.architectures)
+                opts["arch"]["full"] = "arch={}".format(archs)
+                opts["arch"]["value"] = self.architectures
             if self.signedby:
-                opts.append("signed-by={}".format(self.signedby))
+                opts["signedby"]["full"] = "signed-by={}".format(self.signedby)
+                opts["signedby"]["value"] = self.signedby
 
-            if opts:
-                repo_line.append("[{}]".format(" ".join(opts)))
+            ordered_opts = [
+                opt_type for opt_type, opt in opts.items() if opt["full"] != ""
+            ]
 
-            repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
+            for opt in opts.values():
+                if opt["full"] != "":
+                    ordered_opts[opt["index"]] = opt["full"]
+
+            if ordered_opts:
+                repo_line.append("[{}]".format(" ".join(ordered_opts)))
+
+            repo_line += [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
                 repo_line.append("#{}".format(self.comment))
             return " ".join(repo_line) + "\n"
