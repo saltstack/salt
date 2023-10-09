@@ -223,7 +223,7 @@ jobs:
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
@@ -241,7 +241,7 @@ jobs:
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING  -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
 
@@ -677,7 +677,7 @@ jobs:
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
@@ -695,7 +695,7 @@ jobs:
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
 
