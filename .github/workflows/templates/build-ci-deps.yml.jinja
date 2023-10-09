@@ -5,7 +5,7 @@
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -34,7 +34,7 @@
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -63,7 +63,7 @@
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
     needs:
       - prepare-workflow
