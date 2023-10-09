@@ -189,6 +189,7 @@ def test_refresh_modules_async_false():
     assert ret is False
 
 
+@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
 def test_clear_job_cache(salt_call_cli):
     ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/minion_jobs/dummydir")
     assert ret.returncode == 0
@@ -197,6 +198,7 @@ def test_clear_job_cache(salt_call_cli):
     assert ret is True
 
 
+@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
 @pytest.mark.destructive_test
 def test_regen_keys(salt_call_cli):
     ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/pki_dir/dummydir")
