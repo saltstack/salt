@@ -15,7 +15,7 @@ import copy
 import errno
 import fnmatch
 import sys
-import unittest.mock as mock
+import unittest.mock as mock  # pylint: disable=blacklisted-import
 
 # pylint: disable=no-name-in-module,no-member
 from unittest.mock import (
