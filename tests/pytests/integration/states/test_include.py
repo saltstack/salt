@@ -148,3 +148,47 @@ include:
                     "includetest.only-include-two"
                     in ret.data[1]["__sls_included_from__"]
                 )
+
+
+@pytest.mark.slow_test
+def test_issue_65080_saltenv(salt_master, salt_minion, salt_call_cli):
+    """
+    Test scenario when a state includes another state that only includes a third state
+    """
+
+    only_include_sls = """
+include:
+  - includetest.another-include
+    """
+
+    another_include_sls = """
+/tmp/from-test-file.txt:
+  file.managed:
+    - contents: Hello from test-file.sls
+    """
+
+    init_sls = """
+include:
+  - prod: includetest.only-include
+
+/tmp/from-init.txt:
+  file.managed:
+    - contents: Hello from init.sls
+    - require:
+      - sls: includetest.only-include
+    """
+
+    base_tf = salt_master.state_tree.base.temp_file
+    prod_tf = salt_master.state_tree.prod.temp_file
+
+    with base_tf("includetest/init.sls", init_sls):
+        with prod_tf("includetest/only-include.sls", only_include_sls):
+            with prod_tf("includetest/another-include.sls", another_include_sls):
+                ret = salt_call_cli.run("state.apply", "includetest")
+                assert ret.returncode == 0
+
+                ret = salt_call_cli.run("state.show_low_sls", "includetest")
+                assert "__sls_included_from__" in ret.data[0]
+                assert (
+                    "includetest.only-include" in ret.data[0]["__sls_included_from__"]
+                )
