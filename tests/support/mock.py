@@ -27,6 +27,7 @@ from mock import (
     ANY,
     DEFAULT,
     FILTER_DIR,
+    AsyncMock,
     MagicMock,
     Mock,
     NonCallableMagicMock,

@@ -788,7 +788,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mock==3.0.5
+mock==5.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/pytest.txt
@@ -796,6 +796,7 @@ more-itertools==5.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -1212,7 +1213,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   mock
     #   more-itertools
     #   ncclient
     #   paramiko

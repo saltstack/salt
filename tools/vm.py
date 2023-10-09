@@ -983,8 +983,7 @@ class VM:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
-            log.info("Starting Developer configured VM")
-            # Get the develpers security group
+            log.info(f"Starting Developer configured VM In Environment '{environment}'")
             security_group_filters = [
                 {
                     "Name": "vpc-id",
@@ -993,10 +992,6 @@ class VM:
                 {
                     "Name": "tag:spb:project",
                     "Values": ["salt-project"],
-                },
-                {
-                    "Name": "tag:spb:developer",
-                    "Values": ["true"],
                 },
             ]
             response = client.describe_security_groups(Filters=security_group_filters)
@@ -1008,6 +1003,26 @@ class VM:
                 self.ctx.exit(1)
             # Override the launch template network interfaces config
             security_group_ids = [sg["GroupId"] for sg in response["SecurityGroups"]]
+            security_group_filters = [
+                {
+                    "Name": "vpc-id",
+                    "Values": [vpc.id],
+                },
+                {
+                    "Name": "tag:Name",
+                    "Values": [f"saltproject-{environment}-client-vpn-remote-access"],
+                },
+            ]
+            response = client.describe_security_groups(Filters=security_group_filters)
+            if not response.get("SecurityGroups"):
+                self.ctx.error(
+                    "Could not find the right VPN access security group. "
+                    f"Filters:\n{pprint.pformat(security_group_filters)}"
+                )
+                self.ctx.exit(1)
+            security_group_ids.extend(
+                [sg["GroupId"] for sg in response["SecurityGroups"]]
+            )
 
         progress = create_progress_bar()
         create_task = progress.add_task(
@@ -1433,15 +1448,13 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage-onedir", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir")
 
     def create_xml_coverage_reports(self):
         """
         Create XML coverage reports
         """
-        return self.run_nox(
-            "create-xml-coverage-reports-onedir", session_args=[self.name]
-        )
+        return self.run_nox("create-xml-coverage-reports-onedir")
 
     def compress_dependencies(self):
         """

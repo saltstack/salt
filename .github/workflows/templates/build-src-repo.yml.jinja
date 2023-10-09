@@ -1,4 +1,10 @@
 
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - src
+
     steps:
       - uses: actions/checkout@v4
 
