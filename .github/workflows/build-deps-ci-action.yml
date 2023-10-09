@@ -1,5 +1,5 @@
 ---
-name: Install Test Dependencies
+name: Test Dependencies
 
 on:
   workflow_call:
@@ -54,7 +54,7 @@ env:
 jobs:
 
   dependencies:
-    name: Install
+    name: Test Dependencies
     runs-on:
       - self-hosted
       - linux
