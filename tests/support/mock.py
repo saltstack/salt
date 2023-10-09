@@ -7,9 +7,6 @@
     Helper module that wraps `mock` and provides some fake objects in order to
     properly set the function/class decorators and yet skip the test case's
     execution.
-
-    Note: mock >= 2.0.0 required since unittest.mock does not have
-    MagicMock.assert_called in Python < 3.6.
 """
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
@@ -18,12 +15,10 @@ import copy
 import errno
 import fnmatch
 import sys
-
-# By these days, we should blowup if mock is not available
-import mock  # pylint: disable=blacklisted-external-import
+import unittest.mock as mock
 
 # pylint: disable=no-name-in-module,no-member
-from mock import (
+from unittest.mock import (
     ANY,
     DEFAULT,
     FILTER_DIR,
@@ -33,7 +28,6 @@ from mock import (
     NonCallableMagicMock,
     NonCallableMock,
     PropertyMock,
-    __version__,
     call,
     create_autospec,
     patch,
@@ -41,13 +35,6 @@ from mock import (
 )
 
 import salt.utils.stringutils
-
-# pylint: disable=no-name-in-module,no-member
-
-
-__mock_version = tuple(
-    int(part) for part in mock.__version__.split(".") if part.isdigit()
-)  # pylint: disable=no-member
 
 
 class MockFH:
