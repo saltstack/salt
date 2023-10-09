@@ -689,7 +689,7 @@ jobs:
     secrets: inherit
 
   windows-2016-ci-deps:
-    name: Windows 2016 Deps
+    name: Windows 2016
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -706,7 +706,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   windows-2019-ci-deps:
-    name: Windows 2019 Deps
+    name: Windows 2019
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -723,7 +723,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   windows-2022-ci-deps:
-    name: Windows 2022 Deps
+    name: Windows 2022
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -740,7 +740,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   macos-12-ci-deps:
-    name: macOS 12 Deps
+    name: macOS 12
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -757,7 +757,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-8-ci-deps:
-    name: Alma Linux 8 Deps
+    name: Alma Linux 8
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -774,7 +774,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-8-arm64-ci-deps:
-    name: Alma Linux 8 Arm64 Deps
+    name: Alma Linux 8 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -791,7 +791,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-9-ci-deps:
-    name: Alma Linux 9 Deps
+    name: Alma Linux 9
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -808,7 +808,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-9-arm64-ci-deps:
-    name: Alma Linux 9 Arm64 Deps
+    name: Alma Linux 9 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -825,7 +825,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-ci-deps:
-    name: Amazon Linux 2 Deps
+    name: Amazon Linux 2
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -842,7 +842,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-arm64-ci-deps:
-    name: Amazon Linux 2 Arm64 Deps
+    name: Amazon Linux 2 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -859,7 +859,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   archlinux-lts-ci-deps:
-    name: Arch Linux LTS Deps
+    name: Arch Linux LTS
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -876,7 +876,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centos-7-ci-deps:
-    name: CentOS 7 Deps
+    name: CentOS 7
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -893,7 +893,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centos-7-arm64-ci-deps:
-    name: CentOS 7 Arm64 Deps
+    name: CentOS 7 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -910,7 +910,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-8-ci-deps:
-    name: CentOS Stream 8 Deps
+    name: CentOS Stream 8
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -927,7 +927,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-8-arm64-ci-deps:
-    name: CentOS Stream 8 Arm64 Deps
+    name: CentOS Stream 8 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -944,7 +944,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-9-ci-deps:
-    name: CentOS Stream 9 Deps
+    name: CentOS Stream 9
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -961,7 +961,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-9-arm64-ci-deps:
-    name: CentOS Stream 9 Arm64 Deps
+    name: CentOS Stream 9 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -978,7 +978,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-10-ci-deps:
-    name: Debian 10 Deps
+    name: Debian 10
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -995,7 +995,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-11-ci-deps:
-    name: Debian 11 Deps
+    name: Debian 11
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1012,7 +1012,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-11-arm64-ci-deps:
-    name: Debian 11 Arm64 Deps
+    name: Debian 11 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1029,7 +1029,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-37-ci-deps:
-    name: Fedora 37 Deps
+    name: Fedora 37
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1046,7 +1046,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-37-arm64-ci-deps:
-    name: Fedora 37 Arm64 Deps
+    name: Fedora 37 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1063,7 +1063,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-38-ci-deps:
-    name: Fedora 38 Deps
+    name: Fedora 38
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1080,7 +1080,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-38-arm64-ci-deps:
-    name: Fedora 38 Arm64 Deps
+    name: Fedora 38 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1097,7 +1097,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   opensuse-15-ci-deps:
-    name: Opensuse 15 Deps
+    name: Opensuse 15
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1114,7 +1114,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-3-ci-deps:
-    name: Photon OS 3 Deps
+    name: Photon OS 3
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1131,7 +1131,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-4-ci-deps:
-    name: Photon OS 4 Deps
+    name: Photon OS 4
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1148,7 +1148,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-4-arm64-ci-deps:
-    name: Photon OS 4 Arm64 Deps
+    name: Photon OS 4 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1165,7 +1165,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2004-ci-deps:
-    name: Ubuntu 20.04 Deps
+    name: Ubuntu 20.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1182,7 +1182,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2004-arm64-ci-deps:
-    name: Ubuntu 20.04 Arm64 Deps
+    name: Ubuntu 20.04 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1199,7 +1199,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2204-ci-deps:
-    name: Ubuntu 22.04 Deps
+    name: Ubuntu 22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1216,7 +1216,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2204-arm64-ci-deps:
-    name: Ubuntu 22.04 Arm64 Deps
+    name: Ubuntu 22.04 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
