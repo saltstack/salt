@@ -91,7 +91,6 @@ def _rclone(ctx: Context, src: str, dst: str):
         "--transfers=50",
         "--fast-list",
         "--verbose",
-        "--exclude=salt-dev/*",
     ]
     if src == tools.utils.RELEASE_BUCKET_NAME:
         cmdline.append("--s3-storage-class=INTELLIGENT_TIERING")
