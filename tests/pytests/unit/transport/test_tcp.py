@@ -11,6 +11,7 @@ import salt.exceptions
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.transport.tcp
+import salt.utils.platform
 from tests.support.mock import MagicMock, PropertyMock, patch
 
 tpytestmark = [
@@ -84,7 +85,11 @@ def client_socket():
 
 def test_get_socket():
     socket = salt.transport.tcp._get_socket({"ipv6": True})
-    assert int(socket.family) == 23
+
+    if salt.utils.platform.is_windows():
+        assert int(socket.family) == 23
+    else:
+        assert int(socket.family) == 10
 
     socket = salt.transport.tcp._get_socket({"ipv6": False})
     assert int(socket.family) == 2
