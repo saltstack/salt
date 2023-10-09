@@ -3,7 +3,7 @@
 
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }>
+    name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
@@ -32,7 +32,7 @@
 
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }>
+    name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     <%- endif %>
@@ -61,7 +61,7 @@
 
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }>
+    name: <{ display_name }> Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
