@@ -4,16 +4,10 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    <%- endif %>
     needs:
       - prepare-workflow
-    <%- if workflow_slug != 'release' %>
       - build-salt-onedir-windows
-    <%- else %>
-      - download-onedir-artifact
-    <%- endif %>
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: <{ slug }>
@@ -33,16 +27,10 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    <%- endif %>
     needs:
       - prepare-workflow
-    <%- if workflow_slug != 'release' %>
       - build-salt-onedir-macos
-    <%- else %>
-      - download-onedir-artifact
-    <%- endif %>
     uses: ./.github/workflows/build-deps-ci-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -62,16 +50,10 @@
   <{ slug.replace(".", "") }>-ci-deps:
     <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
     name: <{ display_name }>
-    <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['deps'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    <%- endif %>
     needs:
       - prepare-workflow
-    <%- if workflow_slug != 'release' %>
       - build-salt-onedir-linux
-    <%- else %>
-      - download-onedir-artifact
-    <%- endif %>
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: <{ slug }>
