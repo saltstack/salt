@@ -140,7 +140,7 @@ permissions:
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
-          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>
@@ -195,8 +195,6 @@ permissions:
           path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
           retention-days: 7
           if-no-files-found: error
-
-  <%- include "build-ci-deps.yml.jinja" %>
 
   backup:
     name: Backup

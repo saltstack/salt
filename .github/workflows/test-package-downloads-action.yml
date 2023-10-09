@@ -53,6 +53,32 @@ env:
 
 jobs:
 
+  generate-matrix:
+    name: Test Matrix
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci pkg-download-matrix
+
   linux:
     name: Linux
     runs-on:
@@ -61,166 +87,12 @@ jobs:
       - bastion
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    needs:
+      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: almalinux-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-8
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: almalinux-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-8-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: almalinux-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-9
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: almalinux-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-9-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: amazonlinux-2
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: amazonlinux-2
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: amazonlinux-2-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: amazonlinux-2-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: centos-7
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centos-7
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: centos-7-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centos-7-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: centosstream-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centosstream-8
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: centosstream-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centosstream-8-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: centosstream-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centosstream-9
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: centosstream-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centosstream-9-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: debian-10
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-10
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: debian-11
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-11
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: debian-11-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: debian-11-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: fedora-37
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: fedora-37
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: fedora-37-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: fedora-37-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: fedora-38
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: fedora-38
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: fedora-38-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: fedora-38-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: photonos-3
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-3
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: photonos-4
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-4
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: photonos-4-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-4-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: ubuntu-20.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: ubuntu-20.04-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04-arm64
-            arch: aarch64
-            pkg-type: onedir
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: ubuntu-22.04-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04-arm64
-            arch: aarch64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
 
     steps:
 
@@ -444,16 +316,12 @@ jobs:
     runs-on: ${{ matrix.distro-slug }}
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    needs:
+      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: macos-12
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: macos-12
-            arch: x86_64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
 
     steps:
 
@@ -668,19 +536,12 @@ jobs:
       - bastion
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    needs:
+      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: nsis
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: msi
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
 
     steps:
       - name: Checkout Source Code
