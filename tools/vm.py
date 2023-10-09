@@ -1448,15 +1448,13 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage-onedir", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir")
 
     def create_xml_coverage_reports(self):
         """
         Create XML coverage reports
         """
-        return self.run_nox(
-            "create-xml-coverage-reports-onedir", session_args=[self.name]
-        )
+        return self.run_nox("create-xml-coverage-reports-onedir")
 
     def compress_dependencies(self):
         """

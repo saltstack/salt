@@ -71,7 +71,7 @@ env:
 jobs:
 
   generate-matrix:
-    name: Test ${{ inputs.pkg-type }} Pkg Matrix
+    name: Generate Matrix
     runs-on:
       - self-hosted
       - linux
@@ -98,7 +98,7 @@ jobs:
 
 
   test:
-    name: Test Pkg
+    name: Test
     runs-on:
       - self-hosted
       - linux
@@ -112,6 +112,12 @@ jobs:
         include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
 
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
@@ -218,7 +224,7 @@ jobs:
             !artifacts/salt-*.tar.*
 
   report:
-    name: Test Pkg Reports
+    name: Report
     runs-on:
       - self-hosted
       - linux
