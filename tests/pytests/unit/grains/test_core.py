@@ -4132,3 +4132,78 @@ def test__clean_value(caplog):
     for value in values:
         ret = core._clean_value(value[0], value[1])
         assert ret == value[2]
+
+
+def test__linux_init_system(caplog):
+    """
+    test _linux_init_system
+    """
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", MagicMock()) as mock_fopen:
+            mock_fopen.side_effect = OSError()
+            ret = core._linux_init_system()
+            assert ret == "unknown"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", mock_open(read_data="init-not-found")):
+            mock_fopen.side_effect = OSError()
+            ret = core._linux_init_system()
+            assert ret == "unknown"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch(
+            "salt.utils.files.fopen", mock_open(read_data="/usr/sbin/supervisord")
+        ):
+            with patch("salt.utils.path.which", return_value="/usr/sbin/supervisord"):
+                ret = core._linux_init_system()
+                assert ret == "supervisord"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch(
+            "salt.utils.files.fopen", mock_open(read_data="/usr/sbin/dumb-init")
+        ):
+            with patch(
+                "salt.utils.path.which",
+                side_effect=["/usr/sbin/dumb-init", "", "/usr/sbin/dumb-init"],
+            ):
+                ret = core._linux_init_system()
+                assert ret == "dumb-init"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", mock_open(read_data="/usr/sbin/tini")):
+            with patch(
+                "salt.utils.path.which",
+                side_effect=["/usr/sbin/tini", "", "", "/usr/sbin/tini"],
+            ):
+                ret = core._linux_init_system()
+                assert ret == "tini"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", mock_open(read_data="runit")):
+            with patch("salt.utils.path.which", side_effect=["", "", "", ""]):
+                ret = core._linux_init_system()
+                assert ret == "runit"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", mock_open(read_data="/sbin/my_init")):
+            with patch("salt.utils.path.which", side_effect=["", "", "", ""]):
+                ret = core._linux_init_system()
+                assert ret == "runit"
+
+    with patch("os.stat", MagicMock()) as mock_os_stat:
+        mock_os_stat.side_effect = OSError()
+        with patch("salt.utils.files.fopen", mock_open(read_data="systemd")):
+            with patch("salt.utils.path.which", side_effect=[IndexError(), "", "", ""]):
+                with caplog.at_level(logging.WARNING):
+                    ret = core._linux_init_system()
+                    assert ret == "unknown"
+                    assert (
+                        "Unable to fetch data from /proc/1/cmdline" in caplog.messages
+                    )
