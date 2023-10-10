@@ -1,5 +1,5 @@
-import os
 import copy
+import os
 
 import jinja2
 import pytest
@@ -258,7 +258,7 @@ def test_pack_alternatives():
         salt.utils.thin._pack_alternative(ext_conf, digest, tar)
         calls = tar.mock_calls
         for _file in exp_files:
-            assert [x for x in calls if "{}".format(_file) in x[-2]]
+            assert [x for x in calls if f"{_file}" in x[-2]]
             assert [
                 x
                 for x in calls
