@@ -4263,3 +4263,76 @@ default via fe80::20d:b9ff:fe37:e65c dev enp7s0u2u4 proto ra metric 100 pref med
                 "ip6_gw": "fe80::20d:b9ff:fe37:e65c",
                 "ip_gw": True,
             }
+
+
+def test__osx_platform_data():
+    """
+    test _osx_platform_data
+    """
+    osx_platform_data = """Hardware:
+
+    Hardware Overview:
+
+      Model Name: MacBook Pro
+      Model Identifier: MacBookPro7,1
+      Processor Name: Intel Core 2 Duo
+      Processor Speed: 2.4 GHz
+      Number of Processors: 1
+      Total Number of Cores: 2
+      L2 Cache: 3 MB
+      Memory: 16 GB
+      System Firmware Version: 68.0.0.0.0
+      OS Loader Version: 540.120.3~22
+      SMC Version (system): 1.62f7
+      Serial Number (system): W80322MWATM
+      Hardware UUID: 3FA5BDA2-A740-5DF3-8A97-D9D4DB1CE24A
+      Provisioning UDID: 3FA5BDA2-A740-5DF3-8A97-D9D4DB1CE24A
+      Sudden Motion Sensor:
+          State: Enabled"""
+
+    with patch.dict(
+        core.__salt__,
+        {"cmd.run": MagicMock(return_value=osx_platform_data)},
+    ):
+
+        ret = core._osx_platform_data()
+        assert ret == {
+            "model_name": "MacBook Pro",
+            "smc_version": "1.62f7",
+            "system_serialnumber": "W80322MWATM",
+        }
+
+    osx_platform_data = """Hardware:
+
+    Hardware Overview:
+
+      Model Name: MacBook Pro
+      Model Identifier: MacBookPro7,1
+      Processor Name: Intel Core 2 Duo
+      Processor Speed: 2.4 GHz
+      Number of Processors: 1
+      Total Number of Cores: 2
+      L2 Cache: 3 MB
+      Memory: 16 GB
+      System Firmware Version: 68.0.0.0.0
+      Boot ROM Version: 139.0.0.0.0
+      OS Loader Version: 540.120.3~22
+      SMC Version (system): 1.62f7
+      Serial Number (system): W80322MWATM
+      Hardware UUID: 3FA5BDA2-A740-5DF3-8A97-D9D4DB1CE24A
+      Provisioning UDID: 3FA5BDA2-A740-5DF3-8A97-D9D4DB1CE24A
+      Sudden Motion Sensor:
+          State: Enabled"""
+
+    with patch.dict(
+        core.__salt__,
+        {"cmd.run": MagicMock(return_value=osx_platform_data)},
+    ):
+
+        ret = core._osx_platform_data()
+        assert ret == {
+            "model_name": "MacBook Pro",
+            "smc_version": "1.62f7",
+            "system_serialnumber": "W80322MWATM",
+            "boot_rom_version": "139.0.0.0.0",
+        }
