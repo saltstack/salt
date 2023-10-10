@@ -1,7 +1,6 @@
 import pytest
 
 import salt.states.saltmod as saltmod
-import salt.utils.state
 from tests.support.mock import MagicMock, patch
 
 
@@ -11,9 +10,23 @@ def configure_loader_modules(minion_opts):
         saltmod: {
             "__env__": "base",
             "__opts__": minion_opts,
-            "__utils__": {"state.check_result": salt.utils.state.check_result},
         },
     }
+
+
+def test_test_mode():
+    name = "bah"
+
+    expected = {
+        "name": name,
+        "changes": {},
+        "result": None,
+        "comment": f"Runner function '{name}' would be executed.",
+    }
+
+    with patch.dict(saltmod.__opts__, {"test": True}):
+        ret = saltmod.runner(name)
+        assert ret == expected
 
 
 def test_runner():
