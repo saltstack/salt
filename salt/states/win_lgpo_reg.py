@@ -53,7 +53,6 @@ configure that policy.
     you will have to find the values needed to set them with this module using a
     different method.
 """
-
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_functions
@@ -311,7 +310,7 @@ def value_disabled(name, key, policy_class="Machine", all_users=False):
         key=key, name=name, policy_class=policy_class, all_users=all_users
     )
 
-    pol_correct = old["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = old["pol"].get("data", "") == f"**del.{name}"
     reg_correct = old["reg"] == {}
 
     if pol_correct and reg_correct:
@@ -337,7 +336,7 @@ def value_disabled(name, key, policy_class="Machine", all_users=False):
         key=key, name=name, policy_class=policy_class, all_users=all_users
     )
 
-    pol_correct = new["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = new["pol"].get("data", "") == f"**del.{name}"
     reg_correct = new["reg"] == {}
 
     if pol_correct and reg_correct:

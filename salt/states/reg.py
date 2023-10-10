@@ -68,6 +68,7 @@ Value:
 - Each value name has a corresponding value
 
 """
+
 import logging
 
 import salt.modules.reg
@@ -482,7 +483,7 @@ def present(
         return ret
 
     add_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)"
         ),
@@ -519,9 +520,9 @@ def present(
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     if not ret["result"]:
-        ret["comment"] = r"Failed to add {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Failed to add {vname} to {hive}\{key}"
     else:
-        ret["comment"] = r"Added {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Added {vname} to {hive}\{key}"
 
     if ret["result"]:
         ret = __utils__["dacl.check_perms"](
@@ -608,11 +609,11 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
         all_users=all_users,
     )
     if not old["success"] or old["vdata"] == "(value not set)":
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
     remove_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(vname if vname else "(Default)"),
     }
 
@@ -641,9 +642,9 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     if not ret["result"]:
-        ret["comment"] = r"Failed to remove {} from {}".format(key, hive)
+        ret["comment"] = rf"Failed to remove {key} from {hive}"
     else:
-        ret["comment"] = r"Removed {} from {}".format(key, hive)
+        ret["comment"] = rf"Removed {key} from {hive}"
 
     return ret
 
@@ -697,10 +698,10 @@ def key_absent(name, use_32bit_registry=False):
     if not salt.utils.win_reg.read_value(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )["success"]:
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
-    ret["changes"] = {"reg": {"Removed": {"Key": r"{}\{}".format(hive, key)}}}
+    ret["changes"] = {"reg": {"Removed": {"Key": rf"{hive}\{key}"}}}
 
     # Check for test option
     if __opts__["test"]:
@@ -716,6 +717,6 @@ def key_absent(name, use_32bit_registry=False):
     )["success"]:
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Failed to remove registry key {}".format(name)
+        ret["comment"] = f"Failed to remove registry key {name}"
 
     return ret

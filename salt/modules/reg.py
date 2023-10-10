@@ -69,7 +69,6 @@ Value:
     the Local System account (default) will be applied to the Default User
     Profile.
 """
-
 import logging
 
 import salt.utils.platform
@@ -665,13 +664,13 @@ def import_file(source, use_32bit_registry=False):
     """
     cache_path = __salt__["cp.cache_file"](source)
     if not cache_path:
-        error_msg = "File/URL '{}' probably invalid.".format(source)
+        error_msg = f"File/URL '{source}' probably invalid."
         raise ValueError(error_msg)
     if use_32bit_registry:
         word_sz_txt = "32"
     else:
         word_sz_txt = "64"
-    cmd = 'reg import "{}" /reg:{}'.format(cache_path, word_sz_txt)
+    cmd = f'reg import "{cache_path}" /reg:{word_sz_txt}'
     cmd_ret_dict = __salt__["cmd.run_all"](cmd, python_shell=True)
     retcode = cmd_ret_dict["retcode"]
     if retcode != 0:
