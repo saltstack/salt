@@ -69,6 +69,16 @@ def test_mode(tmp_path):
     assert win_file.get_mode(tmp_path) is None
 
 
+def test_chpgrp(tmp_path):
+    tmp_path = str(tmp_path)
+    assert win_file.chpgrp(tmp_path, "Administrators") is True
+
+
+def test_chgrp(tmp_path):
+    tmp_path = str(tmp_path)
+    assert win_file.chgrp(tmp_path, "Administrators") is None
+
+
 def test_version():
     assert len(win_file.version("C:\\Windows\\System32\\wow64.dll").split(".")) == 4
 
