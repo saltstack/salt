@@ -37,11 +37,26 @@ class MockedEvent:
 def configure_loader_modules(minion_opts):
     return {
         saltmod: {
-            "__env__": "base",
             "__opts__": minion_opts,
-            "__utils__": {"state.check_result": salt.utils.state.check_result},
         },
     }
+
+
+def test_test_mode():
+    name = "presence"
+    event_id = "lost"
+    tgt = ["minion_1", "minion_2", "minion_3"]
+
+    expected = {
+        "name": name,
+        "changes": {},
+        "result": None,
+        "comment": f"Orchestration would wait for event '{name}'",
+    }
+
+    with patch.dict(saltmod.__opts__, {"test": True}):
+        ret = saltmod.wait_for_event(name, tgt, event_id=event_id, timeout=-1.0)
+        assert ret == expected
 
 
 def test_wait_for_event():
@@ -76,7 +91,7 @@ def test_wait_for_event():
                 assert saltmod.wait_for_event(name, tgt, timeout=-1.0) == ret
 
 
-def test_wait_for_event_list_single_event():
+def test_list_single_event():
     """
     Test to watch Salt's event bus and block until a condition is met
     """
