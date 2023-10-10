@@ -130,6 +130,44 @@ def test_local_sls_call_multiple_file_roots(salt_master, salt_call_cli):
         assert state_run_dict["changes"]["ret"] == "world"
 
 
+def test_local_sls_call_multiple_pillar_roots(salt_master, salt_call_cli):
+    top_file = """
+    base:
+      '*':
+        - basic1
+        - basic2
+    """
+    basic_pillar_file1 = """
+    some_dict:
+      some_key1: True
+    """
+    basic_pillar_file2 = """
+    some_dict:
+      some_key2: False
+    """
+    with salt_master.pillar_tree.base.temp_file(
+        "top.sls", top_file
+    ), salt_master.pillar_tree.base.temp_file(
+        "basic1.sls", basic_pillar_file1
+    ), salt_master.pillar_tree.prod.temp_file(
+        "basic2.sls", basic_pillar_file2
+    ):
+        ret = salt_call_cli.run(
+            "--local",
+            "--pillar-root",
+            str(salt_master.pillar_tree.base.paths[0]),
+            "--pillar-root",
+            str(salt_master.pillar_tree.prod.paths[0]),
+            "pillar.get",
+            "some_dict",
+        )
+        assert ret.returncode == 0
+        assert "some_key1" in ret.data
+        assert "some_key2" in ret.data
+        assert ret.data["some_key1"] is True
+        assert ret.data["some_key2"] is False
+
+
 def test_local_salt_call(salt_call_cli):
     """
     This tests to make sure that salt-call does not execute the
