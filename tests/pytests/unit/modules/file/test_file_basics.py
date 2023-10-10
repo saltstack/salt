@@ -272,3 +272,25 @@ def test_source_list_for_list_returns_local_file_proto_from_dict(myfile):
     ):
         ret = filemod.source_list([{"file://" + myfile: ""}], "filehash", "base")
         assert list(ret) == ["file://" + myfile, "filehash"]
+
+
+def test_symlink_lexists_called_follow_symlinks_false():
+    tfile = "/tmp/file-basics-test-file"
+    a_link = "/tmp/a_link"
+
+    exists = MagicMock(return_value=False)
+    lexists = MagicMock(return_value=False)
+
+    with patch("os.path.exists", exists), patch("os.path.lexists", lexists), patch(
+        "os.symlink", MagicMock(return_value=True)
+    ):
+        filemod.symlink(tfile, a_link)
+        lexists.assert_not_called()
+        exists.assert_called()
+
+        lexists.reset_mock()
+        exists.reset_mock()
+
+        filemod.symlink(tfile, a_link, follow_symlinks=False)
+        lexists.assert_called()
+        exists.assert_not_called()
