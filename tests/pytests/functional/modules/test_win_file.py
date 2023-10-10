@@ -48,14 +48,6 @@ def test_is_link_false(tmp_path):
     assert win_file.is_link(tmp_path) is False
     assert win_file.is_link(os.path.join(tmp_path, "made_up_path")) is False
 
-
-def test_mkdir(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    assert win_file.mkdir(path) is True
-    assert os.path.isdir(path)
-
-
 def test_user(tmp_path, user):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir")
@@ -70,6 +62,11 @@ def test_fake_user(tmp_path, user):
     user = user + "_fake"
     with pytest.raises(CommandExecutionError):
         win_file.mkdir(path, owner=user)
+
+
+def test_mode(tmp_path):
+    tmp_path = str(tmp_path)
+    assert win_file.get_mode(tmp_path) is None
 
 
 def test_version():
@@ -172,3 +169,26 @@ def test_remove_force(tmp_path):
         pass
     assert os.path.isfile(file) is True
     assert win_file.remove(file, force=True) is True
+
+
+def test_mkdir(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir")
+    assert win_file.mkdir(path) is True
+    assert os.path.isdir(path)
+
+
+def test_makedirs_(tmp_path):
+    tmp_path = str(tmp_path)
+    parent = os.path.join(tmp_path, "dir1\\dir2")
+    path = os.path.join(parent, "dir3")
+    assert win_file.makedirs_(path) is True
+    assert os.path.isdir(parent) is True
+    assert os.path.isdir(path) is False
+
+
+def test_makedirs_perms(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir1\\dir2")
+    assert win_file.makedirs_perms(path) is True
+    assert os.path.isdir(path)
