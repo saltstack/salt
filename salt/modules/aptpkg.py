@@ -206,15 +206,14 @@ if not HAS_APT:
             opts = _get_opts(self.line)
             if self.architectures:
                 archs = ",".join(self.architectures)
-                opts["arch"]["full"] = "arch={}".format(archs)
+                opts["arch"]["full"] = f"arch={archs}"
                 opts["arch"]["value"] = self.architectures
             if self.signedby:
-                opts["signedby"]["full"] = "signed-by={}".format(self.signedby)
+                opts["signedby"]["full"] = f"signed-by={self.signedby}"
                 opts["signedby"]["value"] = self.signedby
 
             ordered_opts = [
-                opt_type for opt_type, opt in opts.items()
-                if opt["full"] != ""
+                opt_type for opt_type, opt in opts.items() if opt["full"] != ""
             ]
 
             for _, opt in opts.items():
