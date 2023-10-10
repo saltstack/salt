@@ -32,8 +32,8 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             self.config["pillar_roots"] = {"base": _expand_glob_path(pillar_roots)}
 
         if self.options.states_dir:
-            state_dirs = []
-            for state_dir in self.options.states_dir:
+            states_dirs = []
+            for states_dir in self.options.states_dir:
                 # check if the argument is pointing to a file on disk
                 states_dirs.append(os.path.abspath(states_dir))
             self.config["states_dirs"] = states_dirs
