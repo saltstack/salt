@@ -1378,7 +1378,12 @@ def test_ip_to_host():
     assert ret is None
 
     ret = network.ip_to_host("::1")
-    assert ret == "localhost"
+    ##    if amzn2
+    ##    assert ret == "localhost6"
+    ##    else if debian family:
+    ##    assert ret == "ip6-localhost"
+    log.warning(f"DGM test_ip_to_host ret '{ret}'")
+    assert ret == "dog"
 
 
 def test_natural_ipv4_netmask():
