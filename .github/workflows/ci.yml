@@ -797,6 +797,40 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  amazonlinux-2023-ci-deps:
+    name: Amazon Linux 2023 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-arm64-ci-deps:
+    name: Amazon Linux 2023 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   archlinux-lts-ci-deps:
     name: Arch Linux LTS Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1269,6 +1303,72 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  amazonlinux-2-arm64-pkg-tests:
+    name: Amazon Linux 2 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  amazonlinux-2023-pkg-tests:
+    name: Amazon Linux 2023 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2023-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  amazonlinux-2023-arm64-pkg-tests:
+    name: Amazon Linux 2023 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2023-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       nox-version: 2022.8.7
@@ -1982,6 +2082,66 @@ jobs:
       workflow-slug: ci
       default-timeout: 180
 
+  amazonlinux-2-arm64:
+    name: Amazon Linux 2 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  amazonlinux-2023:
+    name: Amazon Linux 2023 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2023-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  amazonlinux-2023-arm64:
+    name: Amazon Linux 2023 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2023-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
   archlinux-lts:
     name: Arch Linux LTS Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2482,6 +2642,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps
@@ -2516,6 +2678,9 @@ jobs:
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
+      - amazonlinux-2-arm64
+      - amazonlinux-2023
+      - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
       - centosstream-8
@@ -2673,6 +2838,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps
@@ -2707,6 +2874,9 @@ jobs:
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
+      - amazonlinux-2-arm64
+      - amazonlinux-2023
+      - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
       - centosstream-8
@@ -2730,6 +2900,9 @@ jobs:
       - ubuntu-2204
       - ubuntu-2204-arm64
       - amazonlinux-2-pkg-tests
+      - amazonlinux-2-arm64-pkg-tests
+      - amazonlinux-2023-pkg-tests
+      - amazonlinux-2023-arm64-pkg-tests
       - centos-7-pkg-tests
       - centosstream-8-pkg-tests
       - centosstream-9-pkg-tests

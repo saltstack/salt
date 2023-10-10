@@ -724,6 +724,8 @@ def pkg_matrix(
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "debian-11-arm64",
             # TODO: remove debian 12 once debian 12 pkgs are released
             "debian-12-arm64",
@@ -765,6 +767,8 @@ def pkg_matrix(
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "centosstream-9",
             "debian-11-arm64",
             "debian-12-arm64",
