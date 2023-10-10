@@ -239,12 +239,12 @@ def test_pack_alternatives():
     """
     jinja_fp = os.path.dirname(jinja2.__file__)
     ext_conf = {
-            "test": {
-                "py-version": [2, 7],
-                "path": RUNTIME_VARS.SALT_CODE_DIR,
-                "dependencies": [jinja_fp],
-            }
+        "test": {
+            "py-version": [2, 7],
+            "path": RUNTIME_VARS.SALT_CODE_DIR,
+            "dependencies": [jinja_fp],
         }
+    }
     tops = copy.deepcopy(ext_conf)
     digest = salt.utils.hashutils.DigestCollector()
     tar = _tarfile(None).open()
