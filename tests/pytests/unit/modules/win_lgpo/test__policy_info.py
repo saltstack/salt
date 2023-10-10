@@ -1,19 +1,26 @@
 import socket
 
 import pytest
-import win32security
-import win32security as ws
 
 import salt.modules.cmdmod
 import salt.modules.win_file
 import salt.modules.win_lgpo as win_lgpo
+import salt.utils.win_lgpo_auditpol as ap
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch
+
+try:
+    import win32security as ws
+
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
+    pytest.mark.skipif(not HAS_WIN32, reason="Failed to import win32security"),
 ]
 
 
@@ -238,8 +245,8 @@ def test_usernamesToSidObjects_empty_value(pol_info, val, expected):
 
 def test_usernamesToSidObjects_string_list(pol_info):
     val = "Administrator,Guest"
-    admin_sid = win32security.LookupAccountName("", "Administrator")[0]
-    guest_sid = win32security.LookupAccountName("", "Guest")[0]
+    admin_sid = ws.LookupAccountName("", "Administrator")[0]
+    guest_sid = ws.LookupAccountName("", "Guest")[0]
     expected = [admin_sid, guest_sid]
     assert pol_info._usernamesToSidObjects(val) == expected
 
@@ -382,17 +389,26 @@ def test__virtual__(pol_info):
 
 
 def test_get_advaudit_defaults():
-    with patch.dict(win_lgpo.__context__, {}):
+    patch_context = patch.dict(win_lgpo.__context__, {})
+    patch_salt = patch.dict(
+        win_lgpo.__utils__, {"auditpol.get_auditpol_dump": ap.get_auditpol_dump}
+    )
+    with patch_context, patch_salt:
         assert "Machine Name" in win_lgpo._get_advaudit_defaults("fieldnames")
 
     audit_defaults = {"junk": "defaults"}
-    with patch.dict(win_lgpo.__context__, {"lgpo.audit_defaults": audit_defaults}):
+    patch_context = patch.dict(
+        win_lgpo.__context__, {"lgpo.audit_defaults": audit_defaults}
+    )
+    with patch_context, patch_salt:
         assert win_lgpo._get_advaudit_defaults() == audit_defaults
 
 
 def test_get_netsh_value():
+    with patch.dict(win_lgpo.__context__, {"lgpo.netsh_data": {"domain": {}}}):
+        win_lgpo._set_netsh_value("domain", "state", "State", "NotConfigured")
     with patch.dict(win_lgpo.__context__, {}):
-        assert win_lgpo._get_netsh_value("domain", "State") == "ON"
+        assert win_lgpo._get_netsh_value("domain", "State") == "NotConfigured"
 
     context = {
         "lgpo.netsh_data": {
