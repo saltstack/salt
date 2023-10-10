@@ -89,6 +89,9 @@ def generate_workflows(ctx: Context):
             ("almalinux-8", "Alma Linux 8", "x86_64"),
             ("almalinux-9", "Alma Linux 9", "x86_64"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
+            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64"),
+            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64"),
+            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "aarch64"),
             ("archlinux-lts", "Arch Linux LTS", "x86_64"),
             ("centos-7", "CentOS 7", "x86_64"),
             ("centosstream-8", "CentOS Stream 8", "x86_64"),
@@ -122,6 +125,9 @@ def generate_workflows(ctx: Context):
     test_salt_pkg_listing = {
         "linux": (
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm"),
+            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64", "rpm"),
+            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64", "rpm"),
+            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "aarch64", "rpm"),
             ("centos-7", "CentOS 7", "x86_64", "rpm"),
             ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm"),
             ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm"),
@@ -156,6 +162,8 @@ def generate_workflows(ctx: Context):
             ("almalinux-9-arm64", "Alma Linux 9 Arm64", "aarch64"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
             ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64"),
+            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64"),
+            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "aarch64"),
             ("archlinux-lts", "Arch Linux LTS", "x86_64"),
             ("centos-7", "CentOS 7", "x86_64"),
             ("centos-7-arm64", "CentOS 7 Arm64", "aarch64"),
