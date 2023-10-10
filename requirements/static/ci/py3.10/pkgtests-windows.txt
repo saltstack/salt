@@ -18,7 +18,7 @@ cffi==1.15.1
     # via
     #   clr-loader
     #   cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -30,7 +30,7 @@ colorama==0.4.6
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.3
+cryptography==41.0.4
     # via -r requirements/crypto.txt
 distlib==0.3.6
     # via virtualenv
@@ -40,7 +40,7 @@ distro==1.8.0
     #   pytest-skip-markers
 exceptiongroup==1.1.1
     # via pytest
-filelock==3.12.1
+filelock==3.12.4
     # via virtualenv
 idna==3.4
     # via requests
@@ -109,7 +109,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-salt-factories==1.0.0rc17
     # via -r requirements/static/ci/pkgtests-windows.in
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
 pytest-skip-markers==1.4.1
     # via
@@ -155,7 +155,7 @@ typing-extensions==4.6.3
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==2.0.3
+urllib3==1.26.14
     # via requests
 virtualenv==20.23.0
     # via pytest-salt-factories
