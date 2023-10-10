@@ -1370,7 +1370,7 @@ def test_get_socket():
     assert ret.type == socket.SOCK_STREAM
 
 
-def test_ip_to_host():
+def test_ip_to_host(grains):
     ret = network.ip_to_host("127.0.0.1")
     assert ret == "localhost"
 
@@ -1378,12 +1378,13 @@ def test_ip_to_host():
     assert ret is None
 
     ret = network.ip_to_host("::1")
-    ##    if amzn2
-    ##    assert ret == "localhost6"
-    ##    else if debian family:
-    ##    assert ret == "ip6-localhost"
     log.warning(f"DGM test_ip_to_host ret '{ret}'")
-    assert ret == "dog"
+    if grains["os"] == "Amazon":
+        assert ret == "localhost6"
+    elif grains["os_family"] == "Debian":
+        assert ret == "ip6-localhost"
+    elif grains["os_family"] == "RedHat":
+        assert ret == "localhost"
 
 
 def test_natural_ipv4_netmask():
