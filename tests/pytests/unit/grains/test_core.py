@@ -1622,6 +1622,17 @@ def test_linux_memdata():
     assert memdata.get("mem_total") == 15895
     assert memdata.get("swap_total") == 4676
 
+    _proc_meminfo = textwrap.dedent(
+        """\
+        MemTotal:       16277028 kB
+
+        SwapTotal:       4789244 kB"""
+    )
+    with patch("salt.utils.files.fopen", mock_open(read_data=_proc_meminfo)):
+        memdata = core._linux_memdata()
+    assert memdata.get("mem_total") == 15895
+    assert memdata.get("swap_total") == 4676
+
 
 @pytest.mark.skip_on_windows
 def test_bsd_memdata():
@@ -2585,14 +2596,40 @@ def test_osx_memdata():
     test osx memdata
     """
 
-    def _cmd_side_effect(cmd):
+    def _cmd_side_effect_megabyte(cmd):
         if "hw.memsize" in cmd:
             return "4294967296"
         elif "vm.swapusage" in cmd:
             return "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)"
 
     with patch.dict(
-        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
+        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect_megabyte)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
+        ret = core._osx_memdata()
+        assert ret["swap_total"] == 0
+        assert ret["mem_total"] == 4096
+
+    def _cmd_side_effect_kilobyte(cmd):
+        if "hw.memsize" in cmd:
+            return "4294967296"
+        elif "vm.swapusage" in cmd:
+            return "total = 0.00K  used = 0.00K  free = 0.00K  (encrypted)"
+
+    with patch.dict(
+        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect_kilobyte)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
+        ret = core._osx_memdata()
+        assert ret["swap_total"] == 0
+        assert ret["mem_total"] == 4096
+
+    def _cmd_side_effect_gigabyte(cmd):
+        if "hw.memsize" in cmd:
+            return "4294967296"
+        elif "vm.swapusage" in cmd:
+            return "total = 0.00G  used = 0.00G  free = 0.00G  (encrypted)"
+
+    with patch.dict(
+        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect_gigabyte)}
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
         ret = core._osx_memdata()
         assert ret["swap_total"] == 0
@@ -4336,3 +4373,49 @@ def test__osx_platform_data():
             "system_serialnumber": "W80322MWATM",
             "boot_rom_version": "139.0.0.0.0",
         }
+
+
+def test__parse_junos_showver():
+    """
+    test _parse_junos_showver
+    """
+
+    txt = b"""Hostname: R1-MX960-re0
+Model: mx960
+Junos: 18.2R3-S2.9
+JUNOS Software Release [18.2R3-S2.9]"""
+
+    ret = core._parse_junos_showver(txt)
+    assert ret == {
+        "model": "mx960",
+        "osrelease": "18.2R3-S2.9",
+        "osmajorrelease": "Junos: 18",
+        "osrelease_info": ["Junos: 18", "2R3-S2", "9"],
+    }
+
+    txt = b"""Model: mx240
+Junos: 15.1F2.8
+JUNOS OS Kernel 64-bit  [20150814.313820_builder_stable_10]
+JUNOS OS runtime [20150814.313820_builder_stable_10]
+JUNOS OS time zone information [20150814.313820_builder_stable_10]
+JUNOS OS 32-bit compatibility [20150814.313820_builder_stable_10]
+JUNOS py base [20150814.204717_builder_junos_151_f2]
+JUNOS OS crypto [20150814.313820_builder_stable_10]
+JUNOS network stack and utilities [20150814.204717_builder_junos_151_f2]
+JUNOS libs compat32 [20150814.204717_builder_junos_151_f2]
+JUNOS runtime [20150814.204717_builder_junos_151_f2]
+JUNOS platform support [20150814.204717_builder_junos_151_f2]
+JUNOS modules [20150814.204717_builder_junos_151_f2]
+JUNOS libs [20150814.204717_builder_junos_151_f2]
+JUNOS daemons [20150814.204717_builder_junos_151_f2]
+JUNOS FIPS mode utilities [20150814.204717_builder_junos_151_f2]"""
+
+    ret = core._parse_junos_showver(txt)
+    assert ret == {
+        "model": "mx240",
+        "osrelease": "15.1F2.8",
+        "osmajorrelease": "Junos: 15",
+        "osrelease_info": ["Junos: 15", "1F2", "8"],
+        "kernelversion": "JUNOS OS Kernel 64-bit  [20150814.313820_builder_stable_10]",
+        "kernelrelease": "20150814.313820_builder_stable_10",
+    }
