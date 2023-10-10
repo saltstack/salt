@@ -1378,7 +1378,7 @@ def test_ip_to_host():
     assert ret is None
 
     ret = network.ip_to_host("::1")
-    assert ret == "ip6-localhost"
+    assert ret == "localhost"
 
 
 def test_natural_ipv4_netmask():
