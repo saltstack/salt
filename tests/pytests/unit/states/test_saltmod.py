@@ -131,7 +131,6 @@ def test_state_smoke_test():
     assert ret == expected
 
 
-@pytest.mark.slow_test
 def test_state():
     """
     Test to invoke a state run on a given target
@@ -281,7 +280,6 @@ def test_state():
                 assert minion in comment
 
 
-@pytest.mark.slow_test
 def test_function():
     """
     Test to execute a single module function on a remote
@@ -318,7 +316,6 @@ def test_function():
         assert ret == expected
 
 
-@pytest.mark.slow_test
 def test_function_when_no_minions_match():
     """
     Test to execute a single module function on a remote
@@ -450,7 +447,6 @@ def test_wheel():
         assert ret == expected
 
 
-@pytest.mark.slow_test
 def test_state_ssh():
     """
     Test saltmod state passes roster to saltutil.cmd
@@ -464,7 +460,6 @@ def test_state_ssh():
     assert cmd_mock.call_args.kwargs["roster"] == "my_roster"
 
 
-@pytest.mark.slow_test
 def test_function_ssh():
     """
     Test saltmod function passes roster to saltutil.cmd
