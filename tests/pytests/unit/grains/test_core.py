@@ -4207,3 +4207,59 @@ def test__linux_init_system(caplog):
                     assert (
                         "Unable to fetch data from /proc/1/cmdline" in caplog.messages
                     )
+
+
+def test_default_gateway():
+    """
+    test default_gateway
+    """
+
+    with patch("salt.utils.path.which", return_value=""):
+        ret = core.default_gateway()
+        assert ret == {}
+
+    with patch("salt.utils.path.which", return_value="/usr/sbin/ip"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(return_value="")},
+        ):
+
+            ret = core.default_gateway()
+            assert ret == {"ip_gw": False, "ip4_gw": False, "ip6_gw": False}
+
+    with patch("salt.utils.path.which", return_value="/usr/sbin/ip"):
+        ip4_route = """default via 172.23.5.3 dev enp7s0u2u4 proto dhcp src 172.23.5.173 metric 100
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1
+172.19.0.0/16 dev docker_gwbridge proto kernel scope link src 172.19.0.1
+172.23.5.0/24 dev enp7s0u2u4 proto kernel scope link src 172.23.5.173 metric 100
+192.168.56.0/24 dev vboxnet0 proto kernel scope link src 192.168.56.1"""
+
+        ip6_route = """2603:8001:b402:cc00::/64 dev enp7s0u2u4 proto ra metric 100 pref medium
+fe80::/64 dev enp7s0u2u4 proto kernel metric 1024 pref medium
+default via fe80::20d:b9ff:fe37:e65c dev enp7s0u2u4 proto ra metric 100 pref medium"""
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=[ip4_route, ip6_route])},
+        ):
+
+            ret = core.default_gateway()
+            assert ret == {
+                "ip4_gw": "172.23.5.3",
+                "ip6_gw": "fe80::20d:b9ff:fe37:e65c",
+                "ip_gw": True,
+            }
+
+    with patch("salt.utils.path.which", return_value="/usr/sbin/ip"):
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=[ip4_route, ip6_route])},
+        ):
+
+            ret = core.default_gateway()
+            assert ret == {
+                "ip4_gw": "172.23.5.3",
+                "ip6_gw": "fe80::20d:b9ff:fe37:e65c",
+                "ip_gw": True,
+            }
