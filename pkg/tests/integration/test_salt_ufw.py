@@ -20,7 +20,8 @@ def test_salt_ufw(salt_master, salt_call_cli, install_salt):
     # check that the salt_master is running
     assert salt_master.is_running()
 
-    ufw_master_path = pathlib.Path("/etc/ufw/applications.d/salt-master")
+    ## ufw_master_path = pathlib.Path("/etc/ufw/applications.d/salt-master")
+    ufw_master_path = pathlib.Path("/etc/ufw/applications.d/salt.ufw")
     assert ufw_master_path.exists()
     assert ufw_master_path.is_file()
 
