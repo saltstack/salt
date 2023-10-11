@@ -17,6 +17,7 @@ def test_get_local_client_mopts(master_opts):
     master_opts["rest_cherrypy"] = {"port": 8000}
     local_client = salt.client.get_local_client(mopts=master_opts)
     assert isinstance(local_client, salt.client.LocalClient)
+    assert local_client.opts == master_opts
 
 
 @pytest.mark.parametrize(
