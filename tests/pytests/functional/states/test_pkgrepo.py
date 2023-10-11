@@ -13,7 +13,7 @@ import salt.utils.files
         "  trusted=yes",
         "signed-by=/foo/bar arch=amd64,i386",
         "signed-by=foo/bar trusted=yes arch=amd64",
-    ]
+    ],
 )
 @pytest.mark.skipif(
     not any([x for x in ["ubuntu", "debian"] if x in platform.platform()]),
