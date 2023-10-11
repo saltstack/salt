@@ -35,6 +35,7 @@ import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
+from salt.utils.process import SignalHandlingProcess
 
 if salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -43,7 +44,6 @@ else:
 
 if USE_LOAD_BALANCER:
     import salt.ext.tornado.util
-    from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -128,69 +128,64 @@ def _set_tcp_keepalive(sock, opts):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
 
 
-if USE_LOAD_BALANCER:
+class LoadBalancerServer(SignalHandlingProcess):
+    """
+    Raw TCP server which runs in its own process and will listen
+    for incoming connections. Each incoming connection will be
+    sent via multiprocessing queue to the workers.
+    Since the queue is shared amongst workers, only one worker will
+    handle a given connection.
+    """
 
-    class LoadBalancerServer(SignalHandlingProcess):
-        """
-        Raw TCP server which runs in its own process and will listen
-        for incoming connections. Each incoming connection will be
-        sent via multiprocessing queue to the workers.
-        Since the queue is shared amongst workers, only one worker will
-        handle a given connection.
-        """
+    # TODO: opts!
+    # Based on default used in salt.ext.tornado.netutil.bind_sockets()
+    backlog = 128
 
-        # TODO: opts!
-        # Based on default used in salt.ext.tornado.netutil.bind_sockets()
-        backlog = 128
+    def __init__(self, opts, socket_queue, **kwargs):
+        super().__init__(**kwargs)
+        self.opts = opts
+        self.socket_queue = socket_queue
+        self._socket = None
 
-        def __init__(self, opts, socket_queue, **kwargs):
-            super().__init__(**kwargs)
-            self.opts = opts
-            self.socket_queue = socket_queue
+    def close(self):
+        if self._socket is not None:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            self._socket.close()
             self._socket = None
 
-        def close(self):
-            if self._socket is not None:
-                self._socket.shutdown(socket.SHUT_RDWR)
-                self._socket.close()
-                self._socket = None
+    # pylint: disable=W1701
+    def __del__(self):
+        self.close()
 
-        # pylint: disable=W1701
-        def __del__(self):
-            self.close()
+    # pylint: enable=W1701
 
-        # pylint: enable=W1701
+    def run(self):
+        """
+        Start the load balancer
+        """
+        self._socket = _get_socket(self.opts)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        _set_tcp_keepalive(self._socket, self.opts)
+        self._socket.setblocking(1)
+        self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
+        self._socket.listen(self.backlog)
 
-        def run(self):
-            """
-            Start the load balancer
-            """
-            self._socket = _get_socket(self.opts)
-            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _set_tcp_keepalive(self._socket, self.opts)
-            self._socket.setblocking(1)
-            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
-            self._socket.listen(self.backlog)
-
-            while True:
-                try:
-                    # Wait for a connection to occur since the socket is
-                    # blocking.
-                    connection, address = self._socket.accept()
-                    # Wait for a free slot to be available to put
-                    # the connection into.
-                    # Sockets are picklable on Windows in Python 3.
-                    self.socket_queue.put((connection, address), True, None)
-                except OSError as e:
-                    # ECONNABORTED indicates that there was a connection
-                    # but it was closed while still in the accept queue.
-                    # (observed on FreeBSD).
-                    if (
-                        salt.ext.tornado.util.errno_from_exception(e)
-                        == errno.ECONNABORTED
-                    ):
-                        continue
-                    raise
+        while True:
+            try:
+                # Wait for a connection to occur since the socket is
+                # blocking.
+                connection, address = self._socket.accept()
+                # Wait for a free slot to be available to put
+                # the connection into.
+                # Sockets are picklable on Windows in Python 3.
+                self.socket_queue.put((connection, address), True, None)
+            except OSError as e:
+                # ECONNABORTED indicates that there was a connection
+                # but it was closed while still in the accept queue.
+                # (observed on FreeBSD).
+                if salt.ext.tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
+                    continue
+                raise
 
 
 class Resolver:
@@ -468,45 +463,43 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                 raise
 
 
-if USE_LOAD_BALANCER:
+class LoadBalancerWorker(SaltMessageServer):
+    """
+    This will receive TCP connections from 'LoadBalancerServer' via
+    a multiprocessing queue.
+    Since the queue is shared amongst workers, only one worker will handle
+    a given connection.
+    """
 
-    class LoadBalancerWorker(SaltMessageServer):
-        """
-        This will receive TCP connections from 'LoadBalancerServer' via
-        a multiprocessing queue.
-        Since the queue is shared amongst workers, only one worker will handle
-        a given connection.
-        """
+    def __init__(self, socket_queue, message_handler, *args, **kwargs):
+        super().__init__(message_handler, *args, **kwargs)
+        self.socket_queue = socket_queue
+        self._stop = threading.Event()
+        self.thread = threading.Thread(target=self.socket_queue_thread)
+        self.thread.start()
 
-        def __init__(self, socket_queue, message_handler, *args, **kwargs):
-            super().__init__(message_handler, *args, **kwargs)
-            self.socket_queue = socket_queue
-            self._stop = threading.Event()
-            self.thread = threading.Thread(target=self.socket_queue_thread)
-            self.thread.start()
+    def close(self):
+        self._stop.set()
+        self.thread.join()
+        super().close()
 
-        def close(self):
-            self._stop.set()
-            self.thread.join()
-            super().close()
-
-        def socket_queue_thread(self):
-            try:
-                while True:
-                    try:
-                        client_socket, address = self.socket_queue.get(True, 1)
-                    except queue.Empty:
-                        if self._stop.is_set():
-                            break
-                        continue
-                    # 'self.io_loop' initialized in super class
-                    # 'salt.ext.tornado.tcpserver.TCPServer'.
-                    # 'self._handle_connection' defined in same super class.
-                    self.io_loop.spawn_callback(
-                        self._handle_connection, client_socket, address
-                    )
-            except (KeyboardInterrupt, SystemExit):
-                pass
+    def socket_queue_thread(self):
+        try:
+            while True:
+                try:
+                    client_socket, address = self.socket_queue.get(True, 1)
+                except queue.Empty:
+                    if self._stop.is_set():
+                        break
+                    continue
+                # 'self.io_loop' initialized in super class
+                # 'salt.ext.tornado.tcpserver.TCPServer'.
+                # 'self._handle_connection' defined in same super class.
+                self.io_loop.spawn_callback(
+                    self._handle_connection, client_socket, address
+                )
+        except (KeyboardInterrupt, SystemExit):
+            pass
 
 
 class TCPClientKeepAlive(salt.ext.tornado.tcpclient.TCPClient):
@@ -582,10 +575,6 @@ class MessageClient:
         self._stream = None
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
-
-    def _stop_io_loop(self):
-        if self.io_loop is not None:
-            self.io_loop.stop()
 
     # TODO: timeout inflight sessions
     def close(self):
@@ -962,6 +951,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
+        self.io_loop = io_loop
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(

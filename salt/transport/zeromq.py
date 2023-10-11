@@ -11,8 +11,8 @@ import threading
 from random import randint
 
 import zmq.error
-import zmq.eventloop.zmqstream
 import zmq.eventloop.future
+import zmq.eventloop.zmqstream
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
