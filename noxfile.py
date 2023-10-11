@@ -1870,7 +1870,7 @@ def ci_test_onedir_pkgs(session):
 
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session, "pyzmq")
     env = {
         "ONEDIR_TESTRUN": "1",
         "PKG_TEST_TYPE": chunk,
