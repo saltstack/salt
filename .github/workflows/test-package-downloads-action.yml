@@ -110,6 +110,12 @@ jobs:
           - distro-slug: debian-11-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: debian-12
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: debian-12-arm64
+            arch: aarch64
+            pkg-type: package
           - distro-slug: fedora-37
             arch: x86_64
             pkg-type: package

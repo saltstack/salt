@@ -912,6 +912,36 @@ def test_debian_11_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_debian_12_os_grains():
+    """
+    Test if OS grains are parsed correctly in Debian 12 "bookworm"
+    """
+    # /etc/os-release data taken from base-files 12.4
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "12",
+        "VERSION": "12 (bookworm)",
+        "VERSION_CODENAME": "bookworm",
+        "ID": "debian",
+        "HOME_URL": "https://www.debian.org/",
+        "SUPPORT_URL": "https://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
+    expectation = {
+        "os": "Debian",
+        "os_family": "Debian",
+        "oscodename": "bookworm",
+        "osfullname": "Debian GNU/Linux",
+        "osrelease": "12",
+        "osrelease_info": (12,),
+        "osmajorrelease": 12,
+        "osfinger": "Debian-12",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_centos_8_os_grains():
     """
     Test if OS grains are parsed correctly in Centos 8
