@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 import shutil
 
 import pytest
@@ -8,18 +9,20 @@ import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
 import salt.modules.config as configmod
+import salt.modules.cp as cpmod
 import salt.modules.file as filemod
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, call, patch
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     return {
         filemod: {
             "__salt__": {
@@ -35,7 +38,8 @@ def configure_loader_modules():
                 "grains": {},
             },
             "__grains__": {"kernel": "Linux"},
-        }
+        },
+        cpmod: {"__context__": {}, "__opts__": minion_opts},
     }
 
 
@@ -272,3 +276,73 @@ def test_source_list_for_list_returns_local_file_proto_from_dict(myfile):
     ):
         ret = filemod.source_list([{"file://" + myfile: ""}], "filehash", "base")
         assert list(ret) == ["file://" + myfile, "filehash"]
+
+
+def test_set_mode_file_doesnotexist(tmp_path):
+    """
+    Test set_mode when the file does not exist
+    """
+    path = tmp_path / "path"
+    with pytest.raises(CommandExecutionError) as err:
+        filemod.set_mode(path, "0644")
+    assert err.value.message == f"{str(path)}: File not found"
+
+
+def test_get_source_sum_cannot_cache(tmp_path):
+    """
+    test get_source_sum when you cannot cache the source_hash
+    """
+    path = tmp_path / "salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source_hash = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz.sha3_512"
+    with patch.dict(filemod.__salt__, {"cp.cache_file": MagicMock(return_value=False)}):
+        with pytest.raises(CommandExecutionError) as err:
+            ret = filemod.get_source_sum(path, source=source, source_hash=source_hash)
+    assert err.value.message == f"Source hash file {source_hash} not found"
+
+
+def test_get_source_sum_invalid_proto(tmp_path):
+    """
+    test get_source_sum when an invalid proto is being used
+    """
+    path = tmp_path / "salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source_hash = "invalid://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz.sha3_512"
+    with patch.dict(filemod.__salt__, {"cp.cache_file": MagicMock(return_value=False)}):
+        with pytest.raises(CommandExecutionError) as err:
+            ret = filemod.get_source_sum(path, source=source, source_hash=source_hash)
+    assert f"Source hash {source_hash} format is invalid." in err.value.message
+
+
+def test_get_source_sum_invalid_proto_urllib(tmp_path):
+    """
+    test get_source_sum when an invalid proto is being used
+    and urllib cannot parse it
+    """
+    path = tmp_path / "salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source_hash = pathlib.Path("source_hash")
+    with patch.dict(filemod.__salt__, {"cp.cache_file": MagicMock(return_value=False)}):
+        with pytest.raises(CommandExecutionError) as err:
+            ret = filemod.get_source_sum(path, source=source, source_hash=source_hash)
+    assert f"Source hash {source_hash} format is invalid." in err.value.message
+
+
+def test_get_source_sum_cannot_extract_hash(tmp_path):
+    """
+    test get_source_sum when you cannot extract the hash
+    """
+    path = tmp_path / "salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz"
+    source_hash = "https://repo.saltproject.io/salt_rc/salt/py3/onedir/latest/salt-3006.0rc3-onedir-linux-aarch64.tar.xz.sha3_512"
+    mock_extract = MagicMock(return_value=None)
+    patch_extract = patch("salt.modules.file.extract_hash", mock_extract)
+    cache_path = tmp_path / "cache"
+    patch_salt = patch.dict(
+        filemod.__salt__, {"cp.cache_file": MagicMock(return_value=cache_path)}
+    )
+    with patch_extract, patch_salt:
+        with pytest.raises(CommandExecutionError) as err:
+            ret = filemod.get_source_sum(path, source=source, source_hash=source_hash)
+    assert mock_extract.call_args == call(cache_path, "", path, source, None)
+    assert f"Source hash {source_hash} format is invalid." in err.value.message
