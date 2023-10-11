@@ -491,10 +491,12 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
             assert pillar_items["mypillar"] == "test_value"
 
 
-def test_salt_call_versions(salt_call_cli):
+def test_salt_call_versions(salt_call_cli, caplog):
     """
     Call test.versions without '--local' to test grains
     are sync'd without any missing keys in opts
     """
+    caplog.at_level(logging.DEBUG)
     ret = salt_call_cli.run("test.versions")
     assert ret.returncode == 0
+    assert "LazyLoaded test.versions" in caplog.messages
