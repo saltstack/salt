@@ -3006,7 +3006,7 @@ def test_osdata_virtual_key_win():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_linux_cpu_data_num_cpus():
+def test_linux_cpu_data():
     cpuinfo_list = []
     for i in range(0, 20):
         cpuinfo_dict = {
@@ -3030,6 +3030,61 @@ def test_linux_cpu_data_num_cpus():
         ret = core._linux_cpudata()
         assert "num_cpus" in ret
         assert len(cpuinfo_list) == ret["num_cpus"]
+        assert "cpu_flags" in ret
+        assert "cpu_model" in ret
+
+    cpuinfo_list = []
+    cpuinfo_dict = {
+        "processors": 20,
+        "cpu_family": 6,
+        "model_name": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+        "Features": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr",
+    }
+
+    cpuinfo_list.append(cpuinfo_dict)
+    cpuinfo_content = ""
+    for item in cpuinfo_list:
+        cpuinfo_content += (
+            "# processors: {}\n" "cpu family: {}\n" "vendor_id: {}\n" "Features: {}\n\n"
+        ).format(
+            item["processors"], item["cpu_family"], item["model_name"], item["Features"]
+        )
+
+    with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", mock_open(read_data=cpuinfo_content)
+    ):
+        ret = core._linux_cpudata()
+        assert "num_cpus" in ret
+        assert "cpu_flags" in ret
+        assert "cpu_model" in ret
+
+    cpuinfo_list = []
+    cpuinfo_dict = {
+        "Processor": "ARMv6-compatible processor rev 7 (v6l)",
+        "BogoMIPS": "697.95",
+        "Features": "swp half thumb fastmult vfp edsp java tls",
+        "CPU implementer": "0x41",
+        "CPU architecture": "7",
+        "CPU variant": "0x0",
+        "CPU part": "0xb76",
+        "CPU revision": "7",
+        "Hardware": "BCM2708",
+        "Revision": "0002",
+        "Serial": "00000000",
+    }
+
+    cpuinfo_content = ""
+    for item in cpuinfo_dict:
+        cpuinfo_content += f"{item}: {cpuinfo_dict[item]}\n"
+    cpuinfo_content += "\n\n"
+
+    with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", mock_open(read_data=cpuinfo_content)
+    ):
+        ret = core._linux_cpudata()
+        assert "num_cpus" in ret
+        assert "cpu_flags" in ret
+        assert "cpu_model" in ret
 
 
 @pytest.mark.skip_on_windows
