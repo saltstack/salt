@@ -1378,12 +1378,19 @@ def test_ip_to_host(grains):
     assert ret is None
 
     ret = network.ip_to_host("::1")
-    log.warning(f"DGM test_ip_to_host ret '{ret}'")
     if grains["os"] == "Amazon":
         assert ret == "localhost6"
     elif grains["os_family"] == "Debian":
-        assert ret == "ip6-localhost"
+        if grains["osmajorrelease"] == "12":
+            assert ret == "localhost"
+        else:
+            assert ret == "ip6-localhost"
     elif grains["os_family"] == "RedHat":
+        if grains["oscodename"] == "Photon":
+            assert ret == "ipv6-localhost"
+        else:
+            assert ret == "localhost"
+    else:
         assert ret == "localhost"
 
 
