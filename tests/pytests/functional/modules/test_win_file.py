@@ -6,6 +6,8 @@ import salt.utils.files
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
 from salt.modules import win_file
+import salt.modules.win_useradd
+
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -25,8 +27,8 @@ def configure_loader_modules(minion_opts, modules):
 
 
 @pytest.fixture
-def user():
-    return salt.utils.user.get_user()
+def windows_user():
+    return salt.modules.win_useradd.current()
 
 
 @pytest.mark.flaky_jail
@@ -48,26 +50,66 @@ def test_is_link_false(tmp_path):
     assert win_file.is_link(tmp_path) is False
     assert win_file.is_link(os.path.join(tmp_path, "made_up_path")) is False
 
-def test_user(tmp_path, user):
+
+def test_get_user(tmp_path, windows_user):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir")
-    assert win_file.mkdir(path, owner=user) is True
+    assert win_file.mkdir(path, owner=windows_user) is True
     assert os.path.isdir(path)
-    assert win_file.get_user(path) in user
+    assert win_file.get_user(path) in windows_user
 
 
-def test_fake_user(tmp_path, user):
+def test_fake_user(tmp_path, windows_user):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir")
-    user = user + "_fake"
+    windows_user = windows_user + "_fake"
     with pytest.raises(CommandExecutionError):
-        win_file.mkdir(path, owner=user)
+        win_file.mkdir(path, owner=windows_user)
+
+
+def test_uid_user(tmp_path, windows_user):
+    path = str(tmp_path)
+    uid = win_file.get_uid(path)
+    assert "-" in uid
+    assert win_file.user_to_uid(windows_user) == uid
+    assert win_file.uid_to_user(uid) == windows_user
+
+
+def test_gid_group(tmp_path, windows_user):
+    path = str(tmp_path)
+    gid = win_file.get_gid(path)
+    assert isinstance(gid, str)
+    group = win_file.get_group(path)
+    assert isinstance(group, str)
+    assert win_file.gid_to_group(gid) == group
+    assert win_file.group_to_gid(group) == gid
+
+
+def test_get_pgroup(tmp_path):
+    path = str(tmp_path)
+    pgroup = win_file.get_pgroup(path)
+    assert pgroup == "None"
+
+
+def test_get_pgid(tmp_path):
+    path = str(tmp_path)
+    pgid = win_file.get_pgid(path)
+    assert "-" in pgid
 
 
 def test_mode(tmp_path):
     tmp_path = str(tmp_path)
     assert win_file.get_mode(tmp_path) is None
 
+
+def test_lchown(tmp_path, windows_user):
+    path = str(tmp_path)
+    assert win_file.lchown(path, windows_user) is True
+
+
+def test_chown(tmp_path, windows_user):
+    path = str(tmp_path)
+    assert win_file.chown(path, windows_user) is True
 
 def test_chpgrp(tmp_path):
     tmp_path = str(tmp_path)
@@ -79,8 +121,28 @@ def test_chgrp(tmp_path):
     assert win_file.chgrp(tmp_path, "Administrators") is None
 
 
+def test_stats(tmp_path, windows_user):
+    tmp_path = str(tmp_path)
+    stats = win_file.stats(tmp_path)
+    assert isinstance(stats, dict)
+    assert stats["type"] == "dir"
+    assert isinstance(stats["inode"], int)
+    assert isinstance(stats["uid"], str)
+    assert isinstance(stats["gid"], str)
+    assert stats["user"] == windows_user
+    assert isinstance(stats["group"], str)
+    assert isinstance(stats["pgroup"], str)
+    assert isinstance(stats["atime"], (float, int))
+    assert isinstance(stats["mtime"], (float, int))
+    assert isinstance(stats["ctime"], (float, int))
+    assert isinstance(stats["size"], int)
+    assert isinstance(stats["mode"], str)
+    assert isinstance(stats["target"], str)
+
+
 def test_version():
     assert len(win_file.version("C:\\Windows\\System32\\wow64.dll").split(".")) == 4
+
 
 def test_version_empty(tmp_path):
     tmp_path = str(tmp_path)
@@ -107,20 +169,20 @@ def test_get_attributes(tmp_path):
     assert os.path.isfile(file) is True
     attributes = win_file.get_attributes(file)
     assert isinstance(attributes, dict) is True
-    assert attributes["archive"] == True
-    assert attributes["reparsePoint"] == False
-    assert attributes["compressed"] == False
-    assert attributes["directory"] == False
-    assert attributes["encrypted"] == False
-    assert attributes["hidden"] == False
-    assert attributes["normal"] == False
-    assert attributes["notIndexed"] == False
-    assert attributes["offline"] == False
-    assert attributes["readonly"] == False
-    assert attributes["system"] == False
-    assert attributes["temporary"] == False
-    assert attributes["mountedVolume"] == False
-    assert attributes["symbolicLink"] == False
+    assert attributes["archive"] is True
+    assert attributes["reparsePoint"] is False
+    assert attributes["compressed"] is False
+    assert attributes["directory"] is False
+    assert attributes["encrypted"] is False
+    assert attributes["hidden"] is False
+    assert attributes["normal"] is False
+    assert attributes["notIndexed"] is False
+    assert attributes["offline"] is False
+    assert attributes["readonly"] is False
+    assert attributes["system"] is False
+    assert attributes["temporary"] is False
+    assert attributes["mountedVolume"] is False
+    assert attributes["symbolicLink"] is False
 
 
 def test_set_attributes(tmp_path):
@@ -164,6 +226,11 @@ def test_set_attributes(tmp_path):
     assert attributes["system"] is False
     assert attributes["temporary"] is False
 
+
+def test_set_mode(tmp_path):
+    path = str(tmp_path)
+    assert win_file.set_mode(path, "") is None
+
 def test_remove(tmp_path):
     tmp_path = str(tmp_path)
     file = os.path.join(tmp_path, "t.txt")
@@ -202,3 +269,10 @@ def test_makedirs_perms(tmp_path):
     path = os.path.join(tmp_path, "dir1\\dir2")
     assert win_file.makedirs_perms(path) is True
     assert os.path.isdir(path)
+
+
+def test_check_perms(tmp_path, windows_user):
+    path = str(tmp_path)
+    ret = {}
+    assert isinstance(win_file.check_perms(path, ret, windows_user), dict)
+    assert ret == {}
