@@ -140,4 +140,16 @@ def test_destroy(sreq, echo_server):
     """
     # ensure no exceptions when we go to destroy the sreq, since __del__
     # swallows exceptions, we have to call destroy directly
-    sreq.destroy()
+    assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
+    try:
+        sreq.destroy()
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail(f"sreq.destroy threw an exception {exc}")
+
+
+@pytest.mark.slow_test
+def test_clear_socket(sreq, echo_server):
+    assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
+    assert hasattr(sreq, "_socket")
+    sreq.clear_socket()
+    assert hasattr(sreq, "_socket") is False
