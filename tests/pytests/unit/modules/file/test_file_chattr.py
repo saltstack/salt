@@ -5,7 +5,8 @@ import pytest
 
 import salt.modules.cmdmod as cmdmod
 import salt.modules.file as filemod
-from tests.support.mock import MagicMock, Mock, patch
+from salt.exceptions import SaltInvocationError
+from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
 
@@ -242,3 +243,52 @@ def test_check_perms_should_report_attrs_new_and_old_if_they_changed():
             follow_symlinks=False,
         )
         assert actual_ret["changes"] == expected
+
+
+@pytest.mark.parametrize(
+    "operator",
+    ["addz", None, "doesnotexist", 1],
+)
+def test_file_chattr_invalid_operator(operator):
+    """
+    Test file.chattr when passing in an invalid operator
+    """
+    with pytest.raises(SaltInvocationError) as exc:
+        filemod.chattr(operator=operator)
+    assert (
+        exc.value.message == "Need an operator: 'add' or 'remove' to modify attributes."
+    )
+
+
+def test_file_chattr_none_attributes():
+    """
+    Test file.chattr when attributes is None
+    """
+    with pytest.raises(SaltInvocationError) as exc:
+        filemod.chattr(operator="add")
+    assert exc.value.message == "Need attributes: [aAcCdDeijPsStTu]"
+
+
+def test_file_chattr_remove():
+    """
+    Test file.chattr when operator is remove
+    """
+    mock_cmd = MagicMock()
+    patch_cmd = patch.dict(filemod.__salt__, {"cmd.run": mock_cmd})
+    with patch_cmd:
+        filemod.chattr(operator="remove", attributes="aCd")
+    assert mock_cmd.call_args_list == [call(["chattr", "-aCd"], python_shell=False)]
+
+
+def test_file_chattr_flags():
+    """
+    Test file.chattr when using flags
+    """
+    mock_cmd = MagicMock(return_value="")
+    patch_cmd = patch.dict(filemod.__salt__, {"cmd.run": mock_cmd})
+    with patch_cmd:
+        ret = filemod.chattr(operator="remove", attributes="aCd", flags="R")
+    assert mock_cmd.call_args_list == [
+        call(["chattr", "-aCd", "-R"], python_shell=False)
+    ]
+    assert ret is True

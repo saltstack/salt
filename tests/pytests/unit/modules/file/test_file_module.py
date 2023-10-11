@@ -15,6 +15,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import MagicMock, Mock, patch
 
@@ -607,3 +608,234 @@ def test_file_move_disallow_copy_and_unlink():
         mock_os_rename.assert_called_once()
         mock_shutil_move.assert_not_called()
         assert ret is True
+
+
+def test_file_get_sum(tmp_path):
+    """
+    Test file.get_sum
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    ret = filemod.get_sum(path)
+    assert re.match(r"[a-z0-9]{64}", ret)
+
+
+def test_file_get_sum_no_file(tmp_path):
+    """
+    Test file.get_sum when the file doesn't exist
+    """
+    path = tmp_path / "path"
+    ret = filemod.get_sum(path)
+    assert ret == "File not found"
+
+
+def test_check_hash_file_hash_not_str(tmp_path):
+    """
+    Test file.check_hash when file_hash is not a str
+    """
+    with pytest.raises(SaltInvocationError) as err:
+        filemod.check_hash(tmp_path, 1234)
+    assert err.value.message == "hash must be a string"
+
+
+@pytest.mark.parametrize("hash_sep", ("sha256=", "sha256:"))
+def test_check_hash_file_sep(tmp_path, hash_sep):
+    """
+    Test file.check_hash when file_hash is using a separator
+    for example =
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    _hash = filemod.get_hash(path)
+    ret = filemod.check_hash(path, f"{hash_sep}{_hash}")
+    assert ret is True
+
+
+@pytest.mark.parametrize("hash_sep", ("sha256=", "sha256:"))
+def test_check_hash_file_hash_type_raise(tmp_path, hash_sep):
+    """
+    Test file.check_hash when file_hash is not a valid length
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    with pytest.raises(SaltInvocationError) as err:
+        filemod.check_hash(path, "123")
+    assert "could not be matched to a supported hash type" in err.value.message
+
+
+def test_file_find(tmp_path):
+    """
+    Test file.find
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    ret = filemod.find(tmp_path, name=path.name)
+    assert ret == [str(path)]
+    assert path.is_file()
+
+
+def test_file_find_delete(tmp_path):
+    """
+    Test file.find when adding delete in args
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    ret = filemod.find(tmp_path, "delete", name=path.name)
+    assert ret == [str(path)]
+    assert not path.is_file()
+
+
+def test_seek_read(tmp_path):
+    """
+    test basic functionality for file.seek_read
+    """
+    path = tmp_path / "path"
+    content = "this is a test"
+    path.write_text(f"WARNING: {content}")
+    ret = filemod.seek_read(path, 1028, 9)
+    assert str(ret) == f"b'{content}'"
+
+
+def test_seek_write(tmp_path):
+    """
+    test basic functionality for file.seek_write
+    """
+    path = tmp_path / "path"
+    before_content = "this is a test"
+    after_content = "this is production"
+    path.write_text(f"WARNING: {before_content}")
+    filemod.seek_write(path, after_content, 9)
+    assert path.read_text() == f"WARNING: {after_content}"
+
+
+def test_truncate(tmp_path):
+    """
+    test basic functionality for file.truncate
+    """
+    path = tmp_path / "path"
+    before_content = "this is a test"
+    path.write_text(f"WARNING: {before_content}")
+    filemod.truncate(path, 9)
+    assert path.read_text() == "WARNING: "
+
+
+def test_link(tmp_path):
+    """
+    test basic functionality of file.link
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    symlink = tmp_path / "symlink"
+    ret = filemod.link(path, symlink)
+    assert ret is True
+    assert path.samefile(symlink)
+
+
+@pytest.mark.parametrize("content,exp_ret", [("", 0), ("Test Content", 12)])
+def test_diskusage_file(tmp_path, content, exp_ret):
+    """
+    Test basic functionality of diskusage
+    when targeting a file
+    """
+    path = tmp_path / "path"
+    path.write_text(content)
+    ret = filemod.diskusage(str(path))
+    assert ret == exp_ret
+
+
+@pytest.mark.parametrize("content,exp_ret", [("", 0), ("Test Content", 36)])
+def test_diskusage_directory(tmp_path, content, exp_ret):
+    """
+    Test basic functionality of diskusage
+    when targeting a directory
+    """
+    _dir = tmp_path / "path_dir"
+    _dir.mkdir()
+    _files = ["file1", "file2", "file3"]
+    for _file in _files:
+        path = _dir / _file
+        path.write_text(content)
+    ret = filemod.diskusage(str(_dir))
+    assert ret == exp_ret
+
+
+def test_file_move_not_absolute_path(tmp_path):
+    """
+    test move when file src or dst is not an absolute path
+    """
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    with pytest.raises(SaltInvocationError) as err:
+        ret = filemod.move(src.name, dst.name)
+    assert err.value.message == "Source path must be absolute."
+
+    with pytest.raises(SaltInvocationError) as err:
+        ret = filemod.move(src, dst.name)
+    assert err.value.message == "Destination path must be absolute."
+
+
+def test_file_move_cannot_move(tmp_path):
+    """
+    test move when path cannot be copied.
+    """
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    with pytest.raises(CommandExecutionError) as err:
+        ret = filemod.move(src, dst)
+    assert (
+        err.value.message
+        == f"Unable to move '{str(src)}' to '{str(dst)}': [Errno 2] No such file or directory: '{str(src)}'"
+    )
+
+
+def test_file_join(tmp_path):
+    """
+    test basic functionality of join function
+    """
+    ret = filemod.join("/", "usr", "local", "bin")
+    assert ret == "/usr/local/bin"
+
+
+def test_file_dirname(tmp_path):
+    """
+    test basic functionality of dirname
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    ret = filemod.dirname(path)
+    assert ret == str(path.parent)
+
+
+def test_file_basename(tmp_path):
+    """
+    test basic functionality of basename
+    """
+    path = tmp_path / "path"
+    path.write_text("")
+    ret = filemod.basename(path)
+    assert ret == path.name
+
+
+def test_file_normpath():
+    """
+    test basic functionality of normpath
+    """
+    ret = filemod.normpath("/tmp/../test")
+    assert ret == "/test"
+
+
+def test_file_pardir():
+    """
+    test basic functionality of pardir
+    """
+    ret = filemod.pardir()
+    assert ret == ".."
+
+
+@pytest.mark.skip_on_windows(reason="Method not available on windows file module")
+def test_file_open_files():
+    ret = filemod.open_files()
+    assert "/dev/null" in ret
+    values = ret["/dev/null"]
+    for value in values:
+        assert isinstance(value, int)
