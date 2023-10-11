@@ -1515,7 +1515,7 @@ def test_sourceslist_architectures(repo_line):
     "pkg,arch",
     [
         ("zsh", "amd64"),
-        ("php", "x8664"),
+        ("php", "x86_64"),
     ],
 )
 def test_parse_arch(pkg, arch):
@@ -1530,7 +1530,7 @@ def test_parse_arch(pkg, arch):
 @pytest.mark.parametrize(
     "pkg",
     [
-        ("php"),
+        "php",
     ],
 )
 def test_parse_arch_invalid(pkg):
@@ -1547,7 +1547,7 @@ def test_latest_version_repo_kwarg():
     Test latest_version when `repo` is passed in as a kwarg
     """
     with pytest.raises(SaltInvocationError) as exc:
-        aptpkg.latest_version("php", **{"repo": "https://repo.com"})
+        aptpkg.latest_version("php", repo="https://repo.com")
     assert exc.value.message == "The 'repo' argument is invalid, use 'fromrepo' instead"
 
 
@@ -1555,7 +1555,7 @@ def test_latest_version_names_empty():
     """
     Test latest_version when names is empty
     """
-    ret = aptpkg.latest_version(*[])
+    ret = aptpkg.latest_version()
     assert ret == ""
 
 
@@ -1599,20 +1599,31 @@ def test_hold_pkgs_sources():
     assert err.value.message == "Only one of pkgs or sources can be specified."
 
 
-def test_hold_sources():
+@pytest.mark.parametrize(
+    "sources",
+    [
+        [
+            OrderedDict(
+                [
+                    (
+                        "vim",
+                        "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+                    )
+                ]
+            )
+        ],
+        [
+            (
+                "vim",
+                "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+            )
+        ],
+    ],
+)
+def test_hold_sources(sources):
     """
     test aptpkg.hold when using sources
     """
-    sources = [
-        OrderedDict(
-            [
-                (
-                    "vim",
-                    "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
-                )
-            ]
-        )
-    ]
     set_sel = {"vim": {"old": "install", "new": "hold"}}
     get_sel = {"hold": []}
     patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
@@ -1739,20 +1750,31 @@ def test_unhold_pkgs_sources():
     assert err.value.message == "Only one of pkgs or sources can be specified."
 
 
-def test_unhold_sources():
+@pytest.mark.parametrize(
+    "sources",
+    [
+        [
+            OrderedDict(
+                [
+                    (
+                        "vim",
+                        "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+                    )
+                ]
+            )
+        ],
+        [
+            (
+                "vim",
+                "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
+            )
+        ],
+    ],
+)
+def test_unhold_sources(sources):
     """
     test aptpkg.unhold when using sources
     """
-    sources = [
-        OrderedDict(
-            [
-                (
-                    "vim",
-                    "https://mirrors.edge.kernel.org/ubuntu/pool/main/v/vim/vim_8.2.3995-1ubuntu2.12_amd64.deb",
-                )
-            ]
-        )
-    ]
     set_sel = {"vim": {"old": "hold", "new": "install"}}
     get_sel = {"hold": ["vim"]}
     patch_get_sel = patch("salt.modules.aptpkg.get_selections", return_value=get_sel)
