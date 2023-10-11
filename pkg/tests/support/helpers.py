@@ -50,8 +50,8 @@ log = logging.getLogger(__name__)
 
 @attr.s(kw_only=True, slots=True)
 class SaltPkgInstall:
+    pkg_system_service: bool = attr.ib(default=False)
     proc: Subprocess = attr.ib(init=False, repr=False)
-    system_service: bool = attr.ib(default=False)
 
     # Paths
     root: pathlib.Path = attr.ib(default=None)
@@ -691,7 +691,7 @@ class SaltPkgInstall:
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
 
-            if self.system_service:
+            if self.pkg_system_service:
                 self._install_system_service()
 
         elif platform.is_darwin():
@@ -1246,7 +1246,7 @@ class PkgMixin:
 @attr.s(kw_only=True)
 class DaemonPkgMixin(PkgMixin):
     def __attrs_post_init__(self):
-        if not platform.is_windows() and self.salt_pkg_install.system_service:
+        if not platform.is_windows() and self.salt_pkg_install.pkg_system_service:
             if platform.is_darwin():
                 self.write_launchd_conf()
             else:
@@ -1274,7 +1274,7 @@ class SaltMaster(DaemonPkgMixin, master.SaltMaster):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.pkg_system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():
@@ -1355,7 +1355,7 @@ class SaltMinion(DaemonPkgMixin, minion.SaltMinion):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.pkg_system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():
@@ -1391,7 +1391,7 @@ class SaltApi(DaemonPkgMixin, api.SaltApi):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.pkg_system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():

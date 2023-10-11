@@ -23,11 +23,11 @@ pytestmark = [
 def _install_salt_dependencies(container):
     dependencies = []
     for package, version in salt.version.dependency_information():
-        if package not in ("packaging", "looseversion"):
+        if package.lower() not in ("tornado", "packaging", "looseversion"):
             # These are newer base dependencies which the container might not
             # yet have
             continue
-        dependencies.append(f"{package}=={version}")
+        dependencies.append(f"{package.lower()}=={version}")
     if dependencies:
         ret = container.run("python3", "-m", "pip", "install", *dependencies)
         log.debug("Install missing dependecies ret: %s", ret)
