@@ -11,4 +11,4 @@ looseversion
 tornado>=6.3.3
 
 # We need contextvars for salt-ssh
-contextvars
+contextvars ; python_version < '3.7'
