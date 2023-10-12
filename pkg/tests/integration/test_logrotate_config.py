@@ -32,3 +32,12 @@ def test_logrotate_config(logrotate_config_file):
     assert logrotate_config_file.is_file()
     assert logrotate_config_file.owner() == "root"
     assert logrotate_config_file.group() == "root"
+
+
+def test_issue_65231_etc_logrotate_salt_dir_removed():
+    """
+    Test that /etc/logrotate.d/salt is not a directory
+    """
+    path = Path("/etc/logrotate.d/salt")
+    if path.exists():
+        assert path.is_dir() is False
