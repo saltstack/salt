@@ -2665,6 +2665,13 @@ def test_osx_memdata():
         assert ret["swap_total"] == 0
         assert ret["mem_total"] == 4096
 
+    with patch.dict(
+        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect_gigabyte)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
+        ret = core._memdata({"kernel": "Darwin"})
+        assert ret["swap_total"] == 0
+        assert ret["mem_total"] == 4096
+
 
 @pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
 def test_locale_info_tzname():
@@ -4386,6 +4393,21 @@ default via fe80::20d:b9ff:fe37:e65c dev enp7s0u2u4 proto ra metric 100 pref med
                 "ip_gw": True,
             }
 
+    with patch("salt.utils.path.which", return_value="/usr/sbin/ip"):
+        ip_route = """default
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1
+172.19.0.0/16 dev docker_gwbridge proto kernel scope link src 172.19.0.1
+172.23.5.0/24 dev enp7s0u2u4 proto kernel scope link src 172.23.5.173 metric 100
+192.168.56.0/24 dev vboxnet0 proto kernel scope link src 192.168.56.1"""
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=[ip_route])},
+        ):
+
+            ret = core.default_gateway()
+            assert ret == {"ip_gw": True, "ip4_gw": True, "ip6_gw": False}
+
 
 def test__osx_platform_data():
     """
@@ -4948,6 +4970,17 @@ def test__bsd_memdata():
             {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
         ):
             ret = core._bsd_memdata(osdata)
+            assert ret == {"mem_total": 1023, "swap_total": 0}
+
+    with patch("salt.utils.path.which", side_effect=["/sbin/sysctl", "/sbin/swapctl"]):
+
+        mock_cmd_run = ["-", "1073278976", "no swap devices configured"]
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._memdata(osdata)
             assert ret == {"mem_total": 1023, "swap_total": 0}
 
 
