@@ -142,6 +142,72 @@ IPV6_SUBNETS = {
 }
 
 
+@pytest.fixture(scope="module")
+def linux_interfaces_dict():
+    return {
+        "eth0": {
+            "hwaddr": "e0:3f:49:85:6a:af",
+            "inet": [
+                {
+                    "address": "10.10.10.56",
+                    "broadcast": "10.10.10.255",
+                    "netmask": "255.255.252.0",
+                }
+            ],
+            "inet6": [
+                {
+                    "address": "fe80::e23f:49ff:fe85:6aaf",
+                    "prefixlen": "64",
+                    "scope": "link",
+                }
+            ],
+            "up": True,
+        },
+        "lo": {
+            "inet": [{"address": "127.0.0.1", "netmask": "255.0.0.0"}],
+            "inet6": [{"address": "::1", "prefixlen": "128", "scope": "host"}],
+            "up": True,
+        },
+    }
+
+
+@pytest.fixture(scope="module")
+def freebsd_interfaces_dict():
+    return {
+        "": {"up": False},
+        "em0": {
+            "hwaddr": "00:30:48:ff:ff:ff",
+            "inet": [
+                {
+                    "address": "10.10.10.250",
+                    "broadcast": "10.10.10.255",
+                    "netmask": "255.255.255.224",
+                },
+                {
+                    "address": "10.10.10.56",
+                    "broadcast": "10.10.10.63",
+                    "netmask": "255.255.255.192",
+                },
+            ],
+            "up": True,
+        },
+        "em1": {"hwaddr": "00:30:48:aa:aa:aa", "up": False},
+        "lo0": {
+            "inet": [{"address": "127.0.0.1", "netmask": "255.0.0.0"}],
+            "inet6": [
+                {"address": "fe80::1", "prefixlen": "64", "scope": "0x8"},
+                {"address": "::1", "prefixlen": "128", "scope": None},
+            ],
+            "up": True,
+        },
+        "plip0": {"up": False},
+        "tun0": {
+            "inet": [{"address": "10.12.0.1", "netmask": "255.255.255.255"}],
+            "up": True,
+        },
+    }
+
+
 def test_sanitize_host_ip():
     ret = network.sanitize_host("10.1./2.$3")
     assert ret == "10.1.2.3"
@@ -487,70 +553,14 @@ def test_hex2ip():
     )
 
 
-def test_interfaces_ifconfig_linux():
+def test_interfaces_ifconfig_linux(linux_interfaces_dict):
     interfaces = network._interfaces_ifconfig(LINUX)
-    assert interfaces == {
-        "eth0": {
-            "hwaddr": "e0:3f:49:85:6a:af",
-            "inet": [
-                {
-                    "address": "10.10.10.56",
-                    "broadcast": "10.10.10.255",
-                    "netmask": "255.255.252.0",
-                }
-            ],
-            "inet6": [
-                {
-                    "address": "fe80::e23f:49ff:fe85:6aaf",
-                    "prefixlen": "64",
-                    "scope": "link",
-                }
-            ],
-            "up": True,
-        },
-        "lo": {
-            "inet": [{"address": "127.0.0.1", "netmask": "255.0.0.0"}],
-            "inet6": [{"address": "::1", "prefixlen": "128", "scope": "host"}],
-            "up": True,
-        },
-    }
+    assert interfaces == linux_interfaces_dict
 
 
-def test_interfaces_ifconfig_freebsd():
+def test_interfaces_ifconfig_freebsd(freebsd_interfaces_dict):
     interfaces = network._interfaces_ifconfig(FREEBSD)
-    assert interfaces == {
-        "": {"up": False},
-        "em0": {
-            "hwaddr": "00:30:48:ff:ff:ff",
-            "inet": [
-                {
-                    "address": "10.10.10.250",
-                    "broadcast": "10.10.10.255",
-                    "netmask": "255.255.255.224",
-                },
-                {
-                    "address": "10.10.10.56",
-                    "broadcast": "10.10.10.63",
-                    "netmask": "255.255.255.192",
-                },
-            ],
-            "up": True,
-        },
-        "em1": {"hwaddr": "00:30:48:aa:aa:aa", "up": False},
-        "lo0": {
-            "inet": [{"address": "127.0.0.1", "netmask": "255.0.0.0"}],
-            "inet6": [
-                {"address": "fe80::1", "prefixlen": "64", "scope": "0x8"},
-                {"address": "::1", "prefixlen": "128", "scope": None},
-            ],
-            "up": True,
-        },
-        "plip0": {"up": False},
-        "tun0": {
-            "inet": [{"address": "10.12.0.1", "netmask": "255.255.255.255"}],
-            "up": True,
-        },
-    }
+    assert interfaces == freebsd_interfaces_dict
 
 
 def test_interfaces_ifconfig_solaris():
@@ -1412,3 +1422,104 @@ def test_natural_ipv4_netmask():
 
     ret = network.natural_ipv4_netmask("10.10.10.250", fmt="netmask")
     assert ret == "255.0.0.0"
+
+
+def test_rpad_ipv4_network():
+    ret = network.rpad_ipv4_network("127.0")
+    assert ret == "127.0.0.0"
+    ret = network.rpad_ipv4_network("192.168.3")
+    assert ret == "192.168.3.0"
+    ret = network.rpad_ipv4_network("10.209")
+    assert ret == "10.209.0.0"
+
+
+def test_hw_addr(linux_interfaces_dict, freebsd_interfaces_dict):
+
+    with patch(
+        "salt.utils.network.linux_interfaces",
+        MagicMock(return_value=linux_interfaces_dict),
+    ):
+        hw_addrs = network.hw_addr("eth0")
+        assert hw_addrs == "e0:3f:49:85:6a:af"
+
+    with patch(
+        "salt.utils.network.interfaces", MagicMock(return_value=freebsd_interfaces_dict)
+    ), patch("salt.utils.platform.is_netbsd", MagicMock(return_value=True)):
+        hw_addrs = network.hw_addr("em0")
+        assert hw_addrs == "00:30:48:ff:ff:ff"
+
+        hw_addrs = network.hw_addr("em1")
+        assert hw_addrs == "00:30:48:aa:aa:aa"
+
+        hw_addrs = network.hw_addr("dog")
+        assert (
+            hw_addrs
+            == 'Interface "dog" not in available interfaces: "", "em0", "em1", "lo0", "plip0", "tun0"'
+        )
+
+
+def test_interface_and_ip(linux_interfaces_dict):
+
+    with patch(
+        "salt.utils.network.linux_interfaces",
+        MagicMock(return_value=linux_interfaces_dict),
+    ):
+        ret = network.interface("eth0")
+        assert ret == [
+            {
+                "address": "10.10.10.56",
+                "broadcast": "10.10.10.255",
+                "netmask": "255.255.252.0",
+            }
+        ]
+
+        ret = network.interface("dog")
+        assert ret == 'Interface "dog" not in available interfaces: "eth0", "lo"'
+
+        ret = network.interface_ip("eth0")
+        assert ret == "10.10.10.56"
+
+        ret = network.interface_ip("dog")
+        assert ret == 'Interface "dog" not in available interfaces: "eth0", "lo"'
+
+
+def test_subnets(linux_interfaces_dict):
+
+    with patch(
+        "salt.utils.network.linux_interfaces",
+        MagicMock(return_value=linux_interfaces_dict),
+    ):
+        ret = network.subnets()
+        assert ret == ["10.10.8.0/22"]
+
+        ret = network.subnets6()
+        assert ret == ["fe80::/64"]
+
+
+def test_in_subnet(caplog):
+    assert network.in_subnet("fe80::/64", "fe80::e23f:49ff:fe85:6aaf")
+
+    assert network.in_subnet("10.10.8.0/22", "10.10.10.56")
+
+    assert not network.in_subnet("10.10.8.0/22")
+
+    caplog.clear()
+    ret = network.in_subnet("10.10.8.0/40")
+    assert "Invalid CIDR '10.10.8.0/40'" in caplog.text
+    assert not ret
+
+
+def test_ip_addrs(linux_interfaces_dict):
+    with patch(
+        "salt.utils.network.linux_interfaces",
+        MagicMock(return_value=linux_interfaces_dict),
+    ):
+        ret = network.ip_addrs("eth0")
+        assert ret == ["10.10.10.56"]
+
+    with patch(
+        "salt.utils.network.linux_interfaces",
+        MagicMock(return_value=linux_interfaces_dict),
+    ):
+        ret = network.ip_addrs6("eth0")
+        assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
