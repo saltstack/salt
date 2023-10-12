@@ -124,16 +124,19 @@ def test_mode(tmp_path):
 def test_lchown(tmp_path, windows_user):
     path = str(tmp_path)
     assert win_file.lchown(path, windows_user) is True
+    assert win_file.get_user(path) == windows_user
 
 
 def test_chown(tmp_path, windows_user):
     path = str(tmp_path)
     assert win_file.chown(path, windows_user) is True
+    assert win_file.get_user(path) == windows_user
 
 
 def test_chpgrp(tmp_path):
     tmp_path = str(tmp_path)
     assert win_file.chpgrp(tmp_path, "Administrators") is True
+    assert win_file.get_pgroup(tmp_path) == "Administrators"
 
 
 def test_chgrp(tmp_path):
@@ -267,6 +270,7 @@ def test_remove(tmp_path):
         pass
     assert os.path.isfile(file) is True
     assert win_file.remove(file) is True
+    assert os.path.isfile(file) is False
 
 
 def test_remove_force(tmp_path):
@@ -276,6 +280,7 @@ def test_remove_force(tmp_path):
         pass
     assert os.path.isfile(file) is True
     assert win_file.remove(file, force=True) is True
+    assert os.path.isfile(file) is False
 
 
 def test_mkdir(tmp_path):
@@ -304,10 +309,14 @@ def test_makedirs_perms(tmp_path):
 def test_check_perms(tmp_path, windows_user):
     path = str(tmp_path)
     ret = {}
-    assert isinstance(win_file.check_perms(path, ret, windows_user), dict)
+    perms = win_file.check_perms(path, ret, windows_user)
     assert ret == {}
+    assert perms["comment"] == ""
+    assert isinstance(perms["changes"], dict)
+    assert isinstance(perms["name"], str) and len(perms["name"])
+    assert perms["result"] is True
 
 
 def test_set_perms(tmp_path):
     path = str(tmp_path)
-    assert isinstance(win_file.check_perms(path), dict)
+    assert win_file.set_perms(path) == {}
