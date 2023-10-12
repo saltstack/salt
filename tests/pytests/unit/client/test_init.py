@@ -10,6 +10,9 @@ def local_client():
 
 
 def test_get_local_client(local_client):
+    """
+    Test that a local client is created
+    """
     assert isinstance(local_client, salt.client.LocalClient)
 
 
