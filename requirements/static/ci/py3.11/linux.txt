@@ -97,10 +97,6 @@ click==8.1.3
     # via geomet
 clustershell==1.9.1
     # via -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
-    #   -r requirements/base.txt
 croniter==1.3.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 cryptography==41.0.4
@@ -167,10 +163,6 @@ idna==3.4
     #   httpx
     #   requests
     #   yarl
-immutables==0.15
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
-    #   contextvars
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt

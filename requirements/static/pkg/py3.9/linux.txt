@@ -16,8 +16,6 @@ cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/pkg/linux.in
-contextvars==2.4
-    # via -r requirements/base.txt
 cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
@@ -27,8 +25,6 @@ distro==1.8.0
     # via -r requirements/base.txt
 idna==3.4
     # via requests
-immutables==0.15
-    # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/static/pkg/linux.in
 inflect==6.0.4

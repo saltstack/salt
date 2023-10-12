@@ -18,8 +18,6 @@ cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/darwin.txt
-contextvars==2.4
-    # via -r requirements/base.txt
 cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
@@ -35,8 +33,6 @@ idna==3.4
     # via
     #   -r requirements/darwin.txt
     #   requests
-immutables==0.15
-    # via contextvars
 inflect==6.0.4
     # via jaraco.text
 jaraco.collections==4.1.0

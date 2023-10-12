@@ -23,8 +23,6 @@ cherrypy==18.8.0
     # via -r requirements/windows.txt
 clr-loader==0.2.4
     # via pythonnet
-contextvars==2.4
-    # via -r requirements/base.txt
 cryptography==41.0.4
     # via
     #   -r requirements/crypto.txt
@@ -38,8 +36,6 @@ gitpython==3.1.35
     # via -r requirements/windows.txt
 idna==3.4
     # via requests
-immutables==0.15
-    # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/windows.txt
 importlib-resources==5.12.0
