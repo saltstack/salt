@@ -4949,3 +4949,41 @@ def test__bsd_memdata():
         ):
             ret = core._bsd_memdata(osdata)
             assert ret == {"mem_total": 1023, "swap_total": 0}
+
+
+def test__ps():
+    """
+    test _ps
+    """
+    osdata = {"os_family": ""}
+
+    for bsd in ["FreeBSD", "NetBSD", "OpenBSD", "MacOS"]:
+        osdata = {"os": bsd}
+        ret = core._ps(osdata)
+        assert ret == {"ps": "ps auxwww"}
+
+    osdata = {"os_family": "Solaris", "os": ""}
+    ret = core._ps(osdata)
+    assert ret == {"ps": "/usr/ucb/ps auxwww"}
+
+    osdata = {"os": "Windows", "os_family": ""}
+    ret = core._ps(osdata)
+    assert ret == {"ps": "tasklist.exe"}
+
+    osdata = {"os": "", "os_family": "AIX"}
+    ret = core._ps(osdata)
+    assert ret == {"ps": "/usr/bin/ps auxww"}
+
+    osdata = {"os": "", "os_family": "NILinuxRT"}
+    ret = core._ps(osdata)
+    assert ret == {"ps": "ps -o user,pid,ppid,tty,time,comm"}
+
+    osdata = {"os": "", "os_family": "", "virtual": "openvzhn"}
+    ret = core._ps(osdata)
+    assert ret == {
+        "ps": (
+            'ps -fH -p $(grep -l "^envID:[[:space:]]*0\\$" '
+            '/proc/[0-9]*/status | sed -e "s=/proc/\\([0-9]*\\)/.*=\\1=")  '
+            "| awk '{ $7=\"\"; print }'"
+        )
+    }
