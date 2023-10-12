@@ -1004,6 +1004,7 @@ def _netbsd_interfaces_ifconfig(out):
     return ret
 
 
+# pragma: no cover
 def _junos_interfaces_ifconfig(out):
     """
     Uses ifconfig to return a dictionary of interfaces with various information
@@ -1074,6 +1075,7 @@ def _junos_interfaces_ifconfig(out):
     return ret
 
 
+# pragma: no cover
 def junos_interfaces():
     """
     Obtain interface information for Junos; ifconfig
@@ -1239,6 +1241,7 @@ def _get_iface_info(iface):
         return None, error_msg
 
 
+# pragma: no cover
 def _hw_addr_aix(iface):
     """
     Return the hardware address (a.k.a. MAC address) for a given interface on AIX
@@ -1277,7 +1280,7 @@ def hw_addr(iface):
 
     """
     if salt.utils.platform.is_aix():
-        return _hw_addr_aix
+        return _hw_addr_aix(iface)
 
     iface_info, error = _get_iface_info(iface)
 
@@ -1746,6 +1749,7 @@ def _netlink_tool_remote_on(port, which_end):
     return remotes
 
 
+# pragma: no cover
 def _sunos_remotes_on(port, which_end):
     """
     SunOS specific helper function.
@@ -1786,6 +1790,7 @@ def _sunos_remotes_on(port, which_end):
     return remotes
 
 
+# pragma: no cover
 def _freebsd_remotes_on(port, which_end):
     """
     Returns set of ipv4 host addresses of remote established connections
@@ -1848,6 +1853,7 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
+# pragma: no cover
 def _netbsd_remotes_on(port, which_end):
     """
     Returns set of ipv4 host addresses of remote established connections
@@ -1909,6 +1915,7 @@ def _netbsd_remotes_on(port, which_end):
     return remotes
 
 
+# pragma: no cover
 def _openbsd_remotes_on(port, which_end):
     """
     OpenBSD specific helper function.
@@ -2053,6 +2060,7 @@ def _linux_remotes_on(port, which_end):
     return remotes
 
 
+# pragma: no cover
 def _aix_remotes_on(port, which_end):
     """
     AIX specific helper function.
