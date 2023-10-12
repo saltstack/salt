@@ -477,7 +477,7 @@ def _bsd_cpudata(osdata):
     return grains
 
 
-def _sunos_cpudata():
+def _sunos_cpudata():  # pragma: no cover
     """
     Return the CPU information for Solaris-like systems
     """
@@ -509,7 +509,7 @@ def _sunos_cpudata():
     return grains
 
 
-def _aix_cpudata():
+def _aix_cpudata():  # pragma: no cover
     """
     Return CPU information for AIX systems
     """
@@ -612,7 +612,7 @@ def _bsd_memdata(osdata):
     return grains
 
 
-def _sunos_memdata():
+def _sunos_memdata():  # pragma: no cover
     """
     Return the memory information for SunOS-like systems
     """
@@ -636,7 +636,7 @@ def _sunos_memdata():
     return grains
 
 
-def _aix_memdata():
+def _aix_memdata():  # pragma: no cover
     """
     Return the memory information for AIX systems
     """
@@ -690,16 +690,16 @@ def _memdata(osdata):
         grains.update(_bsd_memdata(osdata))
     elif osdata["kernel"] == "Darwin":
         grains.update(_osx_memdata())
-    elif osdata["kernel"] == "SunOS":
+    elif osdata["kernel"] == "SunOS":  # pragma: no cover
         grains.update(_sunos_memdata())
     elif osdata["kernel"] == "AIX":
-        grains.update(_aix_memdata())
+        grains.update(_aix_memdata())  # pragma: no cover
     elif osdata["kernel"] == "Windows" and HAS_WMI:
         grains.update(_windows_memdata())
     return grains
 
 
-def _aix_get_machine_id():
+def _aix_get_machine_id():  # pragma: no cover
     """
     Parse the output of lsattr -El sys0 for os_uuid
     """
@@ -2461,7 +2461,7 @@ def _smartos_os_data():
     return grains
 
 
-def _sunos_release():
+def _sunos_release():  # pragma: no cover
     grains = {}
     with salt.utils.files.fopen("/etc/release", "r") as fp_:
         rel_data = fp_.read()

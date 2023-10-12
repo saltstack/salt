@@ -4887,3 +4887,65 @@ def test__netbsd_gpu_data():
     with patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
         ret = core._netbsd_gpu_data()
         assert ret == {"gpus": [], "num_gpus": 0}
+
+
+def test__bsd_memdata():
+    """
+    test _bsd_memdata
+    """
+    osdata = {"kernel": "OpenBSD"}
+
+    with patch("salt.utils.path.which", side_effect=["/sbin/sysctl", "/sbin/swapctl"]):
+
+        mock_cmd_run = [
+            "1073278976",
+            "total: 1048559 KBytes allocated, 0 KBytes used, 1048559 KBytes available",
+        ]
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_memdata(osdata)
+            assert ret == {"mem_total": 1023, "swap_total": 0}
+
+    osdata = {"kernel": "NetBSD"}
+
+    with patch("salt.utils.path.which", side_effect=["/sbin/sysctl", "/sbin/swapctl"]):
+
+        mock_cmd_run = [
+            "1073278976",
+            "total: 1048559 KBytes allocated, 0 KBytes used, 1048559 KBytes available",
+        ]
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_memdata(osdata)
+            assert ret == {"mem_total": 1023, "swap_total": 0}
+
+    with patch("salt.utils.path.which", side_effect=["/sbin/sysctl", "/sbin/swapctl"]):
+
+        mock_cmd_run = [
+            "-",
+            "1073278976",
+            "total: 1048559 KBytes allocated, 0 KBytes used, 1048559 KBytes available",
+        ]
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_memdata(osdata)
+            assert ret == {"mem_total": 1023, "swap_total": 0}
+
+    with patch("salt.utils.path.which", side_effect=["/sbin/sysctl", "/sbin/swapctl"]):
+
+        mock_cmd_run = ["-", "1073278976", "no swap devices configured"]
+
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_memdata(osdata)
+            assert ret == {"mem_total": 1023, "swap_total": 0}
