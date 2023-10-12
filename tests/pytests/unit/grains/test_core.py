@@ -4504,3 +4504,386 @@ JUNOS FIPS mode utilities [20150814.204717_builder_junos_151_f2]"""
         "kernelversion": "JUNOS OS Kernel 64-bit  [20150814.313820_builder_stable_10]",
         "kernelrelease": "20150814.313820_builder_stable_10",
     }
+
+
+def test__bsd_cpudata_freebsd():
+    """
+    test _bsd_cpudata for FreeBSD
+    """
+    osdata = {"kernel": "FreeBSD"}
+    mock_cmd_run = ["1", "amd64", "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz"]
+
+    dmesg_mock = """Copyright (c) 1992-2021 The FreeBSD Project.
+Copyright (c) 1979, 1980, 1983, 1986, 1988, 1989, 1991, 1992, 1993, 1994
+    The Regents of the University of California. All rights reserved.
+FreeBSD is a registered trademark of The FreeBSD Foundation.
+FreeBSD 13.2-RELEASE releng/13.2-n254617-525ecfdad597 GENERIC amd64
+FreeBSD clang version 14.0.5 (https://github.com/llvm/llvm-project.git llvmorg-14.0.5-0-gc12386ae247c)
+VT(vga): text 80x25
+CPU: Intel(R) Core(TM) i7-10850H CPU @ 2.70GHz (2712.13-MHz K8-class CPU)
+  Origin="GenuineIntel"  Id=0xa0652  Family=0x6  Model=0xa5  Stepping=2
+  Features=0x1783fbff<FPU,VME,DE,PSE,TSC,MSR,PAE,MCE,CX8,APIC,SEP,MTRR,PGE,MCA,CMOV,PAT,PSE36,MMX,FXSR,SSE,SSE2,HTT>
+  Features2=0x5eda220b<SSE3,PCLMULQDQ,MON,SSSE3,CX16,PCID,SSE4.1,SSE4.2,MOVBE,POPCNT,AESNI,XSAVE,OSXSAVE,AVX,RDRAND>
+  AMD Features=0x28100800<SYSCALL,NX,RDTSCP,LM>
+  AMD Features2=0x121<LAHF,ABM,Prefetch>
+  Structured Extended Features=0x842529<FSGSBASE,BMI1,AVX2,BMI2,INVPCID,NFPUSG,RDSEED,CLFLUSHOPT>
+  Structured Extended Features3=0x30000400<MD_CLEAR,L1DFL,ARCH_CAP>
+  TSC: P-state invariant
+real memory  = 1073676288 (1023 MB)
+avail memory = 995774464 (949 MB)
+Event timer "LAPIC" quality 100
+ACPI APIC Table: <VBOX   VBOXAPIC>
+random: registering fast source Intel Secure Key RNG
+random: fast provider: "Intel Secure Key RNG"
+random: unblocking device.
+ioapic0: MADT APIC ID 1 != hw id 0
+ioapic0 <Version 2.0> irqs 0-23
+random: entropy device external interface
+kbd1 at kbdmux0
+vtvga0: <VT VGA driver>
+smbios0: <System Management BIOS> at iomem 0xfff60-0xfff7e
+smbios0: Version: 2.5, BCD Revision: 2.5
+aesni0: <AES-CBC,AES-CCM,AES-GCM,AES-ICM,AES-XTS>
+acpi0: <VBOX VBOXXSDT>
+acpi0: Power Button (fixed)
+acpi0: Sleep Button (fixed)
+cpu0: <ACPI CPU> on acpi0
+attimer0: <AT timer> port 0x40-0x43,0x50-0x53 on acpi0
+Timecounter "i8254" frequency 1193182 Hz quality 0
+Event timer "i8254" frequency 1193182 Hz quality 100
+Timecounter "ACPI-fast" frequency 3579545 Hz quality 900
+acpi_timer0: <32-bit timer at 3.579545MHz> port 0x4008-0x400b on acpi0
+pcib0: <ACPI Host-PCI bridge> port 0xcf8-0xcff on acpi0
+pci0: <ACPI PCI bus> on pcib0
+isab0: <PCI-ISA bridge> at device 1.0 on pci0
+isa0: <ISA bus> on isab0
+atapci0: <Intel PIIX4 UDMA33 controller> port 0x1f0-0x1f7,0x3f6,0x170-0x177,0x376,0xd000-0xd00f at device 1.1 on pci0
+ata0: <ATA channel> at channel 0 on atapci0
+ata1: <ATA channel> at channel 1 on atapci0
+vgapci0: <VGA-compatible display> port 0xd010-0xd01f mem 0xe0000000-0xe3ffffff,0xf0000000-0xf01fffff irq 18 at device 2.0 on pci0
+vgapci0: Boot video device
+em0: <Intel(R) Legacy PRO/1000 MT 82540EM> port 0xd020-0xd027 mem 0xf0200000-0xf021ffff irq 19 at device 3.0 on pci0
+em0: Using 1024 TX descriptors and 1024 RX descriptors
+em0: Ethernet address: 08:00:27:ae:76:42
+em0: netmap queues/slots: TX 1/1024, RX 1/1024
+pcm0: <Intel ICH (82801AA)> port 0xd100-0xd1ff,0xd200-0xd23f irq 21 at device 5.0 on pci0
+pcm0: <SigmaTel STAC9700/83/84 AC97 Codec>
+ohci0: <Apple KeyLargo/Intrepid USB controller> mem 0xf0804000-0xf0804fff irq 22 at device 6.0 on pci0
+usbus0 on ohci0
+pci0: <bridge> at device 7.0 (no driver attached)
+ehci0: <Intel 82801FB (ICH6) USB 2.0 controller> mem 0xf0805000-0xf0805fff irq 19 at device 11.0 on pci0
+usbus1: EHCI version 1.0
+usbus1 on ehci0
+battery0: <ACPI Control Method Battery> on acpi0
+acpi_acad0: <AC Adapter> on acpi0
+atkbdc0: <Keyboard controller (i8042)> port 0x60,0x64 irq 1 on acpi0
+atkbd0: <AT Keyboard> irq 1 on atkbdc0
+kbd0 at atkbd0
+atkbd0: [GIANT-LOCKED]
+psm0: <PS/2 Mouse> irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+WARNING: Device "psm" is Giant locked and may be deleted before FreeBSD 14.0.
+psm0: model IntelliMouse Explorer, device ID 4
+orm0: <ISA Option ROM> at iomem 0xc0000-0xc7fff pnpid ORM0000 on isa0
+vga0: <Generic ISA VGA> at port 0x3c0-0x3df iomem 0xa0000-0xbffff pnpid PNP0900 on isa0
+atrtc0: <AT realtime clock> at port 0x70 irq 8 on isa0
+atrtc0: registered as a time-of-day clock, resolution 1.000000s
+Event timer "RTC" frequency 32768 Hz quality 0
+atrtc0: non-PNP ISA device will be removed from GENERIC in FreeBSD 14.
+Timecounter "TSC-low" frequency 1356006904 Hz quality 1000
+Timecounters tick every 10.000 msec
+ZFS filesystem version: 5
+ZFS storage pool version: features support (5000)
+usbus0: 12Mbps Full Speed USB v1.0
+usbus1: 480Mbps High Speed USB v2.0
+pcm0: measured ac97 link rate at 44717 Hz
+ugen1.1: <Intel EHCI root HUB> at usbus1
+uhub0 on usbus1
+uhub0: <Intel EHCI root HUB, class 9/0, rev 2.00/1.00, addr 1> on usbus1
+ugen0.1: <Apple OHCI root HUB> at usbus0
+uhub1 on usbus0
+uhub1: <Apple OHCI root HUB, class 9/0, rev 1.00/1.00, addr 1> on usbus0
+Trying to mount root from zfs:zroot/ROOT/default []...
+uhub1: 12 ports with 12 removable, self powered
+ada0 at ata0 bus 0 scbus0 target 0 lun 0
+ada0: <VBOX HARDDISK 1.0> ATA-6 device
+ada0: Serial Number VBf824a3f1-4ad9d778
+ada0: 33.300MB/s transfers (UDMA2, PIO 65536bytes)
+ada0: 16384MB (33554432 512 byte sectors)
+Root mount waiting for: usbus1
+Root mount waiting for: usbus1
+Root mount waiting for: usbus1
+Root mount waiting for: usbus1
+Root mount waiting for: usbus1
+uhub0: 12 ports with 12 removable, self powered
+intsmb0: <Intel PIIX4 SMBUS Interface> irq 23 at device 7.0 on pci0
+intsmb0: intr IRQ 9 enabled revision 0
+smbus0: <System Management Bus> on intsmb0
+lo0: link state changed to UP
+em0: link state changed to UP"""
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            with patch("os.path.isfile", return_value=True):
+                with patch("salt.utils.files.fopen", mock_open(read_data=dmesg_mock)):
+                    ret = core._bsd_cpudata(osdata)
+                    assert "num_cpus" in ret
+                    assert ret["num_cpus"] == 1
+
+                    assert "cpuarch" in ret
+                    assert ret["cpuarch"] == "amd64"
+
+                    assert "cpu_model" in ret
+                    assert (
+                        ret["cpu_model"] == "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz"
+                    )
+
+                    assert "cpu_flags" in ret
+                    assert ret["cpu_flags"] == [
+                        "FPU",
+                        "VME",
+                        "DE",
+                        "PSE",
+                        "TSC",
+                        "MSR",
+                        "PAE",
+                        "MCE",
+                        "CX8",
+                        "APIC",
+                        "SEP",
+                        "MTRR",
+                        "PGE",
+                        "MCA",
+                        "CMOV",
+                        "PAT",
+                        "PSE36",
+                        "MMX",
+                        "FXSR",
+                        "SSE",
+                        "SSE2",
+                        "HTT",
+                        "SSE3",
+                        "PCLMULQDQ",
+                        "MON",
+                        "SSSE3",
+                        "CX16",
+                        "PCID",
+                        "SSE4.1",
+                        "SSE4.2",
+                        "MOVBE",
+                        "POPCNT",
+                        "AESNI",
+                        "XSAVE",
+                        "OSXSAVE",
+                        "AVX",
+                        "RDRAND",
+                        "SYSCALL",
+                        "NX",
+                        "RDTSCP",
+                        "LM",
+                        "LAHF",
+                        "ABM",
+                        "Prefetch",
+                        "FSGSBASE",
+                        "BMI1",
+                        "AVX2",
+                        "BMI2",
+                        "INVPCID",
+                        "NFPUSG",
+                        "RDSEED",
+                        "CLFLUSHOPT",
+                        "MD_CLEAR",
+                        "L1DFL",
+                        "ARCH_CAP",
+                    ]
+
+
+def test__bsd_cpudata_netbsd():
+    """
+    test _bsd_cpudata for NetBSD
+    """
+    osdata = {"kernel": "NetBSD"}
+    mock_cpuctl_identify = """cpu0: highest basic info 00000016
+cpu0: highest extended info 80000008
+cpu0: "Intel(R) Core(TM) i7-10850H CPU @ 2.70GHz"
+cpu0: Intel 10th gen Core (Comet Lake) (686-class), 2753.71 MHz
+cpu0: family 0x6 model 0xa5 stepping 0x2 (id 0xa0652)
+cpu0: features 0x178bfbff<FPU,VME,DE,PSE,TSC,MSR,PAE,MCE,CX8,APIC,SEP,MTRR,PGE>
+cpu0: features 0x178bfbff<MCA,CMOV,PAT,PSE36,CLFSH,MMX,FXSR,SSE,SSE2,HTT>
+cpu0: features1 0x5eda220b<SSE3,PCLMULQDQ,MONITOR,SSSE3,CX16,PCID,SSE41,SSE42>
+cpu0: features1 0x5eda220b<MOVBE,POPCNT,AES,XSAVE,OSXSAVE,AVX,RDRAND>
+cpu0: features2 0x28100800<SYSCALL/SYSRET,XD,RDTSCP,EM64T>
+cpu0: features3 0x121<LAHF,LZCNT,PREFETCHW>
+cpu0: features5 0x842529<FSGSBASE,BMI1,AVX2,BMI2,INVPCID,FPUCSDS,RDSEED>
+cpu0: features5 0x842529<CLFLUSHOPT>
+cpu0: features7 0x30000400<MD_CLEAR,L1D_FLUSH,ARCH_CAP>
+cpu0: xsave features 0x7<x87,SSE,AVX>
+cpu0: xsave area size: current 832, maximum 832, xgetbv enabled
+cpu0: enabled xsave 0x7<x87,SSE,AVX>
+cpu0: I-cache: 32KB 64B/line 8-way, D-cache: 32KB 64B/line 8-way
+cpu0: L2 cache: 256KB 64B/line 4-way
+cpu0: L3 cache: 12MB 64B/line 16-way
+cpu0: 64B prefetching
+cpu0: ITLB: 64 4KB entries 8-way, 8 2M/4M entries
+cpu0: DTLB: 64 4KB entries 4-way, 4 1GB entries 4-way
+cpu0: L2 STLB: 1536 4KB entries 6-way
+cpu0: Initial APIC ID 0
+cpu0: Cluster/Package ID 0
+cpu0: Core ID 0
+cpu0: SMT ID 0
+cpu0: monitor-line size 64
+cpu0: SEF highest subleaf 00000000
+cpu0: Power Management features: 0x100<ITSC>
+cpu0: microcode version 0x0, platform ID 0"""
+    mock_cmd_run = [
+        "1",
+        "amd64",
+        "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz",
+        mock_cpuctl_identify,
+    ]
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_cpudata(osdata)
+            assert "num_cpus" in ret
+            assert ret["num_cpus"] == 1
+
+            assert "cpuarch" in ret
+            assert ret["cpuarch"] == "amd64"
+
+            assert "cpu_model" in ret
+            assert ret["cpu_model"] == "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz"
+
+
+def test__bsd_cpudata_darwin():
+    """
+    test _bsd_cpudata for Darwin
+    """
+    osdata = {"kernel": "Darwin"}
+    mock_cmd_run = [
+        "1",
+        "x86_64",
+        "Intel(R) Core(TM)2 Duo CPU     P8600  @ 2.40GHz",
+        "FPU VME DE PSE TSC MSR PAE MCE CX8 APIC SEP MTRR PGE MCA CMOV PAT PSE36 CLFSH DS ACPI MMX FXSR SSE SSE2 SS HTT TM PBE SSE3 DTES64 MON DSCPL VMX SMX EST TM2 SSSE3 CX16 TPR PDCM SSE4.1 XSAVE",
+    ]
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_cpudata(osdata)
+            assert "num_cpus" in ret
+            assert ret["num_cpus"] == 1
+
+            assert "cpuarch" in ret
+            assert ret["cpuarch"] == "x86_64"
+
+            assert "cpu_model" in ret
+            assert ret["cpu_model"] == "Intel(R) Core(TM)2 Duo CPU     P8600  @ 2.40GHz"
+
+            assert "cpu_flags" in ret
+            assert ret["cpu_flags"] == [
+                "FPU",
+                "VME",
+                "DE",
+                "PSE",
+                "TSC",
+                "MSR",
+                "PAE",
+                "MCE",
+                "CX8",
+                "APIC",
+                "SEP",
+                "MTRR",
+                "PGE",
+                "MCA",
+                "CMOV",
+                "PAT",
+                "PSE36",
+                "CLFSH",
+                "DS",
+                "ACPI",
+                "MMX",
+                "FXSR",
+                "SSE",
+                "SSE2",
+                "SS",
+                "HTT",
+                "TM",
+                "PBE",
+                "SSE3",
+                "DTES64",
+                "MON",
+                "DSCPL",
+                "VMX",
+                "SMX",
+                "EST",
+                "TM2",
+                "SSSE3",
+                "CX16",
+                "TPR",
+                "PDCM",
+                "SSE4.1",
+                "XSAVE",
+            ]
+
+
+def test__bsd_cpudata_openbsd():
+    """
+    test _bsd_cpudata for OpenBSD
+    """
+    osdata = {"kernel": "OpenBSD"}
+    mock_cmd_run = ["1", "amd64", "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz", "amd64"]
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            ret = core._bsd_cpudata(osdata)
+            assert "num_cpus" in ret
+            assert ret["num_cpus"] == 1
+
+            assert "cpuarch" in ret
+            assert ret["cpuarch"] == "amd64"
+
+            assert "cpu_model" in ret
+            assert ret["cpu_model"] == "Intel(R) Core(TM) i7-10850H CPU @ 2.7.0GHz"
+
+
+def test__netbsd_gpu_data():
+    """
+    test _netbsd_gpu_data
+    """
+    mock_pcictl = """000:00:0: Intel 82441FX (PMC) PCI and Memory Controller (host bridge, revision 0x02)
+000:01:0: Intel 82371SB (PIIX3) PCI-ISA Bridge (ISA bridge)
+000:01:1: Intel 82371AB (PIIX4) IDE Controller (IDE mass storage, interface 0x8a, revision 0x01)
+000:02.0: VGA compatible controller: Intel Corporation CometLake-H GT2 [UHD Graphics] (rev 05)
+000:02:0: Intel CometLake-H GT2 [UHD Graphics] (VGA display)
+000:03:0: Intel i82540EM 1000baseT Ethernet (ethernet network, revision 0x02)
+000:04:0: VirtualBox Guest Service (miscellaneous system)
+000:05:0: Intel 82801AA AC-97 Audio Controller (audio multimedia, revision 0x01)
+000:06:0: Apple Computer Intrepid USB Controller (USB serial bus, OHCI)
+000:07:0: Intel 82371AB (PIIX4) Power Management Controller (miscellaneous bridge, revision 0x08)
+000:11:0: Intel 82801FB/FR USB EHCI Controller (USB serial bus, EHCI)"""
+
+    with patch.dict(
+        core.__salt__,
+        {"cmd.run": MagicMock(return_value=mock_pcictl)},
+    ):
+        ret = core._netbsd_gpu_data()
+        assert ret == {
+            "num_gpus": 1,
+            "gpus": [{"vendor": "Intel", "model": "CometLake-H GT2 [UHD Graphics]"}],
+        }
+
+    with patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+        ret = core._netbsd_gpu_data()
+        assert ret == {"gpus": [], "num_gpus": 0}
