@@ -471,22 +471,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
         )
 
-    skip_code_coverage = True
     if "test:coverage" in labels:
-        skip_code_coverage = False
+        ctx.info("Writing 'testrun' to the github outputs file")
+        testrun = TestRun(type="full", skip_code_coverage=False)
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"testrun={json.dumps(testrun)}\n")
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "Full test run chosen because the label `test:coverage` is set.\n"
+            )
+        return
     elif event_name != "pull_request":
-        skip_code_coverage = False
-
-    if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=False)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
+
+    # So, it's a pull request...
 
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
@@ -501,7 +507,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
-    # So, it's a pull request...
     # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
@@ -517,7 +522,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "Full test run chosen because there was a change made "
                 "to `cicd/golden-images.json`.\n"
             )
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
@@ -532,16 +537,16 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif "test:full" in labels:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("Full test run chosen because the label `test:full` is set.\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = TestRun(
             type="changed",
-            skip_code_coverage=skip_code_coverage,
+            skip_code_coverage=True,
             from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
