@@ -557,13 +557,22 @@ def safe_py_code(code):
     return True
 
 
+def insecure_log():
+    """
+    Return the insecure logs types
+    """
+    insecure = []
+    for level, value in LOG_LEVELS.items():
+        if value < LOG_LEVELS.get("info", 20):
+            insecure.append(level)
+    return insecure
+
+
 def verify_log(opts):
     """
     If an insecre logging configuration is found, show a warning
     """
-    level = LOG_LEVELS.get(str(opts.get("log_level")).lower(), logging.NOTSET)
-
-    if level < logging.INFO:
+    if str(opts.get("log_level")).lower() in insecure_log():
         log.warning(
             "Insecure logging configuration detected! Sensitive data may be logged."
         )
