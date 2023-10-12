@@ -183,7 +183,7 @@ def test_paths_log_rotation(
     Assumes test_pkg_paths successful
     """
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
-        "3006.2"
+        "3006.3"
     ):
         pytest.skip("Package path ownership was changed in salt 3006.3")
 
