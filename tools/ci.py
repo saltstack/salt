@@ -9,6 +9,7 @@ import logging
 import os
 import pathlib
 import random
+import shutil
 import sys
 import time
 from typing import TYPE_CHECKING, Any
@@ -1047,3 +1048,90 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
     ctx.info("Writing 'cache-seed' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"cache-seed={cache_seed}\n")
+
+
+@ci.command(
+    name="upload-coverage",
+    arguments={
+        "commit_sha": {
+            "help": "The commit SHA",
+            "required": True,
+        },
+        "reports_path": {
+            "help": "The path to the directory containing the XML Coverage Reports",
+        },
+    },
+)
+def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = None):
+    """
+    Upload code coverage to codecov.
+    """
+    codecov = shutil.which("codecov")
+    if not codecov:
+        ctx.error("Could not find the path to the 'codecov' binary")
+        ctx.exit(1)
+
+    codecov_args = [
+        codecov,
+        "--nonZero",
+        "--sha",
+        commit_sha,
+    ]
+
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+            pr_event_data = gh_event.get("pull_request")
+            if pr_event_data:
+                codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+
+    sleep_time = 15
+    for fpath in reports_path.glob("*.xml"):
+        if fpath.name in ("salt.xml", "tests.xml"):
+            flags = fpath.stem
+        else:
+            try:
+                section, distro_slug, nox_session = fpath.stem.split(".")
+                ctx.print(section, distro_slug, nox_session)
+            except ValueError:
+                ctx.error(
+                    f"The file {fpath} does not respect the expected naming convention "
+                    "'{salt|tests}.<distro-slug>.<nox-session>.xml'. Skipping..."
+                )
+                continue
+            flags = f"{section},{distro_slug}"
+
+        max_attempts = 3
+        current_attempt = 0
+        while True:
+            current_attempt += 1
+            ctx.info(
+                f"Uploading '{fpath}' coverage report to codecov (attempt {current_attempt} of {max_attempts}) ..."
+            )
+
+            ret = ctx.run(
+                *codecov_args,
+                "--file",
+                str(fpath),
+                "--name",
+                fpath.stem,
+                "--flags",
+                flags,
+                check=False,
+            )
+            if ret.returncode == 0:
+                break
+
+            if current_attempt >= max_attempts:
+                ctx.error(f"Failed to upload {fpath} to codecov")
+                ctx.exit(1)
+
+            ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
+            time.sleep(sleep_time)
+
+    ctx.exit(0)
