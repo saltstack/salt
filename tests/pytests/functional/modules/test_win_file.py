@@ -313,7 +313,7 @@ def test_check_perms(tmp_path, windows_user):
     assert ret == {}
     assert perms["comment"] == ""
     assert isinstance(perms["changes"], dict)
-    assert isinstance(perms["name"], str) and len(perms["name"])
+    assert isinstance(perms["name"], str) and len(perms["name"]) != 0
     assert perms["result"] is True
 
 
