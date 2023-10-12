@@ -691,8 +691,8 @@ def _memdata(osdata):
     elif osdata["kernel"] == "Darwin":
         grains.update(_osx_memdata())
     elif osdata["kernel"] == "SunOS":  # pragma: no cover
-        grains.update(_sunos_memdata())
-    elif osdata["kernel"] == "AIX":
+        grains.update(_sunos_memdata())  # pragma: no cover
+    elif osdata["kernel"] == "AIX":  # pragma: no cover
         grains.update(_aix_memdata())  # pragma: no cover
     elif osdata["kernel"] == "Windows" and HAS_WMI:
         grains.update(_windows_memdata())
