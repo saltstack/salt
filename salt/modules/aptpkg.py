@@ -2932,6 +2932,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if "comments" in kwargs:
         kwargs["comments"] = salt.utils.pkg.deb.combine_comments(kwargs["comments"])
 
+    repo_source_entry = SourceEntry(repo)
     if not mod_source:
         mod_source = SourceEntry(repo)
         if "comments" in kwargs:
@@ -2940,12 +2941,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    if HAS_APT:
-        # workaround until python3-apt supports signedby
-        if str(mod_source) != str(SourceEntry(repo)) and "signed-by" in str(mod_source):
-            rline = SourceEntry(repo)
-            mod_source.line = rline.line
-
+    mod_source.line = repo_source_entry.line
     if not mod_source.line.endswith("\n"):
         mod_source.line = mod_source.line + "\n"
 
