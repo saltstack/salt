@@ -141,8 +141,6 @@ def test__status_when_some_matching_processes_then_only_correct_info_should_be_r
 HAS_PSUTIL_VERSION = False
 
 
-PSUTIL2 = psutil.version_info >= (2, 0)
-
 STUB_CPU_TIMES = namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4)
 STUB_CPU_TIMES_PERCPU = [
     namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4),
@@ -222,7 +220,7 @@ except ImportError:
 
 
 def _get_proc_name(proc):
-    return proc.name() if PSUTIL2 else proc.name
+    return proc.name()
 
 
 def _get_proc_pid(proc):
@@ -305,12 +303,11 @@ class DummyProcess:
 @pytest.fixture
 def mocked_proc():
     mocked_proc = MagicMock("salt.utils.psutil_compat.Process")
-    if PSUTIL2:
-        mocked_proc.name = Mock(return_value="test_mock_proc")
-        mocked_proc.pid = Mock(return_value=9999999999)
-    else:
-        mocked_proc.name = "test_mock_proc"
-        mocked_proc.pid = 9999999999
+    mocked_proc.name = Mock(return_value="test_mock_proc")
+    mocked_proc.pid = Mock(return_value=9999999999)
+    mocked_proc.cmdline = Mock(
+        return_value=["test_mock_proc", "--arg", "--kwarg=value"]
+    )
 
     with patch("salt.utils.psutil_compat.Process.send_signal"), patch(
         "salt.utils.psutil_compat.process_iter",
@@ -474,6 +471,10 @@ def test_pgrep(mocked_proc):
         MagicMock(return_value=[mocked_proc]),
     ):
         assert mocked_proc.pid in (ps.pgrep(_get_proc_name(mocked_proc)) or [])
+
+        assert mocked_proc.pid in (
+            ps.pgrep(_get_proc_name(mocked_proc), full=True) or []
+        )
 
 
 def test_pgrep_regex(mocked_proc):
