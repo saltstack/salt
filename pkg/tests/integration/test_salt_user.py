@@ -273,7 +273,9 @@ def test_paths_log_rotation(
 
                             # change ownership of appropriate paths to user
                             for _path in log_pkg_paths:
-                                chg_ownership_cmd = f"chown -R {test_account.username}:{test_account.username} {_path}"
+                                chg_ownership_cmd = (
+                                    f"chown -R {test_account.username} {_path}"
+                                )
                                 ret = salt_call_cli.run(
                                     "--local", "cmd.run", chg_ownership_cmd
                                 )
