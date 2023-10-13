@@ -547,6 +547,10 @@ def test_pkg_install_port(grains, modules):
 
     if grains["os_family"] == "Debian":
         url = modules.cmd.run("apt download --print-uris nano").split()[-4]
+        if url.startswith("'mirror+file"):
+            url = "http://ftp.debian.org/debian/pool/" + url.split("pool")[1].rstrip(
+                "'"
+            )
         try:
             ret = modules.pkg.install(sources=f'[{{"nano":{url}}}]')
             version = re.compile(r"\d\.\d")

@@ -13,6 +13,10 @@ from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 @pytest.fixture
 def configure_loader_modules(minion_opts):
@@ -111,7 +115,7 @@ def test_save():
 
     # Test that beacons contents are written to config file.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
@@ -131,7 +135,7 @@ def test_save():
 
     # Test that when beacons is empty then an empty config file is written.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
