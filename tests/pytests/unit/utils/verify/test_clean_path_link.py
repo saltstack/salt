@@ -1,0 +1,59 @@
+"""
+Ensure salt.utils.clean_path works with symlinked directories and files
+"""
+import ctypes
+
+import pytest
+
+import salt.utils.verify
+
+__CSL = None
+
+
+def symlink(source, link_name):
+    """
+    symlink(source, link_name) Creates a symbolic link pointing to source named
+    link_name
+    """
+    global __CSL
+    if __CSL is None:
+        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+        csl.restype = ctypes.c_ubyte
+        __CSL = csl
+    flags = 0
+    if source is not None and source.is_dir():
+        flags = 1
+    if __CSL(link_name, source, flags) == 0:
+        raise ctypes.WinError()
+
+
+@pytest.fixture()
+def setup_links(tmp_path):
+    to_path = tmp_path / "linkto"
+    from_path = tmp_path / "linkfrom"
+    if salt.utils.platform.is_windows():
+        kwargs = {}
+    else:
+        kwargs = {"target_is_directory": True}
+    if salt.utils.platform.is_windows():
+        symlink(to_path, from_path, **kwargs)
+    else:
+        from_path.symlink_to(to_path, **kwargs)
+    return to_path, from_path
+
+
+def test_clean_path_symlinked_src(setup_links):
+    to_path, from_path = setup_links
+    test_path = from_path / "test"
+    expect_path = str(to_path / "test")
+    ret = salt.utils.verify.clean_path(from_path, test_path)
+    assert ret == expect_path, "{} is not {}".format(ret, expect_path)
+
+
+def test_clean_path_symlinked_tgt(setup_links):
+    to_path, from_path = setup_links
+    test_path = to_path / "test"
+    expect_path = str(to_path / "test")
+    ret = salt.utils.verify.clean_path(from_path, test_path)
+    assert ret == expect_path, "{} is not {}".format(ret, expect_path)
