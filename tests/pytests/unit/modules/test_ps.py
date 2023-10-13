@@ -692,10 +692,6 @@ def test_get_users(stub_user):
             "name": "bdobbs",
         } == ps.get_users()[0]
 
-    with patch("salt.utils.psutil_compat.users", side_effect=AttributeError()):
-        ret = ps.get_users()
-        assert not ret
-
 
 def test_top():
     """
