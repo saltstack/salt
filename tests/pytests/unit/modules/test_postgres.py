@@ -238,7 +238,7 @@ def test_db_alter():
             owner="otheruser",
             runas="foo",
         )
-        log.warning(f"DGM test_db_alter ret '{ret}'")
+        assert ret
 
         postgres._run_psql.assert_has_calls(
             [
@@ -1431,23 +1431,23 @@ def test_language_exists():
     """
     Test language existence check
     """
-    with patch("salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})):
-        with patch(
-            "salt.modules.postgres.psql_query",
-            Mock(
-                return_value=[
-                    {"Name": "internal"},
-                    {"Name": "c"},
-                    {"Name": "sql"},
-                    {"Name": "plpgsql"},
-                ]
-            ),
-        ):
-            with patch(
-                "salt.modules.postgres.language_exists", Mock(return_value=True)
-            ):
-                ret = postgres.language_exists("sql", "testdb")
-                assert ret
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch(
+        "salt.modules.postgres.psql_query",
+        Mock(
+            return_value=[
+                {"Name": "internal"},
+                {"Name": "c"},
+                {"Name": "sql"},
+                {"Name": "plpgsql"},
+            ]
+        ),
+    ), patch(
+        "salt.modules.postgres.language_exists", Mock(return_value=True)
+    ):
+        ret = postgres.language_exists("sql", "testdb")
+        assert ret
 
 
 def test_language_create():
@@ -2228,3 +2228,45 @@ def test_pg_is_older_ext_ver():
     assert postgres._pg_is_older_ext_ver("1.2.3.4", "1.2.3.5")
     assert postgres._pg_is_older_ext_ver("10dev", "10next")
     assert not postgres._pg_is_older_ext_ver("10next", "10dev")
+
+
+def test_tablespace_create():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        postgres.tablespace_create(
+            "test_tablespace",
+            "/tmp/postgres_test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            owner="otheruser",
+            runas="foo",
+        )
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "maint_db",
+                "-c",
+                'CREATE TABLESPACE "test_tablespace" OWNER "otheruser" LOCATION \'/tmp/postgres_test_tablespace\' ',
+            ],
+            runas="foo",
+            password="foo",
+            host="testhost",
+            port="testport",
+            user="testuser",
+        )
