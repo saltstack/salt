@@ -23,13 +23,14 @@
                                             ("photon", "4", "x86_64"),
                                             ("photon", "4", "aarch64"),
                                         ) %>
-          - distro: <{ distro }>
+          - pkg-type: rpm
+            distro: <{ distro }>
             version: "<{ version }>"
             arch: <{ arch }>
         <%- endfor %>
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download System Dependencies
         run: |

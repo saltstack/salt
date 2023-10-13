@@ -484,19 +484,19 @@ class Compiler:
                     else:
                         fun = 0
                         if "." in state:
+                            # This should not happen usually since `pad_funcs`
+                            # is run on rendered templates
                             fun += 1
                         for arg in body[state]:
                             if isinstance(arg, str):
                                 fun += 1
                                 if " " in arg.strip():
                                     errors.append(
-                                        'The function "{}" in state '
-                                        '"{}" in SLS "{}" has '
+                                        f'The function "{arg}" in state '
+                                        f'"{name}" in SLS "{body["__sls__"]}" has '
                                         "whitespace, a function with whitespace is "
-                                        "not supported, perhaps this is an argument "
-                                        'that is missing a ":"'.format(
-                                            arg, name, body["__sls__"]
-                                        )
+                                        "not supported, perhaps this is an argument"
+                                        ' that is missing a ":"'
                                     )
                             elif isinstance(arg, dict):
                                 # The arg is a dict, if the arg is require or
@@ -592,14 +592,22 @@ class Compiler:
                             if state == "require" or state == "watch":
                                 continue
                             errors.append(
-                                "No function declared in state '{}' in SLS '{}'".format(
-                                    state, body["__sls__"]
-                                )
+                                f"No function declared in state '{name}' in SLS "
+                                f"'{body['__sls__']}'"
                             )
                         elif fun > 1:
+                            funs = (
+                                [state.split(".", maxsplit=1)[1]]
+                                if "." in state
+                                else []
+                            )
+                            funs.extend(
+                                arg for arg in body[state] if isinstance(arg, str)
+                            )
                             errors.append(
-                                "Too many functions declared in state '{}' in "
-                                "SLS '{}'".format(state, body["__sls__"])
+                                f"Too many functions declared in state '{name}' in "
+                                f"SLS '{body['__sls__']}'. Please choose one of "
+                                "the following: " + ", ".join(funs)
                             )
         return errors
 
@@ -1509,17 +1517,21 @@ class State:
                 else:
                     fun = 0
                     if "." in state:
+                        # This should not happen usually since `_handle_state_decls`
+                        # is run on rendered templates
                         fun += 1
                     for arg in body[state]:
                         if isinstance(arg, str):
                             fun += 1
                             if " " in arg.strip():
                                 errors.append(
-                                    'The function "{}" in state "{}" in SLS "{}" has '
-                                    "whitespace, a function with whitespace is not "
-                                    "supported, perhaps this is an argument that is "
-                                    'missing a ":"'.format(arg, name, body["__sls__"])
+                                    f'The function "{arg}" in state '
+                                    f'"{name}" in SLS "{body["__sls__"]}" has '
+                                    "whitespace, a function with whitespace is "
+                                    "not supported, perhaps this is an argument"
+                                    ' that is missing a ":"'
                                 )
+
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
@@ -1612,14 +1624,16 @@ class State:
                         if state == "require" or state == "watch":
                             continue
                         errors.append(
-                            "No function declared in state '{}' in SLS '{}'".format(
-                                state, body["__sls__"]
-                            )
+                            f"No function declared in state '{name}' in SLS "
+                            f"'{body['__sls__']}'"
                         )
                     elif fun > 1:
+                        funs = [state.split(".", maxsplit=1)[1]] if "." in state else []
+                        funs.extend(arg for arg in body[state] if isinstance(arg, str))
                         errors.append(
-                            "Too many functions declared in state '{}' in "
-                            "SLS '{}'".format(state, body["__sls__"])
+                            f"Too many functions declared in state '{name}' in "
+                            f"SLS '{body['__sls__']}'. Please choose one of "
+                            "the following: " + ", ".join(funs)
                         )
         return errors
 
