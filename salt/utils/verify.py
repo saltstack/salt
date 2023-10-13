@@ -572,7 +572,9 @@ def verify_log(opts):
     """
     If an insecre logging configuration is found, show a warning
     """
-    if str(opts.get("log_level")).lower() in insecure_log():
+    level = LOG_LEVELS.get(str(opts.get("log_level")).lower(), logging.NOTSET)
+
+    if level < logging.INFO:
         log.warning(
             "Insecure logging configuration detected! Sensitive data may be logged."
         )

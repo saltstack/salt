@@ -66,3 +66,11 @@ def test_verify_log():
     with patch.object(salt.utils.verify.log, "warning", mock_info):
         salt.utils.verify.verify_log({"log_level": "info"})
         assert mock_info.call_count == 0
+
+
+def test_insecure_log():
+    """
+    test insecure_log that it returns accurate insecure log levels
+    """
+    ret = salt.utils.verify.insecure_log()
+    assert ret == ["all", "debug", "garbage", "profile", "trace"]

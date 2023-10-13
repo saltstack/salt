@@ -809,7 +809,7 @@
 # One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug', 'all']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 # Default: 'warning'
 #log_level: warning
