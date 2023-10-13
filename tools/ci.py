@@ -286,6 +286,7 @@ def define_jobs(
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
+        "build-deps-ci": True,
     }
 
     if skip_tests:
@@ -371,6 +372,7 @@ def define_jobs(
     required_pkg_test_changes: set[str] = {
         changed_files_contents["pkg_tests"],
         changed_files_contents["workflows"],
+        changed_files_contents["golden_images"],
     }
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
         if "test:pkg" in labels:
@@ -392,6 +394,7 @@ def define_jobs(
     if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
+                "build-deps-ci",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
@@ -469,22 +472,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
         )
 
-    skip_code_coverage = True
     if "test:coverage" in labels:
-        skip_code_coverage = False
+        ctx.info("Writing 'testrun' to the github outputs file")
+        testrun = TestRun(type="full", skip_code_coverage=False)
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"testrun={json.dumps(testrun)}\n")
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "Full test run chosen because the label `test:coverage` is set.\n"
+            )
+        return
     elif event_name != "pull_request":
-        skip_code_coverage = False
-
-    if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=False)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
+
+    # So, it's a pull request...
 
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
@@ -499,7 +508,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
-    # So, it's a pull request...
     # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
@@ -515,7 +523,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "Full test run chosen because there was a change made "
                 "to `cicd/golden-images.json`.\n"
             )
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
@@ -530,16 +538,16 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif "test:full" in labels:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("Full test run chosen because the label `test:full` is set.\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = TestRun(
             type="changed",
-            skip_code_coverage=skip_code_coverage,
+            skip_code_coverage=True,
             from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
@@ -610,13 +618,22 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "distro_slug": {
             "help": "The distribution slug to generate the matrix for",
         },
+        "full": {
+            "help": "Full test run",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str):
+def matrix(ctx: Context, distro_slug: str, full: bool = False):
     """
     Generate the test matrix.
     """
     _matrix = []
+    _splits = {
+        "functional": 5,
+        "integration": 7,
+        "scenarios": 2,
+        "unit": 4,
+    }
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
@@ -633,35 +650,27 @@ def matrix(ctx: Context, distro_slug: str):
                 continue
             if "macos" in distro_slug and chunk == "scenarios":
                 continue
-            _matrix.append({"transport": transport, "tests-chunk": chunk})
-    print(json.dumps(_matrix))
-    ctx.exit(0)
+            splits = _splits.get(chunk) or 1
+            if full and splits > 1:
+                for split in range(1, splits + 1):
+                    _matrix.append(
+                        {
+                            "transport": transport,
+                            "tests-chunk": chunk,
+                            "test-group": split,
+                            "test-group-count": splits,
+                        }
+                    )
+            else:
+                _matrix.append({"transport": transport, "tests-chunk": chunk})
 
+    ctx.info("Generated matrix:")
+    ctx.print(_matrix, soft_wrap=True)
 
-@ci.command(
-    name="transport-matrix",
-    arguments={
-        "distro_slug": {
-            "help": "The distribution slug to generate the matrix for",
-        },
-    },
-)
-def transport_matrix(ctx: Context, distro_slug: str):
-    """
-    Generate the test matrix.
-    """
-    _matrix = []
-    for transport in ("zeromq", "tcp"):
-        if transport == "tcp":
-            if distro_slug not in (
-                "centosstream-9",
-                "ubuntu-22.04",
-                "ubuntu-22.04-arm64",
-            ):
-                # Only run TCP transport tests on these distributions
-                continue
-        _matrix.append({"transport": transport})
-    print(json.dumps(_matrix))
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
 
 
@@ -695,7 +704,7 @@ def pkg_matrix(
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     if TYPE_CHECKING:
         assert testing_releases
-    matrix = []
+    _matrix = []
     sessions = [
         "install",
     ]
@@ -703,6 +712,9 @@ def pkg_matrix(
         distro_slug
         not in [
             "debian-11-arm64",
+            # TODO: remove debian 12 once debian 12 pkgs are released
+            "debian-12-arm64",
+            "debian-12",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -738,6 +750,9 @@ def pkg_matrix(
         distro_slug
         not in [
             "centosstream-9",
+            "debian-11-arm64",
+            "debian-12-arm64",
+            "debian-12",
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -761,18 +776,18 @@ def pkg_matrix(
                 if version < tools.utils.Version("3006.0")
             ]
         for version in versions:
-            matrix.append(
+            _matrix.append(
                 {
                     "test-chunk": session,
                     "version": version,
                 }
             )
     ctx.info("Generated matrix:")
-    ctx.print(matrix, soft_wrap=True)
+    ctx.print(_matrix, soft_wrap=True)
 
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(matrix)}\n")
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
 
 

@@ -328,6 +328,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a pkg
