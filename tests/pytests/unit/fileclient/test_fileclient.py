@@ -223,3 +223,13 @@ def test_get_file_client(file_client):
     with patch("salt.fileclient.RemoteClient", MagicMock(return_value="remote_client")):
         ret = fileclient.get_file_client(minion_opts)
         assert "remote_client" == ret
+
+
+def test_getstate(file_client, mocked_opts):
+    assert file_client.__getstate__() == {"opts": mocked_opts}
+
+
+def test_setstate(file_client, mocked_opts):
+    mocked_opts["fake_opt"] = "fake"
+    file_client.__setstate__({"opts": mocked_opts})
+    assert file_client.opts == mocked_opts
