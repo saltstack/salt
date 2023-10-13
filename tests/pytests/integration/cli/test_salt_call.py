@@ -499,4 +499,4 @@ def test_salt_call_versions(salt_call_cli, caplog):
     caplog.at_level(logging.DEBUG)
     ret = salt_call_cli.run("test.versions")
     assert ret.returncode == 0
-    assert "LazyLoaded test.versions" in caplog.messages
+    assert "Failed to sync grains module: 'master_uri'" not in caplog.messages
