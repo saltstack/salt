@@ -536,7 +536,6 @@ def certificate_data(name=None, cert_type=None):
             for t in cert_type:
                 ret[n].update({t: __salt__["file.read"](_cert_file(n, t))})
     except FileNotFoundError as e:
-        raise ()
         log.debug("Certificate file %s does not exist ", _cert_file(n, t))
         return False
     return ret
