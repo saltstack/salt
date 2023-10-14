@@ -517,3 +517,74 @@ def test_authenticators():
 
     with patch("salt.modules.acme.plugins", return_value=plugins_returns):
         assert acme.authenticators() == authenticators_returns
+
+
+def test_certificate_data():
+    """
+    Test acme.certificate_date()
+    """
+
+    file_contents = {
+        "/etc/letsencrypt/live/example.com/cert.pem": "Mocked certificate data",
+        "/etc/letsencrypt/live/example.com/chain.pem": "Mocked chain data",
+        "/etc/letsencrypt/live/example.com/privkey.pem": "Mocked private key data",
+        "/etc/letsencrypt/live/example.com/fullchain.pem": "Mocked fullchain data",
+    }
+
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "file.read": MagicMock(
+                side_effect=lambda filename: file_contents.get(filename, filename)
+            )
+        },
+    ), patch("salt.modules.acme.certs", return_value=["example.com"]):
+        assert acme.certificate_data(
+            name="example.com", cert_type=["cert", "fullchain"]
+        ) == {
+            "example.com": {
+                "cert": "Mocked certificate data",
+                "fullchain": "Mocked fullchain data",
+            }
+        }
+
+
+def test_certificate_data_all():
+    """
+    Test acme.certificate_date() when not passing any parameters
+    """
+
+    file_contents = {
+        "/etc/letsencrypt/live/example.com/cert.pem": "Mocked certificate data 1",
+        "/etc/letsencrypt/live/example.com/chain.pem": "Mocked chain data 1",
+        "/etc/letsencrypt/live/example.com/privkey.pem": "Mocked private key data 1",
+        "/etc/letsencrypt/live/example.com/fullchain.pem": "Mocked fullchain data 1",
+        "/etc/letsencrypt/live/example.net/cert.pem": "Mocked certificate data 2",
+        "/etc/letsencrypt/live/example.net/chain.pem": "Mocked chain data 2",
+        "/etc/letsencrypt/live/example.net/privkey.pem": "Mocked private key data 2",
+        "/etc/letsencrypt/live/example.net/fullchain.pem": "Mocked fullchain data 2",
+    }
+    results = {
+        "example.com": {
+            "cert": "Mocked certificate data 1",
+            "chain": "Mocked chain data 1",
+            "privkey": "Mocked private key data 1",
+            "fullchain": "Mocked fullchain data 1",
+        },
+        "example.net": {
+            "cert": "Mocked certificate data 2",
+            "chain": "Mocked chain data 2",
+            "privkey": "Mocked private key data 2",
+            "fullchain": "Mocked fullchain data 2",
+        },
+    }
+
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "file.read": MagicMock(
+                side_effect=lambda filename: file_contents.get(filename, filename)
+            )
+        },
+    ), patch("salt.modules.acme.certs", return_value=["example.com", "example.net"]):
+        assert acme.certificate_data() == results

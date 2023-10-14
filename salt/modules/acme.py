@@ -497,3 +497,45 @@ def authenticators():
         salt 'vhost.example.com' acme.authenticators
     """
     return [plugin["name"] for plugin in plugins() if "Authenticator" in plugin["type"]]
+
+
+def certificate_data(name=None, cert_type=None):
+    """
+    Read certificates and keys for a host and return them as a dict. Ideal as a mine function.
+
+    :param name: Common Name of the certificate or None for all certificates present in the
+                 letsencrypt live store.
+    :param cert_type: The data to be returned: cert/chain/privkey/fullchain or None for all.
+    :rtype: dict
+    :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
+        expiry date ('not_after')
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'vhost.example.com' acme.certificate_data host.example.com fullchain
+    """
+    if not name:
+        name = certs()
+    elif type(name) != list:
+        name = [name]
+
+    if not cert_type:
+        cert_type = ["cert", "chain", "privkey", "fullchain"]
+    elif type(cert_type) != list:
+        cert_type = [cert_type]
+
+    ret = {}
+    try:
+        for n in name:
+            if n not in certs():
+                return False
+            ret.update({n: {}})
+            for t in cert_type:
+                ret[n].update({t: __salt__["file.read"](_cert_file(n, t))})
+    except FileNotFoundError as e:
+        raise ()
+        log.debug("Certificate file %s does not exist ", _cert_file(n, t))
+        return False
+    return ret
