@@ -61,7 +61,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
-    dns_plugin_options={},
+    dns_plugin_options=None,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.

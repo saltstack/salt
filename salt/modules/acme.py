@@ -134,7 +134,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
-    dns_plugin_options={},
+    dns_plugin_options=None,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -227,11 +227,12 @@ def cert(
         cmd.append(f"--authenticator dns-{dns_plugin}")
         if dns_plugin_credentials:
             cmd.append(f"--dns-{dns_plugin}-credentials {dns_plugin_credentials}")
-        for option, value in dns_plugin_options:
-            if value:
-                cmd.append(f"--dns-{dns_plugin}-{option} {value}")
-            else:
-                cmd.append(f"--dns-{dns_plugin}-{option}")
+        if dns_plugin_options:
+            for option, value in dns_plugin_options:
+                if value:
+                    cmd.append(f"--dns-{dns_plugin}-{option} {value}")
+                else:
+                    cmd.append(f"--dns-{dns_plugin}-{option}")
     elif dns_plugin is not None and dns_plugin not in supported_dns_plugins:
         return {
             "result": False,
