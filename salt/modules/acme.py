@@ -25,9 +25,11 @@ Most parameters will fall back to cli.ini defaults if None is given.
 DNS plugins
 -----------
 
-This module currently supports the CloudFlare certbot DNS plugin.  The DNS
-plugin credentials file needs to be passed in using the
-``dns_plugin_credentials`` argument.
+This module supports certbot DNS plugins as challenge authenticators. Most plugins require a
+credentials file that can be specified using the ``dns_plugin_credentials`` argument.
+
+If the DNS plugin needs any additional parameters, these can be defined as a dictionary and
+passed via the ``dnsplugin_options`` argument.
 
 Make sure the appropriate certbot plugin for the wanted DNS provider is
 installed before using this module.
@@ -132,6 +134,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_options={},
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -162,12 +165,13 @@ def cert(
         the port Certbot listens on. A conforming ACME server will still attempt
         to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
-    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare'
-        or 'digitalocean')
+    :param dns_plugin: Name of a DNS plugin to use without the "dns-"-prefix.
     :param dns_plugin_credentials: Path to the credentials file if required by
-        the specified DNS plugin
+        the specified DNS plugin.
     :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations
         before asking ACME servers to verify the DNS record. (default 10)
+    :param dns_plugin_options: Dict of additional options for the dns plugin. Omit the
+        dns-plugin-prefix.
     :rtype: dict
     :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
         expiry date ('not_after')
@@ -178,13 +182,20 @@ def cert(
 
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True \
         renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
+
+        salt 'host.example.com' acme.cert host.example.com "[host2.example.com]" test_cert=True \
+        dns_plugin=google dns_plugin_credentials=/etc/letsencrypt/google.ini \
+        dns_plugin_options='{"project": "example-123456", "wait": None}'
+
     """
 
     cmd = [LEA, "certonly", "--non-interactive", "--agree-tos"]
     if certname is None:
         certname = name
 
-    supported_dns_plugins = ["cloudflare"]
+    supported_dns_plugins = [
+        p.split("-", 1)[1] for p in authenticators() if p.startswith("dns-")
+    ]
 
     cert_file = _cert_file(certname, "cert")
     if not __salt__["file.file_exists"](cert_file):
@@ -213,14 +224,19 @@ def cert(
         if webroot is not True:
             cmd.append(f"--webroot-path {webroot}")
     elif dns_plugin in supported_dns_plugins:
-        if dns_plugin == "cloudflare":
-            cmd.append("--dns-cloudflare")
-            cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
-        else:
-            return {
-                "result": False,
-                "comment": f"DNS plugin '{dns_plugin}' is not supported",
-            }
+        cmd.append(f"--authenticator dns-{dns_plugin}")
+        if dns_plugin_credentials:
+            cmd.append(f"--dns-{dns_plugin}-credentials {dns_plugin_credentials}")
+        for option, value in dns_plugin_options:
+            if value:
+                cmd.append(f"--dns-{dns_plugin}-{option} {value}")
+            else:
+                cmd.append(f"--dns-{dns_plugin}-{option}")
+    elif dns_plugin is not None and dns_plugin not in supported_dns_plugins:
+        return {
+            "result": False,
+            "comment": f"DNS plugin '{dns_plugin}' is not supported",
+        }
     else:
         cmd.append("--authenticator standalone")
 
@@ -421,3 +437,63 @@ def needs_renewal(name, window=None):
         window = int(window)
 
     return _renew_by(name, window) <= datetime.datetime.today()
+
+
+def plugins():
+    """
+    List all plugins and the plugin metadata certbot knows about.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'vhost.example.com' acme.plugins
+    """
+    res = __salt__["cmd.run_all"]("{} plugins".format(LEA))
+
+    plugins = []
+    buffer = []
+    # Parse the certbot text output into a dictionary where the description or entrypoint
+    # field can span multiple lines.
+    for line in res["stdout"].split("\n"):
+        if line.startswith("* "):
+            plugin = {"name": line.split()[1]}
+        elif line.startswith("Description:"):
+            buffer = [line.split(" ", 1)[1]]
+        elif line.startswith("Interfaces:"):
+            plugin.update({"description": " ".join(buffer)})
+            buffer = []
+            plugin.update({"type": line.split(" ", 1)[1].split(", ")})
+        elif line.startswith("Entry point:"):
+            try:
+                plugin.update({"entrypoint": line.split(" = ", 1)[1]})
+                buffer = []
+            except IndexError:
+                # The entrypoint is a multiline item
+                pass
+        elif line.strip() == "" or line.startswith("- - - - -"):
+            try:
+                # Read entrypoint from the multiline buffer
+                if len(buffer) == 1:
+                    plugin.update({"entrypoint": buffer[0]})
+                    buffer = []
+                plugins.append(plugin)
+            except UnboundLocalError:
+                continue
+        else:
+            buffer.append(line)
+
+    return plugins
+
+
+def authenticators():
+    """
+    Return a list of available authenticators
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'vhost.example.com' acme.authenticators
+    """
+    return [plugin["name"] for plugin in plugins() if "Authenticator" in plugin["type"]]
