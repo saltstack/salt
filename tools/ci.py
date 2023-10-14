@@ -718,8 +718,11 @@ def pkg_matrix(
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
+            "photonos-3-arm64",
             "photonos-4",
             "photonos-4-arm64",
+            "photonos-5",
+            "photonos-5-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -756,8 +759,11 @@ def pkg_matrix(
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
+            "photonos-3-arm64",
             "photonos-4",
             "photonos-4-arm64",
+            "photonos-5",
+            "photonos-5-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -776,6 +782,13 @@ def pkg_matrix(
                 if version < tools.utils.Version("3006.0")
             ]
         for version in versions:
+            if (
+                version
+                and distro_slug.startswith("photonos-5")
+                and version < tools.utils.Version("3007.0")
+            ):
+                # We never build packages for Photon OS 5 prior to 3007.0
+                continue
             _matrix.append(
                 {
                     "test-chunk": session,
