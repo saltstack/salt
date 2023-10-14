@@ -449,7 +449,7 @@ def plugins():
 
         salt 'vhost.example.com' acme.plugins
     """
-    res = __salt__["cmd.run_all"]("{} plugins".format(LEA))
+    res = __salt__["cmd.run_all"](f"{LEA} plugins")
 
     plugins = []
     buffer = []
