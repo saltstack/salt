@@ -61,6 +61,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_options={},
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -89,8 +90,10 @@ def cert(
                          the port Certbot listens on. A conforming ACME server
                          will still attempt to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
-    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
+    :param dns_plugin: Name of a DNS plugin to use without the "dns-"-prefix.
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_options: Dict of additional options for the dns plugin. Omit the
+                               dns-plugin-prefix.
     """
 
     if certname is None:
@@ -138,6 +141,7 @@ def cert(
                 http_01_address=http_01_address,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
+                dns_plugin_options=dns_plugin_options,
             )
             ret["result"] = res["result"]
             ret["comment"].append(res["comment"])
