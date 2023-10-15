@@ -88,7 +88,7 @@ flags:
 
 comment:
   layout: "reach, diff, flags, files"
-  behavior: default              # Comment posting behaviour
+  behavior: new                  # Comment posting behaviour
                                  #   default: update, if exists. Otherwise post new.
                                  #   once: update, if exists. Otherwise post new. Skip if deleted.
                                  #   new: delete old and post new.
