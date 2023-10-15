@@ -1,9 +1,11 @@
+"""
+Tests for modules/reg.py
+"""
+
 import pytest
 from saltfactories.utils import random_string
 
 import salt.modules.reg as reg
-import salt.utils.stringutils
-import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
@@ -27,24 +29,6 @@ UNICODE_VALUE = (
     "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
-
-
-@pytest.fixture
-def configure_loader_modules():
-    return {
-        reg: {
-            "__utils__": {
-                "reg.delete_value": salt.utils.win_reg.delete_value,
-                "reg.delete_key_recursive": salt.utils.win_reg.delete_key_recursive,
-                "reg.key_exists": salt.utils.win_reg.key_exists,
-                "reg.list_keys": salt.utils.win_reg.list_keys,
-                "reg.list_values": salt.utils.win_reg.list_values,
-                "reg.read_value": salt.utils.win_reg.read_value,
-                "reg.set_value": salt.utils.win_reg.set_value,
-                "reg.value_exists": salt.utils.win_reg.value_exists,
-            }
-        }
-    }
 
 
 def test_key_exists_existing():
@@ -193,7 +177,7 @@ def test_list_keys_non_existing():
     """
     Test the list_keys function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
+    expected = (False, f"Cannot find key: HKLM\\{FAKE_KEY}")
     result = reg.list_keys(hive="HKLM", key=FAKE_KEY)
     assert result == expected
 
@@ -235,7 +219,7 @@ def test_list_values_non_existing():
     """
     Test the list_values function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
+    expected = (False, f"Cannot find key: HKLM\\{FAKE_KEY}")
     result = reg.list_values(hive="HKLM", key=FAKE_KEY)
     assert result == expected
 
@@ -312,7 +296,7 @@ def test_read_value_non_existing_key():
     Test the read_value function using a non existing registry key
     """
     expected = {
-        "comment": "Cannot find key: HKLM\\{}".format(FAKE_KEY),
+        "comment": f"Cannot find key: HKLM\\{FAKE_KEY}",
         "vdata": None,
         "vtype": None,
         "vname": "fake_name",

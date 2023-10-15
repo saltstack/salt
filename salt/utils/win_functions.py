@@ -7,6 +7,8 @@ import ctypes
 import platform
 import re
 
+import salt.modules.win_useradd
+import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -135,7 +137,7 @@ def get_sid_from_name(name):
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
-        raise CommandExecutionError("User {} not found: {}".format(name, exc))
+        raise CommandExecutionError(f"User {name} not found: {exc}")
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -166,12 +168,33 @@ def get_current_user(with_domain=True):
         elif not with_domain:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        raise CommandExecutionError("Failed to get current user: {}".format(exc))
+        raise CommandExecutionError(f"Failed to get current user: {exc}")
 
     if not user_name:
         return False
 
     return user_name
+
+
+def get_users_sids(exclude=("DefaultAccount", "Guest", "WDAGUtilityAccount")):
+    r"""
+    Gets a list of users and their SIDs on the system.
+
+    Args:
+
+        exclude (list):
+            A list of usernames to exclude from the results
+
+    Returns:
+        list: A list of tuples containing the username with its corresponding
+            SID
+    """
+    user_sids = []
+    for user in salt.modules.win_useradd.list_users():
+        if user not in exclude:
+            sid = salt.modules.win_useradd.getUserSid(username=user)
+            user_sids.append((user, sid))
+    return user_sids
 
 
 def get_sam_name(username):
@@ -253,7 +276,7 @@ def escape_for_cmd_exe(arg):
     meta_re = re.compile(
         "(" + "|".join(re.escape(char) for char in list(meta_chars)) + ")"
     )
-    meta_map = {char: "^{}".format(char) for char in meta_chars}
+    meta_map = {char: f"^{char}" for char in meta_chars}
 
     def escape_meta_chars(m):
         char = m.group(1)

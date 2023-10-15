@@ -53,12 +53,17 @@ The same values can also be used to create states for setting these policies.
     could still be enforced via the ``Registry.pol`` file... theoretically. But
     you will have to find the values needed to set them with this module using a
     different method.
+
+.. warning::
+    The Local System account uses the Default user profile. Any settings applied
+    to the "User" Policy Class when the minion is running under the Local System
+    account (default) will be applied to the Default User Profile.
 """
+
 import logging
 
 import salt.utils.platform
 import salt.utils.win_lgpo_reg
-import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -271,12 +276,14 @@ def set_value(
     v_data,
     v_type="REG_DWORD",
     policy_class="Machine",
+    all_users=False,
 ):
     r"""
     Add a key/value pair to the registry.pol file. This bypasses the admx/adml
     style policies. This is the equivalent of setting a policy to ``Enabled``
 
     Args:
+
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -302,6 +309,21 @@ def set_value(
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. versionadded:: 3007.0
+
+            Apply the policy to all users currently logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -390,12 +412,13 @@ def set_value(
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    if not salt.utils.win_reg.set_value(
+    if not __salt__["reg.set_value"](
         hive=hive,
         key=key,
         vname=v_name,
         vdata=v_data,
         vtype=v_type,
+        all_users=all_users,
     ):
         log.error("LGPO_REG Mod: Failed to set registry entry")
         success = False
@@ -403,7 +426,7 @@ def set_value(
     return success
 
 
-def disable_value(key, v_name, policy_class="machine"):
+def disable_value(key, v_name, policy_class="machine", all_users=False):
     r"""
     Mark a registry value for deletion in the registry.pol file. This bypasses
     the admx/adml style policies. This is the equivalent of setting the policy
@@ -422,6 +445,21 @@ def disable_value(key, v_name, policy_class="machine"):
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. versionadded:: 3007.0
+
+            Apply the policy to all users currently logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -483,24 +521,24 @@ def disable_value(key, v_name, policy_class="machine"):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    ret = __salt__["reg.delete_value"](
+        hive=hive, key=key, vname=v_name, all_users=all_users
+    )
     if not ret:
-        if ret is None:
-            log.debug("LGPO_REG Mod: Registry key/value already missing")
-        else:
-            log.error("LGPO_REG Mod: Failed to remove registry entry")
-            success = False
+        log.error("LGPO_REG Mod: Failed to remove registry entry")
+        success = False
 
     return success
 
 
-def delete_value(key, v_name, policy_class="Machine"):
+def delete_value(key, v_name, policy_class="Machine", all_users=False):
     r"""
     Delete a key/value pair from the Registry.pol file. This bypasses the
     admx/adml style policies. This is the equivalent of setting the policy to
     ``Not Configured``.
 
     Args:
+
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -513,6 +551,21 @@ def delete_value(key, v_name, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. versionadded:: 3007.0
+
+            Apply the policy to all users currently logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -570,13 +623,12 @@ def delete_value(key, v_name, policy_class="Machine"):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    ret = __salt__["reg.delete_value"](
+        hive=hive, key=key, vname=v_name, all_users=all_users
+    )
     if not ret:
-        if ret is None:
-            log.debug("LGPO_REG Mod: Registry key/value already missing")
-        else:
-            log.error("LGPO_REG Mod: Failed to remove registry entry")
-            success = False
+        log.error("LGPO_REG Mod: Failed to remove registry entry")
+        success = False
 
     return success
 
