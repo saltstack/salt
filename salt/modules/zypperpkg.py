@@ -1467,6 +1467,7 @@ def install(
     skip_verify=False,
     version=None,
     ignore_repo_failure=False,
+    recommends=False,
     no_recommends=False,
     root=None,
     **kwargs,
@@ -1557,6 +1558,9 @@ def install(
     ignore_repo_failure
         Zypper returns error code 106 if one of the repositories are not available for various reasons.
         In case to set strict check, this parameter needs to be set to True. Default: False.
+
+    recommends
+        Install also recommended packages in addition to the required ones.
 
     no_recommends
         Do not install recommended packages, only required ones.
@@ -1684,6 +1688,8 @@ def install(
         cmd_install.append("--download-only")
     if fromrepo:
         cmd_install.extend(fromrepoopt)
+    if recommends:
+        cmd_install.append("--recommends")
     if no_recommends:
         cmd_install.append("--no-recommends")
 
@@ -1758,6 +1764,7 @@ def upgrade(
     fromrepo=None,
     novendorchange=False,
     skip_verify=False,
+    recommends=False,
     no_recommends=False,
     root=None,
     diff_attr=None,
@@ -1821,6 +1828,9 @@ def upgrade(
 
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
+    recommends
+        Install also recommended packages in addition to the required ones.
 
     no_recommends
         Do not install recommended packages, only required ones.
@@ -1910,6 +1920,10 @@ def upgrade(
                 log.warning(
                     "Disabling vendor changes is not supported on this Zypper version"
                 )
+
+        if recommends:
+            cmd_update.append("--recommends")
+            log.info("Enabling recommendations")
 
         if no_recommends:
             cmd_update.append("--no-recommends")
