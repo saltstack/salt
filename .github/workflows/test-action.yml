@@ -351,8 +351,8 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
           nox -e create-xml-coverage-reports
-          mv artifacts/coverage/salt.xml artifacts/coverage/salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.xml
-          mv artifacts/coverage/tests.xml artifacts/coverage/tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.xml
+          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
+          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
 
       - name: Report Salt Code Coverage
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'

@@ -1096,12 +1096,11 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
             flags = fpath.stem
         else:
             try:
-                section, distro_slug, nox_session = fpath.stem.split(".")
-                ctx.print(section, distro_slug, nox_session)
+                section, distro_slug, nox_session = fpath.stem.split("..")
             except ValueError:
                 ctx.error(
                     f"The file {fpath} does not respect the expected naming convention "
-                    "'{salt|tests}.<distro-slug>.<nox-session>.xml'. Skipping..."
+                    "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
                 )
                 continue
             flags = f"{section},{distro_slug}"
