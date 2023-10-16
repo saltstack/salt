@@ -458,7 +458,7 @@ def test_owner():
 
 def test_owner_no_path():
     """
-    Test ownere when path is not passed
+    Test owner when path is not passed
     """
     ret = aptpkg.owner()
     assert ret == ""
@@ -466,12 +466,11 @@ def test_owner_no_path():
 
 def test_owner_doesnotexist():
     """
-    Test ownere when the path does not exist
+    Test owner when the path does not exist
     """
-    paths = ["/doesnotexist"]
     mock = MagicMock(return_value="")
     with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": mock}):
-        ret = aptpkg.owner(*paths)
+        ret = aptpkg.owner("/doesnotexist")
         assert ret == ""
 
 
@@ -539,7 +538,6 @@ def test_list_upgrades():
     patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
     with patch_data, patch_refresh, patch_apt:
         ret = aptpkg.list_upgrades(dist_upgrade=False)
-        print(ret)
         assert ret == {
             "linux-cloud-tools-5.15.0-86": "5.15.0-86.96",
             "linux-cloud-tools-5.15.0-86-generic": "5.15.0-86.96",
@@ -553,9 +551,6 @@ def test_list_upgrades():
             "linux-headers-5.15.0-86-generic": "5.15.0-86.96",
             "linux-headers-generic": "5.15.0.86.83",
         }
-
-
-#
 
 
 def test_refresh_db(apt_q_update_var):
