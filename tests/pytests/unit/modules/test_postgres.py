@@ -2211,23 +2211,29 @@ def test_datadir_exists():
         assert ret
 
 
-def test_pg_is_older_ext_ver():
+@pytest.mark.parametrize(
+    "v1,v2,result",
+    (
+        ("8.5", "9.5", True),
+        ("8.5", "8.6", True),
+        ("8.5.2", "8.5.3", True),
+        ("9.5", "8.5", False),
+        ("9.5", "9.6", True),
+        ("9.5.0", "9.5.1", True),
+        ("9.5", "9.5.1", True),
+        ("9.5.1", "9.5", False),
+        ("9.5b", "9.5a", False),
+        ("10a", "10b", True),
+        ("1.2.3.4", "1.2.3.5", True),
+        ("10dev", "10next", True),
+        ("10next", "10dev", False),
+    ),
+)
+def test_pg_is_older_ext_ver(v1, v2, result):
     """
     Test Checks if postgres extension version string is older
     """
-    assert postgres._pg_is_older_ext_ver("8.5", "9.5")
-    assert postgres._pg_is_older_ext_ver("8.5", "8.6")
-    assert postgres._pg_is_older_ext_ver("8.5.2", "8.5.3")
-    assert not postgres._pg_is_older_ext_ver("9.5", "8.5")
-    assert postgres._pg_is_older_ext_ver("9.5", "9.6")
-    assert postgres._pg_is_older_ext_ver("9.5.0", "9.5.1")
-    assert postgres._pg_is_older_ext_ver("9.5", "9.5.1")
-    assert not postgres._pg_is_older_ext_ver("9.5.1", "9.5")
-    assert not postgres._pg_is_older_ext_ver("9.5b", "9.5a")
-    assert postgres._pg_is_older_ext_ver("10a", "10b")
-    assert postgres._pg_is_older_ext_ver("1.2.3.4", "1.2.3.5")
-    assert postgres._pg_is_older_ext_ver("10dev", "10next")
-    assert not postgres._pg_is_older_ext_ver("10next", "10dev")
+    assert postgres._pg_is_older_ext_ver(v1, v2) is result
 
 
 def test_tablespace_create():
