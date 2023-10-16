@@ -1432,7 +1432,7 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         if os.path.exists(path):
             sftp_server_path = path
     if sftp_server_path is None:
-        log.warning(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
     else:
         sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(
