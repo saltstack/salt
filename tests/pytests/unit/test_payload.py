@@ -217,13 +217,13 @@ def test_constants():
 
 def test_package():
     value = salt.utils.msgpack.dumps("test")
-    assert value == salt.payload.package("test")
+    assert salt.payload.package("test") == value
 
 
 def test_unpackage():
     value = [b"test"]
     packed = salt.utils.msgpack.dumps(value)
-    assert value == salt.payload.unpackage(packed)
+    assert salt.payload.unpackage(packed) == value
 
 
 def test_format_payload():
@@ -233,7 +233,7 @@ def test_format_payload():
     enc = [b"test"]
     kwargs = {"foo": "bar"}
     payload = salt.payload.format_payload(enc=enc, kwargs=kwargs)
-    assert expected == payload
+    assert payload == expected
 
 
 def test_SREQ_init():
