@@ -7,29 +7,36 @@ import pytest
 
 import salt.utils.verify
 
-__CSL = None
 
-
-def symlink(source, link_name):
+class Symlink:
     """
     symlink(source, link_name) Creates a symbolic link pointing to source named
     link_name
     """
-    global __CSL
-    if __CSL is None:
-        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
-        csl.restype = ctypes.c_ubyte
-        __CSL = csl
-    flags = 0
-    if source is not None and source.is_dir():
-        flags = 1
-    if __CSL(link_name, source, flags) == 0:
-        raise ctypes.WinError()
+
+    def __init__(self):
+        self._csl = None
+
+    def __call__(self, source, link_name):
+        if self._csl is None:
+            self._csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+            self._csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+            self._csl.restype = ctypes.c_ubyte
+        flags = 0
+        if source is not None and source.is_dir():
+            flags = 1
+
+        if self._csl(link_name, source, flags) == 0:
+            raise ctypes.WinError()
 
 
-@pytest.fixture()
-def setup_links(tmp_path):
+@pytest.fixture(scope="module")
+def symlink():
+    return Symlink()
+
+
+@pytest.fixture
+def setup_links(tmp_path, symlink):
     to_path = tmp_path / "linkto"
     from_path = tmp_path / "linkfrom"
     if salt.utils.platform.is_windows():
