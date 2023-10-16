@@ -7,6 +7,19 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt v3005.4 (2023-10-16)
+=========================
+
+Security
+--------
+
+- Fix CVE-2023-34049 by ensuring we do not use a predictable name for the script and correctly check returncode of scp command.
+  This only impacts salt-ssh users using the pre-flight option. (cve-2023-34049)
+- Bump to `cryptography==41.0.4` due to https://github.com/advisories/GHSA-v8gr-m533-ghj9 (#65267)
+- Bump to `urllib3==1.26.17` or `urllib3==2.0.6` due to https://github.com/advisories/GHSA-v845-jxx5-vc9f (#65334)
+- Bump to `gitpython==3.1.37` due to https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65383)
+
+
 ## Salt v3005.3 (2023-09-14)
 
 ### Fixed
