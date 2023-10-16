@@ -3128,7 +3128,8 @@ jobs:
             distro: amazon
             version: "2"
             arch: arm64
-          - distro: amazon
+          - pkg-type: rpm
+            distro: amazon
             version: "2"
             arch: aarch64
           - pkg-type: rpm
@@ -3147,7 +3148,8 @@ jobs:
             distro: redhat
             version: "7"
             arch: arm64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "7"
             arch: aarch64
           - pkg-type: rpm
@@ -3158,7 +3160,8 @@ jobs:
             distro: redhat
             version: "8"
             arch: arm64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "8"
             arch: aarch64
           - pkg-type: rpm
@@ -3169,7 +3172,8 @@ jobs:
             distro: redhat
             version: "9"
             arch: arm64
-          - distro: redhat
+          - pkg-type: rpm
+            distro: redhat
             version: "9"
             arch: aarch64
           - pkg-type: rpm
@@ -3180,7 +3184,8 @@ jobs:
             distro: fedora
             version: "36"
             arch: arm64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "36"
             arch: aarch64
           - pkg-type: rpm
@@ -3191,7 +3196,8 @@ jobs:
             distro: fedora
             version: "37"
             arch: arm64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "37"
             arch: aarch64
           - pkg-type: rpm
@@ -3202,7 +3208,8 @@ jobs:
             distro: fedora
             version: "38"
             arch: arm64
-          - distro: fedora
+          - pkg-type: rpm
+            distro: fedora
             version: "38"
             arch: aarch64
           - pkg-type: rpm
@@ -3213,7 +3220,8 @@ jobs:
             distro: photon
             version: "3"
             arch: arm64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "3"
             arch: aarch64
           - pkg-type: rpm
@@ -3224,7 +3232,8 @@ jobs:
             distro: photon
             version: "4"
             arch: arm64
-          - distro: photon
+          - pkg-type: rpm
+            distro: photon
             version: "4"
             arch: aarch64
           - pkg-type: rpm
