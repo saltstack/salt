@@ -1656,6 +1656,130 @@ def test_latest_version_names_empty():
     assert ret == ""
 
 
+def test_latest_version_fromrepo():
+    """
+    test latest_version when `fromrepo` is passed in as a kwarg
+    """
+    version = "5.15.0.86.83"
+    fromrepo = "jammy-updates"
+    list_ret = {"linux-cloud-tools-virtual": [version]}
+    apt_ret = {
+        "pid": 4361,
+        "retcode": 0,
+        "stdout": "linux-cloud-tools-virtual:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
+        f"table:\n     {version} 990\n 990"
+        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
+        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
+        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
+        "stderr": "",
+    }
+    mock_apt = MagicMock(return_value=apt_ret)
+    patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
+    mock_list_pkgs = MagicMock(return_value=list_ret)
+    patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
+    with patch_apt, patch_list_pkgs:
+        ret = aptpkg.latest_version(
+            "linux-cloud-tools-virtual",
+            fromrepo=fromrepo,
+            refresh=False,
+            show_installed=True,
+        )
+        assert ret == version
+        assert mock_apt.call_args == call(
+            [
+                "apt-cache",
+                "-q",
+                "policy",
+                "linux-cloud-tools-virtual",
+                "-o",
+                f"APT::Default-Release={fromrepo}",
+            ],
+            scope=False,
+        )
+
+
+def test_latest_version_fromrepo_multiple_names():
+    """
+    test latest_version when multiple names of pkgs are pased
+    """
+    version = "5.15.0.86.83"
+    fromrepo = "jammy-updates"
+    list_ret = {
+        "linux-cloud-tools-virtual": ["5.15.0.69.67"],
+        "linux-generic": ["5.15.0.69.67"],
+    }
+    apt_ret_cloud = {
+        "pid": 4361,
+        "retcode": 0,
+        "stdout": "linux-cloud-tools-virtual:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
+        f"table:\n     {version} 990\n 990"
+        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
+        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
+        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
+        "stderr": "",
+    }
+    apt_ret_generic = {
+        "pid": 4821,
+        "retcode": 0,
+        "stdout": "linux-generic:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n"
+        f"Version table:\n     {version} 990\n        990"
+        "https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-updates/main amd64 Packages\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n *** 5.15.0.69.67"
+        "100\n        100 /var/lib/dpkg/status\n 5.15.0.25.27"
+        "500\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy/main amd64 Packages",
+        "stderr": "",
+    }
+
+    mock_apt = MagicMock()
+    mock_apt.side_effect = [apt_ret_cloud, apt_ret_generic]
+    patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
+    mock_list_pkgs = MagicMock(return_value=list_ret)
+    patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
+    with patch_apt, patch_list_pkgs:
+        ret = aptpkg.latest_version(
+            "linux-cloud-tools-virtual",
+            "linux-generic",
+            fromrepo=fromrepo,
+            refresh=False,
+            show_installed=True,
+        )
+        assert ret == {"linux-cloud-tools-virtual": version, "linux-generic": version}
+        assert mock_apt.call_args_list == [
+            call(
+                [
+                    "apt-cache",
+                    "-q",
+                    "policy",
+                    "linux-cloud-tools-virtual",
+                    "-o",
+                    "APT::Default-Release=jammy-updates",
+                ],
+                scope=False,
+            ),
+            call(
+                [
+                    "apt-cache",
+                    "-q",
+                    "policy",
+                    "linux-generic",
+                    "-o",
+                    "APT::Default-Release=jammy-updates",
+                ],
+                scope=False,
+            ),
+        ]
+
+
 def test_hold():
     """
     test aptpkg.hold() when passing in the name of a package
