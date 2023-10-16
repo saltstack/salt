@@ -390,7 +390,7 @@
 
       - name: Create XML Coverage Reports
         run: |
-          nox -e create-xml-coverage-reports
+          nox --force-color -e create-xml-coverage-reports
 
       - name: Upload Code Coverage To Codecov
         run: |
