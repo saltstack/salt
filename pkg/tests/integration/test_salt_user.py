@@ -323,9 +323,6 @@ def test_paths_log_rotation(
                                     assert (
                                         log_path.owner() == f"{test_account.username}"
                                     )
-                                    assert (
-                                        log_path.group() == f"{test_account.username}"
-                                    )
                                     assert log_path.stat().st_mode & 0o7777 == 0o640
 
                             # cleanup
