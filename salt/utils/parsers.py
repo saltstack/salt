@@ -610,7 +610,8 @@ class LogLevelMixIn(metaclass=MixInMeta):
             *self._console_log_level_cli_flags,
             dest=self._loglevel_config_setting_name_,
             choices=list(salt._logging.LOG_LEVELS),
-            help="Console logging log level. One of {}. Default: '{}'. \n The following log levels are INSECURE and may log sensitive data: {}".format(
+            help="Console logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
                 ", ".join(insecure_log()),
@@ -637,7 +638,8 @@ class LogLevelMixIn(metaclass=MixInMeta):
             "--log-file-level",
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(salt._logging.SORTED_LEVEL_NAMES),
-            help="Logfile logging log level. One of {}. Default: '{}'. \n The following log levels are INSECURE and may log sensitive data: {}".format(
+            help="Logfile logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
                 ", ".join(insecure_log()),
