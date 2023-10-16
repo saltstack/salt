@@ -837,11 +837,11 @@ def pkg_matrix(
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
-    ctx.print(_matrix, soft_wrap=True)
+    ctx.print(matrix, soft_wrap=True)
 
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+            wfh.write(f"matrix={json.dumps(matrix)}\n")
     ctx.exit(0)
 
 
