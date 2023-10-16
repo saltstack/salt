@@ -220,7 +220,7 @@ def test__run_initdb_with_timeout():
 def test_run_psql():
     postgres._run_psql('echo "hi"')
     cmd = postgres.__salt__["cmd.run_all"]
-    assert "postgres" == cmd.call_args[1]["runas"]
+    assert cmd.call_args[1]["runas"] == "postgres"
 
 
 def test_db_alter():
