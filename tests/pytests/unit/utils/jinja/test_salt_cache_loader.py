@@ -318,7 +318,7 @@ def test_get_source_relative_no_tpldir(
     loader = get_loader(opts=minion_opts, saltenv=saltenv)
     with pytest.raises(TemplateNotFound):
         loader.get_source(
-            MagicMock(globals=[]), str(".." / relative_rhello.relative_to(relative_dir))
+            MagicMock(globals={}), str(".." / relative_rhello.relative_to(relative_dir))
         )
 
 
