@@ -154,7 +154,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          nox -e decompress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- ${{ inputs.distro-slug }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -172,7 +172,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "1"
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
@@ -188,7 +188,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -206,7 +206,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests \
             --from-filenames=testrun-changed-files.txt
 
@@ -224,7 +224,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests \
             --from-filenames=testrun-changed-files.txt
 
@@ -242,7 +242,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code
 
       - name: Run Slow Tests
@@ -259,7 +259,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
@@ -276,7 +276,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
@@ -293,7 +293,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
@@ -310,7 +310,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests -k "mac or darwin"
 
       - name: Fix file ownership
@@ -320,7 +320,7 @@ jobs:
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false
         run: |
-          nox -e combine-coverage
+          nox --force-color -e combine-coverage
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
@@ -403,7 +403,7 @@ jobs:
       - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
-          nox -e create-xml-coverage-reports
+          nox --force-color -e create-xml-coverage-reports
           mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
           mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
 
