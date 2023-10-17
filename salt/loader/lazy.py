@@ -319,7 +319,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
-        self._lock = threading.RLock()
+        self._lock = self._get_lock()
+
         with self._lock:
             self._refresh_file_mapping()
 
@@ -329,6 +330,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module(f"{self.loaded_base_name}.int.{tag}")
         _generate_module(f"{self.loaded_base_name}.ext")
         _generate_module(f"{self.loaded_base_name}.ext.{tag}")
+
+    def _get_lock(self):
+        return threading.RLock()
 
     def clean_modules(self):
         """
@@ -747,14 +751,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     spec = file_finder.find_spec(mod_namespace)
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -768,14 +766,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     )
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = self.run(spec.loader.load_module)
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:

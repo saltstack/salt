@@ -8,7 +8,7 @@ distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
 looseversion
+tornado>=6.3.3
+
 # We need contextvars for salt-ssh
 contextvars
-tornado>=6.2.0 ; python_version < '3.8'
-tornado>=6.3.2 ; python_version >= '3.8'

@@ -55,3 +55,10 @@ Development begins on ``Aluminium``, or ``v3003``, after the ``v3002`` tag is
 applied to the ``master`` branch.  Once this occurs, all uses of the
 ``warn_until`` function targeting ``Aluminium``, along with the code they are
 warning about should be removed from the code.
+
+
+Silence Deprecation Warnings
+----------------------------
+
+If you set the `PYTHONWARNINGS` environment variable to `ignore` Salt will
+not print the deprecation warnings.

@@ -110,7 +110,7 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "{} module can only be loaded in a solaris globalzone.".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded in a solaris globalzone.",
     )
 
 
@@ -195,7 +195,7 @@ def _sanitize_value(value):
         return "".join(str(v) for v in new_value).replace(",)", ")")
     else:
         # note: we can't use shelx or pipes quote here because it makes zonecfg barf
-        return '"{}"'.format(value) if " " in value else value
+        return f'"{value}"' if " " in value else value
 
 
 def _dump_cfg(cfg_file):
@@ -233,13 +233,13 @@ def create(zone, brand, zonepath, force=False):
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.files.fpopen(cfg_file, "w+", mode=0o600) as fp_:
         fp_.write("create -b -F\n" if force else "create -b\n")
-        fp_.write("set brand={}\n".format(_sanitize_value(brand)))
-        fp_.write("set zonepath={}\n".format(_sanitize_value(zonepath)))
+        fp_.write(f"set brand={_sanitize_value(brand)}\n")
+        fp_.write(f"set zonepath={_sanitize_value(zonepath)}\n")
 
     # create
     if not __salt__["file.directory_exists"](zonepath):
         __salt__["file.makedirs_perms"](
-            zonepath if zonepath[-1] == "/" else "{}/".format(zonepath), mode="0700"
+            zonepath if zonepath[-1] == "/" else f"{zonepath}/", mode="0700"
         )
 
     _dump_cfg(cfg_file)
@@ -354,7 +354,7 @@ def export(zone, path=None):
     res = __salt__["cmd.run_all"](
         "zonecfg -z {zone} export{path}".format(
             zone=zone,
-            path=" -f {}".format(path) if path else "",
+            path=f" -f {path}" if path else "",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -422,7 +422,7 @@ def _property(methode, zone, key, value):
     cfg_file = None
     if methode not in ["set", "clear"]:
         ret["status"] = False
-        ret["message"] = "unkown methode {}!".format(methode)
+        ret["message"] = f"unkown methode {methode}!"
     else:
         cfg_file = salt.utils.files.mkstemp()
         with salt.utils.files.fpopen(cfg_file, "w+", mode=0o600) as fp_:
@@ -430,9 +430,9 @@ def _property(methode, zone, key, value):
                 if isinstance(value, dict) or isinstance(value, list):
                     value = _sanitize_value(value)
                 value = str(value).lower() if isinstance(value, bool) else str(value)
-                fp_.write("{} {}={}\n".format(methode, key, _sanitize_value(value)))
+                fp_.write(f"{methode} {key}={_sanitize_value(value)}\n")
             elif methode == "clear":
-                fp_.write("{} {}\n".format(methode, key))
+                fp_.write(f"{methode} {key}\n")
 
     # update property
     if cfg_file:
@@ -530,7 +530,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
             kwargs[k] = _sanitize_value(kwargs[k])
     if methode not in ["add", "update"]:
         ret["status"] = False
-        ret["message"] = "unknown methode {}".format(methode)
+        ret["message"] = f"unknown methode {methode}"
         return ret
     if methode in ["update"] and resource_selector and resource_selector not in kwargs:
         ret["status"] = False
@@ -543,7 +543,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.files.fpopen(cfg_file, "w+", mode=0o600) as fp_:
         if methode in ["add"]:
-            fp_.write("add {}\n".format(resource_type))
+            fp_.write(f"add {resource_type}\n")
         elif methode in ["update"]:
             if resource_selector:
                 value = kwargs[resource_selector]
@@ -556,7 +556,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
                     )
                 )
             else:
-                fp_.write("select {}\n".format(resource_type))
+                fp_.write(f"select {resource_type}\n")
         for k, v in kwargs.items():
             if methode in ["update"] and k == resource_selector:
                 continue
@@ -564,9 +564,9 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
                 value = _sanitize_value(value)
             value = str(v).lower() if isinstance(v, bool) else str(v)
             if k in _zonecfg_resource_setters[resource_type]:
-                fp_.write("set {}={}\n".format(k, _sanitize_value(value)))
+                fp_.write(f"set {k}={_sanitize_value(value)}\n")
             else:
-                fp_.write("add {} {}\n".format(k, _sanitize_value(value)))
+                fp_.write(f"add {k} {_sanitize_value(value)}\n")
         fp_.write("end\n")
 
     # update property
@@ -671,7 +671,7 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
                 )
             )
         else:
-            fp_.write("remove {}\n".format(resource_type))
+            fp_.write(f"remove {resource_type}\n")
 
     # update property
     if cfg_file:
@@ -799,6 +799,3 @@ def info(zone, show_all=False):
             ret[resname].append(resdata)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
