@@ -26,7 +26,7 @@ class Symlink:
         if source is not None and source.is_dir():
             flags = 1
 
-        if self._csl(link_name, source, flags) == 0:
+        if self._csl(str(link_name), str(source), flags) == 0:
             raise ctypes.WinError()
 
 
@@ -54,7 +54,7 @@ def test_clean_path_symlinked_src(setup_links):
     to_path, from_path = setup_links
     test_path = from_path / "test"
     expect_path = str(to_path / "test")
-    ret = salt.utils.verify.clean_path(from_path, test_path)
+    ret = salt.utils.verify.clean_path(str(from_path), str(test_path))
     assert ret == expect_path, "{} is not {}".format(ret, expect_path)
 
 
@@ -62,5 +62,5 @@ def test_clean_path_symlinked_tgt(setup_links):
     to_path, from_path = setup_links
     test_path = to_path / "test"
     expect_path = str(to_path / "test")
-    ret = salt.utils.verify.clean_path(from_path, test_path)
+    ret = salt.utils.verify.clean_path(str(from_path), str(test_path))
     assert ret == expect_path, "{} is not {}".format(ret, expect_path)
