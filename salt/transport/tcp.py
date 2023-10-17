@@ -308,12 +308,14 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug("PubClient conencted to %r %r", self, self.path)
             except Exception as exc:  # pylint: disable=broad-except
+                if self.path:
+                    _connect_to = self.path
+                else:
+                    _connect_to = f"{self.host}:{self.port}"
                 log.warning(
                     "TCP Publish Client encountered an exception while connecting to"
-                    " %s:%s %s: %r, will reconnect in %d seconds",
-                    self.host,
-                    self.port,
-                    self.path,
+                    " %s: %r, will reconnect in %d seconds",
+                    _connect_to,
                     exc,
                     self.backoff,
                 )

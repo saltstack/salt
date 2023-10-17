@@ -46,7 +46,7 @@ def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
     """
-    dep = "PyGithub"
+    dep = "PyGithub==1.56.0"
     repo = "https://github.com/saltstack/salt.git"
 
     try:
