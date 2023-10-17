@@ -1392,9 +1392,9 @@ def test_ip_to_host(grains):
     ## DGM
     dgm_grains_os = grains["os"]
     dgm_grains_os_family = grains["os_family"]
-    dgm_grains_osmajorversion = grains["osmajorversion"]
+    dgm_grains_osmajorrelease = grains["osmajorrelease"]
     dgm_grains_oscodename = grains["oscodename"]
-    dgm_strg = f"\nDGM localhost test grains os '{dgm_grains_os}', family '{dgm_grains_os_family}', major version '{dgm_grains_osmajorversion}', code name '{dgm_grains_oscodename}'\n\n"
+    dgm_strg = f"\nDGM localhost test grains os '{dgm_grains_os}', family '{dgm_grains_os_family}', major release '{dgm_grains_osmajorrelease}', code name '{dgm_grains_oscodename}'\n\n"
     print(dgm_strg)
 
     if grains["os"] == "Amazon":
