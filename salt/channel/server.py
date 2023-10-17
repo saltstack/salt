@@ -520,7 +520,12 @@ class ReqServerChannel:
                 load["id"],
             )
             if self.opts.get("auth_events") is True:
-                eload = {"result": False, "id": load["id"], "pub": load["pub"]}
+                eload = {
+                    "result": False,
+                    "act": "reject",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -697,6 +702,7 @@ class ReqServerChannel:
                     if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
+                            "act": "denied",
                             "id": load["id"],
                             "pub": load["pub"],
                         }
@@ -713,7 +719,12 @@ class ReqServerChannel:
             # Something happened that I have not accounted for, FAIL!
             log.warning("Unaccounted for authentication failure")
             if self.opts.get("auth_events") is True:
-                eload = {"result": False, "id": load["id"], "pub": load["pub"]}
+                eload = {
+                    "result": False,
+                    "act": "error",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
