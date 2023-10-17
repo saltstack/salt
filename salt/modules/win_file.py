@@ -1938,6 +1938,7 @@ def check_perms(
         deny_perms=deny_perms,
         inheritance=inheritance,
         reset=reset,
+        test_mode=__opts__["test"],
     )
 
 
