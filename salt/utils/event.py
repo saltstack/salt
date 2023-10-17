@@ -424,10 +424,29 @@ class SaltEvent:
         data = salt.payload.loads(mdata, encoding="utf-8")
         return mtag, data
 
+    @classmethod
+    def pack(cls, tag, data, max_size=None):
+        tagend = TAGEND
+        serialized_data = salt.payload.dumps(data, use_bin_type=True)
+        if max_size:
+            serialized_data = salt.utils.dicttrim.trim_dict(
+                serialized_data,
+                max_size,
+                is_msgpacked=True,
+                use_bin_type=True,
+            )
+        return b"".join(
+            [
+                salt.utils.stringutils.to_bytes(tag),
+                salt.utils.stringutils.to_bytes(tagend),
+                serialized_data,
+            ]
+        )
+
     def _get_match_func(self, match_type=None):
         if match_type is None:
             match_type = self.opts["event_match_type"]
-        return getattr(self, "_match_tag_{}".format(match_type), None)
+        return getattr(self, f"_match_tag_{match_type}", None)
 
     def _check_pending(self, tag, match_func=None):
         """Check the pending_events list for events that match the tag
@@ -702,7 +721,7 @@ class SaltEvent:
             raise ValueError("Empty tag.")
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError("Dict object expected, not '{}'.".format(data))
+            raise ValueError(f"Dict object expected, not '{data}'.")
 
         if not self.cpush:
             if timeout is not None:
@@ -713,33 +732,7 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug(
-            "Sending event(fire_event_async): tag = %s; data = %s %r",
-            tag,
-            data,
-            self.pusher,
-        )
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
         if cb is not None:
@@ -763,7 +756,7 @@ class SaltEvent:
             raise ValueError("Empty tag.")
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError("Dict object expected, not '{}'.".format(data))
+            raise ValueError(f"Dict object expected, not '{data}'.")
 
         if not self.cpush:
             if timeout is not None:
@@ -774,32 +767,7 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug(
-            "Sending event(fire_event): tag = %s; data = %s",
-            tag,
-            data,
-        )
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
             try:
@@ -863,15 +831,14 @@ class SaltEvent:
                 data["retcode"] = retcode
                 tags = tag.split("_|-")
                 if data.get("result") is False:
-                    self.fire_event(
-                        data, "{}.{}".format(tags[0], tags[-1])
-                    )  # old dup event
+                    self.fire_event(data, f"{tags[0]}.{tags[-1]}")  # old dup event
                     data["jid"] = load["jid"]
                     data["id"] = load["id"]
                     data["success"] = False
-                    data["return"] = "Error: {}.{}".format(tags[0], tags[-1])
+                    data["return"] = f"Error: {tags[0]}.{tags[-1]}"
                     data["fun"] = fun
-                    data["user"] = load["user"]
+                    if "user" in load:
+                        data["user"] = load["user"]
                     self.fire_event(
                         data,
                         tagify([load["jid"], "sub", load["id"], "error", fun], "job"),
@@ -1053,12 +1020,12 @@ class AsyncEventPublisher:
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()[:10]
         epub_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+            self.opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc"
         )
         if os.path.exists(epub_sock_path):
             os.unlink(epub_sock_path)
         epull_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+            self.opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
         )
         if os.path.exists(epull_sock_path):
             os.unlink(epull_sock_path)
@@ -1278,7 +1245,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
             # Multiple event returners
             for r in self.opts["event_return"]:
                 log.debug("Calling event returner %s, one of many.", r)
-                event_return = "{}.event_return".format(r)
+                event_return = f"{r}.event_return"
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
@@ -1333,7 +1300,11 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 if event["tag"] == "salt/event/exit":
                     # We're done eventing
                     self.stop = True
-                if self._filter(event):
+                if self._filter(
+                    event,
+                    allow=self.opts["event_return_whitelist"],
+                    deny=self.opts["event_return_blacklist"],
+                ):
                     # This event passed the filter, add it to the queue
                     self.event_queue.append(event)
                 too_long_in_queue = False
@@ -1381,23 +1352,40 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
 
                 self.flush_events()
 
-    def _filter(self, event):
+    @staticmethod
+    def _filter(event, allow=None, deny=None):
         """
         Take an event and run it through configured filters.
 
-        Returns True if event should be stored, else False
+        Returns True if event should be stored, else False.
+
+        Any event that has a "__peer_id" id key defined are denied outright
+        because they did not originate from this master in a clustered
+        configuration.
+
+        If no allow or deny lists are given the event is allowed. Otherwise the
+        event's tag will be checked against the allow list. Then the deny list.
         """
+
+        if "__peer_id" in event:
+            return False
+
+        if allow is None:
+            allow = []
+        if deny is None:
+            deny = []
         tag = event["tag"]
-        if self.opts["event_return_whitelist"]:
+
+        if allow:
             ret = False
         else:
             ret = True
-        for whitelist_match in self.opts["event_return_whitelist"]:
-            if fnmatch.fnmatch(tag, whitelist_match):
+        for allow_match in allow:
+            if fnmatch.fnmatch(tag, allow_match):
                 ret = True
                 break
-        for blacklist_match in self.opts["event_return_blacklist"]:
-            if fnmatch.fnmatch(tag, blacklist_match):
+        for deny_match in deny:
+            if fnmatch.fnmatch(tag, deny_match):
                 ret = False
                 break
         return ret

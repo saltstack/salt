@@ -308,12 +308,14 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug("PubClient conencted to %r %r", self, self.path)
             except Exception as exc:  # pylint: disable=broad-except
+                if self.path:
+                    _connect_to = self.path
+                else:
+                    _connect_to = f"{self.host}:{self.port}"
                 log.warning(
                     "TCP Publish Client encountered an exception while connecting to"
-                    " %s:%s %s: %r, will reconnect in %d seconds",
-                    self.host,
-                    self.port,
-                    self.path,
+                    " %s: %r, will reconnect in %d seconds",
+                    _connect_to,
                     exc,
                     self.backoff,
                 )
@@ -435,7 +437,15 @@ class TCPPubClient(salt.transport.base.PublishClient):
         while True:
             msg = await self.recv()
             if msg:
-                callback(msg)
+                try:
+                    # XXX This is handled better in the websocket transport work
+                    await callback(msg)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Unhandled exception while running callback %r",
+                        self,
+                        exc_info=True,
+                    )
 
     def on_recv(self, callback):
         """
@@ -1120,7 +1130,9 @@ class TCPPuller:
     but using either UNIX domain sockets or TCP sockets
     """
 
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(
+        self, host=None, port=None, path=None, io_loop=None, payload_handler=None
+    ):
         """
         Create a new Tornado IPC server
 
@@ -1136,7 +1148,9 @@ class TCPPuller:
         :param func payload_handler: A function to customize handling of
                                      incoming data.
         """
-        self.socket_path = socket_path
+        self.host = host
+        self.port = port
+        self.path = path
         self._started = False
         self.payload_handler = payload_handler
 
@@ -1152,16 +1166,17 @@ class TCPPuller:
         Blocks until socket is established
         """
         # Start up the ioloop
-        log.trace("IPCServer: binding to socket: %s", self.socket_path)
-        if isinstance(self.socket_path, int):
+        if self.path:
+            log.trace("IPCServer: binding to socket: %s", self.path)
+            self.sock = tornado.netutil.bind_unix_socket(self.path)
+        else:
+            log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(0)
-            self.sock.bind(("127.0.0.1", self.socket_path))
+            self.sock.bind((self.host, self.port))
             # Based on default used in tornado.netutil.bind_sockets()
             self.sock.listen(128)
-        else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
         tornado.netutil.add_accept_handler(
             self.sock,
@@ -1210,7 +1225,12 @@ class TCPPuller:
                         write_callback(stream, framed_msg["head"]),
                     )
             except tornado.iostream.StreamClosedError:
-                log.trace("Client disconnected from IPC %s", self.socket_path)
+                if self.path:
+                    log.trace("Client disconnected from IPC %s", self.path)
+                else:
+                    log.trace(
+                        "Client disconnected from IPC %s:%s", self.host, self.port
+                    )
                 break
             except OSError as exc:
                 # On occasion an exception will occur with
@@ -1378,13 +1398,18 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = pub_server
         if self.pull_path:
             log.debug("Publish server binding pull to %s", self.pull_path)
-            pull_uri = self.pull_path
+            pull_path = self.pull_path
         else:
-            log.debug("Publish server binding pull to 127.0.0.1:%s", self.pull_port)
-            pull_uri = self.pull_port
+            log.debug(
+                "Publish server binding pull to %s:%s", self.pull_host, self.pull_port
+            )
+            pull_host = self.pull_host
+            pull_port = self.pull_port
 
         self.pull_sock = TCPPuller(
-            pull_uri,
+            host=self.pull_host,
+            port=self.pull_port,
+            path=self.pull_path,
             io_loop=io_loop,
             payload_handler=publish_payload,
         )

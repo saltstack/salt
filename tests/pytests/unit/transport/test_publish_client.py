@@ -2,8 +2,11 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
+import asyncio
 import hashlib
 import logging
+import socket
+import time
 
 import pytest
 import tornado.ioloop
@@ -23,7 +26,7 @@ pytestmark = [
 
 
 def transport_ids(value):
-    return "Transport({})".format(value)
+    return f"Transport({value})"
 
 
 @pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)
@@ -186,8 +189,6 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
     host = "127.0.0.1"
     port = 11122
     if transport == "zeromq":
-        import asyncio
-
         import zmq
 
         ctx = zmq.asyncio.Context()
@@ -200,11 +201,11 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         await client.connect()
         assert client._socket
 
-        socket = ctx.socket(zmq.PUB)
-        socket.setsockopt(zmq.BACKLOG, 1000)
-        socket.setsockopt(zmq.LINGER, -1)
-        socket.setsockopt(zmq.SNDHWM, 1000)
-        socket.bind(uri)
+        sock = ctx.socket(zmq.PUB)
+        sock.setsockopt(zmq.BACKLOG, 1000)
+        sock.setsockopt(zmq.LINGER, -1)
+        sock.setsockopt(zmq.SNDHWM, 1000)
+        sock.bind(uri)
         await asyncio.sleep(20)
 
         async def recv():
@@ -212,17 +213,15 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         task = asyncio.create_task(recv())
         # Sleep to allow zmq to do it's thing.
-        await socket.send(msg)
+        await sock.send(msg)
         await task
         response = task.result()
         assert response
         client.close()
-        socket.close()
+        sock.close()
         await asyncio.sleep(0.03)
         ctx.term()
     elif transport == "tcp":
-        import asyncio
-        import socket
 
         client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
         # XXX: This is an implimentation detail of the tcp transport.
@@ -240,7 +239,19 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         msg = salt.payload.dumps({"meh": 123})
         msg = salt.transport.frame.frame_msg(msg, header=None)
-        conn, addr = sock.accept()
+
+        # This loop and timeout is needed to reliably run this test on windows.
+        start = time.monotonic()
+        while True:
+            try:
+                conn, addr = sock.accept()
+            except BlockingIOError:
+                await asyncio.sleep(0.3)
+                if time.monotonic() - start > 30:
+                    raise TimeoutError("No connection after 30 seconds")
+            else:
+                break
+
         conn.send(msg)
         response = await client.recv()
         assert response

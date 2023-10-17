@@ -58,7 +58,7 @@ concurrency:
   <%- do conclusion_needs.append('notify-slack') %>
   notify-slack:
     name: Notify Slack
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: <{ gh_environment }>
     needs:
       <%- for need in prepare_workflow_needs.iter(consume=False) %>
@@ -157,7 +157,7 @@ concurrency:
       <%- endif %>
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |

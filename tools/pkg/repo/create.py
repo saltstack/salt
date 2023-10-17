@@ -19,12 +19,11 @@ from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
-from tools.utils import (
-    Version,
+from tools.utils import Version, parse_versions
+from tools.utils.repo import (
     create_full_repo_path,
     create_top_level_repo_path,
     get_repo_json_file_contents,
-    parse_versions,
 )
 
 try:
@@ -52,11 +51,16 @@ _deb_distro_info = {
         "10": {
             "label": "deb10ary",
             "codename": "buster",
-            "suitename": "oldstable",
+            "suitename": "oldoldstable",
         },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
+            "suitename": "oldstable",
+        },
+        "12": {
+            "label": "deb12ary",
+            "codename": "bookworm",
             "suitename": "stable",
         },
     },

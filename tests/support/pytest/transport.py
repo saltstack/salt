@@ -87,7 +87,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             self.sock = self.ctx.socket(zmq.SUB)
             self.sock.setsockopt(zmq.LINGER, -1)
             self.sock.setsockopt(zmq.SUBSCRIBE, b"")
-            pub_uri = "tcp://{}:{}".format(self.interface, self.port)
+            pub_uri = f"tcp://{self.interface}:{self.port}"
             log.info("Collector listen %s", pub_uri)
             self.sock.connect(pub_uri)
         else:
@@ -143,10 +143,10 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             while True:
                 curr_time = time.time()
                 if time.time() > self.hard_timeout:
-                    log.error("Hard timeout reaced in test collector!")
+                    log.error("Hard timeout reached in test collector!")
                     break
                 if curr_time - last_msg >= self.timeout:
-                    log.error("Receive timeout reaced in test collector!")
+                    log.error("Receive timeout reached in test collector!")
                     break
                 try:
                     payload = yield self._recv()

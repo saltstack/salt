@@ -13,6 +13,12 @@ from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """

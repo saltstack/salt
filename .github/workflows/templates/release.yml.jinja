@@ -52,7 +52,7 @@ permissions:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -87,7 +87,7 @@ permissions:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
@@ -115,6 +115,9 @@ permissions:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
 
       - name: Check Release Staged
         env:
@@ -137,7 +140,7 @@ permissions:
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
-          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>
@@ -170,7 +173,7 @@ permissions:
           - platform: darwin
             arch: x86_64
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -193,6 +196,8 @@ permissions:
           retention-days: 7
           if-no-files-found: error
 
+  <%- include "build-ci-deps.yml.jinja" %>
+
   backup:
     name: Backup
     runs-on:
@@ -207,7 +212,7 @@ permissions:
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Rclone
         uses: AnimMouse/setup-rclone@v1
@@ -237,7 +242,7 @@ permissions:
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -256,7 +261,7 @@ permissions:
           tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
   <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-pkg-repo-downloads.yml.jinja" %>
+  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   release:
@@ -277,7 +282,7 @@ permissions:
     environment: <{ gh_environment }>
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
@@ -388,7 +393,7 @@ permissions:
     environment: <{ gh_environment }>
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
@@ -419,7 +424,7 @@ permissions:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

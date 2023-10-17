@@ -416,6 +416,8 @@ The above example will force the minion to use the :py:mod:`systemd
 <salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
+For per-state provider overrides, see documentation on :ref:`state providers <state-providers>`.
+
 .. __: https://github.com/saltstack/salt/issues/new
 
 Logging Restrictions
