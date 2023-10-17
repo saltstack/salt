@@ -1,5 +1,4 @@
 import datetime
-import logging
 import re
 
 import pytest
@@ -8,8 +7,6 @@ import salt.modules.config as configmod
 import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
-
-log = logging.getLogger(__name__)
 
 # 'md5' + md5('password' + 'username')
 md5_pw = "md55a231fcdb710d73268c4f44283487ba2"
@@ -2322,8 +2319,6 @@ def test_tablespace_list():
             runas="foo",
         )
 
-        log.warning(f"DGM test_tablespace_list ret '{ret}'")
-
         expected_data = {
             "pg_global": {"Owner": "postgres", "ACL": "", "Opts": "", "Location": ""},
             "pg_default": {"Owner": "postgres", "ACL": "", "Opts": "", "Location": ""},
@@ -2431,6 +2426,88 @@ def test_tablespace_exists_false():
         )
 
         assert not ret
+
+
+def test_tablespace_alter_new_owner():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        postgres.tablespace_alter(
+            "test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+            new_owner="testuser",
+        )
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "maint_db",
+                "-c",
+                'ALTER TABLESPACE "test_tablespace" OWNER TO "testuser"',
+            ],
+            runas="foo",
+            password="foo",
+            host="testhost",
+            port="testport",
+            user="testuser",
+        )
+
+
+def test_tablespace_alter_new_name():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        postgres.tablespace_alter(
+            "test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+            new_name="test_tablespace2",
+        )
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "maint_db",
+                "-c",
+                'ALTER TABLESPACE "test_tablespace" RENAME TO "test_tablespace2"',
+            ],
+            runas="foo",
+            password="foo",
+            host="testhost",
+            port="testport",
+            user="testuser",
+        )
 
 
 def test_tablespace_remove():
