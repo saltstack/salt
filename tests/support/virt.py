@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 
@@ -6,6 +7,13 @@ from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
 
 from tests.conftest import CODE_DIR
+
+log = logging.getLogger(__name__)
+
+
+def _install_salt_in_container(container):
+    ret = container.run("python3", "-m", "pip", "install", "/salt")
+    log.debug("Install Salt in the container: %s", ret)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -64,6 +72,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.container_start_check(self._check_script_path_exists)
         for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
             self.check_ports[port] = port
+        self.before_start(_install_salt_in_container, self, on_container=False)
 
     def _check_script_path_exists(self, timeout_at):
         while time.time() <= timeout_at:
