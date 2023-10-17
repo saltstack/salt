@@ -9,6 +9,7 @@ import logging
 import os
 import pathlib
 import random
+import shutil
 import sys
 import time
 from typing import TYPE_CHECKING, Any
@@ -285,6 +286,7 @@ def define_jobs(
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
+        "build-deps-ci": True,
     }
 
     if skip_tests:
@@ -392,6 +394,7 @@ def define_jobs(
     if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
+                "build-deps-ci",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
@@ -469,22 +472,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
         )
 
-    skip_code_coverage = True
     if "test:coverage" in labels:
-        skip_code_coverage = False
+        ctx.info("Writing 'testrun' to the github outputs file")
+        testrun = TestRun(type="full", skip_code_coverage=False)
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"testrun={json.dumps(testrun)}\n")
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "Full test run chosen because the label `test:coverage` is set.\n"
+            )
+        return
     elif event_name != "pull_request":
-        skip_code_coverage = False
-
-    if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=False)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
+
+    # So, it's a pull request...
 
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
@@ -499,7 +508,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
-    # So, it's a pull request...
     # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
@@ -515,7 +523,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "Full test run chosen because there was a change made "
                 "to `cicd/golden-images.json`.\n"
             )
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
@@ -530,16 +538,16 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     elif "test:full" in labels:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("Full test run chosen because the label `test:full` is set.\n")
-        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+        testrun = TestRun(type="full", skip_code_coverage=True)
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = TestRun(
             type="changed",
-            skip_code_coverage=skip_code_coverage,
+            skip_code_coverage=True,
             from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
@@ -704,6 +712,9 @@ def pkg_matrix(
         distro_slug
         not in [
             "debian-11-arm64",
+            # TODO: remove debian 12 once debian 12 pkgs are released
+            "debian-12-arm64",
+            "debian-12",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -739,6 +750,9 @@ def pkg_matrix(
         distro_slug
         not in [
             "centosstream-9",
+            "debian-11-arm64",
+            "debian-12-arm64",
+            "debian-12",
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -1034,3 +1048,89 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
     ctx.info("Writing 'cache-seed' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"cache-seed={cache_seed}\n")
+
+
+@ci.command(
+    name="upload-coverage",
+    arguments={
+        "commit_sha": {
+            "help": "The commit SHA",
+            "required": True,
+        },
+        "reports_path": {
+            "help": "The path to the directory containing the XML Coverage Reports",
+        },
+    },
+)
+def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = None):
+    """
+    Upload code coverage to codecov.
+    """
+    codecov = shutil.which("codecov")
+    if not codecov:
+        ctx.error("Could not find the path to the 'codecov' binary")
+        ctx.exit(1)
+
+    codecov_args = [
+        codecov,
+        "--nonZero",
+        "--sha",
+        commit_sha,
+    ]
+
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+            pr_event_data = gh_event.get("pull_request")
+            if pr_event_data:
+                codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+
+    sleep_time = 15
+    for fpath in reports_path.glob("*.xml"):
+        if fpath.name in ("salt.xml", "tests.xml"):
+            flags = fpath.stem
+        else:
+            try:
+                section, distro_slug, nox_session = fpath.stem.split("..")
+            except ValueError:
+                ctx.error(
+                    f"The file {fpath} does not respect the expected naming convention "
+                    "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
+                )
+                continue
+            flags = f"{section},{distro_slug}"
+
+        max_attempts = 3
+        current_attempt = 0
+        while True:
+            current_attempt += 1
+            ctx.info(
+                f"Uploading '{fpath}' coverage report to codecov (attempt {current_attempt} of {max_attempts}) ..."
+            )
+
+            ret = ctx.run(
+                *codecov_args,
+                "--file",
+                str(fpath),
+                "--name",
+                fpath.stem,
+                "--flags",
+                flags,
+                check=False,
+            )
+            if ret.returncode == 0:
+                break
+
+            if current_attempt >= max_attempts:
+                ctx.error(f"Failed to upload {fpath} to codecov")
+                ctx.exit(1)
+
+            ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
+            time.sleep(sleep_time)
+
+    ctx.exit(0)

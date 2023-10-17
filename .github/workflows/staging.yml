@@ -684,8 +684,8 @@ jobs:
     secrets: inherit
 
   windows-2016-ci-deps:
-    name: Windows 2016
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Windows 2016 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -701,8 +701,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   windows-2019-ci-deps:
-    name: Windows 2019
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Windows 2019 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -718,8 +718,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   windows-2022-ci-deps:
-    name: Windows 2022
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Windows 2022 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -735,8 +735,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   macos-12-ci-deps:
-    name: macOS 12
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    name: macOS 12 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-macos
@@ -752,8 +752,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-8-ci-deps:
-    name: Alma Linux 8
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Alma Linux 8 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -769,8 +769,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-8-arm64-ci-deps:
-    name: Alma Linux 8 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Alma Linux 8 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -786,8 +786,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-9-ci-deps:
-    name: Alma Linux 9
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Alma Linux 9 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -803,8 +803,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   almalinux-9-arm64-ci-deps:
-    name: Alma Linux 9 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Alma Linux 9 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -820,8 +820,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-ci-deps:
-    name: Amazon Linux 2
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Amazon Linux 2 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -837,8 +837,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-arm64-ci-deps:
-    name: Amazon Linux 2 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Amazon Linux 2 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -854,8 +854,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   archlinux-lts-ci-deps:
-    name: Arch Linux LTS
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Arch Linux LTS Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -871,8 +871,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centos-7-ci-deps:
-    name: CentOS 7
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS 7 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -888,8 +888,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centos-7-arm64-ci-deps:
-    name: CentOS 7 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS 7 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -905,8 +905,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-8-ci-deps:
-    name: CentOS Stream 8
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS Stream 8 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -922,8 +922,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-8-arm64-ci-deps:
-    name: CentOS Stream 8 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS Stream 8 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -939,8 +939,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-9-ci-deps:
-    name: CentOS Stream 9
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS Stream 9 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -956,8 +956,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   centosstream-9-arm64-ci-deps:
-    name: CentOS Stream 9 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: CentOS Stream 9 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -973,8 +973,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-10-ci-deps:
-    name: Debian 10
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Debian 10 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -990,8 +990,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-11-ci-deps:
-    name: Debian 11
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Debian 11 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1007,8 +1007,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   debian-11-arm64-ci-deps:
-    name: Debian 11 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Debian 11 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1023,9 +1023,43 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  debian-12-ci-deps:
+    name: Debian 12 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-12-arm64-ci-deps:
+    name: Debian 12 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   fedora-37-ci-deps:
-    name: Fedora 37
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Fedora 37 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1041,8 +1075,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-37-arm64-ci-deps:
-    name: Fedora 37 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Fedora 37 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1058,8 +1092,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-38-ci-deps:
-    name: Fedora 38
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Fedora 38 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1075,8 +1109,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   fedora-38-arm64-ci-deps:
-    name: Fedora 38 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Fedora 38 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1092,8 +1126,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   opensuse-15-ci-deps:
-    name: Opensuse 15
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Opensuse 15 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1109,8 +1143,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-3-ci-deps:
-    name: Photon OS 3
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Photon OS 3 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1126,8 +1160,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-4-ci-deps:
-    name: Photon OS 4
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Photon OS 4 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1143,8 +1177,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   photonos-4-arm64-ci-deps:
-    name: Photon OS 4 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Photon OS 4 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1160,8 +1194,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2004-ci-deps:
-    name: Ubuntu 20.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Ubuntu 20.04 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1177,8 +1211,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2004-arm64-ci-deps:
-    name: Ubuntu 20.04 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Ubuntu 20.04 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1194,8 +1228,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2204-ci-deps:
-    name: Ubuntu 22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Ubuntu 22.04 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1211,8 +1245,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   ubuntu-2204-arm64-ci-deps:
-    name: Ubuntu 22.04 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Ubuntu 22.04 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -1228,7 +1262,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   amazonlinux-2-pkg-tests:
-    name: Amazon Linux 2 Package
+    name: Amazon Linux 2 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1250,7 +1284,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centos-7-pkg-tests:
-    name: CentOS 7 Package
+    name: CentOS 7 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1272,7 +1306,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-8-pkg-tests:
-    name: CentOS Stream 8 Package
+    name: CentOS Stream 8 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1294,7 +1328,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-9-pkg-tests:
-    name: CentOS Stream 9 Package
+    name: CentOS Stream 9 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1316,7 +1350,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-10-pkg-tests:
-    name: Debian 10 Package
+    name: Debian 10 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1338,7 +1372,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-pkg-tests:
-    name: Debian 11 Package
+    name: Debian 11 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1360,7 +1394,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-arm64-pkg-tests:
-    name: Debian 11 Arm64 Package
+    name: Debian 11 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1381,8 +1415,52 @@ jobs:
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  debian-12-pkg-tests:
+    name: Debian 12 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs-onedir
+      - debian-12-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  debian-12-arm64-pkg-tests:
+    name: Debian 12 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs-onedir
+      - debian-12-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   photonos-3-pkg-tests:
-    name: Photon OS 3 Package
+    name: Photon OS 3 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1404,7 +1482,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-4-pkg-tests:
-    name: Photon OS 4 Package
+    name: Photon OS 4 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1426,7 +1504,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-4-arm64-pkg-tests:
-    name: Photon OS 4 Arm64 Package
+    name: Photon OS 4 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1448,7 +1526,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-pkg-tests:
-    name: Ubuntu 20.04 Package
+    name: Ubuntu 20.04 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1470,7 +1548,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-arm64-pkg-tests:
-    name: Ubuntu 20.04 Arm64 Package
+    name: Ubuntu 20.04 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1492,7 +1570,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-pkg-tests:
-    name: Ubuntu 22.04 Package
+    name: Ubuntu 22.04 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1514,7 +1592,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-arm64-pkg-tests:
-    name: Ubuntu 22.04 Arm64 Package
+    name: Ubuntu 22.04 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1536,7 +1614,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   macos-12-pkg-tests:
-    name: macOS 12 Package
+    name: macOS 12 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -1558,7 +1636,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-nsis-pkg-tests:
-    name: Windows 2016 NSIS Package
+    name: Windows 2016 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1580,7 +1658,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-msi-pkg-tests:
-    name: Windows 2016 MSI Package
+    name: Windows 2016 MSI Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1602,7 +1680,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-nsis-pkg-tests:
-    name: Windows 2019 NSIS Package
+    name: Windows 2019 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1624,7 +1702,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-msi-pkg-tests:
-    name: Windows 2019 MSI Package
+    name: Windows 2019 MSI Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1646,7 +1724,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-nsis-pkg-tests:
-    name: Windows 2022 NSIS Package
+    name: Windows 2022 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1668,7 +1746,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-msi-pkg-tests:
-    name: Windows 2022 MSI Package
+    name: Windows 2022 MSI Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1690,7 +1768,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016:
-    name: Windows 2016
+    name: Windows 2016 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1710,7 +1788,7 @@ jobs:
       skip-junit-reports: true
 
   windows-2019:
-    name: Windows 2019
+    name: Windows 2019 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1730,7 +1808,7 @@ jobs:
       skip-junit-reports: true
 
   windows-2022:
-    name: Windows 2022
+    name: Windows 2022 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1750,7 +1828,7 @@ jobs:
       skip-junit-reports: true
 
   macos-12:
-    name: macOS 12
+    name: macOS 12 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
@@ -1770,7 +1848,7 @@ jobs:
       skip-junit-reports: true
 
   almalinux-8:
-    name: Alma Linux 8
+    name: Alma Linux 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1790,7 +1868,7 @@ jobs:
       skip-junit-reports: true
 
   almalinux-9:
-    name: Alma Linux 9
+    name: Alma Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1810,7 +1888,7 @@ jobs:
       skip-junit-reports: true
 
   amazonlinux-2:
-    name: Amazon Linux 2
+    name: Amazon Linux 2 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1830,7 +1908,7 @@ jobs:
       skip-junit-reports: true
 
   archlinux-lts:
-    name: Arch Linux LTS
+    name: Arch Linux LTS Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1850,7 +1928,7 @@ jobs:
       skip-junit-reports: true
 
   centos-7:
-    name: CentOS 7
+    name: CentOS 7 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1870,7 +1948,7 @@ jobs:
       skip-junit-reports: true
 
   centosstream-8:
-    name: CentOS Stream 8
+    name: CentOS Stream 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1890,7 +1968,7 @@ jobs:
       skip-junit-reports: true
 
   centosstream-9:
-    name: CentOS Stream 9
+    name: CentOS Stream 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1910,7 +1988,7 @@ jobs:
       skip-junit-reports: true
 
   debian-10:
-    name: Debian 10
+    name: Debian 10 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1930,7 +2008,7 @@ jobs:
       skip-junit-reports: true
 
   debian-11:
-    name: Debian 11
+    name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1950,7 +2028,7 @@ jobs:
       skip-junit-reports: true
 
   debian-11-arm64:
-    name: Debian 11 Arm64
+    name: Debian 11 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1969,8 +2047,48 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
 
+  debian-12:
+    name: Debian 12 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - debian-12-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
+  debian-12-arm64:
+    name: Debian 12 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - debian-12-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
   fedora-37:
-    name: Fedora 37
+    name: Fedora 37 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1990,7 +2108,7 @@ jobs:
       skip-junit-reports: true
 
   fedora-38:
-    name: Fedora 38
+    name: Fedora 38 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2010,7 +2128,7 @@ jobs:
       skip-junit-reports: true
 
   opensuse-15:
-    name: Opensuse 15
+    name: Opensuse 15 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2030,7 +2148,7 @@ jobs:
       skip-junit-reports: true
 
   photonos-3:
-    name: Photon OS 3
+    name: Photon OS 3 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2050,7 +2168,7 @@ jobs:
       skip-junit-reports: true
 
   photonos-4:
-    name: Photon OS 4
+    name: Photon OS 4 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2070,7 +2188,7 @@ jobs:
       skip-junit-reports: true
 
   photonos-4-arm64:
-    name: Photon OS 4 Arm64
+    name: Photon OS 4 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2090,7 +2208,7 @@ jobs:
       skip-junit-reports: true
 
   ubuntu-2004:
-    name: Ubuntu 20.04
+    name: Ubuntu 20.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2110,7 +2228,7 @@ jobs:
       skip-junit-reports: true
 
   ubuntu-2004-arm64:
-    name: Ubuntu 20.04 Arm64
+    name: Ubuntu 20.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2130,7 +2248,7 @@ jobs:
       skip-junit-reports: true
 
   ubuntu-2204:
-    name: Ubuntu 22.04
+    name: Ubuntu 22.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2150,7 +2268,7 @@ jobs:
       skip-junit-reports: true
 
   ubuntu-2204-arm64:
-    name: Ubuntu 22.04 Arm64
+    name: Ubuntu 22.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -2296,6 +2414,14 @@ jobs:
           - pkg-type: deb
             distro: debian
             version: "11"
+            arch: aarch64
+          - pkg-type: deb
+            distro: debian
+            version: "12"
+            arch: x86_64
+          - pkg-type: deb
+            distro: debian
+            version: "12"
             arch: aarch64
           - pkg-type: deb
             distro: ubuntu
@@ -2968,729 +3094,54 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  almalinux-8-package-download-tests:
-    name: Alma Linux 8 Package Download
+  pkg-download-tests:
+    name: Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+      - almalinux-8-arm64-ci-deps
+      - almalinux-8-ci-deps
+      - almalinux-9-arm64-ci-deps
+      - almalinux-9-ci-deps
+      - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2-ci-deps
+      - centos-7-arm64-ci-deps
+      - centos-7-ci-deps
+      - centosstream-8-arm64-ci-deps
+      - centosstream-8-ci-deps
+      - centosstream-9-arm64-ci-deps
+      - centosstream-9-ci-deps
+      - debian-10-ci-deps
+      - debian-11-arm64-ci-deps
+      - debian-11-ci-deps
+      - debian-12-arm64-ci-deps
+      - debian-12-ci-deps
+      - fedora-37-arm64-ci-deps
+      - fedora-37-ci-deps
+      - fedora-38-arm64-ci-deps
+      - fedora-38-ci-deps
+      - macos-12-ci-deps
+      - photonos-3-ci-deps
+      - photonos-4-arm64-ci-deps
+      - photonos-4-ci-deps
+      - ubuntu-2004-arm64-ci-deps
+      - ubuntu-2004-ci-deps
+      - ubuntu-2204-arm64-ci-deps
+      - ubuntu-2204-ci-deps
+      - windows-2022-ci-deps
+      - build-salt-onedir-linux
+      - build-salt-onedir-macos
+      - build-salt-onedir-windows
+    uses: ./.github/workflows/test-package-downloads-action.yml
     with:
-      distro-slug: almalinux-8
       nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       nox-version: 2022.8.7
       python-version: "3.10"
       skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  almalinux-8-arm64-package-download-tests:
-    name: Alma Linux 8 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: almalinux-8-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  almalinux-9-package-download-tests:
-    name: Alma Linux 9 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: almalinux-9
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  almalinux-9-arm64-package-download-tests:
-    name: Alma Linux 9 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: almalinux-9-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  amazonlinux-2-package-download-tests:
-    name: Amazon Linux 2 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: amazonlinux-2
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  amazonlinux-2-arm64-package-download-tests:
-    name: Amazon Linux 2 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: amazonlinux-2-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centos-7-package-download-tests:
-    name: CentOS 7 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centos-7
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centos-7-arm64-package-download-tests:
-    name: CentOS 7 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centos-7-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centosstream-8-package-download-tests:
-    name: CentOS Stream 8 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centosstream-8
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centosstream-8-arm64-package-download-tests:
-    name: CentOS Stream 8 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centosstream-8-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centosstream-9-package-download-tests:
-    name: CentOS Stream 9 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centosstream-9
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  centosstream-9-arm64-package-download-tests:
-    name: CentOS Stream 9 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: centosstream-9-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  debian-10-package-download-tests:
-    name: Debian 10 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: debian-10
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  debian-11-package-download-tests:
-    name: Debian 11 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: debian-11
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  debian-11-arm64-package-download-tests:
-    name: Debian 11 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: debian-11-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  fedora-37-package-download-tests:
-    name: Fedora 37 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: fedora-37
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  fedora-37-arm64-package-download-tests:
-    name: Fedora 37 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: fedora-37-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  fedora-38-package-download-tests:
-    name: Fedora 38 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: fedora-38
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  fedora-38-arm64-package-download-tests:
-    name: Fedora 38 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: fedora-38-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  photonos-3-package-download-tests:
-    name: Photon OS 3 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: photonos-3
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  photonos-4-package-download-tests:
-    name: Photon OS 4 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: photonos-4
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  photonos-4-arm64-package-download-tests:
-    name: Photon OS 4 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: photonos-4-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  ubuntu-2004-package-download-tests:
-    name: Ubuntu 20.04 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-20.04
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  ubuntu-2004-arm64-package-download-tests:
-    name: Ubuntu 20.04 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-20.04-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  ubuntu-2204-package-download-tests:
-    name: Ubuntu 22.04 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-22.04
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  ubuntu-2204-arm64-package-download-tests:
-    name: Ubuntu 22.04 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  ubuntu-2204-onedir-download-tests:
-    name: Ubuntu 22.04 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-22.04
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: onedir
-    secrets: inherit
-
-  ubuntu-2204-arm64-onedir-download-tests:
-    name: Ubuntu 22.04 Arm64 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: onedir
-    secrets: inherit
-
-  macos-12-package-download-tests:
-    name: macOS 12 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-macos.yml
-    with:
-      distro-slug: macos-12
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      skip-code-coverage: true
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: package
-    secrets: inherit
-
-  macos-12-onedir-download-tests:
-    name: macOS 12 Package Download
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-macos.yml
-    with:
-      distro-slug: macos-12
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      skip-code-coverage: true
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      pkg-type: onedir
-    secrets: inherit
-
-  windows-2022-nsis-amd64-download-tests:
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    name: Windows 2022 Package Download
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-windows.yml
-    with:
-      distro-slug: windows-2022
-      nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
-      pkg-type: nsis
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      skip-code-coverage: true
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-    secrets: inherit
-
-  windows-2022-msi-amd64-download-tests:
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    name: Windows 2022 Package Download
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-windows.yml
-    with:
-      distro-slug: windows-2022
-      nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
-      pkg-type: msi
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      skip-code-coverage: true
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-    secrets: inherit
-
-  windows-2022-onedir-amd64-download-tests:
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    name: Windows 2022 Package Download
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-windows.yml
-    with:
-      distro-slug: windows-2022
-      nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
-      pkg-type: onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      skip-code-coverage: true
-      nox-version: 2022.8.7
-      python-version: "3.10"
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
@@ -3720,6 +3171,8 @@ jobs:
       - debian-10-ci-deps
       - debian-11-ci-deps
       - debian-11-arm64-ci-deps
+      - debian-12-ci-deps
+      - debian-12-arm64-ci-deps
       - fedora-37-ci-deps
       - fedora-37-arm64-ci-deps
       - fedora-38-ci-deps
@@ -3746,6 +3199,8 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
+      - debian-12
+      - debian-12-arm64
       - fedora-37
       - fedora-38
       - opensuse-15
@@ -3763,6 +3218,8 @@ jobs:
       - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
+      - debian-12-pkg-tests
+      - debian-12-arm64-pkg-tests
       - photonos-3-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
@@ -3777,39 +3234,7 @@ jobs:
       - windows-2019-msi-pkg-tests
       - windows-2022-nsis-pkg-tests
       - windows-2022-msi-pkg-tests
-      - almalinux-8-package-download-tests
-      - almalinux-8-arm64-package-download-tests
-      - almalinux-9-package-download-tests
-      - almalinux-9-arm64-package-download-tests
-      - amazonlinux-2-package-download-tests
-      - amazonlinux-2-arm64-package-download-tests
-      - centos-7-package-download-tests
-      - centos-7-arm64-package-download-tests
-      - centosstream-8-package-download-tests
-      - centosstream-8-arm64-package-download-tests
-      - centosstream-9-package-download-tests
-      - centosstream-9-arm64-package-download-tests
-      - debian-10-package-download-tests
-      - debian-11-package-download-tests
-      - debian-11-arm64-package-download-tests
-      - fedora-37-package-download-tests
-      - fedora-37-arm64-package-download-tests
-      - fedora-38-package-download-tests
-      - fedora-38-arm64-package-download-tests
-      - photonos-3-package-download-tests
-      - photonos-4-package-download-tests
-      - photonos-4-arm64-package-download-tests
-      - ubuntu-2004-package-download-tests
-      - ubuntu-2004-arm64-package-download-tests
-      - ubuntu-2204-package-download-tests
-      - ubuntu-2204-arm64-package-download-tests
-      - ubuntu-2204-onedir-download-tests
-      - ubuntu-2204-arm64-onedir-download-tests
-      - macos-12-package-download-tests
-      - macos-12-onedir-download-tests
-      - windows-2022-nsis-amd64-download-tests
-      - windows-2022-msi-amd64-download-tests
-      - windows-2022-onedir-amd64-download-tests
+      - pkg-download-tests
     environment: staging
     runs-on:
       - self-hosted
@@ -3881,6 +3306,7 @@ jobs:
       - build-macos-pkgs-src
       - publish-repositories
       - upload-release-artifacts
+      - pkg-download-tests
       - publish-pypi
     steps:
       - name: Get workflow information
