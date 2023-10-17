@@ -730,6 +730,9 @@ def pkg_matrix(
             # TODO: remove debian 12 once debian 12 pkgs are released
             "debian-12-arm64",
             "debian-12",
+            # TODO: remove amazon 2023 once amazon 2023 pkgs are released
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -773,6 +776,8 @@ def pkg_matrix(
             "debian-11-arm64",
             "debian-12-arm64",
             "debian-12",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
