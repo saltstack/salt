@@ -445,12 +445,18 @@ class SaltPkgInstall:
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait "{str(pkg)}" /start-minion=0 /S'
-                with open(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ps_cmd = (
+                    f'$p = Start-Process -FilePath "{str(pkg)}" -ArgumentList '
+                    f'"/start-minion=0","/S" -Wait -NoNewWindow -Passthru; '
+                    f"exit $p.ExitCode"
+                )
+                ret = self.proc.run(
+                    "powershell.exe",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    f"'{ps_cmd}'",
+                )
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
@@ -813,12 +819,18 @@ class SaltPkgInstall:
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait "{str(pkg_path)}" /start-minion=0 /S'
-                with open(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ps_cmd = (
+                    f'$p = Start-Process -FilePath "{str(pkg_path)}" '
+                    f'-ArgumentList "/start-minion=0","/S" -Wait -NoNewWindow '
+                    f"-Passthru; exit $p.ExitCode"
+                )
+                ret = self.proc.run(
+                    "powershell.exe",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    f"'{ps_cmd}'",
+                )
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
