@@ -473,14 +473,14 @@ class ReqServerChannel:
                         self.opts["max_minions"],
                         load["id"],
                     )
-                    eload = {
-                        "result": False,
-                        "act": "full",
-                        "id": load["id"],
-                        "pub": load["pub"],
-                    }
 
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "full",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -519,8 +519,8 @@ class ReqServerChannel:
                 "Public key rejected for %s. Key is present in rejection key dir.",
                 load["id"],
             )
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {"result": False, "id": load["id"], "pub": load["pub"]}
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -542,13 +542,13 @@ class ReqServerChannel:
                     denied.append(load["pub"])
                     self.cache.store("denied_keys", load["id"], denied)
 
-                eload = {
-                    "result": False,
-                    "id": load["id"],
-                    "act": "denied",
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "id": load["id"],
+                        "act": "denied",
+                        "pub": load["pub"],
+                    }
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -579,13 +579,13 @@ class ReqServerChannel:
                 key_result = None
 
             if key_result is not None:
-                eload = {
-                    "result": key_result,
-                    "act": key_act,
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": key_result,
+                        "act": key_act,
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -607,13 +607,13 @@ class ReqServerChannel:
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
                 )
-                eload = {
-                    "result": False,
-                    "act": "reject",
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "act": "reject",
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -638,13 +638,13 @@ class ReqServerChannel:
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         self.cache.store("denied_keys", load["id"], denied)
-                    eload = {
-                        "result": False,
-                        "id": load["id"],
-                        "act": "denied",
-                        "pub": load["pub"],
-                    }
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "id": load["id"],
+                            "act": "denied",
+                            "pub": load["pub"],
+                        }
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -662,13 +662,13 @@ class ReqServerChannel:
                         load["id"],
                         load["id"],
                     )
-                    eload = {
-                        "result": True,
-                        "act": "pend",
-                        "id": load["id"],
-                        "pub": load["pub"],
-                    }
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": True,
+                            "act": "pend",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -694,8 +694,12 @@ class ReqServerChannel:
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         self.cache.store("denied_keys", load["id"], denied)
-                    eload = {"result": False, "id": load["id"], "pub": load["pub"]}
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -708,8 +712,8 @@ class ReqServerChannel:
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warning("Unaccounted for authentication failure")
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {"result": False, "id": load["id"], "pub": load["pub"]}
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -838,8 +842,13 @@ class ReqServerChannel:
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret["sig"] = self.master_key.encrypt(digest)
-        eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
+            eload = {
+                "result": True,
+                "act": "accept",
+                "id": load["id"],
+                "pub": load["pub"],
+            }
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
         if sign_messages:
             ret["nonce"] = load["nonce"]
