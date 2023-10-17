@@ -97,7 +97,7 @@ def test_get_pgid():
     something
     """
     result = win_file.get_pgid(os.getenv("COMSPEC"))
-    assert not result == ""
+    assert result != ""
 
 
 def test_group_to_gid():
@@ -144,7 +144,7 @@ def test_get_uid():
     something
     """
     result = win_file.get_uid(os.getenv("WINDIR"))
-    assert not result == ""
+    assert result != ""
 
 
 def test_get_uid_error():
@@ -259,7 +259,7 @@ def test_get_user():
     something
     """
     result = win_file.get_user(os.getenv("WINDIR"))
-    assert not result == ""
+    assert result != ""
 
 
 def test_get_user_error():
