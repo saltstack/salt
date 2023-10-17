@@ -2276,3 +2276,198 @@ def test_tablespace_create():
             port="testport",
             user="testuser",
         )
+
+
+def test_tablespace_list():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")
+    ), patch.dict(
+        postgres.__salt__,
+        {
+            "postgres.psql_query": MagicMock(
+                return_value=[
+                    {
+                        "Name": "pg_global",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "pg_default",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "test_tablespace",
+                        "Owner": "testuser",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "/tmp/posgrest_test_tablespace",
+                    },
+                ]
+            ),
+        },
+    ):
+        ret = postgres.tablespace_list(
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+        )
+
+        log.warning(f"DGM test_tablespace_list ret '{ret}'")
+
+        expected_data = {
+            "pg_global": {"Owner": "postgres", "ACL": "", "Opts": "", "Location": ""},
+            "pg_default": {"Owner": "postgres", "ACL": "", "Opts": "", "Location": ""},
+            "test_tablespace": {
+                "Owner": "testuser",
+                "ACL": "",
+                "Opts": "",
+                "Location": "/tmp/posgrest_test_tablespace",
+            },
+        }
+        assert ret == expected_data
+
+
+def test_tablespace_exists_true():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")
+    ), patch.dict(
+        postgres.__salt__,
+        {
+            "postgres.psql_query": MagicMock(
+                return_value=[
+                    {
+                        "Name": "pg_global",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "pg_default",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "test_tablespace",
+                        "Owner": "testuser",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "/tmp/posgrest_test_tablespace",
+                    },
+                ]
+            ),
+        },
+    ):
+        ret = postgres.tablespace_exists(
+            "test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+        )
+
+        assert ret
+
+
+def test_tablespace_exists_false():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")
+    ), patch.dict(
+        postgres.__salt__,
+        {
+            "postgres.psql_query": MagicMock(
+                return_value=[
+                    {
+                        "Name": "pg_global",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "pg_default",
+                        "Owner": "postgres",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "",
+                    },
+                    {
+                        "Name": "test_tablespace",
+                        "Owner": "testuser",
+                        "ACL": "",
+                        "Opts": "",
+                        "Location": "/tmp/posgrest_test_tablespace",
+                    },
+                ]
+            ),
+        },
+    ):
+        ret = postgres.tablespace_exists(
+            "bad_test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+        )
+
+        assert not ret
+
+
+def test_tablespace_remove():
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        postgres.tablespace_remove(
+            "test_tablespace",
+            user="testuser",
+            host="testhost",
+            port="testport",
+            maintenance_db="maint_db",
+            password="foo",
+            runas="foo",
+        )
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "maint_db",
+                "-c",
+                'DROP TABLESPACE "test_tablespace"',
+            ],
+            runas="foo",
+            password="foo",
+            host="testhost",
+            port="testport",
+            user="testuser",
+        )
