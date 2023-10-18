@@ -1246,32 +1246,52 @@ def decompress_dependencies(session):
         else:
             scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
         script_paths = {str(p): p for p in os.scandir(scan_path)}
+        fixed_shebang = f"#!{scan_path / 'python'}"
         for key in sorted(script_paths):
             path = script_paths[key]
-            if not path.is_symlink():
+            if path.is_symlink():
+                broken_link = pathlib.Path(path)
+                resolved_link = os.readlink(path)
+                if not os.path.isabs(resolved_link):
+                    # Relative symlinks, resolve them
+                    resolved_link = os.path.join(scan_path, resolved_link)
+                if not os.path.exists(resolved_link):
+                    session.log("The symlink %r looks to be broken", resolved_link)
+                    # This is a broken link, fix it
+                    resolved_link_suffix = resolved_link.split(
+                        f"artifacts{os.sep}salt{os.sep}"
+                    )[-1]
+                    fixed_link = REPO_ROOT.joinpath(
+                        "artifacts", "salt", resolved_link_suffix
+                    )
+                    session.log(
+                        "Fixing broken symlink in nox virtualenv %r, from %r to %r",
+                        dirname.name,
+                        resolved_link,
+                        str(fixed_link.relative_to(REPO_ROOT)),
+                    )
+                    broken_link.unlink()
+                    broken_link.symlink_to(fixed_link)
                 continue
-            broken_link = pathlib.Path(path)
-            resolved_link = os.readlink(path)
-            if not os.path.isabs(resolved_link):
-                # Relative symlinks, resolve them
-                resolved_link = os.path.join(scan_path, resolved_link)
-            if not os.path.exists(resolved_link):
-                session.log("The symlink %r looks to be broken", resolved_link)
-                # This is a broken link, fix it
-                resolved_link_suffix = resolved_link.split(
-                    f"artifacts{os.sep}salt{os.sep}"
-                )[-1]
-                fixed_link = REPO_ROOT.joinpath(
-                    "artifacts", "salt", resolved_link_suffix
-                )
-                session.log(
-                    "Fixing broken symlink in nox virtualenv %r, from %r to %r",
-                    dirname.name,
-                    resolved_link,
-                    str(fixed_link.relative_to(REPO_ROOT)),
-                )
-                broken_link.unlink()
-                broken_link.symlink_to(fixed_link)
+            if not path.is_file():
+                continue
+            if "windows" not in distro_slug:
+                # Let's try to fix shebang's
+                try:
+                    fpath = pathlib.Path(path)
+                    contents = fpath.read_text().splitlines()
+                    if (
+                        contents[0].startswith("#!")
+                        and contents[0].endswith("python")
+                        and contents[0] != fixed_shebang
+                    ):
+                        session.log(
+                            "Fixing broken shebang in %r",
+                            str(fpath.relative_to(REPO_ROOT)),
+                        )
+                        fpath.write_text("\n".join([fixed_shebang] + contents[1:]))
+                except UnicodeDecodeError:
+                    pass
 
 
 @nox.session(python=False, name="compress-dependencies")
@@ -1870,7 +1890,7 @@ def ci_test_onedir_pkgs(session):
 
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
-        _install_requirements(session, "zeromq")
+        _install_requirements(session, "pyzmq")
     env = {
         "ONEDIR_TESTRUN": "1",
         "PKG_TEST_TYPE": chunk,

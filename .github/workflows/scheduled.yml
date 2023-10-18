@@ -2340,6 +2340,10 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==2022.8.7'
@@ -2355,6 +2359,28 @@ jobs:
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/
+
+      - name: Install Codecov CLI
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          mv ./codecov /usr/local/bin/
+
+      - name: Create XML Coverage Reports
+        run: |
+          nox --force-color -e create-xml-coverage-reports
+
+      - name: Upload Code Coverage To Codecov
+        run: |
+          tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
       - name: Combine Code Coverage
         run: |
