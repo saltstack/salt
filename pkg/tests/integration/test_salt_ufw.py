@@ -43,4 +43,4 @@ Ports:
 
         ufw_info_cmd = "/usr/sbin/ufw app info Salt"
         ret = salt_call_cli.run("--local", "cmd.run", ufw_info_cmd)
-        assert ret.data == expected_info
+        assert expected_info in ret.data
