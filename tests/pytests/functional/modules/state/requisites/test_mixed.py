@@ -7,6 +7,37 @@ pytestmark = [
     pytest.mark.core_test,
 ]
 
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
+
 
 def test_requisites_mixed_require_prereq_use_1(state, state_tree):
     """
@@ -401,3 +432,23 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
     }
     for slsid in _expected:
         assert ret[slsid].comment == _expected[slsid]["comment"]
+
+
+def test_requisites_mixed_illegal_req(state_tree):
+    """
+    Call sls file containing several requisites.
+    When one of the requisites is illegal.
+    """
+    sls_contents = """
+    A:
+      cmd.run:
+        - name: echo A
+    B:
+      cmd.run:
+        - name: echo B
+        - require:
+          - cmd: ["A"]
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state_mod.sls("requisite")
+        assert ret == ["Illegal requisite \"['A']\", please check your syntax.\n"]

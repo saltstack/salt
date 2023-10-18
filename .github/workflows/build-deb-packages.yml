@@ -1,5 +1,5 @@
 ---
-name: Build Debian Packages
+name: Build DEB Packages
 
 on:
   workflow_call:
@@ -16,6 +16,17 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
   build:
@@ -31,19 +42,18 @@ jobs:
           - x86_64
           - aarch64
         source:
-          - onedir
-          - src
+          - ${{ inputs.source }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
 
     steps:
       # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Checkout here for the build process
       - name: Checkout in build directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path:
             pkgs/checkout/
@@ -89,7 +99,7 @@ jobs:
         working-directory: pkgs/checkout/
         run: |
           tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
-              matrix.source == 'onedir' &&
+              inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
@@ -102,7 +112,7 @@ jobs:
       - name: Set Artifact Name
         id: set-artifact-name
         run: |
-          if [ "${{ matrix.source }}" != "src" ]; then
+          if [ "${{ inputs.source }}" != "src" ]; then
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb" >> "$GITHUB_OUTPUT"
           else
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src" >> "$GITHUB_OUTPUT"

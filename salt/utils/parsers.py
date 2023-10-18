@@ -41,7 +41,7 @@ import salt.utils.yaml
 import salt.version as version
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt.utils.verify import verify_log, verify_log_files
+from salt.utils.verify import insecure_log, verify_log, verify_log_files
 
 log = logging.getLogger(__name__)
 
@@ -610,9 +610,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
             *self._console_log_level_cli_flags,
             dest=self._loglevel_config_setting_name_,
             choices=list(salt._logging.LOG_LEVELS),
-            help="Console logging log level. One of {}. Default: '{}'.".format(
+            help="Console logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
+                ", ".join(insecure_log()),
             ),
         )
 
@@ -636,9 +638,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
             "--log-file-level",
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(salt._logging.SORTED_LEVEL_NAMES),
-            help="Logfile logging log level. One of {}. Default: '{}'.".format(
+            help="Logfile logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
+                ", ".join(insecure_log()),
             ),
         )
         self._mixin_after_parsed_funcs.append(self.__setup_logging_routines)
@@ -2649,7 +2653,7 @@ class SaltKeyOptionParser(
             default=".",
             help=(
                 "Set the directory to save the generated keypair, only "
-                "works with \"gen_keys_dir\" option. Default: '%default'."
+                "works with \"--gen-keys\" option. Default: '%default'."
             ),
         )
 
@@ -2767,10 +2771,11 @@ class SaltKeyOptionParser(
 
     def process_gen_keys_dir(self):
         # Schedule __create_keys_dir() to run if there's a value for
-        # --create-keys-dir
-        self._mixin_after_parsed_funcs.append(
-            self.__create_keys_dir
-        )  # pylint: disable=no-member
+        # --gen-keys-dir
+        if self.options.gen_keys:
+            self._mixin_after_parsed_funcs.append(
+                self.__create_keys_dir
+            )  # pylint: disable=no-member
 
     def __create_keys_dir(self):
         if not os.path.isdir(self.config["gen_keys_dir"]):

@@ -8,6 +8,7 @@ import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.testing
 import salt.minion
+import salt.modules.test as test_mod
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
@@ -1102,3 +1103,19 @@ async def test_syndic_async_req_channel(syndic_opts):
     syndic.pub_channel = MagicMock()
     syndic.tune_in_no_block()
     assert isinstance(syndic.async_req_channel, salt.channel.client.AsyncReqChannel)
+
+
+@pytest.mark.slow_test
+def test_load_args_and_kwargs(minion_opts):
+    """
+    Ensure load_args_and_kwargs performs correctly
+    """
+    _args = [{"max": 40, "__kwarg__": True}]
+    ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
+    assert ret == ([], {"max": 40})
+    assert all([True if "__kwarg__" in item else False for item in _args])
+
+    # Test invalid arguments
+    _args = [{"max_sleep": 40, "__kwarg__": True}]
+    with pytest.raises(salt.exceptions.SaltInvocationError):
+        ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)

@@ -3,10 +3,9 @@ import pathlib
 import subprocess
 import sys
 
+import packaging.version
 import psutil
 import pytest
-import yaml
-from pytestskipmarkers.utils import platform
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -59,6 +58,12 @@ def pkg_paths_salt_user_exclusions():
         "/var/cache/salt/master/.root_key"  # written by salt, salt-run and salt-key as root
     ]
     return paths
+
+
+@pytest.fixture(autouse=True)
+def _skip_on_non_relenv(install_salt):
+    if not install_salt.relenv:
+        pytest.skip("The salt user only exists on relenv versions of salt")
 
 
 def test_salt_user_master(salt_master, install_salt):
@@ -129,6 +134,10 @@ def test_pkg_paths(
     """
     Test package paths ownership
     """
+    if packaging.version.parse(install_salt.version) <= packaging.version.parse(
+        "3006.2"
+    ):
+        pytest.skip("Package path ownership was changed in salt 3006.3")
     salt_user_subdirs = []
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)

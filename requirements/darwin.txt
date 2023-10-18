@@ -3,10 +3,9 @@
 -r zeromq.txt
 
 apache-libcloud>=2.4.0
-backports.ssl_match_hostname>=3.7.0.1; python_version < '3.7'
 cherrypy>=17.4.1
 cryptography>=41.0.3
-gitpython>=3.1.30; python_version >= '3.7'
+gitpython>=3.1.30
 idna>=2.8
 linode-python>=1.1.1
 pyasn1>=0.4.8

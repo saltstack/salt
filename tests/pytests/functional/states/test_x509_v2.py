@@ -2171,6 +2171,21 @@ def test_private_key_managed_existing(x509, pk_args):
 
 
 @pytest.mark.usefixtures("existing_pk")
+@pytest.mark.parametrize(
+    "existing_pk",
+    [
+        {"algo": "rsa", "keysize": 3072},
+    ],
+    indirect=True,
+)
+def test_private_key_managed_existing_keysize_change_to_default(x509, pk_args):
+    pk_args.pop("keysize")
+    ret = x509.private_key_managed(**pk_args)
+    assert ret.changes
+    assert ret.changes["keysize"] == 2048
+
+
+@pytest.mark.usefixtures("existing_pk")
 def test_private_key_managed_existing_new(x509, pk_args):
     cur = _get_privkey(pk_args["name"])
     pk_args["new"] = True

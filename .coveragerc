@@ -7,6 +7,13 @@ relative_files = True
 omit =
   setup.py
   .nox/*
+source_pkgs =
+  pkg.tests
+  salt
+  tests
+  tools
+disable_warnings = module-not-imported
+
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -32,7 +39,7 @@ ignore_errors = True
 [paths]
 salt =
   salt/
-  artifacts/salt
+  artifacts/salt/lib/python3.*/site-packages/salt
   **/testing/salt/
   **\testing\salt
 tests =

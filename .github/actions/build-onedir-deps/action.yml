@@ -43,13 +43,15 @@ runs:
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >
-          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|
-          ${{ hashFiles(
-            format('{0}/.relenv/**/*.xz', github.workspace),
-            'requirements/static/pkg/*/*.txt',
-            '.github/actions/build-onedir-deps/action.yml',
-            'cicd/shared-gh-workflows-context.yml'
-          ) }}
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
+            hashFiles(
+              format('{0}/.relenv/**/*.xz', github.workspace),
+              'requirements/static/pkg/*/*.txt',
+              '.github/actions/build-onedir-deps/action.yml',
+              '.github/workflows/build-deps-onedir-*.yml',
+              'cicd/shared-gh-workflows-context.yml'
+            )
+          }}
 
     - name: Install Salt Onedir Package Dependencies
       shell: bash

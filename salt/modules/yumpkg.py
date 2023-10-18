@@ -746,6 +746,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = [
         "rpm",
         "-qa",
+        "--nodigest",
+        "--nosignature",
         "--queryformat",
         salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
     ]

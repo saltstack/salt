@@ -1041,7 +1041,7 @@ def wheel(name, **kwargs):
         jid = None
 
     if __opts__.get("test", False):
-        ret["result"] = (None,)
+        ret["result"] = None
         ret["changes"] = {}
         ret["comment"] = "Wheel function '{}' would be executed.".format(name)
         return ret

@@ -23,12 +23,12 @@ jobs:
     steps:
 
     - name: Checkout Salt
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: salt
 
     - name: Checkout WinRepo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: winrepo
         repository: twangboy/salt-winrepo-ng

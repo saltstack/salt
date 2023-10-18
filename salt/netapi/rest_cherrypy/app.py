@@ -1416,7 +1416,7 @@ class Minions(LowDataAdapter):
             POST /minions HTTP/1.1
             Host: localhost:8000
             Accept: application/x-yaml
-            Content-Type: application/json
+            Content-Type: application/x-www-form-urlencoded
 
             tgt=*&fun=status.diskusage
 
