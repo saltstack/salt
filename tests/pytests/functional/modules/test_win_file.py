@@ -46,9 +46,40 @@ def test_symlink(tmp_path):
     assert os.path.isfile(file) is True
     link = os.path.join(tmp_path, "l")
     assert win_file.is_link(link) is False
-    win_file.symlink(file, link, force=True)
+    assert win_file.symlink(file, link) is True
     assert os.path.isfile(file) is True
     assert win_file.is_link(link) is True
+
+
+@skip_not_windows_admin
+def test_symlink_path_taken(tmp_path):
+    tmp_path = str(tmp_path)
+    file = os.path.join(tmp_path, "t.txt")
+    with salt.utils.files.fopen(file, "w"):
+        pass
+    assert os.path.isfile(file) is True
+    link = os.path.join(tmp_path, "l")
+    with salt.utils.files.fopen(link, "w"):
+        pass
+    # symlink should raise error if path name is all ready taken
+    with pytest.raises(CommandExecutionError):
+        win_file.symlink(file, link)
+
+
+@skip_not_windows_admin
+def test_symlink_force(tmp_path):
+    tmp_path = str(tmp_path)
+    file = os.path.join(tmp_path, "t.txt")
+    with salt.utils.files.fopen(file, "w"):
+        pass
+    assert os.path.isfile(file) is True
+    link = os.path.join(tmp_path, "l")
+    assert win_file.is_link(link) is False
+    assert win_file.symlink(file, link, force=True) is True
+    assert os.path.isfile(file) is True
+    assert win_file.is_link(link) is True
+    # check that symlink returns ture if link is all ready-made
+    assert win_file.symlink(file, link, force=True) is True
 
 
 @skip_not_windows_admin
@@ -60,9 +91,11 @@ def test_symlink_atomic(tmp_path):
     assert os.path.isfile(file) is True
     link = os.path.join(tmp_path, "l")
     assert win_file.is_link(link) is False
-    win_file.symlink(file, link, force=True, atomic=True)
+    assert win_file.symlink(file, link, force=True, atomic=True) is True
     assert os.path.isfile(file) is True
     assert win_file.is_link(link) is True
+    # check that symlink returns ture if link is all ready-made
+    assert win_file.symlink(file, link, force=True, atomic=True) is True
 
 
 def test_is_not_link(tmp_path):
@@ -94,6 +127,10 @@ def test_uid_user(tmp_path):
     assert win_file.user_to_uid(win_file.uid_to_user(uid)) == uid
 
 
+def test_uid_to_user_none(tmp_path):
+    assert win_file.uid_to_user(None) == ""
+
+
 def test_gid_group(tmp_path, windows_user):
     path = str(tmp_path)
     gid = win_file.get_gid(path)
@@ -102,6 +139,10 @@ def test_gid_group(tmp_path, windows_user):
     assert isinstance(group, str)
     assert win_file.gid_to_group(gid) == group
     assert win_file.group_to_gid(group) == gid
+
+
+def test_gid_group_none(tmp_path):
+    assert win_file.group_to_gid(None) == ""
 
 
 def test_get_pgroup(tmp_path):
@@ -116,9 +157,30 @@ def test_get_pgid(tmp_path):
     assert "-" in pgid
 
 
+def test_get_uid_path_not_found(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir")
+    with pytest.raises(CommandExecutionError):
+        win_file.get_uid(path)
+
+
+def test_get_user_path_not_found(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir")
+    with pytest.raises(CommandExecutionError):
+        win_file.get_user(path)
+
+
 def test_mode(tmp_path):
     tmp_path = str(tmp_path)
     assert win_file.get_mode(tmp_path) is None
+
+
+def test_mode_path_not_found(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir1")
+    with pytest.raises(CommandExecutionError):
+        win_file.get_mode(path)
 
 
 def test_lchown(tmp_path, windows_user):
@@ -163,6 +225,13 @@ def test_stats(tmp_path, windows_user):
     assert isinstance(stats["target"], str)
 
 
+def test_stats_path_not_found(tmp_path, windows_user):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir1")
+    with pytest.raises(CommandExecutionError):
+        win_file.stats(path)
+
+
 def test_version():
     assert len(win_file.version("C:\\Windows\\System32\\wow64.dll").split(".")) == 4
 
@@ -174,6 +243,21 @@ def test_version_empty(tmp_path):
         pass
     assert os.path.isfile(file) is True
     assert win_file.version(file) == ""
+
+
+def test_version_path_not_found(tmp_path):
+    tmp_path = str(tmp_path)
+    file = os.path.join(tmp_path, "t.txt")
+    with pytest.raises(CommandExecutionError):
+        win_file.version(file)
+
+
+def test_version_dir(tmp_path):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir")
+    os.mkdir(path)
+    with pytest.raises(CommandExecutionError):
+        win_file.version(path)
 
 
 def test_version_details():
@@ -290,6 +374,20 @@ def test_mkdir(tmp_path):
     assert os.path.isdir(path)
 
 
+def test_mkdir_error(tmp_path):
+    tmp_path = str(tmp_path)
+    # dirs cant be named CON in windows
+    path = os.path.join(tmp_path, "CON")
+    with pytest.raises(CommandExecutionError):
+        win_file.mkdir(path)
+    assert os.path.isdir(path) is False
+    # cant make dir if parent is not made
+    path = os.path.join(tmp_path, "a", "b", "c", "salt")
+    with pytest.raises(CommandExecutionError):
+        win_file.mkdir(path)
+    assert os.path.isdir(path) is False
+
+
 def test_makedirs_(tmp_path):
     tmp_path = str(tmp_path)
     parent = os.path.join(tmp_path, "dir1\\dir2")
@@ -299,9 +397,23 @@ def test_makedirs_(tmp_path):
     assert os.path.isdir(path) is False
 
 
+def test_makedirs__path_exists(tmp_path):
+    tmp_path = str(tmp_path)
+    parent = os.path.join(tmp_path, "dir1\\dir2")
+    path = os.path.join(parent, "dir3")
+    assert win_file.makedirs_(path) is True
+    assert os.path.isdir(parent) is True
+    # makdrirs_ should return message that path has all ready been made
+    assert isinstance(win_file.makedirs_(path), str) is True
+    assert os.path.isdir(parent) is True
+
+
 def test_makedirs_perms(tmp_path):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir1\\dir2")
+    assert win_file.makedirs_perms(path) is True
+    assert os.path.isdir(path)
+    # make sure makedirs does not fail if path is all ready-made
     assert win_file.makedirs_perms(path) is True
     assert os.path.isdir(path)
 
@@ -315,6 +427,14 @@ def test_check_perms(tmp_path, windows_user):
     assert isinstance(perms["changes"], dict)
     assert isinstance(perms["name"], str) and len(perms["name"]) != 0
     assert perms["result"] is True
+
+
+def test_check_perms_path_not_found(tmp_path, windows_user):
+    tmp_path = str(tmp_path)
+    path = os.path.join(tmp_path, "dir1")
+    # check_perms will fail due to path not being made
+    with pytest.raises(CommandExecutionError):
+        win_file.check_perms(path, {}, windows_user)
 
 
 def test_set_perms(tmp_path):
