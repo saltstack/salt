@@ -237,12 +237,13 @@ def test_pkgrepo_with_comments(pkgrepo, pkgrepo_with_comments_name, subtests):
 
 @pytest.fixture
 def copr_pkgrepo_with_comments_name(pkgrepo, grains):
-    if (
-        grains["osfinger"] in ("CentOS Linux-7", "Amazon Linux-2")
-        or grains["os"] == "VMware Photon OS"
-    ):
+    if grains["osfinger"] in ("CentOS Linux-7") or grains["os"] == "VMware Photon OS":
         pytest.skip("copr plugin not installed on {} CI".format(grains["osfinger"]))
-    if grains["os"] in ("CentOS Stream", "AlmaLinux") and grains["osmajorrelease"] == 9:
+    if (
+        grains["os"] in ("CentOS Stream", "AlmaLinux")
+        and grains["osmajorrelease"] == 9
+        or grains["osfinger"] == "Amazon Linux-2023"
+    ):
         pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
     pkgrepo_name = "hello-copr"
     try:
