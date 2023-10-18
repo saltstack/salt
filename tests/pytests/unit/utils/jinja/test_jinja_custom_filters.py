@@ -265,3 +265,40 @@ huh:
 def test_json():
     _render_fail(JSON_SLS_ERROR)
     assert _render(JSON_SLS) == JSON_SLS_RIGHT
+
+PYTHON_SLS_ERROR = """
+{%- set ports = {'http': 80} %}
+
+huh:
+  test.configurable_test_state:
+    - changes: true
+    - result: true
+    - comment: https port is {{ [ports['https23'], ports['https']] | python }}
+    - comment2: https port is {{ [666 + 1, ports['https2']] | python }}
+    - comment3: https port is {{ [666 + 1, ports['https2']] | python }}
+"""
+
+
+PYTHON_SLS = """
+{%- set ports = {'https': 80} %}
+
+huh:
+  test.configurable_test_state:
+    - changes: true
+    - result: true
+    - comment: https port is {{ [666 + 1, ports['https']] | python }}
+"""
+
+
+PYTHON_SLS_RIGHT = """
+
+huh:
+  test.configurable_test_state:
+    - changes: true
+    - result: true
+    - comment: https port is [667, 80]"""
+
+
+def test_python():
+    _render_fail(PYTHON_SLS_ERROR)
+    assert _render(PYTHON_SLS) == PYTHON_SLS_RIGHT
