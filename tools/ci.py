@@ -629,10 +629,10 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
     """
     _matrix = []
     _splits = {
-        "functional": 5,
-        "integration": 7,
-        "scenarios": 2,
-        "unit": 4,
+        "functional": 3,
+        "integration": 5,
+        "scenarios": 1,
+        "unit": 2,
     }
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
