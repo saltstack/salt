@@ -245,7 +245,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pygit2==1.9.1
+pygit2==1.10.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt

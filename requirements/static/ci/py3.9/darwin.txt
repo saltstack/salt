@@ -692,7 +692,7 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyeapi==0.8.3
     # via napalm
-pygit2==1.9.1
+pygit2==1.13.1
     # via -r requirements/static/ci/darwin.in
 pyjwt==2.4.0
     # via adal
