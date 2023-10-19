@@ -13,8 +13,7 @@ from tests.support.mock import ANY, MagicMock, patch
 @pytest.fixture
 def daemon_mixin():
     mixin = salt.utils.parsers.DaemonMixIn()
-    mixin.config = {}
-    mixin.config["pidfile"] = "/some/fake.pid"
+    mixin.config = {"pidfile": "/some/fake.pid"}
     return mixin
 
 
@@ -26,7 +25,7 @@ def test_pid_file_deletion(daemon_mixin):
         with patch("os.path.isfile", MagicMock(return_value=True)):
             with patch("salt.utils.parsers.log", MagicMock()) as log_mock:
                 daemon_mixin._mixin_before_exit()
-                assert unlink_mock.call_count == 1
+                unlink_mock.assert_called_once()
                 log_mock.info.assert_not_called()
                 log_mock.debug.assert_not_called()
 

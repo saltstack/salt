@@ -14,7 +14,6 @@ import salt.syspaths
 import salt.utils.jid
 import salt.utils.parsers
 import salt.utils.platform
-from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -160,6 +159,12 @@ class LogImplMock:
             self.setup_extended_logging(opts)
         self.setup_log_granular_levels(opts["log_granular_levels"])
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self._destroy()
+
 
 # <----------- START TESTS ----------->
 
@@ -192,34 +197,44 @@ def log_cli_parser(request):
 
 @pytest.fixture
 def default_config(log_cli_parser):
-    param_map = {
-        "master": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "minion": salt.config.DEFAULT_MINION_OPTS.copy(),
-        "proxyminion": {
+    if log_cli_parser == "master":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "minion":
+        return salt.config.DEFAULT_MINION_OPTS.copy()
+    elif log_cli_parser == "proxyminion":
+        return {
             **salt.config.DEFAULT_MINION_OPTS.copy(),
-            **salt.config.DEFAULT_PROXY_MINION_OPTS,
-        },
-        "syndic": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltcmd": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltcp": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltkey": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltcall": salt.config.DEFAULT_MINION_OPTS.copy(),
-        "saltrun": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltssh": salt.config.DEFAULT_MASTER_OPTS.copy(),
-        "saltcloud": {
+            **salt.config.DEFAULT_PROXY_MINION_OPTS.copy(),
+        }
+    elif log_cli_parser == "syndic":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltcmd":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltcp":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltkey":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltcall":
+        return salt.config.DEFAULT_MINION_OPTS.copy()
+    elif log_cli_parser == "saltrun":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltssh":
+        return salt.config.DEFAULT_MASTER_OPTS.copy()
+    elif log_cli_parser == "saltcloud":
+        return {
             **salt.config.DEFAULT_MASTER_OPTS.copy(),
-            **salt.config.DEFAULT_CLOUD_OPTS,
-        },
-        "spm": {
+            **salt.config.DEFAULT_CLOUD_OPTS.copy(),
+        }
+    elif log_cli_parser == "spm":
+        return {
             **salt.config.DEFAULT_MASTER_OPTS.copy(),
-            **salt.config.DEFAULT_SPM_OPTS,
-        },
-        "saltapi": {
+            **salt.config.DEFAULT_SPM_OPTS.copy(),
+        }
+    elif log_cli_parser == "saltapi":
+        return {
             **salt.config.DEFAULT_MASTER_OPTS.copy(),
-            **salt.config.DEFAULT_API_OPTS,
-        },
-    }
-    return param_map[log_cli_parser]
+            **salt.config.DEFAULT_API_OPTS.copy(),
+        }
 
 
 @pytest.fixture
@@ -322,20 +337,19 @@ def log_impl():
     """
     Mock logger functions
     """
-    _log_impl = LogImplMock()
-    mocked_functions = {}
-    for name in dir(_log_impl):
-        if name.startswith("_"):
-            continue
-        func = getattr(_log_impl, name)
-        if not callable(func):
-            continue
-        mocked_functions[name] = func
+    with LogImplMock() as _log_impl:
+        mocked_functions = {}
+        for name in dir(_log_impl):
+            if name.startswith("_"):
+                continue
+            func = getattr(_log_impl, name)
+            if not callable(func):
+                continue
+            mocked_functions[name] = func
 
-    patcher = patch.multiple(salt._logging, **mocked_functions)
-    with patcher:
-        yield _log_impl
-    _log_impl._destroy()
+        patcher = patch.multiple(salt._logging, **mocked_functions)
+        with patcher:
+            yield _log_impl
 
 
 def test_get_log_level_cli(
@@ -351,11 +365,11 @@ def test_get_log_level_cli(
     log_level = "critical"
     args = ["--log-level", log_level] + args
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
-    console_log_level = getattr(parser.options, loglevel_config_setting_name)
+    console_log_level = getattr(instance.options, loglevel_config_setting_name)
 
     # Check console log level setting
     assert console_log_level == log_level
@@ -375,14 +389,13 @@ def test_get_log_level_config(
     """
     # Set log level in config
     log_level = "info"
-    opts = testing_config.copy()
-    opts.update({loglevel_config_setting_name: log_level})
+    testing_config.update({loglevel_config_setting_name: log_level})
 
-    parser = parser()
-    with patch(config_func, MagicMock(return_value=opts)):
-        parser.parse_args(args)
+    instance = parser()
+    with patch(config_func, MagicMock(return_value=testing_config)):
+        instance.parse_args(args)
 
-    console_log_level = getattr(parser.options, loglevel_config_setting_name)
+    console_log_level = getattr(instance.options, loglevel_config_setting_name)
 
     # Check console log level setting
     assert console_log_level == log_level
@@ -403,11 +416,11 @@ def test_get_log_level_default(
     # Set defaults
     log_level = default_log_level = testing_config[loglevel_config_setting_name]
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
-    console_log_level = getattr(parser.options, loglevel_config_setting_name)
+    console_log_level = getattr(instance.options, loglevel_config_setting_name)
 
     # Check log level setting
     assert console_log_level == log_level
@@ -421,7 +434,7 @@ def test_get_log_level_default(
     # Check help message
     assert (
         "Default: '{}'.".format(default_log_level)
-        in parser.get_option("--log-level").help
+        in instance.get_option("--log-level").help
     )
 
 
@@ -448,11 +461,11 @@ def test_get_log_file_cli(
     log_file = "{}_cli.log".format(log_file)
     args = ["--log-file", log_file] + args
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
-    log_file_option = getattr(parser.options, logfile_config_setting_name)
+    log_file_option = getattr(instance.options, logfile_config_setting_name)
 
     # Check console logger
     assert log_impl.log_level_console == log_level
@@ -485,14 +498,13 @@ def test_get_log_file_config(
 
     # Set log file in config
     log_file = "{}_config.log".format(log_file)
-    opts = testing_config.copy()
-    opts.update({logfile_config_setting_name: log_file})
+    testing_config.update({logfile_config_setting_name: log_file})
 
-    parser = parser()
-    with patch(config_func, MagicMock(return_value=opts)):
-        parser.parse_args(args)
+    instance = parser()
+    with patch(config_func, MagicMock(return_value=testing_config)):
+        instance.parse_args(args)
 
-    log_file_option = getattr(parser.options, logfile_config_setting_name)
+    log_file_option = getattr(instance.options, logfile_config_setting_name)
 
     # Check console logger
     assert log_impl.log_level_console == log_level
@@ -525,11 +537,11 @@ def test_get_log_file_default(
     log_file = testing_config[logfile_config_setting_name]
     default_log_file = default_config[logfile_config_setting_name]
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
-    log_file_option = getattr(parser.options, logfile_config_setting_name)
+    log_file_option = getattr(instance.options, logfile_config_setting_name)
 
     # Check console logger
     assert log_impl.log_level_console == log_level
@@ -545,7 +557,7 @@ def test_get_log_file_default(
     # Check help message
     assert (
         "Default: '{}'.".format(default_log_file)
-        in parser.get_option("--log-file").help
+        in instance.get_option("--log-file").help
     )
 
 
@@ -571,12 +583,12 @@ def test_get_log_file_level_cli(
     log_level_logfile = "error"
     args = ["--log-file-level", log_level_logfile] + args
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
     log_level_logfile_option = getattr(
-        parser.options, logfile_loglevel_config_setting_name
+        instance.options, logfile_loglevel_config_setting_name
     )
 
     # Check console logger
@@ -609,15 +621,14 @@ def test_get_log_file_level_config(
 
     # Set log file level in config
     log_level_logfile = "info"
-    opts = testing_config.copy()
-    opts.update({logfile_loglevel_config_setting_name: log_level_logfile})
+    testing_config.update({logfile_loglevel_config_setting_name: log_level_logfile})
 
-    parser = parser()
-    with patch(config_func, MagicMock(return_value=opts)):
-        parser.parse_args(args)
+    instance = parser()
+    with patch(config_func, MagicMock(return_value=testing_config)):
+        instance.parse_args(args)
 
     log_level_logfile_option = getattr(
-        parser.options, logfile_loglevel_config_setting_name
+        instance.options, logfile_loglevel_config_setting_name
     )
 
     # Check console logger
@@ -651,12 +662,12 @@ def test_get_log_file_level_default(
     log_level = default_log_level
     log_level_logfile = default_log_level
 
-    parser = parser()
+    instance = parser()
     with patch(config_func, MagicMock(return_value=testing_config)):
-        parser.parse_args(args)
+        instance.parse_args(args)
 
     log_level_logfile_option = getattr(
-        parser.options, logfile_loglevel_config_setting_name
+        instance.options, logfile_loglevel_config_setting_name
     )
 
     # Check console logger
@@ -673,7 +684,7 @@ def test_get_log_file_level_default(
     # Check help message
     assert (
         "Default: '{}'.".format(default_log_level)
-        in parser.get_option("--log-file-level").help
+        in instance.get_option("--log-file-level").help
     )
 
 
@@ -694,15 +705,14 @@ def test_get_console_log_level_with_file_log_level(
 
     args = ["--log-file-level", log_level_logfile] + args
 
-    opts = testing_config.copy()
-    opts.update({loglevel_config_setting_name: log_level})
+    testing_config.update({loglevel_config_setting_name: log_level})
 
-    parser = parser()
-    with patch(config_func, MagicMock(return_value=opts)):
-        parser.parse_args(args)
+    instance = parser()
+    with patch(config_func, MagicMock(return_value=testing_config)):
+        instance.parse_args(args)
 
     log_level_logfile_option = getattr(
-        parser.options, logfile_loglevel_config_setting_name
+        instance.options, logfile_loglevel_config_setting_name
     )
 
     # Check console logger
@@ -724,15 +734,14 @@ def test_log_created(
     """
     Tests that log file is created
     """
-    opts = testing_config.copy()
-    opts.update({"log_file": str(log_file)})
+    testing_config.update({"log_file": str(log_file)})
     log_file_name = str(log_file)
     if log_file_name.split(os.sep)[-1] != "log_file":
-        opts.update({log_file_name: str(log_file)})
+        testing_config.update({log_file_name: str(log_file)})
 
-    parser = parser()
-    with patch(config_func, MagicMock(return_value=opts)):
-        parser.parse_args(args)
+    instance = parser()
+    with patch(config_func, MagicMock(return_value=testing_config)):
+        instance.parse_args(args)
 
     assert os.path.exists(str(log_file_name))
 
@@ -748,28 +757,28 @@ def test_callbacks_uniqueness(parser):
         "_mixin_after_parsed_funcs",
         "_mixin_before_exit_funcs",
     )
-    _parser = parser()
+    instance = parser()
     nums_1 = {}
     for cb_container in mixin_container_names:
-        obj = getattr(_parser, cb_container)
+        obj = getattr(instance, cb_container)
         nums_1[cb_container] = len(obj)
 
     # The next time we instantiate the parser, the counts should be equal
-    _parser = parser()
+    instance = parser()
     nums_2 = {}
     for cb_container in mixin_container_names:
-        obj = getattr(_parser, cb_container)
+        obj = getattr(instance, cb_container)
         nums_2[cb_container] = len(obj)
     assert nums_1 == nums_2
 
 
-def test_verify_log_warning_logged(args, config_func, testing_config, parser):
+def test_verify_log_warning_logged(args, config_func, testing_config, parser, caplog):
     args = ["--log-level", "debug"] + args
-    with TstSuiteLoggingHandler(level=logging.DEBUG) as handler:
-        parser = parser()
+    with caplog.at_level(logging.DEBUG):
+        instance = parser()
         with patch(config_func, MagicMock(return_value=testing_config)):
-            parser.parse_args(args)
+            instance.parse_args(args)
         assert (
-            "WARNING:Insecure logging configuration detected! Sensitive data may be logged."
-            in handler.messages
+            "Insecure logging configuration detected! Sensitive data may be logged."
+            in caplog.messages
         )
