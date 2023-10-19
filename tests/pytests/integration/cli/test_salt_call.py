@@ -462,7 +462,7 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
       test.nop: []
     """
 
-    salt_custom_grains_sls = """
+    salt_custom_grains_py = """
     def main():
         return {'custom_grain': 'test_value'}
     """
@@ -479,7 +479,7 @@ def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
         ), salt_minion.state_tree.base.temp_file(
             "test.sls", salt_test_sls
         ), salt_minion.state_tree.base.temp_file(
-            "_grains/custom_grain.py", salt_custom_grains_sls
+            "_grains/custom_grain.py", salt_custom_grains_py
         ):
             ret = salt_call_cli.run("--local", "state.highstate")
             assert ret.returncode == 0
@@ -496,7 +496,7 @@ def test_salt_call_versions(salt_call_cli, caplog):
     Call test.versions without '--local' to test grains
     are sync'd without any missing keys in opts
     """
-    caplog.at_level(logging.DEBUG)
-    ret = salt_call_cli.run("test.versions")
-    assert ret.returncode == 0
-    assert "Failed to sync grains module: 'master_uri'" not in caplog.messages
+    with caplog.at_level(logging.DEBUG):
+        ret = salt_call_cli.run("test.versions")
+        assert ret.returncode == 0
+        assert "Failed to sync grains module: 'master_uri'" not in caplog.messages
