@@ -146,6 +146,7 @@ def generate_workflows(ctx: Context):
             ("centos-7", "CentOS 7", "x86_64", "rpm", "no-fips"),
             ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm", "no-fips"),
             ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm", "no-fips"),
+            ("centosstream-9-arm64", "CentOS Stream 9 Arm64", "aarch64", "rpm"),
             ("debian-10", "Debian 10", "x86_64", "deb", "no-fips"),
             ("debian-11", "Debian 11", "x86_64", "deb", "no-fips"),
             ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "deb", "no-fips"),
@@ -222,10 +223,26 @@ def generate_workflows(ctx: Context):
         "macos": [],
         "windows": [],
     }
+    rpm_slugs = [
+        "almalinux",
+        "amazonlinux",
+        "centos",
+        "centosstream",
+        "fedora",
+        "photon",
+    ]
     for slug, display_name, arch in build_ci_deps_listing["linux"]:
         if slug in ("archlinux-lts", "opensuse-15"):
             continue
         test_salt_pkg_downloads_listing["linux"].append((slug, arch, "package"))
+        # Account for old arm64 repo paths
+        if arch == "aarch64":
+            for test_slug in rpm_slugs:
+                if slug.startswith(test_slug):
+                    test_salt_pkg_downloads_listing["linux"].append(
+                        (slug, "arm64", "package")
+                    )
+                    break
     for slug, display_name, arch in build_ci_deps_listing["linux"][-2:]:
         if slug in ("archlinux-lts", "opensuse-15"):
             continue
