@@ -1389,18 +1389,10 @@ def test_ip_to_host(grains):
 
     ret = network.ip_to_host("::1")
 
-    ## DGM
-    dgm_grains_os = grains["os"]
-    dgm_grains_os_family = grains["os_family"]
-    dgm_grains_osmajorrelease = grains["osmajorrelease"]
-    dgm_grains_oscodename = grains["oscodename"]
-    dgm_strg = f"\nDGM localhost test grains os '{dgm_grains_os}', family '{dgm_grains_os_family}', major release '{dgm_grains_osmajorrelease}', code name '{dgm_grains_oscodename}'\n\n"
-    print(dgm_strg)
-
     if grains["os"] == "Amazon":
         assert ret == "localhost6"
     elif grains["os_family"] == "Debian":
-        if grains["osmajorrelease"] == "12":
+        if grains["osmajorrelease"] == 12:
             assert ret == "localhost"
         else:
             assert ret == "ip6-localhost"
@@ -1409,6 +1401,8 @@ def test_ip_to_host(grains):
             assert ret == "ipv6-localhost"
         else:
             assert ret == "localhost"
+    elif grains["os_family"] == "Arch":
+        assert ret == "ip6-localhost"
     else:
         assert ret == "localhost"
 
