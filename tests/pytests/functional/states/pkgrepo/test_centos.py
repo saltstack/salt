@@ -237,7 +237,11 @@ def test_pkgrepo_with_comments(pkgrepo, pkgrepo_with_comments_name, subtests):
 
 @pytest.fixture
 def copr_pkgrepo_with_comments_name(pkgrepo, grains):
-    if grains["osfinger"] in ("CentOS Linux-7") or grains["os"] == "VMware Photon OS":
+    if (
+        grains["osfinger"] in ("CentOS Linux-7")
+        or grains["os"] == "VMware Photon OS"
+        or grains["osfinger"] == "Amazon Linux-2"
+    ):
         pytest.skip("copr plugin not installed on {} CI".format(grains["osfinger"]))
     if (
         grains["os"] in ("CentOS Stream", "AlmaLinux")
