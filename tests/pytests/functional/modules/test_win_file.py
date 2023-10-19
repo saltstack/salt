@@ -104,6 +104,14 @@ def test_is_not_link(tmp_path):
     assert win_file.is_link(os.path.join(tmp_path, "made_up_path")) is False
 
 
+@skip_not_windows_admin
+def test__resolve_symlink(tmp_path):
+    tmp_path = str(tmp_path)
+    link = os.path.join(tmp_path, "l")
+    assert win_file.symlink(tmp_path, link) is True
+    assert win_file._resolve_symlink(link) == tmp_path
+
+
 def test_get_user(tmp_path, windows_user):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir")
