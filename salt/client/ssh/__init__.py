@@ -562,7 +562,7 @@ class SSH(MultiprocessingStateMixin):
                 retcode = max(retcode, 1)
             return {host: ret}, retcode
 
-        if salt.defaults.exitcodes.EX_OK != retcode:
+        if retcode != salt.defaults.exitcodes.EX_OK:
             return {host: stderr}, retcode
         return {host: stdout}, retcode
 
@@ -876,7 +876,13 @@ class SSH(MultiprocessingStateMixin):
             self.cache_job(jid, host, ret[host], fun)
             ret, deploy_retcode = self.key_deploy(host, ret)
             if deploy_retcode is not None:
-                retcode = deploy_retcode
+                try:
+                    retcode = int(deploy_retcode)
+                except (TypeError, ValueError):
+                    log.warning(
+                        f"Got an invalid deploy retcode for host '{host}': '{retcode}'"
+                    )
+                    retcode = 1
             final_exit = max(final_exit, retcode)
 
             if isinstance(ret[host], dict) and (
@@ -1375,10 +1381,16 @@ class Single:
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
 
-        # Ensure retcode from wrappers is respected, especially state render exceptions
-        retcode = max(
-            retcode, self.context.get("retcode", salt.defaults.exitcodes.EX_OK)
-        )
+        try:
+            # Ensure retcode from wrappers is respected, especially state render exceptions
+            retcode = max(
+                retcode, self.context.get("retcode", salt.defaults.exitcodes.EX_OK)
+            )
+        except (TypeError, ValueError):
+            log.warning(
+                f"Wrapper module set invalid value for retcode: '{self.context['retcode']}"
+            )
+            retcode = max(retcode, 1)
 
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
