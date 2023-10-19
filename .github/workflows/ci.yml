@@ -1945,7 +1945,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -1967,7 +1967,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -1989,7 +1989,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2011,7 +2011,7 @@ jobs:
       platform: darwin
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2033,7 +2033,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2055,7 +2055,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2077,7 +2077,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2099,7 +2099,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2121,7 +2121,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2143,7 +2143,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2165,7 +2165,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2187,7 +2187,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2209,7 +2209,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2231,7 +2231,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2253,7 +2253,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2275,7 +2275,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2297,7 +2297,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2319,7 +2319,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2341,7 +2341,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2363,7 +2363,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2385,7 +2385,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2407,7 +2407,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2429,7 +2429,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2451,7 +2451,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2473,7 +2473,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2496,7 +2496,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2519,7 +2519,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2542,7 +2542,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2565,7 +2565,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2587,7 +2587,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2609,7 +2609,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2631,7 +2631,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
