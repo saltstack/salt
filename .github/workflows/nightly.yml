@@ -1421,6 +1421,28 @@ jobs:
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  centosstream-9-arm64-pkg-tests:
+    name: CentOS Stream 9 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - centosstream-9-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   debian-10-pkg-tests:
     name: Debian 10 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -3598,6 +3620,7 @@ jobs:
       - centos-7-pkg-tests
       - centosstream-8-pkg-tests
       - centosstream-9-pkg-tests
+      - centosstream-9-arm64-pkg-tests
       - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
