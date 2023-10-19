@@ -1030,7 +1030,7 @@ pyeapi==0.8.3
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   napalm
-pygit2==1.0.3 ; python_version <= "3.8"
+pygit2==1.13.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/linux.in

@@ -280,7 +280,7 @@ pycryptodomex==3.10.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/crypto.txt
-pygit2==1.9.1
+pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via
