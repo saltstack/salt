@@ -354,14 +354,16 @@ cassandra-driver==3.24.0
     # via -r requirements/static/ci/common.in
 certifi==2023.07.22
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1
+cffi==1.14.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
     #   bcrypt
@@ -369,16 +371,20 @@ cffi==1.15.1
     #   napalm
     #   pygit2
     #   pynacl
-charset-normalizer==2.0.12
+charset-normalizer==3.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   aiohttp
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   cherrypy
 cherrypy==18.6.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
 ciscoconfparse==1.5.19
@@ -390,11 +396,14 @@ clustershell==1.8.3
 colorama==0.4.3
     # via ciscoconfparse
 contextvars==2.4
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 cryptography==41.0.4
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
     #   adal
     #   azure-cosmosdb-table
@@ -409,6 +418,7 @@ distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   pytest-skip-markers
@@ -449,13 +459,17 @@ hglib==2.6.1
     # via -r requirements/static/ci/freebsd.in
 idna==2.8
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   etcd3-py
     #   requests
     #   yarl
 immutables==0.15
-    # via contextvars
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   contextvars
 importlib-metadata==4.6.4
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
     #   attrs
     #   backports.entry-points-selectable
@@ -472,24 +486,33 @@ ipaddress==1.0.22
 isodate==0.6.0
     # via msrest
 jaraco.classes==3.2.1
-    # via jaraco.collections
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   jaraco.collections
 jaraco.collections==3.4.0
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   cherrypy
 jaraco.functools==2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==3.5.1
-    # via jaraco.collections
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   jaraco.collections
 jinja2==3.1.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
     #   napalm
 jmespath==1.0.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
@@ -511,7 +534,9 @@ kubernetes==3.0.0
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 looseversion==1.0.2
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -521,6 +546,7 @@ mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
@@ -532,6 +558,7 @@ mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==5.0.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -540,6 +567,7 @@ moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
 msrest==0.6.19
@@ -655,8 +683,9 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==21.3
+packaging==22.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   docker
     #   pytest
@@ -681,9 +710,12 @@ platformdirs==2.2.0
 pluggy==0.13.0
     # via pytest
 portend==2.4
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   cherrypy
 psutil==5.8.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -695,9 +727,13 @@ pyasn1==0.4.8
     #   pyasn1-modules
     #   rsa
 pycparser==2.17
-    # via cffi
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   cffi
 pycryptodomex==3.9.8
-    # via -r requirements/crypto.txt
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/crypto.txt
 pyeapi==0.8.3
     # via napalm
 pygit2==1.10.1
@@ -712,12 +748,11 @@ pynacl==1.5.0
     #   paramiko
 pyopenssl==23.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
     #   etcd3-py
 pyparsing==3.0.9
-    # via
-    #   junos-eznc
-    #   packaging
+    # via junos-eznc
 pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
@@ -761,6 +796,7 @@ pytest==7.2.0
     #   pytest-timeout
 python-dateutil==2.8.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
     #   adal
     #   azure-cosmosdb-table
@@ -773,15 +809,19 @@ python-dateutil==2.8.1
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
-    # via -r requirements/static/pkg/freebsd.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/static/pkg/freebsd.in
 pytz==2022.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   moto
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
 pyyaml==6.0.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   clustershell
     #   junos-eznc
@@ -792,12 +832,14 @@ pyyaml==6.0.1
     #   yamlordereddictloader
 pyzmq==23.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests-oauthlib==1.3.0
     # via msrest
 requests==2.31.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   adal
@@ -834,9 +876,12 @@ scp==0.13.2
 semantic-version==2.9.0
     # via etcd3-py
 setproctitle==1.3.2
-    # via -r requirements/static/pkg/freebsd.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/static/pkg/freebsd.in
 six==1.16.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   bcrypt
     #   cassandra-driver
     #   cheroot
@@ -869,7 +914,9 @@ sqlparse==0.4.4
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
-    # via portend
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   portend
 terminal==0.4.0
     # via ntc-templates
 textfsm==1.1.0
@@ -878,7 +925,9 @@ textfsm==1.1.0
     #   netmiko
     #   ntc-templates
 timelib==0.2.5
-    # via -r requirements/static/pkg/freebsd.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   -r requirements/static/pkg/freebsd.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
@@ -887,6 +936,7 @@ transitions==0.8.1
     # via junos-eznc
 typing-extensions==3.10.0.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   aiohttp
     #   async-timeout
     #   gitpython
@@ -896,6 +946,7 @@ typing-extensions==3.10.0.0
     #   yarl
 urllib3==1.26.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   botocore
     #   docker
     #   kubernetes
@@ -928,9 +979,13 @@ yamlordereddictloader==0.4.0
 yarl==1.7.2
     # via aiohttp
 zc.lockfile==1.4
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   cherrypy
 zipp==3.5.0
-    # via importlib-metadata
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

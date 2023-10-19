@@ -352,30 +352,36 @@ cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
 certifi==2023.07.22
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1
+cffi==1.14.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
     #   bcrypt
     #   cryptography
     #   napalm
     #   pynacl
-charset-normalizer==2.0.12
+charset-normalizer==3.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   aiohttp
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   cherrypy
 cherrypy==18.6.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
 ciscoconfparse==1.5.46
@@ -387,11 +393,14 @@ clustershell==1.8.3
 colorama==0.4.4
     # via ciscoconfparse
 contextvars==2.4
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 cryptography==41.0.4
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   adal
     #   azure-cosmosdb-table
@@ -407,8 +416,9 @@ cryptography==41.0.4
     #   vcert
 distlib==0.3.3
     # via virtualenv
-distro==1.6.0
+distro==1.5.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
 dnspython==2.1.0
@@ -446,13 +456,18 @@ google-auth==2.1.0
     # via kubernetes
 idna==2.8
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.19
-    # via contextvars
-importlib-metadata==4.8.1
-    # via -r requirements/static/pkg/linux.in
+immutables==0.15
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   contextvars
+importlib-metadata==4.6.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/static/pkg/linux.in
 iniconfig==1.1.1
     # via pytest
 ipaddress==1.0.23
@@ -460,24 +475,33 @@ ipaddress==1.0.23
 isodate==0.6.0
     # via msrest
 jaraco.classes==3.2.1
-    # via jaraco.collections
-jaraco.collections==3.4.0
-    # via cherrypy
-jaraco.functools==3.3.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   jaraco.collections
+jaraco.collections==3.4.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   cherrypy
+jaraco.functools==2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==3.5.1
-    # via jaraco.collections
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   jaraco.collections
 jinja2==3.1.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
     #   napalm
-jmespath==0.10.0
+jmespath==1.0.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
@@ -501,7 +525,9 @@ libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
 loguru==0.6.0
     # via ciscoconfparse
 looseversion==1.0.2
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -511,6 +537,7 @@ mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
@@ -518,8 +545,9 @@ markupsafe==2.1.2
     #   werkzeug
 mock==4.0.3
     # via -r requirements/pytest.txt
-more-itertools==8.8.0
+more-itertools==5.0.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -528,6 +556,7 @@ moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
 msrest==0.6.21
@@ -650,8 +679,9 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.3
+packaging==22.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   docker
     #   pytest
@@ -671,12 +701,15 @@ platformdirs==2.3.0
     # via virtualenv
 pluggy==1.0.0
     # via pytest
-portend==2.7.1
-    # via cherrypy
+portend==2.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   cherrypy
 profitbricks==4.1.3
     # via -r requirements/static/ci/cloud.in
 psutil==5.8.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -687,10 +720,14 @@ pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.19
-    # via cffi
-pycryptodomex==3.10.1
-    # via -r requirements/crypto.txt
+pycparser==2.17
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   cffi
+pycryptodomex==3.9.8
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/crypto.txt
 pyeapi==0.8.4
     # via napalm
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
@@ -703,12 +740,11 @@ pynacl==1.5.0
     #   paramiko
 pyopenssl==23.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
 pyparsing==3.0.9
-    # via
-    #   junos-eznc
-    #   packaging
+    # via junos-eznc
 pypsexec==0.1.0
     # via -r requirements/static/ci/cloud.in
 pyrsistent==0.18.0
@@ -756,8 +792,9 @@ pytest==7.2.0
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-python-dateutil==2.8.2
+python-dateutil==2.8.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   adal
     #   azure-cosmosdb-table
@@ -770,9 +807,12 @@ python-dateutil==2.8.2
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/static/pkg/linux.in
 pytz==2022.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   moto
     #   tempora
 pyvmomi==7.0.2
@@ -781,6 +821,7 @@ pywinrm==0.3.0
     # via -r requirements/static/ci/cloud.in
 pyyaml==6.0.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   clustershell
     #   junos-eznc
@@ -790,6 +831,7 @@ pyyaml==6.0.1
     #   yamlordereddictloader
 pyzmq==23.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests-ntlm==1.1.0
@@ -798,6 +840,7 @@ requests-oauthlib==1.3.0
     # via msrest
 requests==2.31.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   adal
@@ -826,7 +869,9 @@ responses==0.14.0
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rpm-vercmp==0.1.2
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/static/pkg/linux.in
 rsa==4.7.2
     # via google-auth
 s3transfer==0.5.0
@@ -839,9 +884,12 @@ scp==0.14.1
 semantic-version==2.9.0
     # via etcd3-py
 setproctitle==1.3.2
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   bcrypt
     #   cassandra-driver
     #   cheroot
@@ -853,6 +901,7 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
+    #   more-itertools
     #   msrestazure
     #   ncclient
     #   paramiko
@@ -878,7 +927,9 @@ sqlparse==0.4.4
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
-    # via portend
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   portend
 tenacity==8.0.1
     # via netmiko
 textfsm==1.1.2
@@ -886,7 +937,9 @@ textfsm==1.1.2
     #   napalm
     #   ntc-templates
 timelib==0.2.5
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
@@ -899,6 +952,7 @@ typing-extensions==3.10.0.2
     #   pytest-system-statistics
 urllib3==1.26.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   botocore
     #   docker
     #   kubernetes
@@ -931,10 +985,14 @@ yamlordereddictloader==0.4.0
     # via junos-eznc
 yarl==1.7.2
     # via aiohttp
-zc.lockfile==2.0
-    # via cherrypy
+zc.lockfile==1.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   cherrypy
 zipp==3.5.0
-    # via importlib-metadata
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/linux.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

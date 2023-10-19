@@ -12,7 +12,7 @@ certifi==2023.07.22
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   requests
-charset-normalizer==2.0.12
+charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   requests
@@ -108,7 +108,7 @@ msgpack==1.0.2
     #   -r requirements/base.txt
 myst-docutils[linkify]==0.18.1
     # via -r requirements/static/ci/docs.in
-packaging==21.3
+packaging==22.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/base.txt
@@ -129,10 +129,6 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.8.1
     # via sphinx
-pyparsing==3.0.9
-    # via
-    #   -c requirements/static/ci/py3.7/linux.txt
-    #   packaging
 pytz==2022.1
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
