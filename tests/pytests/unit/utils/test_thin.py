@@ -33,76 +33,6 @@ def patch_if(condition, *args, **kwargs):
     return inner
 
 
-@patch(
-    "salt.utils.thin.distro",
-    type("distro", (), {"__file__": "/site-packages/distro"}),
-)
-@patch(
-    "salt.utils.thin.salt",
-    type("salt", (), {"__file__": "/site-packages/salt"}),
-)
-@patch(
-    "salt.utils.thin.jinja2",
-    type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
-)
-@patch(
-    "salt.utils.thin.yaml",
-    type("yaml", (), {"__file__": "/site-packages/yaml"}),
-)
-@patch(
-    "salt.utils.thin.tornado",
-    type("tornado", (), {"__file__": "/site-packages/tornado"}),
-)
-@patch(
-    "salt.utils.thin.msgpack",
-    type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
-)
-@patch(
-    "salt.utils.thin.certifi",
-    type("certifi", (), {"__file__": "/site-packages/certifi"}),
-)
-@patch(
-    "salt.utils.thin.singledispatch",
-    type("singledispatch", (), {"__file__": "/site-packages/sdp"}),
-)
-@patch(
-    "salt.utils.thin.singledispatch_helpers",
-    type("singledispatch_helpers", (), {"__file__": "/site-packages/sdp_hlp"}),
-)
-@patch(
-    "salt.utils.thin.ssl_match_hostname",
-    type("ssl_match_hostname", (), {"__file__": "/site-packages/ssl_mh"}),
-)
-@patch(
-    "salt.utils.thin.markupsafe",
-    type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
-)
-@patch(
-    "salt.utils.thin.backports_abc",
-    type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
-)
-@patch(
-    "salt.utils.thin.concurrent",
-    type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
-)
-@patch(
-    "salt.utils.thin.py_contextvars",
-    type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
-)
-@patch(
-    "salt.utils.thin.packaging",
-    type("packaging", (), {"__file__": "/site-packages/packaging"}),
-)
-@patch(
-    "salt.utils.thin.looseversion",
-    type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
-)
-@patch_if(
-    salt.utils.thin.has_immutables,
-    "salt.utils.thin.immutables",
-    type("immutables", (), {"__file__": "/site-packages/immutables"}),
-)
-@patch("salt.utils.thin.log", MagicMock())
 def test_get_tops():
     """
     Test thin.get_tops to get extra-modules alongside the top directories, based on the interpreter.
@@ -131,8 +61,55 @@ def test_get_tops():
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     libs = salt.utils.thin.find_site_modules("contextvars")
-    with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
+    with patch(
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
+    ), patch(
+        "salt.utils.thin.tornado",
+        type("tornado", (), {"__file__": "/site-packages/tornado"}),
+    ), patch(
+        "salt.utils.thin.msgpack",
+        type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
+    ), patch(
+        "salt.utils.thin.certifi",
+        type("certifi", (), {"__file__": "/site-packages/certifi"}),
+    ), patch(
+        "salt.utils.thin.singledispatch",
+        type("singledispatch", (), {"__file__": "/site-packages/sdp"}),
+    ), patch(
+        "salt.utils.thin.singledispatch_helpers",
+        type("singledispatch_helpers", (), {"__file__": "/site-packages/sdp_hlp"}),
+    ), patch(
+        "salt.utils.thin.ssl_match_hostname",
+        type("ssl_match_hostname", (), {"__file__": "/site-packages/ssl_mh"}),
+    ), patch(
+        "salt.utils.thin.markupsafe",
+        type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
+    ), patch(
+        "salt.utils.thin.backports_abc",
+        type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
+    ), patch(
+        "salt.utils.thin.concurrent",
+        type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
+    ), patch(
+        "salt.utils.thin.py_contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    ), patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    ), patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    ), patch(
+        "salt.utils.thin.log", MagicMock()
+    ), patch_if(
+        salt.utils.thin.has_immutables,
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
+    ):
         with patch(
+            "salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])
+        ), patch(
             "builtins.__import__",
             MagicMock(
                 side_effect=[
