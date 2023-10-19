@@ -4,6 +4,7 @@ Tests for logrotate config
 
 from pathlib import Path
 
+import packaging.version
 import pytest
 
 pytestmark = [pytest.mark.skip_on_windows, pytest.mark.skip_on_darwin]
@@ -34,10 +35,15 @@ def test_logrotate_config(logrotate_config_file):
     assert logrotate_config_file.group() == "root"
 
 
-def test_issue_65231_etc_logrotate_salt_dir_removed():
+def test_issue_65231_etc_logrotate_salt_dir_removed(install_salt):
     """
     Test that /etc/logrotate.d/salt is not a directory
     """
+    if install_salt.prev_version and packaging.version.parse(
+        install_salt.prev_version
+    ) == packaging.version.parse("3006.3"):
+        pytest.skip("Testing a downgrade to 3006.3, do not run")
+
     path = Path("/etc/logrotate.d/salt")
     if path.exists():
         assert path.is_dir() is False
