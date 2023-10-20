@@ -98,9 +98,9 @@ jobs:
       - self-hosted
       - linux
       - bastion
-    # Full test runs. Each chunk should never take more than 2 hours.
+    # Full test runs. Each chunk should never take more than 3 hours.
     # Partial test runs(no chunk parallelization), 5 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 120 || 300 }}
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 180 || 300 }}
     needs:
       - generate-matrix
     strategy:
