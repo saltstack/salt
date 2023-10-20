@@ -68,7 +68,7 @@ def init(runlevel):
 
         salt '*' system.init 3
     """
-    cmd = ["init", "{}".format(runlevel)]
+    cmd = ["init", f"{runlevel}"]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -101,7 +101,7 @@ def reboot(at_time=None):
 
         salt '*' system.reboot
     """
-    cmd = ["shutdown", "-r", ("{}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", "-r", (f"{at_time}" if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -129,7 +129,7 @@ def shutdown(at_time=None):
     else:
         flag = "-h"
 
-    cmd = ["shutdown", flag, ("{}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", flag, (f"{at_time}" if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -594,7 +594,7 @@ def set_computer_desc(desc):
             pass
 
     pattern = re.compile(r"^\s*PRETTY_HOSTNAME=(.*)$")
-    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{}"'.format(desc))
+    new_line = salt.utils.stringutils.to_str(f'PRETTY_HOSTNAME="{desc}"')
     try:
         with salt.utils.files.fopen("/etc/machine-info", "r+") as mach_info:
             lines = mach_info.readlines()
@@ -671,10 +671,10 @@ def set_reboot_required_witnessed():
             os.makedirs(dir_path)
         except OSError as ex:
             raise SaltInvocationError(
-                "Error creating {} (-{}): {}".format(dir_path, ex.errno, ex.strerror)
+                f"Error creating {dir_path} (-{ex.errno}): {ex.strerror}"
             )
 
-        rdict = __salt__["cmd.run_all"]("touch {}".format(NILRT_REBOOT_WITNESS_PATH))
+        rdict = __salt__["cmd.run_all"](f"touch {NILRT_REBOOT_WITNESS_PATH}")
         errcode = rdict["retcode"]
 
     return errcode == 0
