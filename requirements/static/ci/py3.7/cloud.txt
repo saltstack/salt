@@ -1101,7 +1101,7 @@ pytest-shell-utilities==1.8.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   pytest-salt-factories
-pytest-skip-markers==1.4.1
+pytest-skip-markers==1.5.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   pytest-salt-factories
