@@ -55,7 +55,7 @@ def test_clean_path_symlinked_src(setup_links):
     test_path = from_path / "test"
     expect_path = str(to_path / "test")
     ret = salt.utils.verify.clean_path(str(from_path), str(test_path))
-    assert ret == expect_path, "{} is not {}".format(ret, expect_path)
+    assert ret == expect_path, f"{ret} is not {expect_path}"
 
 
 def test_clean_path_symlinked_tgt(setup_links):
@@ -63,4 +63,4 @@ def test_clean_path_symlinked_tgt(setup_links):
     test_path = to_path / "test"
     expect_path = str(to_path / "test")
     ret = salt.utils.verify.clean_path(str(from_path), str(test_path))
-    assert ret == expect_path, "{} is not {}".format(ret, expect_path)
+    assert ret == expect_path, f"{ret} is not {expect_path}"
