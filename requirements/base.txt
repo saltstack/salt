@@ -33,8 +33,3 @@ pythonnet>=3.0.1; sys_platform == 'win32'
 pymssql>=2.2.1; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
 lxml>=4.6.3; sys_platform == 'win32'
-
-# From old darwin.txt requirements file
-apache-libcloud>=2.4.0; sys_platform == 'darwin'
-linode-python>=1.1.1; sys_platform == 'darwin'
-vultr>=1.0.1; sys_platform == 'darwin'
