@@ -18,7 +18,7 @@ EXAMPLE_PROVIDERS = {
         "vmware": {
             "driver": "vmware",
             "password": "123456",
-            "url": "vca1.saltstack.com",
+            "url": "vca1.localhost",
             "minion": {"master": "providermaster", "grains": {"providergrain": True}},
             "profiles": {},
             "user": "root",
@@ -31,7 +31,7 @@ EXAMPLE_PROVIDERS = {
             "profiles": {},
             "minion": {"master": "providermaster", "grains": {"providergrain": True}},
             "image": "rhel6_64prod",
-            "url": "vca2.saltstack.com",
+            "url": "vca2.localhost",
             "user": "root",
         }
     },
@@ -158,7 +158,7 @@ def test_cloud_map_merge_conf(salt_cloud_config_file):
                     "profile": "nyc-vm",
                     "provider": "nyc_vcenter:vmware",
                     "resourcepool": "Resources",
-                    "url": "vca1.saltstack.com",
+                    "url": "vca1.localhost",
                     "user": "root",
                 },
                 "db2": {
@@ -196,7 +196,7 @@ def test_cloud_map_merge_conf(salt_cloud_config_file):
                     "profile": "nyc-vm",
                     "provider": "nj_vcenter:vmware",
                     "resourcepool": "Resources",
-                    "url": "vca2.saltstack.com",
+                    "url": "vca2.localhost",
                     "user": "root",
                 },
                 "db3": {
@@ -216,7 +216,7 @@ def test_cloud_map_merge_conf(salt_cloud_config_file):
                     "profile": "nj-vm",
                     "provider": "nj_vcenter:vmware",
                     "resourcepool": "Resources",
-                    "url": "vca2.saltstack.com",
+                    "url": "vca2.localhost",
                     "user": "root",
                 },
             }
