@@ -99,10 +99,12 @@ def salt_cloud_config_file(salt_master_factory):
     return os.path.join(salt_master_factory.config_dir, "cloud")
 
 
-def test_cloud_map_merge_conf(salt_cloud_config_file):
+def test_cloud_map_merge_conf(salt_cloud_config_file, grains):
     """
     Ensure that nested values can be selectivly overridden in a map file
     """
+    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 3:
+        pytest.skip("Test hangs on PhotonOS 3")
     with patch(
         "salt.config.check_driver_dependencies", MagicMock(return_value=True)
     ), patch("salt.cloud.Map.read", MagicMock(return_value=EXAMPLE_MAP)):
