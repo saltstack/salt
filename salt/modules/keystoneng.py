@@ -138,11 +138,11 @@ def get_operator_cloud(auth=None):
     """
     if auth is None:
         auth = __salt__["config.option"]("keystone", {})
-    if "openstack_opcloud" in __context__:
-        if __context__["openstack_opcloud"].auth == auth:
-            return __context__["openstack_opcloud"]
-    __context__["openstack_opcloud"] = shade.operator_cloud(**auth)
-    return __context__["openstack_opcloud"]
+    if "shade_opcloud" in __context__:
+        if __context__["shade_opcloud"].auth == auth:
+            return __context__["shade_opcloud"]
+    __context__["shade_opcloud"] = shade.operator_cloud(**auth)
+    return __context__["shade_opcloud"]
 
 
 def get_openstack_cloud(auth=None):
@@ -151,11 +151,11 @@ def get_openstack_cloud(auth=None):
     """
     if auth is None:
         auth = __salt__["config.option"]("keystone", {})
-    if "openstack_oscloud" in __context__:
-        if __context__["openstack_oscloud"].auth == auth:
-            return __context__["openstack_oscloud"]
-    __context__["openstack_oscloud"] = shade.openstack_cloud(**auth)
-    return __context__["openstack_oscloud"]
+    if "shade_oscloud" in __context__:
+        if __context__["shade_oscloud"].auth == auth:
+            return __context__["shade_oscloud"]
+    __context__["shade_oscloud"] = shade.openstack_cloud(**auth)
+    return __context__["shade_oscloud"]
 
 
 def group_create(auth=None, **kwargs):
