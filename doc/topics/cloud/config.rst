@@ -372,9 +372,9 @@ This driver can be configured using the ``clouds.yml`` file with
 or `shade os-client-config <https://docs.openstack.org/os-client-config/latest/>`.
 
 The ``clouds.yml`` can be located in any of these directories: 
-- cwd
-- ~/.config/openstack
-- /etc/openstack
+ - cwd
+ - ~/.config/openstack
+ - /etc/openstack
 
 Using the openstacksdk module. (Recomended)
 
