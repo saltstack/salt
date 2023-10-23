@@ -1032,3 +1032,5 @@ def role_revoke(auth=None, **kwargs):
         cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.revoke_role(**kwargs)
+
+
