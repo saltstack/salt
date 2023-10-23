@@ -5,7 +5,22 @@ Keystone module for interacting with OpenStack Keystone
 
 :depends:openstack
 
-Example configuration
+Example configuration for openstacksdk in the 'clouds.yaml' file
+
+.. code-block:: yaml
+
+    clouds:
+      keystone:
+        auth:
+          username: admin
+          password: password123
+          user_domain_name: mydomain
+          project_name: myproject
+          project_domain_name: myproject
+          auth_url: https://example.org:5000/v3
+        identity_api_version: 3
+
+Example configuration for shade
 
 .. code-block:: yaml
 
