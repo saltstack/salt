@@ -369,10 +369,14 @@ or legacy `shade <https://docs.openstack.org/shade/latest/>` drivers managed by 
 
 This driver can be configured using the ``clouds.yml`` file with 
 `openstacksdk os-client-config <https://docs.openstack.org/openstacksdk/latest/user/config/>`
-or the ``/etc/openstack/clouds.yml`` file with 
-`shade os-client-config <https://docs.openstack.org/os-client-config/latest/>` 
+or `shade os-client-config <https://docs.openstack.org/os-client-config/latest/>`.
 
-Using the openstacksdk ``clouds.yml`` file (Recomended)
+The ``clouds.yml`` can be located in any of these directories: 
+- cwd
+- ~/.config/openstack
+- /etc/openstack
+
+Using the openstacksdk module. (Recomended)
 
 .. code-block:: yaml
 
@@ -388,7 +392,7 @@ Using the openstacksdk ``clouds.yml`` file (Recomended)
         identity_api_version: 3
         region_name: RegionOne
 
-Using the legacy shade ``/etc/openstack/clouds.yml`` file
+Using the legacy shade module.
 
 .. code-block:: yaml
 
