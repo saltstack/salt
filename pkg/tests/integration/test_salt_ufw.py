@@ -33,6 +33,7 @@ def test_salt_ufw(salt_master, salt_call_cli, install_salt):
 Title: salt
 Description: fast and powerful configuration management and remote
 execution
+
 Ports:
   4505,4506/tcp"""
     ufw_info_cmd = "/usr/sbin/ufw app info Salt"
