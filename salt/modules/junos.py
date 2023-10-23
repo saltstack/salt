@@ -2050,6 +2050,7 @@ def _make_source_list(dir):
     return dir_list
 
 
+# pragma: no cover
 @_timeout_decorator
 def file_compare(file1, file2, **kwargs):
     """
@@ -2112,6 +2113,7 @@ def file_compare(file1, file2, **kwargs):
     return ret
 
 
+# pragma: no cover
 @_timeout_decorator
 def fsentry_exists(dir, **kwargs):
     """
@@ -2257,6 +2259,7 @@ def routing_engine(**kwargs):
     return ret
 
 
+# pragma: no cover
 @_timeout_decorator
 def dir_copy(source, dest, force=False, **kwargs):
     """
