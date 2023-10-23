@@ -5,7 +5,7 @@ Keystone module for interacting with OpenStack Keystone
 
 :depends:openstack
 
-Example configuration for openstacksdk in the 'clouds.yaml' file
+Example configuration for openstacksdk
 
 .. code-block:: yaml
 
