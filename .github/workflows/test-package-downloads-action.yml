@@ -216,7 +216,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
