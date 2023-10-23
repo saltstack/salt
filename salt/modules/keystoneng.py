@@ -51,7 +51,7 @@ __virtualname__ = "keystoneng"
 
 def __virtual__():
     """
-    Only load this module if openstacksdk python module is installed
+    Only load this module if openstacksdk or shade python module is installed
     """
     if HAS_OPENSTACK or HAS_SHADE:
         return __virtualname__
