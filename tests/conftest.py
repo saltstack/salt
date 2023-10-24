@@ -1419,13 +1419,15 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/libexec/openssh/sftp-server",
         # Arch Linux
         "/usr/lib/ssh/sftp-server",
+        # Photon OS 5
+        "/usr/libexec/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
         if os.path.exists(path):
             sftp_server_path = path
     if sftp_server_path is None:
-        log.warning(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
     else:
         sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(
