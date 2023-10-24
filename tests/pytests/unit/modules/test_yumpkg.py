@@ -8,6 +8,7 @@ import pytest
 import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
+import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
@@ -17,25 +18,6 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
 ]
-
-
-# https://dev.to/stack-labs/how-to-mock-a-decorator-in-python-55jc
-def mock_decorator(*args, **kwargs):
-    """Decorate by doing nothing."""
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
-
-
-patch("salt.utils.decorators.path.which", mock_decorator).start()
-
-import salt.modules.yumpkg as yumpkg
 
 
 @pytest.fixture
@@ -1146,11 +1128,13 @@ def test_del_repo_single_file():
 
 
 def test_download_error_no_packages():
-    with pytest.raises(SaltInvocationError):
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    with patch_which, pytest.raises(SaltInvocationError):
         yumpkg.download()
 
 
 def test_download():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
     patch_exists = patch("os.path.exists", MagicMock(return_value=False))
     patch_makedirs = patch("os.makedirs")
     mock_listdir = MagicMock(side_effect=([], ["spongebob-1.2.rpm"]))
@@ -1160,7 +1144,7 @@ def test_download():
         "cmd.run": mock_run,
     }
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
-    with patch_exists, patch_makedirs, patch_listdir, patch_salt:
+    with patch_which, patch_exists, patch_makedirs, patch_listdir, patch_salt:
         result = yumpkg.download("spongebob")
         cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
         mock_run.assert_called_once_with(
@@ -1171,6 +1155,7 @@ def test_download():
 
 
 def test_download_failed():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
     patch_exists = patch("os.path.exists", MagicMock(return_value=True))
     mock_listdir = MagicMock(return_value=["spongebob-1.2.rpm", "junk.txt"])
     patch_listdir = patch("os.listdir", mock_listdir)
@@ -1180,7 +1165,7 @@ def test_download_failed():
         "cmd.run": mock_run,
     }
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
-    with patch_exists, patch_listdir, patch_unlink, patch_salt:
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
         result = yumpkg.download("spongebob", "patrick")
         cmd = [
             "yumdownloader",
@@ -1199,7 +1184,14 @@ def test_download_failed():
         assert result == expected
 
 
+def test_download_missing_yumdownloader():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value=None))
+    with patch_which, pytest.raises(CommandExecutionError):
+        yumpkg.download("spongebob")
+
+
 def test_download_to_purge():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
     patch_exists = patch("os.path.exists", MagicMock(return_value=True))
     mock_listdir = MagicMock(return_value=["spongebob-1.2.rpm", "junk.txt"])
     patch_listdir = patch("os.listdir", mock_listdir)
@@ -1209,7 +1201,7 @@ def test_download_to_purge():
         "cmd.run": mock_run,
     }
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
-    with patch_exists, patch_listdir, patch_unlink, patch_salt:
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
         result = yumpkg.download("spongebob")
         cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
         mock_run.assert_called_once_with(
@@ -1220,6 +1212,7 @@ def test_download_to_purge():
 
 
 def test_download_unlink_error():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
     patch_exists = patch("os.path.exists", MagicMock(return_value=True))
     se_listdir = (
         ["spongebob-1.2.rpm", "junk.txt"],
@@ -1233,7 +1226,7 @@ def test_download_unlink_error():
         "cmd.run": mock_run,
     }
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
-    with patch_exists, patch_listdir, patch_unlink, patch_salt:
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
         with pytest.raises(CommandExecutionError):
             yumpkg.download("spongebob")
 
