@@ -138,7 +138,9 @@ def download_nox_artifact(
     if nox is None:
         ctx.error("Could not find the 'nox' binary in $PATH")
         return ExitCode.FAIL
-    ret = ctx.run(nox, "-e", "decompress-dependencies", "--", slug, check=False)
+    ret = ctx.run(
+        nox, "--force-color", "-e", "decompress-dependencies", "--", slug, check=False
+    )
     if ret.returncode:
         ctx.error("Failed to decompress the nox dependencies")
         return ExitCode.FAIL

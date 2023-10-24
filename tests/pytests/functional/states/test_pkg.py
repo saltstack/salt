@@ -46,7 +46,10 @@ def PKG_TARGETS(grains):
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            _PKG_TARGETS = ["wget", "zsh-html"]
+            if grains["osmajorrelease"] >= 5:
+                _PKG_TARGETS = ["wget", "zsh"]
+            else:
+                _PKG_TARGETS = ["wget", "zsh-html"]
         elif (
             grains["os"] in ("CentOS Stream", "AlmaLinux")
             and grains["osmajorrelease"] == 9
@@ -73,7 +76,7 @@ def PKG_CAP_TARGETS(grains):
 @pytest.fixture
 def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["os"] == "CentOS":
             if grains["osmajorrelease"] == 5:
                 _PKG_32_TARGETS = ["xz-devel.i386"]
@@ -87,7 +90,7 @@ def PKG_32_TARGETS(grains):
 @pytest.fixture
 def PKG_DOT_TARGETS(grains):
     _PKG_DOT_TARGETS = []
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["osmajorrelease"] == 5:
             _PKG_DOT_TARGETS = ["python-migrate0.5"]
         elif grains["osmajorrelease"] == 6:
@@ -106,7 +109,7 @@ def PKG_DOT_TARGETS(grains):
 @pytest.fixture
 def PKG_EPOCH_TARGETS(grains):
     _PKG_EPOCH_TARGETS = []
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["osmajorrelease"] == 7:
             _PKG_EPOCH_TARGETS = ["comps-extras"]
         elif grains["osmajorrelease"] == 8:
