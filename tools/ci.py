@@ -745,14 +745,14 @@ def pkg_matrix(
         )
         ctx.exit(1)
 
-    adj_versions = []
+    adjusted_versions = []
     for ver in testing_releases:
         if ver < tools.utils.Version("3006.0"):
-            adj_versions.append((ver, "classic"))
-            adj_versions.append((ver, "tiamat"))
+            adjusted_versions.append((ver, "classic"))
+            adjusted_versions.append((ver, "tiamat"))
         else:
-            adj_versions.append((ver, "relenv"))
-    ctx.info(f"Will look for the following versions: {adj_versions}")
+            adjusted_versions.append((ver, "relenv"))
+    ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
     # Filter out the prefixes to look under
     if "macos-" in distro_slug:
@@ -791,14 +791,14 @@ def pkg_matrix(
 
     s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
-    matrix = [
+    _matrix = [
         {
             "test-chunk": "install",
             "version": None,
         }
     ]
 
-    for version, backend in adj_versions:
+    for version, backend in adjusted_versions:
         prefix = prefixes[backend]
         # TODO: Remove this after 3009.0
         if backend == "relenv" and version >= tools.utils.Version("3007.0"):
@@ -825,7 +825,7 @@ def pkg_matrix(
                 f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
             )
             for session in ("upgrade", "downgrade"):
-                matrix.append(
+                _matrix.append(
                     {
                         "test-chunk": f"{session}-classic"
                         if backend == "classic"
@@ -837,11 +837,11 @@ def pkg_matrix(
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
-    ctx.print(matrix, soft_wrap=True)
+    ctx.print(_matrix, soft_wrap=True)
 
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(matrix)}\n")
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
 
 
