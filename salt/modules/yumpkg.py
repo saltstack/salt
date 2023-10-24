@@ -30,7 +30,6 @@ import string
 
 import salt.utils.args
 import salt.utils.data
-import salt.utils.decorators.path
 import salt.utils.environment
 import salt.utils.files
 import salt.utils.functools
@@ -3333,7 +3332,6 @@ def modified(*packages, **flags):
     return __salt__["lowpkg.modified"](*packages, **flags)
 
 
-@salt.utils.decorators.path.which("yumdownloader")
 def download(*packages, **kwargs):
     """
     .. versionadded:: 2015.5.0
@@ -3353,6 +3351,9 @@ def download(*packages, **kwargs):
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
     """
+    if not salt.utils.path.which("yumdownloader"):
+        raise CommandExecutionError("'yumdownloader' command not available")
+
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
