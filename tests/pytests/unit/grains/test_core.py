@@ -3932,9 +3932,11 @@ def test_pythonexecutable():
     """
     test pythonexecutable
     """
+    python_executable = sys.executable
 
     ret = core.pythonexecutable()
     assert "pythonexecutable" in ret
+    assert ret["pythonexecutable"] == python_executable
 
 
 def test_pythonpath():
