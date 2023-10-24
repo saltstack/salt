@@ -829,9 +829,8 @@ def pkg_matrix(
         if backend == "relenv" and version >= tools.utils.Version("3007.0"):
             prefix.replace("/arm64/", "/aarch64/")
         # Using a paginator allows us to list recursively and avoid the item limit
-        # TODO: Swap this for the prod bucket before merge
         page_iterator = paginator.paginate(
-            Bucket="salt-project-test-salt-artifacts-release", Prefix=prefix
+            Bucket="salt-project-prod-salt-artifacts-release", Prefix=prefix
         )
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
         key_filter = f"Contents[?contains(Key, '{version}')][]"
