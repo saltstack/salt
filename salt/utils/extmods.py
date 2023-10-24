@@ -32,7 +32,14 @@ def _listdir_recursively(rootdir):
     return file_list
 
 
-def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
+def sync(
+    opts,
+    form,
+    saltenv=None,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+    force_local=False,
+):
     """
     Sync custom modules into the extension_modules directory
     """
@@ -62,7 +69,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
     ret = []
     remote = set()
     source = salt.utils.url.create("_" + form)
-    mod_dir = os.path.join(opts["extension_modules"], "{}".format(form))
+    mod_dir = os.path.join(opts["extension_modules"], f"{form}")
     touched = False
     with salt.utils.files.set_umask(0o077):
         try:
@@ -75,7 +82,9 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            with salt.fileclient.get_file_client(opts) as fileclient:
+            with salt.fileclient.get_file_client(
+                opts, pillar=False, force_local=force_local
+            ) as fileclient:
                 for sub_env in saltenv:
                     log.info("Syncing %s for environment '%s'", form, sub_env)
                     cache = []
@@ -91,7 +100,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         )
                     )
                     local_cache_dir = os.path.join(
-                        opts["cachedir"], "files", sub_env, "_{}".format(form)
+                        opts["cachedir"], "files", sub_env, f"_{form}"
                     )
                     log.debug("Local cache dir: '%s'", local_cache_dir)
                     for fn_ in cache:
@@ -120,13 +129,13 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                             if src_digest != dst_digest:
                                 # The downloaded file differs, replace!
                                 shutil.copyfile(fn_, dest)
-                                ret.append("{}.{}".format(form, relname))
+                                ret.append(f"{form}.{relname}")
                         else:
                             dest_dir = os.path.dirname(dest)
                             if not os.path.isdir(dest_dir):
                                 os.makedirs(dest_dir)
                             shutil.copyfile(fn_, dest)
-                            ret.append("{}.{}".format(form, relname))
+                            ret.append(f"{form}.{relname}")
 
             touched = bool(ret)
             if opts["clean_dynamic_modules"] is True:
