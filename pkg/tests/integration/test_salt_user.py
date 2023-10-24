@@ -187,7 +187,7 @@ def test_paths_log_rotation(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.3")
 
-    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora", "photon"):
+    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
         pytest.skip(
             "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
         )
