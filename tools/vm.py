@@ -1326,11 +1326,13 @@ class VM:
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         rsync_remote_path = remote_path
-        if self.is_windows:
+        if sys.platform == "win32":
             for drive in ("c:", "C:"):
                 source = source.replace(drive, "/cygdrive/c")
-                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
             source = source.replace("\\", "/")
+        if self.is_windows:
+            for drive in ("c:", "C:"):
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
@@ -1520,16 +1522,17 @@ class VM:
             self.ctx.exit(1, "Could find the 'rsync' binary")
         if TYPE_CHECKING:
             assert rsync
+        ssh_cmd = " ".join(
+            self.ssh_command_args(
+                include_vm_target=False, log_command_level=logging.NOTSET
+            )
+        )
         cmd: list[str] = [
-            rsync,
+            f'"{rsync}"',
             "-az",
             "--info=none,progress2",
             "-e",
-            " ".join(
-                self.ssh_command_args(
-                    include_vm_target=False, log_command_level=logging.NOTSET
-                )
-            ),
+            fr'"{ssh_cmd}"',
         ]
         if rsync_flags:
             cmd.extend(rsync_flags)
@@ -1542,6 +1545,8 @@ class VM:
         log.info(f"Running {' '.join(cmd)!r}")  # type: ignore[arg-type]
         progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
+        if sys.platform == "win32":
+            cmd = " ".join(cmd)
         with progress:
             proc = subprocess.Popen(cmd, bufsize=1, stdout=subprocess.PIPE, text=True)
             completed = 0
@@ -1584,7 +1589,7 @@ class VM:
         if TYPE_CHECKING:
             assert ssh
         _ssh_command_args = [
-            ssh,
+            f"'{ssh}'",
             "-F",
             str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
