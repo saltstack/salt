@@ -8,6 +8,10 @@ import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
+pytestmark = [
+    pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
+]
+
 # 'md5' + md5('password' + 'username')
 md5_pw = "md55a231fcdb710d73268c4f44283487ba2"
 
@@ -235,7 +239,7 @@ def test_db_alter():
             owner="otheruser",
             runas="foo",
         )
-        assert ret
+        assert ret is True
 
         postgres._run_psql.assert_has_calls(
             [
@@ -428,7 +432,7 @@ def test_db_exists():
             password="foo",
             runas="foo",
         )
-        assert ret
+        assert ret is True
 
 
 def test_db_list():
@@ -749,7 +753,7 @@ def test_user_exists():
             password="test_password",
             runas="foo",
         )
-        assert ret
+        assert ret is True
 
 
 def test_user_list():
@@ -1186,7 +1190,7 @@ def test_create_extension_newerthan():
                 assert not postgres.create_extension("foo")
 
                 ret = postgres.create_extension("foo", ext_version="a", schema="b")
-                assert ret
+                assert ret is True
                 assert re.match(
                     'ALTER EXTENSION "foo" SET SCHEMA "b";'
                     ' ALTER EXTENSION "foo" UPDATE TO a;',
@@ -1194,14 +1198,14 @@ def test_create_extension_newerthan():
                 )
 
                 ret = postgres.create_extension("foo", ext_version="a", schema="b")
-                assert ret
+                assert ret is True
                 assert re.match(
                     'ALTER EXTENSION "foo" SET SCHEMA "b";',
                     postgres._psql_prepare_and_run.call_args[0][0][1],
                 )
 
                 ret = postgres.create_extension("foo", ext_version="a", schema="b")
-                assert ret
+                assert ret is True
                 assert re.match(
                     'ALTER EXTENSION "foo" UPDATE TO a;',
                     postgres._psql_prepare_and_run.call_args[0][0][1],
@@ -1254,7 +1258,7 @@ def test_schema_exists():
             ),
         ):
             ret = postgres.schema_exists("template1", "public")
-            assert ret
+            assert ret is True
 
 
 def test_schema_get():
@@ -1272,7 +1276,7 @@ def test_schema_get():
             ),
         ):
             ret = postgres.schema_get("template1", "public")
-            assert ret
+            assert ret is True
 
 
 def test_schema_get_again():
@@ -1290,7 +1294,7 @@ def test_schema_get_again():
             ),
         ):
             ret = postgres.schema_get("template1", "pg_toast")
-            assert not ret
+            assert ret is False
 
 
 def test_schema_create():
@@ -1344,7 +1348,7 @@ def test_schema_create2():
             db_user="test_user",
             db_password="test_password",
         )
-        assert not ret
+        assert ret is False
 
 
 def test_schema_remove():
@@ -1398,7 +1402,7 @@ def test_schema_remove2():
             db_user="test_user",
             db_password="test_password",
         )
-        assert not ret
+        assert ret is False
 
 
 def test_language_list():
@@ -1444,7 +1448,7 @@ def test_language_exists():
         "salt.modules.postgres.language_exists", Mock(return_value=True)
     ):
         ret = postgres.language_exists("sql", "testdb")
-        assert ret
+        assert ret is True
 
 
 def test_language_create():
@@ -1504,7 +1508,7 @@ def test_language_create_exists():
             user="testuser",
             password="testpassword",
         )
-        assert not ret
+        assert ret is False
 
 
 def test_language_remove():
@@ -1564,7 +1568,7 @@ def test_language_remove_non_exist():
             user="testuser",
             password="testpassword",
         )
-        assert not ret
+        assert ret is False
 
 
 def test_privileges_list_table():
@@ -1730,7 +1734,7 @@ def test_has_privileges_on_table():
             user="testuser",
             password="testpassword",
         )
-        assert ret
+        assert ret is True
 
         ret = postgres.has_privileges(
             "baruwa",
@@ -1745,7 +1749,7 @@ def test_has_privileges_on_table():
             user="testuser",
             password="testpassword",
         )
-        assert ret
+        assert ret is True
 
         ret = postgres.has_privileges(
             "baruwa",
@@ -1760,7 +1764,7 @@ def test_has_privileges_on_table():
             user="testuser",
             password="testpassword",
         )
-        assert ret
+        assert ret is True
 
         ret = postgres.has_privileges(
             "bayestest",
@@ -1774,7 +1778,7 @@ def test_has_privileges_on_table():
             user="testuser",
             password="testpassword",
         )
-        assert not ret
+        assert ret is False
 
         ret = postgres.has_privileges(
             "bayestest",
@@ -1788,7 +1792,7 @@ def test_has_privileges_on_table():
             user="testuser",
             password="testpassword",
         )
-        assert ret
+        assert ret is True
 
 
 def test_has_privileges_on_group():
@@ -1810,7 +1814,7 @@ def test_has_privileges_on_group():
             user="testuser",
             password="testpassword",
         )
-        assert ret
+        assert ret is True
 
         ret = postgres.has_privileges(
             "baruwa",
@@ -1824,7 +1828,7 @@ def test_has_privileges_on_group():
             user="testuser",
             password="testpassword",
         )
-        assert not ret
+        assert ret is False
 
         ret = postgres.has_privileges(
             "tony",
@@ -1837,7 +1841,7 @@ def test_has_privileges_on_group():
             user="testuser",
             password="testpassword",
         )
-        assert not ret
+        assert ret is False
 
 
 def test_privileges_grant_table():
@@ -2195,7 +2199,7 @@ def test_datadir_init():
                 waldir=None,
                 user="postgres",
             )
-            assert ret
+            assert ret is True
 
 
 def test_datadir_exists():
@@ -2205,7 +2209,7 @@ def test_datadir_exists():
     with patch("os.path.isfile", Mock(return_value=True)):
         name = "/var/lib/pgsql/data"
         ret = postgres.datadir_exists(name)
-        assert ret
+        assert ret is True
 
 
 @pytest.mark.parametrize(
@@ -2376,8 +2380,7 @@ def test_tablespace_exists_true():
             password="foo",
             runas="foo",
         )
-
-        assert ret
+        assert ret is True
 
 
 def test_tablespace_exists_false():
@@ -2424,8 +2427,7 @@ def test_tablespace_exists_false():
             password="foo",
             runas="foo",
         )
-
-        assert not ret
+        assert ret is False
 
 
 def test_tablespace_alter_new_owner():
