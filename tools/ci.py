@@ -776,6 +776,8 @@ def pkg_matrix(
             name = "amazon"
         if "centos" in name:
             name = "redhat"
+        if "photon" in name:
+            name = "photon"
         if name == "windows":
             prefixes = {
                 "classic": "windows/",
