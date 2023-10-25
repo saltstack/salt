@@ -26,6 +26,10 @@ try:
 except ImportError:
     HAS_JUNOS = False
 
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Not supported on Windows"),
+]
+
 
 @pytest.mark.skipif(
     not HAS_JUNOS, reason="The junos-eznc and jxmlease modules are required"
