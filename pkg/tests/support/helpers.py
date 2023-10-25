@@ -87,6 +87,7 @@ class SaltPkgInstall:
     # Package (and management) metadata
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
+    dbg_pkg: str = attr.ib(init=False)
     salt_pkgs: List[str] = attr.ib(init=False)
     pkgs: List[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
@@ -134,6 +135,15 @@ class SaltPkgInstall:
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
 
+    @dbg_pkg.default
+    def _default_dbg_pkg(self):
+        dbg_pkg = None
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+            dbg_pkg = "salt-debuginfo"
+        elif self.distro_id in ("ubuntu", "debian"):
+            dbg_pkg = "salt-dbg"
+        return dbg_pkg
+
     @salt_pkgs.default
     def _default_salt_pkgs(self):
         salt_pkgs = [
@@ -146,12 +156,11 @@ class SaltPkgInstall:
         ]
         if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             salt_pkgs.append("salt")
-            dbg_pkg = "salt-debuginfo"
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
-            dbg_pkg = "salt-dbg"
         if packaging.version.parse(self.version) >= packaging.version.parse("3006.3"):
-            salt_pkgs.append(dbg_pkg)
+            if self.dbg_pkg:
+                salt_pkgs.append(self.dbg_pkg)
         return salt_pkgs
 
     @install_dir.default
@@ -573,6 +582,11 @@ class SaltPkgInstall:
                 idx = list_ret.index("Available Packages")
                 old_ver = list_ret[idx + 1].split()[1]
                 pkgs_to_install = [f"{pkg}-{old_ver}" for pkg in pkgs_to_install]
+                if self.dbg_pkg:
+                    # self.dbg_pkg does not exist on classic packages
+                    dbg_exists = [x for x in pkgs_to_install if self.dbg_pkg in x]
+                    if dbg_exists:
+                        pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
             ret = self.proc.run(
                 self.pkg_mngr,
