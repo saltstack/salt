@@ -7,6 +7,9 @@ from tests.support.mock import Mock, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
+]
 
 LSCLUSTER = """\
 8.4 main 5432 online postgres /srv/8.4/main \
