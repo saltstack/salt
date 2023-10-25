@@ -1,7 +1,6 @@
 import configparser
 import logging
 import os
-from functools import wraps
 
 import pytest
 
@@ -2471,7 +2470,10 @@ def test_get_yum_config(grains):
         pytest.skip(f"{os_family} does not have yum.conf")
     setting = "cache_dir"
     if os_family == "RedHat":
-        setting = "skip_if_unavailable"
+        # This one seems to be in all of them...
+        # If this ever breaks in the future, we'll need to get more specific
+        # than os_family
+        setting = "installonly_limit"
     result = yumpkg._get_yum_config()
     assert setting in result
 

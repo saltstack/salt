@@ -1528,11 +1528,11 @@ class VM:
             )
         )
         cmd: list[str] = [
-            f'"{rsync}"',
+            f'"{rsync}"' if sys.platform == "win32" else rsync,
             "-az",
             "--info=none,progress2",
             "-e",
-            fr'"{ssh_cmd}"',
+            f'"{ssh_cmd}"' if sys.platform == "win32" else ssh_cmd,
         ]
         if rsync_flags:
             cmd.extend(rsync_flags)
@@ -1546,7 +1546,7 @@ class VM:
         progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
         if sys.platform == "win32":
-            cmd = " ".join(cmd)
+            cmd = [" ".join(cmd)]
         with progress:
             proc = subprocess.Popen(cmd, bufsize=1, stdout=subprocess.PIPE, text=True)
             completed = 0
@@ -1589,7 +1589,7 @@ class VM:
         if TYPE_CHECKING:
             assert ssh
         _ssh_command_args = [
-            f"'{ssh}'",
+            ssh,
             "-F",
             str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
