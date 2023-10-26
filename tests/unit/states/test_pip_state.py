@@ -379,6 +379,24 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             self.assertSaltTrueReturn({"test": ret})
             self.assertInSaltComment("successfully installed", {"test": ret})
 
+    def test_install_with_specified_user(self):
+        """
+        Check that if `user` parameter is set and the user does not exists
+        it will fail with an error, see #65458
+        """
+        user_info = MagicMock(return_value={})
+        pip_version = MagicMock(return_value="10.0.1")
+        with patch.dict(
+            pip_state.__salt__,
+            {
+                "user.info": user_info,
+                "pip.version": pip_version,
+            },
+        ):
+            ret = pip_state.installed("mypkg", user="fred")
+            self.assertSaltFalseReturn({"test": ret})
+            self.assertInSaltComment("User fred does not exist", {"test": ret})
+
 
 class PipStateUtilsTest(TestCase):
     def test_has_internal_exceptions_mod_function(self):
