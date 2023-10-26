@@ -11,7 +11,10 @@ pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
 ]
 
-LSCLUSTER = """\
+
+@pytest.fixture
+def get_lscuster():
+    return """\
 8.4 main 5432 online postgres /srv/8.4/main \
         /var/log/postgresql/postgresql-8.4-main.log
 9.1 main 5433 online postgres /srv/9.1/main \
@@ -20,12 +23,12 @@ LSCLUSTER = """\
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(get_lscuster):
     return {
         deb_postgres: {
             "__salt__": {
                 "config.option": Mock(),
-                "cmd.run_all": Mock(return_value={"stdout": LSCLUSTER}),
+                "cmd.run_all": Mock(return_value={"stdout": get_lscuster}),
                 "file.chown": Mock(),
                 "file.remove": Mock(),
             }
@@ -100,9 +103,9 @@ def test_cluster_create_with_float():
         assert deb_postgres.__salt__["cmd.run_all"].call_args[0][0] == expected_cmdstr
 
 
-def test_parse_pg_lsclusters():
+def test_parse_pg_lsclusters(get_lscuster):
     with patch("salt.utils.path.which", Mock(return_value="/usr/bin/pg_lsclusters")):
-        stdout = LSCLUSTER
+        stdout = get_lscuster
         maxDiff = None
         expected = {
             "8.4/main": {
