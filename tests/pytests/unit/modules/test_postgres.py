@@ -12,6 +12,7 @@ pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
 ]
 
+
 # 'md5' + md5('password' + 'username')
 md5_pw = "md55a231fcdb710d73268c4f44283487ba2"
 
@@ -21,36 +22,47 @@ scram_pw = (
     "LzAh/MGUdjYkdbDzcOKpfGwa3WwPUsyGcY+TEnSpcto="
 )
 
-test_privileges_list_function_csv = (
-    'name\n"{baruwatest=X/baruwatest,bayestest=r/baruwatest,baruwa=X*/baruwatest}"\n'
-)
 
-test_list_db_csv = (
-    "Name,Owner,Encoding,Collate,Ctype,Access privileges,Tablespace\n"
-    "template1,postgres,LATIN1,en_US,en_US"
-    ',"{=c/postgres,postgres=CTc/postgres}",pg_default\n'
-    "template0,postgres,LATIN1,en_US,en_US"
-    ',"{=c/postgres,postgres=CTc/postgres}",pg_default\n'
-    "postgres,postgres,LATIN1,en_US,en_US,,pg_default\n"
-    "test_db,postgres,LATIN1,en_US,en_US,,pg_default"
-)
+@pytest.fixture
+def get_test_privileges_list_function_csv():
+    return """name
+"{baruwatest=X/baruwatest,bayestest=r/baruwatest,baruwa=X*/baruwatest}"
+"""
 
-test_list_schema_csv = (
-    "name,owner,acl\n"
-    'public,postgres,"{postgres=UC/postgres,=UC/postgres}"\n'
-    'pg_toast,postgres,""'
-)
 
-test_list_language_csv = "Name\ninternal\nc\nsql\nplpgsql\n"
+@pytest.fixture
+def get_test_list_db_csv():
+    return """Name,Owner,Encoding,Collate,Ctype,Access privileges,Tablespace
+template1,postgres,LATIN1,en_US,en_US,"{=c/postgres,postgres=CTc/postgres}",pg_default
+template0,postgres,LATIN1,en_US,en_US,"{=c/postgres,postgres=CTc/postgres}",pg_default
+postgres,postgres,LATIN1,en_US,en_US,,pg_default
+test_db,postgres,LATIN1,en_US,en_US,,pg_default
+"""
 
-test_privileges_list_table_csv = (
-    "name\n"
-    '"{baruwatest=arwdDxt/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*/baruwatest}"\n'
-)
 
-test_privileges_list_group_csv = (
-    "rolname,admin_option\nbaruwa,f\nbaruwatest2,t\nbaruwatest,f\n"
-)
+@pytest.fixture
+def get_test_list_schema_csv():
+    return """name,owner,acl
+public,postgres,"{postgres=UC/postgres,=UC/postgres}"
+pg_toast,postgres,""
+"""
+
+
+@pytest.fixture
+def get_test_list_language_csv():
+    return "Name\ninternal\nc\nsql\nplpgsql\n"
+
+
+@pytest.fixture
+def get_test_privileges_list_table_csv():
+    return """name
+"{baruwatest=arwdDxt/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*/baruwatest}"
+"""
+
+
+@pytest.fixture
+def get_test_privileges_list_group_csv():
+    return "rolname,admin_option\nbaruwa,f\nbaruwatest2,t\nbaruwatest,f\n"
 
 
 @pytest.fixture
@@ -108,11 +120,11 @@ def test_verify_password(role, password, verifier, method, result):
     assert postgres._verify_password(role, password, verifier, method) == result
 
 
-def test_has_privileges_with_function():
+def test_has_privileges_with_function(get_test_privileges_list_function_csv):
     with patch(
         "salt.modules.postgres._run_psql",
         MagicMock(
-            return_value={"retcode": 0, "stdout": test_privileges_list_function_csv}
+            return_value={"retcode": 0, "stdout": get_test_privileges_list_function_csv}
         ),
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
         ret = postgres.has_privileges(
@@ -418,10 +430,10 @@ def test_db_create_with_trivial_sql_injection():
         )
 
 
-def test_db_exists():
+def test_db_exists(get_test_list_db_csv):
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_list_db_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_list_db_csv}),
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
         ret = postgres.db_exists(
             "test_db",
@@ -435,10 +447,10 @@ def test_db_exists():
         assert ret is True
 
 
-def test_db_list():
+def test_db_list(get_test_list_db_csv):
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_list_db_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_list_db_csv}),
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
         ret = postgres.db_list(
             user="testuser",
@@ -1222,10 +1234,10 @@ def test_encrypt_passwords():
     )
 
 
-def test_schema_list():
+def test_schema_list(get_test_list_schema_csv):
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_list_schema_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_list_schema_csv}),
     ):
         ret = postgres.schema_list(
             "maint_db",
@@ -1276,7 +1288,10 @@ def test_schema_get():
             ),
         ):
             ret = postgres.schema_get("template1", "public")
-            assert ret is True
+            assert ret == {
+                "acl": "{postgres=UC/postgres,=UC/postgres}",
+                "owner": "postgres",
+            }
 
 
 def test_schema_get_again():
@@ -1294,7 +1309,7 @@ def test_schema_get_again():
             ),
         ):
             ret = postgres.schema_get("template1", "pg_toast")
-            assert ret is False
+            assert ret is None
 
 
 def test_schema_create():
@@ -1405,13 +1420,13 @@ def test_schema_remove2():
         assert ret is False
 
 
-def test_language_list():
+def test_language_list(get_test_list_language_csv):
     """
     Test language listing
     """
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_list_language_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_list_language_csv}),
     ):
         ret = postgres.language_list(
             "testdb",
@@ -1571,13 +1586,13 @@ def test_language_remove_non_exist():
         assert ret is False
 
 
-def test_privileges_list_table():
+def test_privileges_list_table(get_test_privileges_list_table_csv):
     """
     Test privilege listing on a table
     """
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_privileges_list_table_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_privileges_list_table_csv}),
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
         ret = postgres.privileges_list(
             "awl",
@@ -1652,13 +1667,13 @@ def test_privileges_list_table():
         )
 
 
-def test_privileges_list_group():
+def test_privileges_list_group(get_test_privileges_list_group_csv):
     """
     Test privilege listing on a group
     """
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_privileges_list_group_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_privileges_list_group_csv}),
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
         ret = postgres.privileges_list(
             "admin",
@@ -1713,13 +1728,13 @@ def test_privileges_list_group():
         )
 
 
-def test_has_privileges_on_table():
+def test_has_privileges_on_table(get_test_privileges_list_table_csv):
     """
     Test privilege checks on table
     """
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_privileges_list_table_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_privileges_list_table_csv}),
     ):
         ret = postgres.has_privileges(
             "baruwa",
@@ -1795,13 +1810,13 @@ def test_has_privileges_on_table():
         assert ret is True
 
 
-def test_has_privileges_on_group():
+def test_has_privileges_on_group(get_test_privileges_list_group_csv):
     """
     Test privilege checks on group
     """
     with patch(
         "salt.modules.postgres._run_psql",
-        Mock(return_value={"retcode": 0, "stdout": test_privileges_list_group_csv}),
+        Mock(return_value={"retcode": 0, "stdout": get_test_privileges_list_group_csv}),
     ):
         ret = postgres.has_privileges(
             "baruwa",
