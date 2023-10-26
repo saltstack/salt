@@ -1,9 +1,6 @@
-import os.path
 import pathlib
-import subprocess
 
 import pytest
-from pytestskipmarkers.utils import platform
 
 
 @pytest.mark.skip_on_windows
