@@ -57,7 +57,10 @@ def configure_loader_modules():
         ret.update(
             {
                 win_dacl: {"__opts__": opts},
-                win_file: {"__utils__": {"dacl.check_perms": win_dacl.check_perms}},
+                win_file: {
+                    "__utils__": {"dacl.check_perms": win_dacl.check_perms},
+                    "__opts__": opts,
+                },
             }
         )
 

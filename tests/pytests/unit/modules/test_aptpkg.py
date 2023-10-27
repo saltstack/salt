@@ -456,6 +456,103 @@ def test_owner():
         assert aptpkg.owner(*paths) == "wget"
 
 
+def test_owner_no_path():
+    """
+    Test owner when path is not passed
+    """
+    ret = aptpkg.owner()
+    assert ret == ""
+
+
+def test_owner_doesnotexist():
+    """
+    Test owner when the path does not exist
+    """
+    mock = MagicMock(return_value="")
+    with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": mock}):
+        ret = aptpkg.owner("/doesnotexist")
+        assert ret == ""
+
+
+def test_get_http_proxy_url_username_passwd():
+    """
+    Test _get_http_proxy_url when username and passwod set
+    """
+    host = "repo.saltproject.io"
+    port = "888"
+    user = "user"
+    passwd = "password"
+    mock_conf = MagicMock()
+    mock_conf.side_effect = [host, port, user, passwd]
+    patch_conf = patch.dict(aptpkg.__salt__, {"config.option": mock_conf})
+    with patch_conf:
+        ret = aptpkg._get_http_proxy_url()
+    assert ret == f"http://{user}:{passwd}@{host}:{port}"
+
+
+def test_get_http_proxy_url():
+    """
+    Test basic functionality for _get_http_proxy_url
+    """
+    host = "repo.saltproject.io"
+    port = "888"
+    user = ""
+    passwd = ""
+    mock_conf = MagicMock()
+    mock_conf.side_effect = [host, port, user, passwd]
+    patch_conf = patch.dict(aptpkg.__salt__, {"config.option": mock_conf})
+    with patch_conf:
+        ret = aptpkg._get_http_proxy_url()
+    assert ret == f"http://{host}:{port}"
+
+
+def test_get_http_proxy_url_empty():
+    """
+    Test _get_http_proxy_Url when host and port are empty
+    """
+    host = ""
+    port = ""
+    user = ""
+    passwd = ""
+    mock_conf = MagicMock()
+    mock_conf.side_effect = [host, port, user, passwd]
+    patch_conf = patch.dict(aptpkg.__salt__, {"config.option": mock_conf})
+    with patch_conf:
+        ret = aptpkg._get_http_proxy_url()
+    assert ret == ""
+
+
+def test_list_upgrades():
+    """
+    Test basic functinoality for list_upgrades
+    """
+    patch_data = patch("salt.utils.data.is_true", return_value=True)
+    patch_refresh = patch("salt.modules.aptpkg.refresh_db")
+    apt_ret = {
+        "pid": 2791,
+        "retcode": 0,
+        "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nCalculating upgrade...\nThe following NEW packages will be installed:\n  linux-cloud-tools-5.15.0-86 linux-cloud-tools-5.15.0-86-generic\n  linux-headers-5.15.0-86 linux-headers-5.15.0-86-generic\n  linux-image-5.15.0-86-generic linux-modules-5.15.0-86-generic\n  linux-modules-extra-5.15.0-86-generic\nThe following packages have been kept back:\n  libnetplan0 libsgutils2-2 netplan. io sg3-utils sg3-utils-udev\nThe following packages will be upgraded:\n  linux-cloud-tools-virtual linux-generic linux-headers-generic\n  linux-image-generic\n4 upgraded, 7 newly installed, 0 to remove and 5 not upgraded.\nInst linux-cloud-tools-5.15.0-86 (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nInst linux-cloud-tools-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nInst linux-cloud-tools-virtual [5.15.0.69.67] (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nInst linux-modules-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64]) []\nInst linux-image-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nInst linux-modules-extra-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nInst linux-generic [5.15.0.69.67] (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64]) []\nInst linux-image-generic [5.15.0.69.67] (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64]) []\nInst linux-headers-5.15.0-86 (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all]) []\nInst linux-headers-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64]) []\nInst linux-headers-generic [5.15.0.69.67] (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-cloud-tools-5.15.0-86 (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-cloud-tools-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-cloud-tools-virtual (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-modules-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-image-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-modules-extra-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-generic (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-image-generic (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-headers-5.15.0-86 (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [all])\nConf linux-headers-5.15.0-86-generic (5.15.0-86.96 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])\nConf linux-headers-generic (5.15.0.86.83 Ubuntu:22.04/jammy-updates, Ubuntu:22.04/jammy-security [amd64])",
+        "stderr": "Running scope as unit: run-r014f3eae66364254b1cdacf701f1ab73.scope",
+    }
+    mock_apt = MagicMock(return_value=apt_ret)
+    patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
+    with patch_data, patch_refresh, patch_apt:
+        ret = aptpkg.list_upgrades(dist_upgrade=False)
+        assert ret == {
+            "linux-cloud-tools-5.15.0-86": "5.15.0-86.96",
+            "linux-cloud-tools-5.15.0-86-generic": "5.15.0-86.96",
+            "linux-cloud-tools-virtual": "5.15.0.86.83",
+            "linux-modules-5.15.0-86-generic": "5.15.0-86.96",
+            "linux-image-5.15.0-86-generic": "5.15.0-86.96",
+            "linux-modules-extra-5.15.0-86-generic": "5.15.0-86.96",
+            "linux-generic": "5.15.0.86.83",
+            "linux-image-generic": "5.15.0.86.83",
+            "linux-headers-5.15.0-86": "5.15.0-86.96",
+            "linux-headers-5.15.0-86-generic": "5.15.0-86.96",
+            "linux-headers-generic": "5.15.0.86.83",
+        }
+
+
 def test_refresh_db(apt_q_update_var):
     """
     Test - Updates the APT database to latest packages based upon repositories.
@@ -1557,6 +1654,130 @@ def test_latest_version_names_empty():
     """
     ret = aptpkg.latest_version()
     assert ret == ""
+
+
+def test_latest_version_fromrepo():
+    """
+    test latest_version when `fromrepo` is passed in as a kwarg
+    """
+    version = "5.15.0.86.83"
+    fromrepo = "jammy-updates"
+    list_ret = {"linux-cloud-tools-virtual": [version]}
+    apt_ret = {
+        "pid": 4361,
+        "retcode": 0,
+        "stdout": "linux-cloud-tools-virtual:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
+        f"table:\n     {version} 990\n 990"
+        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
+        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
+        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
+        "stderr": "",
+    }
+    mock_apt = MagicMock(return_value=apt_ret)
+    patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
+    mock_list_pkgs = MagicMock(return_value=list_ret)
+    patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
+    with patch_apt, patch_list_pkgs:
+        ret = aptpkg.latest_version(
+            "linux-cloud-tools-virtual",
+            fromrepo=fromrepo,
+            refresh=False,
+            show_installed=True,
+        )
+        assert ret == version
+        assert mock_apt.call_args == call(
+            [
+                "apt-cache",
+                "-q",
+                "policy",
+                "linux-cloud-tools-virtual",
+                "-o",
+                f"APT::Default-Release={fromrepo}",
+            ],
+            scope=False,
+        )
+
+
+def test_latest_version_fromrepo_multiple_names():
+    """
+    test latest_version when multiple names of pkgs are pased
+    """
+    version = "5.15.0.86.83"
+    fromrepo = "jammy-updates"
+    list_ret = {
+        "linux-cloud-tools-virtual": ["5.15.0.69.67"],
+        "linux-generic": ["5.15.0.69.67"],
+    }
+    apt_ret_cloud = {
+        "pid": 4361,
+        "retcode": 0,
+        "stdout": "linux-cloud-tools-virtual:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
+        f"table:\n     {version} 990\n 990"
+        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
+        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
+        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
+        "stderr": "",
+    }
+    apt_ret_generic = {
+        "pid": 4821,
+        "retcode": 0,
+        "stdout": "linux-generic:\n"
+        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n"
+        f"Version table:\n     {version} 990\n        990"
+        "https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-updates/main amd64 Packages\n        500"
+        "https://mirrors.edge.kernel.org/ubuntu"
+        "jammy-security/main amd64 Packages\n *** 5.15.0.69.67"
+        "100\n        100 /var/lib/dpkg/status\n 5.15.0.25.27"
+        "500\n        500 https://mirrors.edge.kernel.org/ubuntu"
+        "jammy/main amd64 Packages",
+        "stderr": "",
+    }
+
+    mock_apt = MagicMock()
+    mock_apt.side_effect = [apt_ret_cloud, apt_ret_generic]
+    patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
+    mock_list_pkgs = MagicMock(return_value=list_ret)
+    patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
+    with patch_apt, patch_list_pkgs:
+        ret = aptpkg.latest_version(
+            "linux-cloud-tools-virtual",
+            "linux-generic",
+            fromrepo=fromrepo,
+            refresh=False,
+            show_installed=True,
+        )
+        assert ret == {"linux-cloud-tools-virtual": version, "linux-generic": version}
+        assert mock_apt.call_args_list == [
+            call(
+                [
+                    "apt-cache",
+                    "-q",
+                    "policy",
+                    "linux-cloud-tools-virtual",
+                    "-o",
+                    "APT::Default-Release=jammy-updates",
+                ],
+                scope=False,
+            ),
+            call(
+                [
+                    "apt-cache",
+                    "-q",
+                    "policy",
+                    "linux-generic",
+                    "-o",
+                    "APT::Default-Release=jammy-updates",
+                ],
+                scope=False,
+            ),
+        ]
 
 
 def test_hold():

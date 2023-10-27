@@ -610,6 +610,22 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  photonos-3-arm64-ci-deps:
+    name: Photon OS 3 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   photonos-4-ci-deps:
     name: Photon OS 4 Deps
     needs:
@@ -634,6 +650,38 @@ jobs:
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-ci-deps:
+    name: Photon OS 5 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-arm64-ci-deps:
+    name: Photon OS 5 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -795,9 +843,12 @@ jobs:
       - fedora-38-arm64-ci-deps
       - fedora-38-ci-deps
       - macos-12-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-3-ci-deps
       - photonos-4-arm64-ci-deps
       - photonos-4-ci-deps
+      - photonos-5-arm64-ci-deps
+      - photonos-5-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2204-arm64-ci-deps
@@ -1018,8 +1069,11 @@ jobs:
       - fedora-38-arm64-ci-deps
       - opensuse-15-ci-deps
       - photonos-3-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-4-ci-deps
       - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2204-ci-deps

@@ -24,6 +24,7 @@ def test_system_config(salt_cli, salt_minion):
             "Fedora Linux-36",
             "VMware Photon OS-3",
             "VMware Photon OS-4",
+            "VMware Photon OS-5",
         ):
             ret = subprocess.call(
                 "systemctl show -p ${config} salt-minion.service", shell=True

@@ -1159,6 +1159,23 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  photonos-3-arm64-ci-deps:
+    name: Photon OS 3 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   photonos-4-ci-deps:
     name: Photon OS 4 Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1185,6 +1202,40 @@ jobs:
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-ci-deps:
+    name: Photon OS 5 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-arm64-ci-deps:
+    name: Photon OS 5 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -1481,6 +1532,28 @@ jobs:
       skip-junit-reports: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  photonos-3-arm64-pkg-tests:
+    name: Photon OS 3 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - photonos-3-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1513,6 +1586,50 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-5-pkg-tests:
+    name: Photon OS 5 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - photonos-5-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-5-arm64-pkg-tests:
+    name: Photon OS 5 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - photonos-5-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -2167,6 +2284,26 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
 
+  photonos-3-arm64:
+    name: Photon OS 3 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-3-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
   photonos-4:
     name: Photon OS 4 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2196,6 +2333,46 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
+  photonos-5:
+    name: Photon OS 5 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-5-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: true
+      skip-junit-reports: true
+
+  photonos-5-arm64:
+    name: Photon OS 5 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-5-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -2597,6 +2774,14 @@ jobs:
           - pkg-type: rpm
             distro: photon
             version: "4"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: photon
+            version: "5"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: photon
+            version: "5"
             arch: aarch64
 
     steps:
@@ -3122,9 +3307,12 @@ jobs:
       - fedora-38-arm64-ci-deps
       - fedora-38-ci-deps
       - macos-12-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-3-ci-deps
       - photonos-4-arm64-ci-deps
       - photonos-4-ci-deps
+      - photonos-5-arm64-ci-deps
+      - photonos-5-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2204-arm64-ci-deps
@@ -3179,8 +3367,11 @@ jobs:
       - fedora-38-arm64-ci-deps
       - opensuse-15-ci-deps
       - photonos-3-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-4-ci-deps
       - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2204-ci-deps
@@ -3205,8 +3396,11 @@ jobs:
       - fedora-38
       - opensuse-15
       - photonos-3
+      - photonos-3-arm64
       - photonos-4
       - photonos-4-arm64
+      - photonos-5
+      - photonos-5-arm64
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
@@ -3221,8 +3415,11 @@ jobs:
       - debian-12-pkg-tests
       - debian-12-arm64-pkg-tests
       - photonos-3-pkg-tests
+      - photonos-3-arm64-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
+      - photonos-5-pkg-tests
+      - photonos-5-arm64-pkg-tests
       - ubuntu-2004-pkg-tests
       - ubuntu-2004-arm64-pkg-tests
       - ubuntu-2204-pkg-tests
