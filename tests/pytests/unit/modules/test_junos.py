@@ -28,12 +28,12 @@ except ImportError:
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
+    pytest.mark.skipif(
+        not HAS_JUNOS, reason="The junos-eznc and jxmlease modules are required"
+    ),
 ]
 
 
-@pytest.mark.skipif(
-    not HAS_JUNOS, reason="The junos-eznc and jxmlease modules are required"
-)
 @pytest.fixture
 def mock_cp(*args, **kwargs):
     pass
@@ -206,8 +206,115 @@ def test__timeout_cleankwargs_decorator():
 
 def test_facts_refresh():
     with patch("salt.modules.saltutil.sync_grains") as mock_sync_grains:
-        ret = dict()
-        ret["facts"] = {
+        ret = {
+            "out": True,
+            "facts": {
+                "2RE": True,
+                "HOME": "/var/home/regress",
+                "RE0": {
+                    "last_reboot_reason": "0x200:normal shutdown",
+                    "mastership_state": "master",
+                    "model": "RE-VMX",
+                    "status": "OK",
+                    "up_time": "11 days, 23 hours, 16 minutes, 54 seconds",
+                },
+                "RE1": {
+                    "last_reboot_reason": "0x200:normal shutdown",
+                    "mastership_state": "backup",
+                    "model": "RE-VMX",
+                    "status": "OK",
+                    "up_time": "11 days, 23 hours, 16 minutes, 41 seconds",
+                },
+                "RE_hw_mi": False,
+                "current_re": ["re0", "master", "node", "fwdd", "member", "pfem"],
+                "domain": "englab.juniper.net",
+                "fqdn": "R1_re0.englab.juniper.net",
+                "hostname": "R1_re0",
+                "hostname_info": {"re0": "R1_re0", "re1": "R1_re01"},
+                "ifd_style": "CLASSIC",
+                "junos_info": {
+                    "re0": {
+                        "object": {
+                            "build": None,
+                            "major": (16, 1),
+                            "minor": "20160413_0837_aamish",
+                            "type": "I",
+                        },
+                        "text": "16.1I20160413_0837_aamish",
+                    },
+                    "re1": {
+                        "object": {
+                            "build": None,
+                            "major": (16, 1),
+                            "minor": "20160413_0837_aamish",
+                            "type": "I",
+                        },
+                        "text": "16.1I20160413_0837_aamish",
+                    },
+                },
+                "master": "RE0",
+                "model": "MX240",
+                "model_info": {"re0": "MX240", "re1": "MX240"},
+                "personality": "MX",
+                "re_info": {
+                    "default": {
+                        "0": {
+                            "last_reboot_reason": "0x200:normal shutdown",
+                            "mastership_state": "master",
+                            "model": "RE-VMX",
+                            "status": "OK",
+                        },
+                        "1": {
+                            "last_reboot_reason": "0x200:normal shutdown",
+                            "mastership_state": "backup",
+                            "model": "RE-VMX",
+                            "status": "OK",
+                        },
+                        "default": {
+                            "last_reboot_reason": "0x200:normal shutdown",
+                            "mastership_state": "master",
+                            "model": "RE-VMX",
+                            "status": "OK",
+                        },
+                    }
+                },
+                "re_master": {"default": "0"},
+                "serialnumber": "VMX4eaf",
+                "srx_cluster": None,
+                "switch_style": "BRIDGE_DOMAIN",
+                "vc_capable": False,
+                "vc_fabric": None,
+                "vc_master": None,
+                "vc_mode": None,
+                "version": "16.1I20160413_0837_aamish",
+                "version_RE0": "16.1I20160413_0837_aamish",
+                "version_RE1": "16.1I20160413_0837_aamish",
+                "version_info": {
+                    "build": None,
+                    "major": (16, 1),
+                    "minor": "20160413_0837_aamish",
+                    "type": "I",
+                },
+                "virtual": True,
+            },
+        }
+        assert junos.facts_refresh() == ret
+
+
+def test_facts_refresh_exception():
+    with patch("jnpr.junos.device.Device.facts_refresh") as mock_facts_refresh:
+        mock_facts_refresh.side_effect = raise_exception
+        ret = {
+            "message": 'Execution failed due to "Test exception"',
+            "out": False,
+        }
+        assert junos.facts_refresh() == ret
+
+
+def test_facts():
+    ret = {
+        "out": True,
+        "facts": {
             "2RE": True,
             "HOME": "/var/home/regress",
             "RE0": {
@@ -295,127 +402,25 @@ def test_facts_refresh():
                 "type": "I",
             },
             "virtual": True,
-        }
-        ret["out"] = True
-        assert junos.facts_refresh() == ret
-
-
-def test_facts_refresh_exception():
-    with patch("jnpr.junos.device.Device.facts_refresh") as mock_facts_refresh:
-        mock_facts_refresh.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Execution failed due to "Test exception"'
-        ret["out"] = False
-        assert junos.facts_refresh() == ret
-
-
-def test_facts():
-    ret = dict()
-    ret["facts"] = {
-        "2RE": True,
-        "HOME": "/var/home/regress",
-        "RE0": {
-            "last_reboot_reason": "0x200:normal shutdown",
-            "mastership_state": "master",
-            "model": "RE-VMX",
-            "status": "OK",
-            "up_time": "11 days, 23 hours, 16 minutes, 54 seconds",
         },
-        "RE1": {
-            "last_reboot_reason": "0x200:normal shutdown",
-            "mastership_state": "backup",
-            "model": "RE-VMX",
-            "status": "OK",
-            "up_time": "11 days, 23 hours, 16 minutes, 41 seconds",
-        },
-        "RE_hw_mi": False,
-        "current_re": ["re0", "master", "node", "fwdd", "member", "pfem"],
-        "domain": "englab.juniper.net",
-        "fqdn": "R1_re0.englab.juniper.net",
-        "hostname": "R1_re0",
-        "hostname_info": {"re0": "R1_re0", "re1": "R1_re01"},
-        "ifd_style": "CLASSIC",
-        "junos_info": {
-            "re0": {
-                "object": {
-                    "build": None,
-                    "major": (16, 1),
-                    "minor": "20160413_0837_aamish",
-                    "type": "I",
-                },
-                "text": "16.1I20160413_0837_aamish",
-            },
-            "re1": {
-                "object": {
-                    "build": None,
-                    "major": (16, 1),
-                    "minor": "20160413_0837_aamish",
-                    "type": "I",
-                },
-                "text": "16.1I20160413_0837_aamish",
-            },
-        },
-        "master": "RE0",
-        "model": "MX240",
-        "model_info": {"re0": "MX240", "re1": "MX240"},
-        "personality": "MX",
-        "re_info": {
-            "default": {
-                "0": {
-                    "last_reboot_reason": "0x200:normal shutdown",
-                    "mastership_state": "master",
-                    "model": "RE-VMX",
-                    "status": "OK",
-                },
-                "1": {
-                    "last_reboot_reason": "0x200:normal shutdown",
-                    "mastership_state": "backup",
-                    "model": "RE-VMX",
-                    "status": "OK",
-                },
-                "default": {
-                    "last_reboot_reason": "0x200:normal shutdown",
-                    "mastership_state": "master",
-                    "model": "RE-VMX",
-                    "status": "OK",
-                },
-            }
-        },
-        "re_master": {"default": "0"},
-        "serialnumber": "VMX4eaf",
-        "srx_cluster": None,
-        "switch_style": "BRIDGE_DOMAIN",
-        "vc_capable": False,
-        "vc_fabric": None,
-        "vc_master": None,
-        "vc_mode": None,
-        "version": "16.1I20160413_0837_aamish",
-        "version_RE0": "16.1I20160413_0837_aamish",
-        "version_RE1": "16.1I20160413_0837_aamish",
-        "version_info": {
-            "build": None,
-            "major": (16, 1),
-            "minor": "20160413_0837_aamish",
-            "type": "I",
-        },
-        "virtual": True,
     }
-    ret["out"] = True
     assert junos.facts() == ret
 
 
 def test_facts_exception():
     with patch.dict(junos.__proxy__, {"junos.get_serialized_facts": raise_exception}):
-        ret = dict()
-        ret["message"] = 'Could not display facts due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not display facts due to "Test exception"',
+            "out": False,
+        }
         assert junos.facts() == ret
 
 
 def test_set_hostname_without_args():
-    ret = dict()
-    ret["message"] = "Please provide the hostname."
-    ret["out"] = False
+    ret = {
+        "message": "Please provide the hostname.",
+        "out": False,
+    }
     assert junos.set_hostname() == ret
 
 
@@ -428,18 +433,20 @@ def test_set_hostname_load_called_with_valid_name():
 def test_set_hostname_raise_exception_for_load():
     with patch("jnpr.junos.utils.config.Config.load") as mock_load:
         mock_load.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not load configuration due to error "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not load configuration due to error "Test exception"',
+            "out": False,
+        }
         assert junos.set_hostname("Test-name") == ret
 
 
 def test_set_hostname_raise_exception_for_commit_check():
     with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
         mock_commit_check.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not commit check due to error "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not commit check due to error "Test exception"',
+            "out": False,
+        }
         assert junos.set_hostname("test-name") == ret
 
 
@@ -507,20 +514,20 @@ def test_set_hostname_successful_return_message():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = "Successfully changed hostname."
-        ret["out"] = True
+        ret = {
+            "message": "Successfully changed hostname.",
+            "out": True,
+        }
         assert junos.set_hostname("test-name", **args) == ret
 
 
 def test_set_hostname_raise_exception_for_commit():
     with patch("jnpr.junos.utils.config.Config.commit") as mock_commit:
         mock_commit.side_effect = raise_exception
-        ret = dict()
-        ret[
-            "message"
-        ] = 'Successfully loaded host-name but commit failed with "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Successfully loaded host-name but commit failed with "Test exception"',
+            "out": False,
+        }
         assert junos.set_hostname("test-name") == ret
 
 
@@ -529,9 +536,10 @@ def test_set_hostname_fail_commit_check():
         "jnpr.junos.utils.config.Config.commit_check"
     ) as mock_commit_check, patch("salt.modules.junos.rollback") as mock_rollback:
         mock_commit_check.return_value = False
-        ret = dict()
-        ret["out"] = False
-        ret["message"] = "Successfully loaded host-name but pre-commit check failed."
+        ret = {
+            "message": "Successfully loaded host-name but pre-commit check failed.",
+            "out": False,
+        }
         assert junos.set_hostname("test") == ret
 
 
@@ -543,18 +551,20 @@ def test_commit_without_args():
     ) as mock_commit:
         mock_commit.return_value = True
         mock_commit_check.return_value = True
-        ret = dict()
-        ret["message"] = "Commit Successful."
-        ret["out"] = True
+        ret = {
+            "message": "Commit Successful.",
+            "out": True,
+        }
         assert junos.commit() == ret
 
 
 def test_commit_raise_commit_check_exception():
     with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
         mock_commit_check.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not perform commit check due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not perform commit check due to "Test exception"',
+            "out": False,
+        }
         assert junos.commit() == ret
 
 
@@ -566,11 +576,10 @@ def test_commit_raise_commit_exception():
     ) as mock_commit:
         mock_commit_check.return_value = True
         mock_commit.side_effect = raise_exception
-        ret = dict()
-        ret["out"] = False
-        ret[
-            "message"
-        ] = 'Commit check succeeded but actual commit failed with "Test exception"'
+        ret = {
+            "message": 'Commit check succeeded but actual commit failed with "Test exception"',
+            "out": False,
+        }
         assert junos.commit() == ret
 
 
@@ -630,27 +639,30 @@ def test_commit_pyez_commit_returning_false():
     ) as mock_commit:
         mock_commit.return_value = False
         mock_commit_check.return_value = True
-        ret = dict()
-        ret["message"] = "Commit failed."
-        ret["out"] = False
+        ret = {
+            "message": "Commit failed.",
+            "out": False,
+        }
         assert junos.commit() == ret
 
 
 def test_commit_pyez_commit_check_returns_false():
     with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
         mock_commit_check.return_value = False
-        ret = dict()
-        ret["out"] = False
-        ret["message"] = "Pre-commit check failed."
+        ret = {
+            "message": "Pre-commit check failed.",
+            "out": False,
+        }
         assert junos.commit() == ret
 
 
 def test_rollback_exception():
     with patch("jnpr.junos.utils.config.Config.rollback") as mock_rollback:
         mock_rollback.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Rollback failed due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Rollback failed due to "Test exception"',
+            "out": False,
+        }
         assert junos.rollback() == ret
 
 
@@ -664,18 +676,20 @@ def test_rollback_without_args_success():
     ) as mock_rollback:
         mock_commit_check.return_value = True
         mock_rollback.return_value = True
-        ret = dict()
-        ret["message"] = "Rollback successful"
-        ret["out"] = True
+        ret = {
+            "message": "Rollback successful",
+            "out": True,
+        }
         assert junos.rollback() == ret
 
 
 def test_rollback_without_args_fail():
     with patch("jnpr.junos.utils.config.Config.rollback") as mock_rollback:
         mock_rollback.return_value = False
-        ret = dict()
-        ret["message"] = "Rollback failed"
-        ret["out"] = False
+        ret = {
+            "message": "Rollback failed",
+            "out": False,
+        }
         assert junos.rollback() == ret
 
 
@@ -863,9 +877,10 @@ def test_rollback_commit_check_exception():
         "jnpr.junos.utils.config.Config.rollback"
     ) as mock_rollback:
         mock_commit_check.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not commit check due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not commit check due to "Test exception"',
+            "out": False,
+        }
         assert junos.rollback() == ret
 
 
@@ -879,11 +894,10 @@ def test_rollback_commit_exception():
     ) as mock_rollback:
         mock_commit_check.return_value = True
         mock_commit.side_effect = raise_exception
-        ret = dict()
-        ret[
-            "message"
-        ] = 'Rollback successful but commit failed with error "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Rollback successful but commit failed with error "Test exception"',
+            "out": False,
+        }
         assert junos.rollback() == ret
 
 
@@ -894,9 +908,10 @@ def test_rollback_commit_check_fails():
         "jnpr.junos.utils.config.Config.rollback"
     ) as mock_rollback:
         mock_commit_check.return_value = False
-        ret = dict()
-        ret["message"] = "Rollback successful but pre-commit check failed."
-        ret["out"] = False
+        ret = {
+            "message": "Rollback successful but pre-commit check failed.",
+            "out": False,
+        }
         assert junos.rollback() == ret
 
 
@@ -915,16 +930,18 @@ def test_diff_with_arg():
 def test_diff_exception():
     with patch("jnpr.junos.utils.config.Config.diff") as mock_diff:
         mock_diff.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not get diff with error "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not get diff with error "Test exception"',
+            "out": False,
+        }
         assert junos.diff() == ret
 
 
 def test_ping_without_args():
-    ret = dict()
-    ret["message"] = "Please specify the destination ip to ping."
-    ret["out"] = False
+    ret = {
+        "message": "Please specify the destination ip to ping.",
+        "out": False,
+    }
     assert junos.ping() == ret
 
 
@@ -958,16 +975,18 @@ def test_ping_ttl():
 def test_ping_exception():
     with patch("jnpr.junos.device.Device.execute") as mock_execute:
         mock_execute.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Execution failed due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Execution failed due to "Test exception"',
+            "out": False,
+        }
         assert junos.ping("1.1.1.1") == ret
 
 
 def test_cli_without_args():
-    ret = dict()
-    ret["message"] = "Please provide the CLI command to be executed."
-    ret["out"] = False
+    ret = {
+        "message": "Please provide the CLI command to be executed.",
+        "out": False,
+    }
     assert junos.cli() == ret
 
 
@@ -980,9 +999,10 @@ def test_cli_with_format_as_empty_string():
 def test_cli():
     with patch("jnpr.junos.device.Device.cli") as mock_cli:
         mock_cli.return_vale = "CLI result"
-        ret = dict()
-        ret["message"] = "CLI result"
-        ret["out"] = True
+        ret = {
+            "message": "CLI result",
+            "out": True,
+        }
         junos.cli("show version")
         mock_cli.assert_called_with("show version", "text", warning=False)
 
@@ -1003,9 +1023,10 @@ def test_cli_format_xml():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = "<root><a>test</a></root>"
-        ret["out"] = True
+        ret = {
+            "message": "<root><a>test</a></root>",
+            "out": True,
+        }
         assert junos.cli("show version", **args) == ret
         mock_cli.assert_called_with("show version", "xml", warning=False)
         mock_to_string.assert_called_once_with("<root><a>test</a></root>")
@@ -1015,9 +1036,10 @@ def test_cli_format_xml():
 def test_cli_exception_in_cli():
     with patch("jnpr.junos.device.Device.cli") as mock_cli:
         mock_cli.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Execution failed due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Execution failed due to "Test exception"',
+            "out": False,
+        }
         assert junos.cli("show version") == ret
 
 
@@ -1037,9 +1059,10 @@ def test_cli_output_save():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = "Test return"
-        ret["out"] = True
+        ret = {
+            "message": "Test return",
+            "out": True,
+        }
         assert junos.cli("show version", **args) == ret
         mock_fopen.assert_called_with("/path/to/file", "w")
         mock_cli.assert_called_with("show version", "text", warning=False)
@@ -1062,24 +1085,27 @@ def test_cli_output_save_ioexception():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = 'Unable to open "/path/to/file" to write'
-        ret["out"] = False
+        ret = {
+            "message": 'Unable to open "/path/to/file" to write',
+            "out": False,
+        }
         assert junos.cli("show version", **args) == ret
 
 
 def test_shutdown_without_args():
-    ret = dict()
-    ret["message"] = "Provide either one of the arguments: shutdown or reboot."
-    ret["out"] = False
+    ret = {
+        "message": "Provide either one of the arguments: shutdown or reboot.",
+        "out": False,
+    }
     assert junos.shutdown() == ret
 
 
 def test_shutdown_with_reboot_args():
     with patch("salt.modules.junos.SW.reboot") as mock_reboot:
-        ret = dict()
-        ret["message"] = "Successfully powered off/rebooted."
-        ret["out"] = True
+        ret = {
+            "message": "Successfully powered off/rebooted.",
+            "out": True,
+        }
         args = {
             "__pub_user": "root",
             "__pub_arg": [{"reboot": True}],
@@ -1096,9 +1122,10 @@ def test_shutdown_with_reboot_args():
 
 def test_shutdown_with_poweroff_args():
     with patch("salt.modules.junos.SW.poweroff") as mock_poweroff:
-        ret = dict()
-        ret["message"] = "Successfully powered off/rebooted."
-        ret["out"] = True
+        ret = {
+            "message": "Successfully powered off/rebooted.",
+            "out": True,
+        }
         args = {
             "__pub_user": "root",
             "__pub_arg": [{"shutdown": True}],
@@ -1114,9 +1141,10 @@ def test_shutdown_with_poweroff_args():
 
 
 def test_shutdown_with_shutdown_as_false():
-    ret = dict()
-    ret["message"] = "Nothing to be done."
-    ret["out"] = False
+    ret = {
+        "message": "Nothing to be done.",
+        "out": False,
+    }
     args = {
         "__pub_user": "root",
         "__pub_arg": [{"shutdown": False}],
@@ -1177,16 +1205,18 @@ def test_shutdown_fail_with_exception():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = 'Could not poweroff/reboot because "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not poweroff/reboot because "Test exception"',
+            "out": False,
+        }
         assert junos.shutdown(**args) == ret
 
 
 def test_install_config_without_args():
-    ret = dict()
-    ret["message"] = "Please provide the salt path where the configuration is present"
-    ret["out"] = False
+    ret = {
+        "message": "Please provide the salt path where the configuration is present",
+        "out": False,
+    }
     assert junos.install_config() == ret
 
 
@@ -1194,10 +1224,10 @@ def test_install_config_cp_fails():
     with patch.dict(
         junos.__salt__, {"file.file_exists": MagicMock(return_value=False)}
     ):
-        ret = dict()
-        ret = dict()
-        ret["message"] = "Invalid file path."
-        ret["out"] = False
+        ret = {
+            "message": "Invalid file path.",
+            "out": False,
+        }
         assert junos.install_config("path") == ret
 
 
@@ -1205,10 +1235,10 @@ def test_install_config_file_cp_fails():
     with patch.dict(
         junos.__salt__, {"file.file_exists": MagicMock(return_value=False)}
     ):
-        ret = dict()
-        ret = dict()
-        ret["message"] = "Invalid file path."
-        ret["out"] = False
+        ret = {
+            "message": "Invalid file path.",
+            "out": False,
+        }
         assert junos.install_config("path") == ret
 
 
@@ -1246,9 +1276,10 @@ def test_install_config():
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config.set") == ret
             mock_load.assert_called_with(path="test/path/config", format="set")
 
@@ -1287,9 +1318,10 @@ def test_install_config_xml_file():
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config.xml") == ret
             mock_load.assert_called_with(path="test/path/config", format="xml")
 
@@ -1328,9 +1360,10 @@ def test_install_config_text_file():
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config") == ret
             mock_load.assert_called_with(path="test/path/config", format="text")
 
@@ -1369,9 +1402,10 @@ def test_install_config_cache_not_exists():
             mock_commit_check.return_value = True
             mock_mkdtemp.return_value = "/tmp/argr5351afd"
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert (
                 junos.install_config("salt://actual/path/config", template_vars=True)
                 == ret
@@ -1424,9 +1458,10 @@ def test_install_config_replace():
                 "__pub_ret": "",
             }
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config.set", **args) == ret
             mock_load.assert_called_with(
                 path="test/path/config", format="set", merge=False
@@ -1478,9 +1513,10 @@ def test_install_config_overwrite():
                 "__pub_ret": "",
             }
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config.xml", **args) == ret
             mock_load.assert_called_with(
                 path="test/path/config", format="xml", overwrite=True
@@ -1532,9 +1568,10 @@ def test_install_config_overwrite_false():
                 "__pub_ret": "",
             }
 
-            ret = dict()
-            ret["message"] = "Successfully loaded and committed!"
-            ret["out"] = True
+            ret = {
+                "message": "Successfully loaded and committed!",
+                "out": True,
+            }
             assert junos.install_config("salt://actual/path/config", **args) == ret
             mock_load.assert_called_with(
                 path="test/path/config", format="text", merge=True
@@ -1557,10 +1594,11 @@ def test_install_config_load_causes_exception():
         mock_getsize.return_value = 10
         mock_mkstemp.return_value = "test/path/config"
         mock_load.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not load configuration due to : "Test exception"'
-        ret["format"] = "set"
-        ret["out"] = False
+        ret = {
+            "message": 'Could not load configuration due to : "Test exception"',
+            "out": False,
+            "format": "set",
+        }
         assert junos.install_config(path="actual/path/config.set") == ret
 
 
@@ -1580,9 +1618,10 @@ def test_install_config_no_diff():
         mock_getsize.return_value = 10
         mock_mkstemp.return_value = "test/path/config"
         mock_diff.return_value = None
-        ret = dict()
-        ret["message"] = "Configuration already applied!"
-        ret["out"] = True
+        ret = {
+            "message": "Configuration already applied!",
+            "out": True,
+        }
         assert junos.install_config("actual/path/config") == ret
 
 
@@ -1621,9 +1660,10 @@ def test_install_config_write_diff():
             "__pub_ret": "",
         }
 
-        ret = dict()
-        ret["message"] = "Successfully loaded and committed!"
-        ret["out"] = True
+        ret = {
+            "message": "Successfully loaded and committed!",
+            "out": True,
+        }
         assert junos.install_config("actual/path/config", **args) == ret
         mock_fopen.assert_called_with("copy/config/here", "w")
 
@@ -1666,9 +1706,10 @@ def test_install_config_write_diff_exception():
             "__pub_ret": "",
         }
 
-        ret = dict()
-        ret["message"] = "Could not write into diffs_file due to: 'Test exception'"
-        ret["out"] = False
+        ret = {
+            "message": "Could not write into diffs_file due to: 'Test exception'",
+            "out": False,
+        }
         assert junos.install_config("actual/path/config", **args) == ret
 
 
@@ -1706,9 +1747,10 @@ def test_install_config_commit_params():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = "Successfully loaded and committed!"
-        ret["out"] = True
+        ret = {
+            "message": "Successfully loaded and committed!",
+            "out": True,
+        }
         assert junos.install_config("actual/path/config", **args) == ret
         mock_commit.assert_called_with(comment="comitted via salt", confirm=3)
 
@@ -1737,12 +1779,10 @@ def test_install_config_commit_check_fails():
         mock_diff.return_value = "diff"
         mock_commit_check.return_value = False
 
-        ret = dict()
-        ret["message"] = (
-            "Loaded configuration but commit check failed, hence rolling back"
-            " configuration."
-        )
-        ret["out"] = False
+        ret = {
+            "message": "Loaded configuration but commit check failed, hence rolling back configuration.",
+            "out": False,
+        }
         assert junos.install_config("actual/path/config.xml") == ret
 
 
@@ -1770,11 +1810,10 @@ def test_install_config_commit_exception():
         mock_diff.return_value = "diff"
         mock_commit_check.return_value = True
         mock_commit.side_effect = raise_exception
-        ret = dict()
-        ret[
-            "message"
-        ] = 'Commit check successful but commit failed with "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Commit check successful but commit failed with "Test exception"',
+            "out": False,
+        }
         assert junos.install_config("actual/path/config") == ret
 
 
@@ -1801,12 +1840,10 @@ def test_install_config_test_mode():
         mock_mkstemp.return_value = "test/path/config"
         mock_diff.return_value = "diff"
         mock_commit_check.return_value = True
-        ret = dict()
-        ret["message"] = (
-            "Commit check passed, but skipping commit for dry-run and rolling back"
-            " configuration."
-        )
-        ret["out"] = True
+        ret = {
+            "message": "Commit check passed, but skipping commit for dry-run and rolling back configuration.",
+            "out": True,
+        }
         assert junos.install_config("actual/path/config", test=True) == ret
         mock_commit.assert_not_called()
 
@@ -1834,11 +1871,10 @@ def test_install_config_write_diff_dynamic_mode():
         mock_mkstemp.return_value = "test/path/config"
         mock_diff.return_value = "diff"
         mock_commit_check.return_value = True
-        ret = dict()
-        ret[
-            "message"
-        ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
-        ret["out"] = False
+        ret = {
+            "message": "Write diff is not supported with dynamic/ephemeral configuration mode",
+            "out": False,
+        }
         assert (
             junos.install_config(
                 "actual/path/config", mode="dynamic", diffs_file="/path/to/dif"
@@ -1871,9 +1907,10 @@ def test_install_config_unknown_mode():
         mock_mkstemp.return_value = "test/path/config"
         mock_diff.return_value = "diff"
         mock_commit_check.return_value = True
-        ret = dict()
-        ret["message"] = "install_config failed due to: unsupported action: abcdef"
-        ret["out"] = False
+        ret = {
+            "message": "install_config failed due to: unsupported action: abcdef",
+            "out": False,
+        }
         assert junos.install_config("actual/path/config", mode="abcdef") == ret
         mock_commit.assert_not_called()
 
@@ -1881,26 +1918,29 @@ def test_install_config_unknown_mode():
 def test_zeroize():
     with patch("jnpr.junos.device.Device.cli") as mock_cli:
         result = junos.zeroize()
-        ret = dict()
-        ret["out"] = True
-        ret["message"] = "Completed zeroize and rebooted"
         mock_cli.assert_called_once_with("request system zeroize")
+        ret = {
+            "message": "Completed zeroize and rebooted",
+            "out": True,
+        }
         assert result == ret
 
 
 def test_zeroize_throw_exception():
     with patch("jnpr.junos.device.Device.cli") as mock_cli:
         mock_cli.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not zeroize due to : "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not zeroize due to : "Test exception"',
+            "out": False,
+        }
         assert junos.zeroize() == ret
 
 
 def test_install_os_without_args():
-    ret = dict()
-    ret["message"] = "Please provide the salt path where the junos image is present."
-    ret["out"] = False
+    ret = {
+        "message": "Please provide the salt path where the junos image is present.",
+        "out": False,
+    }
     assert junos.install_os() == ret
 
 
@@ -1933,12 +1973,10 @@ def test_install_os_cp_fails():
                 False,
                 "Invalid path. Please provide a valid image path",
             )
-            ret = dict()
-            ret["message"] = (
-                "Installation failed. Reason: Invalid path. Please provide a valid"
-                " image path"
-            )
-            ret["out"] = False
+            ret = {
+                "message": "Installation failed. Reason: Invalid path. Please provide a valid image path",
+                "out": False,
+            }
             assert junos.install_os("salt://image/path/") == ret
 
 
@@ -1946,9 +1984,10 @@ def test_install_os_image_cp_fails():
     with patch.dict(
         junos.__salt__, {"file.file_exists": MagicMock(return_value=False)}
     ):
-        ret = dict()
-        ret["message"] = "Invalid path. Please provide a valid image path"
-        ret["out"] = False
+        ret = {
+            "message": "Invalid path. Please provide a valid image path",
+            "out": False,
+        }
         assert junos.install_os("/image/path/") == ret
 
 
@@ -1977,9 +2016,10 @@ def test_install_os():
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
             mock_install.return_value = True, "installed"
-            ret = dict()
-            ret["out"] = True
-            ret["message"] = "Installed the os."
+            ret = {
+                "message": "Installed the os.",
+                "out": True,
+            }
             assert junos.install_os("path") == ret
 
 
@@ -1998,9 +2038,10 @@ def test_install_os_failure():
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.return_value = False, "because we are testing failure"
-        ret = dict()
-        ret["out"] = False
-        ret["message"] = "Installation failed. Reason: because we are testing failure"
+        ret = {
+            "message": "Installation failed. Reason: because we are testing failure",
+            "out": False,
+        }
         assert junos.install_os("path") == ret
 
 
@@ -2029,9 +2070,10 @@ def test_install_os_with_reboot_arg():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret["message"] = "Successfully installed and rebooted!"
-        ret["out"] = True
+        ret = {
+            "message": "Successfully installed and rebooted!",
+            "out": True,
+        }
         assert junos.install_os("path", **args) == ret
 
 
@@ -2050,9 +2092,10 @@ def test_install_os_pyez_install_throws_exception():
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Installation failed due to: "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Installation failed due to: "Test exception"',
+            "out": False,
+        }
         assert junos.install_os("path") == ret
 
 
@@ -2082,11 +2125,10 @@ def test_install_os_with_reboot_raises_exception():
             "__pub_tgt_type": "glob",
             "__pub_ret": "",
         }
-        ret = dict()
-        ret[
-            "message"
-        ] = 'Installation successful but reboot failed due to : "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Installation successful but reboot failed due to : "Test exception"',
+            "out": False,
+        }
         assert junos.install_os("path", **args) == ret
 
 
@@ -2105,9 +2147,10 @@ def test_install_os_no_copy():
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.return_value = True, "installed"
-        ret = dict()
-        ret["out"] = True
-        ret["message"] = "Installed the os."
+        ret = {
+            "message": "Installed the os.",
+            "out": True,
+        }
         assert junos.install_os("path", no_copy=True) == ret
         mock_install.assert_called_with(
             "path", no_copy=True, progress=True, timeout=1800
@@ -2131,9 +2174,10 @@ def test_install_os_issu():
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.return_value = True, "installed"
-        ret = dict()
-        ret["out"] = True
-        ret["message"] = "Installed the os."
+        ret = {
+            "message": "Installed the os.",
+            "out": True,
+        }
         assert junos.install_os("path", issu=True) == ret
         mock_install.assert_called_with(ANY, issu=True, progress=True, timeout=1800)
 
@@ -2153,9 +2197,10 @@ def test_install_os_add_params():
         mock_getsize.return_value = 10
         mock_isfile.return_value = True
         mock_install.return_value = True, "installed"
-        ret = dict()
-        ret["out"] = True
-        ret["message"] = "Installed the os."
+        ret = {
+            "message": "Installed the os.",
+            "out": True,
+        }
         remote_path = "/path/to/file"
         assert (
             junos.install_os("path", remote_path=remote_path, nssu=True, validate=True)
@@ -2184,9 +2229,10 @@ def test_file_copy_invalid_src(mock_scpclient, mock_put, mock_ssh):
     mock_put.side_effect = Exception(invalid_path)
     with patch("os.path.isfile") as mock_isfile:
         mock_isfile.return_value = False
-        ret = dict()
-        ret["message"] = 'Could not copy file : "invalid/file/path"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not copy file : "invalid/file/path"',
+            "out": False,
+        }
         assert junos.file_copy(invalid_path, "file") == ret
 
 
@@ -2199,9 +2245,10 @@ def test_file_copy():
         "os.path.isfile"
     ) as mock_isfile:
         mock_isfile.return_value = True
-        ret = dict()
-        ret["message"] = "Successfully copied file from test/src/file to file"
-        ret["out"] = True
+        ret = {
+            "message": "Successfully copied file from test/src/file to file",
+            "out": True,
+        }
         assert junos.file_copy(dest="file", src="test/src/file") == ret
 
 
@@ -2211,9 +2258,10 @@ def test_file_copy_exception():
     ) as mock_isfile:
         mock_isfile.return_value = True
         mock_scp.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'Could not copy file : "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'Could not copy file : "Test exception"',
+            "out": False,
+        }
         assert junos.file_copy(dest="file", src="test/src/file") == ret
 
 
@@ -2239,18 +2287,20 @@ def test_virtual_all_true():
 
 
 def test_rpc_without_args():
-    ret = dict()
-    ret["message"] = "Please provide the rpc to execute."
-    ret["out"] = False
+    ret = {
+        "message": "Please provide the rpc to execute.",
+        "out": False,
+    }
     assert junos.rpc() == ret
 
 
 def test_rpc_get_config_exception():
     with patch("jnpr.junos.device.Device.execute") as mock_execute:
         mock_execute.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'RPC execution failed due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'RPC execution failed due to "Test exception"',
+            "out": False,
+        }
         assert junos.rpc("get_config") == ret
 
 
@@ -2329,9 +2379,10 @@ def test_rpc_get_chassis_inventory_filter_as_arg():
 def test_rpc_get_interface_information_exception():
     with patch("jnpr.junos.device.Device.execute") as mock_execute:
         mock_execute.side_effect = raise_exception
-        ret = dict()
-        ret["message"] = 'RPC execution failed due to "Test exception"'
-        ret["out"] = False
+        ret = {
+            "message": 'RPC execution failed due to "Test exception"',
+            "out": False,
+        }
         assert junos.rpc("get_interface_information") == ret
 
 
