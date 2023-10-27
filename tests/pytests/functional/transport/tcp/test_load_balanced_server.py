@@ -12,6 +12,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_tcp_load_balancer_server(master_opts, io_loop):
 
     messages = []
