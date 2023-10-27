@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 
 import salt.modules.saltutil as saltutil
@@ -7,18 +9,11 @@ from tests.support.mock import sentinel as s
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
+    minion_opts["file_client"] = "local"
     return {
         saltutil: {
-            "__opts__": {
-                "file_client": "local",
-                "cachedir": "/tmp",
-                "pki_dir": "/tmp/pki_dir",
-                "id": "minion",
-                "master_uri": "tcp://127.0.0.1:4505",
-                "__role": "minion",
-                "keysize": 2048,
-            }
+            "__opts__": minion_opts,
         }
     }
 
@@ -162,11 +157,10 @@ def test_sync_all_clean_pillar_cache():
             refresh_pillar.assert_called_with(clean_cache=True)
 
 
-@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
-def test_list_extmods(salt_call_cli):
-    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/extmods/dummydir")
-    assert ret.returncode == 0
-
+def test_list_extmods(salt_call_cli, minion_opts):
+    pathlib.Path(minion_opts["cachedir"], "extmods", "dummydir").mkdir(
+        parents=True, exist_ok=True
+    )
     ret = saltutil.list_extmods()
     assert "dummydir" in ret
     assert ret["dummydir"] == []
@@ -183,25 +177,20 @@ def test_refresh_matchers():
 
 
 def test_refresh_modules_async_false():
-    ## ret = saltutil.refresh_modules( kwargs({"async": False}) )
     kwargs = {"async": False}
     ret = saltutil.refresh_modules(**kwargs)
     assert ret is False
 
 
-@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
-def test_clear_job_cache(salt_call_cli):
-    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/minion_jobs/dummydir")
-    assert ret.returncode == 0
-
+def test_clear_job_cache(salt_call_cli, minion_opts):
+    pathlib.Path(minion_opts["cachedir"], "minion_jobs", "dummydir").mkdir(
+        parents=True, exist_ok=True
+    )
     ret = saltutil.clear_job_cache(hours=1)
     assert ret is True
 
 
-@pytest.mark.skip_on_windows(reason="making use of /tmp directory")
 @pytest.mark.destructive_test
-def test_regen_keys(salt_call_cli):
-    ret = salt_call_cli.run("--local", "cmd.run", "mkdir -p /tmp/pki_dir/dummydir")
-    assert ret.returncode == 0
-
+def test_regen_keys(salt_call_cli, minion_opts):
+    pathlib.Path(minion_opts["pki_dir"], "dummydir").mkdir(parents=True, exist_ok=True)
     saltutil.regen_keys()
