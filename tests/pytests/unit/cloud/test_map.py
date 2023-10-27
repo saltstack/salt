@@ -99,6 +99,8 @@ def salt_cloud_config_file(salt_master_factory):
     return os.path.join(salt_master_factory.config_dir, "cloud")
 
 
+# The cloud map merge uses python's multiprocessing manager which authenticates using HMAC and MD5
+@pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_map_merge_conf(salt_cloud_config_file, grains):
     """
     Ensure that nested values can be selectivly overridden in a map file
