@@ -566,11 +566,9 @@ def install(
                     if prefix == "=":
                         wildcards.append((param, verstr))
                     else:
-                        errors.append(
-                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
-                        )
+                        errors.append(f"Invalid wildcard for {param}{prefix}{verstr}")
                     continue
-                targets.append("{}{}{}".format(param, prefix, verstr))
+                targets.append(f"{param}{prefix}{verstr}")
 
         if wildcards:
             # Resolve wildcard matches
