@@ -162,7 +162,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {
             "result": False,
-            "comment": "Can not open environment: {}, ".format(env_file),
+            "comment": f"Can not open environment: {env_file}, ",
         }
 
     def test_heat_update_stack(self):
