@@ -1382,7 +1382,11 @@ def test_get_socket():
 
 def test_ip_to_host(grains):
     ret = network.ip_to_host("127.0.0.1")
-    assert ret == "localhost"
+    if grains["oscodename"] == "Photon":
+        # Photon returns this for IPv4
+        assert ret == "ipv6-localhost"
+    else:
+        assert ret == "localhost"
 
     ret = network.ip_to_host("2001:a71::1")
     assert ret is None
@@ -1395,10 +1399,11 @@ def test_ip_to_host(grains):
             assert ret == "localhost"
         else:
             assert ret == "ip6-localhost"
-    elif grains["oscodename"] == "Photon":
-        assert ret == "ipv6-localhost"
     elif grains["os_family"] == "RedHat":
-        assert ret == "localhost"
+        if grains["oscodename"] == "Photon":
+            assert ret == "ipv6-localhost"
+        else:
+            assert ret == "localhost"
     elif grains["os_family"] == "Arch":
         if grains.get("osmajorrelease", None) is None:
             # running doesn't have osmajorrelease grains
