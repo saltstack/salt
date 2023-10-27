@@ -87,6 +87,104 @@ jobs:
         run: |
           tools ci matrix ${{ inputs.distro-slug }}
 
+      - name: Generate Transport Matrix
+        id: generate-transport-matrix
+        run: |
+          TRANSPORT_MATRIX=$(tools ci transport-matrix ${{ inputs.distro-slug }})
+          echo "$TRANSPORT_MATRIX"
+          echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
+
+  dependencies:
+    name: Setup Test Dependencies
+    runs-on: ${{ inputs.distro-slug }}
+    timeout-minutes: 90
+    needs:
+      - generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.transport-matrix-include) }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        id: nox-dependencies-cache
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt', 'noxfile.py') }}
+
+      - name: Download Onedir Tarball as an Artifact
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
+      - name: Set up Python ${{ inputs.python-version }}
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install System Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          brew install openssl@3
+
+      - name: Install Nox
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+
+      - name: Define Nox Session
+        id: define-nox-session
+        run: |
+          if [ "${{ matrix.transport }}" != "tcp" ]; then
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}" >> "$GITHUB_OUTPUT"
+          else
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}-tcp" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PRINT_TEST_SELECTION: "0"
+          PRINT_SYSTEM_INFO: "0"
+        run: |
+          export PYCURL_SSL_LIBRARY=openssl
+          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
+          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+          export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
+          nox --install-only -e ${{ env.NOX_SESSION }}
+
+      - name: Cleanup .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          nox -e "pre-archive-cleanup(pkg=False)"
+
+      - name: Compress .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ steps.define-nox-session.outputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
+
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}

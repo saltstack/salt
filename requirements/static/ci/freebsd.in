@@ -1,6 +1,4 @@
 # FreeBSD static CI requirements
---constraint=../pkg/py{py_version}/{platform}.txt
-
 pygit2==1.8.0
 yamllint
 mercurial

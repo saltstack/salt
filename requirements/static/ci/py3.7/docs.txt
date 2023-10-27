@@ -189,7 +189,7 @@ typing-extensions==3.10.0.0
     #   myst-docutils
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   requests
