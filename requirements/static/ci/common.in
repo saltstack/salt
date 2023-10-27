@@ -14,8 +14,9 @@ cherrypy>=17.4.1
 clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
+docker
 etcd3-py==0.1.6
-gitpython>=3.1.30
+gitpython>=3.1.37
 jmespath
 jsonschema
 junos-eznc; sys_platform != 'win32' and python_version <= '3.10'

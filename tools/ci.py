@@ -795,6 +795,8 @@ def pkg_matrix(
                     "version": version,
                 }
             )
+            if distro_slug.startswith("windows"):
+                _matrix[-1]["pkg-type"] = pkg_type.upper()
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 

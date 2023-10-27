@@ -438,7 +438,9 @@ dnspython==1.16.0
     #   ciscoconfparse
     #   python-etcd
 docker==6.1.3
-    # via -r requirements/pytest.txt
+    # via
+    #   -r requirements/pytest.txt
+    #   -r requirements/static/ci/common.in
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
@@ -461,7 +463,7 @@ geomet==0.1.2
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.35
+gitpython==3.1.40
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes

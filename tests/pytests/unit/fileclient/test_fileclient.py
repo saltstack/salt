@@ -116,6 +116,9 @@ def test_fileclient_timeout(minion_opts, master_opts):
             "request_channel_tries": 1,
         }
     )
+    master_uri = "tcp://{master_ip}:{master_port}".format(
+        master_ip="localhost", master_port=minion_opts["master_port"]
+    )
 
     def mock_dumps(*args):
         return b"meh"
