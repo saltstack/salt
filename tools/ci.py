@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from ptscripts import Context, command_group
 
 import tools.utils
+import tools.utils.gh
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -914,8 +915,9 @@ def _get_pr_test_labels_from_api(
         headers = {
             "Accept": "application/vnd.github+json",
         }
-        if "GITHUB_TOKEN" in os.environ:
-            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)
         ret = web.get(f"https://api.github.com/repos/{repository}/pulls/{pr}")
         if ret.status_code != 200:
