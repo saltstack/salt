@@ -580,7 +580,7 @@ typing-extensions==4.6.3
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.14
+urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   botocore
