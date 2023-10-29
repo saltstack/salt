@@ -34,7 +34,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.37
+gitpython==3.1.40
     # via -r requirements/windows.txt
 idna==3.4
     # via requests
@@ -130,7 +130,7 @@ timelib==0.3.0
     # via -r requirements/windows.txt
 tornado==6.3.3
     # via -r requirements/base.txt
-typing-extensions==4.6.3
+typing-extensions==4.8.0
     # via pydantic
 urllib3==1.26.18
     # via

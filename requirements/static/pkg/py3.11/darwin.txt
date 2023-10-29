@@ -113,7 +113,7 @@ timelib==0.3.0
     # via -r requirements/darwin.txt
 tornado==6.3.3
     # via -r requirements/base.txt
-typing-extensions==4.6.3
+typing-extensions==4.8.0
     # via pydantic
 urllib3==1.26.14
     # via requests

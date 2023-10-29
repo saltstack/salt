@@ -140,7 +140,7 @@ gitdb==4.0.10
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   gitpython
-gitpython==3.1.37
+gitpython==3.1.40
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/darwin.txt
@@ -519,7 +519,7 @@ ttp==0.9.5
     #   ttp-templates
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.6.3
+typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   napalm
