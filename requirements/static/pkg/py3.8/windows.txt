@@ -132,7 +132,7 @@ tornado==6.3.3
     # via -r requirements/base.txt
 typing-extensions==4.6.3
     # via pydantic
-urllib3==1.26.14
+urllib3==1.26.18
     # via
     #   -r requirements/windows.txt
     #   requests
