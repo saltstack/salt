@@ -651,7 +651,6 @@ dnspython==1.16.0
 docker==6.1.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
 etcd3-py==0.1.6
     # via
