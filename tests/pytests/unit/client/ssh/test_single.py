@@ -302,8 +302,8 @@ def test_execute_script(opts, target, tmp_path):
         assert ret == exp_ret
         assert mock_cmd.call_count == 2
         assert [
-            call("/bin/sh '{}'".format(script)),
-            call("rm '{}'".format(script)),
+            call(f"/bin/sh '{script}'"),
+            call(f"rm '{script}'"),
         ] == mock_cmd.call_args_list
 
 
