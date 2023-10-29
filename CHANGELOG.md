@@ -7,20 +7,8 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-## Salt v3005.3 (2023-09-14)
-
-### Fixed
-
-- Fix __env__ and improve cache cleaning see more info at pull #65017. (#65002)
-
-
-### Security
-
-- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65167)
-
 
 ## 3006.4 (2023-10-16)
-
 
 ### Security
 
@@ -31,6 +19,29 @@ Versions are `MAJOR.PATCH`.
 - Upgrade relenv to 0.13.12 to address CVE-2023-4807 [#65316](https://github.com/saltstack/salt/issues/65316)
 - Bump to `urllib3==1.26.17` or `urllib3==2.0.6` due to https://github.com/advisories/GHSA-v845-jxx5-vc9f [#65334](https://github.com/saltstack/salt/issues/65334)
 - Bump to `gitpython==3.1.37` due to https://github.com/advisories/GHSA-cwvm-v4w8-q58c [#65383](https://github.com/saltstack/salt/issues/65383)
+
+
+## 3005.4 (2023-10-16)
+
+### Security
+
+- Fix CVE-2023-34049 by ensuring we do not use a predictable name for the script and correctly check returncode of scp command.
+  This only impacts salt-ssh users using the pre-flight option. (cve-2023-34049)
+- Bump to `cryptography==41.0.4` due to https://github.com/advisories/GHSA-v8gr-m533-ghj9 (#65267)
+- Bump to `urllib3==1.26.17` or `urllib3==2.0.6` due to https://github.com/advisories/GHSA-v845-jxx5-vc9f (#65334)
+- Bump to `gitpython==3.1.37` due to https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65383)
+
+
+## Salt v3005.3 (2023-09-14)
+
+### Fixed
+
+- Fix __env__ and improve cache cleaning see more info at pull #65017. (#65002)
+
+
+### Security
+
+- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65167)
 
 
 ## 3006.3 (2023-09-06)
