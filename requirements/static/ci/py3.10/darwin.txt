@@ -437,20 +437,20 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.5
+gitdb==4.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   gitpython
-gitpython==3.1.35
+gitpython==3.1.37
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
-google-auth==1.6.3
+google-auth==2.1.0
     # via kubernetes
 hglib==2.6.1
     # via -r requirements/static/ci/darwin.in
-idna==2.8
+idna==3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/darwin.txt
@@ -851,7 +851,6 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
-    #   google-auth
     #   isodate
     #   jsonschema
     #   junos-eznc
@@ -866,7 +865,7 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smmap==3.0.2
+smmap==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   gitdb
@@ -886,13 +885,13 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-transitions==0.8.1
+transitions==0.8.9
     # via junos-eznc
 typing-extensions==4.2.0
     # via
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.6
+urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   botocore
