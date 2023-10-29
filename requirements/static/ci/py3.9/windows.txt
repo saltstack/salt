@@ -133,7 +133,7 @@ gitdb==4.0.10
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   gitpython
-gitpython==3.1.35
+gitpython==3.1.37
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
