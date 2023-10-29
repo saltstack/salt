@@ -31,9 +31,9 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.35
+gitpython==3.1.37
     # via -r requirements/windows.txt
-idna==2.8
+idna==3.2
     # via requests
 immutables==0.15
     # via contextvars
@@ -124,7 +124,7 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
-urllib3==1.26.6
+urllib3==1.26.18
     # via
     #   -r requirements/windows.txt
     #   requests
