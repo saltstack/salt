@@ -135,7 +135,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.35
+gitpython==3.1.37
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
