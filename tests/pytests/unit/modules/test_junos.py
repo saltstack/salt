@@ -35,11 +35,6 @@ pytestmark = [
 
 
 @pytest.fixture
-def mock_cp(*args, **kwargs):
-    pass
-
-
-@pytest.fixture
 def get_facts():
     facts = {
         "2RE": True,
@@ -151,7 +146,7 @@ def make_connect():
 
 
 @pytest.fixture
-def configure_loader_modules(mock_cp, get_facts, make_connect):
+def configure_loader_modules(get_facts, make_connect):
     return {
         junos: {
             "__proxy__": {
@@ -161,8 +156,8 @@ def configure_loader_modules(mock_cp, get_facts, make_connect):
                 "junos.reboot_clear": MagicMock(return_value=True),
             },
             "__salt__": {
-                "cp.get_template": MagicMock(return_value=mock_cp),
-                "cp.get_file": MagicMock(return_value=mock_cp),
+                "cp.get_template": MagicMock(return_value=True),
+                "cp.get_file": MagicMock(return_value=True),
                 "file.file_exists": MagicMock(return_value=True),
                 "slsutil.renderer": MagicMock(
                     return_value="set system host-name dummy"
