@@ -344,6 +344,18 @@ class SSH(MultiprocessingStateMixin):
                 "ssh_timeout", salt.config.DEFAULT_MASTER_OPTS["ssh_timeout"]
             )
             + self.opts.get("timeout", salt.config.DEFAULT_MASTER_OPTS["timeout"]),
+            "keepalive": self.opts.get(
+                "ssh_keepalive",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive"],
+            ),
+            "keepalive_interval": self.opts.get(
+                "ssh_keepalive_interval",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive_interval"],
+            ),
+            "keepalive_count_max": self.opts.get(
+                "ssh_keepalive_count_max",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive_count_max"],
+            ),
             "sudo": self.opts.get(
                 "ssh_sudo", salt.config.DEFAULT_MASTER_OPTS["ssh_sudo"]
             ),
@@ -1033,6 +1045,9 @@ class Single:
         remote_port_forwards=None,
         winrm=False,
         ssh_options=None,
+        keepalive=True,
+        keepalive_interval=60,
+        keepalive_count_max=3,
         **kwargs,
     ):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
@@ -1093,6 +1108,9 @@ class Single:
             "priv": priv,
             "priv_passwd": priv_passwd,
             "timeout": timeout,
+            "keepalive": keepalive,
+            "keepalive_interval": keepalive_interval,
+            "keepalive_count_max": keepalive_count_max,
             "sudo": sudo,
             "tty": tty,
             "mods": self.mods,
