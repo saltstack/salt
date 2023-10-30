@@ -56,6 +56,11 @@ on:
         type: boolean
         description: Skip Publishing JUnit Reports
         default: false
+      workflow-slug:
+        required: false
+        type: string
+        description: Which workflow is running.
+        default: ci
 
 env:
   COLUMNS: 190
@@ -85,7 +90,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix ${{ inputs.distro-slug }}
+          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
 
   test:
     name: Test
