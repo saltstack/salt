@@ -217,6 +217,8 @@ def test_gpg_pillar(salt_ssh_cli):
     assert "secrets" in ret.data
     assert "foo" in ret.data["secrets"]
     assert "BEGIN PGP MESSAGE" not in ret.data["secrets"]["foo"]
+    assert ret.data["secrets"]["foo"] == "supersecret"
+    assert "_errors" not in ret.data
 
 
 @pytest.mark.usefixtures("pillar_setup")
@@ -236,3 +238,4 @@ def test_saltutil_runner(salt_ssh_cli, salt_minion, salt_run_cli):
     assert ret.data["saltutil"]
     assert salt_minion.id in ret.data["saltutil"]
     assert ret.data["saltutil"][salt_minion.id] is True
+    assert "_errors" not in ret.data
