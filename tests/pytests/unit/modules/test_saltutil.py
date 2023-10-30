@@ -11,6 +11,7 @@ from tests.support.mock import sentinel as s
 @pytest.fixture
 def configure_loader_modules(minion_opts):
     minion_opts["file_client"] = "local"
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4505"
     return {
         saltutil: {
             "__opts__": minion_opts,
