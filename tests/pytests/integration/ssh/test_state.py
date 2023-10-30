@@ -795,7 +795,6 @@ class TestStatePillarOverrideTemplate:
             - source: salt://deepthought.txt.jinja
             - template: jinja
         """
-        # deepthought = "{{ {'the_meaning': pillar.get('the_meaning'), 'btw': pillar.get('btw')} | json }}"
         deepthought = r"""
         {{
           {

@@ -60,7 +60,7 @@ class SSHState(salt.state.State):
         """
         The opts used during pillar rendering should contain the master
         opts in the root namespace. self.opts is the modified minion opts,
-        containing the original master opts in `__master_opts__`.
+        containing the original master opts in __master_opts__.
         """
         _opts = self.opts
         popts = {}
