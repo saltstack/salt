@@ -137,6 +137,8 @@ def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
     # Deferred import
     import tools.utils.gh
 
+    ctx.info(f"Collecting salt releases from repository '{repository}'")
+
     versions = set()
     with ctx.web as web:
         headers = {
