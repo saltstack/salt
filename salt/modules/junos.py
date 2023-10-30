@@ -2050,9 +2050,8 @@ def _make_source_list(dir):
     return dir_list
 
 
-# pragma: no cover
 @_timeout_decorator
-def file_compare(file1, file2, **kwargs):
+def file_compare(file1, file2, **kwargs):  # pragma: no cover
     """
     Compare two files and return a dictionary indicating if they
     are different.
@@ -2113,9 +2112,8 @@ def file_compare(file1, file2, **kwargs):
     return ret
 
 
-# pragma: no cover
 @_timeout_decorator
-def fsentry_exists(dir, **kwargs):
+def fsentry_exists(dir, **kwargs):  # pragma: no cover
     """
     Returns a dictionary indicating if `dir` refers to a file
     or a non-file (generally a directory) in the file system,
@@ -2259,9 +2257,8 @@ def routing_engine(**kwargs):
     return ret
 
 
-# pragma: no cover
 @_timeout_decorator
-def dir_copy(source, dest, force=False, **kwargs):
+def dir_copy(source, dest, force=False, **kwargs):  # pragma: no cover
     """
     Copy a directory and recursively its contents from source to dest.
 
