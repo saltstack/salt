@@ -64,8 +64,10 @@ class SSHState(salt.state.State):
         """
         _opts = self.opts
         popts = {}
-        popts.update(_opts.get("__master_opts__", {}))
+        # Pillar compilation needs the master opts primarily,
+        # same as during regular operation.
         popts.update(_opts)
+        popts.update(_opts.get("__master_opts__", {}))
         self.opts = popts
         pillar = super()._gather_pillar()
         self.opts = _opts
