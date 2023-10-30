@@ -1659,8 +1659,7 @@ ARGS = {arguments}\n'''.format(
         return
 
 
-# pragma: no cover
-def lowstate_file_refs(chunks):
+def lowstate_file_refs(chunks):  # pragma: no cover
     """
     Create a list of file ref objects to reconcile
     """
