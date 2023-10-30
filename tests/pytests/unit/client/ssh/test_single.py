@@ -78,6 +78,61 @@ def test_single_opts(opts, target, mock_bin_paths):
     expected_cmd = (
         "ssh login1 "
         "-o KbdInteractiveAuthentication=no -o "
+        "PasswordAuthentication=yes -o ConnectTimeout=65 -o ServerAliveInterval=60 "
+        "-o ServerAliveCountMax=3 -o Port=22 "
+        "-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa "
+        "-o User=root  date +%s"
+    )
+    assert single.shell._cmd_str("date +%s") == expected_cmd
+
+
+def test_single_opts_custom_keepalive_options(opts, target):
+    """Sanity check for ssh.Single options with custom keepalive"""
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        keepalive_interval=15,
+        keepalive_counter_max=5,
+        **target,
+    )
+
+    assert single.shell._ssh_opts() == ""
+    expected_cmd = (
+        "ssh login1 "
+        "-o KbdInteractiveAuthentication=no -o "
+        "PasswordAuthentication=yes -o ConnectTimeout=65 -o ServerAliveInterval=15 "
+        "-o ServerAliveCountMax=5 -o Port=22 "
+        "-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa "
+        "-o User=root  date +%s"
+    )
+    assert single.shell._cmd_str("date +%s") == expected_cmd
+
+
+def test_single_opts_disable_keepalive(opts, target):
+    """Sanity check for ssh.Single options with custom keepalive"""
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        keepalive=False,
+        **target,
+    )
+
+    assert single.shell._ssh_opts() == ""
+    expected_cmd = (
+        "ssh login1 "
+        "-o KbdInteractiveAuthentication=no -o "
         "PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 "
         "-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa "
         "-o User=root  date +%s"
