@@ -621,9 +621,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "full": {
             "help": "Full test run",
         },
+        "workflow": {
+            "help": "Which workflow is running",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str, full: bool = False):
+def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "ci"):
     """
     Generate the test matrix.
     """
@@ -634,6 +637,11 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
         "scenarios": 1,
         "unit": 2,
     }
+    # On nightly and scheduled builds we don't want splits at all
+    if workflow.lower() in ("nightly", "scheduled"):
+        ctx.info(f"Clearning splits definition since workflow is '{workflow}'")
+        _splits.clear()
+
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
