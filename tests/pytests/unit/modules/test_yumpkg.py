@@ -2494,6 +2494,15 @@ def test_get_yum_config_unreadable():
             yumpkg._get_yum_config()
 
 
+def test_get_yum_config_no_main(caplog):
+    mock_false = MagicMock(return_value=False)
+    with patch.object(configparser.ConfigParser, "read"), patch.object(
+        configparser.ConfigParser, "has_section", mock_false
+    ), patch("os.path.exists", MagicMock(return_value=True)):
+        yumpkg._get_yum_config()
+        assert "Could not find [main] section" in caplog.text
+
+
 def test_normalize_basedir_str():
     basedir = "/etc/yum/yum.conf,/etc/yum.conf"
     result = yumpkg._normalize_basedir(basedir)
