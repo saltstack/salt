@@ -317,7 +317,7 @@ pytest-helpers-namespace==2021.4.29
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
-pytest-httpserver==1.0.4
+pytest-httpserver==1.0.6
     # via -r requirements/pytest.txt
 pytest-salt-factories==1.0.0rc27
     # via -r requirements/pytest.txt
