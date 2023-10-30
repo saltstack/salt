@@ -98,7 +98,7 @@ def test_single_opts_custom_keepalive_options(opts, target):
         thin=salt.utils.thin.thin_path(opts["cachedir"]),
         mine=False,
         keepalive_interval=15,
-        keepalive_counter_max=5,
+        keepalive_count_max=5,
         **target,
     )
 
