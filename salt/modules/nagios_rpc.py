@@ -135,9 +135,9 @@ def _status_query(query, hostname, enumerate=None, service=None):
     elif result.get("status", None) == http.client.UNAUTHORIZED:
         ret["error"] = "Authentication failed. Please check the configuration."
     elif result.get("status", None) == http.client.NOT_FOUND:
-        ret["error"] = "URL {} was not found.".format(config["url"])
+        ret["error"] = f'URL {config["url"]} was not found.'
     else:
-        ret["error"] = "Results: {}".format(result.text)
+        ret["error"] = f"Results: {result.text}"
 
     return ret
 
