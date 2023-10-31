@@ -52,9 +52,9 @@ s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via python-dateutil
-typing-extensions==4.6.3
+typing-extensions==4.8.0
     # via python-tools-scripts
-urllib3==1.26.14
+urllib3==1.26.18
     # via
     #   botocore
     #   requests

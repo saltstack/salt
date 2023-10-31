@@ -67,7 +67,7 @@ smbprotocol==1.10.1
     # via
     #   -r requirements/static/ci/cloud.in
     #   pypsexec
-urllib3==1.26.14
+urllib3==1.26.18
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
