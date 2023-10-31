@@ -3,6 +3,45 @@ Check Host & Service status from Nagios via JSON RPC.
 
 .. versionadded:: 2015.8.0
 
+This modules enables querying the Nagios status for services and hosts.
+This requires the ``statusjson.cgi`` script to be installed on the Nagios
+server which ships with Nagios Core 4.x by default.
+
+Configuration
+=============
+
+To use this module, the following configuration needs to be provided:
+
+.. code-block:: yaml
+
+    nagios:
+      status_url: <https://nagios.example.com/cgi-bin/statusjson.cgi>
+      username: <nagios username>
+      password: <nagios password>
+
+status_url
+^^^^^^^^^^
+
+The URL of the statusjson.cgi. Required.
+
+username
+^^^^^^^^
+
+The username used to login to the nagios host. Optional.
+
+password
+^^^^^^^^
+
+The password used to login to the nagios host. Optional.
+
+
+The nagios_rpc configuration items are fetched using ``config.get`` and therefore
+can be provided as part of the minion configuration, a minion grain, a minion pillar
+item or as part of the master configuration.
+
+.. seealso::
+    :py:mod:`Return config information <salt.modules.config.get>`
+
 """
 
 
