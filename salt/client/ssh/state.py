@@ -68,6 +68,11 @@ class SSHState(salt.state.State):
         # same as during regular operation.
         popts.update(_opts)
         popts.update(_opts.get("__master_opts__", {}))
+        # But, salt.state.State takes the parameters for get_pillar from
+        # the opts, so we need to ensure they are correct for the minion.
+        popts["id"] = _opts["id"]
+        popts["saltenv"] = _opts["saltenv"]
+        popts["pillarenv"] = _opts.get("pillarenv")
         self.opts = popts
         pillar = super()._gather_pillar()
         self.opts = _opts
