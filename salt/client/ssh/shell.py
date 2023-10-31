@@ -135,7 +135,7 @@ class Shell:
             options.append("PasswordAuthentication=no")
         if self.opts.get("_ssh_version", (0,)) > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={}".format(self.timeout))
+        options.append(f"ConnectTimeout={self.timeout}")
         if self.keepalive:
             options.append(f"ServerAliveInterval={self.keepalive_interval}")
             options.append(f"ServerAliveCountMax={self.keepalive_count_max}")
@@ -145,19 +145,19 @@ class Shell:
             options.extend(["StrictHostKeyChecking=no", "UserKnownHostsFile=/dev/null"])
         known_hosts = self.opts.get("known_hosts_file")
         if known_hosts and os.path.isfile(known_hosts):
-            options.append("UserKnownHostsFile={}".format(known_hosts))
+            options.append(f"UserKnownHostsFile={known_hosts}")
         if self.port:
-            options.append("Port={}".format(self.port))
+            options.append(f"Port={self.port}")
         if self.priv and self.priv != "agent-forwarding":
-            options.append("IdentityFile={}".format(self.priv))
+            options.append(f"IdentityFile={self.priv}")
         if self.user:
-            options.append("User={}".format(self.user))
+            options.append(f"User={self.user}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {} ".format(option))
+            ret.append(f"-o {option} ")
         return "".join(ret)
 
     def _passwd_opts(self):
@@ -173,7 +173,7 @@ class Shell:
         ]
         if self.opts["_ssh_version"] > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={}".format(self.timeout))
+        options.append(f"ConnectTimeout={self.timeout}")
         if self.keepalive:
             options.append(f"ServerAliveInterval={self.keepalive_interval}")
             options.append(f"ServerAliveCountMax={self.keepalive_count_max}")
@@ -195,19 +195,19 @@ class Shell:
                 ]
             )
         if self.port:
-            options.append("Port={}".format(self.port))
+            options.append(f"Port={self.port}")
         if self.user:
-            options.append("User={}".format(self.user))
+            options.append(f"User={self.user}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {} ".format(option))
+            ret.append(f"-o {option} ")
         return "".join(ret)
 
     def _ssh_opts(self):
-        return " ".join(["-o {}".format(opt) for opt in self.ssh_options])
+        return " ".join([f"-o {opt}" for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         """
@@ -218,7 +218,7 @@ class Shell:
             # passwords containing '$'
             return "{} {} '{} -p {} {} {}@{}'".format(
                 "ssh-copy-id",
-                "-i {}.pub".format(self.priv),
+                f"-i {self.priv}.pub",
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -237,7 +237,7 @@ class Shell:
             # passwords containing '$'
             return "{} {} {} -p {} {} {}@{}".format(
                 "ssh-copy-id",
-                "-i {}.pub".format(self.priv),
+                f"-i {self.priv}.pub",
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -273,10 +273,7 @@ class Shell:
         if ssh != "scp" and self.remote_port_forwards:
             command.append(
                 " ".join(
-                    [
-                        "-R {}".format(item)
-                        for item in self.remote_port_forwards.split(",")
-                    ]
+                    [f"-R {item}" for item in self.remote_port_forwards.split(",")]
                 )
             )
         if self.ssh_options:
@@ -318,7 +315,7 @@ class Shell:
         rcode = None
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing non-blocking command: {}".format(cmd)
+        logmsg = f"Executing non-blocking command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -337,7 +334,7 @@ class Shell:
         """
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing command: {}".format(cmd)
+        logmsg = f"Executing command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         if 'decode("base64")' in logmsg or "base64.b64decode(" in logmsg:
@@ -354,17 +351,17 @@ class Shell:
         scp a file or files to a remote system
         """
         if makedirs:
-            self.exec_cmd("mkdir -p {}".format(os.path.dirname(remote)))
+            self.exec_cmd(f"mkdir -p {os.path.dirname(remote)}")
 
         # scp needs [<ipv6}
         host = self.host
         if ":" in host:
-            host = "[{}]".format(host)
+            host = f"[{host}]"
 
-        cmd = "{} {}:{}".format(local, host, remote)
+        cmd = f"{local} {host}:{remote}"
         cmd = self._cmd_str(cmd, ssh="scp")
 
-        logmsg = "Executing command: {}".format(cmd)
+        logmsg = f"Executing command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -383,7 +380,7 @@ class Shell:
             cmd_lst = shlex.split(cmd)
         else:
             cmd_lst = shlex.split(ssh_part)
-            cmd_lst.append("/bin/sh {}".format(cmd_part))
+            cmd_lst.append(f"/bin/sh {cmd_part}")
         return cmd_lst
 
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
