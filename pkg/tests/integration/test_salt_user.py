@@ -173,6 +173,7 @@ def test_pkg_paths(
                         assert file_path.group() == "root"
 
 
+@pytest.mark.skip_if_binaries_missing("logrotate")
 def test_paths_log_rotation(
     salt_master, salt_minion, salt_call_cli, install_salt, test_account
 ):
@@ -300,7 +301,6 @@ def test_paths_log_rotation(
                                 # force log rotation
                                 logr_conf_file = "/etc/logrotate.d/salt"
                                 logr_conf_path = pathlib.Path(logr_conf_file)
-                                # assert logr_conf_path.exists()
                                 if not logr_conf_path.exists():
                                     logr_conf_file = "/etc/logrotate.conf"
                                     logr_conf_path = pathlib.Path(logr_conf_file)
@@ -315,10 +315,6 @@ def test_paths_log_rotation(
 
                                 for _path in log_files_list:
                                     log_path = pathlib.Path(_path)
-                                    str_log_path = str(log_path)
-                                    ret = salt_call_cli.run(
-                                        "--local", "cmd.run", f"ls -alh {str_log_path}"
-                                    )
                                     assert log_path.exists()
                                     assert (
                                         log_path.owner() == f"{test_account.username}"
