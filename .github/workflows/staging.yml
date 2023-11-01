@@ -1904,6 +1904,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   windows-2019:
     name: Windows 2019 Test
@@ -1925,6 +1926,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   windows-2022:
     name: Windows 2022 Test
@@ -1946,6 +1948,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   macos-12:
     name: macOS 12 Test
@@ -1967,6 +1970,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   almalinux-8:
     name: Alma Linux 8 Test
@@ -1988,6 +1992,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   almalinux-9:
     name: Alma Linux 9 Test
@@ -2009,6 +2014,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   amazonlinux-2:
     name: Amazon Linux 2 Test
@@ -2030,6 +2036,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   archlinux-lts:
     name: Arch Linux LTS Test
@@ -2051,6 +2058,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   centos-7:
     name: CentOS 7 Test
@@ -2072,6 +2080,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   centosstream-8:
     name: CentOS Stream 8 Test
@@ -2093,6 +2102,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   centosstream-9:
     name: CentOS Stream 9 Test
@@ -2114,6 +2124,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   debian-10:
     name: Debian 10 Test
@@ -2135,6 +2146,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   debian-11:
     name: Debian 11 Test
@@ -2156,6 +2168,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   debian-11-arm64:
     name: Debian 11 Arm64 Test
@@ -2177,6 +2190,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   debian-12:
     name: Debian 12 Test
@@ -2198,6 +2212,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   debian-12-arm64:
     name: Debian 12 Arm64 Test
@@ -2219,6 +2234,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   fedora-37:
     name: Fedora 37 Test
@@ -2240,6 +2256,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   fedora-38:
     name: Fedora 38 Test
@@ -2261,6 +2278,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   opensuse-15:
     name: Opensuse 15 Test
@@ -2282,6 +2300,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-3:
     name: Photon OS 3 Test
@@ -2303,6 +2322,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-3-arm64:
     name: Photon OS 3 Arm64 Test
@@ -2324,6 +2344,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-4:
     name: Photon OS 4 Test
@@ -2345,6 +2366,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
@@ -2366,6 +2388,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-5:
     name: Photon OS 5 Test
@@ -2387,6 +2410,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
@@ -2408,6 +2432,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   ubuntu-2004:
     name: Ubuntu 20.04 Test
@@ -2429,6 +2454,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
@@ -2450,6 +2476,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   ubuntu-2204:
     name: Ubuntu 22.04 Test
@@ -2471,6 +2498,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
@@ -2492,6 +2520,7 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
       workflow-slug: staging
+      default-timeout: 120
 
   build-src-repo:
     name: Build Repository
