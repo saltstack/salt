@@ -217,18 +217,25 @@ def test_driver_signing_reg_reverse_conversion(pol_info, val, expected):
     assert pol_info._driver_signing_reg_reverse_conversion(val) == expected
 
 
-@pytest.mark.parametrize(
-    "val, expected",
-    (
-        (ws.ConvertStringSidToSid("S-1-5-0"), ["S-1-5-0"]),
-        (ws.ConvertStringSidToSid("S-1-1-0"), ["Everyone"]),
-        (
-            ws.LookupAccountName("", "Administrator")[0],
-            [f"{socket.gethostname()}\\Administrator"],
-        ),
-    ),
-)
-def test_sidConversion(pol_info, val, expected):
+# For the next 3 tests we can't use the parametrized decorator because the
+# decorator is evaluated before the imports happen, so the HAS_WIN32 is ignored
+# and the decorator tries to evaluate the win32security library on systems
+# without pyWin32
+def test_sidConversion_no_conversion(pol_info):
+    val = ws.ConvertStringSidToSid("S-1-5-0")
+    expected = ["S-1-5-0"]
+    assert pol_info._sidConversion([val]) == expected
+
+
+def test_sidConversion_everyone(pol_info):
+    val = ws.ConvertStringSidToSid("S-1-1-0")
+    expected = ["Everyone"]
+    assert pol_info._sidConversion([val]) == expected
+
+
+def test_sidConversion_administrator(pol_info):
+    val = ws.LookupAccountName("", "Administrator")[0]
+    expected = [f"{socket.gethostname()}\\Administrator"]
     assert pol_info._sidConversion([val]) == expected
 
 
