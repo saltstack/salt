@@ -61,6 +61,11 @@ on:
         type: string
         description: Which workflow is running.
         default: ci
+      default-timeout:
+        required: false
+        type: number
+        description: Timeout, in minutes, for the test job(Default 300, 5 hours).
+        default: 300
 
 env:
   COLUMNS: 190
@@ -97,7 +102,7 @@ jobs:
     runs-on: ${{ inputs.distro-slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 5 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 120 || 300 }}
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 300 }}
     needs:
       - generate-matrix
     strategy:
