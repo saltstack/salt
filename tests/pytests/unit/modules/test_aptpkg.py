@@ -1711,37 +1711,39 @@ def test_latest_version_fromrepo_multiple_names():
         "linux-cloud-tools-virtual": ["5.15.0.69.67"],
         "linux-generic": ["5.15.0.69.67"],
     }
-    apt_ret_cloud = {
+    apt_ret = {
         "pid": 4361,
         "retcode": 0,
-        "stdout": "linux-cloud-tools-virtual:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
-        f"table:\n     {version} 990\n 990"
-        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
-        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
-        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
-        "stderr": "",
-    }
-    apt_ret_generic = {
-        "pid": 4821,
-        "retcode": 0,
-        "stdout": "linux-generic:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n"
-        f"Version table:\n     {version} 990\n        990"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-updates/main amd64 Packages\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n *** 5.15.0.69.67"
-        "100\n        100 /var/lib/dpkg/status\n 5.15.0.25.27"
-        "500\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy/main amd64 Packages",
+        "stdout": textwrap.dedent(
+            f"""\
+            linux-cloud-tools-virtual:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Versiontable:
+                {version} 990
+            990https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64Packages
+                    500 https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            ***5.15.0.69.67 100
+            100 /var/lib/dpkg/status
+                5.15.0.25.27 500
+                    500https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages
+            linux-generic:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Version table:
+                {version} 990
+                    990https://mirrors.edge.kernel.org/ubuntujammy-updates/main amd64 Packages
+                    500https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            *** 5.15.0.69.67100
+                    100 /var/lib/dpkg/status
+            5.15.0.25.27500
+                    500 https://mirrors.edge.kernel.org/ubuntujammy/main amd64 Packages
+        """
+        ),
         "stderr": "",
     }
 
-    mock_apt = MagicMock()
-    mock_apt.side_effect = [apt_ret_cloud, apt_ret_generic]
+    mock_apt = MagicMock(return_value=apt_ret)
     patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
     mock_list_pkgs = MagicMock(return_value=list_ret)
     patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
@@ -1754,30 +1756,18 @@ def test_latest_version_fromrepo_multiple_names():
             show_installed=True,
         )
         assert ret == {"linux-cloud-tools-virtual": version, "linux-generic": version}
-        assert mock_apt.call_args_list == [
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-cloud-tools-virtual",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-generic",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-        ]
+        mock_apt.assert_called_once_with(
+            [
+                "apt-cache",
+                "-q",
+                "policy",
+                "linux-cloud-tools-virtual",
+                "linux-generic",
+                "-o",
+                "APT::Default-Release=jammy-updates",
+            ],
+            scope=False,
+        )
 
 
 def test_hold():
