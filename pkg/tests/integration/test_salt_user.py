@@ -307,7 +307,7 @@ def test_paths_log_rotation(
                                     assert logr_conf_path.exists()
 
                                 # force log rotation
-                                log_rotate_cmd = f"logrotate -f  {str(logr_conf_file)}"
+                                log_rotate_cmd = f"logrotate -f  {logr_conf_file}"
                                 ret = salt_call_cli.run(
                                     "--local", "cmd.run", log_rotate_cmd
                                 )
@@ -316,9 +316,7 @@ def test_paths_log_rotation(
                                 for _path in log_files_list:
                                     log_path = pathlib.Path(_path)
                                     assert log_path.exists()
-                                    assert (
-                                        log_path.owner() == f"{test_account.username}"
-                                    )
+                                    assert log_path.owner() == test_account.username
                                     assert log_path.stat().st_mode & 0o7777 == 0o640
 
                             # cleanup
