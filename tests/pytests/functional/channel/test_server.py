@@ -164,6 +164,7 @@ def test_pub_server_channel(
         log.info("TEST - Req Server handle payload %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
+
     if master_config["transport"] == "zeromq":
         time.sleep(1)
         attempts = 5
