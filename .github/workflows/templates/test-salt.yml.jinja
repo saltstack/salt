@@ -1,3 +1,8 @@
+<%- if workflow_slug in ("nightly", "scheduled") %>
+  <%- set timeout_value = 300 %>
+<%- else %>
+  <%- set timeout_value = 120 %>
+<%- endif %>
 
   <%- for slug, display_name, arch in test_salt_listing["windows"] %>
 
@@ -22,6 +27,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>
 
@@ -49,6 +55,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>
 
@@ -76,5 +83,6 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>
