@@ -519,6 +519,10 @@ backports.entry-points-selectable==1.1.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   virtualenv
+backports.zoneinfo==0.2.1
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   tzlocal
 bcrypt==3.1.6
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -678,15 +682,15 @@ geomet==0.1.2
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cassandra-driver
-gitdb==4.0.5
+gitdb==4.0.7
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   gitpython
-gitpython==3.1.35
+gitpython==3.1.37
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/static/ci/common.in
-google-auth==1.6.3
+google-auth==2.1.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   kubernetes
@@ -694,7 +698,7 @@ hglib==2.6.1
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/static/ci/linux.in
-idna==2.8
+idna==3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -1128,7 +1132,6 @@ pytz==2022.1
     #   python-telegram-bot
     #   tempora
     #   twilio
-    #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -1242,7 +1245,6 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
-    #   google-auth
     #   isodate
     #   jsonschema
     #   junos-eznc
@@ -1268,7 +1270,7 @@ slack-sdk==3.19.5
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   slack-bolt
-smmap==3.0.4
+smmap==4.0.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   gitdb
@@ -1309,7 +1311,7 @@ tornado==6.1
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   python-telegram-bot
-transitions==0.8.1
+transitions==0.8.9
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   junos-eznc
@@ -1328,11 +1330,11 @@ typing-extensions==3.10.0.0
     #   gitpython
     #   importlib-metadata
     #   yarl
-tzlocal==2.1
+tzlocal==3.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   apscheduler
-urllib3==1.26.6
+urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt

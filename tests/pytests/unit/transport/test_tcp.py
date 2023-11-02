@@ -9,10 +9,11 @@ from pytestshellutils.utils import ports
 import salt.channel.server
 import salt.exceptions
 import salt.ext.tornado
+import salt.ext.tornado.concurrent
 import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, patch
 
-pytestmark = [
+tpytestmark = [
     pytest.mark.core_test,
 ]
 
@@ -483,3 +484,185 @@ def test_presence_removed_on_stream_closed():
             io_loop.run_sync(functools.partial(server.publish_payload, package, None))
 
             server.remove_presence_callback.assert_called_with(client)
+
+
+async def test_tcp_pub_client_decode_dict(minion_opts, io_loop):
+    dmsg = {"meh": "bah"}
+    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
+    assert dmsg == await client._decode_messages(dmsg)
+
+
+async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop):
+    dmsg = {"meh": "bah"}
+    msg = salt.payload.dumps(dmsg)
+    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
+    assert dmsg == await client._decode_messages(msg)
+
+
+def test_tcp_pub_client_close(minion_opts, io_loop):
+    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
+
+    message_client = MagicMock()
+
+    client.message_client = message_client
+    client.close()
+    assert client._closing is True
+    assert client.message_client is None
+    client.close()
+    message_client.close.assert_called_once_with()
+
+
+async def test_pub_server__stream_read(master_opts, io_loop):
+
+    messages = [salt.transport.frame.frame_msg({"foo": "bar"})]
+
+    class Stream:
+        def __init__(self, messages):
+            self.messages = messages
+
+        def read_bytes(self, *args, **kwargs):
+            if self.messages:
+                msg = self.messages.pop(0)
+                future = salt.ext.tornado.concurrent.Future()
+                future.set_result(msg)
+                return future
+            raise salt.ext.tornado.iostream.StreamClosedError()
+
+    client = MagicMock()
+    client.stream = Stream(messages)
+    client.address = "client address"
+    server = salt.transport.tcp.PubServer(master_opts, io_loop)
+    await server._stream_read(client)
+    client.close.assert_called_once()
+
+
+async def test_pub_server__stream_read_exception(master_opts, io_loop):
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.read_bytes = MagicMock(
+        side_effect=[
+            Exception("Something went wrong"),
+            salt.ext.tornado.iostream.StreamClosedError(),
+        ]
+    )
+    client.address = "client address"
+    server = salt.transport.tcp.PubServer(master_opts, io_loop)
+    await server._stream_read(client)
+    client.close.assert_called_once()
+
+
+async def test_salt_message_server(master_opts):
+
+    received = []
+
+    def handler(stream, body, header):
+
+        received.append(body)
+
+    server = salt.transport.tcp.SaltMessageServer(handler)
+    msg = {"foo": "bar"}
+    messages = [salt.transport.frame.frame_msg(msg)]
+
+    class Stream:
+        def __init__(self, messages):
+            self.messages = messages
+
+        def read_bytes(self, *args, **kwargs):
+            if self.messages:
+                msg = self.messages.pop(0)
+                future = salt.ext.tornado.concurrent.Future()
+                future.set_result(msg)
+                return future
+            raise salt.ext.tornado.iostream.StreamClosedError()
+
+    stream = Stream(messages)
+    address = "client address"
+
+    await server.handle_stream(stream, address)
+
+    # Let loop iterate so callback gets called
+    await salt.ext.tornado.gen.sleep(0.01)
+
+    assert received
+    assert [msg] == received
+
+
+async def test_salt_message_server_exception(master_opts, io_loop):
+    received = []
+
+    def handler(stream, body, header):
+
+        received.append(body)
+
+    stream = MagicMock()
+    stream.read_bytes = MagicMock(
+        side_effect=[
+            Exception("Something went wrong"),
+        ]
+    )
+    address = "client address"
+    server = salt.transport.tcp.SaltMessageServer(handler)
+    await server.handle_stream(stream, address)
+    stream.close.assert_called_once()
+
+
+async def test_message_client_stream_return_exception(minion_opts, io_loop):
+    msg = {"foo": "bar"}
+    payload = salt.transport.frame.frame_msg(msg)
+    future = salt.ext.tornado.concurrent.Future()
+    future.set_result(payload)
+    client = salt.transport.tcp.MessageClient(
+        minion_opts,
+        "127.0.0.1",
+        12345,
+        connect_callback=MagicMock(),
+        disconnect_callback=MagicMock(),
+    )
+    client._stream = MagicMock()
+    client._stream.read_bytes.side_effect = [
+        future,
+    ]
+    try:
+        io_loop.add_callback(client._stream_return)
+        await salt.ext.tornado.gen.sleep(0.01)
+        client.close()
+        await salt.ext.tornado.gen.sleep(0.01)
+        assert client._stream is None
+    finally:
+        client.close()
+
+
+def test_tcp_pub_server_pre_fork(master_opts):
+    process_manager = MagicMock()
+    server = salt.transport.tcp.TCPPublishServer(master_opts)
+    server.pre_fork(process_manager)
+
+
+async def test_pub_server_publish_payload(master_opts, io_loop):
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    topic_list = ["meh"]
+    future = salt.ext.tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "meh"
+    server.clients = [client]
+    await server.publish_payload(package, topic_list)
+    client.stream.write.assert_called_once()
+
+
+async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    topic_list = ["meh"]
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [
+        salt.ext.tornado.iostream.StreamClosedError("mock")
+    ]
+    client.id_ = "meh"
+    server.clients = {client}
+    await server.publish_payload(package, topic_list)
+    assert server.clients == set()

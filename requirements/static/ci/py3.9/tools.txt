@@ -20,7 +20,7 @@ charset-normalizer==3.0.1
     # via requests
 commonmark==0.9.1
     # via rich
-idna==3.4
+idna==3.2
     # via requests
 jinja2==3.1.2
     # via -r requirements/static/ci/tools.in
@@ -52,7 +52,7 @@ six==1.16.0
     # via python-dateutil
 typing-extensions==4.4.0
     # via python-tools-scripts
-urllib3==1.26.12
+urllib3==1.26.18
     # via
     #   botocore
     #   requests

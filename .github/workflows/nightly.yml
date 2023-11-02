@@ -18,7 +18,7 @@ on:
         description: Skip running the Salt packages test suite.
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 1 * * *'  # Every day at 1AM
+    - cron: '0 0 * * *'  # Every day at 0AM
 
 env:
   COLUMNS: 190
@@ -1908,6 +1908,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   windows-2019:
     name: Windows 2019 Test
@@ -1928,6 +1930,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   windows-2022:
     name: Windows 2022 Test
@@ -1948,6 +1952,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   macos-12:
     name: macOS 12 Test
@@ -1968,6 +1974,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   almalinux-8:
     name: Alma Linux 8 Test
@@ -1988,6 +1996,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   almalinux-9:
     name: Alma Linux 9 Test
@@ -2008,6 +2018,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   amazonlinux-2:
     name: Amazon Linux 2 Test
@@ -2028,6 +2040,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   archlinux-lts:
     name: Arch Linux LTS Test
@@ -2048,6 +2062,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   centos-7:
     name: CentOS 7 Test
@@ -2068,6 +2084,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   centosstream-8:
     name: CentOS Stream 8 Test
@@ -2088,6 +2106,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   centosstream-9:
     name: CentOS Stream 9 Test
@@ -2108,6 +2128,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   debian-10:
     name: Debian 10 Test
@@ -2128,6 +2150,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   debian-11:
     name: Debian 11 Test
@@ -2148,6 +2172,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   debian-11-arm64:
     name: Debian 11 Arm64 Test
@@ -2168,6 +2194,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   debian-12:
     name: Debian 12 Test
@@ -2188,6 +2216,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   debian-12-arm64:
     name: Debian 12 Arm64 Test
@@ -2208,6 +2238,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   fedora-37:
     name: Fedora 37 Test
@@ -2228,6 +2260,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   fedora-38:
     name: Fedora 38 Test
@@ -2248,6 +2282,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   opensuse-15:
     name: Opensuse 15 Test
@@ -2268,6 +2304,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-3:
     name: Photon OS 3 Test
@@ -2288,6 +2326,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-3-arm64:
     name: Photon OS 3 Arm64 Test
@@ -2308,6 +2348,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-4:
     name: Photon OS 4 Test
@@ -2328,6 +2370,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
@@ -2348,6 +2392,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-5:
     name: Photon OS 5 Test
@@ -2368,6 +2414,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
@@ -2388,6 +2436,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   ubuntu-2004:
     name: Ubuntu 20.04 Test
@@ -2408,6 +2458,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
@@ -2428,6 +2480,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   ubuntu-2204:
     name: Ubuntu 22.04 Test
@@ -2448,6 +2502,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
@@ -2468,6 +2524,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 300
 
   combine-all-code-coverage:
     name: Combine Code Coverage

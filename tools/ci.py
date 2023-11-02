@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from ptscripts import Context, command_group
 
 import tools.utils
+import tools.utils.gh
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -621,9 +622,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "full": {
             "help": "Full test run",
         },
+        "workflow": {
+            "help": "Which workflow is running",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str, full: bool = False):
+def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "ci"):
     """
     Generate the test matrix.
     """
@@ -634,6 +638,11 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False):
         "scenarios": 1,
         "unit": 2,
     }
+    # On nightly and scheduled builds we don't want splits at all
+    if workflow.lower() in ("nightly", "scheduled"):
+        ctx.info(f"Clearning splits definition since workflow is '{workflow}'")
+        _splits.clear()
+
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
@@ -906,8 +915,9 @@ def _get_pr_test_labels_from_api(
         headers = {
             "Accept": "application/vnd.github+json",
         }
-        if "GITHUB_TOKEN" in os.environ:
-            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)
         ret = web.get(f"https://api.github.com/repos/{repository}/pulls/{pr}")
         if ret.status_code != 200:

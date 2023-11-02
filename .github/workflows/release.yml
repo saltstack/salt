@@ -116,7 +116,6 @@ jobs:
 
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
-    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     runs-on:
       - self-hosted
       - linux

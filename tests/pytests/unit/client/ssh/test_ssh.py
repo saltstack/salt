@@ -339,3 +339,113 @@ def test_extra_filerefs(tmp_path, opts):
     with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
         ssh_obj = client._prep_ssh(**ssh_opts)
         assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
+
+
+def test_key_deploy_permission_denied_scp(tmp_path, opts):
+    """
+    test "key_deploy" function when
+    permission denied authentication error
+    when attempting to use scp to copy file
+    to target
+    """
+    host = "localhost"
+    passwd = "password"
+    usr = "ssh-usr"
+    opts["ssh_user"] = usr
+    opts["tgt"] = host
+
+    ssh_ret = {
+        host: {
+            "stdout": "\rroot@192.168.1.187's password: \n\rroot@192.168.1.187's password: \n\rroot@192.168.1.187's password: \n",
+            "stderr": "Permission denied, please try again.\nPermission denied, please try again.\nroot@192.168.1.187: Permission denied (publickey,gssapi-keyex,gssapi-with-micimport pudb; pu.dbassword).\nscp: Connection closed\n",
+            "retcode": 255,
+        }
+    }
+    key_run_ret = {
+        "localhost": {
+            "jid": "20230922155652279959",
+            "return": "test",
+            "retcode": 0,
+            "id": "test",
+            "fun": "cmd.run",
+            "fun_args": ["echo test"],
+        }
+    }
+    patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
+    with patch_roster_file:
+        client = ssh.SSH(opts)
+    patch_input = patch("builtins.input", side_effect=["y"])
+    patch_getpass = patch("getpass.getpass", return_value=["password"])
+    mock_key_run = MagicMock(return_value=key_run_ret)
+    patch_key_run = patch("salt.client.ssh.SSH._key_deploy_run", mock_key_run)
+    with patch_input, patch_getpass, patch_key_run:
+        ret = client.key_deploy(host, ssh_ret)
+    assert mock_key_run.call_args_list[0][0] == (
+        host,
+        {"passwd": [passwd], "host": host, "user": usr},
+        True,
+    )
+    assert ret == key_run_ret
+    assert mock_key_run.call_count == 1
+
+
+def test_key_deploy_permission_denied_file_scp(tmp_path, opts):
+    """
+    test "key_deploy" function when permission denied
+    due to not having access to copy the file to the target
+    We do not want to deploy the key, because this is not
+    an authentication to the target error.
+    """
+    host = "localhost"
+    passwd = "password"
+    usr = "ssh-usr"
+    opts["ssh_user"] = usr
+    opts["tgt"] = host
+
+    mock_key_run = MagicMock(return_value=False)
+    patch_key_run = patch("salt.client.ssh.SSH._key_deploy_run", mock_key_run)
+
+    ssh_ret = {
+        "localhost": {
+            "stdout": "",
+            "stderr": 'scp: dest open "/tmp/preflight.sh": Permission denied\nscp: failed to upload file /etc/salt/preflight.sh to /tmp/preflight.sh\n',
+            "retcode": 1,
+        }
+    }
+    patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
+    with patch_roster_file:
+        client = ssh.SSH(opts)
+    ret = client.key_deploy(host, ssh_ret)
+    assert ret == ssh_ret
+    assert mock_key_run.call_count == 0
+
+
+def test_key_deploy_no_permission_denied(tmp_path, opts):
+    """
+    test "key_deploy" function when no permission denied
+    is returned
+    """
+    host = "localhost"
+    passwd = "password"
+    usr = "ssh-usr"
+    opts["ssh_user"] = usr
+    opts["tgt"] = host
+
+    mock_key_run = MagicMock(return_value=False)
+    patch_key_run = patch("salt.client.ssh.SSH._key_deploy_run", mock_key_run)
+    ssh_ret = {
+        "localhost": {
+            "jid": "20230922161937998385",
+            "return": "test",
+            "retcode": 0,
+            "id": "test",
+            "fun": "cmd.run",
+            "fun_args": ["echo test"],
+        }
+    }
+    patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
+    with patch_roster_file:
+        client = ssh.SSH(opts)
+    ret = client.key_deploy(host, ssh_ret)
+    assert ret == ssh_ret
+    assert mock_key_run.call_count == 0

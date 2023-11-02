@@ -134,13 +134,19 @@ def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
     """
     Return a list of salt versions
     """
+    # Deferred import
+    import tools.utils.gh
+
+    ctx.info(f"Collecting salt releases from repository '{repository}'")
+
     versions = set()
     with ctx.web as web:
         headers = {
             "Accept": "application/vnd.github+json",
         }
-        if "GITHUB_TOKEN" in os.environ:
-            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)
         ret = web.get(f"https://api.github.com/repos/{repository}/tags")
         if ret.status_code != 200:
