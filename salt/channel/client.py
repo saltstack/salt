@@ -564,7 +564,7 @@ class AsyncPubChannel:
                     log.info("fire_master failed", exc_info=True)
                 finally:
                     # SyncWrapper will call either close() or destroy(), whichever is available
-                    del req_channel
+                    req_channel.close()
             else:
                 self._reconnected = True
         except Exception as exc:  # pylint: disable=broad-except
