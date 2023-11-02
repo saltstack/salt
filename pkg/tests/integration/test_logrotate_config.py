@@ -38,8 +38,8 @@ def test_issue_65231_etc_logrotate_salt_dir_removed(install_salt):
     """
     if install_salt.prev_version and packaging.version.parse(
         install_salt.prev_version
-    ) == packaging.version.parse("3006.3"):
-        pytest.skip("Testing a downgrade to 3006.3, do not run")
+    ) <= packaging.version.parse("3006.4"):
+        pytest.skip("Testing a downgrade to 3006.4, do not run")
 
     path = pathlib.Path("/etc/logrotate.d/salt")
     if path.exists():
