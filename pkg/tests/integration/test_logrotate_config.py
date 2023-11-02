@@ -2,28 +2,25 @@
 Tests for logrotate config
 """
 
-from pathlib import Path
+import pathlib
 
 import packaging.version
 import pytest
 
-pytestmark = [pytest.mark.skip_on_windows, pytest.mark.skip_on_darwin]
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+]
 
 
 @pytest.fixture
-def logrotate_config_file(salt_call_cli):
+def logrotate_config_file(grains):
     """
     Fixture for logrotate config file path
     """
-    logrotate_dir = Path("/etc/logrotate.d")
-
-    os_family = salt_call_cli.run("grains.get", "os_family")
-    assert os_family.returncode == 0
-
-    if os_family.data == "RedHat":
-        return logrotate_dir / "salt"
-    elif os_family.data == "Debian":
-        return logrotate_dir / "salt-common"
+    if grains["os_family"] == "RedHat":
+        return pathlib.Path("/etc/logrotate.d", "salt")
+    elif grains["os_family"] == "Debian":
+        return pathlib.Path("/etc/logrotate.d", "salt-common")
 
 
 def test_logrotate_config(logrotate_config_file):
@@ -44,6 +41,6 @@ def test_issue_65231_etc_logrotate_salt_dir_removed(install_salt):
     ) == packaging.version.parse("3006.3"):
         pytest.skip("Testing a downgrade to 3006.3, do not run")
 
-    path = Path("/etc/logrotate.d/salt")
+    path = pathlib.Path("/etc/logrotate.d/salt")
     if path.exists():
         assert path.is_dir() is False
