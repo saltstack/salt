@@ -425,6 +425,7 @@ def test_makedirs_perms(tmp_path):
     assert win_file.makedirs_perms(path) is True
     assert os.path.isdir(path)
 
+
 def test_check_perms_path_not_found(tmp_path, windows_user):
     tmp_path = str(tmp_path)
     path = os.path.join(tmp_path, "dir1")
