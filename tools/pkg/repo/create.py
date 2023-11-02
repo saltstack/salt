@@ -51,11 +51,16 @@ _deb_distro_info = {
         "10": {
             "label": "deb10ary",
             "codename": "buster",
-            "suitename": "oldstable",
+            "suitename": "oldoldstable",
         },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
+            "suitename": "oldstable",
+        },
+        "12": {
+            "label": "deb12ary",
+            "codename": "bookworm",
             "suitename": "stable",
         },
     },
@@ -318,7 +323,7 @@ _rpm_distro_info = {
     "amazon": ["2"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
-    "photon": ["3", "4"],
+    "photon": ["3", "4", "5"],
 }
 
 

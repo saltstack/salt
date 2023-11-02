@@ -416,7 +416,7 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
             },
             [
                 "The require statement in state 'add_test_2' in SLS '/srv/reactor/start.sls' needs to be formed as a list",
-                "Too many functions declared in state 'local.cmd.run' in SLS '/srv/reactor/start.sls'",
+                "Too many functions declared in state 'add_test_2' in SLS '/srv/reactor/start.sls'. Please choose one of the following: cmd.run, cmd.run",
             ],
         ),
         (

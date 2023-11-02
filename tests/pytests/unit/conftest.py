@@ -1,6 +1,10 @@
+import asyncio
+
 import pytest
 
 import salt.config
+import salt.transport.tcp
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -53,3 +57,14 @@ def syndic_opts(tmp_path):
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/syndic.log"
     return opts
+
+
+@pytest.fixture
+def mocked_tcp_pub_client():
+    transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    transport.connect = MagicMock()
+    future = asyncio.Future()
+    transport.connect.return_value = future
+    future.set_result(True)
+    with patch("salt.transport.tcp.TCPPubClient", transport):
+        yield
