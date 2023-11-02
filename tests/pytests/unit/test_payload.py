@@ -7,8 +7,11 @@ import copy
 import datetime
 import logging
 
+import zmq
+
 import salt.exceptions
 import salt.payload
+import salt.utils.msgpack
 from salt.defaults import _Constant
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
@@ -210,3 +213,93 @@ def test_constants():
     sdata = salt.payload.dumps(constant)
     odata = salt.payload.loads(sdata)
     assert odata == constant
+
+
+def test_package():
+    value = salt.utils.msgpack.dumps("test")
+    assert salt.payload.package("test") == value
+
+
+def test_unpackage():
+    value = [b"test"]
+    packed = salt.utils.msgpack.dumps(value)
+    assert salt.payload.unpackage(packed) == value
+
+
+def test_format_payload():
+    expected = salt.utils.msgpack.dumps(
+        {"enc": [b"test"], "load": {"kwargs": {"foo": "bar"}}}
+    )
+    enc = [b"test"]
+    kwargs = {"foo": "bar"}
+    payload = salt.payload.format_payload(enc=enc, kwargs=kwargs)
+    assert payload == expected
+
+
+def test_SREQ_init():
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=None
+    )
+    assert req.master == "tcp://salt:3434"
+    assert req.id_ == b"id"
+    assert req.linger == 1
+    assert req.opts is None
+    assert isinstance(req.context, zmq.Context)
+    assert isinstance(req.poller, zmq.Poller)
+
+
+def test_SREQ_socket():
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=None
+    )
+    # socket() is a property that auto creates a socket if a socket is wanted.
+    socket = req.socket
+    assert isinstance(socket, zmq.Socket)
+
+    req = salt.payload.SREQ(
+        "tcp://[2001:db8:85a3:8d3:1319:8a2e:370:7348]:3434",
+        id_=b"id",
+        serial="msgpack",
+        linger=1,
+        opts=None,
+    )
+    # socket() is a property that auto creates a socket if a socket is wanted.
+    socket = req.socket
+    assert isinstance(socket, zmq.Socket)
+
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=None, serial="msgpack", linger=1, opts=None
+    )
+    # socket() is a property that auto creates a socket if a socket is wanted.
+    socket = req.socket
+    assert isinstance(socket, zmq.Socket)
+
+
+def test_SREQ_set_tcp_keepalive():
+    opts = {"tcp_keepalive": True}
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=opts
+    )
+    socket = req.socket
+    assert req._socket.getsockopt(zmq.TCP_KEEPALIVE)
+
+    opts = {"tcp_keepalive_idle": 100}
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=opts
+    )
+    socket = req.socket
+    assert req._socket.getsockopt(zmq.TCP_KEEPALIVE_IDLE) == 100
+
+    opts = {"tcp_keepalive_cnt": 100}
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=opts
+    )
+    socket = req.socket
+    assert req._socket.getsockopt(zmq.TCP_KEEPALIVE_CNT) == 100
+
+    opts = {"tcp_keepalive_intvl": 100}
+    req = salt.payload.SREQ(
+        "tcp://salt:3434", id_=b"id", serial="msgpack", linger=1, opts=opts
+    )
+    socket = req.socket
+    assert req._socket.getsockopt(zmq.TCP_KEEPALIVE_INTVL) == 100

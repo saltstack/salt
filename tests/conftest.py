@@ -813,6 +813,17 @@ def groups_collection_modifyitems(config, items):
         # Just one group, don't do any filtering
         return
 
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+
+    if config.getoption("--last-failed") or config.getoption("--failed-first"):
+        # This is a test failure rerun, applying test groups would break this
+        terminal_reporter.write(
+            "\nNot splitting collected tests into chunks since --lf/--last-failed or "
+            "-ff/--failed-first was passed on the CLI.\n",
+            yellow=True,
+        )
+        return
+
     total_items = len(items)
 
     # Devide into test groups
@@ -828,7 +839,6 @@ def groups_collection_modifyitems(config, items):
     if deselected:
         config.hook.pytest_deselected(items=deselected)
 
-    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
         f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
@@ -1419,13 +1429,15 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/libexec/openssh/sftp-server",
         # Arch Linux
         "/usr/lib/ssh/sftp-server",
+        # Photon OS 5
+        "/usr/libexec/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
         if os.path.exists(path):
             sftp_server_path = path
     if sftp_server_path is None:
-        log.warning(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
     else:
         sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(
