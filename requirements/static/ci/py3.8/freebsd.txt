@@ -544,7 +544,7 @@ websocket-client==0.40.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==2.3.6
+werkzeug==3.0.1
     # via
     #   moto
     #   pytest-httpserver
