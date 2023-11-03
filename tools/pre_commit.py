@@ -85,7 +85,7 @@ def generate_workflows(ctx: Context):
         },
     }
     test_salt_listing = {
-        "linux": (
+        "linux": [
             ("almalinux-8", "Alma Linux 8", "x86_64"),
             ("almalinux-9", "Alma Linux 9", "x86_64"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
@@ -114,14 +114,23 @@ def generate_workflows(ctx: Context):
             ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
             ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64"),
-        ),
-        "macos": (("macos-12", "macOS 12", "x86_64"),),
-        "windows": (
+        ],
+        "macos": [
+            ("macos-12", "macOS 12", "x86_64"),
+        ],
+        "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
             ("windows-2019", "Windows 2019", "amd64"),
             ("windows-2022", "Windows 2022", "amd64"),
-        ),
+        ],
     }
+    for idx, (slug, display_name, arch) in enumerate(test_salt_listing["linux"][:]):
+        fips = False
+        test_salt_listing["linux"][idx] = (slug, display_name, arch, fips)  # type: ignore[assignment]
+        if slug == "photonos-4":
+            fips = True
+            test_salt_listing["linux"].append((slug, display_name, arch, fips))  # type: ignore[arg-type]
+
     test_salt_pkg_listing = {
         "linux": (
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm"),

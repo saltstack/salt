@@ -2632,6 +2632,29 @@ jobs:
       workflow-slug: ci
       default-timeout: 180
 
+  photonos-4-fips:
+    name: Photon OS 4 Test(FIPS)
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - photonos-4-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      workflow-slug: ci
+      default-timeout: 180
+      fips: true
+
   combine-all-code-coverage:
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
@@ -2709,6 +2732,7 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+      - photonos-4-fips
     steps:
       - uses: actions/checkout@v4
 
@@ -2905,6 +2929,7 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+      - photonos-4-fips
       - amazonlinux-2-pkg-tests
       - amazonlinux-2-arm64-pkg-tests
       - amazonlinux-2023-pkg-tests
