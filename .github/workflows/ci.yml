@@ -2101,6 +2101,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
       skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      workflow-slug: ci
+      default-timeout: 180
 
   amazonlinux-2023:
     name: Amazon Linux 2023 Test
@@ -2121,6 +2123,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
       skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      workflow-slug: ci
+      default-timeout: 180
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
@@ -2141,6 +2145,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
       skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      workflow-slug: ci
+      default-timeout: 180
 
   archlinux-lts:
     name: Arch Linux LTS Test
