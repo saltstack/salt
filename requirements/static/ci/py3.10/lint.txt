@@ -993,7 +993,7 @@ pycryptodomex==3.9.8
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/crypto.txt
-pygit2==1.9.1 ; python_version >= "3.10"
+pygit2==1.13.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/linux.in
