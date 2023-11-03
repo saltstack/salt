@@ -306,6 +306,7 @@ def test(
     print_system_info: bool = False,
     skip_code_coverage: bool = False,
     envvars: list[str] = None,
+    fips: bool = False,
 ):
     """
     Run test in the VM.
@@ -341,6 +342,9 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+        if fips:
+            env["FIPS_TESTRUN"] = "1"
+            vm.run(["tdnf", "install", "-y", "openssl-fips-provider"], sudo=True)
     if envvars:
         for key in envvars:
             if key not in os.environ:
@@ -853,6 +857,9 @@ class VM:
             forward_agent = "no"
         else:
             forward_agent = "yes"
+        ciphers = ""
+        if "photonos" in self.name:
+            ciphers = "Ciphers=aes256-gcm@openssh.com,aes256-cbc,aes256-ctr,chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes128-gcm@openssh.com"
         ssh_config = textwrap.dedent(
             f"""\
             Host {self.name}
@@ -864,7 +871,8 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
-              PasswordAuthentication no
+              PasswordAuthentication=no
+              {ciphers}
             """
         )
         self.ssh_config_file.write_text(ssh_config)

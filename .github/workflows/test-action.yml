@@ -41,6 +41,11 @@ on:
         type: string
         description: The python version to run tests with
         default: "3.10"
+      fips:
+        required: false
+        type: boolean
+        default: false
+        description: Test run with FIPS enabled
       package-name:
         required: false
         type: string
@@ -207,7 +212,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -216,7 +221,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -225,7 +230,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -235,14 +240,14 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+            ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Slow Tests
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
 
       - name: Run Core Tests
@@ -250,7 +255,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
@@ -258,7 +263,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
@@ -267,7 +272,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            -E TEST_GROUP ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
+            -E TEST_GROUP ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
             --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
       - name: Combine Coverage Reports
