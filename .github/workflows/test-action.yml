@@ -64,8 +64,8 @@ on:
       default-timeout:
         required: false
         type: number
-        description: Timeout, in minutes, for the test job(Default 300, 5 hours).
-        default: 300
+        description: Timeout, in minutes, for the test job(Default 360, 6 hours).
+        default: 360
 
 env:
   COLUMNS: 190
@@ -109,8 +109,8 @@ jobs:
       - linux
       - bastion
     # Full test runs. Each chunk should never take more than 2 hours.
-    # Partial test runs(no chunk parallelization), 5 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 300 }}
+    # Partial test runs(no chunk parallelization), 6 Hours
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     needs:
       - generate-matrix
     strategy:
