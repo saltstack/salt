@@ -286,7 +286,7 @@ pydantic==1.10.8
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   inflect
-pygit2==1.12.1
+pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.7
     # via

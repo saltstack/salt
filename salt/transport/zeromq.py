@@ -19,6 +19,7 @@ import tornado.ioloop
 import tornado.locks
 import zmq.asyncio
 import zmq.error
+import zmq.eventloop.future
 import zmq.eventloop.zmqstream
 
 import salt.payload
@@ -633,16 +634,15 @@ class AsyncReqMessageClient:
         else:
             self.io_loop = io_loop
 
-        self.context = zmq.Context()
+        self.context = zmq.eventloop.future.Context()
 
         self.send_queue = []
 
         self._closing = False
-        self._future = None
         self.lock = tornado.locks.Lock()
 
     def connect(self):
-        if hasattr(self, "stream"):
+        if hasattr(self, "socket") and self.socket:
             return
         # wire up sockets
         self._init_socket()
@@ -658,24 +658,10 @@ class AsyncReqMessageClient:
             return
         else:
             self._closing = True
-            if hasattr(self, "stream") and self.stream is not None:
-                if ZMQ_VERSION_INFO < (14, 3, 0):
-                    # stream.close() doesn't work properly on pyzmq < 14.3.0
-                    if self.stream.socket:
-                        self.stream.socket.close()
-                    self.stream.io_loop.remove_handler(self.stream.socket)
-                    # set this to None, more hacks for messed up pyzmq
-                    self.stream.socket = None
-                    self.socket.close()
-                else:
-                    self.stream.close(1)
-                    self.socket = None
-                self.stream = None
-            if self._future:
-                self._future.set_exception(SaltException("Closing connection"))
-                self._future = None
+            if hasattr(self, "socket") and self.socket is not None:
+                self.socket.close(0)
+                self.socket = None
             if self.context.closed is False:
-                # This hangs if closing the stream causes an import error
                 self.context.term()
 
     def _init_socket(self):
@@ -692,23 +678,8 @@ class AsyncReqMessageClient:
                 self.socket.setsockopt(zmq.IPV6, 1)
             elif hasattr(zmq, "IPV4ONLY"):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
-        self.socket.linger = self.linger
+        self.socket.setsockopt(zmq.LINGER, self.linger)
         self.socket.connect(self.addr)
-        self.stream = zmq.eventloop.zmqstream.ZMQStream(
-            self.socket, io_loop=self.io_loop
-        )
-        self.stream.on_recv(self.handle_reply)
-
-    def timeout_message(self, future):
-        """
-        Handle a message timeout by removing it from the sending queue
-        and informing the caller
-
-        :raises: SaltReqTimeoutError
-        """
-        if self._future == future:
-            self._future = None
-            future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
@@ -732,20 +703,27 @@ class AsyncReqMessageClient:
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(
-                timeout, self.timeout_message, future
+                timeout, self._timeout_message, future
             )
 
-        with (yield self.lock.acquire()):
-            self._future = future
-            yield self.stream.send(message)
-            recv = yield future
+        self.io_loop.spawn_callback(self._send_recv, message, future)
+
+        recv = yield future
+
         raise tornado.gen.Return(recv)
 
-    def handle_reply(self, msg):
-        data = salt.payload.loads(msg[0])
-        future = self._future
-        self._future = None
-        future.set_result(data)
+    def _timeout_message(self, future):
+        if not future.done():
+            future.set_exception(SaltReqTimeoutError("Message timed out"))
+
+    @tornado.gen.coroutine
+    def _send_recv(self, message, future):
+        with (yield self.lock.acquire()):
+            yield self.socket.send(message)
+            recv = yield self.socket.recv()
+        if not future.done():
+            data = salt.payload.loads(recv)
+            future.set_result(data)
 
 
 class ZeroMQSocketMonitor:
