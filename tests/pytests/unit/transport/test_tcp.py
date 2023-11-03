@@ -16,7 +16,7 @@ import salt.exceptions
 import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, patch
 
-tpytestmark = [
+pytestmark = [
     pytest.mark.core_test,
 ]
 
