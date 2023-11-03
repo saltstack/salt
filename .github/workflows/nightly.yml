@@ -2162,6 +2162,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 360
 
   amazonlinux-2023:
     name: Amazon Linux 2023 Test
@@ -2182,6 +2184,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 360
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
@@ -2202,6 +2206,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 360
 
   archlinux-lts:
     name: Arch Linux LTS Test
