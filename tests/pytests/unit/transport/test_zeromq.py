@@ -11,7 +11,6 @@ async def test_req_server_garbage_request(io_loop):
     RequestServers's message handler.
     """
     opts = salt.config.master_config("")
-    opts["zmq_monitor"] = True
     request_server = salt.transport.zeromq.RequestServer(opts)
 
     def message_handler(payload):
