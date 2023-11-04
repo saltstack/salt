@@ -813,6 +813,17 @@ def groups_collection_modifyitems(config, items):
         # Just one group, don't do any filtering
         return
 
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+
+    if config.getoption("--last-failed") or config.getoption("--failed-first"):
+        # This is a test failure rerun, applying test groups would break this
+        terminal_reporter.write(
+            "\nNot splitting collected tests into chunks since --lf/--last-failed or "
+            "-ff/--failed-first was passed on the CLI.\n",
+            yellow=True,
+        )
+        return
+
     total_items = len(items)
 
     # Devide into test groups
@@ -828,7 +839,6 @@ def groups_collection_modifyitems(config, items):
     if deselected:
         config.hook.pytest_deselected(items=deselected)
 
-    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
         f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
