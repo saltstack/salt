@@ -278,7 +278,7 @@ msgpack==1.0.5
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
@@ -361,9 +361,9 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==2.4.0
+pyjwt==2.7.0
     # via twilio
-pymysql==1.0.2
+pymysql==1.1.0
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via

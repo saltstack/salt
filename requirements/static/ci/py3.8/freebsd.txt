@@ -255,7 +255,7 @@ msgpack==1.0.5
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
