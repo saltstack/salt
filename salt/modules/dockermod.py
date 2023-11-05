@@ -525,11 +525,11 @@ def _clear_context():
             pass
 
 
-def _get_md5(name, path):
+def _get_sha256(name, path):
     """
-    Get the MD5 checksum of a file from a container
+    Get the sha256 checksum of a file from a container
     """
-    output = run_stdout(name, f"md5sum {shlex.quote(path)}", ignore_retcode=True)
+    output = run_stdout(name, f"sha256sum {shlex.quote(path)}", ignore_retcode=True)
     try:
         return output.split()[0]
     except IndexError:
@@ -3628,8 +3628,8 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
             raise SaltInvocationError(f"Source file {source} does not exist")
 
     # Before we try to replace the file, compare checksums.
-    source_md5 = _get_md5(name, source)
-    if source_md5 == __salt__["file.get_sum"](dest, "md5"):
+    source_sha256 = _get_sha256(name, source)
+    if source_sha256 == __salt__["file.get_sum"](dest, "sha256"):
         log.debug("%s:%s and %s are the same file, skipping copy", name, source, dest)
         return True
 
@@ -3641,7 +3641,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
         src_path = f"{name}:{source}"
     cmd = ["docker", "cp", src_path, dest_dir]
     __salt__["cmd.run"](cmd, python_shell=False)
-    return source_md5 == __salt__["file.get_sum"](dest, "md5")
+    return source_sha256 == __salt__["file.get_sum"](dest, "sha256")
 
 
 # Docker cp gets a file from the container, alias this to copy_from
