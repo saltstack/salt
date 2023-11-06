@@ -914,7 +914,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     async def publisher(self, publish_payload, ioloop=None):
         if ioloop is None:
             ioloop = tornado.ioloop.IOLoop.current()
-            ioloop.asyncio_loop.set_debug(True)
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
