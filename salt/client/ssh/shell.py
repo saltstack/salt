@@ -87,7 +87,7 @@ class Shell:
         ssh_options=None,
     ):
         self.opts = opts
-        # ssh <ipv6>, but scp [<ipv6]:/path
+        # ssh <ipv6>, but scp [<ipv6>]:/path
         self.host = host.strip("[]")
         self.user = user
         self.port = port
@@ -339,11 +339,17 @@ class Shell:
         scp a file or files to a remote system
         """
         if makedirs:
-            ret = self.exec_cmd(f"mkdir -p {os.path.dirname(remote)}")
-            if ret[2]:
-                return ret
+            pardir = os.path.dirname(remote)
+            if not pardir:
+                log.warning(
+                    f"Makedirs called on relative filename: '{remote}'. Skipping."
+                )
+            else:
+                ret = self.exec_cmd("mkdir -p " + shlex.quote(pardir))
+                if ret[2]:
+                    return ret
 
-        # scp needs [<ipv6}
+        # scp needs [<ipv6>]
         host = self.host
         if ":" in host:
             host = f"[{host}]"
