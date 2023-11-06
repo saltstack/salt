@@ -773,7 +773,7 @@ class MessageClient:
 
     # TODO: timeout inflight sessions
     def close(self):
-        if self._closing:
+        if self._closing or self._closed:
             return
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
