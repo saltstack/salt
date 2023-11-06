@@ -136,9 +136,9 @@ def test_pkg_paths(
     Test package paths ownership
     """
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
-        "3006.2"
+        "3006.4"
     ):
-        pytest.skip("Package path ownership was changed in salt 3006.3")
+        pytest.skip("Package path ownership was changed in salt 3006.4")
     salt_user_subdirs = []
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
@@ -184,9 +184,9 @@ def test_paths_log_rotation(
     Assumes test_pkg_paths successful
     """
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
-        "3006.3"
+        "3006.4"
     ):
-        pytest.skip("Package path ownership was changed in salt 3006.3")
+        pytest.skip("Package path ownership was changed in salt 3006.4")
 
     if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
         pytest.skip(
