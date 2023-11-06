@@ -35,7 +35,9 @@ def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
     file_refs = salt.client.ssh.state.lowstate_file_refs(
         chunks,
         _merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), __opts__.get("extra_filerefs", "")
+            kwargs.get("extra_filerefs", ""),
+            __opts__.get("extra_filerefs", ""),
+            __context__.get("_cp_extra_filerefs", ""),
         ),
     )
     # Create the tar containing the state pkg and relevant files.
@@ -201,7 +203,9 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""),
+                opts.get("extra_filerefs", ""),
+                __context__.get("_cp_extra_filerefs", ""),
             ),
         )
 
@@ -339,7 +343,9 @@ def low(data, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), __opts__.get("extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""),
+                __opts__.get("extra_filerefs", ""),
+                __context__.get("_cp_extra_filerefs", ""),
             ),
         )
         roster = salt.roster.Roster(__opts__, __opts__.get("roster", "flat"))
@@ -428,7 +434,9 @@ def high(data, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""),
+                opts.get("extra_filerefs", ""),
+                __context__.get("_cp_extra_filerefs", ""),
             ),
         )
 
@@ -672,7 +680,9 @@ def highstate(test=None, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""),
+                opts.get("extra_filerefs", ""),
+                __context__.get("_cp_extra_filerefs", ""),
             ),
         )
         # Check for errors
@@ -766,7 +776,9 @@ def top(topfn, test=None, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""),
+                opts.get("extra_filerefs", ""),
+                __context__.get("_cp_extra_filerefs", ""),
             ),
         )
 
@@ -1195,7 +1207,9 @@ def single(fun, name, test=None, **kwargs):
     file_refs = salt.client.ssh.state.lowstate_file_refs(
         chunks,
         _merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+            kwargs.get("extra_filerefs", ""),
+            opts.get("extra_filerefs", ""),
+            __context__.get("_cp_extra_filerefs", ""),
         ),
     )
 
