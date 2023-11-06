@@ -23,6 +23,7 @@ from tests.support.mock import Mock, call, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.skip_on_windows]
 
 SUBDIR = "subdir"
 TGT = "testtarget"

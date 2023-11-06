@@ -934,7 +934,10 @@ class SSHCpClient(salt.fileclient.FSClient):
         elif master:
             # The root cachedir on the master-side should not be overridden
             cachedir = os.path.join(
-                self.opts["cachedir"], *prefix, "absolute_root", cachedir[1:]
+                self.opts["cachedir"],
+                *prefix,
+                "absolute_root",
+                str(Path(*cachedir.split(os.sep)[1:])),
             )
         return cachedir
 
