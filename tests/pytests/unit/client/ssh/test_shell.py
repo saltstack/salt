@@ -98,3 +98,16 @@ def test_ssh_shell_exec_cmd_returns_status_code_with_highest_bit_set_if_process_
     assert stdout == ""
     assert stderr == "leave me alone please"
     assert retcode == 137
+
+
+def test_ssh_shell_send_makedirs_failure_returns_immediately():
+    def exec_cmd(cmd):
+        if cmd.startswith("mkdir -p"):
+            return "", "Not a directory", 1
+        return "", "", 0
+
+    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=exec_cmd):
+        shl = shell.Shell({}, "localhost")
+        stdout, stderr, retcode = shl.send("/tmp/file", "/tmp/file", True)
+        assert retcode == 1
+        assert "Not a directory" in stderr

@@ -339,7 +339,9 @@ class Shell:
         scp a file or files to a remote system
         """
         if makedirs:
-            self.exec_cmd(f"mkdir -p {os.path.dirname(remote)}")
+            ret = self.exec_cmd(f"mkdir -p {os.path.dirname(remote)}")
+            if ret[2]:
+                return ret
 
         # scp needs [<ipv6}
         host = self.host
