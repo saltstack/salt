@@ -1,6 +1,7 @@
 import asyncio
 import os
 import socket
+import warnings
 
 import attr
 import pytest
@@ -22,7 +23,7 @@ pytestmark = [
 
 
 @pytest.fixture
-def fake_keys():
+def _fake_keys():
     with patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
         yield
 
@@ -34,7 +35,7 @@ def fake_crypto():
 
 
 @pytest.fixture
-def fake_authd(io_loop):
+def _fake_authd(io_loop):
     @tornado.gen.coroutine
     def return_nothing():
         raise tornado.gen.Return()
@@ -53,10 +54,22 @@ def fake_authd(io_loop):
 
 
 @pytest.fixture
-def fake_crypticle():
+def _fake_crypticle():
     with patch("salt.crypt.Crypticle") as fake_crypticle:
         fake_crypticle.generate_key_string.return_value = "fakey fake"
         yield fake_crypticle
+
+
+@pytest.fixture
+def _squash_exepected_message_client_warning():
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="MessageClient has been deprecated and will be removed.",
+            category=DeprecationWarning,
+            module="salt.transport.tcp",
+        )
+        yield
 
 
 @attr.s(frozen=True, slots=True)
@@ -85,47 +98,35 @@ def client_socket():
         yield _client_socket
 
 
-async def test_message_client_cleanup_on_close(
-    client_socket, temp_salt_master, io_loop
-):
+@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
+async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
     test message client cleanup on close
     """
-
-    orig_loop = io_loop
 
     opts = dict(temp_salt_master.config.copy(), transport="tcp")
     client = salt.transport.tcp.MessageClient(
         opts, client_socket.listen_on, client_socket.port
     )
 
-    # Mock the io_loop's stop method so we know when it has been called.
-    orig_loop.real_stop = orig_loop.stop
-    orig_loop.stop_called = False
+    assert client._closed is False
+    assert client._closing is False
+    assert client._stream is None
 
-    def stop(*args, **kwargs):
-        orig_loop.stop_called = True
-        orig_loop.real_stop()
+    await client.connect()
 
-    orig_loop.stop = stop
-    try:
-        assert client.io_loop == orig_loop
-        await client.connect()
+    # Ensure we are testing the _read_until_future and io_loop teardown
+    assert client._stream is not None
 
-        # Ensure we are testing the _read_until_future and io_loop teardown
-        assert client._stream is not None
+    client.close()
+    assert client._closed is False
+    assert client._closing is True
+    assert client._stream is not None
+    await asyncio.sleep(0.1)
 
-        # The run_sync call will set stop_called, reset it
-        # orig_loop.stop_called = False
-        client.close()
-
-        # Stop should be called again, client's io_loop should be None
-        # assert orig_loop.stop_called is True
-        # assert client.io_loop is None
-    finally:
-        orig_loop.stop = orig_loop.real_stop
-        del orig_loop.real_stop
-        del orig_loop.stop_called
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
 
 
 async def test_async_tcp_pub_channel_connect_publish_port(
@@ -160,6 +161,7 @@ async def test_async_tcp_pub_channel_connect_publish_port(
     # The first call to the mock is the instance's __init__, and the first argument to those calls is the opts dict
     await asyncio.sleep(0.3)
     assert channel.transport.connect.call_args[0][0] == opts["publish_port"]
+    transport.close()
 
 
 def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
@@ -257,7 +259,10 @@ def salt_message_client():
         {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
     )
 
-    yield client
+    try:
+        yield client
+    finally:
+        client.close()
 
 
 # XXX we don't reutnr a future anymore, this needs a different way of testing.
@@ -345,6 +350,7 @@ def salt_message_client():
 #    assert message_id_2 not in salt_message_client.send_timeout_map
 
 
+@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def test_timeout_message_unknown_future(salt_message_client):
     #    # test we don't fail on unknown message_id
     #    salt_message_client.timeout_message(-1, "message")
@@ -362,6 +368,7 @@ def test_timeout_message_unknown_future(salt_message_client):
     assert message_id not in salt_message_client.send_future_map
 
 
+@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def xtest_client_reconnect_backoff(client_socket):
     opts = {"tcp_reconnect_backoff": 5}
 
@@ -388,8 +395,9 @@ def xtest_client_reconnect_backoff(client_socket):
         client.close()
 
 
+@pytest.mark.usefixtures("_fake_crypticle", "_fake_keys")
 async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
-    fake_keys, fake_crypto, fake_crypticle
+    fake_crypto,
 ):
     # Syndics use the minion pki dir, but they also create a syndic_master.pub
     # file for comms with the Salt master
@@ -417,9 +425,8 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
 
-async def test_mixin_should_use_correct_path_when_syndic(
-    fake_keys, fake_authd, fake_crypticle
-):
+@pytest.mark.usefixtures("_fake_authd", "_fake_crypticle", "_fake_keys")
+async def test_mixin_should_use_correct_path_when_syndic():
     mockloop = MagicMock()
     expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
     opts = {
@@ -443,6 +450,7 @@ async def test_mixin_should_use_correct_path_when_syndic(
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
 
+@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def test_presence_events_callback_passed(temp_salt_master, salt_message_client):
     opts = dict(temp_salt_master.config.copy(), transport="tcp", presence_events=True)
     channel = salt.channel.server.PubServerChannel.factory(opts)
@@ -489,30 +497,32 @@ async def test_presence_removed_on_stream_closed():
             server.remove_presence_callback.assert_called_with(client)
 
 
-async def test_tcp_pub_client_decode_dict(minion_opts, io_loop):
+async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
-    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
-    assert dmsg == await client._decode_messages(dmsg)
+    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+        ret = client._decode_messages(dmsg)
+        assert ret == dmsg
 
 
-async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop):
+async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     msg = salt.payload.dumps(dmsg)
-    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
-    assert dmsg == await client._decode_messages(msg)
+    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+        ret = client._decode_messages(msg)
+        assert ret == dmsg
 
 
-def test_tcp_pub_client_close(minion_opts, io_loop):
-    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop)
+def test_tcp_pub_client_close(minion_opts, io_loop, tmp_path):
+    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path)
 
-    message_client = MagicMock()
+    stream = MagicMock()
 
-    client.message_client = message_client
+    client._stream = stream
     client.close()
     assert client._closing is True
-    assert client.message_client is None
+    assert client._stream is None
     client.close()
-    message_client.close.assert_called_once_with()
+    stream.close.assert_called_once_with()
 
 
 async def test_pub_server__stream_read(master_opts, io_loop):
@@ -609,6 +619,7 @@ async def test_salt_message_server_exception(master_opts, io_loop):
     stream.close.assert_called_once()
 
 
+@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_stream_return_exception(minion_opts, io_loop):
     msg = {"foo": "bar"}
     payload = salt.transport.frame.frame_msg(msg)

@@ -49,6 +49,7 @@ def test_pub_client_init(minion_opts, io_loop):
     minion_opts["master_ip"] = "127.0.0.1"
     minion_opts["zmq_filtering"] = True
     minion_opts["zmq_monitor"] = True
-    client = salt.transport.zeromq.PublishClient(minion_opts, io_loop)
-    client.send(b"asf")
-    client.close()
+    with salt.transport.zeromq.PublishClient(
+        minion_opts, io_loop, host=minion_opts["master_ip"], port=121212
+    ) as client:
+        client.send(b"asf")
