@@ -674,6 +674,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
         else:
             netmask += "{:d}".format(256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
+
     return netmask
 
 
@@ -682,8 +683,14 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):
     Returns an IPv4 netmask from the integer representation of that mask.
 
     Ex. 0xffffff00 -> '255.255.255.0'
+        0xffff6400 -> '255.255.100.0'
     """
-    return cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
+    # Note: previously used cidr but that is counting number of bits in set_bits
+    # and can lead to wrong netmaks values, for example:
+    # 0xFFFF6400 is 255.255.100.0, 0x64 is 100 decimal
+    # but if convert to cidr first, it gives 19 bits, get 255.255.224.0 - WRONG
+    # leveraging Python ip_address library for different method of conversion
+    return str(ipaddress.ip_address(set_bits))
 
 
 def _number_of_set_bits(x):
@@ -1004,8 +1011,7 @@ def _netbsd_interfaces_ifconfig(out):
     return ret
 
 
-# pragma: no cover
-def _junos_interfaces_ifconfig(out):
+def _junos_interfaces_ifconfig(out):  # pragma: no cover
     """
     Uses ifconfig to return a dictionary of interfaces with various information
     about each (up/down state, ip address, netmask, and hwaddr)
@@ -1075,8 +1081,7 @@ def _junos_interfaces_ifconfig(out):
     return ret
 
 
-# pragma: no cover
-def junos_interfaces():
+def junos_interfaces():  # pragma: no cover
     """
     Obtain interface information for Junos; ifconfig
     output diverged from other BSD variants (Netmask is now part of the
@@ -1241,8 +1246,7 @@ def _get_iface_info(iface):
         return None, error_msg
 
 
-# pragma: no cover
-def _hw_addr_aix(iface):
+def _hw_addr_aix(iface):  # pragma: no cover
     """
     Return the hardware address (a.k.a. MAC address) for a given interface on AIX
     MAC address not available in through interfaces
@@ -1749,8 +1753,7 @@ def _netlink_tool_remote_on(port, which_end):
     return remotes
 
 
-# pragma: no cover
-def _sunos_remotes_on(port, which_end):
+def _sunos_remotes_on(port, which_end):  # pragma: no cover
     """
     SunOS specific helper function.
     Returns set of ipv4 host addresses of remote established connections
@@ -1790,8 +1793,7 @@ def _sunos_remotes_on(port, which_end):
     return remotes
 
 
-# pragma: no cover
-def _freebsd_remotes_on(port, which_end):
+def _freebsd_remotes_on(port, which_end):  # pragma: no cover
     """
     Returns set of ipv4 host addresses of remote established connections
     on local tcp port port.
@@ -1853,8 +1855,7 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
-# pragma: no cover
-def _netbsd_remotes_on(port, which_end):
+def _netbsd_remotes_on(port, which_end):  # pragma: no cover
     """
     Returns set of ipv4 host addresses of remote established connections
     on local tcp port port.
@@ -1915,8 +1916,7 @@ def _netbsd_remotes_on(port, which_end):
     return remotes
 
 
-# pragma: no cover
-def _openbsd_remotes_on(port, which_end):
+def _openbsd_remotes_on(port, which_end):  # pragma: no cover
     """
     OpenBSD specific helper function.
     Returns set of ipv4 host addresses of remote established connections
@@ -2060,8 +2060,7 @@ def _linux_remotes_on(port, which_end):
     return remotes
 
 
-# pragma: no cover
-def _aix_remotes_on(port, which_end):
+def _aix_remotes_on(port, which_end):  # pragma: no cover
     """
     AIX specific helper function.
     Returns set of ipv4 host addresses of remote established connections
