@@ -10,8 +10,6 @@ log = logging.getLogger(__name__)
 @pytest.mark.core_test
 def test_issue_58763(tmp_path, modules, state_tree, caplog):
 
-    venv_dir = tmp_path / "issue-2028-pip-installed"
-
     sls_contents = dedent(
         """
     run_old:
@@ -42,8 +40,6 @@ def test_issue_58763(tmp_path, modules, state_tree, caplog):
 @pytest.mark.core_test
 def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
 
-    venv_dir = tmp_path / "issue-2028-pip-installed"
-
     sls_contents = dedent(
         """
     test.random_hash:
@@ -68,8 +64,6 @@ def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
 @pytest.mark.core_test
 def test_issue_58763_b(tmp_path, modules, state_tree, caplog):
 
-    venv_dir = tmp_path / "issue-2028-pip-installed"
-
     sls_contents = dedent(
         """
     test.ping:
@@ -89,8 +83,6 @@ def test_issue_58763_b(tmp_path, modules, state_tree, caplog):
 
 @pytest.mark.core_test
 def test_issue_62988_a(tmp_path, modules, state_tree, caplog):
-
-    venv_dir = tmp_path / "issue-2028-pip-installed"
 
     sls_contents = dedent(
         """
@@ -119,8 +111,6 @@ def test_issue_62988_a(tmp_path, modules, state_tree, caplog):
 
 @pytest.mark.core_test
 def test_issue_62988_b(tmp_path, modules, state_tree, caplog):
-
-    venv_dir = tmp_path / "issue-2028-pip-installed"
 
     sls_contents = dedent(
         """
