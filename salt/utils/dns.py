@@ -396,7 +396,7 @@ def _lookup_gai(name, rdtype, timeout=None):
     try:
         addresses = [
             sock[4][0]
-            for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)
+            for sock in socket.getaddrinfo(name, None, sock_t, socket.SOCK_RAW, 0)
         ]
         return addresses
     except socket.gaierror:
