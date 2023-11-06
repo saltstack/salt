@@ -859,7 +859,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         run in a thread or process as it creates and runs an it's own ioloop.
         """
         ioloop = tornado.ioloop.IOLoop()
-        ioloop.add_callback(self.publisher, publish_payload)
+        ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)
         try:
             ioloop.start()
         finally:
