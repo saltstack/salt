@@ -16,13 +16,13 @@ def test_issue_58763(tmp_path, modules, state_tree, caplog):
       module.run:
         - name: test.random_hash
         - size: 10
-        - hash_type: md5
+        - hash_type: sha256
 
     run_new:
       module.run:
         - test.random_hash:
           - size: 10
-          - hash_type: md5
+          - hash_type: sha256
     """
     )
     with pytest.helpers.temp_file("issue-58763.sls", sls_contents, state_tree):
@@ -45,7 +45,7 @@ def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
     test.random_hash:
       module.run:
         - size: 10
-        - hash_type: md5
+        - hash_type: sha256
     """
     )
     with pytest.helpers.temp_file("issue-58763.sls", sls_contents, state_tree):
@@ -93,7 +93,7 @@ def test_issue_62988_a(tmp_path, modules, state_tree, caplog):
       module.wait:
         - test.random_hash:
           - size: 10
-          - hash_type: md5
+          - hash_type: sha256
         - watch:
           - test: test_foo
     """
@@ -123,7 +123,7 @@ def test_issue_62988_b(tmp_path, modules, state_tree, caplog):
       module.wait:
         - test.random_hash:
           - size: 10
-          - hash_type: md5
+          - hash_type: sha256
     """
     )
     with pytest.helpers.temp_file("issue-62988.sls", sls_contents, state_tree):
