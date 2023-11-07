@@ -1,7 +1,6 @@
 import logging
 import socket
 import textwrap
-import time
 
 import pytest
 
@@ -283,7 +282,7 @@ def test_is_ip():
     assert not network.is_ip("0.9.800.1000")
     # Check 16-char-long unicode string
     # https://github.com/saltstack/salt/issues/51258
-    assert not network.is_ipv6("sixteen-char-str")
+    assert not network.is_ip("sixteen-char-str")
 
 
 @pytest.mark.parametrize(
@@ -403,48 +402,60 @@ def test_parse_host_port_bad_raises_value_error(addr):
         network.parse_host_port(addr)
 
 
-def test_dns_check():
-    hosts = [
-        {
-            "host": "10.10.0.3",
-            "port": "",
-            "mocked": [(2, 1, 6, "", ("10.10.0.3", 0))],
-            "ret": "10.10.0.3",
-        },
-        {
-            "host": "10.10.0.3",
-            "port": "1234",
-            "mocked": [(2, 1, 6, "", ("10.10.0.3", 0))],
-            "ret": "10.10.0.3",
-        },
-        {
-            "host": "2001:0db8:85a3::8a2e:0370:7334",
-            "port": "",
-            "mocked": [(10, 1, 6, "", ("2001:db8:85a3::8a2e:370:7334", 0, 0, 0))],
-            "ret": "[2001:db8:85a3::8a2e:370:7334]",
-        },
-        {
-            "host": "2001:0db8:85a3::8a2e:370:7334",
-            "port": "1234",
-            "mocked": [(10, 1, 6, "", ("2001:db8:85a3::8a2e:370:7334", 0, 0, 0))],
-            "ret": "[2001:db8:85a3::8a2e:370:7334]",
-        },
-        {
-            "host": "salt-master",
-            "port": "1234",
-            "mocked": [(2, 1, 6, "", ("127.0.0.1", 0))],
-            "ret": "127.0.0.1",
-        },
-    ]
-    for host in hosts:
-        with patch.object(
-            socket,
-            "getaddrinfo",
-            create_autospec(socket.getaddrinfo, return_value=host["mocked"]),
-        ):
-            with patch("socket.socket", create_autospec(socket.socket)):
-                ret = network.dns_check(host["host"], host["port"])
-                assert ret == host["ret"]
+@pytest.mark.parametrize(
+    "host",
+    (
+        (
+            {
+                "host": "10.10.0.3",
+                "port": "",
+                "mocked": [(2, 1, 6, "", ("10.10.0.3", 0))],
+                "ret": "10.10.0.3",
+            }
+        ),
+        (
+            {
+                "host": "10.10.0.3",
+                "port": "1234",
+                "mocked": [(2, 1, 6, "", ("10.10.0.3", 0))],
+                "ret": "10.10.0.3",
+            }
+        ),
+        (
+            {
+                "host": "2001:0db8:85a3::8a2e:0370:7334",
+                "port": "",
+                "mocked": [(10, 1, 6, "", ("2001:db8:85a3::8a2e:370:7334", 0, 0, 0))],
+                "ret": "[2001:db8:85a3::8a2e:370:7334]",
+            }
+        ),
+        (
+            {
+                "host": "2001:0db8:85a3::8a2e:370:7334",
+                "port": "1234",
+                "mocked": [(10, 1, 6, "", ("2001:db8:85a3::8a2e:370:7334", 0, 0, 0))],
+                "ret": "[2001:db8:85a3::8a2e:370:7334]",
+            }
+        ),
+        (
+            {
+                "host": "salt-master",
+                "port": "1234",
+                "mocked": [(2, 1, 6, "", ("127.0.0.1", 0))],
+                "ret": "127.0.0.1",
+            }
+        ),
+    ),
+)
+def test_dns_check(host):
+    with patch.object(
+        socket,
+        "getaddrinfo",
+        create_autospec(socket.getaddrinfo, return_value=host["mocked"]),
+    ):
+        with patch("socket.socket", create_autospec(socket.socket)):
+            ret = network.dns_check(host["host"], host["port"])
+            assert ret == host["ret"]
 
 
 def test_dns_check_ipv6_filter():
@@ -512,7 +523,6 @@ def test_test_addrs():
         # attempt to connect to resolved address with default timeout
         s.side_effect = socket.error
         addrs = network._test_addrs(addrinfo, 80)
-        time.sleep(2)
         assert not len(addrs) == 0
 
         # nothing can connect, but we've eliminated duplicates
