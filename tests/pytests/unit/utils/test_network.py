@@ -971,11 +971,20 @@ def test_gen_mac():
         assert ret == expected_mac
 
 
+@pytest.mark.parametrize(
+    "mac_addr",
+    (
+        ("31337"),
+        ("0001020304056"),
+        ("00:01:02:03:04:056"),
+        ("a0:b0:c0:d0:e0:fg"),
+    ),
+)
+def test_mac_str_to_bytes_exceptions(mac_addr):
+    pytest.raises(ValueError, network.mac_str_to_bytes, mac_addr)
+
+
 def test_mac_str_to_bytes():
-    pytest.raises(ValueError, network.mac_str_to_bytes, "31337")
-    pytest.raises(ValueError, network.mac_str_to_bytes, "0001020304056")
-    pytest.raises(ValueError, network.mac_str_to_bytes, "00:01:02:03:04:056")
-    pytest.raises(ValueError, network.mac_str_to_bytes, "a0:b0:c0:d0:e0:fg")
     assert b"\x10\x08\x06\x04\x02\x00" == network.mac_str_to_bytes("100806040200")
     assert b"\xf8\xe7\xd6\xc5\xb4\xa3" == network.mac_str_to_bytes("f8e7d6c5b4a3")
 
