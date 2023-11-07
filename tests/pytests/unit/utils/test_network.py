@@ -277,12 +277,18 @@ def test__generate_minion_id_with_unicode_in_etc_hosts():
         assert "thisismyhostname" in network._generate_minion_id()
 
 
-def test_is_ip():
-    assert network.is_ip("10.10.0.3")
-    assert not network.is_ip("0.9.800.1000")
-    # Check 16-char-long unicode string
-    # https://github.com/saltstack/salt/issues/51258
-    assert not network.is_ip("sixteen-char-str")
+@pytest.mark.parametrize(
+    "addr,expected",
+    (
+        ("10.10.0.3", True),
+        ("0.9.800.1000", False),
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        ("sixteen-char-str", False),
+    ),
+)
+def test_is_ip(addr, expected):
+    assert network.is_ip(addr) is expected
 
 
 @pytest.mark.parametrize(
@@ -553,10 +559,10 @@ def test_is_ipv4_subnet():
 def test_is_ipv6_subnet():
     for item in IPV6_SUBNETS[True]:
         log.debug("Testing that %s is a valid subnet", item)
-        assert network.is_ipv6_subnet(item)
+        assert network.is_ipv6_subnet(item) is True
     for item in IPV6_SUBNETS[False]:
         log.debug("Testing that %s is not a valid subnet", item)
-        assert not network.is_ipv6_subnet(item)
+        assert network.is_ipv6_subnet(item) is False
 
 
 @pytest.mark.parametrize(
@@ -608,7 +614,6 @@ def test_interfaces_ifconfig_freebsd(freebsd_interfaces_dict):
 
 def test_interfaces_ifconfig_solaris():
     with patch("salt.utils.platform.is_sunos", return_value=True):
-        interfaces = network._interfaces_ifconfig(SOLARIS)
         expected_interfaces = {
             "ilbint0": {
                 "inet6": [],
@@ -659,12 +664,12 @@ def test_interfaces_ifconfig_solaris():
                 "up": True,
             },
         }
+        interfaces = network._interfaces_ifconfig(SOLARIS)
         assert interfaces == expected_interfaces
 
 
 def test_interfaces_ifconfig_netbsd():
-    interfaces = network._netbsd_interfaces_ifconfig(NETBSD)
-    assert interfaces == {
+    expected_interfaces = {
         "lo0": {
             "inet": [{"address": "127.0.0.1", "netmask": "255.0.0.0"}],
             "inet6": [{"address": "fe80::1", "prefixlen": "64", "scope": "lo0"}],
@@ -689,6 +694,8 @@ def test_interfaces_ifconfig_netbsd():
             "up": True,
         },
     }
+    interfaces = network._netbsd_interfaces_ifconfig(NETBSD)
+    assert interfaces == expected_interfaces
 
 
 def test_freebsd_remotes_on():
@@ -793,6 +800,12 @@ def test_generate_minion_id_127_name_startswith():
     """
     Test if minion IDs can be named starting from "127"
     """
+    expected = [
+        "127890.domainname.blank",
+        "127890",
+        "1.2.3.4",
+        "5.6.7.8",
+    ]
     with patch("platform.node", MagicMock(return_value="127890")), patch(
         "socket.gethostname", MagicMock(return_value="127890")
     ), patch(
@@ -806,18 +819,14 @@ def test_generate_minion_id_127_name_startswith():
         "salt.utils.network.ip_addrs",
         MagicMock(return_value=["1.2.3.4", "5.6.7.8"]),
     ):
-        assert network._generate_minion_id() == [
-            "127890.domainname.blank",
-            "127890",
-            "1.2.3.4",
-            "5.6.7.8",
-        ]
+        assert network._generate_minion_id() == expected
 
 
 def test_generate_minion_id_duplicate():
     """
     Test if IP addresses in the minion IDs are distinct in the pool
     """
+    expected = ["hostname", "1.2.3.4"]
     with patch("platform.node", MagicMock(return_value="hostname")), patch(
         "socket.gethostname", MagicMock(return_value="hostname")
     ), patch("socket.getfqdn", MagicMock(return_value="hostname")), patch(
@@ -829,7 +838,7 @@ def test_generate_minion_id_duplicate():
         "salt.utils.network.ip_addrs",
         MagicMock(return_value=["1.2.3.4", "1.2.3.4", "1.2.3.4"]),
     ):
-        assert network._generate_minion_id() == ["hostname", "1.2.3.4"]
+        assert network._generate_minion_id() == expected
 
 
 def test_generate_minion_id_platform_used():
@@ -964,10 +973,10 @@ def test_generate_minion_id_platform_ip_addr_only():
 
 
 def test_gen_mac():
+    expected_mac = "00:16:3E:01:01:01"
     with patch("random.randint", return_value=1) as random_mock:
         assert random_mock.return_value == 1
         ret = network.gen_mac("00:16:3E")
-        expected_mac = "00:16:3E:01:01:01"
         assert ret == expected_mac
 
 
@@ -981,12 +990,13 @@ def test_gen_mac():
     ),
 )
 def test_mac_str_to_bytes_exceptions(mac_addr):
-    pytest.raises(ValueError, network.mac_str_to_bytes, mac_addr)
+    with pytest.raises(ValueError):
+        network.mac_str_to_bytes(mac_addr)
 
 
 def test_mac_str_to_bytes():
-    assert b"\x10\x08\x06\x04\x02\x00" == network.mac_str_to_bytes("100806040200")
-    assert b"\xf8\xe7\xd6\xc5\xb4\xa3" == network.mac_str_to_bytes("f8e7d6c5b4a3")
+    assert network.mac_str_to_bytes("100806040200") == b"\x10\x08\x06\x04\x02\x00"
+    assert network.mac_str_to_bytes("f8e7d6c5b4a3") == b"\xf8\xe7\xd6\xc5\xb4\xa3"
 
 
 @pytest.mark.slow_test
@@ -1021,12 +1031,13 @@ def test_filter_by_networks_ips_list():
         "193.124.233.5",
         "fe80::d210:cf3f:64e7:5423",
     ]
-    networks = ["10.0.0.0/8", "fe80::/64"]
-    assert network.filter_by_networks(ips, networks) == [
+    expected = [
         "10.0.123.200",
         "10.10.10.10",
         "fe80::d210:cf3f:64e7:5423",
     ]
+    networks = ["10.0.0.0/8", "fe80::/64"]
+    assert network.filter_by_networks(ips, networks) == expected
 
 
 def test_filter_by_networks_interfaces_dict():
@@ -1095,7 +1106,7 @@ def test_ip_networks():
 
     # Verbose, without loopback
     ret = network.ip_networks(verbose=True, interface_data=interface_data)
-    assert ret == {
+    expected_ret1 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1103,11 +1114,13 @@ def test_ip_networks():
             "address": "10.10.8.0",
         },
     }
+    assert ret == expected_ret1
+
     # Verbose, without loopback, specific interface
     ret = network.ip_networks(
         interface="eth0", verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret2 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1115,11 +1128,13 @@ def test_ip_networks():
             "address": "10.10.8.0",
         },
     }
+    assert ret == expected_ret2
+
     # Verbose, without loopback, multiple specific interfaces
     ret = network.ip_networks(
         interface="eth0,lo", verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret3 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1127,6 +1142,8 @@ def test_ip_networks():
             "address": "10.10.8.0",
         },
     }
+    assert ret == expected_ret3
+
     # Verbose, without loopback, specific interface (not present)
     ret = network.ip_networks(
         interface="eth1", verbose=True, interface_data=interface_data
@@ -1136,7 +1153,7 @@ def test_ip_networks():
     ret = network.ip_networks(
         include_loopback=True, verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret4 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1150,6 +1167,8 @@ def test_ip_networks():
             "address": "127.0.0.0",
         },
     }
+    assert ret == expected_ret4
+
     # Verbose, with loopback, specific interface
     ret = network.ip_networks(
         interface="eth0",
@@ -1157,7 +1176,7 @@ def test_ip_networks():
         verbose=True,
         interface_data=interface_data,
     )
-    assert ret == {
+    expected_ret5 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1165,6 +1184,8 @@ def test_ip_networks():
             "address": "10.10.8.0",
         },
     }
+    assert ret == expected_ret5
+
     # Verbose, with loopback, multiple specific interfaces
     ret = network.ip_networks(
         interface="eth0,lo",
@@ -1172,7 +1193,7 @@ def test_ip_networks():
         verbose=True,
         interface_data=interface_data,
     )
-    assert ret == {
+    expected_ret6 = {
         "10.10.8.0/22": {
             "prefixlen": 22,
             "netmask": "255.255.252.0",
@@ -1186,6 +1207,8 @@ def test_ip_networks():
             "address": "127.0.0.0",
         },
     }
+    assert ret == expected_ret6
+
     # Verbose, with loopback, specific interface (not present)
     ret = network.ip_networks(
         interface="eth1",
@@ -1235,7 +1258,7 @@ def test_ip_networks6():
 
     # Verbose, without loopback
     ret = network.ip_networks6(verbose=True, interface_data=interface_data)
-    assert ret == {
+    expected_ret1 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1243,11 +1266,13 @@ def test_ip_networks6():
             "address": "fe80::",
         },
     }
+    assert ret == expected_ret1
+
     # Verbose, without loopback, specific interface
     ret = network.ip_networks6(
         interface="eth0", verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret2 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1255,11 +1280,13 @@ def test_ip_networks6():
             "address": "fe80::",
         },
     }
+    assert ret == expected_ret2
+
     # Verbose, without loopback, multiple specific interfaces
     ret = network.ip_networks6(
         interface="eth0,lo", verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret3 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1267,16 +1294,19 @@ def test_ip_networks6():
             "address": "fe80::",
         },
     }
+    assert ret == expected_ret3
+
     # Verbose, without loopback, specific interface (not present)
     ret = network.ip_networks6(
         interface="eth1", verbose=True, interface_data=interface_data
     )
     assert ret == {}
+
     # Verbose, with loopback
     ret = network.ip_networks6(
         include_loopback=True, verbose=True, interface_data=interface_data
     )
-    assert ret == {
+    expected_ret4 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1290,6 +1320,8 @@ def test_ip_networks6():
             "address": "::1",
         },
     }
+    assert ret == expected_ret4
+
     # Verbose, with loopback, specific interface
     ret = network.ip_networks6(
         interface="eth0",
@@ -1297,7 +1329,7 @@ def test_ip_networks6():
         verbose=True,
         interface_data=interface_data,
     )
-    assert ret == {
+    expected_ret5 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1305,6 +1337,8 @@ def test_ip_networks6():
             "address": "fe80::",
         },
     }
+    assert ret == expected_ret5
+
     # Verbose, with loopback, multiple specific interfaces
     ret = network.ip_networks6(
         interface="eth0,lo",
@@ -1312,7 +1346,7 @@ def test_ip_networks6():
         verbose=True,
         interface_data=interface_data,
     )
-    assert ret == {
+    expected_ret6 = {
         "fe80::/64": {
             "prefixlen": 64,
             "netmask": "ffff:ffff:ffff:ffff::",
@@ -1326,6 +1360,8 @@ def test_ip_networks6():
             "address": "::1",
         },
     }
+    assert ret == expected_ret6
+
     # Verbose, with loopback, specific interface (not present)
     ret = network.ip_networks6(
         interface="eth1",
@@ -1501,14 +1537,15 @@ def test_interface_and_ip(linux_interfaces_dict):
         "salt.utils.network.linux_interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
-        ret = network.interface("eth0")
-        assert ret == [
+        expected = [
             {
                 "address": "10.10.10.56",
                 "broadcast": "10.10.10.255",
                 "netmask": "255.255.252.0",
             }
         ]
+        ret = network.interface("eth0")
+        assert ret == expected
 
         ret = network.interface("dog")
         assert ret == 'Interface "dog" not in available interfaces: "eth0", "lo"'
