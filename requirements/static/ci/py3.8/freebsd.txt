@@ -282,7 +282,7 @@ packaging==23.1
     #   -r requirements/base.txt
     #   docker
     #   pytest
-paramiko==3.2.0 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==3.3.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
