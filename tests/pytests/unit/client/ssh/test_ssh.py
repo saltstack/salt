@@ -408,6 +408,7 @@ def test_key_deploy_permission_denied_file_scp(tmp_path, opts):
 
     ssh_ret = {
         "localhost": {
+            "_error": "The command resulted in a non-zero exit code",
             "stdout": "",
             "stderr": 'scp: dest open "/tmp/preflight.sh": Permission denied\nscp: failed to upload file /etc/salt/preflight.sh to /tmp/preflight.sh\n',
             "retcode": 1,
@@ -418,6 +419,7 @@ def test_key_deploy_permission_denied_file_scp(tmp_path, opts):
         client = ssh.SSH(opts)
     ret, retcode = client.key_deploy(host, ssh_ret)
     assert ret == ssh_ret
+    assert retcode is None
     assert mock_key_run.call_count == 0
 
 
@@ -449,6 +451,7 @@ def test_key_deploy_no_permission_denied(tmp_path, opts):
         client = ssh.SSH(opts)
     ret, retcode = client.key_deploy(host, ssh_ret)
     assert ret == ssh_ret
+    assert retcode is None
     assert mock_key_run.call_count == 0
 
 
