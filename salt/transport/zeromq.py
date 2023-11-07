@@ -1020,7 +1020,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.sock:
             self.connect()
         await self.sock.send(payload)
-        # await self.sock.send(salt.payload.dumps(payload))
 
     @property
     def topic_support(self):
