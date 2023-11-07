@@ -177,34 +177,22 @@ class LoadBalancerServer(SignalHandlingProcess):
         self._socket.setblocking(1)
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
-
-        def run(self):
-            """
-            Start the load balancer
-            """
-            self._socket = _get_socket(self.opts)
-            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _set_tcp_keepalive(self._socket, self.opts)
-            self._socket.setblocking(1)
-            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
-            self._socket.listen(self.backlog)
-
-            while True:
-                try:
-                    # Wait for a connection to occur since the socket is
-                    # blocking.
-                    connection, address = self._socket.accept()
-                    # Wait for a free slot to be available to put
-                    # the connection into.
-                    # Sockets are picklable on Windows in Python 3.
-                    self.socket_queue.put((connection, address), True, None)
-                except OSError as e:
-                    # ECONNABORTED indicates that there was a connection
-                    # but it was closed while still in the accept queue.
-                    # (observed on FreeBSD).
-                    if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
-                        continue
-                    raise
+        while True:
+            try:
+                # Wait for a connection to occur since the socket is
+                # blocking.
+                connection, address = self._socket.accept()
+                # Wait for a free slot to be available to put
+                # the connection into.
+                # Sockets are picklable on Windows in Python 3.
+                self.socket_queue.put((connection, address), True, None)
+            except OSError as e:
+                # ECONNABORTED indicates that there was a connection
+                # but it was closed while still in the accept queue.
+                # (observed on FreeBSD).
+                if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
+                    continue
+                raise
 
 
 class Resolver(tornado.netutil.DefaultLoopResolver):
@@ -343,8 +331,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
             self._closed = False
             self._stream = await self.getstream(timeout=timeout)
             if self._stream:
-                # if not self._stream_return_running:
-                #    self.io_loop.spawn_callback(self._stream_return)
                 if self.connect_callback:
                     self.connect_callback(True)
             self.connected = True
@@ -1039,7 +1025,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             return
         self._closing = True
         for client in self.clients:
-            client.stream.disconnect()
+            client.stream.close()
 
     # pylint: disable=W1701
     def __del__(self):

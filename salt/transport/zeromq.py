@@ -1000,13 +1000,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             ctx = self.ctx
             self.ctx = None
             ctx.term()
+        if self.daemon_monitor:
+            self.daemon_monitor.stop()
         if self.daemon_pub_sock:
             self.daemon_pub_sock.close()
         if self.daemon_pull_sock:
             self.daemon_pull_sock.close()
-        if self.daemon_monitor:
-            self.daemon_monitor.stop()
         if self.daemon_context:
+            self.daemon_context.destroy(1)
             self.daemon_context.term()
 
     async def publish(self, payload, **kwargs):
@@ -1019,6 +1020,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.sock:
             self.connect()
         await self.sock.send(payload)
+        # await self.sock.send(salt.payload.dumps(payload))
 
     @property
     def topic_support(self):
