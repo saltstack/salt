@@ -231,23 +231,17 @@ def test_host_to_ips():
     assertion.
     """
 
-    # pylint doesn't like the }[host] below, disable typecheck
-    # pylint: disable=all
     def getaddrinfo_side_effect(host, *args):
-        try:
-            return {
-                "github.com": [
-                    (2, 1, 6, "", ("192.30.255.112", 0)),
-                    (2, 1, 6, "", ("192.30.255.113", 0)),
-                ],
-                "ipv6host.foo": [
-                    (socket.AF_INET6, 1, 6, "", ("2001:a71::1", 0, 0, 0)),
-                ],
-            }[host]
-        except KeyError:
-            raise socket.gaierror(-2, "Name or service not known")
-
-    # pylint: enable=all
+        if host == "github.com":
+            return [
+                (2, 1, 6, "", ("192.30.255.112", 0)),
+                (2, 1, 6, "", ("192.30.255.113", 0)),
+            ]
+        if host == "ipv6host.foo":
+            return [
+                (socket.AF_INET6, 1, 6, "", ("2001:a71::1", 0, 0, 0)),
+            ]
+        raise socket.gaierror(-2, "Name or service not known")
 
     getaddrinfo_mock = MagicMock(side_effect=getaddrinfo_side_effect)
     with patch.object(socket, "getaddrinfo", getaddrinfo_mock):
@@ -1025,12 +1019,12 @@ def test_filter_by_networks_interfaces_dict():
             "10.0.123.201",
         ],
     }
-    assert network.filter_by_networks(
-        interfaces, ["192.168.1.0/24", "2001:db8::/48"]
-    ) == {
+    expected = {
         "wlan0": ["192.168.1.100", "2001:db8::ff00:42:8329"],
         "eth0": ["2001:0DB8:0:CD30:123:4567:89AB:CDEF", "192.168.1.101"],
     }
+    ret = network.filter_by_networks(interfaces, ["192.168.1.0/24", "2001:db8::/48"])
+    assert ret == expected
 
 
 def test_filter_by_networks_catch_all():
@@ -1040,7 +1034,7 @@ def test_filter_by_networks_catch_all():
         "193.124.233.5",
         "fe80::d210:cf3f:64e7:5423",
     ]
-    assert ips == network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"])
+    assert network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"]) == ips
 
 
 def test_ip_networks():
