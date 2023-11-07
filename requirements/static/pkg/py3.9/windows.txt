@@ -91,7 +91,7 @@ pydantic==1.10.8
     # via inflect
 pymssql==2.2.7
     # via -r requirements/windows.txt
-pymysql==1.0.3
+pymysql==1.1.0
     # via -r requirements/windows.txt
 pyopenssl==23.2.0
     # via -r requirements/windows.txt

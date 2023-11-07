@@ -286,13 +286,13 @@ pydantic==1.10.8
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   inflect
-pygit2==1.12.1
+pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.7
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/windows.txt
-pymysql==1.0.3
+pymysql==1.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/windows.txt
@@ -320,7 +320,7 @@ pytest-salt-factories==1.0.0rc27
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.1
+pytest-skip-markers==1.5.0
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -489,7 +489,7 @@ websocket-client==0.40.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==2.3.6
+werkzeug==3.0.1
     # via
     #   moto
     #   pytest-httpserver

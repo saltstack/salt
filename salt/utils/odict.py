@@ -19,6 +19,8 @@
         http://stackoverflow.com/questions/6190331/
 """
 
+# pragma: no cover  # essentially using Python's OrderDict
+
 
 from collections.abc import Callable
 
@@ -72,9 +74,7 @@ except (ImportError, AttributeError):
                 """
                 super().__init__()
                 if len(args) > 1:
-                    raise TypeError(
-                        "expected at most 1 arguments, got {}".format(len(args))
-                    )
+                    raise TypeError(f"expected at most 1 arguments, got {len(args)}")
                 try:
                     self.__root
                 except AttributeError:
@@ -248,7 +248,7 @@ except (ImportError, AttributeError):
                 _repr_running[call_key] = 1
                 try:
                     if not self:
-                        return "{}()".format(self.__class__.__name__)
+                        return f"{self.__class__.__name__}()"
                     return "{}('{}')".format(
                         self.__class__.__name__, list(self.items())
                     )

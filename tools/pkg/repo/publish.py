@@ -467,7 +467,12 @@ def github(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
-    releases = get_salt_releases(ctx, repository)
+    try:
+        releases = get_salt_releases(ctx, repository)
+    except SystemExit:
+        ctx.warn(f"Failed to get salt releases from repository '{repository}'")
+        releases = get_salt_releases(ctx, "saltstack/salt")
+
     if Version(salt_version) >= releases[-1]:
         make_latest = True
     else:
