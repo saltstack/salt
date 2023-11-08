@@ -17,7 +17,9 @@ async def test_async_pub_channel_connect_cb(minion_opts):
     channel._reconnected = True
 
     mock = MagicMock(salt.channel.client.AsyncReqChannel)
+    mock.__enter__ = lambda self: mock
+
     with patch("salt.channel.client.AsyncReqChannel.factory", return_value=mock):
         await channel.connect_callback(None)
         mock.send.assert_called_once()
-        mock.close.assert_called_once()
+        mock.__exit__.assert_called_once()
