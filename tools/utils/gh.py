@@ -138,7 +138,9 @@ def download_nox_artifact(
     if nox is None:
         ctx.error("Could not find the 'nox' binary in $PATH")
         return ExitCode.FAIL
-    ret = ctx.run(nox, "-e", "decompress-dependencies", "--", slug, check=False)
+    ret = ctx.run(
+        nox, "--force-color", "-e", "decompress-dependencies", "--", slug, check=False
+    )
     if ret.returncode:
         ctx.error("Failed to decompress the nox dependencies")
         return ExitCode.FAIL
@@ -216,11 +218,20 @@ def get_github_token(ctx: Context) -> str | None:
     Get the GITHUB_TOKEN to be able to authenticate to the API.
     """
     github_token = os.environ.get("GITHUB_TOKEN")
-    if github_token is None:
-        gh = shutil.which("gh")
-        ret = ctx.run(gh, "auth", "token", check=False, capture=True)
-        if ret.returncode == 0:
-            github_token = ret.stdout.decode().strip() or None
+    if github_token is not None:
+        ctx.info("$GITHUB_TOKEN was found on the environ")
+        return github_token
+
+    gh = shutil.which("gh")
+    if gh is None:
+        ctx.info("The 'gh' CLI tool is not available. Can't get a token using it.")
+        return github_token
+
+    ret = ctx.run(gh, "auth", "token", check=False, capture=True)
+    if ret.returncode == 0:
+        ctx.info("Got the GitHub token from the 'gh' CLI tool")
+        return ret.stdout.decode().strip() or None
+    ctx.info("Failed to get the GitHub token from the 'gh' CLI tool")
     return github_token
 
 

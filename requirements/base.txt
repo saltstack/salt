@@ -8,6 +8,7 @@ distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
 looseversion
+tornado>=6.3.3
+
 # We need contextvars for salt-ssh
 contextvars
-tornado>=6.3.2
