@@ -1623,8 +1623,9 @@ class Crypticle:
     @classmethod
     def write_key(cls, path, key_size=192):
         directory = pathlib.Path(path).parent
-        fd, tmp = tempfile.mkstemp(dir=directory, prefix="aes")
         with salt.utils.files.set_umask(0o177):
+            fd, tmp = tempfile.mkstemp(dir=directory, prefix="aes")
+            os.close(fd)
             with salt.utils.files.fopen(tmp, "w") as fp:
                 fp.write(cls.generate_key_string(key_size))
             os.rename(tmp, path)
