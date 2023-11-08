@@ -1,16 +1,9 @@
 import pytest
-from pytestskipmarkers.utils import platform
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
 ]
-
-
-@pytest.fixture
-def _skip_on_fips_and_arm64(grains):
-    if platform.is_fips_enabled() and grains["cpuarch"] == "aarch64":
-        pytest.skip("Test cannot run on a FIPS enabled platform")
 
 
 def test_saltcheck_run_test(salt_ssh_cli):
@@ -30,7 +23,7 @@ def test_saltcheck_run_test(salt_ssh_cli):
     assert ret.data["status"] == "Pass"
 
 
-@pytest.mark.usefixtures("_skip_on_fips_and_arm64")
+@pytest.mark.skip_on_aarch64
 def test_saltcheck_state(salt_ssh_cli):
     """
     saltcheck.run_state_tests
