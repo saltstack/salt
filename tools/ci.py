@@ -807,7 +807,7 @@ def pkg_matrix(
             prefix.replace("/arm64/", "/aarch64/")
         # Using a paginator allows us to list recursively and avoid the item limit
         page_iterator = paginator.paginate(
-            Bucket="salt-project-prod-salt-artifacts-release", Prefix=prefix
+            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release", Prefix=prefix
         )
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
         key_filter = f"Contents[?contains(Key, '{version}')][]"
