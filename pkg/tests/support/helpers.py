@@ -547,10 +547,10 @@ class SaltPkgInstall:
 
             if platform.is_aarch64():
                 arch = "arm64"
-                # Starting with 3007.0, we prioritize the aarch64 repo paths for rpm-based distros
+                # Starting with 3006.5, we prioritize the aarch64 repo paths for rpm-based distros
                 if packaging.version.parse(
                     self.prev_version
-                ) >= packaging.version.parse("3007.0"):
+                ) >= packaging.version.parse("3006.5"):
                     arch = "aarch64"
             else:
                 arch = "x86_64"
