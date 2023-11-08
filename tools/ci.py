@@ -803,11 +803,12 @@ def pkg_matrix(
     for version, backend in adjusted_versions:
         prefix = prefixes[backend]
         # TODO: Remove this after 3009.0
-        if backend == "relenv" and version >= tools.utils.Version("3007.0"):
+        if backend == "relenv" and version >= tools.utils.Version("3006.5"):
             prefix.replace("/arm64/", "/aarch64/")
         # Using a paginator allows us to list recursively and avoid the item limit
         page_iterator = paginator.paginate(
-            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release", Prefix=prefix
+            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
+            Prefix=prefix,
         )
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
         key_filter = f"Contents[?contains(Key, '{version}')][]"
