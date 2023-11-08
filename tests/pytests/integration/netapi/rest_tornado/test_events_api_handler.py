@@ -1,7 +1,7 @@
+import asyncio
 from functools import partial
 
 import pytest
-import tornado.gen
 
 from salt.netapi.rest_tornado import saltnado
 
@@ -45,6 +45,6 @@ async def test_get(http_client, io_loop, app):
     )
 
     while len(events_fired) < 5:
-        await tornado.gen.sleep(1)
+        await asyncio.sleep(1)
 
     assert len(events_fired) >= 5

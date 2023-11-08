@@ -311,6 +311,7 @@ def test(
         "PRINT_TEST_PLAN_ONLY": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+        "COVERAGE_CONTEXT": name,
     }
     if "LANG" in os.environ:
         env["LANG"] = os.environ["LANG"]
@@ -547,6 +548,24 @@ def combine_coverage(ctx: Context, name: str):
 
 
 @vm.command(
+    name="create-xml-coverage-reports",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+    },
+)
+def create_xml_coverage_reports(ctx: Context, name: str):
+    """
+    Create XML code coverage reports in the VM.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.create_xml_coverage_reports()
+    ctx.exit(returncode)
+
+
+@vm.command(
     name="download-artifacts",
     arguments={
         "name": {
@@ -591,8 +610,20 @@ def sync_cache(
     cached_instances = {}
     if STATE_DIR.exists():
         for state_path in STATE_DIR.iterdir():
-            instance_id = (state_path / "instance-id").read_text()
-            cached_instances[instance_id] = state_path.name
+            try:
+                instance_id = (state_path / "instance-id").read_text()
+            except FileNotFoundError:
+                if not delete:
+                    log.info(
+                        f"Would remove {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+                else:
+                    shutil.rmtree(state_path)
+                    log.info(
+                        f"REMOVED {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+            else:
+                cached_instances[instance_id] = state_path.name
 
     # Find what instances we are missing in our cached states
     to_write = {}
@@ -808,7 +839,12 @@ class VM:
 
     def write_ssh_config(self):
         if self.ssh_config_file.exists():
-            return
+            if (
+                f"Hostname {self.instance.private_ip_address}"
+                in self.ssh_config_file.read_text()
+            ):
+                # If what's on config matches, then we're good
+                return
         if os.environ.get("CI") is not None:
             forward_agent = "no"
         else:
@@ -824,6 +860,7 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
+              PasswordAuthentication no
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -946,8 +983,7 @@ class VM:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
-            log.info("Starting Developer configured VM")
-            # Get the develpers security group
+            log.info(f"Starting Developer configured VM In Environment '{environment}'")
             security_group_filters = [
                 {
                     "Name": "vpc-id",
@@ -956,10 +992,6 @@ class VM:
                 {
                     "Name": "tag:spb:project",
                     "Values": ["salt-project"],
-                },
-                {
-                    "Name": "tag:spb:developer",
-                    "Values": ["true"],
                 },
             ]
             response = client.describe_security_groups(Filters=security_group_filters)
@@ -971,6 +1003,26 @@ class VM:
                 self.ctx.exit(1)
             # Override the launch template network interfaces config
             security_group_ids = [sg["GroupId"] for sg in response["SecurityGroups"]]
+            security_group_filters = [
+                {
+                    "Name": "vpc-id",
+                    "Values": [vpc.id],
+                },
+                {
+                    "Name": "tag:Name",
+                    "Values": [f"saltproject-{environment}-client-vpn-remote-access"],
+                },
+            ]
+            response = client.describe_security_groups(Filters=security_group_filters)
+            if not response.get("SecurityGroups"):
+                self.ctx.error(
+                    "Could not find the right VPN access security group. "
+                    f"Filters:\n{pprint.pformat(security_group_filters)}"
+                )
+                self.ctx.exit(1)
+            security_group_ids.extend(
+                [sg["GroupId"] for sg in response["SecurityGroups"]]
+            )
 
         progress = create_progress_bar()
         create_task = progress.add_task(
@@ -1115,6 +1167,7 @@ class VM:
             proc = None
             checks = 0
             last_error = None
+            connection_refused_or_reset = False
             while ssh_connection_timeout_progress <= ssh_connection_timeout:
                 start = time.time()
                 if proc is None:
@@ -1154,6 +1207,11 @@ class VM:
                         break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
+                    if connection_refused_or_reset is False and (
+                        "connection refused" in stderr.lower()
+                        or "connection reset" in stderr.lower()
+                    ):
+                        connection_refused_or_reset = True
                     if stderr:
                         stderr = f" Last Error: {stderr}"
                         last_error = stderr
@@ -1173,6 +1231,12 @@ class VM:
                     description=f"Waiting for SSH to become available at {host} ...{stderr or ''}",
                 )
 
+                if connection_refused_or_reset:
+                    # Since ssh is now running, and we're actually getting a connection
+                    # refused error message, let's try to ssh a little slower in order not
+                    # to get blocked
+                    time.sleep(10)
+
                 if checks >= 10 and proc is not None:
                     proc.kill()
                     proc = None
@@ -1191,7 +1255,7 @@ class VM:
             timeout = self.config.terminate_timeout
             timeout_progress = 0.0
             progress = create_progress_bar()
-            task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
+            task = progress.add_task(f"Terminating {self!r}...", total=timeout)
             self.instance.terminate()
             try:
                 with progress:
@@ -1282,6 +1346,7 @@ class VM:
         if not env:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
+        write_env["TOOLS_DISTRO_SLUG"] = self.name
         write_env_filename = ".ci-env"
         write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
@@ -1383,7 +1448,13 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir")
+
+    def create_xml_coverage_reports(self):
+        """
+        Create XML coverage reports
+        """
+        return self.run_nox("create-xml-coverage-reports-onedir")
 
     def compress_dependencies(self):
         """

@@ -1,7 +1,11 @@
+import asyncio
 import logging
+import os
+import time
 
 import pytest
 
+import salt.transport.zeromq
 from tests.support.mock import MagicMock, patch
 from tests.support.pytest.transport import PubServerChannelProcess
 
@@ -51,3 +55,112 @@ def test_zeromq_filtering(salt_master, salt_minion):
         assert len(results) == send_num, "{} != {}, difference: {}".format(
             len(results), send_num, set(expect).difference(results)
         )
+
+
+async def test_pub_channel(master_opts, io_loop):
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+        assert payloads
+    finally:
+        server.close()
+
+
+async def test_pub_channel_filtering(master_opts, io_loop):
+    master_opts["zmq_filtering"] = True
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+    finally:
+        server.close()
+
+
+async def test_pub_channel_filtering_topic(master_opts, io_loop):
+    master_opts["zmq_filtering"] = True
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload, topic_list=["meh"])
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+    finally:
+        server.close()

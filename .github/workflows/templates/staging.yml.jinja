@@ -94,7 +94,7 @@ concurrency:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -158,7 +158,7 @@ concurrency:
           if-no-files-found: error
 
   <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-pkg-repo-downloads.yml.jinja" %>
+  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   publish-pypi:
@@ -183,7 +183,7 @@ concurrency:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

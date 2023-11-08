@@ -14,6 +14,12 @@ DOCKER_MOD_MAP = {
     "state.highstate": "docker.highstate",
 }
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if "proxy" not in __opts__:
@@ -22,7 +28,7 @@ def __virtual__():
             "Docker executor is only meant to be used with Docker Proxy Minions",
         )
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 
