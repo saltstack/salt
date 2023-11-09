@@ -2045,6 +2045,7 @@ def test_when_api_query_result_limit_set_but_not_a_positive_integer_then_error_m
 def test_when_api_token_not_set_then_error_message_should_be_logged(
     default_kwargs,
 ):
+
     default_kwargs["api_token"] = ""
 
     with patch("salt.pillar.netbox.log.error", autospec=True) as fake_error:
@@ -2056,6 +2057,7 @@ def test_when_api_token_not_set_then_error_message_should_be_logged(
 def test_when_we_retrieve_a_single_device_then_return_list(
     default_kwargs, headers, device_results
 ):
+
     expected_result = device_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2092,6 +2094,7 @@ def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_list(
 def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
     default_kwargs, headers, virtual_machine_results
 ):
+
     expected_result = virtual_machine_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2110,6 +2113,7 @@ def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
 def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty_dict(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2128,6 +2132,7 @@ def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty
 def test_when_we_retrieve_device_interfaces_then_return_dict(
     default_kwargs, headers, device_interface_results, device_interfaces_list
 ):
+
     expected_result = device_interfaces_list
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2148,6 +2153,7 @@ def test_when_we_retrieve_device_interfaces_then_return_dict(
 def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2171,6 +2177,7 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
     virtual_machine_interface_results,
     virtual_machine_interfaces_list,
 ):
+
     expected_result = virtual_machine_interfaces_list
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2191,6 +2198,7 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
 def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2211,6 +2219,7 @@ def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_ret
 def test_when_we_retrieve_device_interface_ips_then_return_list(
     default_kwargs, headers, device_ip_results
 ):
+
     expected_result = device_ip_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2235,6 +2244,7 @@ def test_connected_endpoints(
     device_interfaces_list,
     secondary_device_result,
 ):
+
     expected_result = connected_devices_results
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2253,6 +2263,7 @@ def test_connected_endpoints(
 def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2273,6 +2284,7 @@ def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_em
 def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
     default_kwargs, headers, virtual_machine_ip_results
 ):
+
     expected_result = virtual_machine_ip_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2293,6 +2305,7 @@ def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
 def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2313,6 +2326,7 @@ def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_
 def test_associate_ips_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results, device_interfaces_ip_list
 ):
+
     expected_result = device_interfaces_ip_list
 
     interfaces_list = device_interfaces_list
@@ -2328,6 +2342,7 @@ def test_associate_ips_to_interfaces_then_return_list(
 def test_associate_empty_ip_list_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results
 ):
+
     expected_result = device_interfaces_list
 
     interfaces_list = device_interfaces_list
@@ -2343,6 +2358,7 @@ def test_associate_empty_ip_list_to_interfaces_then_return_list(
 def test_when_we_retrieve_site_details_then_return_dict(
     default_kwargs, headers, site_results
 ):
+
     expected_result = site_results["dict"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2362,6 +2378,7 @@ def test_when_we_retrieve_site_details_then_return_dict(
 def test_when_we_retrieve_site_details_and_get_http_error_then_return_empty_dict(
     default_kwargs, headers, http_error
 ):
+
     expected_result = {}
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2381,6 +2398,7 @@ def test_when_we_retrieve_site_details_and_get_http_error_then_return_empty_dict
 def test_when_we_retrieve_site_prefixes_then_return_list(
     default_kwargs, headers, site_prefixes_results, site_prefixes
 ):
+
     expected_result = site_prefixes
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2401,6 +2419,7 @@ def test_when_we_retrieve_site_prefixes_then_return_list(
 def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
+
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2421,6 +2440,7 @@ def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_lis
 def test_when_we_retrieve_proxy_details_then_return_dict(
     default_kwargs, headers, proxy_details_results, proxy_details
 ):
+
     expected_result = proxy_details
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2440,6 +2460,7 @@ def test_when_we_retrieve_proxy_details_then_return_dict(
 def test_when_we_retrieve_proxy_details_and_get_http_error_then_dont_return(
     default_kwargs, headers, http_error
 ):
+
     expected_result = None
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2459,11 +2480,13 @@ def test_when_we_retrieve_proxy_details_and_get_http_error_then_dont_return(
 def test_when_we_retrieve_multiple_devices_then_error_message_should_be_logged(
     default_kwargs, multiple_device_results
 ):
+
     with patch(
         "salt.pillar.netbox._get_devices", autospec=True
     ) as multiple_devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         multiple_devices.return_value = multiple_device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2485,6 +2508,7 @@ def test_when_we_retrieve_multiple_virtual_machines_then_error_message_should_be
     ) as multiple_virtual_machines, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         multiple_virtual_machines.return_value = multiple_virtual_machine_results[
             "dict"
         ]["results"]
@@ -2507,6 +2531,7 @@ def test_when_we_retrieve_a_device_and_a_virtual_machine_then_error_message_shou
     ) as virtual_machine, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         device.return_value = device_results["dict"]["results"]
         virtual_machine.return_value = virtual_machine_results["dict"]["results"]
 
@@ -2521,9 +2546,11 @@ def test_when_we_retrieve_a_device_and_a_virtual_machine_then_error_message_shou
 def test_when_we_retrieve_no_devices_then_error_message_should_be_logged(
     default_kwargs, no_results
 ):
+
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         devices.return_value = no_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2567,6 +2594,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     pillar_results,
     connected_devices_results,
 ):
+
     expected_result = pillar_results
 
     default_kwargs["virtual_machines"] = False
@@ -2592,6 +2620,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     ) as get_proxy_details, patch(
         "salt.pillar.netbox._get_connected_devices", autospec=True
     ) as get_connected_decvices:
+
         get_devices.return_value = device_results["dict"]["results"]
         get_virtual_machines.return_value = no_results["dict"]["results"]
         get_interfaces.return_value = device_interfaces_list
@@ -2655,12 +2684,13 @@ def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_d
 
         actual_result = netbox.ext_pillar(**default_kwargs)
 
-        assert actual_result == expected_result
+        assert actual_result == pillar_results_with_custom_destination
 
 
 def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):
+
     default_kwargs["site_details"] = False
     default_kwargs["site_prefixes"] = False
     default_kwargs["proxy_return"] = True
@@ -2669,6 +2699,7 @@ def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_messa
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         devices.return_value = device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2682,6 +2713,7 @@ def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_messa
 def test_when_we_set_proxy_return_but_get_no_value_for_primary_ip_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):
+
     default_kwargs["site_details"] = False
     default_kwargs["site_prefixes"] = False
     default_kwargs["proxy_return"] = True
@@ -2690,6 +2722,7 @@ def test_when_we_set_proxy_return_but_get_no_value_for_primary_ip_then_error_mes
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
+
         devices.return_value = device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
