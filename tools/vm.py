@@ -1338,7 +1338,7 @@ class VM:
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         if download:
-            self.rsync(destination + "/*", source, description, rsync_flags)
+            self.rsync(f"{destination}/*", source, description, rsync_flags)
         else:
             self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
