@@ -3080,6 +3080,10 @@ jobs:
           - pkg-type: rpm
             distro: photon
             version: "5"
+            arch: arm64
+          - pkg-type: rpm
+            distro: photon
+            version: "5"
             arch: aarch64
 
     steps:
