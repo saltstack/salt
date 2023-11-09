@@ -222,14 +222,18 @@ def ssh(ctx: Context, name: str, command: list[str], sudo: bool = False):
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "download": {
+            "help": "Rsync from the remote target to local salt checkout",
+            "action": "store_true",
+        },
     }
 )
-def rsync(ctx: Context, name: str):
+def rsync(ctx: Context, name: str, download: bool = False):
     """
     Sync local checkout to VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.upload_checkout()
+    vm.upload_checkout(download=download)
 
 
 @vm.command(
@@ -1293,7 +1297,7 @@ class VM:
             shutil.rmtree(self.state_dir, ignore_errors=True)
             self.instance = None
 
-    def upload_checkout(self, verbose=True):
+    def upload_checkout(self, verbose=True, download=False):
         rsync_flags = [
             "--delete",
             "--no-group",
@@ -1335,7 +1339,10 @@ class VM:
                 rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
-        self.rsync(source, destination, description, rsync_flags)
+        if download:
+            self.rsync(f"{destination}/*", source, description, rsync_flags)
+        else:
+            self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
             # rsync sets very strict file permissions and disables inheritance
             # we only need to reset permissions so they inherit from the parent
