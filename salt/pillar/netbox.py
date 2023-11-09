@@ -1166,7 +1166,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         netbox_data["connected_devices"] = _get_connected_devices(
             api_url, minion_id, netbox_data["interfaces"], headers
         )
-
+    
     # add netbox_data to ret in the specified location
     destination_keys = list(
         enumerate(reversed(destination_pillar_key.split(":")), start=1)
