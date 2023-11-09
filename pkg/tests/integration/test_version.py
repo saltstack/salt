@@ -111,14 +111,14 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     package of the same version. For example, v3004~rc1 should be less than
     v3004.
     """
-    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
+    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora", "photon"):
         pytest.skip("Only tests rpm packages")
 
     pkg = [x for x in install_salt.pkgs if "rpm" in x]
     if not pkg:
         pytest.skip("Not testing rpm packages")
     pkg = pkg[0].split("/")[-1]
-    if not re.search(r"rc[0-9]", pkg):
+    if "rc" not in ".".join(pkg.split(".")[:2]):
         pytest.skip("Not testing an RC package")
     assert "~" in pkg
     comp_pkg = pkg.split("~")[0]
