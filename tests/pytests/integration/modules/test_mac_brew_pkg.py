@@ -33,7 +33,8 @@ def setup_teardown_vars(salt_call_cli, add_pkg, del_pkg):
     try:
         yield
     finally:
-        pkg_list = salt_call_cli.run("pkg.list_pkgs")
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        pkg_list = ret.data
 
         # Remove any installed packages
         if add_pkg in pkg_list:
@@ -48,7 +49,8 @@ def test_brew_install(salt_call_cli, add_pkg, setup_teardown_vars):
     """
     try:
         salt_call_cli.run("pkg.install", add_pkg)
-        pkg_list = salt_call_cli.run("pkg.list_pkgs")
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        pkg_list = ret.data
         try:
             assert add_pkg in pkg_list
         except AssertionError:
@@ -66,14 +68,16 @@ def test_remove(salt_call_cli, del_pkg, setup_teardown_vars):
     try:
         # Install a package to delete - If unsuccessful, skip the test
         salt_call_cli.run("pkg.install", del_pkg)
-        pkg_list = salt_call_cli.run("pkg.list_pkgs")
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        pkg_list = ret.data
         if del_pkg not in pkg_list:
             salt_call_cli.run("pkg.install", del_pkg)
             pytest.skip("Failed to install a package to delete")
 
         # Now remove the installed package
         salt_call_cli.run("pkg.remove", del_pkg)
-        del_list = salt_call_cli.run("pkg.list_pkgs")
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        del_list = ret.data
         assert del_pkg not in del_list
     except CommandExecutionError:
         salt_call_cli.run("pkg.remove", del_pkg)
@@ -87,8 +91,10 @@ def test_version(salt_call_cli, add_pkg, setup_teardown_vars):
     """
     try:
         salt_call_cli.run("pkg.install", add_pkg)
-        pkg_list = salt_call_cli.run("pkg.list_pkgs")
-        version = salt_call_cli.run("pkg.version", add_pkg)
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        pkg_list = ret.data
+        ret = salt_call_cli.run("pkg.version", add_pkg)
+        version = ret.data
         try:
             assert version, "version: {} is empty, or other issue is present".format(
                 version
@@ -152,7 +158,8 @@ def test_list_upgrades(salt_call_cli, add_pkg, setup_teardown_vars):
     'name2': 'version2', ... }
     """
     try:
-        upgrades = salt_call_cli.run("pkg.list_upgrades")
+        ret = salt_call_cli.run("pkg.list_upgrades")
+        upgrades = ret.data
         try:
             assert isinstance(upgrades, dict)
             if upgrades:
@@ -174,7 +181,8 @@ def test_info_installed(salt_call_cli, add_pkg, setup_teardown_vars):
     """
     try:
         salt_call_cli.run("pkg.install", add_pkg)
-        info = salt_call_cli.run("pkg.info_installed", add_pkg)
+        ret = salt_call_cli.run("pkg.info_installed", add_pkg)
+        info = ret.data
         try:
             assert add_pkg in info
             assert "versions" in info[add_pkg]
