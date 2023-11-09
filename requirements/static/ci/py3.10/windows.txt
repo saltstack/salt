@@ -44,14 +44,12 @@ certifi==2023.07.22
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
     #   kubernetes
     #   requests
 cffi==1.14.6
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
     #   pygit2
@@ -70,8 +68,8 @@ cheroot==10.0.0
 cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
 click==8.1.3
     # via geomet
 clr-loader==0.2.4
@@ -91,8 +89,7 @@ contextvars==2.4
 cryptography==41.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/crypto.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   etcd3-py
     #   moto
     #   pyopenssl
@@ -130,14 +127,9 @@ genshi==0.7.7
 geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
-    # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   gitpython
+    # via gitpython
 gitpython==3.1.40
-    # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
+    # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
 idna==3.4
@@ -153,7 +145,7 @@ immutables==0.15
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 inflect==6.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -204,10 +196,10 @@ looseversion==1.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
-lxml==4.9.2
+lxml==4.9.2 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.in
@@ -270,8 +262,6 @@ pyasn1-modules==0.3.0
     # via google-auth
 pyasn1==0.4.8
     # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
     #   pyasn1-modules
     #   rsa
 pycparser==2.21
@@ -288,20 +278,20 @@ pydantic==1.10.8
     #   inflect
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
-pymssql==2.2.7
+pymssql==2.2.7 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
-pymysql==1.1.0
+    #   -r requirements/base.txt
+pymysql==1.1.0 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
 pyopenssl==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   etcd3-py
 pyrsistent==0.19.3
     # via jsonschema
@@ -345,7 +335,7 @@ pytest==7.3.2
 python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   botocore
     #   kubernetes
     #   moto
@@ -354,21 +344,21 @@ python-etcd==0.4.5
 python-gnupg==0.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
-pythonnet==3.0.1
+    #   -r requirements/base.txt
+pythonnet==3.0.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 pytz==2023.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   tempora
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
-pywin32==306
+pywin32==306 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   docker
     #   pytest-skip-markers
     #   wmi
@@ -395,7 +385,6 @@ requests==2.31.0
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
     #   docker
     #   etcd3-py
     #   kubernetes
@@ -418,7 +407,7 @@ semantic-version==2.10.0
 setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 six==1.15.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -435,9 +424,7 @@ six==1.15.0
     #   pywinrm
     #   websocket-client
 smmap==5.0.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   gitdb
+    # via gitdb
 sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -449,7 +436,7 @@ tempora==5.3.0
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
@@ -469,7 +456,6 @@ typing-extensions==4.8.0
 urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
     #   botocore
     #   docker
     #   google-auth
@@ -493,14 +479,10 @@ werkzeug==3.0.1
     # via
     #   moto
     #   pytest-httpserver
-wheel==0.38.4
+wmi==1.5.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
-wmi==1.5.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
 xmldiff==2.6.3
     # via -r requirements/static/ci/common.in
 xmltodict==0.13.0
@@ -515,7 +497,7 @@ zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   cherrypy
-zipp==3.15.0
+zipp==3.16.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   importlib-metadata
