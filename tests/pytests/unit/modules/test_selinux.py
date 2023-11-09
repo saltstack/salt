@@ -399,15 +399,14 @@ def test_selinux_add_policy_regex(name, sel_type):
     ):
         selinux.fcontext_add_policy(name, sel_type=sel_type)
         filespec = re.escape(name)
-        filespec_test = f"'{filespec}'"
-        expected_cmd_shell = f"semanage fcontext -l | egrep {filespec_test}"
+        expected_cmd_shell = f"semanage fcontext -l | egrep '{filespec}'"
         mock_cmd_shell.assert_called_once_with(
-            f"{expected_cmd_shell}",
+            expected_cmd_shell,
             ignore_retcode=True,
         )
         expected_cmd_run_all = (
             f"semanage fcontext --modify --type {sel_type} {filespec}"
         )
         mock_cmd_run_all.assert_called_once_with(
-            f"{expected_cmd_run_all}",
+            expected_cmd_run_all,
         )
