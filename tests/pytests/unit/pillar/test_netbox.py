@@ -2318,6 +2318,60 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         assert actual_result == expected_result
 
 
+def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_destination_(
+    default_kwargs,
+    device_results,
+    no_results,
+    device_interfaces_list,
+    device_ip_results,
+    site_results,
+    site_prefixes,
+    proxy_details,
+    pillar_results,
+    connected_devices_results,
+):
+
+    expected_result = pillar_results
+
+    default_kwargs["virtual_machines"] = False
+    default_kwargs["interfaces"] = True
+    default_kwargs["interface_ips"] = True
+    default_kwargs["site_details"] = True
+    default_kwargs["site_prefixes"] = True
+    default_kwargs["proxy_return"] = True
+    default_kwargs["connected_devices"] = True
+    default_kwargs["destination_pillar_key"] = "netbox:minion"
+
+    with patch("salt.pillar.netbox._get_devices", autospec=True) as get_devices, patch(
+        "salt.pillar.netbox._get_virtual_machines", autospec=True
+    ) as get_virtual_machines, patch(
+        "salt.pillar.netbox._get_interfaces", autospec=True
+    ) as get_interfaces, patch(
+        "salt.pillar.netbox._get_interface_ips", autospec=True
+    ) as get_interface_ips, patch(
+        "salt.pillar.netbox._get_site_details", autospec=True
+    ) as get_site_details, patch(
+        "salt.pillar.netbox._get_site_prefixes", autospec=True
+    ) as get_site_prefixes, patch(
+        "salt.pillar.netbox._get_proxy_details", autospec=True
+    ) as get_proxy_details, patch(
+        "salt.pillar.netbox._get_connected_devices", autospec=True
+    ) as get_connected_decvices:
+
+        get_devices.return_value = device_results["dict"]["results"]
+        get_virtual_machines.return_value = no_results["dict"]["results"]
+        get_interfaces.return_value = device_interfaces_list
+        get_interface_ips.return_value = device_ip_results["dict"]["results"]
+        get_site_details.return_value = site_results["dict"]
+        get_site_prefixes.return_value = site_prefixes
+        get_proxy_details.return_value = proxy_details
+        get_connected_decvices.return_value = connected_devices_results
+
+        actual_result = netbox.ext_pillar(**default_kwargs)
+
+        assert actual_result == {"netbox": {"minion": expected_result["netbox"]}}
+
+
 def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):
