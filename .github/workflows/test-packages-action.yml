@@ -40,6 +40,11 @@ on:
         type: string
         description: The python version to run tests with
         default: "3.10"
+      fips:
+        required: false
+        type: boolean
+        default: false
+        description: Test run with FIPS enabled
       package-name:
         required: false
         type: string
@@ -190,12 +195,11 @@ jobs:
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
-            ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-          --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+          --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
           ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
