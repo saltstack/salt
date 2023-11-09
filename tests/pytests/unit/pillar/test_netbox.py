@@ -1587,6 +1587,323 @@ def pillar_results():
 
 
 @pytest.fixture
+def pillar_results_with_custom_destination():
+    return {
+        "netbox": {
+            "minion": {
+                "id": 511,
+                "url": "https://netbox.example.com/api/dcim/devices/511/",
+                "name": "minion1",
+                "node_type": "device",
+                "display_name": "minion1",
+                "device_type": {
+                    "id": 4,
+                    "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                    "manufacturer": {
+                        "id": 1,
+                        "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                        "name": "Cisco",
+                        "slug": "cisco",
+                    },
+                    "model": "ISR2901",
+                    "slug": "isr2901",
+                    "display_name": "Cisco ISR2901",
+                },
+                "device_role": {
+                    "id": 45,
+                    "url": "https://netbox.example.com/api/dcim/device-roles/45/",
+                    "name": "Network",
+                    "slug": "network",
+                },
+                "interfaces": [
+                    {
+                        "id": 8158,
+                        "ip_addresses": [
+                            {
+                                "id": 1146,
+                                "url": "https://netbox.example.com/api/ipam/ip-addresses/1146/",
+                                "family": {"value": 4, "label": "IPv4"},
+                                "address": "192.0.2.1/24",
+                                "vrf": None,
+                                "tenant": None,
+                                "status": {"value": "active", "label": "Active"},
+                                "role": None,
+                                "nat_inside": None,
+                                "nat_outside": None,
+                                "dns_name": "",
+                                "description": "",
+                                "tags": [],
+                                "custom_fields": {},
+                                "created": "2021-02-19",
+                                "last_updated": "2021-02-19T06:12:04.153386Z",
+                            },
+                        ],
+                        "url": "https://netbox.example.com/api/dcim/interfaces/8158/",
+                        "name": "GigabitEthernet0/0",
+                        "label": "",
+                        "type": {"value": "1000base-t", "label": "1000BASE-T (1GE)"},
+                        "enabled": True,
+                        "lag": None,
+                        "mtu": None,
+                        "mac_address": None,
+                        "mgmt_only": False,
+                        "description": "",
+                        "mode": None,
+                        "untagged_vlan": None,
+                        "tagged_vlans": [],
+                        "cable": None,
+                        "cable_peer": None,
+                        "cable_peer_type": None,
+                        "connected_endpoints": [
+                            {
+                                "id": 170,
+                                "url": "https://demo.netbox.dev/api/dcim/interfaces/512/",
+                                "display": "GigabitEthernet1/0/1",
+                                "device": {
+                                    "id": 512,
+                                    "url": "https://demo.netbox.dev/api/dcim/devices/512/",
+                                    "display": "minion2",
+                                    "name": "minion2",
+                                },
+                                "name": "GigabitEthernet1/0/1",
+                                "cable": 35,
+                                "_occupied": True,
+                            }
+                        ],
+                        "connected_endpoints_type": "dcim.interface",
+                        "connected_endpoints_reachable": True,
+                        "tags": [],
+                        "count_ipaddresses": 1,
+                    },
+                    {
+                        "id": 8159,
+                        "ip_addresses": [
+                            {
+                                "id": 1147,
+                                "url": "https://netbox.example.com/api/ipam/ip-addresses/1147/",
+                                "family": {"value": 4, "label": "IPv4"},
+                                "address": "198.51.100.1/24",
+                                "vrf": None,
+                                "tenant": None,
+                                "status": {"value": "active", "label": "Active"},
+                                "role": None,
+                                "nat_inside": None,
+                                "nat_outside": None,
+                                "dns_name": "",
+                                "description": "",
+                                "tags": [],
+                                "custom_fields": {},
+                                "created": "2021-02-19",
+                                "last_updated": "2021-02-19T06:12:40.508154Z",
+                            },
+                        ],
+                        "url": "https://netbox.example.com/api/dcim/interfaces/8159/",
+                        "name": "GigabitEthernet0/1",
+                        "label": "",
+                        "type": {"value": "1000base-t", "label": "1000BASE-T (1GE)"},
+                        "enabled": True,
+                        "lag": None,
+                        "mtu": None,
+                        "mac_address": None,
+                        "mgmt_only": False,
+                        "description": "",
+                        "mode": None,
+                        "untagged_vlan": None,
+                        "tagged_vlans": [],
+                        "cable": None,
+                        "cable_peer": None,
+                        "cable_peer_type": None,
+                        "connected_endpoints": None,
+                        "connected_endpoints_type": None,
+                        "connected_endpoints_reachable": None,
+                        "tags": [],
+                        "count_ipaddresses": 1,
+                    },
+                ],
+                "tenant": None,
+                "platform": {
+                    "id": 1,
+                    "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                    "name": "Cisco IOS",
+                    "slug": "ios",
+                },
+                "serial": "",
+                "asset_tag": None,
+                "site": {
+                    "id": 18,
+                    "url": "https://netbox.example.com/api/dcim/sites/18/",
+                    "name": "Site 1",
+                    "slug": "site1",
+                    "status": {"value": "active", "label": "Active"},
+                    "region": None,
+                    "tenant": None,
+                    "facility": "",
+                    "asn": None,
+                    "time_zone": None,
+                    "description": "",
+                    "physical_address": "",
+                    "shipping_address": "",
+                    "latitude": None,
+                    "longitude": None,
+                    "contact_name": "",
+                    "contact_phone": "",
+                    "contact_email": "",
+                    "comments": "",
+                    "tags": [],
+                    "custom_fields": {},
+                    "created": "2021-02-25",
+                    "last_updated": "2021-02-25T14:21:07.898957Z",
+                    "circuit_count": 0,
+                    "device_count": 1,
+                    "prefix_count": 2,
+                    "rack_count": 0,
+                    "virtualmachine_count": 1,
+                    "vlan_count": 0,
+                    "prefixes": [
+                        {
+                            "id": 284,
+                            "url": "https://netbox.example.com/api/ipam/prefixes/284/",
+                            "family": {"value": 4, "label": "IPv4"},
+                            "prefix": "192.0.2.0/24",
+                            "vrf": None,
+                            "tenant": None,
+                            "vlan": None,
+                            "status": {"value": "active", "label": "Active"},
+                            "role": None,
+                            "is_pool": False,
+                            "description": "",
+                            "tags": [],
+                            "custom_fields": {},
+                            "created": "2021-02-25",
+                            "last_updated": "2021-02-25T15:08:27.136305Z",
+                        },
+                        {
+                            "id": 285,
+                            "url": "https://netbox.example.com/api/ipam/prefixes/285/",
+                            "family": {"value": 4, "label": "IPv4"},
+                            "prefix": "198.51.100.0/24",
+                            "vrf": None,
+                            "tenant": None,
+                            "vlan": None,
+                            "status": {"value": "active", "label": "Active"},
+                            "role": None,
+                            "is_pool": False,
+                            "description": "",
+                            "tags": [],
+                            "custom_fields": {},
+                            "created": "2021-02-25",
+                            "last_updated": "2021-02-25T15:08:59.880440Z",
+                        },
+                    ],
+                },
+                "rack": None,
+                "position": None,
+                "face": None,
+                "parent_device": None,
+                "status": {"value": "active", "label": "Active"},
+                "primary_ip": {
+                    "id": 1146,
+                    "url": "https://netbox.example.com/api/ipam/ip-addresses/1146/",
+                    "family": 4,
+                    "address": "192.0.2.1/24",
+                },
+                "primary_ip4": {
+                    "id": 1146,
+                    "url": "https://netbox.example.com/api/ipam/ip-addresses/1146/",
+                    "family": 4,
+                    "address": "192.0.2.1/24",
+                },
+                "primary_ip6": None,
+                "cluster": None,
+                "virtual_chassis": None,
+                "vc_position": None,
+                "vc_priority": None,
+                "comments": "",
+                "local_context_data": None,
+                "tags": [],
+                "custom_fields": {},
+                "config_context": {},
+                "connected_devices": {
+                    512: {
+                        "asset_tag": None,
+                        "cluster": None,
+                        "comments": "",
+                        "config_context": {},
+                        "created": "2021-02-19",
+                        "custom_fields": {},
+                        "device_role": {
+                            "id": 45,
+                            "name": "Network",
+                            "slug": "network",
+                            "url": "https://netbox.example.com/api/dcim/device-roles/45/",
+                        },
+                        "device_type": {
+                            "display_name": "Cisco " "ISR2901",
+                            "id": 4,
+                            "manufacturer": {
+                                "id": 1,
+                                "name": "Cisco",
+                                "slug": "cisco",
+                                "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                            },
+                            "model": "ISR2901",
+                            "slug": "isr2901",
+                            "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                        },
+                        "display_name": "minion2",
+                        "face": None,
+                        "id": 512,
+                        "last_updated": "2021-02-19T06:12:04.171105Z",
+                        "local_context_data": None,
+                        "name": "minion2",
+                        "node_type": "device",
+                        "parent_device": None,
+                        "platform": {
+                            "id": 1,
+                            "name": "Cisco IOS",
+                            "slug": "ios",
+                            "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                        },
+                        "position": None,
+                        "primary_ip": {
+                            "address": "192.0.2.3/24",
+                            "family": 4,
+                            "id": 1150,
+                            "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                        },
+                        "primary_ip4": {
+                            "address": "192.0.2.3/24",
+                            "family": 4,
+                            "id": 1150,
+                            "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                        },
+                        "primary_ip6": None,
+                        "rack": None,
+                        "serial": "",
+                        "site": {
+                            "id": 18,
+                            "name": "Site 1",
+                            "slug": "site1",
+                            "url": "https://netbox.example.com/api/dcim/sites/18/",
+                        },
+                        "status": {"label": "Active", "value": "active"},
+                        "tags": [],
+                        "tenant": None,
+                        "url": "https://netbox.example.com/api/dcim/devices/512/",
+                        "vc_position": None,
+                        "vc_priority": None,
+                        "virtual_chassis": None,
+                    }
+                },
+                "created": "2021-02-19",
+                "last_updated": "2021-02-19T06:12:04.171105Z",
+            },
+        },
+        "proxy": {"host": "192.0.2.1", "driver": "ios", "proxytype": "napalm"},
+    }
+
+
+@pytest.fixture
 def connected_devices_results():
     return {
         512: {
@@ -1728,7 +2045,6 @@ def test_when_api_query_result_limit_set_but_not_a_positive_integer_then_error_m
 def test_when_api_token_not_set_then_error_message_should_be_logged(
     default_kwargs,
 ):
-
     default_kwargs["api_token"] = ""
 
     with patch("salt.pillar.netbox.log.error", autospec=True) as fake_error:
@@ -1740,7 +2056,6 @@ def test_when_api_token_not_set_then_error_message_should_be_logged(
 def test_when_we_retrieve_a_single_device_then_return_list(
     default_kwargs, headers, device_results
 ):
-
     expected_result = device_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1777,7 +2092,6 @@ def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_list(
 def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
     default_kwargs, headers, virtual_machine_results
 ):
-
     expected_result = virtual_machine_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1796,7 +2110,6 @@ def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
 def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty_dict(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1815,7 +2128,6 @@ def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty
 def test_when_we_retrieve_device_interfaces_then_return_dict(
     default_kwargs, headers, device_interface_results, device_interfaces_list
 ):
-
     expected_result = device_interfaces_list
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1836,7 +2148,6 @@ def test_when_we_retrieve_device_interfaces_then_return_dict(
 def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1860,7 +2171,6 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
     virtual_machine_interface_results,
     virtual_machine_interfaces_list,
 ):
-
     expected_result = virtual_machine_interfaces_list
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1881,7 +2191,6 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
 def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1902,7 +2211,6 @@ def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_ret
 def test_when_we_retrieve_device_interface_ips_then_return_list(
     default_kwargs, headers, device_ip_results
 ):
-
     expected_result = device_ip_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1927,7 +2235,6 @@ def test_connected_endpoints(
     device_interfaces_list,
     secondary_device_result,
 ):
-
     expected_result = connected_devices_results
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1946,7 +2253,6 @@ def test_connected_endpoints(
 def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1967,7 +2273,6 @@ def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_em
 def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
     default_kwargs, headers, virtual_machine_ip_results
 ):
-
     expected_result = virtual_machine_ip_results["dict"]["results"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -1988,7 +2293,6 @@ def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
 def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2009,7 +2313,6 @@ def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_
 def test_associate_ips_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results, device_interfaces_ip_list
 ):
-
     expected_result = device_interfaces_ip_list
 
     interfaces_list = device_interfaces_list
@@ -2025,7 +2328,6 @@ def test_associate_ips_to_interfaces_then_return_list(
 def test_associate_empty_ip_list_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results
 ):
-
     expected_result = device_interfaces_list
 
     interfaces_list = device_interfaces_list
@@ -2041,7 +2343,6 @@ def test_associate_empty_ip_list_to_interfaces_then_return_list(
 def test_when_we_retrieve_site_details_then_return_dict(
     default_kwargs, headers, site_results
 ):
-
     expected_result = site_results["dict"]
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2061,7 +2362,6 @@ def test_when_we_retrieve_site_details_then_return_dict(
 def test_when_we_retrieve_site_details_and_get_http_error_then_return_empty_dict(
     default_kwargs, headers, http_error
 ):
-
     expected_result = {}
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2081,7 +2381,6 @@ def test_when_we_retrieve_site_details_and_get_http_error_then_return_empty_dict
 def test_when_we_retrieve_site_prefixes_then_return_list(
     default_kwargs, headers, site_prefixes_results, site_prefixes
 ):
-
     expected_result = site_prefixes
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2102,7 +2401,6 @@ def test_when_we_retrieve_site_prefixes_then_return_list(
 def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-
     expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2123,7 +2421,6 @@ def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_lis
 def test_when_we_retrieve_proxy_details_then_return_dict(
     default_kwargs, headers, proxy_details_results, proxy_details
 ):
-
     expected_result = proxy_details
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2143,7 +2440,6 @@ def test_when_we_retrieve_proxy_details_then_return_dict(
 def test_when_we_retrieve_proxy_details_and_get_http_error_then_dont_return(
     default_kwargs, headers, http_error
 ):
-
     expected_result = None
 
     with patch("salt.utils.http.query", autospec=True) as query:
@@ -2163,13 +2459,11 @@ def test_when_we_retrieve_proxy_details_and_get_http_error_then_dont_return(
 def test_when_we_retrieve_multiple_devices_then_error_message_should_be_logged(
     default_kwargs, multiple_device_results
 ):
-
     with patch(
         "salt.pillar.netbox._get_devices", autospec=True
     ) as multiple_devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         multiple_devices.return_value = multiple_device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2191,7 +2485,6 @@ def test_when_we_retrieve_multiple_virtual_machines_then_error_message_should_be
     ) as multiple_virtual_machines, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         multiple_virtual_machines.return_value = multiple_virtual_machine_results[
             "dict"
         ]["results"]
@@ -2214,7 +2507,6 @@ def test_when_we_retrieve_a_device_and_a_virtual_machine_then_error_message_shou
     ) as virtual_machine, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         device.return_value = device_results["dict"]["results"]
         virtual_machine.return_value = virtual_machine_results["dict"]["results"]
 
@@ -2229,11 +2521,9 @@ def test_when_we_retrieve_a_device_and_a_virtual_machine_then_error_message_shou
 def test_when_we_retrieve_no_devices_then_error_message_should_be_logged(
     default_kwargs, no_results
 ):
-
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         devices.return_value = no_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2277,7 +2567,6 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     pillar_results,
     connected_devices_results,
 ):
-
     expected_result = pillar_results
 
     default_kwargs["virtual_machines"] = False
@@ -2303,7 +2592,6 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     ) as get_proxy_details, patch(
         "salt.pillar.netbox._get_connected_devices", autospec=True
     ) as get_connected_decvices:
-
         get_devices.return_value = device_results["dict"]["results"]
         get_virtual_machines.return_value = no_results["dict"]["results"]
         get_interfaces.return_value = device_interfaces_list
@@ -2318,7 +2606,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_destination_(
+def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_destination(
     default_kwargs,
     device_results,
     no_results,
@@ -2327,11 +2615,10 @@ def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_d
     site_results,
     site_prefixes,
     proxy_details,
-    pillar_results,
+    pillar_results_with_custom_destination,
     connected_devices_results,
 ):
-
-    expected_result = pillar_results
+    expected_result = pillar_results_with_custom_destination
 
     default_kwargs["virtual_machines"] = False
     default_kwargs["interfaces"] = True
@@ -2357,7 +2644,6 @@ def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_d
     ) as get_proxy_details, patch(
         "salt.pillar.netbox._get_connected_devices", autospec=True
     ) as get_connected_decvices:
-
         get_devices.return_value = device_results["dict"]["results"]
         get_virtual_machines.return_value = no_results["dict"]["results"]
         get_interfaces.return_value = device_interfaces_list
@@ -2369,13 +2655,12 @@ def test_when_we_retrieve_everything_successfully_then_return_dict_with_custom_d
 
         actual_result = netbox.ext_pillar(**default_kwargs)
 
-        assert actual_result == {"netbox": {"minion": expected_result["netbox"]}}
+        assert actual_result == expected_result
 
 
 def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):
-
     default_kwargs["site_details"] = False
     default_kwargs["site_prefixes"] = False
     default_kwargs["proxy_return"] = True
@@ -2384,7 +2669,6 @@ def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_messa
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         devices.return_value = device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)
@@ -2398,7 +2682,6 @@ def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_messa
 def test_when_we_set_proxy_return_but_get_no_value_for_primary_ip_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):
-
     default_kwargs["site_details"] = False
     default_kwargs["site_prefixes"] = False
     default_kwargs["proxy_return"] = True
@@ -2407,7 +2690,6 @@ def test_when_we_set_proxy_return_but_get_no_value_for_primary_ip_then_error_mes
     with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
         "salt.pillar.netbox.log.error", autospec=True
     ) as fake_error:
-
         devices.return_value = device_results["dict"]["results"]
 
         netbox.ext_pillar(**default_kwargs)

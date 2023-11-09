@@ -1089,10 +1089,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     api_query_result_limit = kwargs.get("api_query_result_limit")
 
     ret = {}
-    ret_data = ret
-    for key in destination_pillar_key.split(":"):
-        ret_data[key] = {}
-        ret_data = ret_data[key]
+    netbox_data = {}
 
     # Check that we have a valid API URL:
     if not salt.utils.url.validate(api_url, ["http", "https"]):
@@ -1135,15 +1132,15 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         )
     if len(nodes) == 1:
         # Return the 0th (and only) item in the list
-        ret_data = nodes[0]
+        netbox_data = nodes[0]
     elif len(nodes) > 1:
         log.error('More than one node found for "%s"', minion_id)
         return ret
     else:
         log.error('Unable to pull NetBox data for "%s"', minion_id)
         return ret
-    node_id = ret_data["id"]
-    node_type = ret_data["node_type"]
+    node_id = netbox_data["id"]
+    node_type = netbox_data["node_type"]
     if interfaces:
         interfaces_list = _get_interfaces(
             api_url, minion_id, node_id, node_type, headers, api_query_result_limit
@@ -1152,34 +1149,46 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             interface_ips_list = _get_interface_ips(
                 api_url, minion_id, node_id, node_type, headers, api_query_result_limit
             )
-            ret_data["interfaces"] = _associate_ips_to_interfaces(
+            netbox_data["interfaces"] = _associate_ips_to_interfaces(
                 interfaces_list, interface_ips_list
             )
-    site_id = ret_data["site"]["id"]
-    site_name = ret_data["site"]["name"]
+    site_id = netbox_data["site"]["id"]
+    site_name = netbox_data["site"]["name"]
     if site_details:
-        ret_data["site"] = _get_site_details(
+        netbox_data["site"] = _get_site_details(
             api_url, minion_id, site_name, site_id, headers
         )
     if site_prefixes:
-        ret_data["site"]["prefixes"] = _get_site_prefixes(
+        netbox_data["site"]["prefixes"] = _get_site_prefixes(
             api_url, minion_id, site_name, site_id, headers, api_query_result_limit
         )
     if connected_devices:
-        ret_data["connected_devices"] = _get_connected_devices(
-            api_url, minion_id, ret_data["interfaces"], headers
+        netbox_data["connected_devices"] = _get_connected_devices(
+            api_url, minion_id, netbox_data["interfaces"], headers
         )
+
+    # add netbox_data to ret in the specified location
+    destination_keys = list(
+        enumerate(reversed(destination_pillar_key.split(":")), start=1)
+    )
+    netbox_ret_data = netbox_data
+    for index, key in destination_keys:
+        if index == len(destination_keys):
+            ret[key] = netbox_ret_data
+        else:
+            netbox_ret_data = {key: netbox_ret_data}
+
     if proxy_return:
-        if ret_data["platform"]:
-            platform_id = ret_data["platform"]["id"]
+        if netbox_data["platform"]:
+            platform_id = netbox_data["platform"]["id"]
         else:
             log.error(
                 'You have set "proxy_return" to "True" but you have not set the platform in NetBox for "%s"',
                 minion_id,
             )
             return
-        if ret_data["primary_ip"]:
-            primary_ip = ret_data["primary_ip"]["address"]
+        if netbox_data["primary_ip"]:
+            primary_ip = netbox_data["primary_ip"]["address"]
         else:
             log.error(
                 'You have set "proxy_return" to "True" but you have not set the primary IPv4 or IPv6 address in NetBox for "%s"',
