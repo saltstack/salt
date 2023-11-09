@@ -625,9 +625,18 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "workflow": {
             "help": "Which workflow is running",
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "ci"):
+def matrix(
+    ctx: Context,
+    distro_slug: str,
+    full: bool = False,
+    workflow: str = "ci",
+    fips: bool = False,
+):
     """
     Generate the test matrix.
     """
@@ -674,8 +683,22 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
                             "test-group-count": splits,
                         }
                     )
+                    if (
+                        fips is True
+                        and transport != "tcp"
+                        and distro_slug.startswith(("photonos-4", "photonos-5"))
+                    ):
+                        # Repeat the last one, but with fips
+                        _matrix.append({"fips": "fips", **_matrix[-1]})
             else:
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
+                if (
+                    fips is True
+                    and transport != "tcp"
+                    and distro_slug.startswith(("photonos-4", "photonos-5"))
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -701,6 +724,9 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
             "nargs": "+",
             "required": True,
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
 def pkg_matrix(
@@ -708,6 +734,7 @@ def pkg_matrix(
     distro_slug: str,
     pkg_type: str,
     testing_releases: list[tools.utils.Version] = None,
+    fips: bool = False,
 ):
     """
     Generate the test matrix.
@@ -836,10 +863,14 @@ def pkg_matrix(
                 continue
             _matrix.append(
                 {
-                    "test-chunk": session,
+                    "tests-chunk": session,
                     "version": version,
                 }
             )
+            if fips is True and distro_slug.startswith(("photonos-4", "photonos-5")):
+                # Repeat the last one, but with fips
+                _matrix.append({"fips": "fips", **_matrix[-1]})
+
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 

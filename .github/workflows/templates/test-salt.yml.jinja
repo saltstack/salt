@@ -59,17 +59,11 @@
 
   <%- endfor %>
 
-
   <%- for slug, display_name, arch, fips in test_salt_listing["linux"] %>
-  <%- if fips %>
-    <%- set job_name = slug + "-fips" %>
-  <%- else %>
-    <%- set job_name = slug %>
-  <%- endif %>
 
-  <{ job_name.replace(".", "") }>:
-    <%- do test_salt_needs.append(job_name.replace(".", "")) %>
-    name: <{ display_name }> Test<% if fips %>(FIPS)<% endif %>
+  <{ slug.replace(".", "") }>:
+    <%- do test_salt_needs.append(slug.replace(".", "")) %>
+    name: <{ display_name }> Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -89,7 +83,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
-    <%- if fips %>
+    <%- if fips == "fips" %>
       fips: true
     <%- endif %>
 
