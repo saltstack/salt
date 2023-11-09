@@ -660,6 +660,9 @@ def matrix(
         if transport == "tcp":
             if distro_slug not in (
                 "centosstream-9",
+                "centosstream-9-arm64",
+                "photonos-5",
+                "photonos-5-arm64",
                 "ubuntu-22.04",
                 "ubuntu-22.04-arm64",
             ):
@@ -683,19 +686,15 @@ def matrix(
                             "test-group-count": splits,
                         }
                     )
-                    if (
-                        fips is True
-                        and transport != "tcp"
-                        and distro_slug.startswith(("photonos-4", "photonos-5"))
+                    if fips is True and distro_slug.startswith(
+                        ("photonos-4", "photonos-5")
                     ):
                         # Repeat the last one, but with fips
                         _matrix.append({"fips": "fips", **_matrix[-1]})
             else:
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
-                if (
-                    fips is True
-                    and transport != "tcp"
-                    and distro_slug.startswith(("photonos-4", "photonos-5"))
+                if fips is True and distro_slug.startswith(
+                    ("photonos-4", "photonos-5")
                 ):
                     # Repeat the last one, but with fips
                     _matrix.append({"fips": "fips", **_matrix[-1]})
