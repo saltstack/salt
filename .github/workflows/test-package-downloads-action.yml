@@ -400,7 +400,10 @@ jobs:
           - distro-slug: macos-12
             arch: x86_64
             pkg-type: package
-          - distro-slug: macos-12
+          - distro-slug: macos-13
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: macos-13
             arch: x86_64
             pkg-type: onedir
 
