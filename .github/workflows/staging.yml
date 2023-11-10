@@ -761,7 +761,7 @@ jobs:
       distro-slug: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: darwin
-      arch: x86_64
+      arch: aarch64
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -2191,7 +2191,7 @@ jobs:
       distro-slug: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: darwin
-      arch: x86_64
+      arch: aarch64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
