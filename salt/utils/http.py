@@ -302,7 +302,7 @@ def query(
             opts.get("cachedir", salt.syspaths.CACHE_DIR), "cookies.session.p"
         )
 
-    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
+    if persist_session is True:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
@@ -713,7 +713,7 @@ def query(
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
+    if persist_session is True:
         # TODO: See persist_session above
         if "set-cookie" in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, "wb") as fh_:

@@ -143,7 +143,7 @@ class CacheDisk(CacheDict):
         """
         Read in from disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
+        if not os.path.exists(self._path):
             return
 
         if 0 == os.path.getsize(self._path):
@@ -179,8 +179,6 @@ class CacheDisk(CacheDict):
         """
         Write out to disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK:
-            return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
         with salt.utils.atomicfile.atomic_open(self._path, "wb+") as fp_:
