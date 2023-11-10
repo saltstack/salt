@@ -747,6 +747,9 @@ def pkg_matrix(
             "photonos-4-arm64",
             "photonos-5",
             "photonos-5-arm64",
+            "amazonlinux-2-arm64",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -823,6 +826,13 @@ def pkg_matrix(
                 and version < tools.utils.Version("3007.0")
             ):
                 # We never build packages for these OSs in 3006
+                continue
+            if (
+                version
+                and distro_slug.startswith("amazonlinux-2023")
+                and version < tools.utils.Version("3006.6")
+            ):
+                # We never build packages for AmazonLinux 2023 prior to 3006.5
                 continue
             _matrix.append(
                 {
