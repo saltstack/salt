@@ -3609,6 +3609,12 @@ jobs:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86_64-macos
           path: artifacts/pkgs/incoming
 
+      - name: Download macOS Arch64 Packages
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-aarch64-macos
+          path: artifacts/pkgs/incoming
+
       - name: Setup GnuPG
         run: |
           sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
