@@ -2,6 +2,8 @@ import hashlib
 import logging
 import os
 
+import tornado.web
+
 import salt.auth
 from salt.utils.versions import Version
 
@@ -9,25 +11,11 @@ __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or "rest_tornado"
 
 log = logging.getLogger(__virtualname__)
 
-# we require at least 4.0, as that includes all the Future's stuff we use
-min_tornado_version = "4.0"
-has_tornado = False
-try:
-    import tornado
-
-    if Version(tornado.version) >= Version(min_tornado_version):
-        has_tornado = True
-    else:
-        log.error("rest_tornado requires at least tornado %s", min_tornado_version)
-except (ImportError, TypeError) as err:
-    has_tornado = False
-    log.error("ImportError! %s", err)
-
 
 def __virtual__():
     mod_opts = __opts__.get(__virtualname__, {})
 
-    if has_tornado and "port" in mod_opts:
+    if "port" in mod_opts:
         return __virtualname__
 
     return False
@@ -61,8 +49,8 @@ def get_application(opts):
         token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(
             len(getattr(hashlib, opts.get("hash_type", "md5"))().hexdigest())
         )
-        all_events_pattern = r"/all_events/{}".format(token_pattern)
-        formatted_events_pattern = r"/formatted_events/{}".format(token_pattern)
+        all_events_pattern = rf"/all_events/{token_pattern}"
+        formatted_events_pattern = rf"/formatted_events/{token_pattern}"
         log.debug("All events URL pattern is %s", all_events_pattern)
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}
