@@ -19,6 +19,8 @@ import os
 import re
 import time
 
+import gnupg
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -69,13 +71,6 @@ VERIFY_TRUST_LEVELS = {
 
 _DEFAULT_KEY_SERVER = "keys.openpgp.org"
 
-try:
-    import gnupg
-
-    HAS_GPG_BINDINGS = True
-except ImportError:
-    HAS_GPG_BINDINGS = False
-
 
 def _gpg():
     """
@@ -95,15 +90,7 @@ def __virtual__():
             "The gpg execution module cannot be loaded: gpg binary is not in the path.",
         )
 
-    return (
-        __virtualname__
-        if HAS_GPG_BINDINGS
-        else (
-            False,
-            "The gpg execution module cannot be loaded; the gnupg python module is not"
-            " installed.",
-        )
-    )
+    return __virtualname__
 
 
 def _get_user_info(user=None):
@@ -122,7 +109,7 @@ def _get_user_info(user=None):
             # if it doesn't exist then fall back to user Salt running as
             userinfo = _get_user_info()
         else:
-            raise SaltInvocationError("User {} does not exist".format(user))
+            raise SaltInvocationError(f"User {user} does not exist")
 
     return userinfo
 
@@ -584,11 +571,11 @@ def delete_key(
             else:
                 if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":
                     # Delete the secret key
-                    ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
+                    ret["message"] = f"Secret key for {fingerprint} deleted\n"
 
         # Delete the public key
         if str(__delete_key(fingerprint, False, use_passphrase)) == "ok":
-            ret["message"] += "Public key for {} deleted".format(fingerprint)
+            ret["message"] += f"Public key for {fingerprint} deleted"
         ret["res"] = True
         return ret
     else:
@@ -986,12 +973,12 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             if key:
                 if "fingerprint" not in key:
                     ret["res"] = False
-                    ret["message"] = "Fingerprint not found for keyid {}".format(keyid)
+                    ret["message"] = f"Fingerprint not found for keyid {keyid}"
                     return ret
                 fingerprint = key["fingerprint"]
             else:
                 ret["res"] = False
-                ret["message"] = "KeyID {} not in GPG keychain".format(keyid)
+                ret["message"] = f"KeyID {keyid} not in GPG keychain"
                 return ret
         else:
             ret["res"] = False
@@ -1001,7 +988,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
     if trust_level not in _VALID_TRUST_LEVELS:
         return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
 
-    stdin = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
+    stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
     cmd = [_gpg(), "--import-ownertrust"]
     _user = user
 
@@ -1397,7 +1384,7 @@ def encrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Encrypted data has been written to {}".format(output)
+                ret["comment"] = f"Encrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:
@@ -1485,7 +1472,7 @@ def decrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Decrypted data has been written to {}".format(output)
+                ret["comment"] = f"Decrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:
@@ -1504,20 +1491,18 @@ def decrypt(
     return ret
 
 
-if HAS_GPG_BINDINGS:
+class FixedVerify(gnupg.Verify):
+    """
+    This is a workaround for https://github.com/vsajip/python-gnupg/issues/214.
+    It ensures invalid or otherwise unverified signatures are not
+    merged into sig_info in any way.
 
-    class FixedVerify(gnupg.Verify):
-        """
-        This is a workaround for https://github.com/vsajip/python-gnupg/issues/214.
-        It ensures invalid or otherwise unverified signatures are not
-        merged into sig_info in any way.
+    https://github.com/vsajip/python-gnupg/commit/ee94a7ecc1a86484c9f02337e2bbdd05fd32b383
+    """
 
-        https://github.com/vsajip/python-gnupg/commit/ee94a7ecc1a86484c9f02337e2bbdd05fd32b383
-        """
-
-        def handle_status(self, key, value):
-            if "NEWSIG" == key:
-                self.signature_id = None
-            super().handle_status(key, value)
-            if key in self.TRUST_LEVELS:
-                self.signature_id = None
+    def handle_status(self, key, value):
+        if "NEWSIG" == key:
+            self.signature_id = None
+        super().handle_status(key, value)
+        if key in self.TRUST_LEVELS:
+            self.signature_id = None

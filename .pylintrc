@@ -703,7 +703,8 @@ allowed-3rd-party-modules=msgpack,
                           setproctitle,
                           markupsafe,
                           timelib,
-                          dateutil
+                          dateutil,
+                          gnupg
 
 [EXCEPTIONS]
 

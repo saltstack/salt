@@ -32,13 +32,7 @@ import os
 import smtplib
 from email.utils import formatdate
 
-try:
-    import gnupg
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
+import gnupg
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +66,7 @@ def send(kwargs, opts):
     log.debug("SMTP port has been set to %s", config["smtp.port"])
     log.debug("smtp_return: Subject is '%s'", config["smtp.subject"])
 
-    if HAS_GNUPG and config["smtp.gpgowner"]:
+    if config["smtp.gpgowner"]:
         gpg = gnupg.GPG(
             gnupghome=os.path.expanduser("~{}/.gnupg".format(config["smtp.gpgowner"])),
             options=["--trust-model always"],

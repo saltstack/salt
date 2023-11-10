@@ -21,22 +21,12 @@ import time
 import traceback
 import urllib.parse
 
+import salt.modules.gpg
 import salt.utils.files
 import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-HAS_LIBS = False
-
-try:
-    import gnupg  # pylint: disable=unused-import
-
-    import salt.modules.gpg
-
-    HAS_LIBS = True
-except ImportError:
-    pass
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +44,7 @@ def __virtual__():
             missing_util = True
             break
 
-    if HAS_LIBS and not missing_util:
+    if not missing_util:
         if __grains__.get("os_family", False) in ("RedHat", "Suse"):
             return __virtualname__
         else:
@@ -83,7 +73,7 @@ def _create_rpmmacros(runas="root"):
 
     rpmmacros = os.path.join(home, ".rpmmacros")
     with salt.utils.files.fopen(rpmmacros, "w") as afile:
-        afile.write(salt.utils.stringutils.to_str("%_topdir {}\n".format(rpmbuilddir)))
+        afile.write(salt.utils.stringutils.to_str(f"%_topdir {rpmbuilddir}\n"))
         afile.write("%signature gpg\n")
         afile.write("%_source_filedigest_algorithm 8\n")
         afile.write("%_binary_filedigest_algorithm 8\n")
@@ -133,9 +123,9 @@ def _get_distset(tgt):
     # consistent naming on Centos and Redhat, and allow for Amazon naming
     tgtattrs = tgt.split("-")
     if tgtattrs[0] == "amzn2":
-        distset = '--define "dist .{}"'.format(tgtattrs[0])
+        distset = f'--define "dist .{tgtattrs[0]}"'
     elif tgtattrs[1] in ["6", "7", "8"]:
-        distset = '--define "dist .el{}"'.format(tgtattrs[1])
+        distset = f'--define "dist .el{tgtattrs[1]}"'
     else:
         distset = ""
 
@@ -162,7 +152,7 @@ def _get_deps(deps, tree_base, saltenv="base"):
         else:
             shutil.copy(deprpm, dest)
 
-        deps_list += " {}".format(dest)
+        deps_list += f" {dest}"
 
     return deps_list
 
@@ -175,9 +165,7 @@ def _check_repo_gpg_phrase_utils():
     if __salt__["file.file_exists"](util_name):
         return True
     else:
-        raise CommandExecutionError(
-            "utility '{}' needs to be installed".format(util_name)
-        )
+        raise CommandExecutionError(f"utility '{util_name}' needs to be installed")
 
 
 def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
@@ -326,7 +314,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
             )
 
         # need to update rpm with public key
-        cmd = "rpm --import {}".format(pkg_pub_key_file)
+        cmd = f"rpm --import {pkg_pub_key_file}"
         retrc = __salt__["cmd.retcode"](cmd, runas=runas, use_vt=True)
         if retrc != 0:
             raise SaltInvocationError(
@@ -349,9 +337,9 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
     interval = 0.5
     number_retries = timeout / interval
     times_looped = 0
-    error_msg = "Failed to sign file {}".format(abs_file)
+    error_msg = f"Failed to sign file {abs_file}"
 
-    cmd = "rpm {} --addsign {}".format(define_gpg_name, abs_file)
+    cmd = f"rpm {define_gpg_name} --addsign {abs_file}"
     preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
     try:
         stdout, stderr = None, None
@@ -396,7 +384,7 @@ def _sign_files_with_gpg_agent(runas, local_keyid, abs_file, repodir, env, timeo
     """
     Sign file with provided key utilizing gpg-agent
     """
-    cmd = "rpmsign --verbose  --key-id={} --addsign {}".format(local_keyid, abs_file)
+    cmd = f"rpmsign --verbose  --key-id={local_keyid} --addsign {abs_file}"
     retrc = __salt__["cmd.retcode"](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
     if retrc != 0:
         raise SaltInvocationError(
@@ -548,7 +536,7 @@ def build(
         try:
             __salt__["file.chown"](path=dbase, user=runas, group="mock")
             __salt__["file.chown"](path=results_dir, user=runas, group="mock")
-            cmd = "mock --root={} --resultdir={} --init".format(tgt, results_dir)
+            cmd = f"mock --root={tgt} --resultdir={results_dir} --init"
             retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
             if deps_list and not deps_list.isspace():
                 cmd = "mock --root={} --resultdir={} --install {} {}".format(
@@ -565,7 +553,7 @@ def build(
                 "rpm",
                 "-qp",
                 "--queryformat",
-                "{0}/%{{name}}/%{{version}}-%{{release}}".format(log_dir),
+                f"{log_dir}/%{{name}}/%{{version}}-%{{release}}",
                 srpm,
             ]
             log_dest = __salt__["cmd.run_stdout"](cmdlist, python_shell=False)
@@ -753,6 +741,6 @@ def make_repo(
             else:
                 _sign_file(runas, define_gpg_name, phrase, abs_file, timeout)
 
-    cmd = "createrepo --update {}".format(repodir)
+    cmd = f"createrepo --update {repodir}"
     retrc = __salt__["cmd.run_all"](cmd, runas=runas)
     return retrc

@@ -111,18 +111,12 @@ import os
 import smtplib
 from email.utils import formatdate
 
+import gnupg
+
 import salt.loader
 import salt.returners
 import salt.utils.jid
 from salt.template import compile_template
-
-try:
-    import gnupg
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
 
 log = logging.getLogger(__name__)
 
@@ -186,7 +180,7 @@ def returner(ret):
 
     for field in fields:
         if field in ret:
-            subject += " {}".format(ret[field])
+            subject += f" {ret[field]}"
     subject = compile_template(
         ":string:", rend, renderer, blacklist, whitelist, input_data=subject, **ret
     )
@@ -212,26 +206,20 @@ def returner(ret):
         )
 
     if gpgowner:
-        if HAS_GNUPG:
-            gpg = gnupg.GPG(
-                gnupghome=os.path.expanduser("~{}/.gnupg".format(gpgowner)),
-                options=["--trust-model always"],
-            )
-            encrypted_data = gpg.encrypt(content, to_addrs)
-            if encrypted_data.ok:
-                log.debug("smtp_return: Encryption successful")
-                content = str(encrypted_data)
-            else:
-                log.error(
-                    "smtp_return: Encryption failed, only an error message will be sent"
-                )
-                content = "Encryption failed, the return data was not sent.\r\n\r\n{}\r\n{}".format(
-                    encrypted_data.status, encrypted_data.stderr
-                )
+        gpg = gnupg.GPG(
+            gnupghome=os.path.expanduser(f"~{gpgowner}/.gnupg"),
+            options=["--trust-model always"],
+        )
+        encrypted_data = gpg.encrypt(content, to_addrs)
+        if encrypted_data.ok:
+            log.debug("smtp_return: Encryption successful")
+            content = str(encrypted_data)
         else:
             log.error(
-                "gnupg python module is required in order to user gpgowner in smtp"
-                " returner ; ignoring gpgowner configuration for now"
+                "smtp_return: Encryption failed, only an error message will be sent"
+            )
+            content = "Encryption failed, the return data was not sent.\r\n\r\n{}\r\n{}".format(
+                encrypted_data.status, encrypted_data.stderr
             )
     if isinstance(content, io.StringIO):
         content = content.read()

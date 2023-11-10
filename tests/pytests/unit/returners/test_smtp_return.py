@@ -9,13 +9,6 @@ import salt.returners.smtp_return as smtp
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import MagicMock, patch
 
-try:
-    import gnupg  # pylint: disable=unused-import
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
 
 @pytest.fixture
 def configure_loader_modules():
@@ -72,7 +65,6 @@ def _test_returner(mocked_smtplib):  # pylint: disable=unused-argument
         assert mocked_smtplib.return_value.sendmail.called is True
 
 
-@pytest.mark.skipif(not HAS_GNUPG, reason="Need gnupg to run this test")
 def test_returner_gnupg():
     with patch("salt.returners.smtp_return.gnupg"), patch(
         "salt.returners.smtp_return.smtplib.SMTP"
@@ -80,7 +72,6 @@ def test_returner_gnupg():
         _test_returner(mocked_smtplib)
 
 
-@pytest.mark.skipif(HAS_GNUPG, reason="Only run this test without gnupg")
 def test_returner_no_gnupg():
     with patch("salt.returners.smtp_return.smtplib.SMTP") as mocked_smtplib:
         _test_returner(mocked_smtplib)

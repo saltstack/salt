@@ -1,19 +1,11 @@
 import shutil
 import subprocess
 
+import gnupg as gnupglib
 import psutil
 import pytest
 
-try:
-    import gnupg as gnupglib
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
-
 pytestmark = [
-    pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library"),
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
 ]
 
