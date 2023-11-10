@@ -17,41 +17,47 @@ def test_get_output_volume(salt_call_cli):
     Tests the return of get_output_volume.
     """
     ret = salt_call_cli.run("desktop.get_output_volume")
-    assert ret is not None
+    assert ret.data is not None
 
 
 def test_set_output_volume(salt_call_cli):
     """
     Tests the return of set_output_volume.
     """
-    current_vol = salt_call_cli.run("desktop.get_output_volume")
+    ret = salt_call_cli.run("desktop.get_output_volume")
+    current_vol = ret.data
     to_set = 10
     if current_vol == str(to_set):
         to_set += 2
-    new_vol = salt_call_cli.run("desktop.set_output_volume", str(to_set))
-    check_vol = salt_call_cli.run("desktop.get_output_volume")
+    ret = salt_call_cli.run("desktop.set_output_volume", str(to_set))
+    new_vol = ret.data
+    ret = salt_call_cli.run("desktop.get_output_volume")
+    check_vol = ret.data
     assert new_vol == check_vol
 
     # Set volume back to what it was before
-    salt_call_cli.run("desktop.set_output_volume", [current_vol])
+    salt_call_cli.run("desktop.set_output_volume", current_vol)
 
 
 def test_screensaver(salt_call_cli):
     """
     Tests the return of the screensaver function.
     """
-    assert salt_call_cli.run("desktop.screensaver")
+    ret = salt_call_cli.run("desktop.screensaver")
+    assert ret.data
 
 
 def test_lock(salt_call_cli):
     """
     Tests the return of the lock function.
     """
-    assert salt_call_cli.run("desktop.lock")
+    ret = salt_call_cli.run("desktop.lock")
+    assert ret.data
 
 
 def test_say(salt_call_cli):
     """
     Tests the return of the say function.
     """
-    assert salt_call_cli.run("desktop.say", "hello", "world")
+    ret = salt_call_cli.run("desktop.say", "hello", "world")
+    assert ret.data
