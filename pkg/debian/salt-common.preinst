@@ -31,5 +31,9 @@ case "$1" in
             -s $SALT_SHELL  \
             -g $SALT_GROUP  \
              $SALT_USER
+
+    # Remove incorrectly installed logrotate config - issue 65231
+    test -d /etc/logrotate.d/salt && rm -r /etc/logrotate.d/salt || /bin/true
+
   ;;
 esac
