@@ -451,9 +451,10 @@ tornado==6.3.3
     #   -r requirements/base.txt
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.8.0
+typing-extensions==4.7.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -501,9 +502,10 @@ zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cherrypy
-zipp==3.16.2
+zipp==3.9.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
     #   importlib-metadata
     #   importlib-resources
 

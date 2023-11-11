@@ -112,16 +112,20 @@ timelib==0.3.0
     # via -r requirements/base.txt
 tornado==6.3.3
     # via -r requirements/base.txt
-typing-extensions==4.8.0
-    # via pydantic
+typing-extensions==4.7.1
+    # via
+    #   -r requirements/base.txt
+    #   pydantic
 urllib3==1.26.18
     # via requests
 wmi==1.5.1 ; sys_platform == "win32"
     # via -r requirements/base.txt
 zc.lockfile==3.0.post1
     # via cherrypy
-zipp==3.16.2
-    # via importlib-metadata
+zipp==3.9.1
+    # via
+    #   -r requirements/base.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

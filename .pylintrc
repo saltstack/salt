@@ -705,7 +705,8 @@ allowed-3rd-party-modules=msgpack,
                           timelib,
                           dateutil,
                           gnupg,
-                          cherrypy
+                          cherrypy,
+                          importlib_metadata
 
 [EXCEPTIONS]
 

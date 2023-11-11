@@ -19,8 +19,14 @@ pyopenssl>=20.0.1
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
-importlib-metadata>=3.3.0
 cryptography>=41.0.3
+
+importlib-metadata>=3.3.0
+# While we ship and support salt-ssh, the version of zipp and importlib-metadata needs
+# to be kept as defined bellow.
+# zipp and importlib-metadata is a importlib-metadata requirement
+zipp < 3.10
+typing-extensions < 4.8
 
 # From old requirements/static/pkg/linux.in
 rpm-vercmp; sys_platform == 'linux'

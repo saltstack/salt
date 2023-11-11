@@ -19,6 +19,7 @@ import charset_normalizer  # pylint: disable=3rd-party-module-not-gated  # Due t
 import dateutil
 import distro
 import idna  # pylint: disable=3rd-party-module-not-gated  # Due to requests
+import importlib_metadata
 import jinja2
 import jmespath
 import looseversion
@@ -28,8 +29,10 @@ import packaging
 import requests
 import six  # pylint: disable=blacklisted-external-import,3rd-party-module-not-gated
 import tornado
+import typing_extensions  # pylint: disable=3rd-party-module-not-gated  # Due to importlib_metadata
 import urllib3  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import yaml
+import zipp  # pylint: disable=3rd-party-module-not-gated  # Due to importlib_metadata
 
 import salt
 import salt.exceptions
@@ -291,6 +294,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "idna",
         "dateutil",
         "six",
+        "importlib_metadata",
+        "zipp",
+        "typing_extensions",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -447,6 +453,9 @@ def get_tops(extra_mods="", so_mods=""):
         idna,
         dateutil,
         six,
+        importlib_metadata,
+        zipp,
+        typing_extensions,
     ]
     modules = find_site_modules("contextvars")
     if modules:
