@@ -50,9 +50,7 @@ jmespath==1.0.1
 looseversion==1.2.0
     # via -r requirements/base.txt
 markupsafe==2.1.2
-    # via
-    #   -r requirements/base.txt
-    #   jinja2
+    # via jinja2
 more-itertools==9.1.0
     # via
     #   cheroot

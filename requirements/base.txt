@@ -2,7 +2,6 @@ Jinja2
 jmespath
 msgpack>=1.0.0
 PyYAML
-MarkupSafe
 requests>=2.25.1
 distro>=1.0.1
 psutil>=5.0.0

@@ -19,6 +19,7 @@ import distro
 import jinja2
 import jmespath
 import looseversion
+import markupsafe
 import msgpack
 import packaging
 import tornado
@@ -68,13 +69,6 @@ try:
     import backports_abc
 except ImportError:
     import salt.ext.backports_abc as backports_abc
-
-try:
-    # New Jinja only
-    import markupsafe
-except ImportError:
-    markupsafe = None
-
 
 try:
     # Older python where the backport from pypi is installed

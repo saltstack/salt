@@ -700,7 +700,8 @@ allowed-3rd-party-modules=msgpack,
                           looseversion,
                           pytestskipmarkers,
                           jmespath,
-                          setproctitle
+                          setproctitle,
+                          markupsafe
 
 [EXCEPTIONS]
 
