@@ -701,7 +701,8 @@ allowed-3rd-party-modules=msgpack,
                           pytestskipmarkers,
                           jmespath,
                           setproctitle,
-                          markupsafe
+                          markupsafe,
+                          timelib
 
 [EXCEPTIONS]
 

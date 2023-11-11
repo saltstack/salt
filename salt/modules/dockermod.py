@@ -248,12 +248,8 @@ try:
 except ImportError:
     HAS_LZMA = False
 
-try:
-    import timelib
+import timelib
 
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
 # pylint: enable=import-error
 
 HAS_NSENTER = bool(salt.utils.path.which("nsenter"))
@@ -2195,15 +2191,14 @@ def logs(name, **kwargs):
         # Try to resolve down to a datetime.datetime object using timelib. If
         # it's not installed, pass the value as-is and let docker-py throw an
         # APIError.
-        if HAS_TIMELIB:
-            try:
-                kwargs["since"] = timelib.strtodatetime(kwargs["since"])
-            except Exception as exc:  # pylint: disable=broad-except
-                log.warning(
-                    "docker.logs: Failed to parse '%s' using timelib: %s",
-                    kwargs["since"],
-                    exc,
-                )
+        try:
+            kwargs["since"] = timelib.strtodatetime(kwargs["since"])
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "docker.logs: Failed to parse '%s' using timelib: %s",
+                kwargs["since"],
+                exc,
+            )
 
     # logs() returns output as bytestrings
     return salt.utils.stringutils.to_unicode(_client_wrapper("logs", name, **kwargs))

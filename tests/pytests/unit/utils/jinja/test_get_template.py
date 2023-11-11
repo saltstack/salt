@@ -25,14 +25,6 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
-
 class MockFileClient:
     """
     Does not download files but records any file request for testing
@@ -321,9 +313,6 @@ def test_non_ascii_encoding(
         assert mock_file_client.requests[0]["path"] == "salt://macro"
 
 
-@pytest.mark.skipif(
-    HAS_TIMELIB is False, reason="The `timelib` library is not installed."
-)
 @pytest.mark.parametrize(
     "data_object",
     [

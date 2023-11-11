@@ -26,13 +26,6 @@ from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import render_jinja_tmpl
 
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
 
 @pytest.fixture
 def minion_opts(tmp_path, minion_opts):
@@ -392,7 +385,7 @@ def test_update_dict_key_value(minion_opts, local_salt):
     # Test incorrect usage
     for update_with in [42, "foo", [42]]:
         template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
-        expected = r"Cannot update {} with a {}.".format(type({}), type(update_with))
+        expected = rf"Cannot update {type({})} with a {type(update_with)}."
         with pytest.raises(SaltRenderError, match=expected):
             render_jinja_tmpl(
                 template,
@@ -463,7 +456,7 @@ def test_extend_dict_key_value(minion_opts, local_salt):
 
     # Test incorrect usage
     template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
-    expected = r"Cannot extend {} with a {}.".format(type([]), int)
+    expected = rf"Cannot extend {type([])} with a {int}."
     with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
@@ -812,12 +805,12 @@ def test_http_query(minion_opts, local_salt, backend, httpserver):
         "backend": backend,
         "body": "Hey, this isn't http://google.com!",
     }
-    httpserver.expect_request("/{}".format(backend)).respond_with_data(
+    httpserver.expect_request(f"/{backend}").respond_with_data(
         salt.utils.json.dumps(response), content_type="text/plain"
     )
     rendered = render_jinja_tmpl(
         "{{ '"
-        + httpserver.url_for("/{}".format(backend))
+        + httpserver.url_for(f"/{backend}")
         + "' | http_query(backend='"
         + backend
         + "') }}",
@@ -837,7 +830,7 @@ def test_http_query(minion_opts, local_salt, backend, httpserver):
     )
     assert isinstance(
         dict_reply["body"], str
-    ), "Failed with rendered template: {}".format(rendered)
+    ), f"Failed with rendered template: {rendered}"
 
 
 def test_to_bool(minion_opts, local_salt):
