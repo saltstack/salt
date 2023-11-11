@@ -1,13 +1,9 @@
-"""
-tests.unit.states.pip_test
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import logging
 import os
 import subprocess
 import sys
 
+import pip  # pylint: disable=3rd-party-module-not-gated
 import pytest
 
 import salt.states.pip_state as pip_state
@@ -20,20 +16,9 @@ from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
-try:
-    import pip
-
-    HAS_PIP = True
-except ImportError:
-    HAS_PIP = False
-
-
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.skipif(
-    not HAS_PIP, reason="The 'pip' library is not importable(installed system-wide)"
-)
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -413,8 +398,8 @@ class PipStateInstallationErrorTest(TestCase):
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():
-            if name in ["PyYAML", "packaging", "looseversion"]:
-                extra_requirements.append("{}=={}".format(name, version))
+            if name in ["PyYAML", "packaging", "looseversion", "jmespath"]:
+                extra_requirements.append(f"{name}=={version}")
         failures = {}
         pip_version_requirements = [
             # Latest pip 18
@@ -453,7 +438,7 @@ class PipStateInstallationErrorTest(TestCase):
                 with VirtualEnv() as venv:
                     venv.install(*extra_requirements)
                     if requirement:
-                        venv.install("pip{}".format(requirement))
+                        venv.install(f"pip{requirement}")
                     try:
                         subprocess.check_output([venv.venv_python, "-c", code])
                     except subprocess.CalledProcessError as exc:

@@ -729,11 +729,6 @@ def test_from_entries():
 
 
 def test_json_query():
-    # Raises exception if jmespath module is not found
-    with patch("salt.utils.data.jmespath", None):
-        with pytest.raises(RuntimeError, match="requires jmespath"):
-            salt.utils.data.json_query({}, "@")
-
     # Test search
     user_groups = {
         "user1": {"groups": ["group1", "group2", "group3"]},

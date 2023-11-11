@@ -17,6 +17,7 @@ import zipfile
 
 import distro
 import jinja2
+import jmespath
 import looseversion
 import msgpack
 import packaging
@@ -148,7 +149,7 @@ def find_site_modules(name):
     except RuntimeError:
         log.debug("No site package directories found")
     for site_path in site_paths:
-        path = os.path.join(site_path, "{}.py".format(name))
+        path = os.path.join(site_path, f"{name}.py")
         lib = import_module(name, path)
         if lib:
             libs.append(lib)
@@ -283,6 +284,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "backports_abc",
         "looseversion",
         "packaging",
+        "jmespath",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -432,6 +434,7 @@ def get_tops(extra_mods="", so_mods=""):
         backports_abc,
         looseversion,
         packaging,
+        jmespath,
     ]
     modules = find_site_modules("contextvars")
     if modules:
@@ -549,9 +552,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             top = os.path.normpath(top)
             base, top_dirname = os.path.basename(top), os.path.dirname(top)
             os.chdir(top_dirname)
-            site_pkg_dir = (
-                _is_shareable(base) and "pyall" or "py{}".format(py_ver_major)
-            )
+            site_pkg_dir = _is_shareable(base) and "pyall" or f"py{py_ver_major}"
             log.debug(
                 'Packing alternative "%s" to "%s/%s" destination',
                 base,
@@ -705,7 +706,7 @@ def gen_thin(
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
 
-            site_pkg_dir = _is_shareable(base) and "pyall" or "py{}".format(py_ver)
+            site_pkg_dir = _is_shareable(base) and "pyall" or f"py{py_ver}"
 
             log.debug('Packing "%s" to "%s" destination', base, site_pkg_dir)
             if not os.path.isdir(top):
@@ -773,7 +774,7 @@ def thin_sum(cachedir, form="sha1"):
     code_checksum_path = os.path.join(cachedir, "thin", "code-checksum")
     if os.path.isfile(code_checksum_path):
         with salt.utils.files.fopen(code_checksum_path, "r") as fh:
-            code_checksum = "'{}'".format(fh.read().strip())
+            code_checksum = f"'{fh.read().strip()}'"
     else:
         code_checksum = "'0'"
 
@@ -978,7 +979,7 @@ def gen_min(
                 os.chdir(tempdir)
             if not os.path.isdir(top):
                 # top is a single file module
-                tfp.add(base, arcname=os.path.join("py{}".format(py_ver), base))
+                tfp.add(base, arcname=os.path.join(f"py{py_ver}", base))
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
@@ -991,7 +992,7 @@ def gen_min(
                         continue
                     tfp.add(
                         os.path.join(root, name),
-                        arcname=os.path.join("py{}".format(py_ver), root, name),
+                        arcname=os.path.join(f"py{py_ver}", root, name),
                     )
             if tempdir is not None:
                 shutil.rmtree(tempdir)

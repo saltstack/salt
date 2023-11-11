@@ -1209,6 +1209,7 @@ repos:
           - packaging
           - looseversion
           - tornado
+          - jmespath
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1229,6 +1230,7 @@ repos:
           - packaging
           - looseversion
           - tornado
+          - jmespath
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1253,6 +1255,7 @@ repos:
           - packaging
           - looseversion
           - tornado
+          - jmespath
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1277,6 +1280,7 @@ repos:
           - packaging
           - looseversion
           - tornado
+          - jmespath
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0

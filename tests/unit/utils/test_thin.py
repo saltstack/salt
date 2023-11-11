@@ -82,6 +82,7 @@ class SSHThinTestCase(TestCase):
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
+            "jmespath": str(code_dir / "jmespath"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -474,6 +475,7 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "jmespath",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -556,6 +558,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
+    @patch(
+        "salt.utils.thin.jmespath",
+        type("jmespath", (), {"__file__": "/site-packages/jmespath"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
         """
@@ -579,6 +585,7 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "jmespath",
             "foo",
             "bar.py",
         ]
@@ -671,6 +678,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
+    @patch(
+        "salt.utils.thin.jmespath",
+        type("jmespath", (), {"__file__": "/site-packages/jmespath"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
         """
@@ -694,6 +705,7 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "jmespath",
             "foo.so",
             "bar.so",
         ]
@@ -919,9 +931,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("py3", "pyall"):
             for i in range(1, 4):
-                files.append(os.path.join(py, "root", "r{}".format(i)))
+                files.append(os.path.join(py, "root", f"r{i}"))
             for i in range(4, 7):
-                files.append(os.path.join(py, "root2", "r{}".format(i)))
+                files.append(os.path.join(py, "root2", f"r{i}"))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
@@ -997,9 +1009,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("pyall", "pyall", "py3"):
             for i in range(1, 4):
-                files.append(os.path.join("namespace", py, "root", "r{}".format(i)))
+                files.append(os.path.join("namespace", py, "root", f"r{i}"))
             for i in range(4, 7):
-                files.append(os.path.join("namespace", py, "root2", "r{}".format(i)))
+                files.append(os.path.join("namespace", py, "root2", f"r{i}"))
 
         for idx, cl in enumerate(thin.tarfile.open().method_calls[:-6]):
             arcname = cl[2].get("arcname")
@@ -1132,6 +1144,7 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts("looseversion.py"), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
+                    (bts("jmespath/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1174,6 +1187,7 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts("looseversion.py"), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
+                    (bts("jmespath/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1247,7 +1261,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     def test_pack_alternatives(self):
         """
@@ -1257,7 +1271,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1275,7 +1289,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1302,7 +1316,7 @@ class SSHThinTestCase(TestCase):
                 assert msg in log_handler.messages
         calls = self.tar.mock_calls
         for _file in self.exp_files:
-            arg = [x for x in calls if "{}".format(_file) in x[-2]]
+            arg = [x for x in calls if f"{_file}" in x[-2]]
             kwargs = [
                 x
                 for x in calls
@@ -1344,7 +1358,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     def test_pack_alternatives_empty_dependencies(self):
         """
@@ -1376,7 +1390,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")

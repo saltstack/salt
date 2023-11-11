@@ -44,6 +44,8 @@ Connection module for Amazon SNS
 
 import logging
 
+import jmespath
+
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -52,7 +54,6 @@ log = logging.getLogger(__name__)
 try:
     import boto3
     import botocore
-    import jmespath
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True

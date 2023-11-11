@@ -14,6 +14,8 @@ import random
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
+import jmespath
+
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
@@ -21,11 +23,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
-
-try:
-    import jmespath
-except ImportError:
-    jmespath = None
 
 ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
@@ -1278,10 +1275,6 @@ def json_query(data, expr):
 
         [80, 25, 22]
     """
-    if jmespath is None:
-        err = "json_query requires jmespath module installed"
-        log.error(err)
-        raise RuntimeError(err)
     return jmespath.search(expr, data)
 
 
