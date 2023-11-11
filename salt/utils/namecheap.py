@@ -14,33 +14,19 @@
             pip install requests
 
 """
-
-
 import logging
 import xml.dom.minidom
 
+import requests
+
 import salt.loader
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 __salt__ = None
 
 
 def __virtual__():
-    if not HAS_REQUESTS:
-        return (
-            False,
-            "Missing dependency: 'requests'. The namecheap utils module "
-            "cannot be loaded. ",
-        )
     global __salt__
     if not __salt__:
         __salt__ = salt.loader.minion_mods(__opts__)

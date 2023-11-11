@@ -8,12 +8,7 @@ import logging
 import pprint
 import time
 
-try:
-    import requests
-
-    HAS_REQUESTS = True  # pylint: disable=W0612
-except ImportError:
-    HAS_REQUESTS = False  # pylint: disable=W0612
+import requests
 
 log = logging.getLogger(__name__)
 

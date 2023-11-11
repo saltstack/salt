@@ -1,8 +1,6 @@
 """
 Utility functions for salt.cloud
 """
-
-
 import codecs
 import copy
 import errno
@@ -21,6 +19,7 @@ import time
 import traceback
 import uuid
 
+import requests
 from jinja2 import Template
 
 import salt.client
@@ -2955,15 +2954,6 @@ def update_bootstrap(config, url=None):
         raise ValueError("Cant get any source to update")
     if url.startswith("http") or "://" in url:
         log.debug("Updating the bootstrap-salt.sh script to latest stable")
-        try:
-            import requests
-        except ImportError:
-            return {
-                "error": (
-                    "Updating the bootstrap-salt.sh script requires the "
-                    "Python requests library to be installed"
-                )
-            }
         req = requests.get(url)
         if req.status_code != 200:
             return {

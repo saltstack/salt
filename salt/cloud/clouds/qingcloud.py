@@ -33,6 +33,8 @@ import time
 import urllib.parse
 from hashlib import sha256
 
+import requests
+
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
@@ -44,15 +46,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "qingcloud"
@@ -97,7 +90,7 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    return config.check_driver_dependencies(__virtualname__, {"requests": HAS_REQUESTS})
+    return config.check_driver_dependencies(__virtualname__, {"requests": True})
 
 
 def _compute_signature(parameters, access_key_secret, method, path):
@@ -108,7 +101,7 @@ def _compute_signature(parameters, access_key_secret, method, path):
     """
     parameters["signature_method"] = "HmacSHA256"
 
-    string_to_sign = "{}\n{}\n".format(method.upper(), path)
+    string_to_sign = f"{method.upper()}\n{path}\n"
 
     keys = sorted(parameters.keys())
     pairs = []
@@ -166,9 +159,9 @@ def query(params=None):
                         for sk, sv in value[i - 1].items():
                             if isinstance(sv, dict) or isinstance(sv, list):
                                 sv = salt.utils.json.dumps(sv, separators=(",", ":"))
-                            real_parameters["{}.{}.{}".format(key, i, sk)] = sv
+                            real_parameters[f"{key}.{i}.{sk}"] = sv
                     else:
-                        real_parameters["{}.{}".format(key, i)] = value[i - 1]
+                        real_parameters[f"{key}.{i}"] = value[i - 1]
             else:
                 real_parameters[key] = value
 
@@ -252,7 +245,7 @@ def _get_location(vm_=None):
         return vm_location
 
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -320,9 +313,7 @@ def _get_image(vm_):
     if vm_image in images:
         return vm_image
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def show_image(kwargs, call=None):
@@ -442,9 +433,7 @@ def _get_size(vm_):
     if vm_size in sizes.keys():
         return vm_size
 
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def _show_normalized_node(full_node):
@@ -626,7 +615,7 @@ def show_instance(instance_id, call=None, kwargs=None):
 
     if items["total_count"] == 0:
         raise SaltCloudNotFound(
-            "The specified instance, '{}', could not be found.".format(instance_id)
+            f"The specified instance, '{instance_id}', could not be found."
         )
 
     full_node = items["instance_set"][0]
@@ -878,7 +867,7 @@ def destroy(instance_id, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -894,7 +883,7 @@ def destroy(instance_id, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

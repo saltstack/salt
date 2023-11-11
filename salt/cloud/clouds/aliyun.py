@@ -34,6 +34,8 @@ import urllib.parse
 import uuid
 from hashlib import sha1
 
+import requests
+
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
@@ -46,14 +48,6 @@ from salt.exceptions import (
 )
 from salt.utils.stringutils import to_bytes
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 ALIYUN_LOCATIONS = {
@@ -113,7 +107,7 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    return config.check_driver_dependencies(__virtualname__, {"requests": HAS_REQUESTS})
+    return config.check_driver_dependencies(__virtualname__, {"requests": True})
 
 
 def avail_locations(call=None):
@@ -412,9 +406,7 @@ def get_image(vm_):
 
     if vm_image and str(vm_image) in images:
         return images[vm_image]["ImageId"]
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_securitygroup(vm_):
@@ -432,7 +424,7 @@ def get_securitygroup(vm_):
     if securitygroup and str(securitygroup) in sgs:
         return sgs[securitygroup]["SecurityGroupId"]
     raise SaltCloudNotFound(
-        "The specified security group, '{}', could not be found.".format(securitygroup)
+        f"The specified security group, '{securitygroup}', could not be found."
     )
 
 
@@ -451,9 +443,7 @@ def get_size(vm_):
     if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]["InstanceTypeId"]
 
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def __get_location(vm_):
@@ -471,7 +461,7 @@ def __get_location(vm_):
     if vm_location and str(vm_location) in locations:
         return locations[vm_location]["RegionId"]
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -920,7 +910,7 @@ def _get_node(name):
             )
             # Just a little delay between attempts...
             time.sleep(0.5)
-    raise SaltCloudNotFound("The specified instance {} not found".format(name))
+    raise SaltCloudNotFound(f"The specified instance {name} not found")
 
 
 def show_image(kwargs, call=None):
@@ -982,7 +972,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1001,7 +991,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

@@ -89,18 +89,12 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import requests
+
 import salt.config as config
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudNotFound, SaltCloudSystemExit
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 # The epoch of the last time a query was made
@@ -145,7 +139,7 @@ def _get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    deps = {"requests": HAS_REQUESTS}
+    deps = {"requests": True}
     return config.check_driver_dependencies(__virtualname__, deps)
 
 

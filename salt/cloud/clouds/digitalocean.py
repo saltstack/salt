@@ -30,6 +30,8 @@ import os
 import pprint
 import time
 
+import requests
+
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.files
@@ -44,14 +46,6 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "digitalocean"
@@ -95,7 +89,7 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    return config.check_driver_dependencies(__virtualname__, {"requests": HAS_REQUESTS})
+    return config.check_driver_dependencies(__virtualname__, {"requests": True})
 
 
 def avail_locations(call=None):

@@ -30,38 +30,26 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
 
 """
 
+import html.parser
 import logging
 
-HAS_LIBS = False
-try:
-    import html.parser
-
-    import requests
-
-    HAS_LIBS = True
-
-    # pylint: disable=abstract-method
-
-    class ASAMHTMLParser(html.parser.HTMLParser):  # fix issue #30477
-        def __init__(self):
-            html.parser.HTMLParser.__init__(self)
-            self.data = []
-
-        def handle_starttag(self, tag, attrs):
-            if tag != "a":
-                return
-            for attr in attrs:
-                if attr[0] != "href":
-                    return
-                self.data.append(attr[1])
-
-    # pylint: enable=abstract-method
-
-
-except ImportError:
-    pass
+import requests
 
 log = logging.getLogger(__name__)
+
+
+class ASAMHTMLParser(html.parser.HTMLParser):  # pylint: disable=abstract-method
+    def __init__(self):
+        html.parser.HTMLParser.__init__(self)
+        self.data = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+        for attr in attrs:
+            if attr[0] != "href":
+                return
+            self.data.append(attr[1])
 
 
 def __virtual__():
@@ -69,9 +57,6 @@ def __virtual__():
     Check for ASAM Fan-Out driver configuration in master config file
     or directory and load runner only if it is specified
     """
-    if not HAS_LIBS:
-        return False
-
     if _get_asam_configuration() is False:
         return False
     return True
@@ -226,7 +211,7 @@ def remove_platform(name, server_url):
     try:
         html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to look up existing platforms on {}".format(server_url)
+        err_msg = f"Failed to look up existing platforms on {server_url}"
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
@@ -244,18 +229,18 @@ def remove_platform(name, server_url):
                 url, data, auth, verify=config["verify_ssl"]
             )
         except Exception as exc:  # pylint: disable=broad-except
-            err_msg = "Failed to delete platform from {}".format(server_url)
+            err_msg = f"Failed to delete platform from {server_url}"
             log.error("%s:\n%s", err_msg, exc)
             return {name: err_msg}
 
         parser = _parse_html_content(html_content)
         platformset_name = _get_platformset_name(parser.data, name)
         if platformset_name:
-            return {name: "Failed to delete platform from {}".format(server_url)}
+            return {name: f"Failed to delete platform from {server_url}"}
         else:
-            return {name: "Successfully deleted platform from {}".format(server_url)}
+            return {name: f"Successfully deleted platform from {server_url}"}
     else:
-        return {name: "Specified platform name does not exist on {}".format(server_url)}
+        return {name: f"Specified platform name does not exist on {server_url}"}
 
 
 def list_platforms(server_url):
@@ -351,11 +336,11 @@ def add_platform(name, platform_set, server_url):
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Specified platform already exists on {}".format(server_url)}
+        return {name: f"Specified platform already exists on {server_url}"}
 
     platform_sets = list_platform_sets(server_url)
     if platform_set not in platform_sets[server_url]:
-        return {name: "Specified platform set does not exist on {}".format(server_url)}
+        return {name: f"Specified platform set does not exist on {server_url}"}
 
     url = config["platform_edit_url"]
 
@@ -373,12 +358,12 @@ def add_platform(name, platform_set, server_url):
     try:
         html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to add platform on {}".format(server_url)
+        err_msg = f"Failed to add platform on {server_url}"
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Successfully added platform on {}".format(server_url)}
+        return {name: f"Successfully added platform on {server_url}"}
     else:
-        return {name: "Failed to add platform on {}".format(server_url)}
+        return {name: f"Failed to add platform on {server_url}"}

@@ -26,15 +26,10 @@ In the minion's config file:
 
 import logging
 
+import requests
+
 import salt.utils.json
 import salt.utils.stringutils
-
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
 
 log = logging.getLogger(__name__)
 
@@ -42,9 +37,6 @@ __virtualname__ = "telemetry"
 
 
 def __virtual__():
-    # Only load if imports exist.
-    if not HAS_REQUESTS:
-        return False
     return __virtualname__
 
 
@@ -72,7 +64,7 @@ def _auth(api_key=None, profile="telemetry"):
 
 
 def _update_cache(deployment_id, metric_name, alert):
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     if key in __context__:
         alerts = __context__[key]
@@ -133,7 +125,7 @@ def get_alert_config(
     auth = _auth(profile=profile)
     alert = False
 
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     if key not in __context__:
         try:
@@ -209,9 +201,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             notification_channel_id = response.json().get("_id")
             __context__["telemetry.channels"][notify_channel] = notification_channel_id
         else:
-            raise Exception(
-                "Failed to created notification channel {}".format(notify_channel)
-            )
+            raise Exception(f"Failed to created notification channel {notify_channel}")
 
     return notification_channel_id
 
@@ -233,8 +223,7 @@ def get_alarms(deployment_id, profile="telemetry"):
 
     try:
         response = requests.get(
-            _get_telemetry_base(profile)
-            + "/alerts?deployment={}".format(deployment_id),
+            _get_telemetry_base(profile) + f"/alerts?deployment={deployment_id}",
             headers=auth,
         )
     except requests.exceptions.RequestException as e:
@@ -247,7 +236,7 @@ def get_alarms(deployment_id, profile="telemetry"):
         if alarms:
             return alarms
 
-        return "No alarms defined for deployment: {}".format(deployment_id)
+        return f"No alarms defined for deployment: {deployment_id}"
     else:
         # Non 200 response, sent back the error response'
         return {
@@ -275,7 +264,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     auth = _auth(api_key, profile)
     request_uri = _get_telemetry_base(profile) + "/alerts"
 
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     # set the notification channels if not already set
     post_body = {
@@ -421,12 +410,12 @@ def delete_alarms(
     if not alert_ids:
         return (
             False,
-            "failed to find alert associated with deployment: {}".format(deployment_id),
+            f"failed to find alert associated with deployment: {deployment_id}",
         )
 
     failed_to_delete = []
     for id in alert_ids:
-        delete_url = _get_telemetry_base(profile) + "/alerts/{}".format(id)
+        delete_url = _get_telemetry_base(profile) + f"/alerts/{id}"
 
         try:
             response = requests.delete(delete_url, headers=auth)

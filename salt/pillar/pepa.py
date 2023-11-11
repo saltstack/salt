@@ -270,6 +270,7 @@ import re
 import sys
 
 import jinja2
+import requests
 
 import salt.utils.files
 import salt.utils.yaml
@@ -278,14 +279,6 @@ __author__ = "Michael Persson <michael.ake.persson@gmail.com>"
 __copyright__ = "Copyright (c) 2013 Michael Persson"
 __license__ = "Apache License, Version 2.0"
 __version__ = "0.6.6"
-
-
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
 
 
 # Only used when called from a terminal
@@ -357,9 +350,6 @@ def __virtual__():
     """
     Only return if all the modules are available
     """
-    if not HAS_REQUESTS:
-        return False
-
     return True
 
 
@@ -600,8 +590,6 @@ if __name__ == "__main__":
     if args.query_api:
         import getpass
 
-        import requests
-
         username = args.username
         password = args.password
         if username is None:
@@ -615,7 +603,7 @@ if __name__ == "__main__":
 
         if not request.ok:
             raise RuntimeError(
-                "Failed to authenticate to SaltStack REST API: {}".format(request.text)
+                f"Failed to authenticate to SaltStack REST API: {request.text}"
             )
 
         response = request.json()

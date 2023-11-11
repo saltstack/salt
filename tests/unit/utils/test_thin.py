@@ -83,6 +83,10 @@ class SSHThinTestCase(TestCase):
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
             "jmespath": str(code_dir / "jmespath"),
+            "requests": str(code_dir / "requests"),
+            "urllib3": str(code_dir / "urllib3"),
+            "charset_normalizer": str(code_dir / "charset_normalizer"),
+            "idna": str(code_dir / "idna"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -476,6 +480,10 @@ class SSHThinTestCase(TestCase):
             "looseversion",
             "packaging",
             "jmespath",
+            "requests",
+            "urllib3",
+            "charset_normalizer",
+            "idna",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -562,6 +570,24 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.jmespath",
         type("jmespath", (), {"__file__": "/site-packages/jmespath"}),
     )
+    @patch(
+        "salt.utils.thin.requests",
+        type("requests", (), {"__file__": "/site-packages/requests"}),
+    )
+    @patch(
+        "salt.utils.thin.urllib3",
+        type("urllib3", (), {"__file__": "/site-packages/urllib3"}),
+    )
+    @patch(
+        "salt.utils.thin.charset_normalizer",
+        type(
+            "charset_normalizer", (), {"__file__": "/site-packages/charset_normalizer"}
+        ),
+    )
+    @patch(
+        "salt.utils.thin.idna",
+        type("idna", (), {"__file__": "/site-packages/idna"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
         """
@@ -586,6 +612,10 @@ class SSHThinTestCase(TestCase):
             "looseversion",
             "packaging",
             "jmespath",
+            "requests",
+            "urllib3",
+            "charset_normalizer",
+            "idna",
             "foo",
             "bar.py",
         ]
@@ -682,6 +712,24 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.jmespath",
         type("jmespath", (), {"__file__": "/site-packages/jmespath"}),
     )
+    @patch(
+        "salt.utils.thin.requests",
+        type("requests", (), {"__file__": "/site-packages/requests"}),
+    )
+    @patch(
+        "salt.utils.thin.urllib3",
+        type("urllib3", (), {"__file__": "/site-packages/urllib3"}),
+    )
+    @patch(
+        "salt.utils.thin.charset_normalizer",
+        type(
+            "charset_normalizer", (), {"__file__": "/site-packages/charset_normalizer"}
+        ),
+    )
+    @patch(
+        "salt.utils.thin.idna",
+        type("idna", (), {"__file__": "/site-packages/idna"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
         """
@@ -706,6 +754,10 @@ class SSHThinTestCase(TestCase):
             "looseversion",
             "packaging",
             "jmespath",
+            "requests",
+            "urllib3",
+            "charset_normalizer",
+            "idna",
             "foo.so",
             "bar.so",
         ]
@@ -1145,6 +1197,10 @@ class SSHThinTestCase(TestCase):
                     (bts("looseversion.py"), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
                     (bts("jmespath/__init__.py"), bts("")),
+                    (bts("requests/__init__.py"), bts("")),
+                    (bts("urllib3/__init__.py"), bts("")),
+                    (bts("charset_normalizer/__init__.py"), bts("")),
+                    (bts("idna/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1188,6 +1244,10 @@ class SSHThinTestCase(TestCase):
                     (bts("looseversion.py"), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
                     (bts("jmespath/__init__.py"), bts("")),
+                    (bts("requests/__init__.py"), bts("")),
+                    (bts("urllib3/__init__.py"), bts("")),
+                    (bts("charset_normalizer/__init__.py"), bts("")),
+                    (bts("idna/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1233,6 +1293,10 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts("looseversion.py"), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
+                    (bts("requests/__init__.py"), bts("")),
+                    (bts("urllib3/__init__.py"), bts("")),
+                    (bts("charset_normalizer/__init__.py"), bts("")),
+                    (bts("idna/__init__.py"), bts("")),
                 ],
             ),
         )

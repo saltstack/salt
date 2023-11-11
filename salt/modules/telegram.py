@@ -12,14 +12,9 @@ Module for sending messages via Telegram.
 
 import logging
 
+import requests
+
 from salt.exceptions import SaltInvocationError
-
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +27,6 @@ def __virtual__():
 
     :return: The virtual name of the module.
     """
-    if not HAS_REQUESTS:
-        return (False, "Missing dependency requests")
     return __virtualname__
 
 
@@ -104,7 +97,7 @@ def _post_message(message, chat_id, token):
     :param token:       The Telegram API token.
     :return:            Boolean if message was sent successfully.
     """
-    url = "https://api.telegram.org/bot{}/sendMessage".format(token)
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     parameters = dict()
     if chat_id:

@@ -15,14 +15,18 @@ import tarfile
 import tempfile
 import zipfile
 
+import charset_normalizer  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import distro
+import idna  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import jinja2
 import jmespath
 import looseversion
 import markupsafe
 import msgpack
 import packaging
+import requests
 import tornado
+import urllib3  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import yaml
 
 import salt
@@ -279,6 +283,10 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "looseversion",
         "packaging",
         "jmespath",
+        "requests",
+        "urllib3",
+        "charset_normalizer",
+        "idna",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -429,6 +437,10 @@ def get_tops(extra_mods="", so_mods=""):
         looseversion,
         packaging,
         jmespath,
+        requests,
+        urllib3,
+        charset_normalizer,
+        idna,
     ]
     modules = find_site_modules("contextvars")
     if modules:

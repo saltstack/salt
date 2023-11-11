@@ -17,16 +17,11 @@ import re
 import time
 from datetime import datetime
 
+import requests
+
 import salt.config
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-
-try:
-    import requests
-
-    HAS_REQUESTS = True  # pylint: disable=W0612
-except ImportError:
-    HAS_REQUESTS = False  # pylint: disable=W0612
 
 try:
     import binascii

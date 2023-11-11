@@ -38,6 +38,8 @@ import socket
 import time
 import urllib
 
+import requests
+
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.json
@@ -48,20 +50,12 @@ from salt.exceptions import (
 )
 
 try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-try:
     from IPy import IP
 
     HAS_IPY = True
 except ImportError:
     HAS_IPY = False
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "proxmox"
@@ -106,7 +100,7 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    deps = {"requests": HAS_REQUESTS, "IPy": HAS_IPY}
+    deps = {"requests": True, "IPy": HAS_IPY}
     return config.check_driver_dependencies(__virtualname__, deps)
 
 

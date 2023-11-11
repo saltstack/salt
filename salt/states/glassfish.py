@@ -15,22 +15,17 @@ You can setup connection parameters like this
       - password: changeit
 """
 
+import requests
+
 import salt.utils.json
 from salt.exceptions import CommandExecutionError
-
-try:
-    import requests
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
 
 
 def __virtual__():
     """
     Only load if glassfish module is available
     """
-    if "glassfish.enum_connector_c_pool" in __salt__ and HAS_LIBS:
+    if "glassfish.enum_connector_c_pool" in __salt__:
         return True
     return (False, "glassfish module could not be loaded")
 
@@ -82,7 +77,7 @@ def _do_element_present(name, elem_type, data, server=None):
     """
     ret = {"changes": {}, "update": False, "create": False, "error": None}
     try:
-        elements = __salt__["glassfish.enum_{}".format(elem_type)]()
+        elements = __salt__[f"glassfish.enum_{elem_type}"]()
     except requests.ConnectionError as error:
         if __opts__["test"]:
             ret["changes"] = {"Name": name, "Params": data}
@@ -97,23 +92,19 @@ def _do_element_present(name, elem_type, data, server=None):
         ret["create"] = True
         if not __opts__["test"]:
             try:
-                __salt__["glassfish.create_{}".format(elem_type)](
-                    name, server=server, **data
-                )
+                __salt__[f"glassfish.create_{elem_type}"](name, server=server, **data)
             except CommandExecutionError as error:
                 ret["error"] = error
                 return ret
     elif elements and any(data):
-        current_data = __salt__["glassfish.get_{}".format(elem_type)](
-            name, server=server
-        )
+        current_data = __salt__[f"glassfish.get_{elem_type}"](name, server=server)
         data_diff = _is_updated(current_data, data)
         if data_diff:
             ret["update"] = True
             ret["changes"] = data_diff
             if not __opts__["test"]:
                 try:
-                    __salt__["glassfish.update_{}".format(elem_type)](
+                    __salt__[f"glassfish.update_{elem_type}"](
                         name, server=server, **data
                     )
                 except CommandExecutionError as error:
@@ -127,7 +118,7 @@ def _do_element_absent(name, elem_type, data, server=None):
     """
     ret = {"delete": False, "error": None}
     try:
-        elements = __salt__["glassfish.enum_{}".format(elem_type)]()
+        elements = __salt__[f"glassfish.enum_{elem_type}"]()
     except requests.ConnectionError as error:
         if __opts__["test"]:
             ret["create"] = True
@@ -140,9 +131,7 @@ def _do_element_absent(name, elem_type, data, server=None):
         ret["delete"] = True
         if not __opts__["test"]:
             try:
-                __salt__["glassfish.delete_{}".format(elem_type)](
-                    name, server=server, **data
-                )
+                __salt__[f"glassfish.delete_{elem_type}"](name, server=server, **data)
             except CommandExecutionError as error:
                 ret["error"] = error
     return ret
@@ -208,7 +197,7 @@ def connection_factory_present(
     # Manage parameters
     pool_data = {}
     res_data = {}
-    pool_name = "{}-Connection-Pool".format(name)
+    pool_name = f"{name}-Connection-Pool"
     if restype == "topic_connection_factory":
         pool_data["connectionDefinitionName"] = "javax.jms.TopicConnectionFactory"
     elif restype == "queue_connection_factory":
@@ -285,7 +274,7 @@ def connection_factory_absent(name, both=True, server=None):
         Delete both the pool and the resource, defaults to ``true``
     """
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
-    pool_name = "{}-Connection-Pool".format(name)
+    pool_name = f"{name}-Connection-Pool"
     pool_ret = _do_element_absent(
         pool_name, "connector_c_pool", {"cascade": both}, server
     )
@@ -466,7 +455,7 @@ def jdbc_datasource_present(
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
 
     # Manage parameters
-    res_name = "jdbc/{}".format(name)
+    res_name = f"jdbc/{name}"
     pool_data = {}
     pool_data_properties = {}
     res_data = {}

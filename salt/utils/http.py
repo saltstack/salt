@@ -70,12 +70,7 @@ try:
 except ImportError:
     HAS_CURL_HTTPCLIENT = False
 
-try:
-    import requests
-
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
+import requests
 
 try:
     import certifi
@@ -232,16 +227,8 @@ def query(
         salt.utils.network.refresh_dns()
 
     if backend == "requests":
-        if HAS_REQUESTS is False:
-            ret["error"] = (
-                "http.query has been set to use requests, but the "
-                "requests library does not seem to be installed"
-            )
-            log.error(ret["error"])
-            return ret
-        else:
-            requests_log = logging.getLogger("requests")
-            requests_log.setLevel(logging.WARNING)
+        requests_log = logging.getLogger("requests")
+        requests_log.setLevel(logging.WARNING)
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado

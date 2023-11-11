@@ -729,6 +729,7 @@ def dependency_information(include_salt_cloud=False):
         ("relenv", "relenv", "__version__"),
         ("jmespath", "jmespath", None),
         ("psutil", "psutil", None),
+        ("requests", "requests", None),
     ]
 
     if include_salt_cloud:

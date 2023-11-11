@@ -19,14 +19,7 @@ Module for working with the Grafana v4 API
             grafana_password: admin
             grafana_timeout: 3
 """
-
-try:
-    import requests
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
-
+import requests
 
 __virtualname__ = "grafana4"
 
@@ -35,15 +28,7 @@ def __virtual__():
     """
     Only load if requests is installed
     """
-    if HAS_LIBS:
-        return __virtualname__
-    else:
-        return (
-            False,
-            'The "{}" module could not be loaded: "requests" is not installed.'.format(
-                __virtualname__
-            ),
-        )
+    return __virtualname__
 
 
 def _get_headers(profile):

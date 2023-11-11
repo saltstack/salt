@@ -36,8 +36,6 @@ def configure_loader_modules():
             }
         }
     }
-    if mandrill.HAS_REQUESTS is False:
-        module_globals["sys.modules"] = {"requests": MagicMock()}
     return module_globals
 
 
