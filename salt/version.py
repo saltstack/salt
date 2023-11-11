@@ -728,6 +728,7 @@ def dependency_information(include_salt_cloud=False):
         ("looseversion", "looseversion", None),
         ("relenv", "relenv", "__version__"),
         ("jmespath", "jmespath", None),
+        ("psutil", "psutil", None),
     ]
 
     if include_salt_cloud:

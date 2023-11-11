@@ -5,48 +5,19 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 """
-
-
 import datetime
 import re
 import time
+
+import psutil
 
 import salt.utils.data
 import salt.utils.decorators.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# pylint: disable=import-error
-try:
-    import salt.utils.psutil_compat as psutil
-
-    HAS_PSUTIL = True
-    PSUTIL2 = getattr(psutil, "version_info", ()) >= (2, 0)
-except ImportError:
-    HAS_PSUTIL = False
-# pylint: enable=import-error
-
 
 def __virtual__():
-    if not HAS_PSUTIL:
-        return (
-            False,
-            "The ps module cannot be loaded: python module psutil not installed.",
-        )
-
-    # Functions and attributes used in this execution module seem to have been
-    # added as of psutil 0.3.0, from an inspection of the source code. Only
-    # make this module available if the version of psutil is >= 0.3.0. Note
-    # that this may need to be tweaked if we find post-0.3.0 versions which
-    # also have problems running the functions in this execution module, but
-    # most distributions have already moved to later versions (for example,
-    # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
-    if psutil.version_info >= (0, 3, 0):
-        return True
-    return (
-        False,
-        "The ps execution module cannot be loaded: the psutil python module version {}"
-        " is less than 0.3.0".format(psutil.version_info),
-    )
+    return True
 
 
 def _get_proc_cmdline(proc):
@@ -56,7 +27,7 @@ def _get_proc_cmdline(proc):
     It's backward compatible with < 2.0 versions of psutil.
     """
     try:
-        return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
+        return salt.utils.data.decode(proc.cmdline())
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -68,9 +39,7 @@ def _get_proc_create_time(proc):
     It's backward compatible with < 2.0 versions of psutil.
     """
     try:
-        return salt.utils.data.decode(
-            proc.create_time() if PSUTIL2 else proc.create_time
-        )
+        return salt.utils.data.decode(proc.create_time())
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -82,7 +51,7 @@ def _get_proc_name(proc):
     It's backward compatible with < 2.0 versions of psutil.
     """
     try:
-        return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
+        return salt.utils.data.decode(proc.name())
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -94,7 +63,7 @@ def _get_proc_status(proc):
     It's backward compatible with < 2.0 versions of psutil.
     """
     try:
-        return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
+        return salt.utils.data.decode(proc.status())
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -106,7 +75,7 @@ def _get_proc_username(proc):
     It's backward compatible with < 2.0 versions of psutil.
     """
     try:
-        return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
+        return salt.utils.data.decode(proc.username())
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
@@ -590,7 +559,7 @@ def boot_time(time_format=None):
         try:
             return b_time.strftime(time_format)
         except TypeError as exc:
-            raise SaltInvocationError("Invalid format string: {}".format(exc))
+            raise SaltInvocationError(f"Invalid format string: {exc}")
     return b_time
 
 

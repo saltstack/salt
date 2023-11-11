@@ -1,21 +1,14 @@
 """
 Run processes as a different user in Windows
 """
-
-# Import Python Libraries
 import ctypes
 import logging
 import os
 import time
 
+import psutil
+
 from salt.exceptions import CommandExecutionError
-
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
 
 try:
     import msvcrt
@@ -45,8 +38,8 @@ def __virtual__():
     """
     Only load if Win32 Libraries are installed
     """
-    if not HAS_WIN32 or not HAS_PSUTIL:
-        return False, "This utility requires pywin32 and psutil"
+    if not HAS_WIN32:
+        return False, "This utility requires pywin32"
 
     return "win_runas"
 

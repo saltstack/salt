@@ -34,12 +34,7 @@ try:
 except ImportError:
     HAS_WMI = False
 
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
+import psutil
 
 if salt.utils.platform.is_windows():
     ping_master = namespaced_function(ping_master, globals())
@@ -143,9 +138,6 @@ def __virtual__():
 
     if not HAS_WMI:
         return False, "win_status.py: Requires WMI and WinAPI"
-
-    if not HAS_PSUTIL:
-        return False, "win_status.py: Requires psutil"
 
     # Namespace modules from `status.py`
     global ping_master, time_

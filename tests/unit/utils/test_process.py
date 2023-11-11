@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 
+import psutil
 import pytest
 
 import salt._logging
@@ -15,14 +16,6 @@ import salt.utils.platform
 import salt.utils.process
 from tests.support.mock import patch
 from tests.support.unit import TestCase
-
-HAS_PSUTIL = False
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    pass
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +31,7 @@ def die(func):
         name = func.__name__[5:]
 
         def _die():
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
 
         attrname = "die_" + name
         setattr(self, attrname, _die)
@@ -58,7 +51,7 @@ def incr(func):
         name = func.__name__[5:]
 
         def _incr(counter, num):
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
             for _ in range(0, num):
                 counter.value += 1
 
@@ -80,7 +73,7 @@ def spin(func):
         name = func.__name__[5:]
 
         def _spin():
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
             while True:
                 time.sleep(1)
 
@@ -257,7 +250,6 @@ class TestProcessCallbacks(TestCase):
         ls3.assert_called()
 
 
-@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestSignalHandlingProcess(TestCase):
     @classmethod
     def Process(cls, pid):
@@ -585,7 +577,6 @@ class CMORProcessHelper:
                 return
 
 
-@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestGetProcessInfo(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
@@ -618,7 +609,6 @@ class TestGetProcessInfo(TestCase):
             self.assertIsNone(salt.utils.process.get_process_info(pid))
 
 
-@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
@@ -662,7 +652,6 @@ class TestClaimMantleOfResponsibility(TestCase):
         )
 
 
-@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestCheckMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()

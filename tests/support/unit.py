@@ -35,12 +35,7 @@ from unittest import TextTestRunner as _TextTestRunner
 from unittest import expectedFailure, skip, skipIf
 from unittest.case import SkipTest, _id
 
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
+import psutil
 
 log = logging.getLogger(__name__)
 
@@ -212,7 +207,7 @@ class TestCase(_TestCase):
 
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)
-        if HAS_PSUTIL and SHOW_PROC:
+        if SHOW_PROC:
             show_zombie_processes = "SHOW_PROC_ZOMBIES" in os.environ
             proc_info = "[CPU:{}%|MEM:{}%".format(
                 psutil.cpu_percent(), psutil.virtual_memory().percent
@@ -225,7 +220,7 @@ class TestCase(_TestCase):
                             found_zombies += 1
                 except Exception:  # pylint: disable=broad-except
                     pass
-                proc_info += "|Z:{}".format(found_zombies)
+                proc_info += f"|Z:{found_zombies}"
             proc_info += "] {short_desc}".format(short_desc=desc if desc else "")
             return proc_info
         else:

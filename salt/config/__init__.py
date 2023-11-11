@@ -36,15 +36,6 @@ from salt._logging import (
     DFLT_LOG_FMT_LOGFILE,
 )
 
-try:
-    import psutil
-
-    if not hasattr(psutil, "virtual_memory"):
-        raise ImportError("Version of psutil too old.")
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
-
 log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
@@ -85,11 +76,13 @@ def _gather_buffer_space():
 
     Result is in bytes.
     """
-    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
-        # Oh good, we have psutil. This will be quick.
+    try:
+        # Late import
+        import psutil
+
         total_mem = psutil.virtual_memory().total
-    else:
-        # Avoid loading core grains unless absolutely required
+    except ImportError:
+        # This happens when we build a thin for salt-ssh
         import platform
 
         import salt.grains.core
@@ -98,6 +91,7 @@ def _gather_buffer_space():
         os_data = {"kernel": platform.system()}
         grains = salt.grains.core._memdata(os_data)
         total_mem = grains["mem_total"]
+
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 

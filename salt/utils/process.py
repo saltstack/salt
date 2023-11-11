@@ -31,13 +31,13 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-HAS_PSUTIL = False
 try:
     import psutil
 
     HAS_PSUTIL = True
 except ImportError:
-    pass
+    # This only happens with salt-ssh
+    HAS_PSUTIL = False
 
 try:
     import setproctitle
@@ -55,7 +55,7 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle("{} {}".format(current.rstrip(), name))
+        setproctitle.setproctitle(f"{current.rstrip()} {name}")
 
 
 def daemonize(redirect_out=True):
@@ -173,7 +173,7 @@ def notify_systemd():
             if notify_socket:
                 # Handle abstract namespace socket
                 if notify_socket.startswith("@"):
-                    notify_socket = "\0{}".format(notify_socket[1:])
+                    notify_socket = f"\0{notify_socket[1:]}"
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
@@ -227,14 +227,6 @@ def claim_mantle_of_responsibility(file_name):
     file_name: str
     Return: bool
     """
-
-    # all OSs supported by salt has psutil
-    if not HAS_PSUTIL:
-        log.critical(
-            "Assuming no other Process has this responsibility! pidfile: %s", file_name
-        )
-        return True
-
     # add file directory if missing
     file_directory_name = os.path.dirname(file_name)
     if not os.path.isdir(file_directory_name) and file_directory_name:
@@ -279,14 +271,6 @@ def check_mantle_of_responsibility(file_name):
     file_name: str
     Return: None or int
     """
-
-    # all OSs supported by salt has psutil
-    if not HAS_PSUTIL:
-        log.critical(
-            "Assuming no other Process has this responsibility! pidfile: %s", file_name
-        )
-        return
-
     # get process info from file
     try:
         with salt.utils.files.fopen(file_name, "r") as file:
@@ -351,7 +335,7 @@ def set_pidfile(pidfile, user):
             pidfile, user
         )
         log.debug("%s Traceback follows:", msg, exc_info=True)
-        sys.stderr.write("{}\n".format(msg))
+        sys.stderr.write(f"{msg}\n")
         sys.exit(err.errno)
     log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
 
@@ -406,12 +390,11 @@ def os_is_running(pid):
         pid = int(pid)
     if HAS_PSUTIL:
         return psutil.pid_exists(pid)
-    else:
-        try:
-            os.kill(pid, 0)  # SIG 0 is the "are you alive?" signal
-            return True
-        except OSError:
-            return False
+    try:
+        os.kill(pid, 0)  # SIG 0 is the "are you alive?" signal
+        return True
+    except OSError:
+        return False
 
 
 class ThreadPool:
@@ -1062,35 +1045,34 @@ class SignalHandlingProcess(Process):
     def _handle_signals(self, signum, sigframe):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:
             msg += "SIGTERM"
         msg += ". Exiting"
         log.debug(msg)
-        if HAS_PSUTIL:
-            try:
-                process = psutil.Process(os.getpid())
-                if hasattr(process, "children"):
-                    for child in process.children(recursive=True):
-                        try:
-                            if child.is_running():
-                                child.terminate()
-                        except psutil.NoSuchProcess:
-                            log.warning(
-                                "Unable to kill child of process %d, it does "
-                                "not exist. My pid is %d",
-                                self.pid,
-                                os.getpid(),
-                            )
-            except psutil.NoSuchProcess:
-                log.warning(
-                    "Unable to kill children of process %d, it does not exist."
-                    "My pid is %d",
-                    self.pid,
-                    os.getpid(),
-                )
+        try:
+            process = psutil.Process(os.getpid())
+            if hasattr(process, "children"):
+                for child in process.children(recursive=True):
+                    try:
+                        if child.is_running():
+                            child.terminate()
+                    except psutil.NoSuchProcess:
+                        log.warning(
+                            "Unable to kill child of process %d, it does "
+                            "not exist. My pid is %d",
+                            self.pid,
+                            os.getpid(),
+                        )
+        except psutil.NoSuchProcess:
+            log.warning(
+                "Unable to kill children of process %d, it does not exist."
+                "My pid is %d",
+                self.pid,
+                os.getpid(),
+            )
         # It's OK to call os._exit instead of sys.exit on forked processed
         os._exit(salt.defaults.exitcodes.EX_OK)
 

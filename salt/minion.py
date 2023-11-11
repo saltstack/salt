@@ -80,14 +80,11 @@ from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
-HAS_PSUTIL = False
 try:
-    import salt.utils.psutil_compat as psutil
-
-    HAS_PSUTIL = True
+    import psutil
 except ImportError:
+    # This only happens with salt-ssh
     pass
-
 HAS_RESOURCE = False
 try:
     import resource
@@ -1552,7 +1549,7 @@ class Minion(MinionBase):
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
-        if opts.get("modules_max_memory", -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
+        if opts.get("modules_max_memory", -1) > 0 and HAS_RESOURCE:
             log.debug(
                 "modules_max_memory set, enforcing a maximum of %s",
                 opts["modules_max_memory"],
@@ -1563,10 +1560,6 @@ class Minion(MinionBase):
             mem_limit = rss + vms + opts["modules_max_memory"]
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif opts.get("modules_max_memory", -1) > 0:
-            if not HAS_PSUTIL:
-                log.error(
-                    "Unable to enforce modules_max_memory because psutil is missing"
-                )
             if not HAS_RESOURCE:
                 log.error(
                     "Unable to enforce modules_max_memory because resource is missing"

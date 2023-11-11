@@ -3,20 +3,15 @@ Beacon to monitor disk usage.
 
 .. versionadded:: 2015.5.0
 
-:depends: python-psutil
+:depends: https://pypi.org/project/psutil
 """
 import logging
 import re
 
+import psutil
+
 import salt.utils.beacons
 import salt.utils.platform
-
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
 
 log = logging.getLogger(__name__)
 
@@ -24,12 +19,7 @@ __virtualname__ = "diskusage"
 
 
 def __virtual__():
-    if HAS_PSUTIL is False:
-        err_msg = "psutil library is missing."
-        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
-        return False, err_msg
-    else:
-        return __virtualname__
+    return __virtualname__
 
 
 def validate(config):
@@ -94,7 +84,7 @@ def beacon(config):
         # if our mount doesn't end with a $, insert one.
         mount_re = mount
         if not mount.endswith("$"):
-            mount_re = "{}$".format(mount)
+            mount_re = f"{mount}$"
 
         if salt.utils.platform.is_windows():
             # mount_re comes in formatted with a $ at the end

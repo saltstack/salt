@@ -11,7 +11,6 @@ import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
 from salt.utils.platform import is_junos
-from salt.utils.process import HAS_PSUTIL
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
@@ -302,9 +301,7 @@ class Minion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if (HAS_PSUTIL and not self.claim_process_responsibility()) or (
-            not HAS_PSUTIL and self.check_running()
-        ):
+        if not self.claim_process_responsibility():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
