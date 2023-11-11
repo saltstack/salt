@@ -45,6 +45,7 @@ try:
     HAS_SETPROCTITLE = True
 except ImportError:
     HAS_SETPROCTITLE = False
+    # This only happens with salt-ssh or when deploying the salt thin to a docker container
 
 
 def appendproctitle(name):

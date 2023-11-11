@@ -1211,6 +1211,7 @@ repos:
           - tornado
           - jmespath
           - psutil
+          - setproctitle
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1233,6 +1234,7 @@ repos:
           - tornado
           - jmespath
           - psutil
+          - setproctitle
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1259,6 +1261,7 @@ repos:
           - tornado
           - jmespath
           - psutil
+          - setproctitle
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1285,6 +1288,7 @@ repos:
           - tornado
           - jmespath
           - psutil
+          - setproctitle
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
