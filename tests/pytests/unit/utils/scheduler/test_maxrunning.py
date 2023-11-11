@@ -1,24 +1,13 @@
 import logging
 
+import dateutil.parser
 import pytest
 
 from tests.support.mock import MagicMock, patch
 
-try:
-    import dateutil.parser as dateutil_parser
-
-    HAS_DATEUTIL_PARSER = True
-except ImportError:
-    HAS_DATEUTIL_PARSER = False
-
-
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.skipif(
-        HAS_DATEUTIL_PARSER is False,
-        reason="The 'dateutil.parser' library is not available",
-    ),
     pytest.mark.windows_whitelisted,
 ]
 
@@ -63,7 +52,7 @@ def test_maxrunning_minion(schedule):
         }
     ]
 
-    run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+    run_time = dateutil.parser.parse("11/29/2017 4:00pm")
 
     with patch("salt.utils.minion.running", MagicMock(return_value=running_data)):
         with patch("salt.utils.process.os_is_running", MagicMock(return_value=True)):
@@ -116,7 +105,7 @@ def test_maxrunning_master(schedule):
         }
     ]
 
-    run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+    run_time = dateutil.parser.parse("11/29/2017 4:00pm")
 
     with patch(
         "salt.utils.master.get_running_jobs", MagicMock(return_value=running_data)

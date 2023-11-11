@@ -1,20 +1,10 @@
-# Python libs
 import datetime
 import logging
 
 import pytest
 
-# Salt libs
 import salt.beacons.wtmp as wtmp
 from tests.support.mock import MagicMock, mock_open, patch
-
-# pylint: disable=import-error
-try:
-    import dateutil.parser as dateutil_parser  # pylint: disable=unused-import
-
-    _TIME_SUPPORTED = True
-except ImportError:
-    _TIME_SUPPORTED = False
 
 raw = (
     b"\x07\x00\x00\x00H\x18\x00\x00pts/14\x00\x00\x00\x00\x00\x00"
@@ -171,7 +161,6 @@ def test_match():
             assert ret == _expected
 
 
-@pytest.mark.skipif(_TIME_SUPPORTED is False, reason="dateutil.parser is missing.")
 def test_match_time():
     with patch("salt.utils.files.fopen", mock_open(read_data=raw)):
         mock_now = datetime.datetime(2017, 9, 22, 16, 0, 0, 0)
@@ -236,7 +225,7 @@ def test_match_group():
             with patch("time.time", MagicMock(return_value=1506121200)):
                 with patch("struct.unpack", MagicMock(return_value=pack)):
                     with patch(
-                        "{}.info".format(groupadd),
+                        f"{groupadd}.info",
                         new=MagicMock(return_value=mock_group_info),
                     ):
                         config = [

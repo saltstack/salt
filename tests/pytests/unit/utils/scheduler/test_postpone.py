@@ -1,22 +1,12 @@
 import datetime
 import logging
 
+import dateutil.parser
 import pytest
-
-try:
-    import dateutil.parser
-
-    HAS_DATEUTIL_PARSER = True
-except ImportError:
-    HAS_DATEUTIL_PARSER = False
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.skipif(
-        HAS_DATEUTIL_PARSER is False,
-        reason="The 'dateutil.parser' library is not available",
-    ),
     pytest.mark.windows_whitelisted,
 ]
 

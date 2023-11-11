@@ -24,6 +24,8 @@ import threading
 import time
 import weakref
 
+import dateutil.parser
+
 import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
@@ -47,15 +49,6 @@ from salt.exceptions import SaltInvocationError
 from salt.utils.odict import OrderedDict
 
 # pylint: disable=import-error
-try:
-    import dateutil.parser as dateutil_parser
-
-    _WHEN_SUPPORTED = True
-    _RANGE_SUPPORTED = True
-except ImportError:
-    _WHEN_SUPPORTED = False
-    _RANGE_SUPPORTED = False
-
 try:
     import croniter
 
@@ -834,7 +827,7 @@ class Schedule:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in ret.items():
                     if key != "kwargs":
-                        kwargs["__pub_{}".format(key)] = copy.deepcopy(val)
+                        kwargs[f"__pub_{key}"] = copy.deepcopy(val)
 
             # Only include these when running runner modules
             if self.opts["__role"] == "master":
@@ -899,7 +892,7 @@ class Schedule:
                             rets.extend(returner)
                     # simple de-duplication with order retained
                     for returner in OrderedDict.fromkeys(rets):
-                        ret_str = "{}.returner".format(returner)
+                        ret_str = f"{returner}.returner"
                         if ret_str in self.returners:
                             self.returners[ret_str](ret)
                         else:
@@ -1074,13 +1067,6 @@ class Schedule:
             """
             Handle schedule item with when
             """
-            if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
-                    data["name"]
-                )
-                log.error(data["_error"])
-                return
-
             if not isinstance(data["when"], list):
                 _when_data = [data["when"]]
             else:
@@ -1121,7 +1107,7 @@ class Schedule:
 
                 if not isinstance(when_, datetime.datetime):
                     try:
-                        when_ = dateutil_parser.parse(when_)
+                        when_ = dateutil.parser.parse(when_)
                     except ValueError:
                         data[
                             "_error"
@@ -1281,13 +1267,6 @@ class Schedule:
             """
             Handle schedule item with skip_explicit
             """
-            if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
-                    data["name"]
-                )
-                log.error(data["_error"])
-                return
-
             if not isinstance(data["skip_during_range"], dict):
                 data["_error"] = (
                     "schedule.handle_func: Invalid, range "
@@ -1301,7 +1280,7 @@ class Schedule:
             end = data["skip_during_range"]["end"]
             if not isinstance(start, datetime.datetime):
                 try:
-                    start = dateutil_parser.parse(start)
+                    start = dateutil.parser.parse(start)
                 except ValueError:
                     data["_error"] = (
                         "Invalid date string for start in "
@@ -1313,7 +1292,7 @@ class Schedule:
 
             if not isinstance(end, datetime.datetime):
                 try:
-                    end = dateutil_parser.parse(end)
+                    end = dateutil.parser.parse(end)
                 except ValueError:
                     data["_error"] = (
                         "Invalid date string for end in "
@@ -1360,13 +1339,6 @@ class Schedule:
             """
             Handle schedule item with skip_explicit
             """
-            if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
-                    data["name"]
-                )
-                log.error(data["_error"])
-                return
-
             if not isinstance(data["range"], dict):
                 data["_error"] = (
                     "schedule.handle_func: Invalid, range "
@@ -1380,7 +1352,7 @@ class Schedule:
             end = data["range"]["end"]
             if not isinstance(start, datetime.datetime):
                 try:
-                    start = dateutil_parser.parse(start)
+                    start = dateutil.parser.parse(start)
                 except ValueError:
                     data[
                         "_error"
@@ -1392,7 +1364,7 @@ class Schedule:
 
             if not isinstance(end, datetime.datetime):
                 try:
-                    end = dateutil_parser.parse(end)
+                    end = dateutil.parser.parse(end)
                 except ValueError:
                     data[
                         "_error"
@@ -1431,16 +1403,9 @@ class Schedule:
             """
             Handle schedule item with after
             """
-            if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
-                    data["name"]
-                )
-                log.error(data["_error"])
-                return
-
             after = data["after"]
             if not isinstance(after, datetime.datetime):
-                after = dateutil_parser.parse(after)
+                after = dateutil.parser.parse(after)
 
             if after >= now:
                 log.debug("After time has not passed skipping job: %s.", data["name"])
@@ -1455,16 +1420,9 @@ class Schedule:
             """
             Handle schedule item with until
             """
-            if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
-                    data["name"]
-                )
-                log.error(data["_error"])
-                return
-
             until = data["until"]
             if not isinstance(until, datetime.datetime):
-                until = dateutil_parser.parse(until)
+                until = dateutil.parser.parse(until)
 
             if until <= now:
                 log.debug("Until time has passed skipping job: %s.", data["name"])
@@ -1753,7 +1711,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
+                miss_msg = f" (runtime missed by {abs(seconds)} seconds)"
 
             try:
                 if run:

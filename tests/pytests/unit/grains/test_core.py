@@ -2583,7 +2583,6 @@ def test_osx_memdata():
         assert ret["mem_total"] == 4096
 
 
-@pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
 def test_locale_info_tzname():
     # mock datetime.now().tzname()
     # cant just mock now because it is read only
@@ -2612,7 +2611,6 @@ def test_locale_info_tzname():
         assert ret["locale_info"]["timezone"] == "MDT_FAKE"
 
 
-@pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
 def test_locale_info_unicode_error_tzname():
     # UnicodeDecodeError most have the default string encoding
     unicode_error = UnicodeDecodeError("fake", b"\x00\x00", 1, 2, "fake")
@@ -2653,19 +2651,6 @@ def test_locale_info_unicode_error_tzname():
         is_windows.assert_called_once_with()
 
         assert ret["locale_info"]["timezone"] == "CST_FAKE"
-
-
-@pytest.mark.skipif(core._DATEUTIL_TZ, reason="Not Missing dateutil.tz")
-def test_locale_info_no_tz_tzname():
-    with patch.object(
-        salt.utils.platform, "is_proxy", return_value=False
-    ) as is_proxy, patch.object(
-        core.salt.utils.platform, "is_windows", return_value=True
-    ) as is_windows:
-        ret = core.locale_info()
-        is_proxy.assert_called_once_with()
-        is_windows.assert_not_called()
-        assert ret["locale_info"]["timezone"] == "unknown"
 
 
 def test_cwd_exists():

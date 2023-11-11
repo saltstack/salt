@@ -13,21 +13,13 @@ import datetime
 import logging
 import os
 
+import dateutil.parser
 import yaml
 
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.yaml
-
-try:
-    import dateutil.parser as dateutil_parser
-
-    _WHEN_SUPPORTED = True
-    _RANGE_SUPPORTED = True
-except ImportError:
-    _WHEN_SUPPORTED = False
-    _RANGE_SUPPORTED = False
 
 __proxyenabled__ = ["*"]
 
@@ -531,23 +523,16 @@ def build_schedule_item(name, **kwargs):
             schedule[name]["splay"] = kwargs["splay"]
 
     if "when" in kwargs:
-        if not _WHEN_SUPPORTED:
-            ret["result"] = False
-            ret["comment"] = 'Missing dateutil.parser, "when" is unavailable.'
-            return ret
-        else:
-            validate_when = kwargs["when"]
-            if not isinstance(validate_when, list):
-                validate_when = [validate_when]
-            for _when in validate_when:
-                try:
-                    dateutil_parser.parse(_when)
-                except ValueError:
-                    ret["result"] = False
-                    ret["comment"] = 'Schedule item {} for "when" in invalid.'.format(
-                        _when
-                    )
-                    return ret
+        validate_when = kwargs["when"]
+        if not isinstance(validate_when, list):
+            validate_when = [validate_when]
+        for _when in validate_when:
+            try:
+                dateutil.parser.parse(_when)
+            except ValueError:
+                ret["result"] = False
+                ret["comment"] = f'Schedule item {_when} for "when" in invalid.'
+                return ret
 
     for item in [
         "range",

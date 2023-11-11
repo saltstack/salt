@@ -16,6 +16,7 @@ import tempfile
 import zipfile
 
 import charset_normalizer  # pylint: disable=3rd-party-module-not-gated  # Due to requests
+import dateutil
 import distro
 import idna  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import jinja2
@@ -25,6 +26,7 @@ import markupsafe
 import msgpack
 import packaging
 import requests
+import six  # pylint: disable=blacklisted-external-import,3rd-party-module-not-gated
 import tornado
 import urllib3  # pylint: disable=3rd-party-module-not-gated  # Due to requests
 import yaml
@@ -287,6 +289,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "urllib3",
         "charset_normalizer",
         "idna",
+        "dateutil",
+        "six",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -441,6 +445,8 @@ def get_tops(extra_mods="", so_mods=""):
         urllib3,
         charset_normalizer,
         idna,
+        dateutil,
+        six,
     ]
     modules = find_site_modules("contextvars")
     if modules:

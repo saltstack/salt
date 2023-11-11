@@ -148,18 +148,13 @@ LOGOUT_TYPE = 8
 
 log = logging.getLogger(__name__)
 
-try:
-    import dateutil.parser as dateutil_parser
-
-    _TIME_SUPPORTED = True
-except ImportError:
-    _TIME_SUPPORTED = False
+import dateutil.parser
 
 
 def __virtual__():
     if os.path.isfile(WTMP):
         return __virtualname__
-    err_msg = "{} does not exist.".format(WTMP)
+    err_msg = f"{WTMP} does not exist."
     log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
     return False, err_msg
 
@@ -204,14 +199,10 @@ def _check_time_range(time_range, now):
     """
     Check time range
     """
-    if _TIME_SUPPORTED:
-        _start = dateutil_parser.parse(time_range["start"])
-        _end = dateutil_parser.parse(time_range["end"])
+    _start = dateutil.parser.parse(time_range["start"])
+    _end = dateutil.parser.parse(time_range["end"])
 
-        return bool(_start <= now <= _end)
-    else:
-        log.error("Dateutil is required.")
-        return False
+    return bool(_start <= now <= _end)
 
 
 def _get_loc():

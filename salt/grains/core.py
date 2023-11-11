@@ -23,6 +23,8 @@ import time
 import uuid
 from errno import EACCES, EPERM
 
+import dateutil.tz
+
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -93,13 +95,6 @@ except ImportError:  # Define freedesktop_os_release for Python < 3.10
 def __init__(opts):
     _clear_interfaces()
 
-
-try:
-    import dateutil.tz  # pylint: disable=import-error
-
-    _DATEUTIL_TZ = True
-except ImportError:
-    _DATEUTIL_TZ = False
 
 log = logging.getLogger(__name__)
 
@@ -2696,16 +2691,15 @@ def locale_info():
     grains["locale_info"]["detectedencoding"] = __salt_system_encoding__
 
     grains["locale_info"]["timezone"] = "unknown"
-    if _DATEUTIL_TZ:
-        try:
-            grains["locale_info"]["timezone"] = datetime.datetime.now(
-                dateutil.tz.tzlocal()
-            ).tzname()
-        except UnicodeDecodeError:
-            # Because the method 'tzname' is not a part of salt the decoding error cant be fixed.
-            # The error is in datetime in the python2 lib
-            if salt.utils.platform.is_windows():
-                grains["locale_info"]["timezone"] = time.tzname[0].decode("mbcs")
+    try:
+        grains["locale_info"]["timezone"] = datetime.datetime.now(
+            dateutil.tz.tzlocal()
+        ).tzname()
+    except UnicodeDecodeError:
+        # Because the method 'tzname' is not a part of salt the decoding error cant be fixed.
+        # The error is in datetime in the python2 lib
+        if salt.utils.platform.is_windows():
+            grains["locale_info"]["timezone"] = time.tzname[0].decode("mbcs")
 
     return grains
 

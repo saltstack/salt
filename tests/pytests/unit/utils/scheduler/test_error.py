@@ -1,15 +1,9 @@
 import logging
 
+import dateutil.parser
 import pytest
 
 from tests.support.mock import MagicMock, patch
-
-try:
-    import dateutil.parser
-
-    HAS_DATEUTIL_PARSER = True
-except ImportError:
-    HAS_DATEUTIL_PARSER = False
 
 try:
     import croniter  # pylint: disable=unused-import
@@ -19,13 +13,6 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-
-pytestmark = [
-    pytest.mark.skipif(
-        HAS_DATEUTIL_PARSER is False,
-        reason="The 'dateutil.parser' library is not available",
-    ),
-]
 
 
 @pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")

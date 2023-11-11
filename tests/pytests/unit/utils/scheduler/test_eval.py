@@ -3,19 +3,12 @@ import logging
 import random
 import time
 
+import dateutil.parser
 import pytest
 
 import salt.utils.platform
 import salt.utils.schedule
 from tests.support.mock import MagicMock, patch
-
-try:
-    import dateutil.parser
-
-    HAS_DATEUTIL_PARSER = True
-except ImportError:
-    HAS_DATEUTIL_PARSER = False
-
 
 try:
     import croniter  # pylint: disable=unused-import
@@ -27,10 +20,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.skipif(
-        HAS_DATEUTIL_PARSER is False,
-        reason="The 'dateutil.parser' library is not available",
-    ),
     pytest.mark.windows_whitelisted,
 ]
 

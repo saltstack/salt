@@ -702,7 +702,8 @@ allowed-3rd-party-modules=msgpack,
                           jmespath,
                           setproctitle,
                           markupsafe,
-                          timelib
+                          timelib,
+                          dateutil
 
 [EXCEPTIONS]
 

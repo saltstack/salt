@@ -87,6 +87,8 @@ class SSHThinTestCase(TestCase):
             "urllib3": str(code_dir / "urllib3"),
             "charset_normalizer": str(code_dir / "charset_normalizer"),
             "idna": str(code_dir / "idna"),
+            "dateutil": str(code_dir / "dateutil"),
+            "six": str(code_dir / "six.py"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -484,6 +486,8 @@ class SSHThinTestCase(TestCase):
             "urllib3",
             "charset_normalizer",
             "idna",
+            "dateutil",
+            "six.py",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -494,7 +498,6 @@ class SSHThinTestCase(TestCase):
             else:
                 spl = os.sep
             tops.append(top.rsplit(spl, 1)[-1])
-        assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops), sorted(tops)
 
     @patch(
@@ -588,6 +591,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.idna",
         type("idna", (), {"__file__": "/site-packages/idna"}),
     )
+    @patch(
+        "salt.utils.thin.dateutil",
+        type("dateutil", (), {"__file__": "/site-packages/dateutil"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
         """
@@ -616,6 +623,8 @@ class SSHThinTestCase(TestCase):
             "urllib3",
             "charset_normalizer",
             "idna",
+            "dateutil",
+            "six.py",
             "foo",
             "bar.py",
         ]
@@ -730,6 +739,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.idna",
         type("idna", (), {"__file__": "/site-packages/idna"}),
     )
+    @patch(
+        "salt.utils.thin.dateutil",
+        type("dateutil", (), {"__file__": "/site-packages/dateutil"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
         """
@@ -758,6 +771,8 @@ class SSHThinTestCase(TestCase):
             "urllib3",
             "charset_normalizer",
             "idna",
+            "dateutil",
+            "six.py",
             "foo.so",
             "bar.so",
         ]
@@ -1201,6 +1216,8 @@ class SSHThinTestCase(TestCase):
                     (bts("urllib3/__init__.py"), bts("")),
                     (bts("charset_normalizer/__init__.py"), bts("")),
                     (bts("idna/__init__.py"), bts("")),
+                    (bts("dateutil/__init__.py"), bts("")),
+                    (bts("six.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1248,6 +1265,8 @@ class SSHThinTestCase(TestCase):
                     (bts("urllib3/__init__.py"), bts("")),
                     (bts("charset_normalizer/__init__.py"), bts("")),
                     (bts("idna/__init__.py"), bts("")),
+                    (bts("dateutil/__init__.py"), bts("")),
+                    (bts("six.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1297,6 +1316,8 @@ class SSHThinTestCase(TestCase):
                     (bts("urllib3/__init__.py"), bts("")),
                     (bts("charset_normalizer/__init__.py"), bts("")),
                     (bts("idna/__init__.py"), bts("")),
+                    (bts("dateutil/__init__.py"), bts("")),
+                    (bts("six.py"), bts("")),
                 ],
             ),
         )
