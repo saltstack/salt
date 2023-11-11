@@ -704,7 +704,8 @@ allowed-3rd-party-modules=msgpack,
                           markupsafe,
                           timelib,
                           dateutil,
-                          gnupg
+                          gnupg,
+                          cherrypy
 
 [EXCEPTIONS]
 

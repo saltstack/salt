@@ -7,24 +7,13 @@ This is run by ``salt-api`` and started in a multiprocess.
 import logging
 import os
 
+import cherrypy
+
 from salt.utils.versions import Version
-
-# pylint: disable=C0103
-
-
-# Import CherryPy without traceback so we can provide an intelligent log
-# message in the __virtual__ function
-try:
-    import cherrypy
-
-    cpy_error = None
-except ImportError as exc:
-    cpy_error = exc
 
 __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or "rest_cherrypy"
 
 logger = logging.getLogger(__virtualname__)
-cpy_min = "3.2.2"
 
 
 def __virtual__():
@@ -36,23 +25,8 @@ def __virtual__():
         # run the module and increase logging severity to be helpful
 
         # Everything looks good; return the module name
-        if not cpy_error and "port" in mod_opts:
+        if "port" in mod_opts:
             return __virtualname__
-
-        # CherryPy wasn't imported; explain why
-        if cpy_error:
-            if "cherrypy" in globals() and Version(cherrypy.__version__) < Version(
-                cpy_min
-            ):
-                error_msg = "Required version of CherryPy is {} or greater.".format(
-                    cpy_min
-                )
-            else:
-                error_msg = cpy_error
-
-            logger.error(
-                "Not loading '%s'. Error loading CherryPy: %s", __name__, error_msg
-            )
 
         # Missing port config
         if "port" not in mod_opts:
