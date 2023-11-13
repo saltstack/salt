@@ -76,6 +76,7 @@ def test_versions_report(salt_run_cli):
         return
 
     assert "relenv" in ret_dict["Dependency Versions"]
+    assert "relenv" in ret_dict["Hard Dependency Versions"]
     assert "Salt Extensions" in ret_dict
 
 

@@ -87,7 +87,8 @@ def test_versions_report(salt_cli):
         return
 
     assert "onedir" in ret_dict["Salt Package Information"]["Package Type"]
-    assert "relenv" in ret_dict["Dependency Versions"]
+    assert "relenv" in ret_dict["Hard Dependency Versions"]
+    assert "Soft Dependency Versions" in ret_dict
     assert "Salt Extensions" in ret_dict
     assert "salt-analytics-framework" in ret_dict["Salt Extensions"]
 

@@ -695,55 +695,40 @@ def package_information():
     yield "Package Type", salt.utils.package.pkg_type()
 
 
-def dependency_information(include_salt_cloud=False):
+def hard_dependencies_information():
     """
-    Report versions of library dependencies.
+    Report versions of Salt's library hard dependencies.
     """
     libs = [
         ("Jinja2", "jinja2", "__version__"),
-        ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
-        ("msgpack-pure", "msgpack_pure", "version"),
-        ("pycrypto", "Crypto", "__version__"),
-        ("pycryptodome", "Cryptodome", "version_info"),
+        ("PyCryptodomeX", "Cryptodome", "version_info"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
         ("ZMQ", "zmq", "zmq_version"),
-        ("Mako", "mako", "__version__"),
         ("Tornado", "tornado", "version"),
         ("timelib", "timelib", "version"),
-        ("dateutil", "dateutil", "__version__"),
-        ("pygit2", "pygit2", "__version__"),
-        ("libgit2", "pygit2", "LIBGIT2_VERSION"),
-        ("smmap", "smmap", "__version__"),
-        ("cffi", "cffi", "__version__"),
-        ("pycparser", "pycparser", "__version__"),
-        ("gitdb", "gitdb", "__version__"),
-        ("gitpython", "git", "__version__"),
+        ("python-dateutil", "dateutil", "__version__"),
         ("python-gnupg", "gnupg", "__version__"),
-        ("mysql-python", "MySQLdb", "__version__"),
         ("cherrypy", "cherrypy", "__version__"),
-        ("docker-py", "docker", "__version__"),
         ("packaging", "packaging", "__version__"),
         ("looseversion", "looseversion", None),
         ("relenv", "relenv", "__version__"),
         ("jmespath", "jmespath", None),
         ("psutil", "psutil", None),
         ("requests", "requests", None),
+        ("distro", "distro", None),
+        ("contextvars", "contextvars", None),
+        ("setproctitle", "setproctitle", None),
+        ("pyopenssl", "pyopenssl", None),
+        ("cryptography", "cryptography", None),
+        ("importlib-metadata", "importlib_metadata", None),
     ]
-
-    if include_salt_cloud:
-        libs.append(
-            ("Apache Libcloud", "libcloud", "__version__"),
-        )
 
     def _sort_by_lowercased_name(entry):
         return entry[0].lower()
 
     for name, imp, attr in sorted(libs, key=_sort_by_lowercased_name):
-        if imp is None:
-            yield name, attr
-            continue
         try:
             if attr is None:
                 # Late import to reduce the needed available modules and libs
@@ -762,6 +747,64 @@ def dependency_information(include_salt_cloud=False):
             yield name, version
         except Exception:  # pylint: disable=broad-except
             yield name, None
+
+
+def soft_dependencies_information(include_salt_cloud=False):
+    """
+    Report versions of library dependencies.
+    """
+    libs = [
+        ("M2Crypto", "M2Crypto", "version"),
+        ("pycrypto", "Crypto", "__version__"),
+        ("Mako", "mako", "__version__"),
+        ("pygit2", "pygit2", "__version__"),
+        ("libgit2", "pygit2", "LIBGIT2_VERSION"),
+        ("smmap", "smmap", "__version__"),
+        ("cffi", "cffi", "__version__"),
+        ("pycparser", "pycparser", "__version__"),
+        ("gitdb", "gitdb", "__version__"),
+        ("gitpython", "git", "__version__"),
+        ("mysql-python", "MySQLdb", "__version__"),
+        ("docker-py", "docker", "__version__"),
+    ]
+
+    if include_salt_cloud:
+        libs.append(
+            ("Apache Libcloud", "libcloud", "__version__"),
+        )
+
+    def _sort_by_lowercased_name(entry):
+        return entry[0].lower()
+
+    for name, imp, attr in sorted(libs, key=_sort_by_lowercased_name):
+        try:
+            if attr is None:
+                # Late import to reduce the needed available modules and libs
+                # installed when running `python salt/version.py`
+                import importlib_metadata
+
+                version = importlib_metadata.version(imp)
+                yield name, version
+                continue
+            imp = __import__(imp)
+            version = getattr(imp, attr)
+            if callable(version):
+                version = version()
+            if isinstance(version, (tuple, list)):
+                version = ".".join(map(str, version))
+            yield name, version
+        except Exception:  # pylint: disable=broad-except
+            # Since this is a soft depdenccy, and it's not installed,
+            # don't waste space on it
+            continue
+
+
+def dependency_information(include_salt_cloud=False):
+    """
+    Report versions of library dependencies.
+    """
+    yield from hard_dependencies_information()
+    yield from soft_dependencies_information(include_salt_cloud)
 
 
 def system_information():
@@ -878,14 +921,16 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
         ("Python", sys.version.rsplit("\n")[0].strip()),
     ]
     salt_info = list(salt_information())
-    lib_info = list(dependency_information(include_salt_cloud))
+    hard_dep_info = list(hard_dependencies_information())
+    soft_dep_info = list(soft_dependencies_information(include_salt_cloud))
     sys_info = list(system_information())
     package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
         "Python Version": dict(py_info),
-        "Dependency Versions": dict(lib_info),
+        "Hard Dependency Versions": dict(hard_dep_info),
+        "Soft Dependency Versions": dict(soft_dep_info),
         "System Versions": dict(sys_info),
         "Salt Package Information": dict(package_info),
     }
@@ -905,20 +950,22 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     )
     not_installed = "Not Installed"
     ns_pad = len(not_installed)
-    lib_pad = max(len(name) for name in ver_info["Dependency Versions"])
+    hard_lib_pad = max(len(name) for name in ver_info["Hard Dependency Versions"])
+    soft_lib_pad = max(len(name) for name in ver_info["Soft Dependency Versions"])
     sys_pad = max(len(name) for name in ver_info["System Versions"])
     if include_extensions and "Salt Extensions" in ver_info:
         ext_pad = max(len(name) for name in ver_info["Salt Extensions"])
     else:
         ext_pad = 1
-    padding = max(lib_pad, sys_pad, ns_pad, ext_pad) + 1
+    padding = max(hard_lib_pad, soft_lib_pad, sys_pad, ns_pad, ext_pad) + 1
 
     fmt = "{0:>{pad}}: {1}"
     info = []
     for ver_type in (
         "Salt Version",
         "Python Version",
-        "Dependency Versions",
+        "Hard Dependency Versions",
+        "Soft Dependency Versions",
         "Salt Extensions",
         "Salt Package Information",
         "System Versions",
