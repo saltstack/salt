@@ -1229,9 +1229,12 @@ def replace_deployment(
     Replaces an existing deployment with a new one defined by name and
     namespace, having the specificed metadata and spec.
     """
+
+    from kubernetes.client import V1Deployment
+
     body = __create_object_body(
         kind="Deployment",
-        obj_class=AppsV1beta1Deployment,
+        obj_class=V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1245,7 +1248,7 @@ def replace_deployment(
     cfg = _setup_conn(**kwargs)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.replace_namespaced_deployment(name, namespace, body)
 
         return api_response.to_dict()
