@@ -38,11 +38,11 @@ def test_info(salt_call_cli, setup_teardown_vars):
 
     # Correct Functionality
     ret = salt_call_cli.run("shadow.info", TEST_USER)
-    assert ret["name"] == TEST_USER
+    assert ret.data["name"] == TEST_USER
 
     # User does not exist
     ret = salt_call_cli.run("shadow.info", NO_USER)
-    assert ret["name"] == ""
+    assert ret.data["name"] == ""
 
 
 def test_get_account_created(salt_call_cli, setup_teardown_vars):
@@ -54,7 +54,7 @@ def test_get_account_created(salt_call_cli, setup_teardown_vars):
 
     # Correct Functionality
     text_date = salt_call_cli.run("shadow.get_account_created", TEST_USER)
-    assert text_date != "Invalid Timestamp"
+    assert text_date.data != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 

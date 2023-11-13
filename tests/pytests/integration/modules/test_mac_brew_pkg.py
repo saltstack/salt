@@ -134,8 +134,8 @@ def test_latest_version(salt_call_cli, add_pkg, setup_teardown_vars):
         installed_latest = salt_call_cli.run("pkg.latest_version", add_pkg)
         version = salt_call_cli.run("pkg.version", add_pkg)
         try:
-            assert isinstance(uninstalled_latest, str)
-            assert installed_latest == version
+            assert isinstance(uninstalled_latest.data, str)
+            assert installed_latest.data == version.data
         except AssertionError:
             salt_call_cli.run("pkg.remove", add_pkg)
             raise
@@ -149,7 +149,7 @@ def test_refresh_db(salt_call_cli, setup_teardown_vars):
     Integration test to ensure pkg.refresh_db works with brew
     """
     refresh_brew = salt_call_cli.run("pkg.refresh_db")
-    assert refresh_brew
+    assert refresh_brew.data
 
 
 def test_list_upgrades(salt_call_cli, add_pkg, setup_teardown_vars):

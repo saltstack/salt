@@ -21,18 +21,25 @@ def test_wake_on_network(salt_call_cli):
 
     WAKE_ON_NET = None
     ret = salt_call_cli.run("power.get_wake_on_network")
-    if isinstance(ret, bool):
-        WAKE_ON_NET = ret
+    if isinstance(ret.data, bool):
+        WAKE_ON_NET = ret.data
 
     # If available on this system, test it
     if WAKE_ON_NET is None:
         # Check for not available
         ret = salt_call_cli.run("power.get_wake_on_network")
-        assert "Error" in ret
+        assert "Error" in ret.data
     else:
-        assert salt_call_cli.run("power.set_wake_on_network", "on")
-        assert salt_call_cli.run("power.get_wake_on_network")
-        assert salt_call_cli.run("power.set_wake_on_network", "off")
-        assert not salt_call_cli.run("power.get_wake_on_network")
+        ret = salt_call_cli.run("power.set_wake_on_network", "on")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.get_wake_on_network")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.set_wake_on_network", "off")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.get_wake_on_network")
+        assert not ret.data
 
         salt_call_cli.run("power.set_wake_on_network", WAKE_ON_NET)
