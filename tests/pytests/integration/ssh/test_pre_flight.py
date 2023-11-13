@@ -204,6 +204,7 @@ def account():
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_not_root
 def test_ssh_pre_flight_script(salt_ssh_cli, caplog, _create_roster, tmp_path, account):
     """
     Test to ensure user cannot create and run a script
@@ -235,6 +236,7 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_not_root
 def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
     """
     Test to ensure standard user cannot run pre flight script
