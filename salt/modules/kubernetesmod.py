@@ -983,9 +983,12 @@ def create_deployment(
     """
     Creates the kubernetes deployment as defined by the user.
     """
+
+    from kubernetes.client import V1Deployment
+
     body = __create_object_body(
         kind="Deployment",
-        obj_class=AppsV1beta1Deployment,
+        obj_class=V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -999,7 +1002,7 @@ def create_deployment(
     cfg = _setup_conn(**kwargs)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.create_namespaced_deployment(namespace, body)
 
         return api_response.to_dict()
