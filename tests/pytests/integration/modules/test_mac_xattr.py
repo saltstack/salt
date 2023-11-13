@@ -180,7 +180,5 @@ def test_clear(salt_call_cli, setup_teardown_vars):
     assert ret.data
 
     # Test file not found
-    ret = (
-        salt_call_cli.run("xattr.clear", no_file) == f"ERROR: File not found: {no_file}"
-    )
+    ret = salt_call_cli.run("xattr.clear", no_file)
     assert ret.data == f"ERROR: File not found: {no_file}"

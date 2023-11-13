@@ -63,7 +63,7 @@ def test_get_set_date(salt_call_cli):
     # Test bad date format
     ret = salt_call_cli.run("timezone.set_date", "13/12/2014")
     assert (
-        ret.data
+        ret.stderr
         == "ERROR executing 'timezone.set_date': Invalid Date/Time Format: 13/12/2014"
     )
 
@@ -94,7 +94,7 @@ def test_set_time(salt_call_cli):
     # Test bad time format
     ret = salt_call_cli.run("timezone.set_time", "3:71")
     assert (
-        ret.data
+        ret.stderr
         == "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71"
     )
 
@@ -116,7 +116,7 @@ def test_get_set_zone(salt_call_cli):
     # Test bad time zone
     ret = salt_call_cli.run("timezone.set_zone", "spongebob")
     assert (
-        ret.data == "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
+        ret.stderr == "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
     )
 
 
