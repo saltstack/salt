@@ -48,16 +48,16 @@ def test_computer_sleep(salt_call_cli, setup_teardown_vars):
 
     # Test invalid input
     ret = salt_call_cli.run("power.set_computer_sleep", "spongebob")
-    assert "Invalid String Value for Minutes" in ret.data
+    assert "Invalid String Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_computer_sleep", 0)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_computer_sleep", 181)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_computer_sleep", True)
-    assert "Invalid Boolean Value for Minutes" in ret.data
+    assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
 def test_display_sleep(salt_call_cli, setup_teardown_vars):
@@ -81,16 +81,16 @@ def test_display_sleep(salt_call_cli, setup_teardown_vars):
 
     # Test invalid input
     ret = salt_call_cli.run("power.set_display_sleep", "spongebob")
-    assert "Invalid String Value for Minutes" in ret.data
+    assert "Invalid String Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_display_sleep", 0)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_display_sleep", 181)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_display_sleep", True)
-    assert "Invalid Boolean Value for Minutes" in ret.data
+    assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
 def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
@@ -114,16 +114,16 @@ def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
 
     # Test invalid input
     ret = salt_call_cli.run("power.set_harddisk_sleep", "spongebob")
-    assert "Invalid String Value for Minutes" in ret.data
+    assert "Invalid String Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_harddisk_sleep", 0)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_harddisk_sleep", 181)
-    assert "Invalid Integer Value for Minutes" in ret.data
+    assert "Invalid Integer Value for Minutes" in ret.stderr
 
     ret = salt_call_cli.run("power.set_harddisk_sleep", True)
-    assert "Invalid Boolean Value for Minutes" in ret.data
+    assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
 def test_restart_freeze(salt_call_cli, setup_teardown_vars):

@@ -95,7 +95,7 @@ def test_get_set_remote_login(salt_call_cli):
 
     # Test invalid input
     ret = salt_call_cli.run("system.set_remote_login", "spongebob")
-    assert "Invalid String Value for Enabled" in ret.data
+    assert "Invalid String Value for Enabled" in ret.stderr
 
 
 def test_get_set_remote_events(salt_call_cli):
@@ -143,7 +143,7 @@ def test_get_set_remote_events(salt_call_cli):
 
     # Test invalid input
     ret = salt_call_cli.run("system.set_remote_events", "spongebob")
-    assert "Invalid String Value for Enabled" in ret.data
+    assert "Invalid String Value for Enabled" in ret.stderr
 
 
 def test_get_set_subnet_name(salt_call_cli):
@@ -176,7 +176,7 @@ def test_get_list_startup_disk(salt_call_cli):
 
     # Test passing set a bad disk
     ret = salt_call_cli.run("system.set_startup_disk", "spongebob")
-    assert "Invalid value passed for path." in ret.data
+    assert "Invalid value passed for path." in ret.stderr
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -196,7 +196,7 @@ def test_get_set_restart_delay(salt_call_cli):
 
     # Pass set bad value for seconds
     ret = salt_call_cli.run("system.set_restart_delay", 70)
-    assert "Invalid value passed for seconds." in ret.data
+    assert "Invalid value passed for seconds." in ret.stderr
 
 
 def test_get_set_disable_keyboard_on_lock(salt_call_cli):
@@ -244,7 +244,7 @@ def test_get_set_disable_keyboard_on_lock(salt_call_cli):
 
     # Test invalid input
     ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "spongebob")
-    assert "Invalid String Value for Enabled" in ret.data
+    assert "Invalid String Value for Enabled" in ret.stderr
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -270,7 +270,7 @@ def test_get_set_boot_arch(salt_call_cli):
 
     # Test invalid input
     ret = salt_call_cli.run("system.set_boot_arch", "spongebob")
-    assert "Invalid value passed for arch" in ret.data
+    assert "Invalid value passed for arch" in ret.stderr
 
 
 # A similar test used to be skipped on py3 due to 'hanging', if we see
