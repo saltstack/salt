@@ -92,6 +92,7 @@ def __virtual__():
 
     return __virtualname__
 
+
 if not salt.utils.platform.is_windows():
 
     @contextmanager
@@ -470,8 +471,7 @@ def deployments(namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "AppsV1Api->list_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->list_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -816,8 +816,7 @@ def delete_deployment(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "AppsV1Api->delete_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->delete_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1253,8 +1252,7 @@ def replace_deployment(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "AppsV1Api->replace_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->replace_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
