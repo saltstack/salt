@@ -34,24 +34,30 @@ def test_computer_sleep(salt_call_cli, setup_teardown_vars):
     """
 
     # Normal Functionality
-    assert salt_call_cli.run("power.set_computer_sleep", 90)
-    assert salt_call_cli.run("power.get_computer_sleep") == "after 90 minutes"
-    assert salt_call_cli.run("power.set_computer_sleep", "Off")
-    assert salt_call_cli.run("power.get_computer_sleep") == "Never"
+    ret = salt_call_cli.run("power.set_computer_sleep", 90)
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_computer_sleep")
+    assert ret.data == "after 90 minutes"
+
+    ret = salt_call_cli.run("power.set_computer_sleep", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_computer_sleep")
+    assert ret.data == "Never"
 
     # Test invalid input
-    assert "Invalid String Value for Minutes" in salt_call_cli.run(
-        "power.set_computer_sleep", "spongebob"
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_computer_sleep", 0
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_computer_sleep", 181
-    )
-    assert "Invalid Boolean Value for Minutes" in salt_call_cli.run(
-        "power.set_computer_sleep", True
-    )
+    ret = salt_call_cli.run("power.set_computer_sleep", "spongebob")
+    assert "Invalid String Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_computer_sleep", 0)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_computer_sleep", 181)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_computer_sleep", True)
+    assert "Invalid Boolean Value for Minutes" in ret.data
 
 
 def test_display_sleep(salt_call_cli, setup_teardown_vars):
@@ -61,24 +67,30 @@ def test_display_sleep(salt_call_cli, setup_teardown_vars):
     """
 
     # Normal Functionality
-    assert salt_call_cli.run("power.set_display_sleep", 90)
-    assert salt_call_cli.run("power.get_display_sleep") == "after 90 minutes"
-    assert salt_call_cli.run("power.set_display_sleep", "Off")
-    assert salt_call_cli.run("power.get_display_sleep") == "Never"
+    ret = salt_call_cli.run("power.set_display_sleep", 90)
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_display_sleep")
+    assert ret.data == "after 90 minutes"
+
+    ret = salt_call_cli.run("power.set_display_sleep", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_display_sleep")
+    assert ret.data == "Never"
 
     # Test invalid input
-    assert "Invalid String Value for Minutes" in salt_call_cli.run(
-        "power.set_display_sleep", "spongebob"
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_display_sleep", 0
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_display_sleep", 181
-    )
-    assert "Invalid Boolean Value for Minutes" in salt_call_cli.run(
-        "power.set_display_sleep", True
-    )
+    ret = salt_call_cli.run("power.set_display_sleep", "spongebob")
+    assert "Invalid String Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_display_sleep", 0)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_display_sleep", 181)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_display_sleep", True)
+    assert "Invalid Boolean Value for Minutes" in ret.data
 
 
 def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
@@ -88,24 +100,30 @@ def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
     """
 
     # Normal Functionality
-    assert salt_call_cli.run("power.set_harddisk_sleep", 90)
-    assert salt_call_cli.run("power.get_harddisk_sleep") == "after 90 minutes"
-    assert salt_call_cli.run("power.set_harddisk_sleep", "Off")
-    assert salt_call_cli.run("power.get_harddisk_sleep") == "Never"
+    ret = salt_call_cli.run("power.set_harddisk_sleep", 90)
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_harddisk_sleep")
+    assert ret.data == "after 90 minutes"
+
+    ret = salt_call_cli.run("power.set_harddisk_sleep", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_harddisk_sleep")
+    assert ret.data == "Never"
 
     # Test invalid input
-    assert "Invalid String Value for Minutes" in salt_call_cli.run(
-        "power.set_harddisk_sleep", "spongebob"
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_harddisk_sleep", 0
-    )
-    assert "Invalid Integer Value for Minutes" in salt_call_cli.run(
-        "power.set_harddisk_sleep", 181
-    )
-    assert "Invalid Boolean Value for Minutes" in salt_call_cli.run(
-        "power.set_harddisk_sleep", True
-    )
+    ret = salt_call_cli.run("power.set_harddisk_sleep", "spongebob")
+    assert "Invalid String Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_harddisk_sleep", 0)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_harddisk_sleep", 181)
+    assert "Invalid Integer Value for Minutes" in ret.data
+
+    ret = salt_call_cli.run("power.set_harddisk_sleep", True)
+    assert "Invalid Boolean Value for Minutes" in ret.data
 
 
 def test_restart_freeze(salt_call_cli, setup_teardown_vars):
@@ -114,10 +132,17 @@ def test_restart_freeze(salt_call_cli, setup_teardown_vars):
     Test power.set_restart_freeze
     """
     # Normal Functionality
-    assert salt_call_cli.run("power.set_restart_freeze", "on")
-    assert salt_call_cli.run("power.get_restart_freeze")
+    ret = salt_call_cli.run("power.set_restart_freeze", "on")
+    assert ret.data
+
+    ret = salt_call_cli.run("power.get_restart_freeze")
+    assert ret.data
+
     # This will return False because mac fails to actually make the change
-    assert not salt_call_cli.run("power.set_restart_freeze", "off")
+    ret = salt_call_cli.run("power.set_restart_freeze", "off")
+    assert not ret.data
+
     # Even setting to off returns true, it actually is never set
     # This is an apple bug
-    assert salt_call_cli.run("power.get_restart_freeze")
+    ret = salt_call_cli.run("power.get_restart_freeze")
+    assert ret.data

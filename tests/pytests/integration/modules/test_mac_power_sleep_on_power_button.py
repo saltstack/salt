@@ -21,18 +21,25 @@ def test_sleep_on_power_button(salt_call_cli):
     SLEEP_ON_BUTTON = None
 
     ret = salt_call_cli.run("power.get_sleep_on_power_button")
-    if isinstance(ret, bool):
+    if isinstance(ret.data, bool):
         SLEEP_ON_BUTTON = salt_call_cli.run("power.get_sleep_on_power_button")
 
     # If available on this system, test it
-    if SLEEP_ON_BUTTON is None:
+    if SLEEP_ON_BUTTON.data is None:
         # Check for not available
         ret = salt_call_cli.run("power.get_sleep_on_power_button")
-        assert "Error" in ret
+        assert "Error" in ret.data
     else:
-        assert salt_call_cli.run("power.set_sleep_on_power_button", "on")
-        assert salt_call_cli.run("power.get_sleep_on_power_button")
-        assert salt_call_cli.run("power.set_sleep_on_power_button", "off")
-        assert not salt_call_cli.run("power.get_sleep_on_power_button")
+        ret = salt_call_cli.run("power.set_sleep_on_power_button", "on")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.get_sleep_on_power_button")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.set_sleep_on_power_button", "off")
+        assert ret.data
+
+        ret = salt_call_cli.run("power.get_sleep_on_power_button")
+        assert not ret.data
 
         salt_call_cli.run("power.set_sleep_on_power_button", SLEEP_ON_BUTTON)

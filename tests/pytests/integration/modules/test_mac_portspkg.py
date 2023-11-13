@@ -29,8 +29,9 @@ def test_list_pkgs(salt_call_cli, setup_teardown_vars):
     Test pkg.list_pkgs
     """
     salt_call_cli.run("pkg.install", "agree")
-    assert isinstance(salt_call_cli.run("pkg.list_pkgs"), dict)
-    assert "agree" in salt_call_cli.run("pkg.list_pkgs")
+    pkg_list_ret = salt_call_cli.run("pkg.list_pkgs")
+    assert isinstance(pkg_list_ret.data, dict)
+    assert "agree" in pkg_list_ret.data
 
 
 def test_latest_version(salt_call_cli, setup_teardown_vars):
@@ -39,8 +40,8 @@ def test_latest_version(salt_call_cli, setup_teardown_vars):
     """
     salt_call_cli.run("pkg.install", "agree")
     result = salt_call_cli.run("pkg.latest_version", "agree", refresh=False)
-    assert isinstance(result, dict)
-    assert "agree" in result
+    assert isinstance(result.data, dict)
+    assert "agree" in result.data
 
 
 def test_remove(salt_call_cli, setup_teardown_vars):
@@ -49,8 +50,8 @@ def test_remove(salt_call_cli, setup_teardown_vars):
     """
     salt_call_cli.run("pkg.install", "agree")
     removed = salt_call_cli.run("pkg.remove", "agree")
-    assert isinstance(removed, dict)
-    assert "agree" in removed
+    assert isinstance(removed.data, dict)
+    assert "agree" in removed.data
 
 
 @pytest.mark.destructive_test
@@ -60,15 +61,16 @@ def test_install(salt_call_cli, setup_teardown_vars):
     """
     salt_call_cli.run("pkg.remove", "agree")
     installed = salt_call_cli.run("pkg.install", "agree")
-    assert isinstance(installed, dict)
-    assert "agree" in installed
+    assert isinstance(installed.data, dict)
+    assert "agree" in installed.data
 
 
 def test_list_upgrades(salt_call_cli, setup_teardown_vars):
     """
     Test pkg.list_upgrades
     """
-    assert isinstance(salt_call_cli.run("pkg.list_upgrades", refresh=False), dict)
+    upgrade = salt_call_cli.run("pkg.list_upgrades", refresh=False)
+    assert isinstance(upgrade.data, dict)
 
 
 def test_upgrade_available(salt_call_cli, setup_teardown_vars):
@@ -76,14 +78,18 @@ def test_upgrade_available(salt_call_cli, setup_teardown_vars):
     Test pkg.upgrade_available
     """
     salt_call_cli.run("pkg.install", "agree")
-    assert not salt_call_cli.run("pkg.upgrade_available", "agree", refresh=False)
+    upgrade_available = salt_call_cli.run(
+        "pkg.upgrade_available", "agree", refresh=False
+    )
+    assert not upgrade_available.data
 
 
 def test_refresh_db(salt_call_cli, setup_teardown_vars):
     """
     Test pkg.refresh_db
     """
-    assert salt_call_cli.run("pkg.refresh_db")
+    refresh = salt_call_cli.run("pkg.refresh_db")
+    assert refresh.data
 
 
 def test_upgrade(salt_call_cli, setup_teardown_vars):
@@ -91,5 +97,5 @@ def test_upgrade(salt_call_cli, setup_teardown_vars):
     Test pkg.upgrade
     """
     results = salt_call_cli.run("pkg.upgrade", refresh=False)
-    assert isinstance(results, dict)
-    assert results["result"]
+    assert isinstance(results.data, dict)
+    assert results.data["result"]

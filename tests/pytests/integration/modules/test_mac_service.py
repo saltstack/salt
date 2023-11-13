@@ -45,12 +45,13 @@ def test_show(salt_call_cli, setup_teardown_vars):
     """
     SERVICE_NAME = setup_teardown_vars[0]
     # Existing Service
-    service_info = salt_call_cli.run("service.show", [SERVICE_NAME])
-    assert isinstance(service_info, dict)
-    assert service_info["plist"]["Label"] == SERVICE_NAME
+    service_info = salt_call_cli.run("service.show", SERVICE_NAME)
+    assert isinstance(service_info.data, dict)
+    assert service_info.data["plist"]["Label"] == SERVICE_NAME
 
     # Missing Service
-    assert "Service not found" in salt_call_cli.run("service.show", "spongebob")
+    ret = salt_call_cli.run("service.show", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_launchctl(salt_call_cli):
@@ -58,18 +59,17 @@ def test_launchctl(salt_call_cli):
     Test service.launchctl
     """
     # Expected Functionality
-    assert salt_call_cli.run("service.launchctl", "error", "bootstrap", 64)
-    assert (
-        salt_call_cli.run(
-            "service.launchctl", ["error", "bootstrap", 64], return_stdout=True
-        )
-        == "64: unknown error code"
+    ret = salt_call_cli.run("service.launchctl", "error", "bootstrap", 64)
+    assert ret.data
+
+    ret = salt_call_cli.run(
+        "service.launchctl", ["error", "bootstrap", 64], return_stdout=True
     )
+    assert ret.data == "64: unknown error code"
 
     # Raise an error
-    assert "Failed to error service" in salt_call_cli.run(
-        "service.launchctl", "error", "bootstrap"
-    )
+    ret = salt_call_cli.run("service.launchctl", "error", "bootstrap")
+    assert "Failed to error service" in ret.data
 
 
 def test_list(salt_call_cli, setup_teardown_vars):
@@ -78,11 +78,14 @@ def test_list(salt_call_cli, setup_teardown_vars):
     """
     SERVICE_NAME = setup_teardown_vars[0]
     # Expected Functionality
-    assert "PID" in salt_call_cli.run("service.list")
-    assert "{" in salt_call_cli.run("service.list", SERVICE_NAME)
+    ret = salt_call_cli.run("service.list")
+    assert "PID" in ret.data
+    ret = salt_call_cli.run("service.list", SERVICE_NAME)
+    assert "{" in ret.data
 
     # Service not found
-    assert "Service not found" in salt_call_cli.run("service.list", "spongebob")
+    ret = salt_call_cli.run("service.list", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_enable(salt_call_cli, setup_teardown_vars):
@@ -90,9 +93,11 @@ def test_enable(salt_call_cli, setup_teardown_vars):
     Test service.enable
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.enable", SERVICE_NAME)
+    ret = salt_call_cli.run("service.enable", SERVICE_NAME)
+    assert ret.data
 
-    assert "Service not found" in salt_call_cli.run("service.enable", "spongebob")
+    ret = salt_call_cli.run("service.enable", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_disable(salt_call_cli, setup_teardown_vars):
@@ -100,9 +105,11 @@ def test_disable(salt_call_cli, setup_teardown_vars):
     Test service.disable
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.disable", SERVICE_NAME)
+    ret = salt_call_cli.run("service.disable", SERVICE_NAME)
+    assert ret.data
 
-    assert "Service not found" in salt_call_cli.run("service.disable", "spongebob")
+    ret = salt_call_cli.run("service.disable", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_start(salt_call_cli, setup_teardown_vars):
@@ -112,9 +119,11 @@ def test_start(salt_call_cli, setup_teardown_vars):
     Test service.status
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.start", SERVICE_NAME)
+    ret = salt_call_cli.run("service.start", SERVICE_NAME)
+    assert ret.data
 
-    assert "Service not found" in salt_call_cli.run("service.start", "spongebob")
+    ret = salt_call_cli.run("service.start", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_stop(salt_call_cli, setup_teardown_vars):
@@ -122,9 +131,11 @@ def test_stop(salt_call_cli, setup_teardown_vars):
     Test service.stop
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.stop", SERVICE_NAME)
+    ret = salt_call_cli.run("service.stop", SERVICE_NAME)
+    assert ret.data
 
-    assert "Service not found" in salt_call_cli.run("service.stop", ["spongebob"])
+    ret = salt_call_cli.run("service.stop", ["spongebob"])
+    assert "Service not found" in ret.data
 
 
 def test_status(salt_call_cli, setup_teardown_vars):
@@ -133,15 +144,20 @@ def test_status(salt_call_cli, setup_teardown_vars):
     """
     SERVICE_NAME = setup_teardown_vars[0]
     # A running service
-    assert salt_call_cli.run("service.start", SERVICE_NAME)
-    assert salt_call_cli.run("service.status", SERVICE_NAME)
+    ret = salt_call_cli.run("service.start", SERVICE_NAME)
+    assert ret.data
+    ret = salt_call_cli.run("service.status", SERVICE_NAME)
+    assert ret.data
 
     # A stopped service
-    assert salt_call_cli.run("service.stop", SERVICE_NAME)
-    assert not salt_call_cli.run("service.status", SERVICE_NAME)
+    ret = salt_call_cli.run("service.stop", SERVICE_NAME)
+    assert ret.data
+    ret = salt_call_cli.run("service.status", SERVICE_NAME)
+    assert not ret.data
 
     # Service not found
-    assert not salt_call_cli.run("service.status", "spongebob")
+    ret = salt_call_cli.run("service.status", "spongebob")
+    assert not ret.data
 
 
 def test_available(salt_call_cli, setup_teardown_vars):
@@ -149,8 +165,11 @@ def test_available(salt_call_cli, setup_teardown_vars):
     Test service.available
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.available", SERVICE_NAME)
-    assert not salt_call_cli.run("service.available", "spongebob")
+    ret = salt_call_cli.run("service.available", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.available", "spongebob")
+    assert not ret.data
 
 
 def test_missing(salt_call_cli, setup_teardown_vars):
@@ -158,8 +177,11 @@ def test_missing(salt_call_cli, setup_teardown_vars):
     Test service.missing
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert not salt_call_cli.run("service.missing", SERVICE_NAME)
-    assert salt_call_cli.run("service.missing", "spongebob")
+    ret = salt_call_cli.run("service.missing", SERVICE_NAME)
+    assert not ret.data
+
+    ret = salt_call_cli.run("service.missing", "spongebob")
+    assert ret.data
 
 
 def test_enabled(salt_call_cli, setup_teardown_vars):
@@ -167,13 +189,20 @@ def test_enabled(salt_call_cli, setup_teardown_vars):
     Test service.enabled
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.enabled", SERVICE_NAME)
-    assert salt_call_cli.run("service.start", SERVICE_NAME)
+    ret = salt_call_cli.run("service.enabled", SERVICE_NAME)
+    assert ret.data
 
-    assert salt_call_cli.run("service.enabled", SERVICE_NAME)
-    assert salt_call_cli.run("service.stop", SERVICE_NAME)
+    ret = salt_call_cli.run("service.start", SERVICE_NAME)
+    assert ret.data
 
-    assert salt_call_cli.run("service.enabled", "spongebob")
+    ret = salt_call_cli.run("service.enabled", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.stop", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.enabled", "spongebob")
+    assert ret.data
 
 
 def test_disabled(salt_call_cli, setup_teardown_vars):
@@ -181,13 +210,23 @@ def test_disabled(salt_call_cli, setup_teardown_vars):
     Test service.disabled
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.start", SERVICE_NAME)
-    assert not salt_call_cli.run("service.disabled", SERVICE_NAME)
+    ret = salt_call_cli.run("service.start", SERVICE_NAME)
+    assert ret.data
 
-    assert salt_call_cli.run("service.disable", SERVICE_NAME)
-    assert salt_call_cli.run("service.disabled", SERVICE_NAME)
-    assert salt_call_cli.run("service.enable", SERVICE_NAME)
-    assert "Service not found" in salt_call_cli.run("service.stop", "spongebob")
+    ret = salt_call_cli.run("service.disabled", SERVICE_NAME)
+    assert not ret.data
+
+    ret = salt_call_cli.run("service.disable", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.disabled", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.enable", SERVICE_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("service.stop", "spongebob")
+    assert "Service not found" in ret.data
 
 
 def test_get_all(salt_call_cli, setup_teardown_vars):
@@ -196,8 +235,8 @@ def test_get_all(salt_call_cli, setup_teardown_vars):
     """
     SERVICE_NAME = setup_teardown_vars[0]
     services = salt_call_cli.run("service.get_all")
-    assert isinstance(services, list)
-    assert SERVICE_NAME in services
+    assert isinstance(services.data, list)
+    assert SERVICE_NAME in services.data
 
 
 def test_get_enabled(salt_call_cli, setup_teardown_vars):
@@ -206,8 +245,8 @@ def test_get_enabled(salt_call_cli, setup_teardown_vars):
     """
     SERVICE_NAME = setup_teardown_vars[0]
     services = salt_call_cli.run("service.get_enabled")
-    assert isinstance(services, list)
-    assert SERVICE_NAME in services
+    assert isinstance(services.data, list)
+    assert SERVICE_NAME in services.data
 
 
 def test_service_laoded(salt_call_cli, setup_teardown_vars):
@@ -215,4 +254,5 @@ def test_service_laoded(salt_call_cli, setup_teardown_vars):
     Test service.get_enabled
     """
     SERVICE_NAME = setup_teardown_vars[0]
-    assert salt_call_cli.run("service.loaded", SERVICE_NAME)
+    ret = salt_call_cli.run("service.loaded", SERVICE_NAME)
+    assert ret.data
