@@ -16,7 +16,8 @@ pytestmark = [
 def setup_teardown_vars(salt_call_cli):
     AGREE_INSTALLED = False
     try:
-        AGREE_INSTALLED = "agree" in salt_call_cli.run("pkg.list_pkgs")
+        ret = salt_call_cli.run("pkg.list_pkgs")
+        AGREE_INSTALLED = "agree" in ret.data
         salt_call_cli.run("pkg.refresh_db")
         yield
     finally:

@@ -41,9 +41,7 @@ def rep_user_group():
     yield random_string("RS-", lowercase=False)
 
 
-pytest.fixture(scope="function")
-
-
+@pytest.fixture(scope="module")
 def setup_teardown_vars(salt_call_cli, add_group, change_group, del_group):
     try:
         ret = salt_call_cli.run("grains.item", "kernel")
