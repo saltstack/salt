@@ -781,7 +781,7 @@ def delete_deployment(name, namespace="default", **kwargs):
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.delete_namespaced_deployment(
             name=name, namespace=namespace, body=body
         )
@@ -817,7 +817,7 @@ def delete_deployment(name, namespace="default", **kwargs):
         else:
             log.exception(
                 "Exception when calling "
-                "ExtensionsV1beta1Api->delete_namespaced_deployment"
+                "AppsV1Api->delete_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1258,7 +1258,7 @@ def replace_deployment(
         else:
             log.exception(
                 "Exception when calling "
-                "ExtensionsV1beta1Api->replace_namespaced_deployment"
+                "AppsV1Api->replace_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1532,9 +1532,11 @@ def __dict_to_object_meta(name, namespace, metadata):
 
 def __dict_to_deployment_spec(spec):
     """
-    Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
+    Converts a dictionary into kubernetes V1DeploymentSpec instance.
     """
-    spec_obj = AppsV1beta1DeploymentSpec(template=spec.get("template", ""))
+    from kubernetes.client import V1DeploymentSpec
+
+    spec_obj = V1DeploymentSpec(template=spec.get("template", ""))
     for key, value in spec.items():
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
