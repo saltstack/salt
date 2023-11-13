@@ -60,6 +60,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates
 import salt.utils.yaml
+from salt.utils.versions import Version
 from salt.exceptions import CommandExecutionError, TimeoutError
 
 # pylint: disable=import-error,no-name-in-module
@@ -83,11 +84,13 @@ def __virtual__():
     """
     Check dependencies
     """
-    if HAS_LIBS:
-        return __virtualname__
+    if not HAS_LIBS:
+        return False, "python kubernetes library not found"
 
-    return False, "python kubernetes library not found"
+    if Version(kubernetes.__version__).major < 12:
+        return False, "python kubernetes library to old"
 
+    return __virtualname__
 
 if not salt.utils.platform.is_windows():
 
@@ -458,7 +461,7 @@ def deployments(namespace="default", **kwargs):
     """
     cfg = _setup_conn(**kwargs)
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.list_namespaced_deployment(namespace)
 
         return [dep["metadata"]["name"] for dep in api_response.to_dict().get("items")]
@@ -468,7 +471,7 @@ def deployments(namespace="default", **kwargs):
         else:
             log.exception(
                 "Exception when calling "
-                "ExtensionsV1beta1Api->list_namespaced_deployment"
+                "AppsV1Api->list_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
