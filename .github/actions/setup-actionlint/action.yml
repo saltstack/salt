@@ -4,7 +4,7 @@ description: Setup actionlint
 inputs:
   version:
     description: The version of actionlint
-    default: 1.6.24
+    default: 1.6.26
   cache-seed:
     required: true
     type: string
