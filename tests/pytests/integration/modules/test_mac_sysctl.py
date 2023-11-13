@@ -20,7 +20,7 @@ pytestmark = [
 
 @pytest.fixture(scope="function")
 def assign_cmd():
-    return "net.inet.icmp.icmplim"
+    return "net.inet.icmp.timestamp"
 
 
 @pytest.fixture(scope="function")
