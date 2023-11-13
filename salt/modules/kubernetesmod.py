@@ -984,11 +984,9 @@ def create_deployment(
     Creates the kubernetes deployment as defined by the user.
     """
 
-    from kubernetes.client import V1Deployment
-
     body = __create_object_body(
         kind="Deployment",
-        obj_class=V1Deployment,
+        obj_class=kubernetes.client.V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1230,11 +1228,9 @@ def replace_deployment(
     namespace, having the specificed metadata and spec.
     """
 
-    from kubernetes.client import V1Deployment
-
     body = __create_object_body(
         kind="Deployment",
-        obj_class=V1Deployment,
+        obj_class=kubernetes.client.V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1534,9 +1530,8 @@ def __dict_to_deployment_spec(spec):
     """
     Converts a dictionary into kubernetes V1DeploymentSpec instance.
     """
-    from kubernetes.client import V1DeploymentSpec
 
-    spec_obj = V1DeploymentSpec(template=spec.get("template", ""))
+    spec_obj = kubernetes.client.V1DeploymentSpec(template=spec.get("template", ""))
     for key, value in spec.items():
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
