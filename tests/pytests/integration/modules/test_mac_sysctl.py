@@ -31,7 +31,8 @@ def config_file():
 @pytest.fixture(scope="function")
 def setup_teardown_vars(salt_call_cli, assign_cmd, config_file):
     has_conf = False
-    val = salt_call_cli.run("sysctl.get", assign_cmd, config_file)
+    ret = salt_call_cli.run("sysctl.get", assign_cmd, config_file)
+    val = ret.data
 
     # If sysctl file is present, make a copy
     # Remove original file so we can replace it with test files
@@ -48,7 +49,7 @@ def setup_teardown_vars(salt_call_cli, assign_cmd, config_file):
         yield val
     finally:
         ret = salt_call_cli.run("sysctl.get", assign_cmd)
-        if ret != val:
+        if ret.data != val:
             salt_call_cli.run("sysctl.assign", assign_cmd, val)
 
         if has_conf is True:
@@ -71,7 +72,8 @@ def test_assign(salt_call_cli, assign_cmd, setup_teardown_vars):
         while rand == val:
             rand = random.randint(0, 500)
         salt_call_cli.run("sysctl.assign", assign_cmd, rand)
-        info = int(salt_call_cli.run("sysctl.get", assign_cmd))
+        ret = int(salt_call_cli.run("sysctl.get", assign_cmd))
+        info = int(ret.data)
         try:
             assert rand == info
         except AssertionError:
@@ -109,7 +111,7 @@ def test_persist_already_set(salt_call_cli, config_file, setup_teardown_vars):
     try:
         salt_call_cli.run("sysctl.persist", assign_cmd, 50)
         ret = salt_call_cli.run("sysctl.persist", assign_cmd, 50)
-        assert ret == "Already set"
+        assert ret.data == "Already set"
     except CommandExecutionError:
         os.remove(config_file)
         raise
@@ -131,7 +133,8 @@ def test_persist_apply_change(
         while rand == val:
             rand = random.randint(0, 500)
         salt_call_cli.run("sysctl.persist", assign_cmd, rand, apply_change=True)
-        info = int(salt_call_cli.run("sysctl.get", assign_cmd))
+        ret = salt_call_cli.run("sysctl.get", assign_cmd)
+        info = int(ret.data)
         assert info == rand
     except CommandExecutionError:
         os.remove(config_file)
