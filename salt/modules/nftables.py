@@ -446,9 +446,9 @@ def save(filename=None, family="ipv4"):
     if _conf() and not filename:
         filename = _conf()
 
-    # Not a typo. Invert the dictionary twice to get unique values only.
+    # Invert the dictionary twice to get unique values only.
     nft_families = {v: k for k, v in _NFTABLES_FAMILIES.items()}
-    nft_families = {v: k for k, v in _NFTABLES_FAMILIES.items()}
+    nft_families = {v: k for k, v in nft_families.items()}
 
     rules = "#! nft -f\n"
 
