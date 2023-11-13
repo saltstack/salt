@@ -24,6 +24,8 @@
 
 from collections.abc import Callable
 
+import salt.utils.versions
+
 try:
     # pylint: disable=E0611,minimum-python-version
     import collections
@@ -72,6 +74,14 @@ except (ImportError, AttributeError):
                 because their insertion order is arbitrary.
 
                 """
+                salt.utils.versions.warn_until(
+                    3009,
+                    "The Salt backport `OrderedDict` class introduced for Python 2 "
+                    "has been deprecated, and is set to be removed in {version}. "
+                    "Please use Python 3 `OrderedDict`.",
+                    category=FutureWarning,
+                )
+
                 super().__init__()
                 if len(args) > 1:
                     raise TypeError(f"expected at most 1 arguments, got {len(args)}")
