@@ -3,7 +3,7 @@ import logging
 import time
 import types
 
-import importlib_metadata
+from salt._compat import importlib_metadata
 
 log = logging.getLogger(__name__)
 

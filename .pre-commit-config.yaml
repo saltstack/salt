@@ -1212,7 +1212,6 @@ repos:
           - jmespath
           - psutil
           - setproctitle
-          - importlib_metadata
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1236,7 +1235,6 @@ repos:
           - jmespath
           - psutil
           - setproctitle
-          - importlib_metadata
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1264,7 +1262,6 @@ repos:
           - jmespath
           - psutil
           - setproctitle
-          - importlib_metadata
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1292,7 +1289,6 @@ repos:
           - jmespath
           - psutil
           - setproctitle
-          - importlib_metadata
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0

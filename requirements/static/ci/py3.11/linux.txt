@@ -565,10 +565,9 @@ twilio==8.2.2
     # via -r requirements/static/ci/linux.in
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.7.1
+typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
-    #   -r requirements/base.txt
     #   napalm
     #   pydantic
     #   pytest-shell-utilities
@@ -615,10 +614,9 @@ zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   cherrypy
-zipp==3.9.1
+zipp==3.16.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
-    #   -r requirements/base.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

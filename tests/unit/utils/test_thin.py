@@ -89,9 +89,6 @@ class SSHThinTestCase(TestCase):
             "idna": str(code_dir / "idna"),
             "dateutil": str(code_dir / "dateutil"),
             "six": str(code_dir / "six.py"),
-            "importlib_metadata": str(code_dir / "importlib_metadata"),
-            "zipp": str(code_dir / "zipp"),
-            "typing_extensions": str(code_dir / "typing_extensions.py"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -461,22 +458,6 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
-    @patch(
-        "salt.utils.thin.importlib_metadata",
-        type(
-            "importlib_metadata", (), {"__file__": "/site-packages/importlib_metadata"}
-        ),
-    )
-    @patch(
-        "salt.utils.thin.zipp",
-        type("zipp", (), {"__file__": "/site-packages/zipp"}),
-    )
-    @patch(
-        "salt.utils.thin.typing_extensions",
-        type(
-            "typing_extensions", (), {"__file__": "/site-packages/typing_extensions.py"}
-        ),
-    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops(self):
         """
@@ -507,9 +488,6 @@ class SSHThinTestCase(TestCase):
             "idna",
             "dateutil",
             "six.py",
-            "importlib_metadata",
-            "zipp",
-            "typing_extensions.py",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -617,22 +595,6 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.dateutil",
         type("dateutil", (), {"__file__": "/site-packages/dateutil"}),
     )
-    @patch(
-        "salt.utils.thin.importlib_metadata",
-        type(
-            "importlib_metadata", (), {"__file__": "/site-packages/importlib_metadata"}
-        ),
-    )
-    @patch(
-        "salt.utils.thin.zipp",
-        type("zipp", (), {"__file__": "/site-packages/zipp"}),
-    )
-    @patch(
-        "salt.utils.thin.typing_extensions",
-        type(
-            "typing_extensions", (), {"__file__": "/site-packages/typing_extensions.py"}
-        ),
-    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
         """
@@ -663,9 +625,6 @@ class SSHThinTestCase(TestCase):
             "idna",
             "dateutil",
             "six.py",
-            "importlib_metadata",
-            "zipp",
-            "typing_extensions.py",
             "foo",
             "bar.py",
         ]
@@ -784,22 +743,6 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.dateutil",
         type("dateutil", (), {"__file__": "/site-packages/dateutil"}),
     )
-    @patch(
-        "salt.utils.thin.importlib_metadata",
-        type(
-            "importlib_metadata", (), {"__file__": "/site-packages/importlib_metadata"}
-        ),
-    )
-    @patch(
-        "salt.utils.thin.zipp",
-        type("zipp", (), {"__file__": "/site-packages/zipp"}),
-    )
-    @patch(
-        "salt.utils.thin.typing_extensions",
-        type(
-            "typing_extensions", (), {"__file__": "/site-packages/typing_extensions.py"}
-        ),
-    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
         """
@@ -830,9 +773,6 @@ class SSHThinTestCase(TestCase):
             "idna",
             "dateutil",
             "six.py",
-            "importlib_metadata",
-            "zipp",
-            "typing_extensions.py",
             "foo.so",
             "bar.so",
         ]
@@ -1278,9 +1218,6 @@ class SSHThinTestCase(TestCase):
                     (bts("idna/__init__.py"), bts("")),
                     (bts("dateutil/__init__.py"), bts("")),
                     (bts("six.py"), bts("")),
-                    (bts("importlib_metadata/__init__.py"), bts("")),
-                    (bts("zipp/__init__.py"), bts("")),
-                    (bts("typing_extensions.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1330,9 +1267,6 @@ class SSHThinTestCase(TestCase):
                     (bts("idna/__init__.py"), bts("")),
                     (bts("dateutil/__init__.py"), bts("")),
                     (bts("six.py"), bts("")),
-                    (bts("importlib_metadata/__init__.py"), bts("")),
-                    (bts("zipp/__init__.py"), bts("")),
-                    (bts("typing_extensions.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1383,9 +1317,6 @@ class SSHThinTestCase(TestCase):
                     (bts("charset_normalizer/__init__.py"), bts("")),
                     (bts("idna/__init__.py"), bts("")),
                     (bts("dateutil/__init__.py"), bts("")),
-                    (bts("importlib_metadata/__init__.py"), bts("")),
-                    (bts("zipp/__init__.py"), bts("")),
-                    (bts("typing_extensions.py"), bts("")),
                     (bts("six.py"), bts("")),
                 ],
             ),

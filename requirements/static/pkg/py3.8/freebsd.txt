@@ -97,17 +97,14 @@ timelib==0.3.0
     # via -r requirements/base.txt
 tornado==6.3.3
     # via -r requirements/base.txt
-typing-extensions==4.7.1
-    # via
-    #   -r requirements/base.txt
-    #   pydantic
+typing-extensions==4.8.0
+    # via pydantic
 urllib3==1.26.18
     # via requests
 zc.lockfile==3.0.post1
     # via cherrypy
-zipp==3.9.1
+zipp==3.16.2
     # via
-    #   -r requirements/base.txt
     #   importlib-metadata
     #   importlib-resources
 
