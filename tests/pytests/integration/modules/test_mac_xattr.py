@@ -36,15 +36,16 @@ def test_list_no_xattr(salt_call_cli, setup_teardown_vars):
     no_file = setup_teardown_vars[1]
 
     # Clear existing attributes
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Test no attributes
-    assert salt_call_cli.run("xattr.list", test_file) == {}
+    ret = salt_call_cli.run("xattr.list", test_file)
+    assert ret.data == {}
 
     # Test file not found
-    assert (
-        salt_call_cli.run("xattr.list", no_file) == f"ERROR: File not found: {no_file}"
-    )
+    ret = salt_call_cli.run("xattr.list", no_file)
+    assert ret.data == f"ERROR: File not found: {no_file}"
 
 
 def test_write(salt_call_cli, setup_teardown_vars):
@@ -55,25 +56,30 @@ def test_write(salt_call_cli, setup_teardown_vars):
     no_file = setup_teardown_vars[1]
 
     # Clear existing attributes
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Write some attributes
-    assert salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
-    assert salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
-    assert salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    ret = salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    assert ret.data
 
     # Test that they were actually added
-    assert salt_call_cli.run("xattr.list", test_file) == {
+    ret = salt_call_cli.run("xattr.list", test_file)
+    assert ret.data == {
         "spongebob": "squarepants",
         "squidward": "plankton",
         "crabby": "patty",
     }
 
     # Test file not found
-    assert (
-        salt_call_cli.run("xattr.write", no_file, "patrick", "jellyfish")
-        == f"ERROR: File not found: {no_file}"
-    )
+    ret = salt_call_cli.run("xattr.write", no_file, "patrick", "jellyfish")
+    assert ret.data == f"ERROR: File not found: {no_file}"
 
 
 def test_read(salt_call_cli, setup_teardown_vars):
@@ -84,25 +90,24 @@ def test_read(salt_call_cli, setup_teardown_vars):
     no_file = setup_teardown_vars[1]
 
     # Clear existing attributes
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Write an attribute
-    assert salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
+    ret = salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
+    assert ret.data
 
     # Read the attribute
-    assert salt_call_cli.run("xattr.read", test_file, "spongebob") == "squarepants"
+    ret = salt_call_cli.run("xattr.read", test_file, "spongebob")
+    assert ret.data == "squarepants"
 
     # Test file not found
-    assert (
-        salt_call_cli.run("xattr.read", no_file, "spongebob")
-        == f"ERROR: File not found: {no_file}"
-    )
+    ret = salt_call_cli.run("xattr.read", no_file, "spongebob")
+    assert ret.data == f"ERROR: File not found: {no_file}"
 
     # Test attribute not found
-    assert (
-        salt_call_cli.run("xattr.read", test_file, "patrick")
-        == "ERROR: Attribute not found: patrick"
-    )
+    ret = salt_call_cli.run("xattr.read", test_file, "patrick")
+    assert ret.data == "ERROR: Attribute not found: patrick"
 
 
 def test_delete(salt_call_cli, setup_teardown_vars):
@@ -113,33 +118,40 @@ def test_delete(salt_call_cli, setup_teardown_vars):
     no_file = setup_teardown_vars[1]
 
     # Clear existing attributes
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Write some attributes
-    assert salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
-    assert salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
-    assert salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    ret = salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    assert ret.data
 
     # Delete an attribute
-    assert salt_call_cli.run("xattr.delete", test_file, "squidward")
+    ret = salt_call_cli.run("xattr.delete", test_file, "squidward")
+    assert ret.data
 
     # Make sure it was actually deleted
-    assert salt_call_cli.run("xattr.list", test_file) == {
+    ret = salt_call_cli.run("xattr.list", test_file)
+    assert ret.data == {
         "spongebob": "squarepants",
         "crabby": "patty",
     }
 
     # Test file not found
+    ret = salt_call_cli.run("xattr.delete", no_file, "spongebob")
     assert (
         salt_call_cli.run("xattr.delete", no_file, "spongebob")
         == f"ERROR: File not found: {no_file}"
     )
 
     # Test attribute not found
-    assert (
-        salt_call_cli.run("xattr.delete", test_file, "patrick")
-        == "ERROR: Attribute not found: patrick"
-    )
+    ret = salt_call_cli.run("xattr.delete", test_file, "patrick")
+    assert ret.data == "ERROR: Attribute not found: patrick"
 
 
 def test_clear(salt_call_cli, setup_teardown_vars):
@@ -150,17 +162,25 @@ def test_clear(salt_call_cli, setup_teardown_vars):
     no_file = setup_teardown_vars[1]
 
     # Clear existing attributes
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Write some attributes
-    assert salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
-    assert salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
-    assert salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    ret = salt_call_cli.run("xattr.write", test_file, "spongebob", "squarepants")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "squidward", "plankton")
+    assert ret.data
+
+    ret = salt_call_cli.run("xattr.write", test_file, "crabby", "patty")
+    assert ret.data
 
     # Test Clear
-    assert salt_call_cli.run("xattr.clear", test_file)
+    ret = salt_call_cli.run("xattr.clear", test_file)
+    assert ret.data
 
     # Test file not found
-    assert (
+    ret = (
         salt_call_cli.run("xattr.clear", no_file) == f"ERROR: File not found: {no_file}"
     )
+    assert ret.data == f"ERROR: File not found: {no_file}"

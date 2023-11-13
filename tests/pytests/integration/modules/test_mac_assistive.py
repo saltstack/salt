@@ -41,8 +41,10 @@ def test_install_and_remove(salt_call_cli, osa_script, setup_teardown_vars):
     Tests installing and removing a bundled ID or command to use assistive access.
     """
     new_bundle = "com.smileonmymac.textexpander"
-    assert salt_call_cli.run("assistive.install", new_bundle)
-    assert salt_call_cli.run("assistive.remove", new_bundle)
+    ret = salt_call_cli.run("assistive.install", new_bundle)
+    assert ret.data
+    ret = salt_call_cli.run("assistive.remove", new_bundle)
+    assert ret.data
 
 
 @pytest.mark.slow_test

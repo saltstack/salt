@@ -22,11 +22,20 @@ pytestmark = [
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(salt_call_cli):
-    ATRUN_ENABLED = salt_call_cli.run("service.enabled", "com.apple.atrun")
-    REMOTE_LOGIN_ENABLED = salt_call_cli.run("system.get_remote_login")
-    REMOTE_EVENTS_ENABLED = salt_call_cli.run("system.get_remote_events")
-    SUBNET_NAME = salt_call_cli.run("system.get_subnet_name")
-    KEYBOARD_DISABLED = salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    ret = salt_call_cli.run("service.enabled", "com.apple.atrun")
+    ATRUN_ENABLED = ret.data
+
+    ret = salt_call_cli.run("system.get_remote_login")
+    REMOTE_LOGIN_ENABLED = ret.data
+
+    ret = salt_call_cli.run("system.get_remote_events")
+    REMOTE_EVENTS_ENABLED = ret.data
+
+    ret = salt_call_cli.run("system.get_subnet_name")
+    SUBNET_NAME = ret.data
+
+    ret = salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    KEYBOARD_DISABLED = ret.data
 
     try:
         yield
@@ -47,25 +56,46 @@ def test_get_set_remote_login(salt_call_cli):
     Test system.set_remote_login
     """
     # Normal Functionality
-    assert salt_call_cli.run("system.set_remote_login", True)
-    assert salt_call_cli.run("system.get_remote_login")
-    assert salt_call_cli.run("system.set_remote_login", False)
-    assert not salt_call_cli.run("system.get_remote_login")
+    ret = salt_call_cli.run("system.set_remote_login", True)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_remote_login")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", False)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_remote_login")
+    assert not ret.data
 
     # Test valid input
-    assert salt_call_cli.run("system.set_remote_login", True)
-    assert salt_call_cli.run("system.set_remote_login", False)
-    assert salt_call_cli.run("system.set_remote_login", "yes")
-    assert salt_call_cli.run("system.set_remote_login", "no")
-    assert salt_call_cli.run("system.set_remote_login", "On")
-    assert salt_call_cli.run("system.set_remote_login", "Off")
-    assert salt_call_cli.run("system.set_remote_login", 1)
-    assert salt_call_cli.run("system.set_remote_login", 0)
+    ret = salt_call_cli.run("system.set_remote_login", True)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", False)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", "yes")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", "no")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", "On")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", 1)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_login", 0)
+    assert ret.data
 
     # Test invalid input
-    assert "Invalid String Value for Enabled" in salt_call_cli.run(
-        "system.set_remote_login", "spongebob"
-    )
+    ret = salt_call_cli.run("system.set_remote_login", "spongebob")
+    assert "Invalid String Value for Enabled" in ret.data
 
 
 def test_get_set_remote_events(salt_call_cli):
@@ -74,25 +104,46 @@ def test_get_set_remote_events(salt_call_cli):
     Test system.set_remote_events
     """
     # Normal Functionality
-    assert salt_call_cli.run("system.set_remote_events", True)
-    assert salt_call_cli.run("system.get_remote_events")
-    assert salt_call_cli.run("system.set_remote_events", False)
-    assert not salt_call_cli.run("system.get_remote_events")
+    ret = salt_call_cli.run("system.set_remote_events", True)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_remote_events")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", False)
+    assert ret.data
+
+    ret = not salt_call_cli.run("system.get_remote_events")
+    assert not ret.data
 
     # Test valid input
-    assert salt_call_cli.run("system.set_remote_events", True)
-    assert salt_call_cli.run("system.set_remote_events", False)
-    assert salt_call_cli.run("system.set_remote_events", "yes")
-    assert salt_call_cli.run("system.set_remote_events", "no")
-    assert salt_call_cli.run("system.set_remote_events", "On")
-    assert salt_call_cli.run("system.set_remote_events", "Off")
-    assert salt_call_cli.run("system.set_remote_events", 1)
-    assert salt_call_cli.run("system.set_remote_events", 0)
+    ret = salt_call_cli.run("system.set_remote_events", True)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", False)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", "yes")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", "no")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", "On")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", 1)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_remote_events", 0)
+    assert ret.data
 
     # Test invalid input
-    assert "Invalid String Value for Enabled" in salt_call_cli.run(
-        "system.set_remote_events", "spongebob"
-    )
+    ret = salt_call_cli.run("system.set_remote_events", "spongebob")
+    assert "Invalid String Value for Enabled" in ret.data
 
 
 def test_get_set_subnet_name(salt_call_cli):
@@ -102,8 +153,11 @@ def test_get_set_subnet_name(salt_call_cli):
     """
     SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
-    assert salt_call_cli.run("system.set_subnet_name", SET_SUBNET_NAME)
-    assert salt_call_cli.run("system.get_subnet_name") == SET_SUBNET_NAME
+    ret = salt_call_cli.run("system.set_subnet_name", SET_SUBNET_NAME)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_subnet_name")
+    assert ret.data == SET_SUBNET_NAME
 
 
 def test_get_list_startup_disk(salt_call_cli):
@@ -115,13 +169,14 @@ def test_get_list_startup_disk(salt_call_cli):
     """
     # Test list and get
     ret = salt_call_cli.run("system.list_startup_disks")
-    assert isinstance(ret, list)
-    assert salt_call_cli.run("system.get_startup_disk") in ret
+    assert isinstance(ret.data, list)
+
+    startup_disk = salt_call_cli.run("system.get_startup_disk")
+    assert startup_disk in ret
 
     # Test passing set a bad disk
-    assert "Invalid value passed for path." in salt_call_cli.run(
-        "system.set_startup_disk", "spongebob"
-    )
+    ret = salt_call_cli.run("system.set_startup_disk", "spongebob")
+    assert "Invalid value passed for path." in ret.data
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -133,13 +188,15 @@ def test_get_set_restart_delay(salt_call_cli):
     may need to disable this test as we can't control the delay value
     """
     # Normal Functionality
-    assert salt_call_cli.run("system.set_restart_delay", 90)
-    assert salt_call_cli.run("system.get_restart_delay") == "90 seconds"
+    ret = salt_call_cli.run("system.set_restart_delay", 90)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_restart_delay")
+    assert ret.data == "90 seconds"
 
     # Pass set bad value for seconds
-    assert "Invalid value passed for seconds." in salt_call_cli.run(
-        "system.set_restart_delay", 70
-    )
+    ret = salt_call_cli.run("system.set_restart_delay", 70)
+    assert "Invalid value passed for seconds." in ret.data
 
 
 def test_get_set_disable_keyboard_on_lock(salt_call_cli):
@@ -148,26 +205,46 @@ def test_get_set_disable_keyboard_on_lock(salt_call_cli):
     Test system.set_disable_keyboard_on_lock
     """
     # Normal Functionality
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", True)
-    assert salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", True)
+    assert ret.data
 
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", False)
-    assert not salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    ret = salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", False)
+    assert ret.data
+
+    ret = not salt_call_cli.run("system.get_disable_keyboard_on_lock")
+    assert not ret.data
 
     # Test valid input
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", True)
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", False)
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", "yes")
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", "no")
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", "On")
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", "Off")
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", 1)
-    assert salt_call_cli.run("system.set_disable_keyboard_on_lock", 0)
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", True)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", False)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "yes")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "no")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "On")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "Off")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", 1)
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", 0)
+    assert ret.data
 
     # Test invalid input
-    assert "Invalid String Value for Enabled" in salt_call_cli.run(
-        "system.set_disable_keyboard_on_lock", "spongebob"
-    )
+    ret = salt_call_cli.run("system.set_disable_keyboard_on_lock", "spongebob")
+    assert "Invalid String Value for Enabled" in ret.data
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -179,15 +256,21 @@ def test_get_set_boot_arch(salt_call_cli):
     may need to disable this test as we can't set the boot architecture
     """
     # Normal Functionality
-    assert salt_call_cli.run("system.set_boot_arch", "i386")
-    assert salt_call_cli.run("system.get_boot_arch") == "i386"
-    assert salt_call_cli.run("system.set_boot_arch", "default")
-    assert salt_call_cli.run("system.get_boot_arch") == "default"
+    ret = salt_call_cli.run("system.set_boot_arch", "i386")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_boot_arch") == "i386"
+    assert ret.data
+
+    ret = salt_call_cli.run("system.set_boot_arch", "default")
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_boot_arch") == "default"
+    assert ret.data
 
     # Test invalid input
-    assert "Invalid value passed for arch" in salt_call_cli.run(
-        "system.set_boot_arch", "spongebob"
-    )
+    ret = salt_call_cli.run("system.set_boot_arch", "spongebob")
+    assert "Invalid value passed for arch" in ret.data
 
 
 # A similar test used to be skipped on py3 due to 'hanging', if we see
@@ -202,10 +285,14 @@ def test_get_set_computer_name(salt_call_cli):
     """
     SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 
-    COMPUTER_NAME = salt_call_cli.run("system.get_computer_name")
+    ret = salt_call_cli.run("system.get_computer_name")
+    COMPUTER_NAME = ret.data
 
     log.debug("Set name is %s", SET_COMPUTER_NAME)
     assert salt_call_cli.run("system.set_computer_name", [SET_COMPUTER_NAME])
-    assert salt_call_cli.run("system.get_computer_name") == SET_COMPUTER_NAME
+    assert ret.data
+
+    ret = salt_call_cli.run("system.get_computer_name")
+    assert ret.data == SET_COMPUTER_NAME
 
     salt_call_cli.run("system.set_computer_name", COMPUTER_NAME)

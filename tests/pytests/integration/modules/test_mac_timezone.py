@@ -55,12 +55,15 @@ def test_get_set_date(salt_call_cli):
     Test timezone.set_date
     """
     # Correct Functionality
-    assert salt_call_cli.run("timezone.set_date", "2/20/2011")
-    assert salt_call_cli.run("timezone.get_date") == "2/20/2011"
+    ret = salt_call_cli.run("timezone.set_date", "2/20/2011")
+    assert ret.data
+    ret = salt_call_cli.run("timezone.get_date")
+    assert ret.data == "2/20/2011"
 
     # Test bad date format
+    ret = salt_call_cli.run("timezone.set_date", "13/12/2014")
     assert (
-        salt_call_cli.run("timezone.set_date", "13/12/2014")
+        ret.data
         == "ERROR executing 'timezone.set_date': Invalid Date/Time Format: 13/12/2014"
     )
 
@@ -71,7 +74,7 @@ def test_get_time(salt_call_cli):
     Test timezone.get_time
     """
     text_time = salt_call_cli.run("timezone.get_time")
-    assert text_time != "Invalid Timestamp"
+    assert text_time.data != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_time, "%H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
@@ -85,11 +88,13 @@ def test_set_time(salt_call_cli):
     Test timezone.set_time
     """
     # Correct Functionality
-    assert salt_call_cli.run("timezone.set_time", "3:14")
+    ret = salt_call_cli.run("timezone.set_time", "3:14")
+    assert ret.data
 
     # Test bad time format
+    ret = salt_call_cli.run("timezone.set_time", "3:71")
     assert (
-        salt_call_cli.run("timezone.set_time", "3:71")
+        ret.data
         == "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71"
     )
 
@@ -104,13 +109,14 @@ def test_get_set_zone(salt_call_cli):
     Test timezone.set_zone
     """
     # Correct Functionality
-    assert salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
-    assert salt_call_cli.run("timezone.get_zone") == "Pacific/Wake"
+    ret = salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
+    assert ret.data
+    assert ret.data == "Pacific/Wake"
 
     # Test bad time zone
+    ret = salt_call_cli.run("timezone.set_zone", "spongebob")
     assert (
-        salt_call_cli.run("timezone.set_zone", "spongebob")
-        == "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
+        ret.data == "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
     )
 
 
@@ -122,13 +128,16 @@ def test_get_offset(salt_call_cli):
     """
     Test timezone.get_offset
     """
-    assert salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
-    assert isinstance(salt_call_cli.run("timezone.get_offset"), (str,))
-    assert salt_call_cli.run("timezone.get_offset") == "+1200"
+    ret = salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
+    assert ret.data
+    ret = salt_call_cli.run("timezone.get_offset")
+    assert isinstance(ret.data, str)
+    assert ret.data == "+1200"
 
-    assert salt_call_cli.run("timezone.set_zone", "America/Los_Angeles")
-    assert isinstance(salt_call_cli.run("timezone.get_offset"), (str,))
-    assert salt_call_cli.run("timezone.get_offset") == "-0700"
+    ret = salt_call_cli.run("timezone.set_zone", "America/Los_Angeles")
+    assert ret.data
+    assert isinstance(ret.data, str)
+    assert ret.data == "-0700"
 
 
 @pytest.mark.skip(
@@ -140,13 +149,15 @@ def test_get_set_zonecode(salt_call_cli):
     Test timezone.get_zonecode
     Test timezone.set_zonecode
     """
-    assert salt_call_cli.run("timezone.set_zone", "America/Los_Angeles")
-    assert isinstance(salt_call_cli.run("timezone.get_zonecode"), (str,))
-    assert salt_call_cli.run("timezone.get_zonecode") == "PDT"
+    ret = salt_call_cli.run("timezone.set_zone", "America/Los_Angeles")
+    assert ret.data
+    assert isinstance(ret.data, str)
+    assert ret.data == "PDT"
 
-    assert salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
-    assert isinstance(salt_call_cli.run("timezone.get_zonecode"), (str,))
-    assert salt_call_cli.run("timezone.get_zonecode") == "WAKT"
+    ret = salt_call_cli.run("timezone.set_zone", "Pacific/Wake")
+    assert ret.data
+    assert isinstance(ret.data, str)
+    assert ret.data == "WAKT"
 
 
 @pytest.mark.slow_test
@@ -155,9 +166,9 @@ def test_list_zones(salt_call_cli):
     Test timezone.list_zones
     """
     zones = salt_call_cli.run("timezone.list_zones")
-    assert isinstance(zones, list)
-    assert "America/Denver" in zones
-    assert "America/Los_Angeles" in zones
+    assert isinstance(zones.data, list)
+    assert "America/Denver" in zones.data
+    assert "America/Los_Angeles" in zones.data
 
 
 @pytest.mark.skip(
@@ -168,9 +179,12 @@ def test_zone_compare(salt_call_cli):
     """
     Test timezone.zone_compare
     """
-    assert salt_call_cli.run("timezone.set_zone", "America/Denver")
-    assert salt_call_cli.run("timezone.zone_compare", "America/Denver")
-    assert not salt_call_cli.run("timezone.zone_compare", "Pacific/Wake")
+    ret = salt_call_cli.run("timezone.set_zone", "America/Denver")
+    assert ret.data
+    ret = salt_call_cli.run("timezone.zone_compare", "America/Denver")
+    assert ret.data
+    ret = salt_call_cli.run("timezone.zone_compare", "Pacific/Wake")
+    assert not ret.data
 
 
 @pytest.mark.skip(
@@ -182,11 +196,17 @@ def test_get_set_using_network_time(salt_call_cli):
     Test timezone.get_using_network_time
     Test timezone.set_using_network_time
     """
-    assert salt_call_cli.run("timezone.set_using_network_time", True)
-    assert salt_call_cli.run("timezone.get_using_network_time")
+    ret = salt_call_cli.run("timezone.set_using_network_time", True)
+    assert ret.data
 
-    assert salt_call_cli.run("timezone.set_using_network_time", False)
-    assert not salt_call_cli.run("timezone.get_using_network_time")
+    ret = salt_call_cli.run("timezone.get_using_network_time")
+    assert ret.data
+
+    ret = salt_call_cli.run("timezone.set_using_network_time", False)
+    assert ret.data
+
+    ret = salt_call_cli.run("timezone.get_using_network_time")
+    assert not ret.data
 
 
 @pytest.mark.skip(
@@ -198,5 +218,8 @@ def test_get_set_time_server(salt_call_cli):
     Test timezone.get_time_server
     Test timezone.set_time_server
     """
-    assert salt_call_cli.run("timezone.set_time_server", "spongebob.com")
-    assert salt_call_cli.run("timezone.get_time_server") == "spongebob.com"
+    ret = salt_call_cli.run("timezone.set_time_server", "spongebob.com")
+    assert ret.data
+
+    ret = salt_call_cli.run("timezone.get_time_server") == "spongebob.com"
+    assert ret.data
