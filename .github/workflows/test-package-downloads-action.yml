@@ -89,11 +89,17 @@ jobs:
           - distro-slug: amazonlinux-2-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: amazonlinux-2-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: amazonlinux-2023
             arch: x86_64
             pkg-type: package
           - distro-slug: amazonlinux-2023-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: amazonlinux-2023-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: centos-7
             arch: x86_64
