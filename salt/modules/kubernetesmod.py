@@ -1417,6 +1417,30 @@ def replace_configmap(
         _cleanup(**cfg)
 
 
+def apply(file, namespace="default", **kwargs):
+    """
+    Apply k8s manifests from file.
+
+    CLI Example:
+    .. code-block:: bash
+        salt 'minion1' kubernetes.apply /path/to/yaml/file/manifest.yaml namespace="default"
+    """
+    cfg = _setup_conn(**kwargs)
+    try:
+        client = kubernetes.client.ApiClient()
+        kubernetes.utils.create_from_yaml(client, file, verbose=True)
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->replace_namespaced_configmap"
+            )
+            raise CommandExecutionError(exc)
+    finally:
+        _cleanup(**cfg)
+
+
 def __create_object_body(
     kind,
     obj_class,
