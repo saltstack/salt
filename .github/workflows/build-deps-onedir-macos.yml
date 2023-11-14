@@ -71,7 +71,7 @@ jobs:
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version }}
