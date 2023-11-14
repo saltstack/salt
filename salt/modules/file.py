@@ -5696,6 +5696,7 @@ def check_managed_changes(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     """
@@ -5747,6 +5748,12 @@ def check_managed_changes(
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
         Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
 
         .. versionadded:: 3007.0
 
@@ -5822,6 +5829,7 @@ def check_managed_changes(
         ignore_ordering=ignore_ordering,
         ignore_whitespace=ignore_whitespace,
         ignore_comment_characters=ignore_comment_characters,
+        new_file_diff=new_file_diff,
     )
     __clean_tmp(sfn)
     return changes
@@ -5847,6 +5855,7 @@ def check_file_meta(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5962,6 +5971,12 @@ def check_file_meta(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3007.0
     """
     changes = {}
     has_changes = False
@@ -5977,7 +5992,7 @@ def check_file_meta(
     except CommandExecutionError:
         lstats = {}
 
-    if not lstats:
+    if not lstats and not new_file_diff:
         changes["newfile"] = name
         if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
             return True, changes
@@ -6006,10 +6021,16 @@ def check_file_meta(
                             ignore_whitespace=ignore_whitespace,
                             ignore_comment_characters=ignore_comment_characters,
                         )
-                    else:
+                    elif lstats:
                         changes["diff"] = get_diff(
                             name, sfn, template=True, show_filenames=False
                         )
+                    else:
+                        with tempfile.NamedTemporaryFile() as _mt:
+                            _mt.write(b"")
+                            changes["diff"] = get_diff(
+                                _mt.name, sfn, template=True, show_filenames=False
+                            )
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -6044,8 +6065,12 @@ def check_file_meta(
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
                 )
-            else:
+            elif lstats:
                 differences = get_diff(name, tmp, show_filenames=False)
+            else:
+                with tempfile.NamedTemporaryFile() as _mt:
+                    _mt.write(b"")
+                    differences = get_diff(_mt.name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -6055,6 +6080,9 @@ def check_file_meta(
                 changes["diff"] = "<Obfuscated Template>"
             else:
                 changes["diff"] = differences
+
+    if not lstats:
+        return changes
 
     if not salt.utils.platform.is_windows():
         # Check owner
@@ -6321,6 +6349,7 @@ def manage_file(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     """
@@ -6542,6 +6571,12 @@ def manage_file(
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
         Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
 
         .. versionadded:: 3007.0
 
@@ -6916,6 +6951,13 @@ def manage_file(
 
             # It is a new file, set the diff accordingly
             ret["changes"]["diff"] = "New file"
+            if new_file_diff:
+                with tempfile.NamedTemporaryFile() as _mt:
+                    _mt.write(b"")
+                    ret["changes"]["diff"] = get_diff(
+                        _mt.name, sfn, show_filenames=False
+                    )
+
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
@@ -6969,6 +7011,13 @@ def manage_file(
                     )
                 else:
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
+
+            if new_file_diff and ret["changes"]["diff"] == "New file":
+                with tempfile.NamedTemporaryFile() as _mt:
+                    _mt.write(b"")
+                    ret["changes"]["diff"] = get_diff(
+                        _mt.name, tmp, show_filenames=False
+                    )
 
             # Copy into place
             salt.utils.files.copyfile(
