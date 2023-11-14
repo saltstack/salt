@@ -3161,6 +3161,10 @@ jobs:
           - pkg-type: rpm
             distro: amazon
             version: "2023"
+            arch: arm64
+          - pkg-type: rpm
+            distro: amazon
+            version: "2023"
             arch: aarch64
           - pkg-type: rpm
             distro: redhat
