@@ -1464,7 +1464,7 @@ def __create_object_body(
             or src_obj["kind"] != kind
         ):
             raise CommandExecutionError(
-                "The source file should define only a {} object".format(kind)
+                f"The source file should define only a {kind} object"
             )
 
         if "metadata" in src_obj:
@@ -1485,7 +1485,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
     """
     sfn = __salt__["cp.cache_file"](source, saltenv)
     if not sfn:
-        raise CommandExecutionError("Source file '{}' not found".format(source))
+        raise CommandExecutionError(f"Source file '{source}' not found")
 
     with salt.utils.files.fopen(sfn, "r") as src:
         contents = src.read()
@@ -1515,7 +1515,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
                 contents = data["data"].encode("utf-8")
             else:
                 raise CommandExecutionError(
-                    "Unknown template specified: {}".format(template)
+                    f"Unknown template specified: {template}"
                 )
 
         return salt.utils.yaml.safe_load(contents)
