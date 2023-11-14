@@ -2,7 +2,7 @@ import subprocess
 
 import pytest
 
-from tests.support.helpers import TESTS_DIR
+from tests.pytests.pkg.support.helpers import TESTS_DIR
 
 
 @pytest.fixture
@@ -16,7 +16,13 @@ def python_script_bin(install_salt):
 @pytest.mark.parametrize("exp_ret,user_arg", [(1, "false"), (0, "true")])
 def test_python_script(install_salt, exp_ret, user_arg, python_script_bin):
     ret = install_salt.proc.run(
-        *(python_script_bin + [str(TESTS_DIR / "files" / "check_python.py"), user_arg]),
+        *(
+            python_script_bin
+            + [
+                str(TESTS_DIR / "pytests" / "pkg" / "files" / "check_python.py"),
+                user_arg,
+            ]
+        ),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -28,7 +34,13 @@ def test_python_script(install_salt, exp_ret, user_arg, python_script_bin):
 
 def test_python_script_exception(install_salt, python_script_bin):
     ret = install_salt.proc.run(
-        *(python_script_bin + [str(TESTS_DIR / "files" / "check_python.py"), "raise"]),
+        *(
+            python_script_bin
+            + [
+                str(TESTS_DIR / "pytests" / "pkg" / "files" / "check_python.py"),
+                "raise",
+            ]
+        ),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,

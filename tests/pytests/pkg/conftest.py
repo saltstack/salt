@@ -12,7 +12,7 @@ from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 import salt.config
-from tests.support.helpers import (
+from tests.pytests.pkg.support.helpers import (
     CODE_DIR,
     TESTS_DIR,
     ApiRequest,
@@ -209,7 +209,7 @@ def state_tree():
     envs = {
         "base": [
             str(file_root),
-            str(TESTS_DIR / "files"),
+            str(TESTS_DIR / "pytests" / "pkg" / "files"),
         ],
     }
     tree = SaltStateTree(envs=envs)
@@ -345,7 +345,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
     test_user = False
     master_config = install_salt.config_path / "master"
     if master_config.exists():
-        with open(master_config) as fp:
+        with salt.utils.files.fopen(master_config) as fp:
             data = yaml.safe_load(fp)
             if data and "user" in data:
                 test_user = True
@@ -439,15 +439,18 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                 "-R",
                 "salt:salt",
                 str(pathlib.Path("/etc", "salt", "pki", "master")),
-            ]
+            ],
+            check=True,
         )
         # The engines_dirs is created in .nox path. We need to set correct perms
         # for the user running the Salt Master
-        subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
+        subprocess.run(
+            ["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")], check=False
+        )
         file_roots = pathlib.Path("/srv/", "salt")
         pillar_roots = pathlib.Path("/srv/", "pillar")
         for _dir in [file_roots, pillar_roots]:
-            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)], check=False)
 
     with factory.started(start_timeout=start_timeout):
         yield factory
@@ -504,10 +507,10 @@ def salt_minion(salt_factories, salt_master, install_salt):
         file_roots = pathlib.Path("/srv/", "salt")
         pillar_roots = pathlib.Path("/srv/", "pillar")
         for _dir in [file_roots, pillar_roots]:
-            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)], check=True)
 
     factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+        pytest.helpers.remove_stale_minion_key_pkg, salt_master, factory.id
     )
     with factory.started(start_timeout=start_timeout):
         yield factory

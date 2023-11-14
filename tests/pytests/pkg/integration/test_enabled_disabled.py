@@ -1,6 +1,5 @@
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils.functional import MultiStateResult
 
 
 @pytest.mark.skip_on_windows(reason="Linux test only")

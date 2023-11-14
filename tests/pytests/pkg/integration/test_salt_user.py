@@ -90,7 +90,7 @@ def test_salt_user_home(install_salt):
     home = ""
     try:
         home = proc.stdout.decode().split(":")[5]
-    except:
+    except Exception:  # pylint: disable=broad-except
         pass
     assert home == "/opt/saltstack/salt"
 
@@ -106,7 +106,7 @@ def test_salt_user_group(install_salt):
         for group in proc.stdout.decode().split(" "):
             if "salt" in group:
                 in_group = True
-    except:
+    except Exception:  # pylint: disable=broad-except
         pass
     assert in_group is True
 
@@ -124,7 +124,7 @@ def test_salt_user_shell(install_salt):
     try:
         shell = proc.stdout.decode().split(":")[6].strip()
         shell_exists = pathlib.Path(shell).exists()
-    except:
+    except Exception:  # pylint: disable=broad-except
         pass
     assert shell_exists is True
 
