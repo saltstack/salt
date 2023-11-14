@@ -1,7 +1,5 @@
 import subprocess
 
-from pytestskipmarkers.utils import platform
-
 
 def test_help(install_salt):
     """

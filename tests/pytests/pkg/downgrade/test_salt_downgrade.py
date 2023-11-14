@@ -1,5 +1,3 @@
-import shutil
-
 import packaging.version
 import pytest
 from pytestskipmarkers.utils import platform
