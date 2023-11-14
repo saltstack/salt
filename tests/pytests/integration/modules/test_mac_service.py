@@ -43,7 +43,7 @@ def test_show(salt_call_cli, setup_teardown_vars):
     """
     Test service.show
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     # Existing Service
     service_info = salt_call_cli.run("service.show", SERVICE_NAME)
     assert isinstance(service_info.data, dict)
@@ -76,7 +76,7 @@ def test_list(salt_call_cli, setup_teardown_vars):
     """
     Test service.list
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     # Expected Functionality
     ret = salt_call_cli.run("service.list")
     assert "PID" in ret.data
@@ -92,7 +92,7 @@ def test_enable(salt_call_cli, setup_teardown_vars):
     """
     Test service.enable
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.enable", SERVICE_NAME)
     assert ret.data
 
@@ -104,7 +104,7 @@ def test_disable(salt_call_cli, setup_teardown_vars):
     """
     Test service.disable
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.disable", SERVICE_NAME)
     assert ret.data
 
@@ -118,7 +118,7 @@ def test_start(salt_call_cli, setup_teardown_vars):
     Test service.stop
     Test service.status
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.start", SERVICE_NAME)
     assert ret.data
 
@@ -130,7 +130,7 @@ def test_stop(salt_call_cli, setup_teardown_vars):
     """
     Test service.stop
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.stop", SERVICE_NAME)
     assert ret.data
 
@@ -142,7 +142,7 @@ def test_status(salt_call_cli, setup_teardown_vars):
     """
     Test service.status
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     # A running service
     ret = salt_call_cli.run("service.start", SERVICE_NAME)
     assert ret.data
@@ -164,7 +164,7 @@ def test_available(salt_call_cli, setup_teardown_vars):
     """
     Test service.available
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.available", SERVICE_NAME)
     assert ret.data
 
@@ -176,7 +176,7 @@ def test_missing(salt_call_cli, setup_teardown_vars):
     """
     Test service.missing
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.missing", SERVICE_NAME)
     assert not ret.data
 
@@ -188,7 +188,7 @@ def test_enabled(salt_call_cli, setup_teardown_vars):
     """
     Test service.enabled
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.enabled", SERVICE_NAME)
     assert ret.data
 
@@ -209,7 +209,7 @@ def test_disabled(salt_call_cli, setup_teardown_vars):
     """
     Test service.disabled
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.start", SERVICE_NAME)
     assert ret.data
 
@@ -233,7 +233,7 @@ def test_get_all(salt_call_cli, setup_teardown_vars):
     """
     Test service.get_all
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     services = salt_call_cli.run("service.get_all")
     assert isinstance(services.data, list)
     assert SERVICE_NAME in services.data
@@ -243,7 +243,7 @@ def test_get_enabled(salt_call_cli, setup_teardown_vars):
     """
     Test service.get_enabled
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     services = salt_call_cli.run("service.get_enabled")
     assert isinstance(services.data, list)
     assert SERVICE_NAME in services.data
@@ -253,6 +253,6 @@ def test_service_laoded(salt_call_cli, setup_teardown_vars):
     """
     Test service.get_enabled
     """
-    SERVICE_NAME = setup_teardown_vars[0]
+    SERVICE_NAME = setup_teardown_vars
     ret = salt_call_cli.run("service.loaded", SERVICE_NAME)
     assert ret.data

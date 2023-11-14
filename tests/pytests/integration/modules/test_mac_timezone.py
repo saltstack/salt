@@ -75,7 +75,7 @@ def test_get_time(salt_call_cli):
     """
     text_time = salt_call_cli.run("timezone.get_time")
     assert text_time.data != "Invalid Timestamp"
-    obj_date = datetime.datetime.strptime(text_time, "%H:%M:%S")
+    obj_date = datetime.datetime.strptime(text_time.data, "%H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
 
