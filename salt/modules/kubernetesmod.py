@@ -60,8 +60,8 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates
 import salt.utils.yaml
-from salt.utils.versions import Version
 from salt.exceptions import CommandExecutionError, TimeoutError
+from salt.utils.versions import Version
 
 # pylint: disable=import-error,no-name-in-module
 try:
