@@ -463,7 +463,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "salt.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "salt"
         cmd_args = [
-            "--omit=tests/*,pkg/tests/*",
+            "--omit=tests/*,tests/pytests/pkg/*",
             "--include=salt/*",
         ]
 
@@ -475,7 +475,7 @@ def _report_coverage(
         )
         cmd_args = [
             "--omit=salt/*",
-            "--include=tests/*,pkg/tests/*",
+            "--include=tests/*,tests/pytests/pkg/*",
         ]
     else:
         json_coverage_file = (
@@ -484,7 +484,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "full"
         cmd_args = [
-            "--include=salt/*,tests/*,pkg/tests/*",
+            "--include=salt/*,tests/*,tests/pytests/pkg/*",
         ]
 
     if cli_report:
@@ -1812,30 +1812,30 @@ def ci_test_onedir_pkgs(session):
         )
 
     chunks = {
-        "install": ["pkg/tests/"],
+        "install": ["tests/pytests/pkg/"],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "upgrade-classic": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "downgrade-classic": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "pkg/tests/download/",
+            "tests/pytests/pkg/download/",
         ],
     }
 

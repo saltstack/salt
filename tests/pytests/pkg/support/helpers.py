@@ -16,6 +16,7 @@ import packaging
 import psutil
 import pytest
 import requests
+import saltfactories.cli
 from pytestshellutils.shell import DaemonImpl, Subprocess
 from pytestshellutils.utils.processes import (
     ProcessResult,
@@ -24,9 +25,11 @@ from pytestshellutils.utils.processes import (
 )
 from pytestskipmarkers.utils import platform
 from saltfactories.bases import SystemdSaltDaemonImpl
-from saltfactories.cli import call, key, salt
+from saltfactories.cli import call, key
 from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
+
+import salt.utils.files
 
 try:
     import crypt
@@ -41,9 +44,9 @@ try:
 except ImportError:
     HAS_PWD = False
 
-TESTS_DIR = pathlib.Path(__file__).resolve().parent.parent
+TESTS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent.parent
 CODE_DIR = TESTS_DIR.parent
-ARTIFACTS_DIR = CODE_DIR / "artifacts"
+ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 
 log = logging.getLogger(__name__)
 
@@ -420,7 +423,7 @@ class SaltPkgInstall:
                 # expects unless we do it via a batch file
                 batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
                 batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with open(batch_file, "w") as fp:
+                with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
@@ -618,7 +621,7 @@ class SaltPkgInstall:
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
                 f"/etc/apt/keyrings/{gpg_dest}",
             )
-            with open(
+            with salt.utils.files.fopen(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
                 fp.write(
@@ -665,8 +668,8 @@ class SaltPkgInstall:
             # Let's not check the returncode if this is the case
             if not (
                 downgrade
-                and not packaging.version.parse(self.prev_version)
-                >= packaging.version.parse("3006.0")
+                and packaging.version.parse(self.prev_version)
+                < packaging.version.parse("3006.0")
             ):
                 self._check_retcode(ret)
             if downgrade:
@@ -710,7 +713,7 @@ class SaltPkgInstall:
                 # expects unless we do it via a batch file
                 batch_file = pkg_path.parent / "install_msi.cmd"
                 batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with open(batch_file, "w") as fp:
+                with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
@@ -813,40 +816,6 @@ class SaltPkgInstall:
             log.debug("Un-Installing packages:\n%s", pprint.pformat(self.salt_pkgs))
             ret = self.proc.run(self.pkg_mngr, self.rm_pkg, "-y", *self.salt_pkgs)
             self._check_retcode(ret)
-
-    def assert_uninstalled(self):
-        """
-        Assert that the paths in /opt/saltstack/ were correctly
-        removed or not removed
-        """
-        return
-        if platform.is_windows():
-            # I'm not sure where the /opt/saltstack path is coming from
-            # This is the path we're using to test windows
-            opt_path = pathlib.Path(os.getenv("LocalAppData"), "salt", "pypath")
-        else:
-            opt_path = pathlib.Path(os.sep, "opt", "saltstack", "salt", "pypath")
-        if not opt_path.exists():
-            if platform.is_windows():
-                assert not opt_path.parent.exists()
-            else:
-                assert not opt_path.parent.parent.exists()
-        else:
-            opt_path_contents = list(opt_path.rglob("*"))
-            if not opt_path_contents:
-                pytest.fail(
-                    f"The path '{opt_path}' exists but there are no files in it."
-                )
-            else:
-                for path in list(opt_path_contents):
-                    if path.name in (".installs.json", "__pycache__"):
-                        opt_path_contents.remove(path)
-                if opt_path_contents:
-                    pytest.fail(
-                        "The test left some files behind: {}".format(
-                            ", ".join([str(p) for p in opt_path_contents])
-                        )
-                    )
 
     def write_launchd_conf(self, service):
         service_name = f"com.saltstack.salt.{service}"
@@ -953,7 +922,6 @@ class SaltPkgInstall:
     def __exit__(self, *_):
         if not self.no_uninstall:
             self.uninstall()
-            self.assert_uninstalled()
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
@@ -1335,17 +1303,21 @@ class SaltMaster(DaemonPkgMixin, master.SaltMaster):
             factory_class=SaltApi, salt_pkg_install=self.salt_pkg_install, **kwargs
         )
 
-    def salt_key_cli(self, **factory_class_kwargs):
+    def salt_key_cli(self, factory_class=None, **factory_class_kwargs):
+        if not factory_class:
+            factory_class = SaltKey
+        factory_class_kwargs["salt_pkg_install"] = self.salt_pkg_install
         return super().salt_key_cli(
-            factory_class=SaltKey,
-            salt_pkg_install=self.salt_pkg_install,
+            factory_class=factory_class,
             **factory_class_kwargs,
         )
 
-    def salt_cli(self, **factory_class_kwargs):
+    def salt_cli(self, factory_class=None, **factory_class_kwargs):
+        if not factory_class:
+            factory_class = SaltCli
+        factory_class_kwargs["salt_pkg_install"] = self.salt_pkg_install
         return super().salt_cli(
-            factory_class=SaltCli,
-            salt_pkg_install=self.salt_pkg_install,
+            factory_class=factory_class,
             **factory_class_kwargs,
         )
 
@@ -1403,10 +1375,12 @@ class SaltMinion(DaemonPkgMixin, minion.SaltMinion):
             "salt-minion", self.salt_pkg_install.binary_paths["minion"]
         )
 
-    def salt_call_cli(self, **factory_class_kwargs):
+    def salt_call_cli(self, factory_class=None, **factory_class_kwargs):
+        if not factory_class:
+            factory_class = SaltCall
+        factory_class_kwargs["salt_pkg_install"] = self.salt_pkg_install
         return super().salt_call_cli(
-            factory_class=SaltCall,
-            salt_pkg_install=self.salt_pkg_install,
+            factory_class=factory_class,
             **factory_class_kwargs,
         )
 
@@ -1453,14 +1427,14 @@ class SaltCall(PkgMixin, call.SaltCall):
 
 
 @attr.s(kw_only=True, slots=True)
-class SaltCli(PkgMixin, salt.SaltCli):
+class SaltCli(PkgMixin, saltfactories.cli.salt.SaltCli):
     """
     Subclassed just to tweak the binary paths if needed.
     """
 
     def __attrs_post_init__(self):
         self.script_name = "salt"
-        salt.SaltCli.__attrs_post_init__(self)
+        saltfactories.cli.salt.SaltCli.__attrs_post_init__(self)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -1586,7 +1560,7 @@ class ApiRequest:
 
 
 @pytest.helpers.register
-def remove_stale_minion_key(master, minion_id):
+def remove_stale_minion_key_pkg(master, minion_id):
     key_path = os.path.join(master.config["pki_dir"], "minions", minion_id)
     if os.path.exists(key_path):
         os.unlink(key_path)
@@ -1624,7 +1598,7 @@ def download_file(url, dest, auth=None):
     # NOTE the stream=True parameter below
     with requests.get(url, stream=True, auth=auth) as r:
         r.raise_for_status()
-        with open(dest, "wb") as f:
+        with salt.utils.files.fopen(dest, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)

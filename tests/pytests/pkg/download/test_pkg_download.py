@@ -267,7 +267,7 @@ def setup_redhat_family(
 
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
     ret = shell.run("rpm", "--import", str(downloads_path / gpg_key_name), check=False)
@@ -333,7 +333,7 @@ def setup_debian_family(
 
         try:
             pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
         salt_sources_path = downloads_path / "salt.list"
@@ -384,7 +384,7 @@ def setup_debian_family(
 
         try:
             pytest.helpers.download_file(onedir_url, onedir_location)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
         shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
@@ -439,7 +439,7 @@ def setup_macos(
 
         try:
             pytest.helpers.download_file(onedir_url, onedir_location)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
         shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
@@ -516,7 +516,7 @@ def setup_windows(
 
             try:
                 pytest.helpers.download_file(onedir_url, onedir_location)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
             shell.run("unzip", str(onedir_location), "-d", str(onedir_extracted))
