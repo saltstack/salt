@@ -128,10 +128,12 @@ def test_latest_version(salt_call_cli, add_pkg, setup_teardown_vars):
     """
     try:
         salt_call_cli.run("pkg.remove", add_pkg)
-        uninstalled_latest = salt_call_cli.run("pkg.latest_version", add_pkg)
+        ret = salt_call_cli.run("pkg.latest_version", add_pkg)
+        uninstalled_latest = ret.data
 
         salt_call_cli.run("pkg.install", add_pkg)
-        installed_latest = salt_call_cli.run("pkg.latest_version", add_pkg)
+        ret = salt_call_cli.run("pkg.latest_version", add_pkg)
+        installed_latest = ret.data
         version = salt_call_cli.run("pkg.version", add_pkg)
         try:
             assert isinstance(uninstalled_latest.data, str)

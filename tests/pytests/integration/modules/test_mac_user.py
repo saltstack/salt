@@ -142,7 +142,8 @@ def test_mac_user_changes(salt_call_cli, setup_teardown_vars):
 
         # Test mac.user.chshell
         salt_call_cli.run("user.chshell", CHANGE_USER, "/bin/zsh")
-        shell_info = salt_call_cli.run("user.info", CHANGE_USER)
+        ret = salt_call_cli.run("user.info", CHANGE_USER)
+        shell_info = ret.data
         assert shell_info["shell"] == "/bin/zsh"
 
         # Test mac_user.chhome
