@@ -1422,7 +1422,9 @@ def apply(file, namespace="default", **kwargs):
     Apply k8s manifests from file.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt 'minion1' kubernetes.apply /path/to/yaml/file/manifest.yaml namespace="default"
     """
     cfg = _setup_conn(**kwargs)
