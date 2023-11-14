@@ -19,6 +19,13 @@ If your service states are running into trouble with init system detection,
 please see the :ref:`Overriding Virtual Module Providers <module-provider-override>`
 section of Salt's module documentation to work around possible errors.
 
+For services managed by systemd, the systemd_service module includes a built-in
+feature to reload the daemon when unit files are changed or extended. This
+feature is used automatically by the service state and the systemd_service
+module when running on a systemd minion, so there is no need to set up your own
+methods of reloading the daemon. If you need to manually reload the daemon for
+some reason, you can use the :func:`systemd_service.systemctl_reload <salt.modules.systemd_service.systemctl_reload>` function provided by Salt.
+
 .. note::
     The current status of a service is determined by the return code of the init/rc
     script status command. A status return code of 0 it is considered running.  Any

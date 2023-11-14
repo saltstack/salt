@@ -158,7 +158,9 @@ def test_version_report_lines():
     line_lengths = {
         len(line.split(":")[0])
         for line in versions_report_ret[start_looking_index:]
-        if line != " " and line not in ("System Versions:", "Salt Extensions:")
+        if line != " "
+        and line
+        not in ("System Versions:", "Salt Extensions:", "Salt Package Information:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1
@@ -187,7 +189,7 @@ def test_string_new_version_minor():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == min_ver
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
 
 def test_string_new_version_minor_as_string():
@@ -201,13 +203,13 @@ def test_string_new_version_minor_as_string():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == int(min_ver)
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
     # This only seems to happen on a cloned repo without its tags
     maj_ver = "3000"
     min_ver = ""
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
-    assert ver.minor is None, "{!r} is not {!r}".format(ver.minor, min_ver)
+    assert ver.minor is None, f"{ver.minor!r} is not {min_ver!r}"
     assert not ver.bugfix
     assert ver.string == maj_ver
 
@@ -222,7 +224,7 @@ def test_string_old_version():
     min_ver = "2"
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.bugfix == 0
-    assert ver.string == "{}.{}.0".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}.0"
 
 
 @pytest.mark.parametrize(
@@ -433,7 +435,7 @@ def test_system_version_linux():
     """
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Manjaro Linux", "20.0.2", "Lysia")),
     ):
         versions = [item for item in system_information()]
@@ -441,7 +443,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "9", "stretch")),
     ):
         versions = [item for item in system_information()]
@@ -449,7 +451,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "10", "buster")),
     ):
         versions = [item for item in system_information()]
@@ -457,7 +459,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "7", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -465,7 +467,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "8", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -473,7 +475,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("OpenSUSE Leap", "15.1", "")),
     ):
         versions = [item for item in system_information()]
@@ -537,6 +539,8 @@ def test_versions_report_no_extensions_available():
         ("3000.1", "3000.1", "Neon"),
         ("3005", "3005", "Phosphorus"),
         ("3006", "3006.0", "Sulfur"),
+        ("3006.0", "3006.0", "Sulfur"),
+        ("3006.1", "3006.1", "Sulfur"),
         ("3015.1", "3015.1", "Manganese"),
         ("3109.3", "3109.3", None),
     ],

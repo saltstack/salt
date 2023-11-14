@@ -1,6 +1,7 @@
-python-tools-scripts >= 0.11.1
+python-tools-scripts >= 0.18.1
 attrs
 boto3
 pyyaml
 jinja2
 packaging
+virustotal3

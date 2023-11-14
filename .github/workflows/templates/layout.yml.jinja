@@ -3,21 +3,30 @@
 <%- set prepare_workflow_if_check = prepare_workflow_if_check|default(False) %>
 <%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
-<%- set python_version_linux = "3.10.10" %>
-<%- set python_version_macos = "3.10.10" %>
-<%- set python_version_windows = "3.10.10" %>
-<%- set relenv_version = "0.7.0" %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
+<%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
+<%- set gh_actions_workflows_python_version = "3.10" %>
 ---
+<%- block name %>
 name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
+<%- endblock name %>
 
 <%- block on %>
 
 on:
   push: {}
-  pull_request: {}
+  pull_request:
+    types:
+      - labeled
+      - unlabeled
+      - opened
+      - reopened
+      - synchronize
 
 <%- endblock on %>
 
@@ -25,7 +34,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 <%- endblock env %>
@@ -35,6 +44,9 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
+<%- if workflow_slug not in ("nightly", "scheduled") %>
+  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
+<%- endif %>
 
 <%- endblock permissions %>
 
@@ -63,7 +75,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
@@ -77,11 +89,16 @@ jobs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
+      testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
@@ -127,6 +144,7 @@ jobs:
                 - *doc_requirements
             workflows:
               - added|modified:
+                - cicd/shared-gh-workflows-context.yml
                 - .github/actions/**/action.yml
                 - .github/workflows/*.yml
                 - .github/workflows/templates/*.yml.jinja2
@@ -172,6 +190,11 @@ jobs:
         run:
           tools ci print-gh-event
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
@@ -179,11 +202,25 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
+      - name: Get Pull Request Test Labels
+        id: get-pull-labels
+        if: ${{ github.event_name == 'pull_request'}}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-pr-test-labels --repository ${{ github.repository }}
+
       <%- if prepare_actual_release %>
 
       - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
+
 
       <%- endif %>
 
@@ -218,11 +255,33 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }> ${{ github.event_name }} changed-files.json
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
           echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Get Latest Salt Releases for Testing
+        id: get-testing-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+          echo '${{ steps.get-testing-releases.outputs.testing-releases }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
@@ -245,10 +304,32 @@ jobs:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
 
-      - name: Set Cache Seed Output
-        id: set-cache-seed
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
         run: |
-          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+          tools ci get-release-changelog-target ${{ github.event_name }}
+
+{#  We can't yet use tokenless uploads with the codecov CLI
+
+      - name: Install Codecov CLI
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Save Commit Metadata In Codecov
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-commit --git-service github --sha ${{ github.sha }}
+
+      - name: Create Codecov Coverage Report
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-report --git-service github --sha ${{ github.sha }}
+
+#}
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 
@@ -259,7 +340,10 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    <%- if workflow_slug == "nightly" %>
+    environment: <{ workflow_slug }>
+    <%- endif %>
     needs:
       <%- for need in prepare_workflow_needs.iter(consume=True) %>
       - <{ need }>
@@ -280,6 +364,9 @@ jobs:
       - name: Get workflow information
         id: get-workflow-info
         uses: technote-space/workflow-conclusion-action@v3
+
+      <%- block set_pipeline_exit_status_extra_steps %>
+      <%- endblock set_pipeline_exit_status_extra_steps %>
 
       - name: Set Pipeline Exit Status
         shell: bash

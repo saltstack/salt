@@ -4,13 +4,6 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def grains(salt_call_cli):
-    ret = salt_call_cli.run("--local", "grains.items")
-    assert ret.data, ret
-    return ret.data
-
-
-@pytest.fixture(scope="module")
 def pkg_name(salt_call_cli, grains):
     if sys.platform.startswith("win"):
         ret = salt_call_cli.run("--local", "winrepo.update_git_repos")

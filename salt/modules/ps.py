@@ -218,7 +218,7 @@ def proc_info(pid, attrs=None):
     attrs
         Optional list of desired process attributes.  The list of possible
         attributes can be found here:
-        http://pythonhosted.org/psutil/#psutil.Process
+        https://psutil.readthedocs.io/en/latest/#processes
     """
     try:
         proc = psutil.Process(pid)
@@ -768,7 +768,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = str(nb_lines) + " occurrence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

@@ -1,9 +1,21 @@
 
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg-type:
+          - src
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Source Tarball
         uses: actions/download-artifact@v3
@@ -46,18 +58,23 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create src --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+          tools pkg repo create src --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
+
+      - name: Copy Files For Source Only Artifact Uploads
+        run: |
+          mkdir artifacts/src
+          find artifacts/pkgs/repo -type f -print -exec cp {} artifacts/src \;
 
       - name: Upload Standalone Repository As An Artifact
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
           path: |
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/*-GPG-*
+            artifacts/src/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            artifacts/src/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
+            artifacts/src/*-GPG-*
           retention-days: 7
           if-no-files-found: error
 

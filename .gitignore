@@ -16,6 +16,7 @@ MANIFEST
 .pytest_cache
 Pipfile.lock
 .mypy_cache/*
+.tools-venvs/
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -23,6 +24,7 @@ Pipfile.lock
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
 /env/
+/.env/
 /bin/
 /etc/
 /include/
@@ -128,6 +130,7 @@ Session.vim
 
 # Nox requirements archives
 nox.*.tar.bzip2
+nox.*.tar.xz
 
 # Debian packages
 /debian
@@ -138,6 +141,7 @@ nox.*.tar.bzip2
 /pkg/debian/salt-api
 /pkg/debian/salt-common
 /pkg/debian/salt-cloud
+/pkg/debian/salt-dbg
 /pkg/debian/salt-master
 /pkg/debian/salt-minion
 /pkg/debian/salt-ssh

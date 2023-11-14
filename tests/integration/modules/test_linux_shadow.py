@@ -15,6 +15,7 @@ from tests.support.case import ModuleCase
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.slow_test
 class ShadowModuleTest(ModuleCase):
     """
     Validate the linux shadow system module

@@ -11,17 +11,16 @@ The data sent to the state calls is as follows:
       }
 """
 
-
 import copy
 import datetime
 import fnmatch
 import importlib
+import inspect
 import logging
 import os
 import random
 import re
 import site
-import sys
 import time
 import traceback
 
@@ -83,6 +82,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "fun",
         "state",
         "check_cmd",
+        "cmd_opts_exclude",
         "failhard",
         "onlyif",
         "unless",
@@ -158,8 +158,8 @@ def _clean_tag(tag):
 
 def _l_tag(name, id_):
     low = {
-        "name": "listen_{}".format(name),
-        "__id__": "listen_{}".format(id_),
+        "name": f"listen_{name}",
+        "__id__": f"listen_{id_}",
         "state": "Listen_Error",
         "fun": "Listen_Error",
     }
@@ -449,145 +449,165 @@ class Compiler:
         if not isinstance(high, dict):
             errors.append("High data is not a dictionary and is invalid")
         reqs = OrderedDict()
-        for name, body in high.items():
-            if name.startswith("__"):
-                continue
-            if not isinstance(name, str):
-                errors.append(
-                    "ID '{}' in SLS '{}' is not formed as a string, but is a {}".format(
-                        name, body["__sls__"], type(name).__name__
-                    )
-                )
-            if not isinstance(body, dict):
-                err = "The type {} in {} is not formatted as a dictionary".format(
-                    name, body
-                )
-                errors.append(err)
-                continue
-            for state in body:
-                if state.startswith("__"):
-                    continue
-                if not isinstance(body[state], list):
+        if not errors:
+            for name, body in high.items():
+                try:
+                    if name.startswith("__"):
+                        continue
+                except (AttributeError, TypeError):
+                    # Do not traceback on non string state ID
+                    # handle the error properly
+                    pass
+
+                if not isinstance(name, str):
                     errors.append(
-                        "State '{}' in SLS '{}' is not formed as a list".format(
-                            name, body["__sls__"]
+                        "ID '{}' in SLS '{}' is not formed as a string, but is a {}. It may need to be quoted".format(
+                            name, body["__sls__"], type(name).__name__
                         )
                     )
-                else:
-                    fun = 0
-                    if "." in state:
-                        fun += 1
-                    for arg in body[state]:
-                        if isinstance(arg, str):
-                            fun += 1
-                            if " " in arg.strip():
-                                errors.append(
-                                    'The function "{}" in state '
-                                    '"{}" in SLS "{}" has '
-                                    "whitespace, a function with whitespace is "
-                                    "not supported, perhaps this is an argument "
-                                    'that is missing a ":"'.format(
-                                        arg, name, body["__sls__"]
-                                    )
-                                )
-                        elif isinstance(arg, dict):
-                            # The arg is a dict, if the arg is require or
-                            # watch, it must be a list.
-                            #
-                            # Add the requires to the reqs dict and check them
-                            # all for recursive requisites.
-                            argfirst = next(iter(arg))
-                            if argfirst in ("require", "watch", "prereq", "onchanges"):
-                                if not isinstance(arg[argfirst], list):
-                                    errors.append(
-                                        "The {} statement in state '{}' in SLS '{}' "
-                                        "needs to be formed as a list".format(
-                                            argfirst, name, body["__sls__"]
-                                        )
-                                    )
-                                # It is a list, verify that the members of the
-                                # list are all single key dicts.
-                                else:
-                                    reqs[name] = {"state": state}
-                                    for req in arg[argfirst]:
-                                        if isinstance(req, str):
-                                            req = {"id": req}
-                                        if not isinstance(req, dict):
-                                            errors.append(
-                                                "Requisite declaration {} in SLS {} "
-                                                "is not formed as a single key "
-                                                "dictionary".format(
-                                                    req, body["__sls__"]
-                                                )
-                                            )
-                                            continue
-                                        req_key = next(iter(req))
-                                        req_val = req[req_key]
-                                        if "." in req_key:
-                                            errors.append(
-                                                "Invalid requisite type '{}' "
-                                                "in state '{}', in SLS "
-                                                "'{}'. Requisite types must "
-                                                "not contain dots, did you "
-                                                "mean '{}'?".format(
-                                                    req_key,
-                                                    name,
-                                                    body["__sls__"],
-                                                    req_key[: req_key.find(".")],
-                                                )
-                                            )
-                                        if not ishashable(req_val):
-                                            errors.append(
-                                                'Illegal requisite "{}", is SLS {}\n'.format(
-                                                    str(req_val),
-                                                    body["__sls__"],
-                                                )
-                                            )
-                                            continue
-
-                                        # Check for global recursive requisites
-                                        reqs[name][req_val] = req_key
-                                        # I am going beyond 80 chars on
-                                        # purpose, this is just too much
-                                        # of a pain to deal with otherwise
-                                        if req_val in reqs:
-                                            if name in reqs[req_val]:
-                                                if reqs[req_val][name] == state:
-                                                    if (
-                                                        reqs[req_val]["state"]
-                                                        == reqs[name][req_val]
-                                                    ):
-                                                        errors.append(
-                                                            "A recursive requisite was"
-                                                            ' found, SLS "{}" ID "{}"'
-                                                            ' ID "{}"'.format(
-                                                                body["__sls__"],
-                                                                name,
-                                                                req_val,
-                                                            )
-                                                        )
-                                # Make sure that there is only one key in the
-                                # dict
-                                if len(list(arg)) != 1:
-                                    errors.append(
-                                        "Multiple dictionaries defined in argument "
-                                        "of state '{}' in SLS '{}'".format(
-                                            name, body["__sls__"]
-                                        )
-                                    )
-                    if not fun:
-                        if state == "require" or state == "watch":
-                            continue
+                if not isinstance(body, dict):
+                    err = "The type {} in {} is not formatted as a dictionary".format(
+                        name, body
+                    )
+                    errors.append(err)
+                    continue
+                for state in body:
+                    if state.startswith("__"):
+                        continue
+                    if not isinstance(body[state], list):
                         errors.append(
-                            "No function declared in state '{}' in SLS '{}'".format(
-                                state, body["__sls__"]
+                            "State '{}' in SLS '{}' is not formed as a list".format(
+                                name, body["__sls__"]
                             )
                         )
-                    elif fun > 1:
-                        errors.append(
-                            "Too many functions declared in state '{}' in "
-                            "SLS '{}'".format(state, body["__sls__"])
-                        )
+                    else:
+                        fun = 0
+                        if "." in state:
+                            # This should not happen usually since `pad_funcs`
+                            # is run on rendered templates
+                            fun += 1
+                        for arg in body[state]:
+                            if isinstance(arg, str):
+                                fun += 1
+                                if " " in arg.strip():
+                                    errors.append(
+                                        f'The function "{arg}" in state '
+                                        f'"{name}" in SLS "{body["__sls__"]}" has '
+                                        "whitespace, a function with whitespace is "
+                                        "not supported, perhaps this is an argument"
+                                        ' that is missing a ":"'
+                                    )
+                            elif isinstance(arg, dict):
+                                # The arg is a dict, if the arg is require or
+                                # watch, it must be a list.
+                                #
+                                # Add the requires to the reqs dict and check them
+                                # all for recursive requisites.
+                                argfirst = next(iter(arg))
+                                if argfirst in (
+                                    "require",
+                                    "watch",
+                                    "prereq",
+                                    "onchanges",
+                                ):
+                                    if not isinstance(arg[argfirst], list):
+                                        errors.append(
+                                            "The {} statement in state '{}' in SLS '{}' "
+                                            "needs to be formed as a list".format(
+                                                argfirst, name, body["__sls__"]
+                                            )
+                                        )
+                                    # It is a list, verify that the members of the
+                                    # list are all single key dicts.
+                                    else:
+                                        reqs[name] = {"state": state}
+                                        for req in arg[argfirst]:
+                                            if isinstance(req, str):
+                                                req = {"id": req}
+                                            if not isinstance(req, dict):
+                                                errors.append(
+                                                    "Requisite declaration {} in SLS {} "
+                                                    "is not formed as a single key "
+                                                    "dictionary".format(
+                                                        req, body["__sls__"]
+                                                    )
+                                                )
+                                                continue
+                                            req_key = next(iter(req))
+                                            req_val = req[req_key]
+                                            if "." in req_key:
+                                                errors.append(
+                                                    "Invalid requisite type '{}' "
+                                                    "in state '{}', in SLS "
+                                                    "'{}'. Requisite types must "
+                                                    "not contain dots, did you "
+                                                    "mean '{}'?".format(
+                                                        req_key,
+                                                        name,
+                                                        body["__sls__"],
+                                                        req_key[: req_key.find(".")],
+                                                    )
+                                                )
+                                            if not ishashable(req_val):
+                                                errors.append(
+                                                    'Illegal requisite "{}", is SLS {}\n'.format(
+                                                        str(req_val),
+                                                        body["__sls__"],
+                                                    )
+                                                )
+                                                continue
+
+                                            # Check for global recursive requisites
+                                            reqs[name][req_val] = req_key
+                                            # I am going beyond 80 chars on
+                                            # purpose, this is just too much
+                                            # of a pain to deal with otherwise
+                                            if req_val in reqs:
+                                                if name in reqs[req_val]:
+                                                    if reqs[req_val][name] == state:
+                                                        if (
+                                                            reqs[req_val]["state"]
+                                                            == reqs[name][req_val]
+                                                        ):
+                                                            errors.append(
+                                                                "A recursive requisite was"
+                                                                ' found, SLS "{}" ID "{}"'
+                                                                ' ID "{}"'.format(
+                                                                    body["__sls__"],
+                                                                    name,
+                                                                    req_val,
+                                                                )
+                                                            )
+                                    # Make sure that there is only one key in the
+                                    # dict
+                                    if len(list(arg)) != 1:
+                                        errors.append(
+                                            "Multiple dictionaries defined in argument "
+                                            "of state '{}' in SLS '{}'".format(
+                                                name, body["__sls__"]
+                                            )
+                                        )
+                        if not fun:
+                            if state == "require" or state == "watch":
+                                continue
+                            errors.append(
+                                f"No function declared in state '{name}' in SLS "
+                                f"'{body['__sls__']}'"
+                            )
+                        elif fun > 1:
+                            funs = (
+                                [state.split(".", maxsplit=1)[1]]
+                                if "." in state
+                                else []
+                            )
+                            funs.extend(
+                                arg for arg in body[state] if isinstance(arg, str)
+                            )
+                            errors.append(
+                                f"Too many functions declared in state '{name}' in "
+                                f"SLS '{body['__sls__']}'. Please choose one of "
+                                "the following: " + ", ".join(funs)
+                            )
         return errors
 
     def order_chunks(self, chunks):
@@ -971,10 +991,18 @@ class State:
             "timeout",
             "success_retcodes",
         )
+        if "cmd_opts_exclude" in low_data:
+            if not isinstance(low_data["cmd_opts_exclude"], list):
+                cmd_opts_exclude = [low_data["cmd_opts_exclude"]]
+            else:
+                cmd_opts_exclude = low_data["cmd_opts_exclude"]
+        else:
+            cmd_opts_exclude = []
         for run_cmd_arg in POSSIBLE_CMD_ARGS:
-            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+            if run_cmd_arg not in cmd_opts_exclude:
+                cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
 
-        if "shell" in low_data:
+        if "shell" in low_data and "shell" not in cmd_opts_exclude:
             cmd_opts["shell"] = low_data["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -1057,7 +1085,7 @@ class State:
                     return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
-                    ret["comment"] = "no `fun` argument in onlyif: {}".format(entry)
+                    ret["comment"] = f"no `fun` argument in onlyif: {entry}"
                     log.warning(ret["comment"])
                     return ret
 
@@ -1135,7 +1163,7 @@ class State:
                     return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
-                    ret["comment"] = "no `fun` argument in unless: {}".format(entry)
+                    ret["comment"] = f"no `fun` argument in unless: {entry}"
                     log.warning(ret["comment"])
                     return ret
 
@@ -1385,9 +1413,9 @@ class State:
                 )
                 reason = self.states.missing_fun_string(full)
                 if reason:
-                    errors.append("Reason: {}".format(reason))
+                    errors.append(f"Reason: {reason}")
             else:
-                errors.append("Specified state '{}' was not found".format(full))
+                errors.append(f"Specified state '{full}' was not found")
         else:
             # First verify that the parameters are met
             aspec = salt.utils.args.get_function_argspec(self.states[full])
@@ -1486,17 +1514,21 @@ class State:
                 else:
                     fun = 0
                     if "." in state:
+                        # This should not happen usually since `_handle_state_decls`
+                        # is run on rendered templates
                         fun += 1
                     for arg in body[state]:
                         if isinstance(arg, str):
                             fun += 1
                             if " " in arg.strip():
                                 errors.append(
-                                    'The function "{}" in state "{}" in SLS "{}" has '
-                                    "whitespace, a function with whitespace is not "
-                                    "supported, perhaps this is an argument that is "
-                                    'missing a ":"'.format(arg, name, body["__sls__"])
+                                    f'The function "{arg}" in state '
+                                    f'"{name}" in SLS "{body["__sls__"]}" has '
+                                    "whitespace, a function with whitespace is "
+                                    "not supported, perhaps this is an argument"
+                                    ' that is missing a ":"'
                                 )
+
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
@@ -1589,14 +1621,16 @@ class State:
                         if state == "require" or state == "watch":
                             continue
                         errors.append(
-                            "No function declared in state '{}' in SLS '{}'".format(
-                                state, body["__sls__"]
-                            )
+                            f"No function declared in state '{name}' in SLS "
+                            f"'{body['__sls__']}'"
                         )
                     elif fun > 1:
+                        funs = [state.split(".", maxsplit=1)[1]] if "." in state else []
+                        funs.extend(arg for arg in body[state] if isinstance(arg, str))
                         errors.append(
-                            "Too many functions declared in state '{}' in "
-                            "SLS '{}'".format(state, body["__sls__"])
+                            f"Too many functions declared in state '{name}' in "
+                            f"SLS '{body['__sls__']}'. Please choose one of "
+                            "the following: " + ", ".join(funs)
                         )
         return errors
 
@@ -2114,7 +2148,7 @@ class State:
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": f"An exception occurred in this state: {trb}",
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -2131,9 +2165,7 @@ class State:
         if "retry" in low:
             retries = 1
             low["retry"] = instance.verify_retry_data(low["retry"])
-            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__[
-                "test"
-            ]:
+            if not instance.states.opts["test"]:
                 while low["retry"]["attempts"] >= retries:
 
                     if low["retry"]["until"] == ret["result"]:
@@ -2222,7 +2254,7 @@ class State:
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
             args=(instance, self._init_kwargs, name, cdata, low),
-            name="ParallelState({})".format(name),
+            name=f"ParallelState({name})",
         )
         proc.start()
         ret = {
@@ -2258,7 +2290,7 @@ class State:
                 "comment": "",
             }
             for err in errors:
-                ret["comment"] += "{}\n".format(err)
+                ret["comment"] += f"{err}\n"
             ret["__run_num__"] = self.__run_num
             self.__run_num += 1
             format_log(ret)
@@ -2292,6 +2324,7 @@ class State:
             initial_ret={"full": state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS,
         )
+
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.
@@ -2301,6 +2334,7 @@ class State:
             "__running__": immutabletypes.freeze(running) if running else {},
             "__instance_id__": self.instance_id,
             "__lowstate__": immutabletypes.freeze(chunks) if chunks else {},
+            "__user__": self.opts.get("user", "UNKNOWN"),
         }
 
         if "__env__" in low:
@@ -2310,8 +2344,8 @@ class State:
             inject_globals.update(self.inject_globals)
 
         if low.get("__prereq__"):
-            test = sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]
-            sys.modules[self.states[cdata["full"]].__module__].__opts__["test"] = True
+            test = self.states.opts["test"]
+            self.states.opts["test"] = True
         try:
             # Let's get a reference to the salt environment to use within this
             # state call.
@@ -2374,11 +2408,15 @@ class State:
                                 *cdata["args"], **cdata["kwargs"]
                             )
                 self.states.inject_globals = {}
-            if (
-                "check_cmd" in low
-                and "{0[state]}.mod_run_check_cmd".format(low) not in self.states
-            ):
-                ret.update(self._run_check_cmd(low))
+            if "check_cmd" in low:
+                state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)
+                state_func = "{0[state]}.{0[fun]}".format(low)
+                state_func_sig = inspect.signature(self.states[state_func])
+                if state_check_cmd not in self.states:
+                    ret.update(self._run_check_cmd(low))
+                else:
+                    if "check_cmd" not in state_func_sig.parameters:
+                        ret.update(self._run_check_cmd(low))
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2399,14 +2437,11 @@ class State:
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": f"An exception occurred in this state: {trb}",
             }
         finally:
             if low.get("__prereq__"):
-                sys.modules[self.states[cdata["full"]].__module__].__opts__[
-                    "test"
-                ] = test
-
+                self.states.opts["test"] = test
             self.state_con.pop("runas", None)
             self.state_con.pop("runas_password", None)
 
@@ -2447,7 +2482,7 @@ class State:
         )
         if "retry" in low and "parallel" not in low:
             low["retry"] = self.verify_retry_data(low["retry"])
-            if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
+            if not self.states.opts["test"]:
                 if low["retry"]["until"] != ret["result"]:
                     if low["retry"]["attempts"] > retries:
                         interval = low["retry"]["interval"]
@@ -3414,7 +3449,7 @@ class State:
                                             lkey, lval
                                         )
                                     ),
-                                    "name": "listen_{}:{}".format(lkey, lval),
+                                    "name": f"listen_{lkey}:{lval}",
                                     "result": False,
                                     "changes": {},
                                 }
@@ -3529,9 +3564,7 @@ class State:
             return high, errors
 
         if not isinstance(high, dict):
-            errors.append(
-                "Template {} does not render to a dictionary".format(template)
-            )
+            errors.append(f"Template {template} does not render to a dictionary")
             return high, errors
 
         invalid_items = ("include", "exclude", "extends")
@@ -3906,10 +3939,10 @@ class BaseHighState:
         """
         merging_strategy = self.opts["top_file_merging_strategy"]
         try:
-            merge_attr = "_merge_tops_{}".format(merging_strategy)
+            merge_attr = f"_merge_tops_{merging_strategy}"
             merge_func = getattr(self, merge_attr)
             if not hasattr(merge_func, "__call__"):
-                msg = "'{}' is not callable".format(merge_attr)
+                msg = f"'{merge_attr}' is not callable"
                 log.error(msg)
                 raise TypeError(msg)
         except (AttributeError, TypeError):
@@ -4237,7 +4270,7 @@ class BaseHighState:
             fn_ = sls
             if not os.path.isfile(fn_):
                 errors.append(
-                    "Specified SLS {} on local filesystem cannot be found.".format(sls)
+                    f"Specified SLS {sls} on local filesystem cannot be found."
                 )
         state = None
         if not fn_:
@@ -4260,25 +4293,25 @@ class BaseHighState:
                     context=context,
                 )
             except SaltRenderError as exc:
-                msg = "Rendering SLS '{}:{}' failed: {}".format(saltenv, sls, exc)
+                msg = f"Rendering SLS '{saltenv}:{sls}' failed: {exc}"
                 log.critical(msg)
                 errors.append(msg)
             except Exception as exc:  # pylint: disable=broad-except
-                msg = "Rendering SLS {} failed, render error: {}".format(sls, exc)
+                msg = f"Rendering SLS {sls} failed, render error: {exc}"
                 log.critical(
                     msg,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG,
                 )
-                errors.append("{}\n{}".format(msg, traceback.format_exc()))
+                errors.append(f"{msg}\n{traceback.format_exc()}")
             try:
-                mods.add("{}:{}".format(saltenv, sls))
+                mods.add(f"{saltenv}:{sls}")
             except AttributeError:
                 pass
 
         if state:
             if not isinstance(state, dict):
-                errors.append("SLS {} does not render to a dictionary".format(sls))
+                errors.append(f"SLS {sls} does not render to a dictionary")
             else:
                 include = []
                 if "include" in state:
@@ -4381,7 +4414,7 @@ class BaseHighState:
                             r_env = (
                                 resolved_envs[0] if len(resolved_envs) == 1 else saltenv
                             )
-                            mod_tgt = "{}:{}".format(r_env, sls_target)
+                            mod_tgt = f"{r_env}:{sls_target}"
                             if mod_tgt not in mods:
                                 nstate, err = self.render_state(
                                     sls_target,
@@ -4481,7 +4514,7 @@ class BaseHighState:
                             comps[0]: [comps[1]],
                         }
                         continue
-                errors.append("ID {} in SLS {} is not a dictionary".format(name, sls))
+                errors.append(f"ID {name} in SLS {sls} is not a dictionary")
                 continue
             skeys = set()
             for key in list(state[name]):
@@ -4525,9 +4558,7 @@ class BaseHighState:
         if "extend" in state:
             ext = state.pop("extend")
             if not isinstance(ext, dict):
-                errors.append(
-                    "Extension value in SLS '{}' is not a dictionary".format(sls)
-                )
+                errors.append(f"Extension value in SLS '{sls}' is not a dictionary")
                 return
             for name in ext:
                 if not isinstance(ext[name], dict):
@@ -4594,7 +4625,7 @@ class BaseHighState:
                     statefiles = [sls_match]
 
                 for sls in statefiles:
-                    r_env = "{}:{}".format(saltenv, sls)
+                    r_env = f"{saltenv}:{sls}"
                     if r_env in mods:
                         continue
                     state, errors = self.render_state(
@@ -4605,7 +4636,7 @@ class BaseHighState:
                     for i, error in enumerate(errors[:]):
                         if "is not available" in error:
                             # match SLS foobar in environment
-                            this_sls = "SLS {} in saltenv".format(sls_match)
+                            this_sls = f"SLS {sls_match} in saltenv"
                             if this_sls in error:
                                 errors[
                                     i
@@ -4650,7 +4681,7 @@ class BaseHighState:
         try:
             highstate.update(state)
         except ValueError:
-            errors.append("Error when rendering state with contents: {}".format(state))
+            errors.append(f"Error when rendering state with contents: {state}")
 
     def _check_pillar(self, force=False):
         """
@@ -4703,7 +4734,7 @@ class BaseHighState:
                 "__run_num__": 0,
             }
         }
-        cfn = os.path.join(self.opts["cachedir"], "{}.cache.p".format(cache_name))
+        cfn = os.path.join(self.opts["cachedir"], f"{cache_name}.cache.p")
 
         if cache:
             if os.path.isfile(cfn):

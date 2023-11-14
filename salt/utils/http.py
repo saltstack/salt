@@ -5,7 +5,7 @@ and the like, but also useful for basic HTTP testing.
 .. versionadded:: 2015.5.0
 """
 
-import cgi
+import email.message
 import gzip
 import http.client
 import http.cookiejar
@@ -22,9 +22,11 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zlib
 
+import tornado.httputil
+import tornado.simple_httpclient
+from tornado.httpclient import HTTPClient
+
 import salt.config
-import salt.ext.tornado.httputil
-import salt.ext.tornado.simple_httpclient
 import salt.loader
 import salt.syspaths
 import salt.utils.args
@@ -38,7 +40,6 @@ import salt.utils.stringutils
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt.ext.tornado.httpclient import HTTPClient
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -63,7 +64,7 @@ except ImportError:
 
 
 try:
-    import salt.ext.tornado.curl_httpclient
+    import tornado.curl_httpclient
 
     HAS_CURL_HTTPCLIENT = True
 except ImportError:
@@ -84,7 +85,7 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-USERAGENT = "Salt/{}".format(salt.version.__version__)
+USERAGENT = f"Salt/{salt.version.__version__}"
 
 
 def __decompressContent(coding, pgctnt):
@@ -117,6 +118,37 @@ def __decompressContent(coding, pgctnt):
 
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt
+
+
+def _decode_result_text(result_text, backend, decode_body=None, result=None):
+    """
+    Decode only the result_text
+    """
+    if backend == "requests":
+        if not isinstance(result_text, str) and decode_body:
+            result_text = result_text.decode(result.encoding or "utf-8")
+    else:
+        if isinstance(result_text, bytes) and decode_body:
+            result_text = result_text.decode("utf-8")
+    return result_text
+
+
+def _decode_result(result_text, result_headers, backend, decode_body=None, result=None):
+    """
+    Decode the result_text and headers.
+    """
+    if "Content-Type" in result_headers:
+        msg = email.message.EmailMessage()
+        msg.add_header("Content-Type", result_headers["Content-Type"])
+        if msg.get_content_type().startswith("text/"):
+            content_charset = msg.get_content_charset()
+            if content_charset and not isinstance(result_text, str):
+                result_text = result_text.decode(content_charset)
+    result_text = _decode_result_text(
+        result_text, backend, decode_body=decode_body, result=result
+    )
+
+    return result_text, result_headers
 
 
 @jinja_filter("http_query")
@@ -170,7 +202,7 @@ def query(
     formdata_fieldname=None,
     formdata_filename=None,
     decode_body=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Query a resource, and decode the return data
@@ -213,7 +245,7 @@ def query(
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = salt.ext.tornado.httputil.url_concat(url, params) if params else url
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -295,7 +327,7 @@ def query(
             auth = (username, password)
 
     if agent == USERAGENT:
-        agent = "{} http.query()".format(agent)
+        agent = f"{agent} http.query()"
     header_dict["User-agent"] = agent
 
     if backend == "requests":
@@ -360,14 +392,14 @@ def query(
                 url,
                 params=params,
                 files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
-                **req_kwargs
+                **req_kwargs,
             )
         else:
             result = sess.request(method, url, params=params, data=data, **req_kwargs)
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
-            header_callback("HTTP/1.0 {} MESSAGE".format(result.status_code))
+            header_callback(f"HTTP/1.0 {result.status_code} MESSAGE")
             # fake streaming the content
             streaming_callback(result.content)
             return {
@@ -388,10 +420,10 @@ def query(
         result_headers = result.headers
         result_text = result.content
         result_cookies = result.cookies
-        body = result.content
-        if not isinstance(body, str) and decode_body:
-            body = body.decode(result.encoding or "utf-8")
-        ret["body"] = body
+        result_text = _decode_result_text(
+            result_text, backend, decode_body=decode_body, result=result
+        )
+        ret["body"] = result_text
     elif backend == "urllib2":
         request = urllib.request.Request(url_full, data)
         handlers = [
@@ -482,18 +514,9 @@ def query(
         result_status_code = result.code
         result_headers = dict(result.info())
         result_text = result.read()
-        if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
-        if isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
     else:
         # Tornado
@@ -567,16 +590,16 @@ def query(
                 log.error(ret["error"])
                 return ret
 
-            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(
+            tornado.httpclient.AsyncHTTPClient.configure(
                 "tornado.curl_httpclient.CurlAsyncHTTPClient"
             )
             client_argspec = salt.utils.args.get_function_argspec(
-                salt.ext.tornado.curl_httpclient.CurlAsyncHTTPClient.initialize
+                tornado.curl_httpclient.CurlAsyncHTTPClient.initialize
             )
         else:
-            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(None)
+            tornado.httpclient.AsyncHTTPClient.configure(None)
             client_argspec = salt.utils.args.get_function_argspec(
-                salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
+                tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
             )
 
         supports_max_body_size = "max_body_size" in client_argspec.args
@@ -615,9 +638,15 @@ def query(
                 else HTTPClient()
             )
             result = download_client.fetch(url_full, **req_kwargs)
-        except salt.ext.tornado.httpclient.HTTPError as exc:
+        except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
+            ret["body"], _ = _decode_result(
+                exc.response.body,
+                exc.response.headers,
+                backend,
+                decode_body=decode_body,
+            )
             return ret
         except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
             if status is True:
@@ -635,18 +664,9 @@ def query(
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
-        if isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers["Set-Cookie"])
@@ -1038,12 +1058,12 @@ def _sanitize_url_components(comp_list, field):
     """
     if not comp_list:
         return ""
-    elif comp_list[0].startswith("{}=".format(field)):
-        ret = "{}=XXXXXXXXXX&".format(field)
+    elif comp_list[0].startswith(f"{field}="):
+        ret = f"{field}=XXXXXXXXXX&"
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
     else:
-        ret = "{}&".format(comp_list[0])
+        ret = f"{comp_list[0]}&"
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
 

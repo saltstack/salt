@@ -3,12 +3,14 @@ Tests for building and installing salt
 """
 import json
 import logging
+import os
 import pathlib
 import re
 import sys
 
 import pytest
 
+import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.version
@@ -17,7 +19,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
@@ -457,3 +459,38 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = installed_salt_path[0] / "salt"
         salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
+
+
+def test_salt_install_args(
+    virtualenv, cache_dir, use_static_requirements, src_dir, tmp_path
+):
+    """
+    test building with `install` command with --salt-*
+    args. For example, --salt-config-dir and --salt-cache-dir.
+    """
+    cache_dir = tmp_path / "cache_dir"
+    config_dir = tmp_path / "config_dir"
+    # Let's create the testing virtualenv
+    with virtualenv as venv:
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
+        env = os.environ.copy()
+        env["GENERATE_SALT_SYSPATHS"] = "True"
+        ret = venv.run(
+            venv.venv_python,
+            "setup.py",
+            "--salt-config-dir",
+            str(config_dir),
+            "--salt-cache-dir",
+            str(cache_dir),
+            "install",
+            cwd=src_dir,
+            env=env,
+        )
+        assert ret.returncode == 0
+        syspath = pathlib.Path(src_dir, "build", "lib", "salt", "_syspaths.py")
+        assert syspath.exists()
+        with salt.utils.files.fopen(syspath) as fp:
+            data = fp.read()
+        assert str(cache_dir) in data
+        assert str(config_dir) in data
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)

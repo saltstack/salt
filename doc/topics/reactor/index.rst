@@ -212,6 +212,10 @@ in :ref:`local reactions <reactor-local>`, but as noted above this is not very
 user-friendly. Therefore, the new config schema is recommended if the master
 is running a supported release.
 
+.. note::
+  State ids of reactors for runners and wheels should all be unique. They can
+  overwrite each other when added to the async queue causing lost reactions.
+
 The below two examples are equivalent:
 
 +-------------------------------------------------+-------------------------------------------------+
@@ -247,6 +251,10 @@ master.
 Like :ref:`runner reactions <reactor-runner>`, the old config schema called for
 wheel reactions to have arguments passed directly under the name of the
 :ref:`wheel function <all-salt.wheel>` (or in ``arg`` or ``kwarg`` parameters).
+
+.. note::
+  State ids of reactors for runners and wheels should all be unique. They can
+  overwrite each other when added to the async queue causing lost reactions.
 
 The below two examples are equivalent:
 

@@ -152,15 +152,12 @@ def remove(name, log_file=None):
         res = __salt__["logadm.remove"](name if name else log_file)
         ret["result"] = "Error" not in res
         if ret["result"]:
-            ret["comment"] = "Configuration for {} removed.".format(log_file)
+            ret["comment"] = f"Configuration for {log_file} removed."
             ret["changes"][log_file] = None
         else:
             ret["comment"] = res["Error"]
     else:
         ret["result"] = True
-        ret["comment"] = "No configuration for {} present.".format(log_file)
+        ret["comment"] = f"No configuration for {log_file} present."
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

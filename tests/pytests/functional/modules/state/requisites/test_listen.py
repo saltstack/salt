@@ -2,6 +2,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -352,3 +353,38 @@ def test_onlyif_req(state, subtests):
         assert ret.result is False
         assert ret.changes
         assert ret.comment == "Failure!"
+
+
+def test_listen_requisite_not_exist(state, state_tree):
+    """
+    Tests a simple state using the listen requisite
+    when the state id does not exist
+    """
+    sls_contents = """
+    successful_changing_state:
+      cmd.run:
+        - name: echo "Successful Change"
+
+    non_changing_state:
+      test.succeed_without_changes
+
+    test_listening_change_state:
+      cmd.run:
+        - name: echo "Listening State"
+        - listen:
+          - cmd: successful_changing_state
+
+    test_listening_non_changing_state:
+      cmd.run:
+        - name: echo "Only run once"
+        - listen:
+          - test: non_changing_state_not_exist
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert (
+            ret.raw[
+                "Listen_Error_|-listen_non_changing_state_not_exist_|-listen_test_|-Listen_Error"
+            ]["comment"]
+            == "Referenced state test: non_changing_state_not_exist does not exist"
+        )

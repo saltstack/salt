@@ -3,13 +3,14 @@ Helpers/utils for working with tornado asynchronous stuff
 """
 
 
+import asyncio
 import contextlib
 import logging
 import sys
 import threading
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
+import tornado.concurrent
+import tornado.ioloop
 
 log = logging.getLogger(__name__)
 
@@ -19,12 +20,18 @@ def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
-    io_loop.make_current()
+    try:
+        orig_loop = tornado.ioloop.IOLoop.current()
+    except RuntimeError:
+        orig_loop = None
+    asyncio.set_event_loop(io_loop.asyncio_loop)
     try:
         yield
     finally:
-        orig_loop.make_current()
+        if orig_loop:
+            asyncio.set_event_loop(orig_loop.asyncio_loop)
+        else:
+            asyncio.set_event_loop(None)
 
 
 class SyncWrapper:
@@ -51,7 +58,10 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.asyncio_loop = asyncio.new_event_loop()
+        self.io_loop = tornado.ioloop.IOLoop(
+            asyncio_loop=self.asyncio_loop, make_current=False
+        )
         if args is None:
             args = []
         if kwargs is None:
@@ -82,7 +92,7 @@ class SyncWrapper:
             self._async_methods += self.obj._coroutines
 
     def __repr__(self):
-        return "<SyncWrapper(cls={})".format(self.cls)
+        return f"<SyncWrapper(cls={self.cls})"
 
     def close(self):
         for method in self._close_methods:
@@ -102,7 +112,11 @@ class SyncWrapper:
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
         io_loop.stop()
-        io_loop.close(all_fds=True)
+        try:
+            io_loop.close(all_fds=True)
+        except KeyError:
+            pass
+        self.asyncio_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -114,7 +128,7 @@ class SyncWrapper:
             results = []
             thread = threading.Thread(
                 target=self._target,
-                args=(key, args, kwargs, results, self.io_loop),
+                args=(key, args, kwargs, results, self.asyncio_loop),
             )
             thread.start()
             thread.join()
@@ -126,17 +140,33 @@ class SyncWrapper:
 
         return wrap
 
-    def _target(self, key, args, kwargs, results, io_loop):
+    def _target(self, key, args, kwargs, results, asyncio_loop):
+        asyncio.set_event_loop(asyncio_loop)
+        io_loop = tornado.ioloop.IOLoop.current()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
             results.append(result)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
 
     def __enter__(self):
+        if hasattr(self.obj, "__aenter__"):
+            ret = self._wrap("__aenter__")()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
+        elif hasattr(self.obj, "__enter__"):
+            ret = self.obj.__enter__()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
         return self
 
     def __exit__(self, exc_type, exc_val, tb):
+        if hasattr(self.obj, "__aexit__"):
+            self._wrap("__aexit__")(exc_type, exc_val, tb)
         self.close()

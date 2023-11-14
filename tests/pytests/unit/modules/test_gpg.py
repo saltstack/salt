@@ -15,13 +15,14 @@ import psutil
 import pytest
 
 import salt.modules.gpg as gpg
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 pytest.importorskip("gnupg")
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.requires_random_entropy,
+    pytest.mark.slow_test,
 ]
 
 log = logging.getLogger(__name__)
@@ -879,12 +880,26 @@ def test_search_keys(gpghome):
         }
     ]
 
+    mock_search_keys = MagicMock(return_value=_search_result)
     mock_opt = MagicMock(return_value="root")
     with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
         with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
-            with patch.object(gpg, "_search_keys", return_value=_search_result):
+            with patch.object(gpg, "_search_keys", mock_search_keys):
                 ret = gpg.search_keys("person@example.com")
                 assert ret == _expected_result
+
+                assert (
+                    call("person@example.com", "keys.openpgp.org", None)
+                    in mock_search_keys.mock_calls
+                )
+
+                ret = gpg.search_keys("person@example.com", "keyserver.ubuntu.com")
+                assert ret == _expected_result
+
+                assert (
+                    call("person@example.com", "keyserver.ubuntu.com", None)
+                    in mock_search_keys.mock_calls
+                )
 
 
 def test_gpg_import_pub_key(gpghome):

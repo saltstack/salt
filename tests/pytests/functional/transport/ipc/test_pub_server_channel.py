@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -19,7 +20,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module", params=["tcp", "zeromq"])
+@pytest.fixture(scope="module", params=["zeromq", "tcp"])
 def transport(request):
     yield request.param
 
@@ -61,6 +62,7 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
 
     ZMQ's ipc transport not supported on Windows
     """
+
     opts = dict(
         salt_master.config.copy(),
         ipc_mode="ipc",
@@ -93,26 +95,46 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
         pytest.skip("Test not applicable to the ZeroMQ transport.")
 
     def _send_small(opts, sid, num=10):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
-            server_channel.publish(load)
-        time.sleep(0.3)
+
+        async def send():
+            for idx in range(num):
+                load = {
+                    "tgt_type": "glob",
+                    "tgt": "*",
+                    "jid": f"{sid}-s{idx}",
+                }
+                await server_channel.publish(load)
+
+        asyncio.run(send())
+        # Allow some time for sends to finish
         time.sleep(3)
-        server_channel.close_pub()
+        server_channel.close()
+        loop.close()
+        asyncio.set_event_loop(None)
 
     def _send_large(opts, sid, num=10, size=250000 * 3):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {
-                "tgt_type": "glob",
-                "tgt": "*",
-                "jid": "{}-l{}".format(sid, idx),
-                "xdata": "0" * size,
-            }
-            server_channel.publish(load)
+
+        async def send():
+            for idx in range(num):
+                load = {
+                    "tgt_type": "glob",
+                    "tgt": "*",
+                    "jid": f"{sid}-l{idx}",
+                    "xdata": "0" * size,
+                }
+                await server_channel.publish(load)
+
+        asyncio.run(send())
         time.sleep(0.3)
-        server_channel.close_pub()
+        server_channel.close()
+        loop.close()
+        asyncio.set_event_loop(None)
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
     send_num = 10 * 4
@@ -124,8 +146,8 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
             executor.submit(_send_large, opts, 2)
             executor.submit(_send_small, opts, 3)
             executor.submit(_send_large, opts, 4)
-        expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 3)])
-        expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (2, 4)])
+        expect.extend([f"{a}-s{b}" for a in range(10) for b in (1, 3)])
+        expect.extend([f"{a}-l{b}" for a in range(10) for b in (2, 4)])
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)

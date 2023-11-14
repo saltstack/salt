@@ -23,14 +23,15 @@ def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
     """
+    if not install_salt.relenv and not install_salt.classic:
+        pytest.skip("Unable to get the python version dynamically from tiamat builds")
     test_bin = os.path.join(*install_salt.binary_paths["master"])
     python_bin = os.path.join(*install_salt.binary_paths["python"])
     ret = install_salt.proc.run(test_bin, "--versions-report")
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
     py_version = subprocess.run(
         [str(python_bin), "--version"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     ).stdout
     py_version = py_version.decode().strip().replace(" ", ": ")
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
@@ -52,17 +53,20 @@ def test_compare_versions(version, binary, install_salt):
     """
     Test compare versions
     """
-    if platform.is_windows() and install_salt.singlebin:
-        pytest.skip(
-            "Already tested in `test_salt_version`. No need to repeat for "
-            "Windows single binary installs."
-        )
-
     if binary in install_salt.binary_paths:
-        ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
+        ret = install_salt.proc.run(
+            *install_salt.binary_paths[binary],
+            "--version",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
     else:
-        pytest.skip(f"Binary not available: {binary}")
+        if platform.is_windows():
+            pytest.skip(f"Binary not available on windows: {binary}")
+        pytest.fail(
+            f"Platform is not Windows and yet the binary {binary!r} is not available"
+        )
 
 
 @pytest.mark.skip_unless_on_darwin()
@@ -89,19 +93,15 @@ def test_symlinks_created(version, symlink, install_salt):
     """
     Test symlinks created
     """
-    if not install_salt.installer_pkg:
-        pytest.skip(
-            "This test is for the installer package only (pkg). It does not "
-            "apply to the tarball"
-        )
+    if install_salt.classic:
+        pytest.skip("Symlinks not created for classic macos builds, we adjust the path")
+    if not install_salt.relenv and symlink == "spm":
+        symlink = "salt-spm"
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
 @pytest.mark.skip_on_windows()
-@pytest.mark.skipif(
-    True, reason="Skipping until images are updated with rpmdev-vercmp for RC2"
-)
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included

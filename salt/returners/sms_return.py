@@ -38,14 +38,18 @@ try:
 
     # Grab version, ensure elements are ints
     twilio_version = tuple(int(x) for x in twilio.__version_info__)
-    if twilio_version > (5,):
-        TWILIO_5 = False
+    if twilio_version > (6,):
+        from twilio.base.exceptions import TwilioRestException
+        from twilio.rest import Client as TwilioRestClient
+    elif twilio_version > (5,):
+        # pylint: disable=no-name-in-module
         from twilio.rest import Client as TwilioRestClient
         from twilio.rest import TwilioException as TwilioRestException
+
+        # pylint: enable=no-name-in-module
     else:
-        TWILIO_5 = True
         from twilio import TwilioRestException  # pylint: disable=no-name-in-module
-        from twilio.rest import TwilioRestClient
+        from twilio.rest import TwilioRestClient  # pylint: disable=no-name-in-module
 
     HAS_TWILIO = True
 except ImportError:

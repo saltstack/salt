@@ -16,4 +16,7 @@ class SaltSSH(salt.utils.parsers.SaltSSHOptionParser):
         self.parse_args()
 
         ssh = salt.client.ssh.SSH(self.config)
-        ssh.run()
+        try:
+            ssh.run()
+        finally:
+            ssh.fsclient.destroy()

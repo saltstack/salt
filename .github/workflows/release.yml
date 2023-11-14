@@ -1,7 +1,9 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '.github/workflows/templates/release.yml.jinja'
 ---
+
 name: Release
+run-name: "Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 on:
   workflow_dispatch:
@@ -12,12 +14,15 @@ on:
         description: >
           The Salt version to get from staging to publish the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
-  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_DOMAIN }}"
 
 permissions:
   contents: write  # To be able to publish the release
@@ -30,7 +35,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: release-check
     steps:
       - name: Check For Admin Permission
@@ -39,25 +44,22 @@ jobs:
           require: admin
           username: ${{ github.triggering_actor }}
 
-      - name: Check Branch
-        run: |
-          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
-              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
-              exit 1
-          else
-              echo "Allowed"
-          fi
-
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    environment: release
     needs:
       - check-requirements
     outputs:
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
@@ -81,8 +83,691 @@ jobs:
           validate-version: true
 
       - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
+
+      - name: Check Release Staged
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
+  download-onedir-artifact:
+    name: Download Staging Onedir Artifact
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    environment: release
+    needs:
+      - prepare-workflow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x86_64
+          - platform: linux
+            arch: aarch64
+          - platform: windows
+            arch: amd64
+          - platform: windows
+            arch: x86
+          - platform: darwin
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Download Onedir Tarball Artifact
+        run: |
+          tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
+
+      - name: Upload Onedir Tarball as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
+          retention-days: 7
+          if-no-files-found: error
+
+  windows-2016-ci-deps:
+    name: Windows 2016 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: windows-2016
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  windows-2019-ci-deps:
+    name: Windows 2019 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: windows-2019
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  windows-2022-ci-deps:
+    name: Windows 2022 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  macos-12-ci-deps:
+    name: macOS 12 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  macos-13-ci-deps:
+    name: macOS 13 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action-macos.yml
+    with:
+      distro-slug: macos-13
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  almalinux-8-ci-deps:
+    name: Alma Linux 8 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: almalinux-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  almalinux-8-arm64-ci-deps:
+    name: Alma Linux 8 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  almalinux-9-ci-deps:
+    name: Alma Linux 9 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  almalinux-9-arm64-ci-deps:
+    name: Alma Linux 9 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2-ci-deps:
+    name: Amazon Linux 2 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2-arm64-ci-deps:
+    name: Amazon Linux 2 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  archlinux-lts-ci-deps:
+    name: Arch Linux LTS Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: archlinux-lts
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centos-7-ci-deps:
+    name: CentOS 7 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centos-7
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centos-7-arm64-ci-deps:
+    name: CentOS 7 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centos-7-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centosstream-8-ci-deps:
+    name: CentOS Stream 8 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centosstream-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centosstream-8-arm64-ci-deps:
+    name: CentOS Stream 8 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centosstream-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centosstream-9-ci-deps:
+    name: CentOS Stream 9 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centosstream-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  centosstream-9-arm64-ci-deps:
+    name: CentOS Stream 9 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-10-ci-deps:
+    name: Debian 10 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-10
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-11-ci-deps:
+    name: Debian 11 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-11
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-11-arm64-ci-deps:
+    name: Debian 11 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-12-ci-deps:
+    name: Debian 12 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-12-arm64-ci-deps:
+    name: Debian 12 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  fedora-37-ci-deps:
+    name: Fedora 37 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: fedora-37
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  fedora-37-arm64-ci-deps:
+    name: Fedora 37 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: fedora-37-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  fedora-38-ci-deps:
+    name: Fedora 38 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: fedora-38
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  fedora-38-arm64-ci-deps:
+    name: Fedora 38 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: fedora-38-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  opensuse-15-ci-deps:
+    name: Opensuse 15 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: opensuse-15
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-3-ci-deps:
+    name: Photon OS 3 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-3
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-3-arm64-ci-deps:
+    name: Photon OS 3 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-4-ci-deps:
+    name: Photon OS 4 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-4-arm64-ci-deps:
+    name: Photon OS 4 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-ci-deps:
+    name: Photon OS 5 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-arm64-ci-deps:
+    name: Photon OS 5 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  ubuntu-2004-ci-deps:
+    name: Ubuntu 20.04 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  ubuntu-2004-arm64-ci-deps:
+    name: Ubuntu 20.04 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  ubuntu-2204-ci-deps:
+    name: Ubuntu 22.04 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  ubuntu-2204-arm64-ci-deps:
+    name: Ubuntu 22.04 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
   backup:
     name: Backup
@@ -93,15 +778,23 @@ jobs:
     needs:
       - prepare-workflow
     environment: release
+    outputs:
+      backup-complete: ${{ steps.backup.outputs.backup-complete }}
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Backup Previous Releases
+        id: backup
         run: |
           tools pkg repo backup-previous-releases
 
@@ -114,23 +807,85 @@ jobs:
     needs:
       - prepare-workflow
       - backup
+      - download-onedir-artifact
     environment: release
 
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Publish Release Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
-          tools pkg repo publish release \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
-            --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
+
+  pkg-download-tests:
+    name: Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - almalinux-8-arm64-ci-deps
+      - almalinux-8-ci-deps
+      - almalinux-9-arm64-ci-deps
+      - almalinux-9-ci-deps
+      - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2-ci-deps
+      - centos-7-arm64-ci-deps
+      - centos-7-ci-deps
+      - centosstream-8-arm64-ci-deps
+      - centosstream-8-ci-deps
+      - centosstream-9-arm64-ci-deps
+      - centosstream-9-ci-deps
+      - debian-10-ci-deps
+      - debian-11-arm64-ci-deps
+      - debian-11-ci-deps
+      - debian-12-arm64-ci-deps
+      - debian-12-ci-deps
+      - fedora-37-arm64-ci-deps
+      - fedora-37-ci-deps
+      - fedora-38-arm64-ci-deps
+      - fedora-38-ci-deps
+      - macos-12-ci-deps
+      - macos-13-ci-deps
+      - photonos-3-arm64-ci-deps
+      - photonos-3-ci-deps
+      - photonos-4-arm64-ci-deps
+      - photonos-4-ci-deps
+      - photonos-5-arm64-ci-deps
+      - photonos-5-ci-deps
+      - ubuntu-2004-arm64-ci-deps
+      - ubuntu-2004-ci-deps
+      - ubuntu-2204-arm64-ci-deps
+      - ubuntu-2204-ci-deps
+      - windows-2022-ci-deps
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action.yml
+    with:
+      nox-session: ci-test-onedir
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
 
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
       - self-hosted
       - linux
@@ -139,10 +894,11 @@ jobs:
       - prepare-workflow
       - backup
       - publish-repositories
+      - pkg-download-tests
     environment: release
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
@@ -208,6 +964,7 @@ jobs:
           ssh: true
           tags: true
           atomic: true
+          branch: ${{ github.ref }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@v1.12.0
@@ -224,27 +981,133 @@ jobs:
           replacesArtifacts: true
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
+      - name: Upload PyPi Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: |
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
+          retention-days: 7
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPi
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
+    needs:
+      - prepare-workflow
+      - release
+    environment: release
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Download PyPi Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: artifacts/release
+
       - name: Publish to PyPi
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
-          tools pkg pypi-upload release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - check-requirements
       - prepare-workflow
       - publish-repositories
+      - pkg-download-tests
       - release
+      - publish-pypi
+      - windows-2016-ci-deps
+      - windows-2019-ci-deps
+      - windows-2022-ci-deps
+      - macos-12-ci-deps
+      - macos-13-ci-deps
+      - almalinux-8-ci-deps
+      - almalinux-8-arm64-ci-deps
+      - almalinux-9-ci-deps
+      - almalinux-9-arm64-ci-deps
+      - amazonlinux-2-ci-deps
+      - amazonlinux-2-arm64-ci-deps
+      - archlinux-lts-ci-deps
+      - centos-7-ci-deps
+      - centos-7-arm64-ci-deps
+      - centosstream-8-ci-deps
+      - centosstream-8-arm64-ci-deps
+      - centosstream-9-ci-deps
+      - centosstream-9-arm64-ci-deps
+      - debian-10-ci-deps
+      - debian-11-ci-deps
+      - debian-11-arm64-ci-deps
+      - debian-12-ci-deps
+      - debian-12-arm64-ci-deps
+      - fedora-37-ci-deps
+      - fedora-37-arm64-ci-deps
+      - fedora-38-ci-deps
+      - fedora-38-arm64-ci-deps
+      - opensuse-15-ci-deps
+      - photonos-3-ci-deps
+      - photonos-3-arm64-ci-deps
+      - photonos-4-ci-deps
+      - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
+      - ubuntu-2004-ci-deps
+      - ubuntu-2004-arm64-ci-deps
+      - ubuntu-2204-ci-deps
+      - ubuntu-2204-arm64-ci-deps
     steps:
       - name: Get workflow information
         id: get-workflow-info
         uses: technote-space/workflow-conclusion-action@v3
+
+      - run: |
+          # shellcheck disable=SC2129
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            echo 'To restore the release bucket run:' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+            echo 'tools pkg repo restore-previous-releases' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Set Pipeline Exit Status
         shell: bash

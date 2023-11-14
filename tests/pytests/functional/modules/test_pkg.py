@@ -1,6 +1,7 @@
 import configparser
 import logging
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -288,14 +289,14 @@ def test_hold_unhold(grains, modules, states, test_pkg, refresh_db):
             except AssertionError:
                 pass
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     modules.pkg.install(test_pkg)
 
     try:
         hold_ret = modules.pkg.hold(test_pkg)
         if versionlock_pkg and "-versionlock is not installed" in str(hold_ret):
-            pytest.skip("{}  `{}` is installed".format(hold_ret, versionlock_pkg))
+            pytest.skip(f"{hold_ret}  `{versionlock_pkg}` is installed")
         assert test_pkg in hold_ret
         assert hold_ret[test_pkg]["result"] is True
 
@@ -327,7 +328,7 @@ def test_refresh_db(grains, tmp_path, minion_opts, refresh_db):
     loader = Loaders(minion_opts)
     ret = loader.modules.pkg.refresh_db()
     if not isinstance(ret, dict):
-        pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
+        pytest.skip(f"Upstream repo did not return coherent results: {ret}")
 
     if grains["os_family"] == "RedHat":
         assert ret in (True, None)
@@ -422,9 +423,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg, refresh_db)
         ret = modules.pkg.install(target, version=old)
         if not isinstance(ret, dict):
             if ret.startswith("ERROR"):
-                pytest.skipTest(
-                    "Could not install older {} to complete test.".format(target)
-                )
+                pytest.skipTest(f"Could not install older {target} to complete test.")
 
         # Run a system upgrade, which should catch the fact that the
         # targeted package needs upgrading, and upgrade it.
@@ -465,19 +464,17 @@ def test_pkg_latest_version(grains, modules, states, test_pkg, refresh_db):
 
     cmd_pkg = []
     if grains["os_family"] == "RedHat":
-        cmd_pkg = modules.cmd.run("yum list {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"yum list {test_pkg}")
     elif salt.utils.platform.is_windows():
         cmd_pkg = modules.pkg.list_available(test_pkg)
     elif grains["os_family"] == "Debian":
-        cmd_pkg = modules.cmd.run("apt list {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"apt list {test_pkg}")
     elif grains["os_family"] == "Arch":
-        cmd_pkg = modules.cmd.run("pacman -Si {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"pacman -Si {test_pkg}")
     elif grains["os_family"] == "FreeBSD":
-        cmd_pkg = modules.cmd.run(
-            "pkg search -S name -qQ version -e {}".format(test_pkg)
-        )
+        cmd_pkg = modules.cmd.run(f"pkg search -S name -qQ version -e {test_pkg}")
     elif grains["os_family"] == "Suse":
-        cmd_pkg = modules.cmd.run("zypper info {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"zypper info {test_pkg}")
     elif grains["os_family"] == "MacOS":
         brew_bin = salt.utils.path.which("brew")
         mac_user = modules.file.get_user(brew_bin)
@@ -487,7 +484,7 @@ def test_pkg_latest_version(grains, modules, states, test_pkg, refresh_db):
                     os.listdir("/Users/")
                 )
             )
-        cmd_pkg = modules.cmd.run("brew info {}".format(test_pkg), run_as=mac_user)
+        cmd_pkg = modules.cmd.run(f"brew info {test_pkg}", run_as=mac_user)
     else:
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
     pkg_latest = modules.pkg.latest_version(test_pkg)
@@ -529,9 +526,38 @@ def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
     expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
         result = modules.pkg.list_repos(strict_config=True)
-    assert "{}".format(exc_info.value) == expected
+    assert f"{exc_info.value}" == expected
 
     # test implicitly strict_config
     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
         result = modules.pkg.list_repos()
-    assert "{}".format(exc_info.value) == expected
+    assert f"{exc_info.value}" == expected
+
+
+@pytest.mark.destructive_test
+@pytest.mark.slow_test
+def test_pkg_install_port(grains, modules):
+    """
+    test install package with a port in the url
+    """
+    pkgs = modules.pkg.list_pkgs()
+    nano = pkgs.get("nano")
+    if nano:
+        modules.pkg.remove("nano")
+
+    if grains["os_family"] == "Debian":
+        url = modules.cmd.run("apt download --print-uris nano").split()[-4]
+        if url.startswith("'mirror+file"):
+            url = "http://ftp.debian.org/debian/pool/" + url.split("pool")[1].rstrip(
+                "'"
+            )
+        try:
+            ret = modules.pkg.install(sources=f'[{{"nano":{url}}}]')
+            version = re.compile(r"\d\.\d")
+            assert version.search(url).group(0) in ret["nano"]["new"]
+        finally:
+            modules.pkg.remove("nano")
+            if nano:
+                # If nano existed on the machine before the test ran
+                # re-install that version
+                modules.pkg.install(f"nano={nano}")

@@ -25,6 +25,8 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 import salt.defaults.exitcodes  # isort:skip  pylint: disable=unused-import
+import salt.utils.ctx
+
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
@@ -32,7 +34,6 @@ from salt._logging.handlers import SysLogHandler  # isort:skip
 from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
-from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.immutabletypes import freeze, ImmutableDict  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
 
@@ -108,9 +109,9 @@ DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(lev
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
-        self.bracketname = "[{:<17}]".format(str(self.name))
-        self.bracketlevel = "[{:<8}]".format(str(self.levelname))
-        self.bracketprocess = "[{:>5}]".format(str(self.process))
+        self.bracketname = f"[{str(self.name):<17}]"
+        self.bracketlevel = f"[{str(self.levelname):<8}]"
+        self.bracketprocess = f"[{str(self.process):>5}]"
 
 
 class SaltColorLogRecord(SaltLogRecord):
@@ -124,11 +125,11 @@ class SaltColorLogRecord(SaltLogRecord):
         self.colorname = "{}[{:<17}]{}".format(
             LOG_COLORS["name"], str(self.name), reset
         )
-        self.colorlevel = "{}[{:<8}]{}".format(clevel, str(self.levelname), reset)
+        self.colorlevel = f"{clevel}[{str(self.levelname):<8}]{reset}"
         self.colorprocess = "{}[{:>5}]{}".format(
             LOG_COLORS["process"], str(self.process), reset
         )
-        self.colormsg = "{}{}{}".format(cmsg, self.getMessage(), reset)
+        self.colormsg = f"{cmsg}{self.getMessage()}{reset}"
 
 
 def get_log_record_factory():
@@ -237,10 +238,14 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         if extra is None:
             extra = {}
 
-        # pylint: disable=no-member
-        current_jid = RequestContext.current.get("data", {}).get("jid", None)
-        log_fmt_jid = RequestContext.current.get("opts", {}).get("log_fmt_jid", None)
-        # pylint: enable=no-member
+        current_jid = (
+            salt.utils.ctx.get_request_context().get("data", {}).get("jid", None)
+        )
+        log_fmt_jid = (
+            salt.utils.ctx.get_request_context()
+            .get("opts", {})
+            .get("log_fmt_jid", None)
+        )
 
         if current_jid is not None:
             extra["jid"] = current_jid
@@ -270,17 +275,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         else:
             extra["exc_info_on_loglevel"] = exc_info_on_loglevel
 
-        if sys.version_info < (3, 8):
-            LOGGING_LOGGER_CLASS._log(
-                self,
-                level,
-                msg,
-                args,
-                exc_info=exc_info,
-                extra=extra,
-                stack_info=stack_info,
-            )
-        else:
+        try:
             LOGGING_LOGGER_CLASS._log(
                 self,
                 level,
@@ -290,6 +285,18 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                 extra=extra,
                 stack_info=stack_info,
                 stacklevel=stacklevel,
+            )
+        except TypeError:
+            # Python < 3.8 - We still need this for salt-ssh since it will use
+            # the system python, and not out onedir.
+            LOGGING_LOGGER_CLASS._log(
+                self,
+                level,
+                msg,
+                args,
+                exc_info=exc_info,
+                extra=extra,
+                stack_info=stack_info,
             )
 
     def makeRecord(
@@ -469,7 +476,15 @@ def setup_temp_handler(log_level=None):
             break
     else:
         handler = DeferredStreamHandler(sys.stderr)
-        atexit.register(handler.flush)
+
+        def tryflush():
+            try:
+                handler.flush()
+            except ValueError:
+                # File handle has already been closed.
+                pass
+
+        atexit.register(tryflush)
     handler.setLevel(log_level)
 
     # Set the default temporary console formatter config
@@ -725,7 +740,7 @@ def setup_logfile_handler(
                     syslog_opts["address"] = str(path.resolve().parent)
             except OSError as exc:
                 raise LoggingRuntimeError(
-                    "Failed to setup the Syslog logging handler: {}".format(exc)
+                    f"Failed to setup the Syslog logging handler: {exc}"
                 ) from exc
         elif parsed_log_path.path:
             # In case of udp or tcp with a facility specified
@@ -735,7 +750,7 @@ def setup_logfile_handler(
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise LoggingRuntimeError(
-                    "The syslog facility '{}' is not known".format(facility_name)
+                    f"The syslog facility '{facility_name}' is not known"
                 )
         else:
             # This is the case of udp or tcp without a facility specified
@@ -746,7 +761,7 @@ def setup_logfile_handler(
             # This python syslog version does not know about the user provided
             # facility name
             raise LoggingRuntimeError(
-                "The syslog facility '{}' is not known".format(facility_name)
+                f"The syslog facility '{facility_name}' is not known"
             )
         syslog_opts["facility"] = facility
 
@@ -766,7 +781,7 @@ def setup_logfile_handler(
             handler = SysLogHandler(**syslog_opts)
         except OSError as exc:
             raise LoggingRuntimeError(
-                "Failed to setup the Syslog logging handler: {}".format(exc)
+                f"Failed to setup the Syslog logging handler: {exc}"
             ) from exc
     else:
         # make sure, the logging directory exists and attempt to create it if necessary

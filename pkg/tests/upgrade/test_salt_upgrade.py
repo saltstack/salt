@@ -1,36 +1,44 @@
+import packaging.version
 import pytest
 
 
-def test_salt_upgrade(salt_call_cli, salt_minion, install_salt):
+def test_salt_upgrade(salt_call_cli, install_salt):
     """
-    Test upgrade of Salt
+    Test an upgrade of Salt.
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-    # verify previous install version is setup correctly and works
-    ret = salt_call_cli.run("test.ping")
-    assert ret.returncode == 0
-    assert ret.data
 
-    # test pip install before an upgrade
-    dep = "PyGithub"
+    if install_salt.relenv:
+        original_py_version = install_salt.package_python_version()
+
+    # Verify previous install version is setup correctly and works
+    ret = salt_call_cli.run("test.version")
+    assert ret.returncode == 0
+    assert packaging.version.parse(ret.data) < packaging.version.parse(
+        install_salt.artifact_version
+    )
+
+    # Test pip install before an upgrade
+    dep = "PyGithub==1.56.0"
+    install = salt_call_cli.run("--local", "pip.install", dep)
+    assert install.returncode == 0
+
+    # Verify we can use the module dependent on the installed package
     repo = "https://github.com/saltstack/salt.git"
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
     use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
     assert "Authentication information could" in use_lib.stderr
-    # upgrade Salt from previous version and test
+
+    # Upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
-    ret = salt_call_cli.run("test.ping")
+    ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
-    assert ret.data
+    assert packaging.version.parse(ret.data) == packaging.version.parse(
+        install_salt.artifact_version
+    )
 
-    # install dep following upgrade
-    # TODO: Remove this once we figure out how to
-    # preserve things installed via PIP between upgrades.
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
-
-    # test pip install after an upgrade
-    use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-    assert "Authentication information could" in use_lib.stderr
+    if install_salt.relenv:
+        new_py_version = install_salt.package_python_version()
+        if new_py_version == original_py_version:
+            # test pip install after an upgrade
+            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)

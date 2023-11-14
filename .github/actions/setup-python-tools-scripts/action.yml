@@ -2,6 +2,12 @@
 name: setup-python-tools-scripts
 description: Setup 'python-tools-scripts'
 
+inputs:
+  cwd:
+    type: string
+    description: The directory the salt checkout is located in
+    default: "."
+
 outputs:
   version:
     value: ${{ steps.get-version.outputs.version }}
@@ -25,12 +31,19 @@ runs:
 
     - name: Install 'python-tools-scripts'
       shell: bash
+      working-directory: ${{ inputs.cwd }}
       run: |
-        python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        (python3 -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
+        if [ $exitcode -eq 0 ]; then
+          python3 -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        else
+          python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        fi
 
     - name: Get 'python-tools-scripts' Version
       id: get-version
       shell: bash
+      working-directory: ${{ inputs.cwd }}
       run: |
         VERSION=$(tools --version)
         echo "version=$VERSION" >> "${GITHUB_OUTPUT}"

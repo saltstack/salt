@@ -1,8 +1,8 @@
 import textwrap
 
 import pytest
+import tornado.ioloop
 
-import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -73,9 +73,7 @@ def configure_loader_modules(tmp_path):
 @pytest.fixture(scope="module", autouse=True)
 def clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 

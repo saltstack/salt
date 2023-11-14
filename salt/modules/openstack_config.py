@@ -13,28 +13,11 @@ import shlex
 import salt.exceptions
 import salt.utils.decorators.path
 
-try:
-    import pipes
-
-    HAS_DEPS = True
-except ImportError:
-    HAS_DEPS = False
-
-if hasattr(shlex, "quote"):
-    _quote = shlex.quote
-elif HAS_DEPS and hasattr(pipes, "quote"):
-    _quote = pipes.quote
-else:
-    _quote = None
-
-
 # Don't shadow built-in's.
 __func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
-    if _quote is None and not HAS_DEPS:
-        return (False, "Missing dependencies")
     return True
 
 
@@ -69,10 +52,10 @@ def set_(filename, section, parameter, value):
         salt-call openstack_config.set /etc/keystone/keystone.conf sql connection foo
     """
 
-    filename = _quote(filename)
-    section = _quote(section)
-    parameter = _quote(parameter)
-    value = _quote(str(value))
+    filename = shlex.quote(filename)
+    section = shlex.quote(section)
+    parameter = shlex.quote(parameter)
+    value = shlex.quote(str(value))
 
     result = __salt__["cmd.run_all"](
         "openstack-config --set {} {} {} {}".format(
@@ -109,12 +92,12 @@ def get(filename, section, parameter):
 
     """
 
-    filename = _quote(filename)
-    section = _quote(section)
-    parameter = _quote(parameter)
+    filename = shlex.quote(filename)
+    section = shlex.quote(section)
+    parameter = shlex.quote(parameter)
 
     result = __salt__["cmd.run_all"](
-        "openstack-config --get {} {} {}".format(filename, section, parameter),
+        f"openstack-config --get {filename} {section} {parameter}",
         python_shell=False,
     )
 
@@ -145,12 +128,12 @@ def delete(filename, section, parameter):
         salt-call openstack_config.delete /etc/keystone/keystone.conf sql connection
     """
 
-    filename = _quote(filename)
-    section = _quote(section)
-    parameter = _quote(parameter)
+    filename = shlex.quote(filename)
+    section = shlex.quote(section)
+    parameter = shlex.quote(parameter)
 
     result = __salt__["cmd.run_all"](
-        "openstack-config --del {} {} {}".format(filename, section, parameter),
+        f"openstack-config --del {filename} {section} {parameter}",
         python_shell=False,
     )
 

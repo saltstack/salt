@@ -15,7 +15,7 @@ import salt.utils.yaml
 from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -40,7 +40,7 @@ def test_fib_txt_output(salt_call_cli):
 
 @pytest.mark.parametrize("indent", [-1, 0, 1])
 def test_json_out_indent(salt_call_cli, indent):
-    ret = salt_call_cli.run("--out=json", "--out-indent={}".format(indent), "test.ping")
+    ret = salt_call_cli.run("--out=json", f"--out-indent={indent}", "test.ping")
     assert ret.returncode == 0
     assert ret.data is True
     if indent == -1:
@@ -164,7 +164,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             try:
                 stat1 = output_file.stat()
             except OSError:
-                pytest.fail("Failed to generate output file {}".format(output_file))
+                pytest.fail(f"Failed to generate output file {output_file}")
 
             # Let's change umask
             os.umask(0o777)  # pylint: disable=blacklisted-function
@@ -187,7 +187,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             try:
                 stat3 = output_file.stat()
             except OSError:
-                pytest.fail("Failed to generate output file {}".format(output_file))
+                pytest.fail(f"Failed to generate output file {output_file}")
             # Mode must have changed since we're creating a new log file
             assert stat1.st_mode != stat3.st_mode
 
@@ -290,7 +290,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
         with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:
             fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
         ret = salt_call_cli.run(
-            "--config-dir={}".format(config_dir),
+            f"--config-dir={config_dir}",
             "--log-level=debug",
             "cmd.run",
             "echo foo",
@@ -429,3 +429,74 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
     assert "test" in ret.data
     assert ret.data["test"] == "'test' is not available."
     assert "test.echo" in ret.data
+
+
+def test_state_highstate_custom_grains(salt_master, salt_minion_factory):
+    """
+    This test ensure that custom grains in salt://_grains are loaded before pillar compilation
+    to ensure that any use of custom grains in pillar files are available, this implies that
+    a sync of grains occurs before loading the regular /etc/salt/grains or configuration file
+    grains, as well as the usual grains.
+
+    Note: cannot use salt_minion and salt_call_cli, since these will be loaded before
+    the pillar and custom_grains files are written, hence using salt_minion_factory.
+    """
+    pillar_top_sls = """
+    base:
+      '*':
+        - defaults
+        """
+
+    pillar_defaults_sls = """
+    mypillar: "{{ grains['custom_grain'] }}"
+    """
+
+    salt_top_sls = """
+    base:
+      '*':
+        - test
+        """
+
+    salt_test_sls = """
+    "donothing":
+      test.nop: []
+    """
+
+    salt_custom_grains_py = """
+    def main():
+        return {'custom_grain': 'test_value'}
+    """
+    assert salt_master.is_running()
+    with salt_minion_factory.started():
+        salt_minion = salt_minion_factory
+        salt_call_cli = salt_minion_factory.salt_call_cli()
+        with salt_minion.pillar_tree.base.temp_file(
+            "top.sls", pillar_top_sls
+        ), salt_minion.pillar_tree.base.temp_file(
+            "defaults.sls", pillar_defaults_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "top.sls", salt_top_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "test.sls", salt_test_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "_grains/custom_grain.py", salt_custom_grains_py
+        ):
+            ret = salt_call_cli.run("--local", "state.highstate")
+            assert ret.returncode == 0
+            ret = salt_call_cli.run("--local", "pillar.items")
+            assert ret.returncode == 0
+            assert ret.data
+            pillar_items = ret.data
+            assert "mypillar" in pillar_items
+            assert pillar_items["mypillar"] == "test_value"
+
+
+def test_salt_call_versions(salt_call_cli, caplog):
+    """
+    Call test.versions without '--local' to test grains
+    are sync'd without any missing keys in opts
+    """
+    with caplog.at_level(logging.DEBUG):
+        ret = salt_call_cli.run("test.versions")
+        assert ret.returncode == 0
+        assert "Failed to sync grains module: 'master_uri'" not in caplog.messages

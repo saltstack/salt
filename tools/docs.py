@@ -1,7 +1,7 @@
 """
 These commands are used to generate Salt's manpages.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import logging
@@ -23,12 +23,25 @@ docs = command_group(
     description=__doc__,
     venv_config={
         "requirements_files": [
+            tools.utils.REPO_ROOT / "requirements" / "base.txt",
+            tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
             tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "docs.txt"
+            / "docs.txt",
+        ],
+        "pip_args": [
+            "--constraint",
+            str(
+                tools.utils.REPO_ROOT
+                / "requirements"
+                / "static"
+                / "pkg"
+                / "py{}.{}".format(*sys.version_info)
+                / "linux.txt"
+            ),
         ],
     },
 )

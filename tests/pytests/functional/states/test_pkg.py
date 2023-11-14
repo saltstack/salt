@@ -46,7 +46,10 @@ def PKG_TARGETS(grains):
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            _PKG_TARGETS = ["wget", "zsh-html"]
+            if grains["osmajorrelease"] >= 5:
+                _PKG_TARGETS = ["wget", "zsh"]
+            else:
+                _PKG_TARGETS = ["wget", "zsh-html"]
         elif (
             grains["os"] in ("CentOS Stream", "AlmaLinux")
             and grains["osmajorrelease"] == 9
@@ -73,12 +76,9 @@ def PKG_CAP_TARGETS(grains):
 @pytest.fixture
 def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["os"] == "CentOS":
-            if grains["osmajorrelease"] == 5:
-                _PKG_32_TARGETS = ["xz-devel.i386"]
-            else:
-                _PKG_32_TARGETS.append("xz-devel.i686")
+            _PKG_32_TARGETS.append("xz-devel.i686")
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
@@ -87,12 +87,8 @@ def PKG_32_TARGETS(grains):
 @pytest.fixture
 def PKG_DOT_TARGETS(grains):
     _PKG_DOT_TARGETS = []
-    if grains["os_family"] == "RedHat":
-        if grains["osmajorrelease"] == 5:
-            _PKG_DOT_TARGETS = ["python-migrate0.5"]
-        elif grains["osmajorrelease"] == 6:
-            _PKG_DOT_TARGETS = ["tomcat6-el-2.1-api"]
-        elif grains["osmajorrelease"] == 7:
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
+        if grains["osmajorrelease"] == 7:
             _PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
         elif grains["osmajorrelease"] == 8:
             _PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
@@ -106,7 +102,7 @@ def PKG_DOT_TARGETS(grains):
 @pytest.fixture
 def PKG_EPOCH_TARGETS(grains):
     _PKG_EPOCH_TARGETS = []
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["osmajorrelease"] == 7:
             _PKG_EPOCH_TARGETS = ["comps-extras"]
         elif grains["osmajorrelease"] == 8:
@@ -174,6 +170,7 @@ def latest_version(ctx, modules):
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_001_installed(modules, states, PKG_TARGETS):
     """
     This is a destructive test as it installs and then removes a package
@@ -194,6 +191,7 @@ def test_pkg_001_installed(modules, states, PKG_TARGETS):
 
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
     """
     This is a destructive test as it installs and then removes a package
@@ -213,6 +211,7 @@ def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes two packages
@@ -236,6 +235,7 @@ def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
 
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_004_installed_multipkg_with_version(PKG_TARGETS, latest_version, states):
     """
     This is a destructive test as it installs and then removes two packages
@@ -259,6 +259,7 @@ def test_pkg_004_installed_multipkg_with_version(PKG_TARGETS, latest_version, st
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_005_installed_32bit(PKG_32_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes a package
@@ -283,6 +284,7 @@ def test_pkg_005_installed_32bit(PKG_32_TARGETS, modules, states):
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_006_installed_32bit_with_version(PKG_32_TARGETS, latest_version, states):
     """
     This is a destructive test as it installs and then removes a package
@@ -307,6 +309,7 @@ def test_pkg_006_installed_32bit_with_version(PKG_32_TARGETS, latest_version, st
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_007_with_dot_in_pkgname(PKG_DOT_TARGETS, latest_version, states):
     """
     This tests for the regression found in the following issue:
@@ -329,6 +332,7 @@ def test_pkg_007_with_dot_in_pkgname(PKG_DOT_TARGETS, latest_version, states):
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_008_epoch_in_version(PKG_EPOCH_TARGETS, latest_version, states):
     """
     This tests for the regression found in the following issue:
@@ -447,14 +451,16 @@ def test_pkg_011_latest_only_upgrade(
         new_version = modules.pkg.version(target, use_context=False)
         assert new_version == updates[target]
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
-        assert ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)][
-            "comment"
-        ] == "Package {} is already up-to-date".format(target)
+        assert (
+            ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"]
+            == f"Package {target} is already up-to-date"
+        )
 
 
 @pytest.mark.usefixtures("WILDCARDS_SUPPORTED")
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_012_installed_with_wildcard_version(PKG_TARGETS, states, modules):
     """
     This is a destructive test as it installs and then removes a package
@@ -502,6 +508,7 @@ def test_pkg_012_installed_with_wildcard_version(PKG_TARGETS, states, modules):
 
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.latest_version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_013_installed_with_comparison_operator(
     grains, PKG_TARGETS, states, modules
 ):
@@ -540,6 +547,7 @@ def test_pkg_013_installed_with_comparison_operator(
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_014_installed_missing_release(grains, PKG_TARGETS, states, modules):
     """
     Tests that a version number missing the release portion still resolves
@@ -572,6 +580,7 @@ def test_pkg_014_installed_missing_release(grains, PKG_TARGETS, states, modules)
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     """
     Tests that a package can be held even when the package is already installed.
@@ -593,7 +602,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -612,7 +621,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     )
 
     if versionlock_pkg and "-versionlock is not installed" in str(ret):
-        pytest.skip("{}  `{}` is installed".format(ret, versionlock_pkg))
+        pytest.skip(f"{ret}  `{versionlock_pkg}` is installed")
 
     # changes from pkg.hold for Red Hat family are different
     target_changes = {}
@@ -649,6 +658,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, states):
     """
     See
@@ -711,7 +721,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -724,7 +734,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
     assert target_ret.result is True
 
     if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
-        pytest.skip("{}  `{}` is installed".format(target_ret, versionlock_pkg))
+        pytest.skip(f"{target_ret}  `{versionlock_pkg}` is installed")
 
     try:
         tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
@@ -753,6 +763,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_cap_001_installed(PKG_CAP_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes a package
@@ -775,7 +786,7 @@ def test_pkg_cap_001_installed(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/updated: {}".format(realpkg)
+            f"The following packages would be installed/updated: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.installed(
@@ -788,6 +799,7 @@ def test_pkg_cap_001_installed(PKG_CAP_TARGETS, modules, states):
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_cap_002_already_installed(PKG_CAP_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes a package
@@ -829,6 +841,7 @@ def test_pkg_cap_002_already_installed(PKG_CAP_TARGETS, modules, states):
 
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_cap_003_installed_multipkg_with_version(
     PKG_CAP_TARGETS,
     PKG_TARGETS,
@@ -871,7 +884,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
             test=True,
         )
         assert "packages would be installed/updated" in ret.comment
-        assert "{}={}".format(realpkg, realver) in ret.comment
+        assert f"{realpkg}={realver}" in ret.comment
 
         ret = states.pkg.installed(
             name="test_pkg_cap_003_installed_multipkg_with_version-install-capability",
@@ -891,6 +904,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.latest", "pkg.removed")
+@pytest.mark.slow_test
 def test_pkg_cap_004_latest(PKG_CAP_TARGETS, modules, states):
     """
     This tests pkg.latest with a package that has no epoch (or a zero
@@ -914,7 +928,7 @@ def test_pkg_cap_004_latest(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/upgraded: {}".format(realpkg)
+            f"The following packages would be installed/upgraded: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.latest(name=target, refresh=False, resolve_capabilities=True)
@@ -930,6 +944,7 @@ def test_pkg_cap_004_latest(PKG_CAP_TARGETS, modules, states):
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed", "pkg.downloaded")
+@pytest.mark.slow_test
 def test_pkg_cap_005_downloaded(PKG_CAP_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes a package
@@ -953,9 +968,7 @@ def test_pkg_cap_005_downloaded(PKG_CAP_TARGETS, modules, states):
         resolve_capabilities=True,
         test=True,
     )
-    assert (
-        "The following packages would be downloaded: {}".format(realpkg) in ret.comment
-    )
+    assert f"The following packages would be downloaded: {realpkg}" in ret.comment
 
     ret = states.pkg.downloaded(name=target, refresh=False, resolve_capabilities=True)
     assert ret.result is True
@@ -963,6 +976,7 @@ def test_pkg_cap_005_downloaded(PKG_CAP_TARGETS, modules, states):
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed", "pkg.uptodate")
+@pytest.mark.slow_test
 def test_pkg_cap_006_uptodate(PKG_CAP_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes a package

@@ -22,7 +22,7 @@ inputs:
     required: false
     type: string
     description: The version of relenv to use
-    default: 0.6.0
+    default: 0.13.2
 
 outputs:
   version:

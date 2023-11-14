@@ -13,6 +13,13 @@ on:
         type: string
         description: Seed used to invalidate caches
 
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
 jobs:
   build:
     name: Build
@@ -32,25 +39,13 @@ jobs:
           # - pdf
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.patch
-
-      - name: Configure Git
-        shell: bash
-        run: |
-          git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
-          git config --global --add safe.directory "$(pwd)"
-
-      - name: Apply Release Patch
-        shell: bash
-        run: |
-          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-          rm salt-${{ inputs.salt-version }}.patch
 
       - name: Get Python Version
         id: get-python-version
@@ -61,6 +56,16 @@ jobs:
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache

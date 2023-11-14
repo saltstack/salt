@@ -60,15 +60,19 @@
 #
 #cachedir: /var/cache/salt/master
 
-# Directory for custom modules. This directory can contain subdirectories for
-# each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", "engines", "utils", etc.
+# Directory where custom modules sync to. This directory can contain
+# subdirectories for each of Salt's module types such as "runners",
+# "output", "wheel", "modules", "states", "returners", "engines",
+# "utils", etc.
+#
+# Note, any directories or files not found in the `module_dirs`
+# location will be removed from the extension_modules path.
+
 #extension_modules: /var/cache/salt/master/extmods
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
 # "states", "returners", "engines", "utils", etc.
-# Like 'extension_modules' but can take an array of paths
 #module_dirs: []
 
 # Verify and set permissions on configuration directories at startup:
@@ -1021,6 +1025,7 @@
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
 # pillar is recompiled and stored.
+# The cache TTL does not prevent pillar cache from being refreshed before its TTL expires.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
@@ -1193,7 +1198,7 @@
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 #log_level: warning
 

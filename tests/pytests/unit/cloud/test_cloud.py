@@ -1,6 +1,7 @@
 import pytest
 
 from salt.cloud import Cloud
+from salt.exceptions import SaltCloudSystemExit
 from tests.support.mock import MagicMock, patch
 
 
@@ -76,6 +77,7 @@ def test_vm_config_merger():
     Validate the vm's config is generated correctly.
 
     https://github.com/saltstack/salt/issues/49226
+    https://github.com/saltstack/salt/issues/64610
     """
     main = {
         "minion": {"master": "172.31.39.213"},
@@ -99,6 +101,71 @@ def test_vm_config_merger():
         "image": "ami-0a1fbca0e5b419fd1",
         "size": "t2.micro",
     }
+    vm_overrides = {
+        "test_vm": {"grains": {"meh2": "newbar", "meh3": "foo"}},
+        "other_vm": {"grains": {"meh1": "notused"}},
+    }
+    expected = {
+        "minion": {"master": "172.31.39.213"},
+        "log_file": "var/log/salt/cloud.log",
+        "pool_size": 10,
+        "private_key": "dwoz.pem",
+        "grains": {
+            "foo1": "bar",
+            "foo2": "bang",
+            "meh3": "foo",
+            "meh2": "newbar",
+            "meh1": "foo",
+        },
+        "availability_zone": "us-west-2b",
+        "driver": "ec2",
+        "ssh_interface": "private_ips",
+        "ssh_username": "admin",
+        "location": "us-west-2",
+        "profile": "default",
+        "provider": "ec2-default:ec2",
+        "image": "ami-0a1fbca0e5b419fd1",
+        "size": "t2.micro",
+        "name": "test_vm",
+    }
+    vm = Cloud.vm_config("test_vm", main, provider, profile, vm_overrides)
+    assert expected == vm
+
+
+@pytest.mark.slow_test
+def test_vm_config_merger_nooverridevalue():
+    """
+    Validate the vm's config is generated correctly, even if no
+    applicable values are in the vm_override structure
+
+    https://github.com/saltstack/salt/issues/64610
+    """
+    main = {
+        "minion": {"master": "172.31.39.213"},
+        "log_file": "var/log/salt/cloud.log",
+        "pool_size": 10,
+    }
+    provider = {
+        "private_key": "dwoz.pem",
+        "grains": {"foo1": "bar", "foo2": "bang"},
+        "availability_zone": "us-west-2b",
+        "driver": "ec2",
+        "ssh_interface": "private_ips",
+        "ssh_username": "admin",
+        "location": "us-west-2",
+    }
+    profile = {
+        "profile": "default",
+        "grains": {"meh2": "bar", "meh1": "foo"},
+        "provider": "ec2-default:ec2",
+        "ssh_username": "admin",
+        "image": "ami-0a1fbca0e5b419fd1",
+        "size": "t2.micro",
+    }
+    vm_overrides = {
+        "test_vm": {"grains": {"meh2": "newbar", "meh3": "foo"}},
+        "other_vm": {"grains": {"meh1": "notused"}},
+    }
     expected = {
         "minion": {"master": "172.31.39.213"},
         "log_file": "var/log/salt/cloud.log",
@@ -119,7 +186,29 @@ def test_vm_config_merger():
         "provider": "ec2-default:ec2",
         "image": "ami-0a1fbca0e5b419fd1",
         "size": "t2.micro",
-        "name": "test_vm",
+        "name": "test_vm2",
     }
-    vm = Cloud.vm_config("test_vm", main, provider, profile, {})
+    vm = Cloud.vm_config("test_vm2", main, provider, profile, vm_overrides)
     assert expected == vm
+
+
+def test_cloud_run_profile_create_returns_boolean(master_config):
+
+    master_config["profiles"] = {"test_profile": {"provider": "test_provider:saltify"}}
+    master_config["providers"] = {
+        "test_provider": {
+            "saltify": {"profiles": {"provider": "test_provider:saltify"}}
+        }
+    }
+    master_config["show_deploy_args"] = False
+
+    cloud = Cloud(master_config)
+    with patch.object(cloud, "create", return_value=True):
+        ret = cloud.run_profile("test_profile", ["test_vm"])
+        assert ret == {"test_vm": True}
+
+    cloud = Cloud(master_config)
+    with patch.object(cloud, "create", return_value=False):
+        with pytest.raises(SaltCloudSystemExit):
+            ret = cloud.run_profile("test_profile", ["test_vm"])
+            assert ret == {"test_vm": False}

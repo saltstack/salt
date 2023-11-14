@@ -19,7 +19,7 @@ import salt.utils.path
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -132,7 +132,6 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
     assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret
 
 
-@pytest.mark.slow_test
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
 @pytest.mark.skip_initial_onedir_failure
 def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
@@ -156,7 +155,7 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     cmdline = [
         sys.executable,
         salt_cli.get_script_path(),
-        "--config-dir={}".format(salt_master.config_dir),
+        f"--config-dir={salt_master.config_dir}",
         salt_minion.id,
         "test.sleep",
         "30",
