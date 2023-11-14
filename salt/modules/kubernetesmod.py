@@ -1093,7 +1093,7 @@ def create_secret(
     source=None,
     template=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Creates the kubernetes secret as defined by the user.
@@ -1268,7 +1268,7 @@ def replace_service(
     old_service,
     saltenv,
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing service with a new one defined by name and namespace,
@@ -1318,7 +1318,7 @@ def replace_secret(
     template=None,
     saltenv="base",
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing secret with a new one defined by name and namespace,
@@ -1373,7 +1373,7 @@ def replace_configmap(
     template=None,
     saltenv="base",
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing configmap with a new one defined by name and
@@ -1514,9 +1514,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
 
                 contents = data["data"].encode("utf-8")
             else:
-                raise CommandExecutionError(
-                    f"Unknown template specified: {template}"
-                )
+                raise CommandExecutionError(f"Unknown template specified: {template}")
 
         return salt.utils.yaml.safe_load(contents)
 
