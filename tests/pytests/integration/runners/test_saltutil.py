@@ -76,7 +76,7 @@ def test_sync(
     """
     Ensure modules are synced when various sync functions are called
     """
-    module_name = "hello_sync_{}".format(module_type)
+    module_name = f"hello_sync_{module_type}"
     module_contents = """
 def __virtual__():
     return "hello"
@@ -85,17 +85,45 @@ def world():
     return "world"
 """
 
-    test_moduledir = salt_master.state_tree.base.write_path / "_{}".format(module_type)
+    test_moduledir = salt_master.state_tree.base.write_path / f"_{module_type}"
     test_moduledir.mkdir(parents=True, exist_ok=True)
     module_tempfile = salt_master.state_tree.base.temp_file(
-        "_{}/{}.py".format(module_type, module_name), module_contents
+        f"_{module_type}/{module_name}.py", module_contents
     )
 
     with module_tempfile:
-        salt_cmd = "saltutil.sync_{}".format(module_sync_functions[module_type])
+        salt_cmd = f"saltutil.sync_{module_sync_functions[module_type]}"
         ret = salt_run_cli.run(salt_cmd)
         assert ret.returncode == 0
-        assert "{}.hello".format(module_type) in ret.stdout
+        assert f"{module_type}.hello" in ret.stdout
+
+
+def test_sync_refresh_false(
+    module_type, module_sync_functions, salt_run_cli, salt_minion, salt_master
+):
+    """
+    Ensure modules are synced when various sync functions are called
+    """
+    module_name = f"hello_sync_{module_type}"
+    module_contents = """
+def __virtual__():
+    return "hello"
+
+def world():
+    return "world"
+"""
+
+    test_moduledir = salt_master.state_tree.base.write_path / f"_{module_type}"
+    test_moduledir.mkdir(parents=True, exist_ok=True)
+    module_tempfile = salt_master.state_tree.base.temp_file(
+        f"_{module_type}/{module_name}.py", module_contents
+    )
+
+    with module_tempfile:
+        salt_cmd = f"saltutil.sync_{module_sync_functions[module_type]}"
+        ret = salt_run_cli.run(salt_cmd, saltenv=None, refresh=False)
+        assert ret.returncode == 0
+        assert f"saltutil.sync_{module_sync_functions[module_type]}" in ret.stdout
 
 
 def _write_module_dir_and_file(module_type, salt_minion, salt_master):
@@ -111,11 +139,11 @@ def world():
     return "world"
 """
 
-    test_moduledir = salt_master.state_tree.base.paths[0] / "_{}".format(module_type)
+    test_moduledir = salt_master.state_tree.base.paths[0] / f"_{module_type}"
     test_moduledir.mkdir(parents=True, exist_ok=True)
 
     module_tempfile = salt_master.state_tree.base.temp_file(
-        "_{}/{}.py".format(module_type, module_name), module_contents
+        f"_{module_type}/{module_name}.py", module_contents
     )
 
     return module_tempfile
@@ -139,4 +167,4 @@ def test_sync_all(salt_run_cli, salt_minion, salt_master):
 
         assert ret.returncode == 0
         for module_type in get_module_types():
-            assert "{}.hello".format(module_type) in ret.stdout
+            assert f"{module_type}.hello" in ret.stdout

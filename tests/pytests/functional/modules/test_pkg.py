@@ -64,6 +64,8 @@ def test_pkg(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             _pkg = "snoopy"
+        elif grains["osfinger"] == "Amazon Linux-2023":
+            return "dnf-utils"
         else:
             _pkg = "units"
     elif grains["os_family"] == "Debian":

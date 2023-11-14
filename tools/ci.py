@@ -721,13 +721,24 @@ def pkg_matrix(
     sessions = [
         "install",
     ]
+    # OSs that where never included in 3005
+    # We cannot test an upgrade for this OS on this version
+    not_3005 = ["amazonlinux-2-arm64", "photonos-5", "photonos-5-arm64"]
+    # OSs that where never included in 3006
+    # We cannot test an upgrade for this OS on this version
+    not_3006 = ["photonos-5", "photonos-5-arm64"]
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "debian-11-arm64",
             # TODO: remove debian 12 once debian 12 pkgs are released
             "debian-12-arm64",
             "debian-12",
+            # TODO: remove amazon 2023 once amazon 2023 pkgs are released
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -736,6 +747,9 @@ def pkg_matrix(
             "photonos-4-arm64",
             "photonos-5",
             "photonos-5-arm64",
+            "amazonlinux-2-arm64",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -765,10 +779,14 @@ def pkg_matrix(
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "centosstream-9",
             "debian-11-arm64",
             "debian-12-arm64",
             "debian-12",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -797,10 +815,24 @@ def pkg_matrix(
         for version in versions:
             if (
                 version
-                and distro_slug.startswith("photonos-5")
+                and distro_slug in not_3005
+                and version < tools.utils.Version("3006.0")
+            ):
+                # We never build packages for these OSs in 3005
+                continue
+            elif (
+                version
+                and distro_slug in not_3006
                 and version < tools.utils.Version("3007.0")
             ):
-                # We never build packages for Photon OS 5 prior to 3007.0
+                # We never build packages for these OSs in 3006
+                continue
+            if (
+                version
+                and distro_slug.startswith("amazonlinux-2023")
+                and version < tools.utils.Version("3006.6")
+            ):
+                # We never build packages for AmazonLinux 2023 prior to 3006.5
                 continue
             _matrix.append(
                 {
