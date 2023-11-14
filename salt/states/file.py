@@ -2324,6 +2324,7 @@ def managed(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     r"""
@@ -3015,6 +3016,12 @@ def managed(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3007.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3343,6 +3350,7 @@ def managed(
                     ignore_ordering=ignore_ordering,
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
+                    new_file_diff=new_file_diff,
                     **kwargs,
                 )
                 if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
@@ -3485,6 +3493,7 @@ def managed(
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3577,6 +3586,7 @@ def managed(
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
