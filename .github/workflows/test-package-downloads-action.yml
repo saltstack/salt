@@ -83,6 +83,12 @@ jobs:
           - distro-slug: amazonlinux-2-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: amazonlinux-2023
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: amazonlinux-2023-arm64
+            arch: aarch64
+            pkg-type: package
           - distro-slug: centos-7
             arch: x86_64
             pkg-type: package
@@ -110,6 +116,12 @@ jobs:
           - distro-slug: debian-11-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: debian-12
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: debian-12-arm64
+            arch: aarch64
+            pkg-type: package
           - distro-slug: fedora-37
             arch: x86_64
             pkg-type: package
@@ -125,10 +137,19 @@ jobs:
           - distro-slug: photonos-3
             arch: x86_64
             pkg-type: package
+          - distro-slug: photonos-3-arm64
+            arch: aarch64
+            pkg-type: package
           - distro-slug: photonos-4
             arch: x86_64
             pkg-type: package
           - distro-slug: photonos-4-arm64
+            arch: aarch64
+            pkg-type: package
+          - distro-slug: photonos-5
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: photonos-5-arm64
             arch: aarch64
             pkg-type: package
           - distro-slug: ubuntu-20.04

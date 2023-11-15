@@ -7,7 +7,7 @@ import os
 import sys
 import warnings
 
-if sys.version_info < (3,):
+if sys.version_info < (3,):  # pragma: no cover
     sys.stderr.write(
         "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
     )
@@ -22,7 +22,7 @@ class TornadoImporter:
         if USE_VENDORED_TORNADO:
             if module_name.startswith("tornado"):
                 return self
-        else:
+        else:  # pragma: no cover
             if module_name.startswith("salt.ext.tornado"):
                 return self
         return None
@@ -30,7 +30,7 @@ class TornadoImporter:
     def create_module(self, spec):
         if USE_VENDORED_TORNADO:
             mod = importlib.import_module("salt.ext.{}".format(spec.name))
-        else:
+        else:  # pragma: no cover
             # Remove 'salt.ext.' from the module
             mod = importlib.import_module(spec.name[9:])
         sys.modules[spec.name] = mod

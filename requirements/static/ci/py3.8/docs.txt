@@ -34,7 +34,7 @@ distro==1.5.0
     #   -r requirements/base.txt
 docutils==0.16
     # via sphinx
-idna==2.8
+idna==3.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   requests
@@ -177,13 +177,13 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   portend
-typing-extensions==4.2.0
+typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   myst-docutils
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==1.26.6
+urllib3==1.26.18
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   requests

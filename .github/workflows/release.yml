@@ -116,7 +116,6 @@ jobs:
 
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
-    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     runs-on:
       - self-hosted
       - linux
@@ -322,6 +321,38 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  amazonlinux-2023-ci-deps:
+    name: Amazon Linux 2023 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-arm64-ci-deps:
+    name: Amazon Linux 2023 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   archlinux-lts-ci-deps:
     name: Arch Linux LTS Deps
     needs:
@@ -482,6 +513,38 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  debian-12-ci-deps:
+    name: Debian 12 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-12-arm64-ci-deps:
+    name: Debian 12 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   fedora-37-ci-deps:
     name: Fedora 37 Deps
     needs:
@@ -578,6 +641,22 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  photonos-3-arm64-ci-deps:
+    name: Photon OS 3 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-3-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   photonos-4-ci-deps:
     name: Photon OS 4 Deps
     needs:
@@ -602,6 +681,38 @@ jobs:
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-ci-deps:
+    name: Photon OS 5 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  photonos-5-arm64-ci-deps:
+    name: Photon OS 5 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -747,6 +858,8 @@ jobs:
       - almalinux-9-ci-deps
       - amazonlinux-2-arm64-ci-deps
       - amazonlinux-2-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
       - centos-7-arm64-ci-deps
       - centos-7-ci-deps
       - centosstream-8-arm64-ci-deps
@@ -756,14 +869,19 @@ jobs:
       - debian-10-ci-deps
       - debian-11-arm64-ci-deps
       - debian-11-ci-deps
+      - debian-12-arm64-ci-deps
+      - debian-12-ci-deps
       - fedora-37-arm64-ci-deps
       - fedora-37-ci-deps
       - fedora-38-arm64-ci-deps
       - fedora-38-ci-deps
       - macos-12-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-3-ci-deps
       - photonos-4-arm64-ci-deps
       - photonos-4-ci-deps
+      - photonos-5-arm64-ci-deps
+      - photonos-5-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2204-arm64-ci-deps
@@ -966,6 +1084,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps
@@ -976,14 +1096,19 @@ jobs:
       - debian-10-ci-deps
       - debian-11-ci-deps
       - debian-11-arm64-ci-deps
+      - debian-12-ci-deps
+      - debian-12-arm64-ci-deps
       - fedora-37-ci-deps
       - fedora-37-arm64-ci-deps
       - fedora-38-ci-deps
       - fedora-38-arm64-ci-deps
       - opensuse-15-ci-deps
       - photonos-3-ci-deps
+      - photonos-3-arm64-ci-deps
       - photonos-4-ci-deps
       - photonos-4-arm64-ci-deps
+      - photonos-5-ci-deps
+      - photonos-5-arm64-ci-deps
       - ubuntu-2004-ci-deps
       - ubuntu-2004-arm64-ci-deps
       - ubuntu-2204-ci-deps

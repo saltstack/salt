@@ -36,11 +36,16 @@ on:
         required: true
         type: string
         description: The nox version to install
-      python-version:
+      gh-actions-python-version:
         required: false
         type: string
         description: The python version to run tests with
         default: "3.10"
+      fips:
+        required: false
+        type: boolean
+        default: false
+        description: Test run with FIPS enabled
       package-name:
         required: false
         type: string
@@ -56,6 +61,16 @@ on:
         type: boolean
         description: Skip Publishing JUnit Reports
         default: false
+      workflow-slug:
+        required: false
+        type: string
+        description: Which workflow is running.
+        default: ci
+      default-timeout:
+        required: false
+        type: number
+        description: Timeout, in minutes, for the test job(Default 360, 6 hours).
+        default: 360
 
 env:
   COLUMNS: 190
@@ -90,7 +105,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.distro-slug }}
+          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }}
 
   test:
     name: Test
@@ -99,8 +114,8 @@ jobs:
       - linux
       - bastion
     # Full test runs. Each chunk should never take more than 2 hours.
-    # Partial test runs(no chunk parallelization), 5 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 120 || 300 }}
+    # Partial test runs(no chunk parallelization), 6 Hours
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     needs:
       - generate-matrix
     strategy:
@@ -142,7 +157,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
@@ -197,7 +212,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -206,7 +221,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -215,7 +230,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] == false }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -225,14 +240,14 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+            ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Slow Tests
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
 
       - name: Run Core Tests
@@ -240,7 +255,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
@@ -248,7 +263,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.distro-slug }} \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
@@ -257,7 +272,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            -E TEST_GROUP ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
+            -E TEST_GROUP ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
             --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
       - name: Combine Coverage Reports
@@ -350,85 +365,9 @@ jobs:
       - name: Create XML Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
-          nox -e create-xml-coverage-reports
-
-      - name: Install Codecov CLI
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
-        run: |
-          # We can't yet use tokenless uploads with the codecov CLI
-          # python3 -m pip install codecov-cli
-          #
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-
-      - name: Upload Source Code Coverage To Codecov
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
-        run: |
-          if [ ! -s artifacts/coverage/salt.xml ]; then
-            echo "The artifacts/coverage/salt.xml file does not exist"
-            exit 1
-          fi
-          # We can't yet use tokenless uploads with the codecov CLI
-          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-          #  do-upload --git-service github --sha ${{ github.sha }} \
-          #  --file artifacts/coverage/salt.xml \
-          #  --flag salt --flag ${{ inputs.distro-slug }} \
-          #  --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
-          n=0
-          until [ "$n" -ge 5 ]
-          do
-          if ./codecov --file artifacts/coverage/salt.xml \
-              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-              --flags salt,${{ inputs.distro-slug }} \
-              --name salt.${{ inputs.distro-slug }}.${{ inputs.nox-session }} --nonZero; then
-              rc=$?
-              break
-          fi
-          rc=$?
-          n=$((n+1))
-          sleep 15
-          done
-          if [ "$rc" -ne 0 ]; then
-            echo "Failed to upload codecov stats"
-            exit 1
-          fi
-
-      - name: Upload Tests Code Coverage To Codecov
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
-        run: |
-          if [ ! -s artifacts/coverage/tests.xml ]; then
-            echo "The artifacts/coverage/tests.xml file does not exist"
-            exit 1
-          fi
-          # We can't yet use tokenless uploads with the codecov CLI
-          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-          #  do-upload --git-service github --sha ${{ github.sha }} \
-          #  --file artifacts/coverage/tests.xml \
-          #  --flag tests --flag ${{ inputs.distro-slug }} \
-          #  --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
-          n=0
-          until [ "$n" -ge 5 ]
-          do
-          if ./codecov --file artifacts/coverage/tests.xml \
-              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-              --flags tests,${{ inputs.distro-slug }} \
-              --name tests.${{ inputs.distro-slug }}.${{ inputs.nox-session }} --nonZero; then
-              rc=$?
-              break
-          fi
-          rc=$?
-          n=$((n+1))
-          sleep 15
-          done
-          if [ "$rc" -ne 0 ]; then
-            echo "Failed to upload codecov stats"
-            exit 1
-          fi
+          nox --force-color -e create-xml-coverage-reports
+          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
+          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
 
       - name: Report Salt Code Coverage
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
