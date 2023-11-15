@@ -1,3 +1,6 @@
+import traceback
+import warnings
+
 import salt.ext.tornado.gen
 
 TRANSPORTS = (
@@ -94,14 +97,32 @@ def publish_client(opts, io_loop):
     raise Exception("Transport type not found: {}".format(ttype))
 
 
-class RequestClient:
+class Transport:
+    def __init__(self, *args, **kwargs):
+        self._trace = "\n".join(traceback.format_stack()[:-1])
+        if not hasattr(self, "_closing"):
+            self._closing = False
+
+    # pylint: disable=W1701
+    def __del__(self):
+        if not self._closing:
+            warnings.warn(
+                f"Unclosed transport {self!r} \n{self._trace}",
+                ResourceWarning,
+                source=self,
+            )
+
+    # pylint: enable=W1701
+
+
+class RequestClient(Transport):
     """
     The RequestClient transport is used to make requests and get corresponding
     replies from the RequestServer.
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        pass
+        super().__init__()
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, timeout=60):
@@ -197,13 +218,13 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
 
-class PublishClient:
+class PublishClient(Transport):
     """
     The PublishClient receives messages from the PublishServer and runs a callback.
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        pass
+        super().__init__()
 
     def on_recv(self, callback):
         """

@@ -529,14 +529,8 @@ class AsyncReqMessageClient:
         # wire up sockets
         self._init_socket()
 
-    # TODO: timeout all in-flight sessions, or error
     def close(self):
-        try:
-            if self._closing:
-                return
-        except AttributeError:
-            # We must have been called from __del__
-            # The python interpreter has nuked most attributes already
+        if self._closing:
             return
         else:
             self._closing = True
@@ -661,7 +655,10 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
-        self._socket.disable_monitor()
+        try:
+            self._socket.disable_monitor()
+        except zmq.Error:
+            pass
         self._socket = None
         self._monitor_socket = None
         if self._monitor_stream is not None:
@@ -880,6 +877,7 @@ class RequestClient(salt.transport.base.RequestClient):
     ttype = "zeromq"
 
     def __init__(self, opts, io_loop):  # pylint: disable=W0231
+        super().__init__(opts, io_loop)
         self.opts = opts
         master_uri = self.get_master_uri(opts)
         self.message_client = AsyncReqMessageClient(
@@ -887,6 +885,7 @@ class RequestClient(salt.transport.base.RequestClient):
             master_uri,
             io_loop=io_loop,
         )
+        self._closing = False
 
     def connect(self):
         self.message_client.connect()
@@ -898,6 +897,9 @@ class RequestClient(salt.transport.base.RequestClient):
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
+        if self._closing:
+            return
+        self._closing = True
         self.message_client.close()
 
     @staticmethod

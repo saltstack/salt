@@ -213,6 +213,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
     ttype = "tcp"
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
         self.message_client = None
@@ -227,12 +228,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         if self.message_client is not None:
             self.message_client.close()
             self.message_client = None
-
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
-    # pylint: enable=W1701
 
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
@@ -1038,6 +1033,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
     ttype = "tcp"
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
         parse = urllib.parse.urlparse(self.opts["master_uri"])
@@ -1054,6 +1050,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
             source_ip=opts.get("source_ip"),
             source_port=opts.get("source_ret_port"),
         )
+        self._closing = False
 
     @salt.ext.tornado.gen.coroutine
     def connect(self):
@@ -1065,4 +1062,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
+        if self._closing:
+            return
+        self._closing = True
         self.message_client.close()
