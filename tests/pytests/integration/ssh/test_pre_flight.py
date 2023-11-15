@@ -19,7 +19,9 @@ from saltfactories.utils import random_string
 
 import salt.utils.files
 
-pytestmark = pytest.mark.skip_on_windows(reason="Salt-ssh not available on Windows")
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Salt-ssh not available on Windows"),
+]
 
 
 def _custom_roster(roster_file, roster_data):
@@ -33,33 +35,39 @@ def _custom_roster(roster_file, roster_data):
 
 @pytest.fixture
 def _create_roster(salt_ssh_roster_file, tmp_path):
-    ret = {}
-    ret["roster"] = salt_ssh_roster_file
-    ret["data"] = {"ssh_pre_flight": str(tmp_path / "ssh_pre_flight.sh")}
-    ret["test_script"] = str(tmp_path / "test-pre-flight-script-worked.txt")
-    ret["thin_dir"] = tmp_path / "thin_dir"
+    thin_dir = tmp_path / "thin-dir"
+    ret = {
+        "roster": salt_ssh_roster_file,
+        "data": {
+            "ssh_pre_flight": str(tmp_path / "ssh_pre_flight.sh"),
+        },
+        "test_script": str(tmp_path / "test-pre-flight-script-worked.txt"),
+        "thin_dir": str(thin_dir),
+    }
 
     with salt.utils.files.fopen(salt_ssh_roster_file, "r") as fp:
         data = salt.utils.yaml.safe_load(fp)
+
     pre_flight_script = ret["data"]["ssh_pre_flight"]
     data["localhost"]["ssh_pre_flight"] = pre_flight_script
-    data["localhost"]["thin_dir"] = str(ret["thin_dir"])
+    data["localhost"]["thin_dir"] = ret["thin_dir"]
     with salt.utils.files.fopen(salt_ssh_roster_file, "w") as fp:
         yaml.safe_dump(data, fp)
 
     with salt.utils.files.fopen(pre_flight_script, "w") as fp:
         fp.write("touch {}".format(ret["test_script"]))
 
-    yield ret
-    if ret["thin_dir"].exists():
-        shutil.rmtree(ret["thin_dir"])
+    try:
+        yield ret
+    finally:
+        if thin_dir.exists():
+            shutil.rmtree(thin_dir)
 
 
 @pytest.mark.slow_test
 def test_ssh_pre_flight(salt_ssh_cli, caplog, _create_roster):
     """
-    test ssh when ssh_pre_flight is set
-    ensure the script runs successfully
+    test ssh when ssh_pre_flight is set ensure the script runs successfully
     """
     ret = salt_ssh_cli.run("test.ping")
     assert ret.returncode == 0
@@ -70,8 +78,7 @@ def test_ssh_pre_flight(salt_ssh_cli, caplog, _create_roster):
 @pytest.mark.slow_test
 def test_ssh_run_pre_flight(salt_ssh_cli, _create_roster):
     """
-    test ssh when --pre-flight is passed to salt-ssh
-    to ensure the script runs successfully
+    test ssh when --pre-flight is passed to salt-ssh to ensure the script runs successfully
     """
     # make sure we previously ran a command so the thin dir exists
     ret = salt_ssh_cli.run("test.ping")
@@ -85,10 +92,7 @@ def test_ssh_run_pre_flight(salt_ssh_cli, _create_roster):
     assert not pathlib.Path(_create_roster["test_script"]).exists()
 
     # Now ensure
-    ret = salt_ssh_cli.run(
-        "test.ping",
-        "--pre-flight",
-    )
+    ret = salt_ssh_cli.run("test.ping", "--pre-flight")
     assert ret.returncode == 0
     assert pathlib.Path(_create_roster["test_script"]).exists()
 
@@ -115,18 +119,15 @@ def test_ssh_run_pre_flight_args(salt_ssh_cli, _create_roster):
     assert ret.returncode == 0
     assert test_script_1.exists()
     assert test_script_2.exists()
-    pathlib.Path(test_script_1).unlink()
-    pathlib.Path(test_script_2).unlink()
+    test_script_1.unlink()
+    test_script_2.unlink()
 
     ret = salt_ssh_cli.run("test.ping")
     assert ret.returncode == 0
     assert not test_script_1.exists()
     assert not test_script_2.exists()
 
-    ret = salt_ssh_cli.run(
-        "test.ping",
-        "--pre-flight",
-    )
+    ret = salt_ssh_cli.run("test.ping", "--pre-flight")
     assert ret.returncode == 0
     assert test_script_1.exists()
     assert test_script_2.exists()
@@ -166,17 +167,14 @@ def test_ssh_run_pre_flight_args_prevent_injection(
     test_script_2.unlink()
     assert not injected_file.is_file()
 
-    ret = salt_ssh_cli.run(
-        "test.ping",
-        "--pre-flight",
-    )
+    ret = salt_ssh_cli.run("test.ping", "--pre-flight")
     assert ret.returncode == 0
 
     assert test_script_1.exists()
     assert test_script_2.exists()
-    assert not pathlib.Path(
-        injected_file
-    ).is_file(), "File injection suceeded. This shouldn't happend"
+    assert (
+        not injected_file.is_file()
+    ), "File injection suceeded. This shouldn't happend"
 
 
 @pytest.mark.flaky(max_runs=4)
@@ -189,10 +187,7 @@ def test_ssh_run_pre_flight_failure(salt_ssh_cli, _create_roster):
     with salt.utils.files.fopen(_create_roster["data"]["ssh_pre_flight"], "w") as fp_:
         fp_.write("exit 2")
 
-    ret = salt_ssh_cli.run(
-        "test.ping",
-        "--pre-flight",
-    )
+    ret = salt_ssh_cli.run("test.ping", "--pre-flight")
     assert ret.data["retcode"] == 2
 
 
@@ -255,7 +250,7 @@ def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
         x=1
         while [ $x -le 200000 ]; do
             SCRIPT=`bash {str(tmp_preflight)} 2> /dev/null; echo $?`
-            if [ ${{SCRIPT}} == 0 ]; then
+            if [ ${{SCRIPT}} -eq 0 ]; then
                 break
             fi
             x=$(( $x + 1 ))
@@ -301,10 +296,7 @@ def test_ssh_run_pre_flight_target_file_perms(salt_ssh_cli, _create_roster, tmp_
         """
         )
 
-    ret = salt_ssh_cli.run(
-        "test.ping",
-        "--pre-flight",
-    )
+    ret = salt_ssh_cli.run("test.ping", "--pre-flight")
     assert ret.returncode == 0
     with salt.utils.files.fopen(perms_file) as fp:
         data = fp.read()

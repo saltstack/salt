@@ -625,9 +625,18 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "workflow": {
             "help": "Which workflow is running",
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "ci"):
+def matrix(
+    ctx: Context,
+    distro_slug: str,
+    full: bool = False,
+    workflow: str = "ci",
+    fips: bool = False,
+):
     """
     Generate the test matrix.
     """
@@ -640,13 +649,20 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
     }
     # On nightly and scheduled builds we don't want splits at all
     if workflow.lower() in ("nightly", "scheduled"):
-        ctx.info(f"Clearning splits definition since workflow is '{workflow}'")
-        _splits.clear()
+        ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
+        for key in _splits:
+            new_value = _splits[key] - 2
+            if new_value < 1:
+                new_value = 1
+            _splits[key] = new_value
 
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
                 "centosstream-9",
+                "centosstream-9-arm64",
+                "photonos-5",
+                "photonos-5-arm64",
                 "ubuntu-22.04",
                 "ubuntu-22.04-arm64",
             ):
@@ -670,8 +686,18 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
                             "test-group-count": splits,
                         }
                     )
+                    if fips is True and distro_slug.startswith(
+                        ("photonos-4", "photonos-5")
+                    ):
+                        # Repeat the last one, but with fips
+                        _matrix.append({"fips": "fips", **_matrix[-1]})
             else:
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
+                if fips is True and distro_slug.startswith(
+                    ("photonos-4", "photonos-5")
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -697,6 +723,9 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
             "nargs": "+",
             "required": True,
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
 def pkg_matrix(
@@ -704,6 +733,7 @@ def pkg_matrix(
     distro_slug: str,
     pkg_type: str,
     testing_releases: list[tools.utils.Version] = None,
+    fips: bool = False,
 ):
     """
     Generate the test matrix.
@@ -717,13 +747,24 @@ def pkg_matrix(
     sessions = [
         "install",
     ]
+    # OSs that where never included in 3005
+    # We cannot test an upgrade for this OS on this version
+    not_3005 = ["amazonlinux-2-arm64", "photonos-5", "photonos-5-arm64"]
+    # OSs that where never included in 3006
+    # We cannot test an upgrade for this OS on this version
+    not_3006 = ["photonos-5", "photonos-5-arm64"]
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "debian-11-arm64",
             # TODO: remove debian 12 once debian 12 pkgs are released
             "debian-12-arm64",
             "debian-12",
+            # TODO: remove amazon 2023 once amazon 2023 pkgs are released
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -732,6 +773,9 @@ def pkg_matrix(
             "photonos-4-arm64",
             "photonos-5",
             "photonos-5-arm64",
+            "amazonlinux-2-arm64",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -761,10 +805,14 @@ def pkg_matrix(
     if (
         distro_slug
         not in [
+            "amazon-2023",
+            "amazon-2023-arm64",
             "centosstream-9",
             "debian-11-arm64",
             "debian-12-arm64",
             "debian-12",
+            "amazonlinux-2023",
+            "amazonlinux-2023-arm64",
             "ubuntu-22.04",
             "ubuntu-22.04-arm64",
             "photonos-3",
@@ -793,17 +841,35 @@ def pkg_matrix(
         for version in versions:
             if (
                 version
-                and distro_slug.startswith("photonos-5")
+                and distro_slug in not_3005
+                and version < tools.utils.Version("3006.0")
+            ):
+                # We never build packages for these OSs in 3005
+                continue
+            elif (
+                version
+                and distro_slug in not_3006
                 and version < tools.utils.Version("3007.0")
             ):
-                # We never build packages for Photon OS 5 prior to 3007.0
+                # We never build packages for these OSs in 3006
+                continue
+            if (
+                version
+                and distro_slug.startswith("amazonlinux-2023")
+                and version < tools.utils.Version("3006.6")
+            ):
+                # We never build packages for AmazonLinux 2023 prior to 3006.5
                 continue
             _matrix.append(
                 {
-                    "test-chunk": session,
+                    "tests-chunk": session,
                     "version": version,
                 }
             )
+            if fips is True and distro_slug.startswith(("photonos-4", "photonos-5")):
+                # Repeat the last one, but with fips
+                _matrix.append({"fips": "fips", **_matrix[-1]})
+
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 

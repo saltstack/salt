@@ -1,5 +1,6 @@
 import os.path
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -117,7 +118,7 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     if not pkg:
         pytest.skip("Not testing rpm packages")
     pkg = pkg[0].split("/")[-1]
-    if "rc" not in pkg:
+    if not re.search(r"rc[0-9]", pkg):
         pytest.skip("Not testing an RC package")
     assert "~" in pkg
     comp_pkg = pkg.split("~")[0]
