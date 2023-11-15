@@ -23,7 +23,7 @@ junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
-kubernetes<4.0
+kubernetes>=12.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
 moto>=2.0.0
 napalm; sys_platform != 'win32'
