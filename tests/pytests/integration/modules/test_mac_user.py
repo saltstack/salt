@@ -159,8 +159,8 @@ def test_mac_user_changes(salt_call_cli, setup_teardown_vars):
         assert fullname_info["fullname"] == "Foo Bar"
 
         # Test mac_user.chgroups
-        ret = salt_call_cli.run("user.info", CHANGE_USER)["groups"]
-        pre_info = ret.data
+        ret = salt_call_cli.run("user.info", CHANGE_USER)
+        pre_info = ret.data["groups"]
         expected = pre_info + ["wheel"]
         salt_call_cli.run("user.chgroups", CHANGE_USER, "wheel")
         ret = salt_call_cli.run("user.info", CHANGE_USER)
