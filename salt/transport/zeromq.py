@@ -596,12 +596,20 @@ class AsyncReqMessageClient:
 
     @salt.ext.tornado.gen.coroutine
     def _send_recv(self, message, future):
-        with (yield self.lock.acquire()):
-            yield self.socket.send(message)
-            recv = yield self.socket.recv()
-        if not future.done():
-            data = salt.payload.loads(recv)
-            future.set_result(data)
+        try:
+            with (yield self.lock.acquire()):
+                yield self.socket.send(message)
+                try:
+                    recv = yield self.socket.recv()
+                except zmq.eventloop.future.CancelledError as exc:
+                    future.set_exception(exc)
+                    return
+
+            if not future.done():
+                data = salt.payload.loads(recv)
+                future.set_result(data)
+        except Exception as exc:  # pylint: disable=broad-except
+            future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
