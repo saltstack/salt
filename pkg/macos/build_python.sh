@@ -243,12 +243,7 @@ else
     # We want to suppress the output here so it looks nice
     # To see the output, remove the output redirection
     _msg "Fetching python (relenv)"
-    relenv fetch --python=$PY_VERSION
-    if [ -f "$RELENV_DIR/build/$PY_VERSION-x86_64-macos.tar.xz" ]; then
-        _success
-    else
-        _failure
-    fi
+    relenv fetch --python=$PY_VERSION && _success || _failure
 fi
 
 _msg "Extracting python environment"
