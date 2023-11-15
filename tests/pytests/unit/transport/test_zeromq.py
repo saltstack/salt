@@ -1498,3 +1498,31 @@ def test_pub_client_init(minion_opts, io_loop):
     client = salt.transport.zeromq.PublishClient(minion_opts, io_loop)
     client.send(b"asf")
     client.close()
+
+
+async def test_unclosed_request_client(minion_opts, io_loop):
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    await client.connect()
+    try:
+        assert client._closing is False
+        with pytest.warns(salt.transport.base.TransportWarning):
+            client.__del__()
+    finally:
+        client.close()
+
+
+async def test_unclosed_publish_client(minion_opts, io_loop):
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["master_ip"] = "127.0.0.1"
+    minion_opts["zmq_filtering"] = True
+    minion_opts["zmq_monitor"] = True
+    client = salt.transport.zeromq.PublishClient(minion_opts, io_loop)
+    await client.connect(2121)
+    try:
+        assert client._closing is False
+        with pytest.warns(salt.transport.base.TransportWarning):
+            client.__del__()
+    finally:
+        client.close()
