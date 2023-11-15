@@ -444,7 +444,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-deps-onedir-windows:
@@ -458,7 +458,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-deps-onedir-macos:
@@ -472,7 +472,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-linux:
@@ -488,7 +488,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-windows:
@@ -504,7 +504,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-macos:
@@ -520,7 +520,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-rpm-pkgs-onedir:
@@ -532,7 +532,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -545,7 +545,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -558,7 +558,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -571,7 +571,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -584,7 +584,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -597,7 +597,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -610,7 +610,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -623,7 +623,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.14.1"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
