@@ -115,6 +115,20 @@ repos:
           - docstrings
           - check
 
+      - id: tools
+        alias: loader-check-virtual
+        name: Check loader modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - pre-commit
+          - salt-loaders
+          - check-virtual
+
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
@@ -1238,26 +1252,6 @@ repos:
         pass_filenames: false
         args:
           - filemap.check
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0.1
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-
-      - id: invoke
-        alias: loader-check-virtual
-        name: Check loader modules __virtual__
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        args:
-          - loader.check-virtual
         additional_dependencies:
           - blessings==1.7
           - pyyaml==6.0.1
