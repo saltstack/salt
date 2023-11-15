@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING
 from ptscripts import Context, command_group
 
 import tools.utils
-from salt.loader import SALT_INTERNAL_LOADERS_PATHS
 from salt.version import SaltStackVersion
+from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
 SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
 SALT_MODULES_PATH = SALT_CODE_DIR / "modules"
@@ -865,7 +865,7 @@ def check_docstrings(
     Check salt's docstrings
     """
     if not files:
-        _files = SALT_CODE_DIR.rglob("*.py")
+        _files = list(SALT_CODE_DIR.rglob("*.py"))
     else:
         _files = [fpath.resolve() for fpath in files if fpath.suffix == ".py"]
 
