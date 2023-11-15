@@ -122,7 +122,7 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
         salt '*' keychain.list_certs
     """
     cmd = (
-        'security find-certificate -a {} | grep -o "alis".*\\" | '
+        'security find-certificate -a {} | grep -o "alis.*" | '
         "grep -o '\\\"[-A-Za-z0-9.:() ]*\\\"'".format(shlex.quote(keychain))
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
