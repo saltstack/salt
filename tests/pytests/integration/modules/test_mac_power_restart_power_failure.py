@@ -21,7 +21,7 @@ def test_restart_power_failure(salt_call_cli):
     RESTART_POWER = None
 
     ret = salt_call_cli.run("power.get_restart_power_failure")
-    if isinstance(ret, bool):
+    if isinstance(ret.data, bool):
         RESTART_POWER = ret.data
 
     # If available on this system, test it
@@ -30,13 +30,13 @@ def test_restart_power_failure(salt_call_cli):
         ret = salt_call_cli.run("power.get_restart_power_failure")
         assert "Error" in ret.data
     else:
-        ret = salt_call_cli.run("power.set_restart_power_failure", "on")
+        ret = salt_call_cli.run("power.set_restart_power_failure", "On")
         assert ret.data
 
         ret = salt_call_cli.run("power.get_restart_power_failure")
         assert ret.data
 
-        ret = salt_call_cli.run("power.set_restart_power_failure", "off")
+        ret = salt_call_cli.run("power.set_restart_power_failure", "Off")
         assert ret.data
 
         ret = salt_call_cli.run("power.get_restart_power_failure")

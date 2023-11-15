@@ -136,8 +136,8 @@ def test_latest_version(salt_call_cli, add_pkg, setup_teardown_vars):
         installed_latest = ret.data
         version = salt_call_cli.run("pkg.version", add_pkg)
         try:
-            assert isinstance(uninstalled_latest.data, str)
-            assert installed_latest.data == version.data
+            assert isinstance(uninstalled_latest, str)
+            assert installed_latest == version.data
         except AssertionError:
             salt_call_cli.run("pkg.remove", add_pkg)
             raise

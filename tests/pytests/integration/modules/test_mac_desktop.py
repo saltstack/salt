@@ -44,6 +44,8 @@ def test_screensaver(salt_call_cli):
     Tests the return of the screensaver function.
     """
     ret = salt_call_cli.run("desktop.screensaver")
+    if "does not exist" in ret.stderr:
+        pytest.skip("Skipping. Screensaver unavailable.")
     assert ret.data
 
 
@@ -52,6 +54,8 @@ def test_lock(salt_call_cli):
     Tests the return of the lock function.
     """
     ret = salt_call_cli.run("desktop.lock")
+    if "Unable to run" in ret.stderr:
+        pytest.skip("Skipping. Unable to lock screen.")
     assert ret.data
 
 

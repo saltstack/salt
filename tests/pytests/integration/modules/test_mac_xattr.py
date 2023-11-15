@@ -16,8 +16,8 @@ pytestmark = [
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(salt_call_cli, tmp_path):
-    test_file = tmp_path / "xattr_test_file.txt"
-    no_file = tmp_path / "xattr_no_file.txt"
+    test_file = str(tmp_path / "xattr_test_file.txt")
+    no_file = str(tmp_path / "xattr_no_file.txt")
 
     salt_call_cli.run("file.touch", test_file)
 
@@ -45,7 +45,7 @@ def test_list_no_xattr(salt_call_cli, setup_teardown_vars):
 
     # Test file not found
     ret = salt_call_cli.run("xattr.list", no_file)
-    assert ret.stderr == f"ERROR: File not found: {no_file}"
+    assert f"File not found: {no_file}" in ret.stderr
 
 
 def test_write(salt_call_cli, setup_teardown_vars):
@@ -79,7 +79,7 @@ def test_write(salt_call_cli, setup_teardown_vars):
 
     # Test file not found
     ret = salt_call_cli.run("xattr.write", no_file, "patrick", "jellyfish")
-    assert ret.stderr == f"ERROR: File not found: {no_file}"
+    assert f"File not found: {no_file}" in ret.stderr
 
 
 def test_read(salt_call_cli, setup_teardown_vars):
@@ -103,11 +103,11 @@ def test_read(salt_call_cli, setup_teardown_vars):
 
     # Test file not found
     ret = salt_call_cli.run("xattr.read", no_file, "spongebob")
-    assert ret.stderr == f"ERROR: File not found: {no_file}"
+    assert f"File not found: {no_file}" in ret.stderr
 
     # Test attribute not found
     ret = salt_call_cli.run("xattr.read", test_file, "patrick")
-    assert ret.stderr == "ERROR: Attribute not found: patrick"
+    assert "Attribute not found: patrick" in ret.stderr
 
 
 def test_delete(salt_call_cli, setup_teardown_vars):
@@ -144,11 +144,11 @@ def test_delete(salt_call_cli, setup_teardown_vars):
 
     # Test file not found
     ret = salt_call_cli.run("xattr.delete", no_file, "spongebob")
-    assert ret.stderr == f"ERROR: File not found: {no_file}"
+    assert f"File not found: {no_file}" in ret.stderr
 
     # Test attribute not found
     ret = salt_call_cli.run("xattr.delete", test_file, "patrick")
-    assert ret.stderr == "ERROR: Attribute not found: patrick"
+    assert "Attribute not found: patrick" in ret.stderr
 
 
 def test_clear(salt_call_cli, setup_teardown_vars):
@@ -178,4 +178,4 @@ def test_clear(salt_call_cli, setup_teardown_vars):
 
     # Test file not found
     ret = salt_call_cli.run("xattr.clear", no_file)
-    assert ret.stderr == f"ERROR: File not found: {no_file}"
+    assert f"File not found: {no_file}" in ret.stderr
