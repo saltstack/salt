@@ -575,7 +575,7 @@ JUNOS Routing Software Suite [9.1S3.5]"""
                         ],
                     }
                     with patch.object(
-                        clitable, "open", mock_open(read_data=mock_read_data)
+                        textfsm.clitable, "open", mock_open(read_data=mock_read_data)
                     ):
                         with patch.dict(
                             textfsm_mod.__salt__,
