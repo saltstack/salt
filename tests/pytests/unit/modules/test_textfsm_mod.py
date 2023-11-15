@@ -482,7 +482,7 @@ juniper_version_template, .*, Juniper, sh[[ow]] ve[[rsion]]"""
                     {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
                 ):
                     with patch.object(
-                        clitable, "open", mock_open(read_data=mock_open_index)
+                        textfsm.clitable, "open", mock_open(read_data=mock_open_index)
                     ):
                         with patch.dict(
                             textfsm_mod.__salt__,
