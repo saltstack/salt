@@ -53,6 +53,11 @@ except ImportError:
         return stub_function
 
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
+
 required_boto_version = "2.0.0"
 required_boto3_version = "1.2.1"
 region = "us-east-1"

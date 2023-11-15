@@ -126,6 +126,7 @@ def test_vm_config_merger():
     assert expected == vm
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_run_profile_create_returns_boolean(master_config):
 
     master_config["profiles"] = {"test_profile": {"provider": "test_provider:saltify"}}
