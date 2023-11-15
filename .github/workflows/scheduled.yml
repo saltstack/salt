@@ -384,6 +384,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           SKIP: lint-salt,lint-tests
+          PRE_COMMIT_COLOR: always
         run: |
           # Run it twice so that pre-commit can fix anything that can be automatically fixed.
           git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
