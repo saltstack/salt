@@ -1536,7 +1536,7 @@ def lint_salt(session):
         paths = session.posargs
     else:
         # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
+        paths = ["setup.py", "noxfile.py", "salt/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
@@ -1646,37 +1646,6 @@ def docs_man(session, compress, update, clean):
     if compress:
         session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
     os.chdir("..")
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run invoke tasks
-    """
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session)
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
-    cmd = ["inv"]
-    files = []
-
-    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
-    # Let's make it behave properly
-    for idx, posarg in enumerate(session.posargs):
-        if idx == 0:
-            cmd.append(posarg)
-            continue
-        if posarg.startswith("--"):
-            cmd.append(posarg)
-            continue
-        files.append(posarg)
-    if files:
-        cmd.append("--files={}".format(" ".join(files)))
-    session.run(*cmd)
 
 
 @nox.session(name="changelog", python="3")

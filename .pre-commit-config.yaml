@@ -129,6 +129,16 @@ repos:
           - salt-loaders
           - check-virtual
 
+      - id: tools
+        alias: check-filemap
+        name: Check Filename Map Change Matching
+        files: ^tests/(filename_map\.yml|.*\.py)$
+        pass_filenames: false
+        args:
+          - pre-commit
+          - filemap
+          - check
+
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
@@ -1039,56 +1049,6 @@ repos:
           - requirements/static/ci/changelog.in
   # <---- Changelog --------------------------------------------------------------------------------------------------
 
-  # ----- Invoke ---------------------------------------------------------------------------------------------------->
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.7-requirements
-        name: Linux CI Py3.7 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.7/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.7
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.8-requirements
-        name: Linux CI Py3.8 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.8/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.8
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.9-requirements
-        name: Linux CI Py3.9 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.9/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.9
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.10-requirements
-        name: Linux CI Py3.10 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.10/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.10
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-  # <---- Invoke -----------------------------------------------------------------------------------------------------
-
   # ----- Tools ---------------------------------------------------------------------------------------------------->
       - id: pip-tools-compile
         alias: compile-ci-tools-3.9-requirements
@@ -1242,50 +1202,6 @@ repos:
   # <---- Security ---------------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-filemap
-        name: Check Filename Map Change Matching
-        files: ^tests/(filename_map\.yml|.*\.py)$
-        pass_filenames: false
-        args:
-          - filemap.check
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0.1
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-known-missing-docstrings
-        name: Check Known Missing Docstrings
-        stages: [manual]
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        args:
-          - docstrings.check
-          - --error-on-known-failures
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0.1
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.3.0
     hooks:
