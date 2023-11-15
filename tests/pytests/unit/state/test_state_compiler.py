@@ -1302,3 +1302,37 @@ def test_check_refresh_pillar(minion_opts, caplog):
             state_obj.check_refresh(data, ret)
             mock_refresh.assert_called_once()
             assert "Refreshing pillar..." in caplog.text
+
+
+def test_module_refresh_runtimeerror(minion_opts, caplog):
+    """
+    test module_refresh when runtimerror occurs
+    """
+    mock_importlib = MagicMock()
+    mock_importlib.side_effect = RuntimeError("Error")
+    patch_importlib = patch("importlib.reload", mock_importlib)
+    patch_pillar = patch("salt.state.State._gather_pillar", return_value="")
+    with patch_importlib, patch_pillar:
+        state_obj = salt.state.State(minion_opts)
+        state_obj.module_refresh()
+        assert (
+            "Error encountered during module reload. Modules were not reloaded."
+            in caplog.text
+        )
+
+
+def test_module_refresh_typeerror(minion_opts, caplog):
+    """
+    test module_refresh when typeerror occurs
+    """
+    mock_importlib = MagicMock()
+    mock_importlib.side_effect = TypeError("Error")
+    patch_importlib = patch("importlib.reload", mock_importlib)
+    patch_pillar = patch("salt.state.State._gather_pillar", return_value="")
+    with patch_importlib, patch_pillar:
+        state_obj = salt.state.State(minion_opts)
+        state_obj.module_refresh()
+        assert (
+            "Error encountered during module reload. Modules were not reloaded."
+            in caplog.text
+        )

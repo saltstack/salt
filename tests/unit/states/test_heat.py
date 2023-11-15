@@ -5,7 +5,6 @@ import salt.modules.heat
 import salt.modules.win_file as win_file
 import salt.states.heat as heat
 import salt.utils.platform
-import salt.utils.win_dacl as dacl
 import tests.unit.modules.test_heat
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -38,10 +37,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                     "config.backup_mode": MagicMock(return_value=False),
                 },
             },
-            win_file: {
-                "__utils__": {"dacl.check_perms": salt.utils.win_dacl.check_perms}
-            },
-            dacl: {"__opts__": {"test": False}},
+            win_file: {"__opts__": {"test": False}},
         }
 
     def setUp(self):

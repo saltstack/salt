@@ -6,6 +6,7 @@ import os
 
 import attr
 import pytest
+from pytestskipmarkers.utils import platform
 
 import salt.utils.files
 import salt.utils.path
@@ -932,7 +933,11 @@ def _filter_id(value):
     ids=_filter_id,
 )
 def filter(request):
-    return request.param
+    _filter = request.param
+    if platform.is_fips_enabled():
+        if _filter.name in ("md5", "random_hash"):
+            pytest.skip("Test cannot run on a FIPS enabled platform")
+    return _filter
 
 
 def test_filter(state, state_tree, filter, grains):

@@ -6,6 +6,8 @@
         <%- for distro, version, arch in (
                                             ("amazon", "2", "x86_64"),
                                             ("amazon", "2", "aarch64"),
+                                            ("amazon", "2023", "x86_64"),
+                                            ("amazon", "2023", "aarch64"),
                                             ("redhat", "7", "x86_64"),
                                             ("redhat", "7", "aarch64"),
                                             ("redhat", "8", "x86_64"),
@@ -22,6 +24,8 @@
                                             ("photon", "3", "aarch64"),
                                             ("photon", "4", "x86_64"),
                                             ("photon", "4", "aarch64"),
+                                            ("photon", "5", "x86_64"),
+                                            ("photon", "5", "aarch64"),
                                         ) %>
           - pkg-type: rpm
             distro: <{ distro }>

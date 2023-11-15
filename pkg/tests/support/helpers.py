@@ -516,7 +516,7 @@ class SaltPkgInstall:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
 
             if platform.is_aarch64():
-                arch = "aarch64"
+                arch = "arm64"
             else:
                 arch = "x86_64"
             ret = self.proc.run(
