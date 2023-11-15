@@ -8,20 +8,7 @@ import pytest
 import salt.modules.textfsm_mod as textfsm_mod
 from tests.support.mock import MagicMock, mock_open, patch
 
-HAS_LIBS = True
-# pylint: disable=import-error,no-name-in-module,unused-import
-try:
-    from textfsm import clitable
-except ImportError:
-    HAS_LIBS = False
-# pylint: enable=import-error,no-name-in-module,unused-import
-
-
-pytestmark = [
-    pytest.mark.skipif(
-        not HAS_LIBS, reason="Install textfsm to be able to run this test."
-    )
-]
+textfsm = pytest.importorskip("textfsm", reason="Install textfsm to be able to run this test.")
 
 
 @pytest.fixture()
