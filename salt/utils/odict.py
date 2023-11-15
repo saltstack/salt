@@ -78,7 +78,7 @@ except (ImportError, AttributeError):
                     3009,
                     "The Salt backport `OrderedDict` class introduced for Python 2 "
                     "has been deprecated, and is set to be removed in {version}. "
-                    "Please use Python 3 `OrderedDict`.",
+                    "Please import `OrderedDict` from `collections`.",
                     category=FutureWarning,
                 )
 
