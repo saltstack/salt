@@ -9,6 +9,7 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
+    pytest.mark.skip_if_binaries_missing("port"),
 ]
 
 

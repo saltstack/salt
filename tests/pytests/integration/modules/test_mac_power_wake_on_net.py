@@ -28,7 +28,7 @@ def test_wake_on_network(salt_call_cli):
     if WAKE_ON_NET is None:
         # Check for not available
         ret = salt_call_cli.run("power.get_wake_on_network")
-        assert "Error" in ret.data
+        assert "Error" in ret.stderr
     else:
         ret = salt_call_cli.run("power.set_wake_on_network", "on")
         assert ret.data

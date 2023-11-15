@@ -26,7 +26,7 @@ def test_wake_on_modem(salt_call_cli):
     if WAKE_ON_MODEM is None:
         # Check for not available
         ret = salt_call_cli.run("power.get_wake_on_modem")
-        assert "Error" in ret.data
+        assert "Error" in ret.stderr
     else:
         ret = salt_call_cli.run("power.set_wake_on_modem", "on")
         assert ret.data
