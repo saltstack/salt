@@ -4037,7 +4037,7 @@ def test_id():
 
 def test__linux_bin_exists():
     """
-    test id
+    test __linux_bin_exists
     """
     mock_retcode = [salt.exceptions.CommandExecutionError, 0]
     with patch.dict(
@@ -4074,7 +4074,7 @@ def test__linux_bin_exists():
 
 def test__parse_lsb_release():
     """
-    test id
+    test __parse_lsb_release
     """
     mock_lsb_file = """
 DISTRIB_ID="ManjaroLinux"
@@ -4099,7 +4099,7 @@ DISTRIB_DESCRIPTION="Manjaro Linux"
 
 def test__osx_gpudata():
     """
-    test id
+    test __osx_gpudata
     """
     mock_gpudata = """
 Graphics/Displays:
