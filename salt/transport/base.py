@@ -97,18 +97,38 @@ def publish_client(opts, io_loop):
     raise Exception("Transport type not found: {}".format(ttype))
 
 
+class TransportWarning(Warning):
+    """
+    Transport warning.
+    """
+
+
 class Transport:
     def __init__(self, *args, **kwargs):
         self._trace = "\n".join(traceback.format_stack()[:-1])
         if not hasattr(self, "_closing"):
             self._closing = False
+        if not hasattr(self, "_connect_called"):
+            self._connect_called = False
+
+    def connect(self, *args, **kwargs):
+        self._connect_called = True
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        """
+        Warn the user if the transport's close method was never called.
+
+        If the _closing attribute is missing we won't raise a warning. This
+        prevents issues when class's dunder init method is called with improper
+        arguments, and is later getting garbage collected. Users of this class
+        should take care to call super() and validate the functionality with a
+        test.
+        """
+        if getattr(self, "_connect_called") and not getattr(self, "_closing", True):
             warnings.warn(
-                f"Unclosed transport {self!r} \n{self._trace}",
-                ResourceWarning,
+                f"Unclosed transport! {self!r} \n{self._trace}",
+                TransportWarning,
                 source=self,
             )
 
@@ -137,7 +157,7 @@ class RequestClient(Transport):
         """
         raise NotImplementedError
 
-    def connect(self):
+    def connect(self):  # pylint: disable=W0221
         """
         Connect to the server / broker.
         """
@@ -233,7 +253,7 @@ class PublishClient(Transport):
         raise NotImplementedError
 
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):  # pylint: disable=W0221
         """
         Create a network connection to the the PublishServer or broker.
         """

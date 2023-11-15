@@ -231,6 +231,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
 
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+        self._connect_called = True
         self.publish_port = publish_port
         self.message_client = MessageClient(
             self.opts,
@@ -1054,6 +1055,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
 
     @salt.ext.tornado.gen.coroutine
     def connect(self):
+        self._connect_called = True
         yield self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
