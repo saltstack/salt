@@ -26,6 +26,9 @@ jobs:
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
+    env:
+      PRE_COMMIT_COLOR: always
+
     steps:
 
       - name: Install System Deps
