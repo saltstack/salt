@@ -81,7 +81,7 @@ def test_get_friendly_name():
     with patch.dict(keychain.__salt__, {"cmd.run": mock}):
         out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd")
         mock.assert_called_once_with(
-            "openssl pkcs12 -in /path/to/cert.p12 -passin pass:passw0rd -info "
+            "openssl pkcs12 -legacy -in /path/to/cert.p12 -passin pass:passw0rd -info "
             "-nodes -nokeys 2> /dev/null | grep friendlyName:",
             python_shell=True,
         )
