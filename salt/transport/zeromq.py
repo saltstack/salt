@@ -207,6 +207,7 @@ class PublishClient(salt.transport.base.PublishClient):
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+        self._connect_called = True
         self.publish_port = publish_port
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",
@@ -214,7 +215,8 @@ class PublishClient(salt.transport.base.PublishClient):
         )
         log.debug("%r connecting to %s", self, self.master_pub)
         self._socket.connect(self.master_pub)
-        connect_callback(True)
+        if connect_callback is not None:
+            connect_callback(True)
 
     @property
     def master_pub(self):
@@ -886,13 +888,16 @@ class RequestClient(salt.transport.base.RequestClient):
             io_loop=io_loop,
         )
         self._closing = False
+        self._connect_called = False
 
+    @salt.ext.tornado.gen.coroutine
     def connect(self):
+        self._connect_called = True
         self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, timeout=60):
-        self.connect()
+        yield self.connect()
         ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
