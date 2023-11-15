@@ -30,6 +30,7 @@ pytestmark = [
         reason='"smbprotocol" needs to be installed.',
     ),
     pytest.mark.skip_if_binaries_missing("smbd", check_all=False),
+    pytest.mark.skip_unless_on_linux(reason="using Linux samba to test smb"),
 ]
 
 
@@ -57,7 +58,6 @@ def smb_dict():
         passwdb = Path(str(tmpdir) + os.sep + "passwdb")
         username = getpass.getuser()
         with salt.utils.files.fopen(passwdb, "w") as fp:
-            ## fp.write(TBE.format(username))
             fp.write(
                 "{username}:0:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:AC8E657F8"
                 "3DF82BEEA5D43BDAF7800CC:[U          ]:LCT-507C14C7:"
@@ -66,12 +66,6 @@ def smb_dict():
         samba_conf = Path(str(tmpdir) + os.sep + "smb.conf")
         with salt.utils.files.fopen(samba_conf, "w") as fp:
             fp.write(
-                ## CONFIG.format(
-                ##     samba_dir=samba_dir,
-                ##     public_dir=public_dir,
-                ##     passwdb=passwdb,
-                ##     user=username,
-                ## )
                 f"[global]\n"
                 "realm = saltstack.com\n"
                 "interfaces = lo 127.0.0.0/8\n"

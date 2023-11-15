@@ -44,6 +44,10 @@ bcrypt==4.1.2
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
+blinker==1.7.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   flask
 boto3==1.21.46
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -110,9 +114,10 @@ ciscoconfparse==1.5.19
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   napalm
-click==7.1.1
+click==8.1.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   flask
     #   geomet
 clustershell==1.8.3
     # via
@@ -160,11 +165,16 @@ dnspython==1.16.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
+    #   ldapdomaindump
     #   python-etcd
 docker==6.1.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
+dsinternals==1.2.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
 etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -181,6 +191,10 @@ flaky==3.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
+flask==3.0.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
 frozenlist==1.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -189,6 +203,8 @@ frozenlist==1.3.0
 future==0.18.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
+    #   ldapdomaindump
     #   napalm
     #   textfsm
 genshi==0.7.5
@@ -224,11 +240,16 @@ immutables==0.15
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   contextvars
+impacket==0.11.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 importlib-metadata==6.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
+    #   flask
 iniconfig==1.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -237,6 +258,10 @@ ipaddress==1.0.22
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   kubernetes
+itsdangerous==2.1.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   flask
 jaraco.classes==3.2.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
@@ -264,6 +289,7 @@ jinja2==3.1.3
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
+    #   flask
     #   junos-eznc
     #   moto
     #   napalm
@@ -300,6 +326,15 @@ kubernetes==3.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
+ldap3==2.9.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
+    #   ldapdomaindump
+ldapdomaindump==0.9.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -440,6 +475,8 @@ pyasn1-modules==0.2.4
 pyasn1==0.4.8
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   impacket
+    #   ldap3
     #   pyasn1-modules
     #   rsa
 pycparser==2.21 ; python_version >= "3.9"
@@ -454,6 +491,7 @@ pycryptodomex==3.19.1
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/crypto.txt
+    #   impacket
 pyeapi==0.8.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -477,6 +515,7 @@ pyopenssl==24.0.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
+    #   impacket
 pyparsing==3.0.9
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -492,9 +531,10 @@ pyserial==3.4
     #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   netmiko
-pyspnego==0.8.0
+pyspnego==0.10.2 ; python_version >= "3.8"
     # via
-    #   -r requirements/static/ci/cloud.in
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
     #   smbprotocol
 pytest-custom-exit-code==0.3.0
     # via
@@ -661,6 +701,7 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
+    #   impacket
     #   jsonschema
     #   junos-eznc
     #   kazoo
@@ -680,7 +721,8 @@ six==1.16.0
     #   websocket-client
 smbprotocol==1.10.1
     # via
-    #   -r requirements/static/ci/cloud.in
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
     #   pypsexec
 smmap==4.0.0
     # via
@@ -770,6 +812,7 @@ wempy==0.2.1
 werkzeug==3.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   flask
     #   moto
     #   pytest-httpserver
 xmltodict==0.12.0
