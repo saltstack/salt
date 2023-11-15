@@ -154,7 +154,7 @@ def set_salt_version(
             ret = venv.run_code(code, capture=True, check=False)
             if ret.returncode:
                 ctx.error(ret.stderr.decode())
-                ctx.exit(ctx.returncode)
+                ctx.exit(ret.returncode)
             salt_version = ret.stdout.strip().decode()
 
     if not tools.utils.REPO_ROOT.joinpath("salt").is_dir():

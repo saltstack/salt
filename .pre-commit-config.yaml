@@ -46,7 +46,7 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.15.0"
+    rev: "0.18.3"
     hooks:
       - id: tools
         alias: check-changelog-entries
@@ -1078,16 +1078,24 @@ repos:
           - requirements/static/ci/tools.in
 
       - id: pip-tools-compile
-        alias: compile-ci-tools-3.11-requirements
-        name: Linux CI Py3.11 Tools Requirements
-        files: ^requirements/static/ci/(tools\.in|py3.11/(tools|linux)\.txt)$
+        alias: compile-ci-tools-virustotal-3.9-requirements
+        name: Linux CI Py3.9 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.9/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
         args:
           - -v
-          - --build-isolation
-          - --py-version=3.11
-          - --no-emit-index-url
-          - requirements/static/ci/tools.in
+          - --py-version=3.9
+          - requirements/static/ci/tools-virustotal.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-virustotal-3.10-requirements
+        name: Linux CI Py3.10 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.10/(tools(-virustotal)?|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - requirements/static/ci/tools-virustotal.in
   # <---- Tools -----------------------------------------------------------------------------------------------------
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
@@ -1319,6 +1327,7 @@ repos:
           - types-attrs
           - types-pyyaml
           - types-requests
+          - python-tools-scripts>=0.18.3
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12
