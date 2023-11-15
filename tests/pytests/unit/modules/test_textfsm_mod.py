@@ -8,7 +8,9 @@ import pytest
 import salt.modules.textfsm_mod as textfsm_mod
 from tests.support.mock import MagicMock, mock_open, patch
 
-textfsm = pytest.importorskip("textfsm", reason="Install textfsm to be able to run this test.")
+textfsm = pytest.importorskip(
+    "textfsm", reason="Install textfsm to be able to run this test."
+)
 
 
 @pytest.fixture()
@@ -442,7 +444,9 @@ juniper_version_template, .*, Juniper, sh[[ow]] ve[[rsion]]"""
                     {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
                 ):
                     with patch.object(
-                        clitable, "open", mock_open(read_data=mock_open_index)
+                        textfsm_mod.clitable,
+                        "open",
+                        mock_open(read_data=mock_open_index),
                     ):
                         with patch.dict(
                             textfsm_mod.__salt__,
