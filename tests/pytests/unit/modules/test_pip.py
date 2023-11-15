@@ -1521,7 +1521,7 @@ def test_list_upgrades_gt9(python_binary):
             {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
             {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
             ]"""
-    mock = MagicMock(return_value={"retcode": 0, "stdout": "{}".format(eggs)})
+    mock = MagicMock(return_value={"retcode": 0, "stdout": f"{eggs}"})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="9.1.1")):
             ret = pip.list_upgrades()
