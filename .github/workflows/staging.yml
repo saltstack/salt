@@ -164,6 +164,18 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Restore Cached Python Tools Virtualenvs
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs
+          key: ${{ env.CACHE_SEED }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
@@ -318,22 +330,17 @@ jobs:
         with:
           python-binary: python3
 
+      - name: Restore Python Tools Virtualenvs Cache
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
+          restore-keys: |
+            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
+            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
+
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Cache Python Tools Docs Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/docs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
-
-      - name: Cache Python Tools Changelog Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/changelog
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|changelog|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/changelog.txt') }}
-
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -456,8 +463,16 @@ jobs:
         with:
           python-binary: python3
 
+      - name: Restore Python Tools Virtualenvs Cache
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
+          restore-keys: |
+            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
+            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
+
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Setup Salt Version
@@ -465,12 +480,6 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-
-      - name: Cache Python Tools Build Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/build
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|build|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/build.txt') }}
 
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball

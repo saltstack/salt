@@ -10,11 +10,11 @@ import logging
 import os
 import pathlib
 import shutil
-import sys
 import textwrap
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+import boto3
 from ptscripts import Context, command_group
 
 import tools.pkg
@@ -25,17 +25,6 @@ from tools.utils.repo import (
     create_top_level_repo_path,
     get_repo_json_file_contents,
 )
-
-try:
-    import boto3
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -157,7 +146,7 @@ def debian(
     distro_details = _deb_distro_info[distro][distro_version]
 
     ctx.info("Distribution Details:")
-    ctx.info(distro_details)
+    ctx.print(distro_details, soft_wrap=True)
     if TYPE_CHECKING:
         assert isinstance(distro_details["label"], str)
         assert isinstance(distro_details["codename"], str)

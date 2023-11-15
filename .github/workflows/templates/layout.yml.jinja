@@ -182,6 +182,18 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Restore Cached Python Tools Virtualenvs
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs
+          key: ${{ env.CACHE_SEED }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
