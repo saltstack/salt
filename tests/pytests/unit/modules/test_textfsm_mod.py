@@ -18,7 +18,7 @@ def configure_loader_modules():
     return {textfsm_mod: {"__opts__": {}}}
 
 
-def test_virttual_virtual():
+def test_dunder_virtual():
     """
     Test __virtual__
     """
@@ -397,30 +397,26 @@ def test_index_platform_name_grains_no_cachedir():
     """
     Test index
     """
-    with patch.object(textfsm_mod, "HAS_CLITABLE", True):
-        with patch.dict(
-            textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
-        ):
-            with patch.dict(
-                textfsm_mod.__grains__,
-                {"textfsm_platform_grain": "textfsm_platform_grain"},
-            ):
-
-                with patch.dict(
-                    textfsm_mod.__salt__,
-                    {"cp.cache_dir": MagicMock(return_value=False)},
-                ):
-                    ret = textfsm_mod.index(
-                        command="sh ver",
-                        platform="",
-                        output_file="salt://textfsm/juniper_version_example",
-                        textfsm_path="salt://textfsm/",
-                    )
-                    assert ret == {
-                        "out": None,
-                        "result": False,
-                        "comment": "Unable to fetch from salt://textfsm/. Is the TextFSM path correctly specified?",
-                    }
+    with patch.object(textfsm_mod, "HAS_CLITABLE", True), patch.dict(
+        textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    ), patch.dict(
+        textfsm_mod.__grains__,
+        {"textfsm_platform_grain": "textfsm_platform_grain"},
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.cache_dir": MagicMock(return_value=False)},
+    ):
+        ret = textfsm_mod.index(
+            command="sh ver",
+            platform="",
+            output_file="salt://textfsm/juniper_version_example",
+            textfsm_path="salt://textfsm/",
+        )
+        assert ret == {
+            "out": None,
+            "result": False,
+            "comment": "Unable to fetch from salt://textfsm/. Is the TextFSM path correctly specified?",
+        }
 
 
 def test_index_platform_name_grains_output_false():
@@ -431,38 +427,33 @@ def test_index_platform_name_grains_output_false():
 Template, Hostname, Vendor, Command
 juniper_version_template, .*, Juniper, sh[[ow]] ve[[rsion]]"""
 
-    with patch.object(textfsm_mod, "HAS_CLITABLE", True):
-        with patch.dict(
-            textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
-        ):
-            with patch.dict(
-                textfsm_mod.__grains__,
-                {"textfsm_platform_grain": "textfsm_platform_grain"},
-            ):
-                with patch.dict(
-                    textfsm_mod.__salt__,
-                    {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
-                ):
-                    with patch.object(
-                        textfsm_mod.clitable,
-                        "open",
-                        mock_open(read_data=mock_open_index),
-                    ):
-                        with patch.dict(
-                            textfsm_mod.__salt__,
-                            {"cp.get_file_str": MagicMock(return_value=False)},
-                        ):
-                            ret = textfsm_mod.index(
-                                command="sh ver",
-                                platform="",
-                                output_file="salt://textfsm/juniper_version_example",
-                                textfsm_path="salt://textfsm/",
-                            )
-                            assert ret == {
-                                "out": None,
-                                "result": False,
-                                "comment": "Unable to read from salt://textfsm/juniper_version_example. Please specify a valid file or text.",
-                            }
+    with patch.object(textfsm_mod, "HAS_CLITABLE", True), patch.dict(
+        textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    ), patch.dict(
+        textfsm_mod.__grains__,
+        {"textfsm_platform_grain": "textfsm_platform_grain"},
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
+    ), patch.object(
+        textfsm_mod.clitable,
+        "open",
+        mock_open(read_data=mock_open_index),
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.get_file_str": MagicMock(return_value=False)},
+    ):
+        ret = textfsm_mod.index(
+            command="sh ver",
+            platform="",
+            output_file="salt://textfsm/juniper_version_example",
+            textfsm_path="salt://textfsm/",
+        )
+        assert ret == {
+            "out": None,
+            "result": False,
+            "comment": "Unable to read from salt://textfsm/juniper_version_example. Please specify a valid file or text.",
+        }
 
 
 def test_index_platform_name_grains_no_output_specified():
@@ -473,35 +464,30 @@ def test_index_platform_name_grains_no_output_specified():
 Template, Hostname, Vendor, Command
 juniper_version_template, .*, Juniper, sh[[ow]] ve[[rsion]]"""
 
-    with patch.object(textfsm_mod, "HAS_CLITABLE", True):
-        with patch.dict(
-            textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
-        ):
-            with patch.dict(
-                textfsm_mod.__grains__,
-                {"textfsm_platform_grain": "textfsm_platform_grain"},
-            ):
-                with patch.dict(
-                    textfsm_mod.__salt__,
-                    {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
-                ):
-                    with patch.object(
-                        textfsm.clitable, "open", mock_open(read_data=mock_open_index)
-                    ):
-                        with patch.dict(
-                            textfsm_mod.__salt__,
-                            {"cp.get_file_str": MagicMock(return_value=False)},
-                        ):
-                            ret = textfsm_mod.index(
-                                command="sh ver",
-                                platform="",
-                                textfsm_path="salt://textfsm/",
-                            )
-                            assert ret == {
-                                "out": None,
-                                "result": False,
-                                "comment": "Please specify a valid output text or file",
-                            }
+    with patch.object(textfsm_mod, "HAS_CLITABLE", True), patch.dict(
+        textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    ), patch.dict(
+        textfsm_mod.__grains__,
+        {"textfsm_platform_grain": "textfsm_platform_grain"},
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
+    ), patch.object(
+        textfsm.clitable, "open", mock_open(read_data=mock_open_index)
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.get_file_str": MagicMock(return_value=False)},
+    ):
+        ret = textfsm_mod.index(
+            command="sh ver",
+            platform="",
+            textfsm_path="salt://textfsm/",
+        )
+        assert ret == {
+            "out": None,
+            "result": False,
+            "comment": "Please specify a valid output text or file",
+        }
 
 
 def test_index_platform_name_grains_output_specified():
@@ -559,54 +545,50 @@ JUNOS Packet Forwarding Engine Support (MX Common) [9.1S3.5]
 JUNOS Online Documentation [9.1S3.5]
 JUNOS Routing Software Suite [9.1S3.5]"""
 
-    with patch.object(textfsm_mod, "HAS_CLITABLE", True):
-        with patch.dict(
-            textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    with patch.object(textfsm_mod, "HAS_CLITABLE", True), patch.dict(
+        textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    ), patch.dict(
+        textfsm_mod.__grains__,
+        {"textfsm_platform_grain": "textfsm_platform_grain"},
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
+    ):
+        mock_read_data = {
+            "/index": [mock_open_index],
+            "/juniper_version_template": [
+                juniper_version_template_one,
+                juniper_version_template_two,
+            ],
+        }
+        with patch.object(
+            textfsm.clitable, "open", mock_open(read_data=mock_read_data)
+        ), patch.dict(
+            textfsm_mod.__salt__,
+            {"cp.get_file_str": MagicMock(return_value=output_text)},
         ):
-            with patch.dict(
-                textfsm_mod.__grains__,
-                {"textfsm_platform_grain": "textfsm_platform_grain"},
-            ):
-                with patch.dict(
-                    textfsm_mod.__salt__,
-                    {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
-                ):
-                    mock_read_data = {
-                        "/index": [mock_open_index],
-                        "/juniper_version_template": [
-                            juniper_version_template_one,
-                            juniper_version_template_two,
-                        ],
+            ret = textfsm_mod.index(
+                command="sh ver",
+                platform="",
+                output_file="salt://textfsm/juniper_version_example",
+                textfsm_path="salt://textfsm/",
+            )
+            assert ret == {
+                "out": [
+                    {
+                        "chassis": "",
+                        "model": "mx960",
+                        "boot": "9.1S3.5",
+                        "base": "9.1S3.5",
+                        "kernel": "9.1S3.5",
+                        "crypto": "9.1S3.5",
+                        "documentation": "9.1S3.5",
+                        "routing": "9.1S3.5",
                     }
-                    with patch.object(
-                        textfsm.clitable, "open", mock_open(read_data=mock_read_data)
-                    ):
-                        with patch.dict(
-                            textfsm_mod.__salt__,
-                            {"cp.get_file_str": MagicMock(return_value=output_text)},
-                        ):
-                            ret = textfsm_mod.index(
-                                command="sh ver",
-                                platform="",
-                                output_file="salt://textfsm/juniper_version_example",
-                                textfsm_path="salt://textfsm/",
-                            )
-                            assert ret == {
-                                "out": [
-                                    {
-                                        "chassis": "",
-                                        "model": "mx960",
-                                        "boot": "9.1S3.5",
-                                        "base": "9.1S3.5",
-                                        "kernel": "9.1S3.5",
-                                        "crypto": "9.1S3.5",
-                                        "documentation": "9.1S3.5",
-                                        "routing": "9.1S3.5",
-                                    }
-                                ],
-                                "result": True,
-                                "comment": "",
-                            }
+                ],
+                "result": True,
+                "comment": "",
+            }
 
 
 def test_index_platform_name_grains_output_specified_no_attribute():
@@ -664,41 +646,37 @@ JUNOS Packet Forwarding Engine Support (MX Common) [9.1S3.5]
 JUNOS Online Documentation [9.1S3.5]
 JUNOS Routing Software Suite [9.1S3.5]"""
 
-    with patch.object(textfsm_mod, "HAS_CLITABLE", True):
-        with patch.dict(
-            textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    with patch.object(textfsm_mod, "HAS_CLITABLE", True), patch.dict(
+        textfsm_mod.__opts__, {"textfsm_platform_grain": "textfsm_platform_grain"}
+    ), patch.dict(
+        textfsm_mod.__grains__,
+        {"textfsm_platform_grain": "textfsm_platform_grain"},
+    ), patch.dict(
+        textfsm_mod.__salt__,
+        {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
+    ):
+        mock_read_data = {
+            "/index": [mock_open_index],
+            "/juniper_version_template": [
+                juniper_version_template_one,
+                juniper_version_template_two,
+            ],
+        }
+        with patch.object(
+            textfsm.clitable, "open", mock_open(read_data=mock_read_data)
+        ), patch.dict(
+            textfsm_mod.__salt__,
+            {"cp.get_file_str": MagicMock(return_value=output_text)},
         ):
-            with patch.dict(
-                textfsm_mod.__grains__,
-                {"textfsm_platform_grain": "textfsm_platform_grain"},
-            ):
-                with patch.dict(
-                    textfsm_mod.__salt__,
-                    {"cp.cache_dir": MagicMock(return_value="/path/to/cache/")},
-                ):
-                    mock_read_data = {
-                        "/index": [mock_open_index],
-                        "/juniper_version_template": [
-                            juniper_version_template_one,
-                            juniper_version_template_two,
-                        ],
-                    }
-                    with patch.object(
-                        textfsm.clitable, "open", mock_open(read_data=mock_read_data)
-                    ):
-                        with patch.dict(
-                            textfsm_mod.__salt__,
-                            {"cp.get_file_str": MagicMock(return_value=output_text)},
-                        ):
-                            ret = textfsm_mod.index(
-                                command="sr ver",
-                                platform="",
-                                output_file="salt://textfsm/juniper_version_example",
-                                textfsm_path="salt://textfsm/",
-                            )
+            ret = textfsm_mod.index(
+                command="sr ver",
+                platform="",
+                output_file="salt://textfsm/juniper_version_example",
+                textfsm_path="salt://textfsm/",
+            )
 
-                            assert ret == {
-                                "out": None,
-                                "result": False,
-                                "comment": "Unable to process the output: No template found for attributes: \"{'Command': 'sr ver', 'Platform': 'textfsm_platform_grain'}\"",
-                            }
+            assert ret == {
+                "out": None,
+                "result": False,
+                "comment": "Unable to process the output: No template found for attributes: \"{'Command': 'sr ver', 'Platform': 'textfsm_platform_grain'}\"",
+            }
