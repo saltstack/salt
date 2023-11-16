@@ -56,6 +56,8 @@ jobs:
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}
 
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}

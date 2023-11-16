@@ -88,6 +88,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix

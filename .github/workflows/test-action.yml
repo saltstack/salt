@@ -101,6 +101,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Generate Test Matrix
         id: generate-matrix
@@ -169,6 +171,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}

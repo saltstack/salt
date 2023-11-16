@@ -3,6 +3,14 @@ name: setup-python-tools-scripts
 description: Setup 'python-tools-scripts'
 
 inputs:
+  cache-prefix:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+  cache-suffix:
+    required: false
+    type: string
+    description: Seed used to invalidate caches
   cwd:
     type: string
     description: The directory the salt checkout is located in
@@ -28,6 +36,15 @@ runs:
       uses: ./.github/actions/get-python-version
       with:
         python-binary: python3
+
+    - name: Restore Python Tools Virtualenvs Cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.cwd }}/.tools-venvs
+        key: ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}${{ inputs.cache-suffix && format('|{0}', inputs.cache-suffix) || '' }}
+        restore-keys: |
+          ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}${{ inputs.cache-suffix && format('|{0}', inputs.cache-suffix) || '' }}
+          ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
 
     - name: Install 'python-tools-scripts'
       shell: bash
