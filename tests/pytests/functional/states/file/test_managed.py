@@ -94,22 +94,22 @@ def a_pubkey():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
-mI0EY9pxawEEAPpBbXxRYFUm6np5h746Nch7+OrbLdtBxP8x7VDOockr/x7drssb
-llVFuK4HmiJg+Nkyakn3XmVYBHY2yBIkN/MP+R1zRxiFmniKOTD15UuHSQaWZTqh
-qac6XrLZ20BiWl1fKweCz1wGUcMZaOBs0WVB0sIupqfS90Ub93VC/+oxABEBAAG0
-JlNhbHRTdGFjayBBIFRlc3QgPGF0ZXN0QHNhbHRzdGFjay5jb20+iNEEEwEIADsW
-IQT4zMjLXh2IaNqlhZqx+apXxJfnHAUCY9pxawIbAwULCQgHAgIiAgYVCgkICwIE
-FgIDAQIeBwIXgAAKCRCx+apXxJfnHFDhA/47t5yYdCcjxXu/1Kn9sQwI+aq/S3x9
-/ZKE+RodlryqA43BUT7N6JLQ5zJO6p+kRhMwCcVfBeDNJANqVi63HEDp8q3633BF
-q1Cbi3BG0ugBdCADIETYBwl/ytMSgYwRO8b4TkYCyhWuWAgliVF3ceX0AVsng8pF
-o6Vh4A3SqosQgA==
-=eHpb
+mI0EY4fxHQEEAJvXEaaw+o/yZCwMOJbt5FQHbVMMDX/0YI8UdzsE5YCC4iKnoC3x
+FwFdkevKj3qp+45iBGLLnalfXIcVGXJGACB+tPHgsfHaXSDQPSfmX6jbZ6pHosSm
+v1tTixY+NTJzGL7hDLz2sAXTbYmTbXeE9ifWWk6NcIwZivUbhNRBM+KxABEBAAG0
+LUtleSBBIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5YUBleGFtcGxlPojR
+BBMBCAA7FiEE7wN2X1nukEkwyKeBVTqCoFjAx5UFAmOH8R0CGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQVTqCoFjAx5XURAQAguOwI+49lG0Kby+Bsyv3
+of3GgxvhS1Qa7+ysj088az5GVt0pqVe3SbRVvn/jyC6yZvWuv94KdL3R7hCeEz2/
+JakCRJ4wxEsdeASE8t9H/oTqD0I5asMa9EMvn5ICEGeLsTeQb7OYYihTQj7HJLG6
+pDEmK8EhJDvV/9o0lnhm/9w=
+=Wc0O
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
 @pytest.fixture
 def a_fp():
-    return "F8CCC8CB5E1D8868DAA5859AB1F9AA57C497E71C"
+    return "EF03765F59EE904930C8A781553A82A058C0C795"
 
 
 @pytest.fixture
@@ -117,26 +117,26 @@ def b_pubkey():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
-mI0EY9pxigEEANbHCh566IEbp9Ez1WE3oEi+XXyf7H3GDgrVc8v9COMexpAFkJa1
-gG+yCm4bOZ5vHAXbP2rGvlOEcao3y3evj2TWahg0+05CDugRjL0pO4JcMUBV1mBZ
-ynUGoQ5T+WtKilJ5k/JrSRpJW3y//46q0g5c470qVNn9ZX0YZW/b7DFXABEBAAG0
-JlNhbHRTdGFjayBCIFRlc3QgPGJ0ZXN0QHNhbHRzdGFjay5jb20+iNEEEwEIADsW
-IQSN8J3lSrZ/YDHXHW8h5Z/XBbOHgQUCY9pxigIbAwULCQgHAgIiAgYVCgkICwIE
-FgIDAQIeBwIXgAAKCRAh5Z/XBbOHgTCuA/9mYXAehM9avvq0Jm2dVbPidqxLstki
-tgo3gCWmO1b5dXEBrhOZ8pZAktQ3WWoRrbwpNA7NAEIDF5l6uwMLLbGPQ5jreOdP
-uzHpHONR1WWAzw2dj3v+5IcLDQ4sLi9VRgJqtMasTd8TpqMCVNcMArDBiy5hRF/e
-XWEkf19Nb8qrdg==
-=OEiT
+mI0EY4fxNQEEAOgAzbpheJrOq4il5BrMVtP1G1kU94QX2+xLXEgW/wPdE4HD6Zbg
+vliIg18v7Na4x8ubWy/7CkXC83EJ8SoSqcCccvuKjIWsm6tfeCidNstNCjewFMUR
+7ZOQmAe/I2JAlz2SgNxS3ZDiCZpGkxqE0GZ+1N7Mz2WHImnExG149RVHABEBAAG0
+LUtleSBCIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5YkBleGFtcGxlPojR
+BBMBCAA7FiEEEYtPq3gDjLLfe2niD2xCJkdGXJMFAmOH8TUCGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQD2xCJkdGXJNR3AQAk5ZoN+/ViIX3vA/LbXPn
+2VE1E7ETTeIGqsb5f98UfjIbYfkNE8+OtnPxnDbSOPWBEOT+XPPjmxnE0a2UNTfn
+ECO71/ZUiyC3ZN50IZ0vgzwBH+DeIV6PDAAun5FGx4RI7v6n0CPlrUcWKYe8wY1F
+COflOxnEyLVHXnX8wUIzZwo=
+=Hq0X
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
 @pytest.fixture
 def b_fp():
-    return "8DF09DE54AB67F6031D71D6F21E59FD705B38781"
+    return "118B4FAB78038CB2DF7B69E20F6C422647465C93"
 
 
 @pytest.fixture
-def gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
+def _gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
     pubkeys = [a_pubkey, b_pubkey]
     fingerprints = [a_fp, b_fp]
     gnupg.import_keys("\n".join(pubkeys))
@@ -922,7 +922,7 @@ def test_verify_ssl_https_source(file, tmp_path, ssl_webserver, verify_ssl):
 
 
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
-@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.usefixtures("_gpg_keys_present")
 @pytest.mark.parametrize("signature", [True, ".asc"])
 def test_file_managed_signature(
     file, tmp_path, signature, remote_grail_scene33, gpghome
@@ -951,7 +951,7 @@ def test_file_managed_signature(
 
 
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
-@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.usefixtures("_gpg_keys_present")
 def test_file_managed_signature_fail(
     file, tmp_path, remote_grail_scene33, gpghome, modules
 ):
@@ -979,7 +979,7 @@ def test_file_managed_signature_fail(
 
 
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
-@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.usefixtures("_gpg_keys_present")
 @pytest.mark.parametrize("sig", [True, ".asc"])
 def test_file_managed_source_hash_sig(
     file, tmp_path, sig, remote_grail_scene33, gpghome
@@ -1006,7 +1006,7 @@ def test_file_managed_source_hash_sig(
 
 
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
-@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.usefixtures("_gpg_keys_present")
 def test_file_managed_source_hash_sig_fail(
     file, tmp_path, remote_grail_scene33, gpghome
 ):
