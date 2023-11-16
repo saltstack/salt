@@ -381,7 +381,7 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
-pyspnego==0.10.2 ; python_version >= "3.8"
+pyspnego==0.10.2 ; sys_platform != "win32" and python_version >= "3.8"
     # via
     #   -r requirements/static/ci/common.in
     #   smbprotocol
@@ -537,7 +537,7 @@ slack-bolt==1.15.5
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.19.5
     # via slack-bolt
-smbprotocol==1.10.1
+smbprotocol==1.10.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 smmap==4.0.0
     # via gitdb

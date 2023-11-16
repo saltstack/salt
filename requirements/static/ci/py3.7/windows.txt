@@ -99,10 +99,9 @@ cryptography==42.0.5
     #   etcd3-py
     #   moto
     #   pyopenssl
-    #   pyspnego
     #   requests-ntlm
     #   trustme
-distlib==0.3.2
+istlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via
@@ -342,10 +341,6 @@ pyopenssl==24.0.0
     #   impacket
 pyrsistent==0.17.3
     # via jsonschema
-pyspnego==0.9.2 ; python_version <= "3.7"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   smbprotocol
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
@@ -478,8 +473,6 @@ six==1.15.0
     #   textfsm
     #   virtualenv
     #   websocket-client
-smbprotocol==1.10.1
-    # via -r requirements/static/ci/common.in
 smmap==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
