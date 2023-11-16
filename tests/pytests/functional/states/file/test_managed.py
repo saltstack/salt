@@ -148,7 +148,7 @@ def _gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
 
 
 def _format_ids(key, value):
-    return "{}={}".format(key, value)
+    return f"{key}={value}"
 
 
 def test_managed(file, tmp_path, grail_scene33_file):
@@ -324,7 +324,7 @@ def test_managed_escaped_file_path(file, tmp_path, state_tree):
     file.managed test that 'salt://|' protects unusual characters in file path
     """
     funny_file = tmp_path / "?f!le? n@=3&-blah-.file type"
-    funny_url = "salt://|{}".format(funny_file.name)
+    funny_url = f"salt://|{funny_file.name}"
     with pytest.helpers.temp_file(funny_file.name, "", state_tree):
         ret = file.managed(name=str(funny_file), source=funny_url)
     assert ret.result is True
@@ -347,7 +347,7 @@ def test_managed_contents(file, tmp_path, name, contents):
     test file.managed with contents that is a boolean, string, integer,
     float, list, and dictionary
     """
-    name = tmp_path / "managed-{}".format(name)
+    name = tmp_path / f"managed-{name}"
     ret = file.managed(name=str(name), contents=contents)
     assert ret.result is True
     assert "diff" in ret.changes
@@ -393,7 +393,7 @@ def test_managed_check_cmd(file, tmp_path):
     assert ret.result is True
     assert "Empty file" in ret.comment
     assert ret.changes == {
-        "new": "file {} created".format(name),
+        "new": f"file {name} created",
         "mode": "0440",
     }
 
@@ -417,7 +417,7 @@ def test_managed_local_source_with_source_hash(
     ret = file.managed(
         name=str(name),
         source=proto + str(grail_scene33_file),
-        source_hash="sha256={}".format(bad_hash),
+        source_hash=f"sha256={bad_hash}",
     )
     assert ret.result is False
     assert not ret.changes
@@ -427,7 +427,7 @@ def test_managed_local_source_with_source_hash(
     ret = file.managed(
         name=str(name),
         source=proto + str(grail_scene33_file),
-        source_hash="sha256={}".format(grail_scene33_file_hash),
+        source_hash=f"sha256={grail_scene33_file_hash}",
     )
     assert ret.result is True
 
@@ -664,7 +664,7 @@ def test_template_local_file(file, tmp_path, prefix):
 
     ret = file.managed(
         name=str(dest),
-        source="{}{}".format(prefix, source),
+        source=f"{prefix}{source}",
         template="jinja",
         context={"foo": "Hello world!"},
     )
@@ -726,8 +726,8 @@ def test_issue_8947_utf8_sls(modules, tmp_path, state_tree, subtests):
     korean_1 = "한국어 시험"
     korean_2 = "첫 번째 행"
     korean_3 = "마지막 행"
-    test_file = tmp_path / "{}.txt".format(korean_1)
-    with subtests.test("test_file={}".format(test_file)):
+    test_file = tmp_path / f"{korean_1}.txt"
+    with subtests.test(f"test_file={test_file}"):
         # create the sls template
         sls_contents = """
         some-utf8-file-create:
@@ -745,10 +745,10 @@ def test_issue_8947_utf8_sls(modules, tmp_path, state_tree, subtests):
             for state_run in ret:
                 assert state_run.result is True
 
-        assert test_file.read_text() == "{}\n".format(korean_1)
+        assert test_file.read_text() == f"{korean_1}\n"
 
-    test_file = tmp_path / "{}.txt".format(korean_2)
-    with subtests.test("test_file={}".format(test_file)):
+    test_file = tmp_path / f"{korean_2}.txt"
+    with subtests.test(f"test_file={test_file}"):
         sls_contents = """
         some-utf8-file-create2:
           file.managed:
@@ -883,7 +883,7 @@ def test_file_managed_keep_source_false_http(
 
     # Now make sure that the file is not cached
     ret = modules.cp.is_cached(remote_grail_scene33.url)
-    assert not ret, "File is still cached at {}".format(ret)
+    assert not ret, f"File is still cached at {ret}"
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
