@@ -9,7 +9,6 @@ gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
-    pytest.mark.windows_whitelisted,
 ]
 
 
@@ -118,6 +117,7 @@ def keyring(gpghome, tmp_path, request):
     # cleanup is taken care of by gpghome and tmp_path
 
 
+@pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
@@ -131,6 +131,10 @@ def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp):
 def test_gpg_present_keyring_no_changes(
     gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp
 ):
+    """
+    The keyring tests are not whitelisted on Windows since they are just
+    timing out, possibly because of the two separate GPG instances?
+    """
     assert not gnupg.list_keys(keys=key_a_fp)
     assert gnupg_keyring.list_keys(keys=key_a_fp)
     ret = gpg.present(
@@ -144,6 +148,7 @@ def test_gpg_present_keyring_no_changes(
     assert not ret.changes
 
 
+@pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_present_trust_change(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
@@ -181,6 +186,7 @@ def test_gpg_present_keyring_trust_change(
     assert key_info[0]["trust"] == "u"
 
 
+@pytest.mark.windows_whitelisted
 def test_gpg_absent_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert not gnupg.list_keys(keys=key_a_fp)
     ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome))
@@ -188,6 +194,7 @@ def test_gpg_absent_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert not ret.changes
 
 
+@pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_absent(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
@@ -226,6 +233,7 @@ def test_gpg_absent_from_keyring_delete_keyring(
     assert not Path(keyring).exists()
 
 
+@pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_absent_test_mode_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
