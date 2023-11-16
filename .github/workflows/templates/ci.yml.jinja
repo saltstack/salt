@@ -68,23 +68,11 @@
 
     <%- endif %>
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
-      - name: Restore Python Tools Virtualenvs Cache
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
-          restore-keys: |
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+          cache-suffix: changelog
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -226,23 +214,11 @@
         with:
           python-version: "3.10"
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
-      - name: Restore Python Tools Virtualenvs Cache
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
-          restore-keys: |
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+          cache-suffix: build
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -352,6 +328,9 @@
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+          cache-suffix: coverage
 
       - name: Install Nox
         run: |

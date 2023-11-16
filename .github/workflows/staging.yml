@@ -164,20 +164,10 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
-      - name: Restore Cached Python Tools Virtualenvs
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs
-          key: ${{ env.CACHE_SEED }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
 
       - name: Pretty Print The GH Actions Event
         run:
@@ -324,23 +314,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
-      - name: Restore Python Tools Virtualenvs Cache
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
-          restore-keys: |
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|changelog
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+          cache-suffix: changelog
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -457,23 +435,11 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
-      - name: Restore Python Tools Virtualenvs Cache
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
-          restore-keys: |
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}|build
-            ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+          cache-suffix: build
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -585,6 +551,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
@@ -598,6 +565,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
@@ -611,6 +579,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
@@ -624,6 +593,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
@@ -637,6 +607,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
@@ -653,6 +624,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
@@ -669,6 +641,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
@@ -685,6 +658,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
@@ -2747,7 +2721,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-script
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}s
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -2890,6 +2866,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -3109,6 +3087,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -3197,6 +3177,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -3297,6 +3279,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -3381,6 +3365,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -3506,6 +3492,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
         uses: actions/download-artifact@v3
@@ -3551,6 +3539,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Release Patch
         uses: actions/download-artifact@v3
@@ -3768,6 +3758,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Setup GnuPG
         run: |
