@@ -463,8 +463,12 @@ if [ $1 -lt 2 ]; then
   # ensure hmac are up to date, master or minion, rest install one or the other
   # key used is from openssl/crypto/fips/fips_standalone_hmac.c openssl 1.1.1k
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    if [ -e /opt/saltstack/salt/lib/libssl.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+    fi
+    if [ -e /opt/saltstack/salt/lib/libcrypto.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    fi
   fi
 fi
 
@@ -482,8 +486,12 @@ if [ $1 -lt 2 ]; then
   # ensure hmac are up to date, master or minion, rest install one or the other
   # key used is from openssl/crypto/fips/fips_standalone_hmac.c openssl 1.1.1k
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    if [ -e /opt/saltstack/salt/lib/libssl.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+    fi
+    if [ -e /opt/saltstack/salt/lib/libcrypto.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    fi
   fi
 fi
 
@@ -537,8 +545,12 @@ if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-minion | grep Name | grep salt-minion)" ]; then
       # uninstall and no minion running
-      /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-      /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      if [ -e  /opt/saltstack/salt/lib/.libssl.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+      fi
+      if [ -e /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      fi
     fi
   fi
 fi
@@ -552,8 +564,12 @@ if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-master | grep Name | grep salt-master)" ]; then
       # uninstall and no master running
-      /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-      /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      if [ -e /opt/saltstack/salt/lib/.libssl.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+      fi
+      if [ -e /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      fi
     fi
   fi
 fi
