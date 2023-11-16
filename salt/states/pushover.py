@@ -2,11 +2,6 @@
 Send a message to PushOver
 ==========================
 
-.. warning::
-    This module will be removed from Salt in version 3009.0 in favor of
-    the `saltext.pushover Salt Extension
-    <https://github.com/salt-extensions/saltext-pushover>`_
-
 This state is useful for sending messages to PushOver during state runs.
 
 .. versionadded:: 2015.5.0
