@@ -3755,7 +3755,7 @@ def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
             msg = f"Found existing symlink: {path}"
             raise CommandExecutionError(msg)
 
-    if exists(path) and not force and not atomic:
+    if os.path.exists(path) and not force and not atomic:
         msg = f"Existing path is not a symlink: {path}"
         raise CommandExecutionError(msg)
 
