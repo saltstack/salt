@@ -852,14 +852,21 @@ def pkg_matrix(
                 f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
             )
             for session in ("upgrade", "downgrade"):
+                if backend == "classic":
+                    session += "-classic"
                 _matrix.append(
                     {
-                        "test-chunk": f"{session}-classic"
-                        if backend == "classic"
-                        else session,
+                        "test-chunk": session,
                         "version": str(version),
                     }
                 )
+                if (
+                    backend == "relenv"
+                    and fips is True
+                    and distro_slug.startswith(("photonos-4", "photonos-5"))
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
         else:
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
