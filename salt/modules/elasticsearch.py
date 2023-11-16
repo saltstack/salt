@@ -55,6 +55,15 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "elasticsearch",
+    "https://github.com/cesan3/salt-ext-elasticsearch",  # This is the repo with the issues tracker for this module
+    # and the one that will be used to submit PRs, for now, until
+    # PR actions are enabled in
+    # http://salt-extensions/saltext-elasticsearch repo
+)
+
 try:
     import elasticsearch
 

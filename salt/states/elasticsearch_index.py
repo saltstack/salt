@@ -11,6 +11,15 @@ import logging
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "elasticsearch",
+    "https://github.com/cesan3/salt-ext-elasticsearch",  # This is the repo with the issues tracker for this module
+    # and the one that will be used to submit PRs, for now, until
+    # PR actions are enabled in
+    # http://salt-extensions/saltext-elasticsearch repo
+)
+
 
 def absent(name):
     """
@@ -26,20 +35,20 @@ def absent(name):
         index = __salt__["elasticsearch.index_get"](index=name)
         if index and name in index:
             if __opts__["test"]:
-                ret["comment"] = "Index {} will be removed".format(name)
+                ret["comment"] = f"Index {name} will be removed"
                 ret["changes"]["old"] = index[name]
                 ret["result"] = None
             else:
                 ret["result"] = __salt__["elasticsearch.index_delete"](index=name)
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed index {}".format(name)
+                    ret["comment"] = f"Successfully removed index {name}"
                     ret["changes"]["old"] = index[name]
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove index {} for unknown reasons".format(name)
+                    ] = f"Failed to remove index {name} for unknown reasons"
         else:
-            ret["comment"] = "Index {} is already absent".format(name)
+            ret["comment"] = f"Index {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -94,15 +103,15 @@ def present(name, definition=None):
                     index=name, body=definition
                 )
                 if output:
-                    ret["comment"] = "Successfully created index {}".format(name)
+                    ret["comment"] = f"Successfully created index {name}"
                     ret["changes"] = {
                         "new": __salt__["elasticsearch.index_get"](index=name)[name]
                     }
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create index {}, {}".format(name, output)
+                    ret["comment"] = f"Cannot create index {name}, {output}"
         else:
-            ret["comment"] = "Index {} is already present".format(name)
+            ret["comment"] = f"Index {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
