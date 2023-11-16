@@ -894,7 +894,12 @@ def test_search_keys(gpghome):
                 assert ret == _expected_result
 
                 assert (
-                    call("person@example.com", "keys.openpgp.org", None)
+                    call(
+                        "person@example.com",
+                        "keys.openpgp.org",
+                        user=None,
+                        gnupghome=None,
+                    )
                     in mock_search_keys.mock_calls
                 )
 
@@ -902,7 +907,12 @@ def test_search_keys(gpghome):
                 assert ret == _expected_result
 
                 assert (
-                    call("person@example.com", "keyserver.ubuntu.com", None)
+                    call(
+                        "person@example.com",
+                        "keyserver.ubuntu.com",
+                        user=None,
+                        gnupghome=None,
+                    )
                     in mock_search_keys.mock_calls
                 )
 
