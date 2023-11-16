@@ -74,7 +74,7 @@ def test_mounted():
 
             with patch.dict(mount.__opts__, {"test": False}):
                 comt = f"Unable to unmount {name}: False."
-                umount = "Forced unmount and mount because options (noowners) changed"
+                umount = "Forced a lazy unmount and mount because the previous unmount failed and because the options (noowners) changed"
                 ret.update(
                     {
                         "comment": comt,
