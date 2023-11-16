@@ -2314,6 +2314,7 @@ def managed(
     use_etag=False,
     ignore_ordering=False,
     ignore_whitespace=False,
+    ignore_comment_characters=None,
     **kwargs,
 ):
     r"""
@@ -2905,6 +2906,37 @@ def managed(
         the ``source_hash`` parameter.
 
         .. versionadded:: 3005
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3218,9 +3250,10 @@ def managed(
                     follow_symlinks=follow_symlinks,
                     ignore_ordering=ignore_ordering,
                     ignore_whitespace=ignore_whitespace,
+                    ignore_comment_characters=ignore_comment_characters,
                     **kwargs,
                 )
-                if any([ignore_ordering, ignore_whitespace]):
+                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
                     has_changes, ret["changes"] = check_changes
                 else:
                     ret["changes"] = check_changes
@@ -3259,7 +3292,7 @@ def managed(
                 ret["comment"] = f"The file {name} is in the correct state"
 
             if (
-                any([ignore_ordering, ignore_whitespace])
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
                 and ret["changes"]
                 and not has_changes
             ):
@@ -3349,6 +3382,7 @@ def managed(
                 use_etag=use_etag,
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3372,7 +3406,10 @@ def managed(
         if ret["changes"]:
             # Reset ret
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
-            if any([ignore_ordering, ignore_whitespace]) and not has_changes:
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and not has_changes
+            ):
                 ret["skip_req"] = True
 
             check_cmd_opts = {}
@@ -3432,6 +3469,7 @@ def managed(
                 use_etag=use_etag,
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except

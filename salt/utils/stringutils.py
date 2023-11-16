@@ -511,7 +511,7 @@ def get_context(template, line, num_lines=5, marker=None):
 def get_diff_list(a, b, *args, **kwargs):
     """
     Perform diff on two iterables containing lines from two files, and return
-    the diff as as string. Lines are normalized to str types to avoid issues
+    the diff as a list. Lines are normalized to str types to avoid issues
     with unicode on PY2.
     """
     encoding = ("utf-8", "latin-1", __salt_system_encoding__)
@@ -529,43 +529,60 @@ def get_diff_list(a, b, *args, **kwargs):
 def get_diff(a, b, *args, **kwargs):
     """
     Perform diff on two iterables containing lines from two files, and return
-    the diff as as string. Lines are normalized to str types to avoid issues
+    the diff as a string. Lines are normalized to str types to avoid issues
     with unicode on PY2.
     """
     return "".join(get_diff_list(a, b, *args, **kwargs))
 
 
 def get_conditional_diff(
-    a, b, *args, ignore_ordering=True, ignore_whitespace=True, **kwargs
+    a,
+    b,
+    *args,
+    ignore_ordering=True,
+    ignore_whitespace=True,
+    ignore_comment_characters="#",
+    **kwargs,
 ):
     """
     Perform diff on two iterables containing lines from two files, and return
     the diff as as string. Lines are normalized to str types to avoid issues
     with unicode on PY2.
     """
+    if ignore_comment_characters is None:
+        ignore_comment_characters = []
+    elif isinstance(ignore_comment_characters, str):
+        ignore_comment_characters = [ignore_comment_characters]
+    elif not isinstance(ignore_comment_characters, list):
+        log.warning("ignore_comment_characters must be set to a string or list")
+        ignore_comment_characters = []
+
     diff = list(get_diff_list(a, b, *args, **kwargs))
 
     has_changes = False
-    if any([ignore_whitespace, ignore_ordering]):
+    if any([ignore_whitespace, ignore_ordering, ignore_comment_characters]):
         adds = []
         subs = []
         for line in diff:
             if line.startswith("+++") or line.startswith("---"):
                 continue
             if line.startswith("+") or line.startswith("-"):
-                if ignore_ordering:
-                    if ignore_whitespace and line.startswith("+"):
-                        if line[1:].strip():
-                            adds.append(line[1:].strip())
-                    elif ignore_whitespace and line.startswith("-"):
-                        if line[1:].strip():
-                            subs.append(line[1:].strip())
-                    elif line.startswith("+"):
-                        adds.append(line[1:])
-                    elif line.startswith("-"):
-                        subs.append(line[1:])
-                elif ignore_whitespace and line[1:].strip():
-                    has_changes = True
+                oper, *line = line
+                line = "".join(line)
+
+                for char in ignore_comment_characters:
+                    if char in line:
+                        # find 1st index of comment and delete everything after
+                        line = line[: line.index(char)]
+
+                if ignore_whitespace:
+                    line = line.strip()
+
+                if line and oper == "+":
+                    adds.append(line)
+                elif line and oper == "-":
+                    subs.append(line)
+
         if sorted(adds) != sorted(subs):
             has_changes = True
     else:
