@@ -548,6 +548,45 @@ def get_conditional_diff(
     Perform diff on two iterables containing lines from two files, and return
     the diff as as string. Lines are normalized to str types to avoid issues
     with unicode on PY2.
+
+    Perform a diff on two iterables containing lines from two files, and return
+    the diff as a string. The resulting diff list will be filtered based on the
+    `ignore_ordering`, `ignore_whitespace`, and `ignore_comment_characters`
+    parameters. If any of those parameters are set, the function will check for
+    differences between the added and removed lines, after processing the diff
+    list.
+
+    If there are any differences, the function will return the boolean result
+    of the filtered diff list using the provided parameters as well as the
+    original diff list as a string. If there aren't any differences, the
+    function will return ``False`` and an empty string.
+
+    Parameters:
+    a: iterable
+        The first iterable to perform the diff against.
+    b: iterable
+        The second iterable to perform the diff against.
+    *args :
+        Additional arguments to pass to the ``get_diff_list`` function.
+    ignore_ordering (bool):
+        If True, the function will ignore the order of lines when checking for
+        differences.
+    ignore_whitespace (bool):
+        If True, the function will ignore leading and trailing white spaces when
+        checking for differences. Implies ``ignore_ordering``
+    ignore_comment_characters (str or list of str):
+        A string or list of strings representing comment characters. If
+        provided, the function will ignore any characters on the line after any
+        of these characters when checking for differences. Implies
+        ``ignore_ordering``
+    **kwargs :
+        Additional keyword arguments to pass to the ``get_diff_list`` function.
+
+    Returns:
+    bool: The boolean result of the filtered diff list using the provided
+          parameters.
+    str: The diff of the two iterables as a string. Empty string if no
+         differences are found.
     """
     if ignore_comment_characters is None:
         ignore_comment_characters = []

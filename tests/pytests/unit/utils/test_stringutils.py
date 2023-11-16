@@ -772,7 +772,7 @@ def test_human_to_bytes_edge_cases():
     assert salt.utils.stringutils.human_to_bytes("2HB") == 0
 
 
-def test_get_conditional_diff():
+def test_get_conditional_diff_no_diff():
     has_changes, diff = salt.utils.stringutils.get_conditional_diff(
         "",
         "",
@@ -783,6 +783,23 @@ def test_get_conditional_diff():
     assert has_changes is False
     assert diff == ""
 
+
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, True),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, True),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
     mock_diff = textwrap.dedent(
         """
         diff --git a/sample.txt b/sample.txt
@@ -809,45 +826,30 @@ def test_get_conditional_diff():
         has_changes, diff = salt.utils.stringutils.get_conditional_diff(
             "",
             "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters="#",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
         )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
+        assert has_changes is expected_changes
         assert diff == mock_diff
 
 
-def test_get_conditional_diff_ordering():
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, False),
+        (True, False, "#", False),
+        (True, False, None, False),
+        (False, True, "#", False),
+        (False, True, None, False),
+        (False, False, "#", False),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_ordering(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
     mock_diff = textwrap.dedent(
         """
         diff --git a/sample.txt b/sample.txt
@@ -875,75 +877,30 @@ def test_get_conditional_diff_ordering():
         has_changes, diff = salt.utils.stringutils.get_conditional_diff(
             "",
             "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters="#",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
         )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=False,
-            ignore_comment_characters="#",
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=True,
-            ignore_comment_characters="#",
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=True,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
+        assert has_changes is expected_changes
         assert diff == mock_diff
 
 
-def test_get_conditional_diff_whitespace():
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, False),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, False),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_whitespace(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
     mock_diff = textwrap.dedent(
         """
         diff --git a/sample.txt b/sample.txt
@@ -969,45 +926,30 @@ def test_get_conditional_diff_whitespace():
         has_changes, diff = salt.utils.stringutils.get_conditional_diff(
             "",
             "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters="#",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
         )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
+        assert has_changes is expected_changes
         assert diff == mock_diff
 
 
-def test_get_conditional_diff_comment():
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, True),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, True),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_comment(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
     mock_diff = textwrap.dedent(
         """
         diff --git a/sample.txt b/sample.txt
@@ -1035,39 +977,9 @@ def test_get_conditional_diff_comment():
         has_changes, diff = salt.utils.stringutils.get_conditional_diff(
             "",
             "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters="#",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
         )
-        assert has_changes is False
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=True,
-            ignore_comment_characters="//",
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=True,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
-        assert diff == mock_diff
-
-        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
-            "",
-            "",
-            ignore_ordering=False,
-            ignore_whitespace=False,
-            ignore_comment_characters=None,
-        )
-        assert has_changes is True
+        assert has_changes is expected_changes
         assert diff == mock_diff
