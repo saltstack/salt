@@ -2926,7 +2926,7 @@ def managed(
             The file will not be modified, meaning inline signatures are not
             removed.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     source_hash_sig
         When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
@@ -2935,31 +2935,31 @@ def managed(
         retrievable by ``cp.cache_file`` for a detached one. The cached file
         will be deleted if the signature verification fails.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
         require at least one valid signature from one of a list of key fingerprints.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
         require a valid signature from each of the key fingerprints in this list.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying signatures, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying signatures, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -8980,31 +8980,31 @@ def cached(
         retrievable by ``cp.cache_file`` for a detached one. The cached file
         will be deleted if the signature verification fails.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
         require at least one valid signature from one of a list of key fingerprints.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
         require a valid signature from each of the key fingerprints in this list.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying signatures, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying signatures, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
