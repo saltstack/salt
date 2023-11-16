@@ -21,6 +21,7 @@ import time
 
 import salt.utils.data
 import salt.utils.files
+import salt.utils.immutabletypes as immutabletypes
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.versions
@@ -31,51 +32,61 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = "gpg"
 
-LETTER_TRUST_DICT = {
-    "e": "Expired",
-    "q": "Unknown",
-    "n": "Not Trusted",
-    "f": "Fully Trusted",
-    "m": "Marginally Trusted",
-    "u": "Ultimately Trusted",
-    "r": "Revoked",
-    "-": "Unknown",
-}
+LETTER_TRUST_DICT = immutabletypes.freeze(
+    {
+        "e": "Expired",
+        "q": "Unknown",
+        "n": "Not Trusted",
+        "f": "Fully Trusted",
+        "m": "Marginally Trusted",
+        "u": "Ultimately Trusted",
+        "r": "Revoked",
+        "-": "Unknown",
+    }
+)
 
-NUM_TRUST_DICT = {
-    "expired": "1",
-    "unknown": "2",
-    "not_trusted": "3",
-    "marginally": "4",
-    "fully": "5",
-    "ultimately": "6",
-}
+NUM_TRUST_DICT = immutabletypes.freeze(
+    {
+        "expired": "1",
+        "unknown": "2",
+        "not_trusted": "3",
+        "marginally": "4",
+        "fully": "5",
+        "ultimately": "6",
+    }
+)
 
-INV_NUM_TRUST_DICT = {
-    "1": "Expired",
-    "2": "Unknown",
-    "3": "Not Trusted",
-    "4": "Marginally",
-    "5": "Fully Trusted",
-    "6": "Ultimately Trusted",
-}
+INV_NUM_TRUST_DICT = immutabletypes.freeze(
+    {
+        "1": "Expired",
+        "2": "Unknown",
+        "3": "Not Trusted",
+        "4": "Marginally",
+        "5": "Fully Trusted",
+        "6": "Ultimately Trusted",
+    }
+)
 
-VERIFY_TRUST_LEVELS = {
-    "0": "Undefined",
-    "1": "Never",
-    "2": "Marginal",
-    "3": "Fully",
-    "4": "Ultimate",
-}
+VERIFY_TRUST_LEVELS = immutabletypes.freeze(
+    {
+        "0": "Undefined",
+        "1": "Never",
+        "2": "Marginal",
+        "3": "Fully",
+        "4": "Ultimate",
+    }
+)
 
-TRUST_KEYS_TRUST_LEVELS = {
-    "expired": "TRUST_EXPIRED",
-    "unknown": "TRUST_UNDEFINED",
-    "never": "TRUST_NEVER",
-    "marginally": "TRUST_MARGINAL",
-    "fully": "TRUST_FULLY",
-    "ultimately": "TRUST_ULTIMATE",
-}
+TRUST_KEYS_TRUST_LEVELS = immutabletypes.freeze(
+    {
+        "expired": "TRUST_EXPIRED",
+        "unknown": "TRUST_UNDEFINED",
+        "never": "TRUST_NEVER",
+        "marginally": "TRUST_MARGINAL",
+        "fully": "TRUST_FULLY",
+        "ultimately": "TRUST_ULTIMATE",
+    }
+)
 
 _DEFAULT_KEY_SERVER = "keys.openpgp.org"
 
@@ -233,7 +244,7 @@ def _search_keys(text, keyserver, user=None, gnupghome=None):
 
 def search_keys(text, keyserver=None, user=None, gnupghome=None):
     """
-    Search keys on a keyserver
+    Search for keys on a keyserver
 
     text
         Text to search the keyserver for, e.g. email address, keyID or fingerprint.
