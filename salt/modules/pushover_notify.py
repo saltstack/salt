@@ -1,11 +1,6 @@
 """
 Module for sending messages to Pushover (https://www.pushover.net)
 
-.. warning::
-    This module will be removed from Salt in version 3009.0 in favor of
-    the `saltext.pushover Salt Extension
-    <https://github.com/salt-extensions/saltext-pushover>`_
-
 .. versionadded:: 2016.3.0
 
 :configuration: This module can be used by either passing an api key and version

@@ -1,11 +1,6 @@
 """
 Return salt data via pushover (http://www.pushover.net)
 
-.. warning::
-    This module will be removed from Salt in version 3009.0 in favor of
-    the `saltext.pushover Salt Extension
-    <https://github.com/salt-extensions/saltext-pushover>`_
-
 .. versionadded:: 2016.3.0
 
 The following fields can be set in the minion conf file::
@@ -95,6 +90,12 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 __virtualname__ = "pushover"
+
+__deprecated__ = (
+    3009,
+    "pushover",
+    "https://github.com/saltstack/saltext-pushover",
+)
 
 
 def _get_options(ret=None):
