@@ -3,12 +3,18 @@
 Sphinx documentation for Salt
 """
 import os
+import pathlib
 import re
+import shutil
 import sys
+import textwrap
 import time
 import types
 
 from sphinx.directives.other import TocTree
+from sphinx.util import logging
+
+log = logging.getLogger(__name__)
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
@@ -415,6 +421,36 @@ class ReleasesTree(TocTree):
         return rst
 
 
+def extract_module_deprecations(app, what, name, obj, options, lines):
+    """
+    Add a warning to the modules being deprecated into extensions.
+    """
+    # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#event-autodoc-process-docstring
+    if what != "module":
+        # We're only interested in module deprecations
+        return
+
+    try:
+        deprecated_info = obj.__deprecated__
+    except AttributeError:
+        # The module is not deprecated
+        return
+
+    _version, _extension, _url = deprecated_info
+    msg = textwrap.dedent(
+        f"""
+        .. warning::
+
+            This module will be removed from Salt in version {_version} in favor of
+            the `{_extension} Salt Extension <{_url}>`_.
+
+        """
+    )
+    # Modify the docstring lines in-place
+    lines[:] = msg.splitlines() + lines
+
+
 def setup(app):
     app.add_directive("releasestree", ReleasesTree)
     app.connect("autodoc-skip-member", skip_mod_init_member)
+    app.connect("autodoc-process-docstring", extract_module_deprecations)
