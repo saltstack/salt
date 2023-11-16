@@ -13,7 +13,7 @@ textfsm = pytest.importorskip(
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def configure_loader_modules():
     return {textfsm_mod: {"__opts__": {}}}
 
