@@ -37,6 +37,12 @@ runs:
       with:
         python-binary: python3
 
+    - name: Set `TOOLS_VIRTUALENV_CACHE_SEED`
+      shell: bash
+      run: |
+        TOOLS_VIRTUALENV_CACHE_SEED="${{ inputs.cache-prefix }}|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ inputs.cache-suffix || '' }}"
+        echo "TOOLS_VIRTUALENV_CACHE_SEED=${TOOLS_VIRTUALENV_CACHE_SEED}" | tee -a "${GITHUB_ENV}"
+
     - name: Restore Python Tools Virtualenvs Cache
       uses: actions/cache@v3
       with:
