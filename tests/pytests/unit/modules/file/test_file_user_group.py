@@ -7,6 +7,10 @@ import salt.modules.file as filemod
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
 
 @pytest.fixture
 def configure_loader_modules():
