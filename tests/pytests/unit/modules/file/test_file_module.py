@@ -780,11 +780,14 @@ def test_file_move_cannot_move(tmp_path):
     """
     src = tmp_path / "src"
     dst = tmp_path / "dst"
+    exp_src = str(src)
+    if salt.utils.platform.is_windows():
+        exp_src = str(src).replace("\\", "\\\\")
     with pytest.raises(CommandExecutionError) as err:
         ret = filemod.move(src, dst)
     assert (
         err.value.message
-        == f"Unable to move '{str(src)}' to '{str(dst)}': [Errno 2] No such file or directory: '{str(src)}'"
+        == f"Unable to move '{str(src)}' to '{str(dst)}': [Errno 2] No such file or directory: '{exp_src}'"
     )
 
 
@@ -792,8 +795,11 @@ def test_file_join(tmp_path):
     """
     test basic functionality of join function
     """
-    ret = filemod.join("/", "usr", "local", "bin")
-    assert ret == "/usr/local/bin"
+    ret = filemod.join(os.sep, "usr", "local", "bin")
+    if salt.utils.platform.is_windows():
+        assert ret == "\\usr\\local\\bin"
+    else:
+        assert ret == "/usr/local/bin"
 
 
 def test_file_dirname(tmp_path):
@@ -820,8 +826,13 @@ def test_file_normpath():
     """
     test basic functionality of normpath
     """
-    ret = filemod.normpath("/tmp/../test")
-    assert ret == "/test"
+    path = "/tmp/../test"
+    exp_path = "/test"
+    if salt.utils.platform.is_windows():
+        path = "C://test"
+        exp_path = "C:\\test"
+    ret = filemod.normpath(path)
+    assert ret == exp_path
 
 
 def test_file_pardir():
