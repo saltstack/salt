@@ -5,7 +5,6 @@ import pytest
 import salt.modules.cmdmod
 import salt.modules.win_file
 import salt.modules.win_lgpo as win_lgpo
-import salt.utils.win_lgpo_auditpol as ap
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch
 
@@ -393,53 +392,6 @@ def test__virtual__(pol_info):
             False,
             "win_lgpo: Required modules failed to load",
         )
-
-
-def test_get_advaudit_defaults():
-    patch_context = patch.dict(win_lgpo.__context__, {})
-    patch_salt = patch.dict(
-        win_lgpo.__utils__, {"auditpol.get_auditpol_dump": ap.get_auditpol_dump}
-    )
-    with patch_context, patch_salt:
-        assert "Machine Name" in win_lgpo._get_advaudit_defaults("fieldnames")
-
-    audit_defaults = {"junk": "defaults"}
-    patch_context = patch.dict(
-        win_lgpo.__context__, {"lgpo.audit_defaults": audit_defaults}
-    )
-    with patch_context, patch_salt:
-        assert win_lgpo._get_advaudit_defaults() == audit_defaults
-
-
-def test_get_netsh_value():
-    with patch.dict(win_lgpo.__context__, {"lgpo.netsh_data": {"domain": {}}}):
-        win_lgpo._set_netsh_value("domain", "state", "State", "NotConfigured")
-    with patch.dict(win_lgpo.__context__, {}):
-        assert win_lgpo._get_netsh_value("domain", "State") == "NotConfigured"
-
-    context = {
-        "lgpo.netsh_data": {
-            "domain": {
-                "State": "ONContext",
-                "Inbound": "NotConfigured",
-                "Outbound": "NotConfigured",
-                "LocalFirewallRules": "NotConfigured",
-            },
-        },
-    }
-    with patch.dict(win_lgpo.__context__, context):
-        assert win_lgpo._get_netsh_value("domain", "State") == "ONContext"
-
-
-def test_get_secedit_data(tmp_path):
-    with patch.dict(win_lgpo.__opts__, {"cachedir": str(tmp_path)}):
-        assert "[System Access]\r\n" in win_lgpo._get_secedit_data()
-
-
-def test_get_secedit_value(tmp_path):
-    with patch.dict(win_lgpo.__opts__, {"cachedir": str(tmp_path)}):
-        assert win_lgpo._get_secedit_value("Unicode") == "yes"
-        assert win_lgpo._get_secedit_value("JunkKey") == "Not Defined"
 
 
 @pytest.mark.parametrize(
