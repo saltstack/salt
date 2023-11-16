@@ -138,7 +138,7 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     """
-    contextkey = "systemd._check_for_unit_changes.{}".format(name)
+    contextkey = f"systemd._check_for_unit_changes.{name}"
     if contextkey not in __context__:
         if _untracked_custom_unit_found(name) or _unit_file_changed(name):
             systemctl_reload()
@@ -329,7 +329,9 @@ def _strip_scope(msg):
     return "\n".join(ret).strip()
 
 
-def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=None):
+def _systemctl_cmd(
+    action, name=None, systemd_scope=False, no_block=False, root=None, extra_args=None
+):
     """
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
@@ -353,6 +355,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=
         ret.append(_canonical_unit_name(name))
     if "status" in ret:
         ret.extend(["-n", "0"])
+    if isinstance(extra_args, list):
+        ret.extend(extra_args)
     return ret
 
 
@@ -380,7 +384,7 @@ def _sysv_enabled(name, root):
     runlevel.
     """
     # Find exact match (disambiguate matches like "S01anacron" for cron)
-    rc = _root("/etc/rc{}.d/S*{}".format(_runlevel(), name), root)
+    rc = _root(f"/etc/rc{_runlevel()}.d/S*{name}", root)
     for match in glob.glob(rc):
         if re.match(r"S\d{,2}%s" % name, os.path.basename(match)):
             return True
@@ -1289,15 +1293,27 @@ def enabled(name, root=None, **kwargs):  # pylint: disable=unused-argument
     # Try 'systemctl is-enabled' first, then look for a symlink created by
     # systemctl (older systemd releases did not support using is-enabled to
     # check templated services), and lastly check for a sysvinit service.
-    if (
-        __salt__["cmd.retcode"](
-            _systemctl_cmd("is-enabled", name, root=root),
-            python_shell=False,
-            ignore_retcode=True,
-        )
-        == 0
-    ):
+    cmd_result = __salt__["cmd.run_all"](
+        _systemctl_cmd("is-enabled", name, root=root),
+        python_shell=False,
+        ignore_retcode=True,
+    )
+    if cmd_result["retcode"] == 0 and cmd_result["stdout"] != "alias":
         return True
+    elif cmd_result["stdout"] == "alias":
+        # check the service behind the alias
+        aliased_name = __salt__["cmd.run_stdout"](
+            _systemctl_cmd("show", name, root=root, extra_args=["-P", "Id"]),
+            python_shell=False,
+        )
+        if (
+            __salt__["cmd.retcode"](
+                _systemctl_cmd("is-enabled", aliased_name, root=root),
+                python_shell=False,
+                ignore_retcode=True,
+            )
+        ) == 0:
+            return True
     elif "@" in name:
         # On older systemd releases, templated services could not be checked
         # with ``systemctl is-enabled``. As a fallback, look for the symlinks
@@ -1454,7 +1470,7 @@ def firstboot(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     out = __salt__["cmd.run_all"](cmd)
 
