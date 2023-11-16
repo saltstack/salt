@@ -4,6 +4,8 @@ import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as auditpol
+from salt.exceptions import CommandExecutionError
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -110,7 +112,16 @@ def set_policy():
     )
 
 
-def _test_adv_auditing(setting, expected):
+@pytest.mark.parametrize(
+    "setting, expected",
+    [
+        ("No Auditing", "0"),
+        ("Success", "1"),
+        ("Failure", "2"),
+        ("Success and Failure", "3"),
+    ],
+)
+def test_get_value(setting, expected):
     """
     Helper function to set an audit setting and assert that it was successful
     """
@@ -120,17 +131,38 @@ def _test_adv_auditing(setting, expected):
     assert result == expected
 
 
-def test_no_auditing(disable_legacy_auditing, set_policy):
-    _test_adv_auditing("No Auditing", "0")
+def test_get_defaults():
+    patch_context = patch.dict(win_lgpo.__context__, {})
+    patch_salt = patch.dict(
+        win_lgpo.__utils__, {"auditpol.get_auditpol_dump": auditpol.get_auditpol_dump}
+    )
+    with patch_context, patch_salt:
+        assert "Machine Name" in win_lgpo._get_advaudit_defaults("fieldnames")
+
+    audit_defaults = {"junk": "defaults"}
+    patch_context = patch.dict(
+        win_lgpo.__context__, {"lgpo.audit_defaults": audit_defaults}
+    )
+    with patch_context, patch_salt:
+        assert win_lgpo._get_advaudit_defaults() == audit_defaults
 
 
-def test_success(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success", "1")
+def test_set_value_error():
+    mock_set_file_data = MagicMock(return_value=False)
+    with patch.object(win_lgpo, "_set_advaudit_file_data", mock_set_file_data):
+        with pytest.raises(CommandExecutionError):
+            win_lgpo._set_advaudit_value("Audit User Account Management", "None")
 
 
-def test_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Failure", "2")
-
-
-def test_success_and_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success and Failure", "3")
+def test_set_value_log_messages(caplog):
+    mock_set_file_data = MagicMock(return_value=True)
+    mock_set_pol_data = MagicMock(return_value=False)
+    mock_context = {"lgpo.adv_audit_data": {"test_option": "test_value"}}
+    with patch.object(
+        win_lgpo, "_set_advaudit_file_data", mock_set_file_data
+    ), patch.object(win_lgpo, "_set_advaudit_pol_data", mock_set_pol_data), patch.dict(
+        win_lgpo.__context__, mock_context
+    ):
+        win_lgpo._set_advaudit_value("test_option", None)
+        assert "Failed to apply audit setting:" in caplog.text
+        assert "LGPO: Removing Advanced Audit data:" in caplog.text
