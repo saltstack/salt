@@ -246,7 +246,7 @@ immutables==0.15
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
     #   contextvars
-impacket==0.11.0
+impacket==0.11.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/static/ci/common.in

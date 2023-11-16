@@ -169,7 +169,7 @@ immutables==0.15
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   contextvars
-impacket==0.11.0
+impacket==0.11.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 importlib-metadata==6.0.0
     # via

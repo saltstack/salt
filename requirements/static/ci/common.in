@@ -50,7 +50,7 @@ genshi>=0.7.3
 cheetah3>=3.2.2
 mako
 wempy
-impacket
+impacket; sys_platform != 'win32'
 pyspnego==0.9.2; sys_platform != 'win32' and python_version <= '3.7'
 pyspnego==0.10.2; sys_platform != 'win32' and python_version >= '3.8'
 smbprotocol==1.10.1; sys_platform != 'win32'
