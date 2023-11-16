@@ -4595,6 +4595,8 @@ def get_managed(
     skip_verify=False,
     verify_ssl=True,
     use_etag=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
     **kwargs,
 ):
     """
@@ -5513,6 +5515,8 @@ def check_managed_changes(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
     **kwargs,
 ):
     """
@@ -5565,6 +5569,8 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
             **kwargs,
         )
 
@@ -5600,6 +5606,8 @@ def check_managed_changes(
         setype=setype,
         serange=serange,
         follow_symlinks=follow_symlinks,
+        ignore_ordering=ignore_ordering,
+        ignore_whitespace=ignore_whitespace,
     )
     __clean_tmp(sfn)
     return changes
@@ -5622,6 +5630,8 @@ def check_file_meta(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5706,6 +5716,7 @@ def check_file_meta(
         .. versionadded:: 3005
     """
     changes = {}
+    has_changes = False
     if not source_sum:
         source_sum = dict()
 
@@ -5733,9 +5744,19 @@ def check_file_meta(
                 )
             if sfn:
                 try:
-                    changes["diff"] = get_diff(
-                        name, sfn, template=True, show_filenames=False
-                    )
+                    if any([ignore_ordering, ignore_whitespace]):
+                        has_changes, changes["diff"] = get_diff(
+                            name,
+                            sfn,
+                            template=True,
+                            show_filenames=False,
+                            ignore_ordering=ignore_ordering,
+                            ignore_whitespace=ignore_whitespace,
+                        )
+                    else:
+                        changes["diff"] = get_diff(
+                            name, sfn, template=True, show_filenames=False
+                        )
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -5761,7 +5782,16 @@ def check_file_meta(
                 tmp_.write(salt.utils.stringutils.to_str(contents))
         # Compare the static contents with the named file
         try:
-            differences = get_diff(name, tmp, show_filenames=False)
+            if any([ignore_ordering, ignore_whitespace]):
+                has_changes, differences = get_diff(
+                    name,
+                    tmp,
+                    show_filenames=False,
+                    ignore_ordering=ignore_ordering,
+                    ignore_whitespace=ignore_whitespace,
+                )
+            else:
+                differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -5824,6 +5854,9 @@ def check_file_meta(
             if serange and serange != current_serange:
                 changes["selinux"] = {"range": serange}
 
+    if any([ignore_ordering, ignore_whitespace]):
+        return has_changes, changes
+
     return changes
 
 
@@ -5836,6 +5869,8 @@ def get_diff(
     template=False,
     source_hash_file1=None,
     source_hash_file2=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
 ):
     """
     Return unified diff of two files
@@ -5945,9 +5980,19 @@ def get_diff(
             else:
                 if show_filenames:
                     args.extend(paths)
-                ret = __utils__["stringutils.get_diff"](*args)
-        return ret
-    return ""
+                if any([ignore_ordering, ignore_whitespace]):
+                    ret = __utils__["stringutils.get_conditional_diff"](
+                        *args,
+                        ignore_ordering=ignore_ordering,
+                        ignore_whitespace=ignore_whitespace,
+                    )
+                else:
+                    ret = __utils__["stringutils.get_diff"](*args)
+    elif any([ignore_ordering, ignore_whitespace]):
+        ret = (False, "")
+    else:
+        ret = ""
+    return ret
 
 
 def manage_file(
@@ -5978,6 +6023,8 @@ def manage_file(
     serange=None,
     verify_ssl=True,
     use_etag=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
     **kwargs,
 ):
     """
@@ -6118,6 +6165,7 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    has_changes = False
     check_web_source_hash = bool(
         source
         and urllib.parse.urlparse(source).scheme != "salt"
@@ -6199,7 +6247,16 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if any([ignore_ordering, ignore_whitespace]):
+                        has_changes, file_diff = get_diff(
+                            real_name,
+                            sfn,
+                            show_filenames=False,
+                            ignore_ordering=ignore_ordering,
+                            ignore_whitespace=ignore_whitespace,
+                        )
+                    else:
+                        file_diff = get_diff(real_name, sfn, show_filenames=False)
                     if file_diff:
                         ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
@@ -6236,13 +6293,26 @@ def manage_file(
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             try:
-                differences = get_diff(
-                    real_name,
-                    tmp,
-                    show_filenames=False,
-                    show_changes=show_changes,
-                    template=True,
-                )
+                if any([ignore_ordering, ignore_whitespace]):
+                    has_changes, differences = get_diff(
+                        real_name,
+                        tmp,
+                        show_filenames=False,
+                        show_changes=show_changes,
+                        template=True,
+                        ignore_ordering=ignore_ordering,
+                        ignore_whitespace=ignore_whitespace,
+                    )
+                else:
+                    differences = get_diff(
+                        real_name,
+                        tmp,
+                        show_filenames=False,
+                        show_changes=show_changes,
+                        template=True,
+                        ignore_ordering=ignore_ordering,
+                        ignore_whitespace=ignore_whitespace,
+                    )
 
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
@@ -6330,6 +6400,8 @@ def manage_file(
 
         if ret["changes"]:
             ret["comment"] = f"File {salt.utils.data.decode(name)} updated"
+            if any([ignore_ordering, ignore_whitespace]) and not has_changes:
+                ret["skip_req"] = True
 
         elif not ret["changes"] and ret["result"]:
             ret["comment"] = "File {} is in the correct state".format(
@@ -6507,6 +6579,13 @@ def manage_file(
             ret["comment"] = "File " + name + " is in the correct state"
         if sfn:
             __clean_tmp(sfn)
+
+        if (
+            any([ignore_ordering, ignore_whitespace])
+            and ret["changes"]
+            and not has_changes
+        ):
+            ret["skip_req"] = True
 
         return ret
 

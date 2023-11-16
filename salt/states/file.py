@@ -2312,6 +2312,8 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
     **kwargs,
 ):
     r"""
@@ -2924,6 +2926,8 @@ def managed(
     if selinux is not None and not salt.utils.platform.is_linux():
         return _error(ret, "The 'selinux' option is only supported on Linux")
 
+    has_changes = False
+
     if selinux:
         seuser = selinux.get("seuser", None)
         serole = selinux.get("serole", None)
@@ -3190,7 +3194,7 @@ def managed(
     try:
         if __opts__["test"]:
             if "file.check_managed_changes" in __salt__:
-                ret["changes"] = __salt__["file.check_managed_changes"](
+                check_changes = __salt__["file.check_managed_changes"](
                     name,
                     source,
                     source_hash,
@@ -3212,8 +3216,14 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
+                    ignore_ordering=ignore_ordering,
+                    ignore_whitespace=ignore_whitespace,
                     **kwargs,
                 )
+                if any([ignore_ordering, ignore_whitespace]):
+                    has_changes, ret["changes"] = check_changes
+                else:
+                    ret["changes"] = check_changes
 
                 if salt.utils.platform.is_windows():
                     try:
@@ -3247,6 +3257,13 @@ def managed(
             else:
                 ret["result"] = True
                 ret["comment"] = f"The file {name} is in the correct state"
+
+            if (
+                any([ignore_ordering, ignore_whitespace])
+                and ret["changes"]
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
             return ret
 
@@ -3330,6 +3347,8 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3353,6 +3372,8 @@ def managed(
         if ret["changes"]:
             # Reset ret
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
+            if any([ignore_ordering, ignore_whitespace]) and not has_changes:
+                ret["skip_req"] = True
 
             check_cmd_opts = {}
             if "shell" in __grains__:
@@ -3409,6 +3430,8 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except

@@ -2966,6 +2966,12 @@ class State:
                 if tag not in run_dict:
                     req_stats.add("unmet")
                     continue
+                # A state can include a "skip_req" key in the return dict
+                # with a True value to skip triggering onchanges, watch, or
+                # other requisites which would result in a only running on a
+                # change or running mod_watch
+                if run_dict[tag].get("skip_req"):
+                    req_stats.add("skip_req")
                 if r_state.startswith("onfail"):
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
@@ -3016,6 +3022,10 @@ class State:
             status = "unmet"
         elif "fail" in fun_stats:
             status = "fail"
+        elif "skip_req" in fun_stats and (fun_stats & {"onchangesmet", "premet"}):
+            status = "skip_req"
+        elif "skip_req" in fun_stats and "change" in fun_stats:
+            status = "skip_watch"
         elif "pre" in fun_stats:
             if "premet" in fun_stats:
                 status = "met"
@@ -3246,6 +3256,21 @@ class State:
                 self.pre[tag] = self.call(low, chunks, running)
             else:
                 running[tag] = self.call(low, chunks, running)
+        elif status == "skip_req":
+            running[tag] = {
+                "changes": {},
+                "result": True,
+                "comment": "State was not run because requisites were skipped by another state",
+                "__run_num__": self.__run_num,
+            }
+            for key in ("__sls__", "__id__", "name"):
+                running[tag][key] = low.get(key)
+        elif status == "skip_watch" and not low.get("__prereq__"):
+            ret = self.call(low, chunks, running)
+            ret[
+                "comment"
+            ] += " mod_watch was not run because requisites were skipped by another state"
+            running[tag] = ret
         elif status == "fail":
             # if the requisite that failed was due to a prereq on this low state
             # show the normal error
