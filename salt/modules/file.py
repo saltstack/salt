@@ -818,31 +818,31 @@ def get_source_sum(
         retrievable by :py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
         from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
         <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
         of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
         <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying ``source_hash_sig``, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying ``source_hash_sig``, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -4772,31 +4772,31 @@ def get_managed(
         retrievable by ``cp.cache_file`` for a detached one. The cached file
         will be deleted if the signature verification fails.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
         from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
         <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
         of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
         <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying ``source_hash_sig``, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying ``source_hash_sig``, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -6268,7 +6268,7 @@ def manage_file(
             required on the final output, therefore this does not lend itself well
             when templates are rendered.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     source_hash_sig
         When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
@@ -6277,31 +6277,31 @@ def manage_file(
         retrievable by ``cp.cache_file`` for a detached one. The cached file
         will be deleted if the signature verification fails.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
         require at least one valid signature from one of a list of key fingerprints.
         This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
         require a valid signature from each of the key fingerprints in this list.
         This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying signatures, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying signatures, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     CLI Example:
 

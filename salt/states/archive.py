@@ -114,7 +114,7 @@ def _update_checksum(path):
                         line[1] = hsum
                     fp_.write("{}:{}\n".format(*line))
                 if hash_type not in [x[0] for x in lines]:
-                    fp_.write("{}:{}\n".format(hash_type, hsum))
+                    fp_.write(f"{hash_type}:{hsum}\n")
         except OSError as exc:
             log.warning(
                 "Failed to update checksum for %s: %s",
@@ -729,7 +729,7 @@ def extracted(
         identifies a detached signature.
         This signature will be enforced regardless of source type.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     source_hash_sig
         When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
@@ -738,31 +738,31 @@ def extracted(
         retrievable by ``cp.cache_file`` for a detached one. The cached file
         will be deleted if the signature verification fails.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
         require at least one valid signature from one of a list of key fingerprints.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
         require a valid signature from each of the key fingerprints in this list.
         This is passed to ``gpg.verify``.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     keyring
         When verifying signatures, use this keyring.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     gnupghome
         When verifying signatures, use this GnuPG home.
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     **Examples**
 
@@ -830,7 +830,7 @@ def extracted(
         keep_source = True
 
     if not _path_is_abs(name):
-        ret["comment"] = "{} is not an absolute path".format(name)
+        ret["comment"] = f"{name} is not an absolute path"
         return ret
     else:
         if not name:
@@ -848,7 +848,7 @@ def extracted(
         # False
         name = name.rstrip(os.sep)
         if os.path.isfile(name):
-            ret["comment"] = "{} exists and is not a directory".format(name)
+            ret["comment"] = f"{name} exists and is not a directory"
             return ret
         # Add back the slash so that file.makedirs properly creates the
         # destdir if it needs to be created. file.makedirs expects a trailing
@@ -875,12 +875,12 @@ def extracted(
             if not_rel:
                 ret[
                     "comment"
-                ] = "Value for 'enforce_ownership_on' must be within {}".format(name)
+                ] = f"Value for 'enforce_ownership_on' must be within {name}"
                 return ret
 
     if if_missing is not None and os.path.exists(if_missing):
         ret["result"] = True
-        ret["comment"] = "Path {} exists".format(if_missing)
+        ret["comment"] = f"Path {if_missing} exists"
         return ret
 
     if user or group:
@@ -893,7 +893,7 @@ def extracted(
         if user:
             uid = __salt__["file.user_to_uid"](user)
             if uid == "":
-                ret["comment"] = "User {} does not exist".format(user)
+                ret["comment"] = f"User {user} does not exist"
                 return ret
         else:
             uid = -1
@@ -901,7 +901,7 @@ def extracted(
         if group:
             gid = __salt__["file.group_to_gid"](group)
             if gid == "":
-                ret["comment"] = "Group {} does not exist".format(group)
+                ret["comment"] = f"Group {group} does not exist"
                 return ret
         else:
             gid = -1
@@ -936,7 +936,7 @@ def extracted(
 
     if not source_match:
         ret["result"] = False
-        ret["comment"] = 'Invalid source "{}"'.format(source)
+        ret["comment"] = f'Invalid source "{source}"'
         return ret
 
     urlparsed_source = urlparse(source_match)
@@ -1280,7 +1280,7 @@ def extracted(
             )
 
             for error in errors:
-                msg += "\n- {}".format(error)
+                msg += f"\n- {error}"
         ret["comment"] = msg
         return ret
 
@@ -1368,9 +1368,7 @@ def extracted(
                             return ret
 
             if incorrect_type:
-                incorrect_paths = "\n\n" + "\n".join(
-                    ["- {}".format(x) for x in incorrect_type]
-                )
+                incorrect_paths = "\n\n" + "\n".join([f"- {x}" for x in incorrect_type])
                 ret["comment"] = (
                     "The below paths (relative to {}) exist, but are the "
                     "incorrect type (file instead of directory, symlink "
@@ -1424,7 +1422,7 @@ def extracted(
                                 "following errors were observed:\n"
                             )
                             for error in errors:
-                                msg += "\n- {}".format(error)
+                                msg += f"\n- {error}"
                             ret["comment"] = msg
                             return ret
 
@@ -1470,7 +1468,7 @@ def extracted(
                 salt.utils.files.rm_rf(name.rstrip(os.sep))
                 ret["changes"].setdefault(
                     "removed",
-                    "Directory {} was removed prior to the extraction".format(name),
+                    f"Directory {name} was removed prior to the extraction",
                 )
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
@@ -1481,7 +1479,7 @@ def extracted(
                     "errors were observed:\n".format(name)
                 )
                 for error in errors:
-                    msg += "\n- {}".format(error)
+                    msg += f"\n- {error}"
                 ret["comment"] = msg
                 return ret
 
@@ -1504,7 +1502,7 @@ def extracted(
                     "errors were observed:\n"
                 )
                 for error in errors:
-                    msg += "\n- {}".format(error)
+                    msg += f"\n- {error}"
                 ret["comment"] = msg
                 return ret
 
@@ -1788,7 +1786,7 @@ def extracted(
     else:
         ret["result"] = True
         if if_missing_path_exists:
-            ret["comment"] = "{} exists".format(if_missing)
+            ret["comment"] = f"{if_missing} exists"
         else:
             ret["comment"] = "All files in archive are already present"
         if __opts__["test"]:
@@ -1813,7 +1811,7 @@ def extracted(
             "paths were missing:\n"
         )
         for item in enforce_missing:
-            ret["comment"] += "\n- {}".format(item)
+            ret["comment"] += f"\n- {item}"
 
     if enforce_failed:
         ret["result"] = False
@@ -1822,7 +1820,7 @@ def extracted(
             "unable to change ownership on the following paths:\n"
         )
         for item in enforce_failed:
-            ret["comment"] += "\n- {}".format(item)
+            ret["comment"] += f"\n- {item}"
 
     if not source_is_local:
         if keep_source:
