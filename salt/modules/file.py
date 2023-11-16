@@ -812,10 +812,10 @@ def get_source_sum(
         .. versionadded:: 3002
 
     source_hash_sig
-        When ``source_hash`` is a file, ensure a valid GPG signature exists on
-        the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
-        retrievable by :py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        When ``source`` is a remote file source and ``source_hash`` is a file,
+        ensure a valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
 
         .. versionadded:: 3007.0
@@ -4766,11 +4766,12 @@ def get_managed(
         .. versionadded:: 3005
 
     source_hash_sig
-        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
-        is not true, ensure a valid GPG signature exists on the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
-        retrievable by ``cp.cache_file`` for a detached one. The cached file
-        will be deleted if the signature verification fails.
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
 
         .. versionadded:: 3007.0
 
@@ -6258,24 +6259,39 @@ def manage_file(
 
     signature
         Ensure a valid GPG signature exists on the selected ``source`` file.
-        Set this to true for inline signatures, or to a file URI retrievable by
-        ``cp.cache_file`` for a detached one. The cached file will be deleted
-        if the signature verification fails.
+        Set this to true for inline signatures, or to a file URI retrievable
+        by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
 
         .. note::
 
-            This signature will be enforced regardless of source type and will be
-            required on the final output, therefore this does not lend itself well
-            when templates are rendered.
+            A signature is only enforced directly after caching the file,
+            before it is moved to its final destination. Existing target files
+            (with the correct checksum) will neither be checked nor deleted.
+
+            It will be enforced regardless of source type and will be
+            required on the final output, therefore this does not lend itself
+            well when templates are rendered.
+            The file will not be modified, meaning inline signatures are not
+            removed.
 
         .. versionadded:: 3007.0
 
     source_hash_sig
-        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
-        is not true, ensure a valid GPG signature exists on the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
-        retrievable by ``cp.cache_file`` for a detached one. The cached file
-        will be deleted if the signature verification fails.
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
 
         .. versionadded:: 3007.0
 

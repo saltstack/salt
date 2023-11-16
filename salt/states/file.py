@@ -2915,39 +2915,53 @@ def managed(
 
     signature
         Ensure a valid GPG signature exists on the selected ``source`` file.
-        Set this to true for inline signatures, or to a file URI retrievable by
-        ``cp.cache_file`` for a detached one.
+        Set this to true for inline signatures, or to a file URI retrievable
+        by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
 
         .. note::
 
-            This signature will be enforced regardless of source type and will be
-            required on the final output, therefore this does not lend itself well
-            when templates are rendered.
+            A signature is only enforced directly after caching the file,
+            before it is moved to its final destination. Existing target files
+            (with the correct checksum) will neither be checked nor deleted.
+
+            It will be enforced regardless of source type and will be
+            required on the final output, therefore this does not lend itself
+            well when templates are rendered.
             The file will not be modified, meaning inline signatures are not
             removed.
 
         .. versionadded:: 3007.0
 
     source_hash_sig
-        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
-        is not true, ensure a valid GPG signature exists on the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
-        retrievable by ``cp.cache_file`` for a detached one. The cached file
-        will be deleted if the signature verification fails.
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
 
         .. versionadded:: 3007.0
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
         require at least one valid signature from one of a list of key fingerprints.
-        This is passed to ``gpg.verify``.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
         require a valid signature from each of the key fingerprints in this list.
-        This is passed to ``gpg.verify``.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
@@ -8974,25 +8988,32 @@ def cached(
         .. versionadded:: 3005
 
     source_hash_sig
-        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
-        is not true, ensure a valid GPG signature exists on the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
-        retrievable by ``cp.cache_file`` for a detached one. The cached file
-        will be deleted if the signature verification fails.
+        When ``name`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
 
         .. versionadded:: 3007.0
 
     signed_by_any
-        When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to ``gpg.verify``.
+        When verifying ``source_hash_sig``, require at least one valid signature
+        from one of a list of key fingerprints. This is passed to
+        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
     signed_by_all
-        When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to ``gpg.verify``.
+        When verifying ``source_hash_sig``, require a valid signature from each
+        of the key fingerprints in this list. This is passed to
+        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
