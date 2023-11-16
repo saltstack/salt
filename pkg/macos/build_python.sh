@@ -257,6 +257,7 @@ fi
 #-------------------------------------------------------------------------------
 # Removing Unneeded Libraries from Python
 #-------------------------------------------------------------------------------
+PY_VERSION_MINOR=$($BLD_PY_BIN -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info))')
 REMOVE=(
     "idlelib"
     "test"
@@ -264,16 +265,10 @@ REMOVE=(
     "turtledemo"
 )
 for i in "${REMOVE[@]}"; do
-    TEST_DIR="$BUILD_DIR/opt/salt/lib/python3.*/$i"
-    DIR=$(compgen -G "$TEST_DIR")
-    if [ -n "$DIR" ]; then
+    TEST_DIR="$BUILD_DIR/opt/salt/lib/python${PY_VERSION_MINOR}/$i"
+    if [ -d "$TEST_DIR" ]; then
         _msg "Removing $i directory"
-        rm -rf "$DIR"
-        if ! compgen -G "$TEST_DIR" > /dev/null; then
-            _success
-        else
-            _failure
-        fi
+        rm -rf "$TEST_DIR" && _success || _failure
     fi
 done
 
