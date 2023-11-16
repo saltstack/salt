@@ -9,18 +9,21 @@ Manage GPG keychains
 import logging
 
 import salt.utils.dictupdate
+import salt.utils.immutabletypes as immutabletypes
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-TRUST_MAP = {
-    "expired": "Expired",
-    "unknown": "Unknown",
-    "not_trusted": "Not Trusted",
-    "marginally": "Marginally",
-    "fully": "Fully Trusted",
-    "ultimately": "Ultimately Trusted",
-}
+TRUST_MAP = immutabletypes.freeze(
+    {
+        "expired": "Expired",
+        "unknown": "Unknown",
+        "not_trusted": "Not Trusted",
+        "marginally": "Marginally",
+        "fully": "Fully Trusted",
+        "ultimately": "Ultimately Trusted",
+    }
+)
 
 
 def present(
