@@ -38,21 +38,15 @@ def state_tree_run_fail(base_env_state_tree_root_dir):
         yield
 
 
-def test_retcode_state_sls_run_fail(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.sls", "fail_run")
-    assert ret.returncode == EX_AGGREGATE
-
-
-def test_retcode_state_highstate_run_fail(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.highstate")
-    assert ret.returncode == EX_AGGREGATE
-
-
-def test_retcode_state_sls_id_render_exception(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.sls_id", "This file state fails", "fail_run")
-    assert ret.returncode == EX_AGGREGATE
-
-
-def test_retcode_state_top_run_fail(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.top", "top.sls")
+@pytest.mark.parametrize(
+    "args",
+    (
+        ("state.sls", "fail_run"),
+        ("state.highstate",),
+        ("state.sls_id", "This file state fails", "fail_run"),
+        ("state.top", "top.sls"),
+    ),
+)
+def test_it(salt_ssh_cli, args):
+    ret = salt_ssh_cli.run(*args)
     assert ret.returncode == EX_AGGREGATE

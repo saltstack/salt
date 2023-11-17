@@ -77,31 +77,21 @@ def override(base):
     return expected, poverride
 
 
-def test_state_sls(salt_ssh_cli, override, _write_pillar_state):
+@pytest.mark.parametrize(
+    "args,kwargs",
+    (
+        (("state.sls", "writepillar"), {}),
+        (("state.highstate",), {"whitelist": "writepillar"}),
+        (("state.top", "top.sls"), {}),
+    ),
+)
+def test_it(salt_ssh_cli, args, kwargs, override, _write_pillar_state):
     expected, override = override
-    ret = salt_ssh_cli.run("state.sls", "writepillar", pillar=override)
-    _assert_pillar(ret, expected, _write_pillar_state)
-
-
-def test_state_highstate(salt_ssh_cli, override, _write_pillar_state):
-    expected, override = override
-    ret = salt_ssh_cli.run(
-        "state.highstate", pillar=override, whitelist=["writepillar"]
-    )
-    _assert_pillar(ret, expected, _write_pillar_state)
-
-
-def test_state_top(salt_ssh_cli, override, _write_pillar_state):
-    expected, override = override
-    ret = salt_ssh_cli.run("state.top", "top.sls", pillar=override)
-    _assert_pillar(ret, expected, _write_pillar_state)
-
-
-def _assert_pillar(ret, expected, path):
+    ret = salt_ssh_cli.run(*args, **kwargs, pillar=override)
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
-    assert path.exists()
-    pillar = json.loads(path.read_text())
+    assert _write_pillar_state.exists()
+    pillar = json.loads(_write_pillar_state.read_text())
     assert pillar["raw"] == expected
     assert pillar["modules"] == expected
