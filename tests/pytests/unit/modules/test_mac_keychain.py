@@ -88,6 +88,15 @@ def test_get_friendly_name():
 
         assert out == expected
 
+        out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd", legacy=False)
+        mock.assert_called_once_with(
+            "openssl pkcs12 -in /path/to/cert.p12 -passin pass:passw0rd -info "
+            "-nodes -nokeys 2> /dev/null | grep friendlyName:",
+            python_shell=True,
+        )
+
+        assert out == expected
+
 
 def test_get_default_keychain():
     """
