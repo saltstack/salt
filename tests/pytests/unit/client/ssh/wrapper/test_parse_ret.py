@@ -1,3 +1,5 @@
+import pytest
+
 import salt.client.ssh.wrapper as wrap
 
 
@@ -10,14 +12,9 @@ def test_parse_ret_permission_denied_scp():
     stderr = "Permission denied, please try again.\nPermission denied, please try again.\nroot@192.168.1.187: Permission denied (publickey,gssapi-keyex,gssapi-with-micimport pudb; pu.dbassword).\nscp: Connection closed\n"
     retcode = 255
 
-    try:
+    with pytest.raises(wrap.SSHPermissionDeniedError) as exc:
         wrap.parse_ret(stdout, stderr, retcode)
-    except wrap.SSHPermissionDeniedError as err:
-        # need access to the exception instance, which pytest.raises
-        # does not provide
-        ret = err.to_ret()
-    else:
-        assert False, "Did not raise SSHPermissionDeniedError"
+    ret = exc.value.to_ret()
     assert "_error" in ret
     assert ret["_error"] == "Permission denied"
     assert "stdout" in ret
@@ -41,6 +38,6 @@ def test_parse_ret_permission_denied_because_of_permissions():
     try:
         wrap.parse_ret(stdout, stderr, retcode)
     except wrap.SSHPermissionDeniedError:
-        assert False, "This should not have resulted in an SSHPermissionDeniedError"
+        pytest.fail("This should not have resulted in an SSHPermissionDeniedError")
     except wrap.SSHCommandExecutionError:
         pass
