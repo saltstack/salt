@@ -523,7 +523,7 @@ pyserial==3.4
     #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   netmiko
-pyspnego==0.10.2 ; sys_platform != "win32" and python_version >= "3.8"
+pyspnego==0.10.2 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
