@@ -92,6 +92,7 @@ def test_mac_keychain_get_friendly_name(setup_teardown_vars, salt_call_cli):
     salt_call_cli.run("keychain.install", cert, passwd)
     ret = salt_call_cli.run("keychain.list_certs")
     certs_list = ret.data
+    assert cert_alias in certs_list
     if cert_alias not in certs_list:
         salt_call_cli.run("keychain.uninstall", cert_alias)
         pytest.skip("Failed to install keychain")

@@ -151,6 +151,8 @@ def get_friendly_name(cert, password, legacy=False):
     .. code-block:: bash
 
         salt '*' keychain.get_friendly_name /tmp/test.p12 test123
+
+        salt '*' keychain.get_friendly_name /tmp/test.p12 test123 legacy=True
     """
     legacy_arg = ""
     if legacy:
