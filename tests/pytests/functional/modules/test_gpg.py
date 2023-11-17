@@ -386,7 +386,7 @@ def gnupg_privkeyring(gpghome, keyring_privkeys):
 
 
 @pytest.fixture(params=["abcde"])
-def pubkeys_present(gnupg, request):
+def _pubkeys_present(gnupg, request):
     pubkeys = [request.getfixturevalue(f"key_{x}_pub") for x in request.param]
     fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
     gnupg.import_keys("\n".join(pubkeys))
@@ -398,7 +398,7 @@ def pubkeys_present(gnupg, request):
 
 
 @pytest.fixture(params=["ab"])
-def privkeys_present(gnupg, request):
+def _privkeys_present(gnupg, request):
     privkeys = [request.getfixturevalue(f"key_{x}_priv") for x in request.param]
     fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
     res = gnupg.import_keys("\n".join(privkeys))
@@ -440,7 +440,7 @@ def keyring_privkeys(gpghome, gnupg, tmp_path, request):
     # cleanup is taken care of by gpghome and tmp_path
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_list_keys(gpg, gpghome, gnupg):
     res = gpg.list_keys(gnupghome=str(gpghome))
     assert res
@@ -452,20 +452,17 @@ def test_list_keys_in_keyring(gpg, gpghome, keyring, gnupg_keyring):
     assert len(res) == len(gnupg_keyring.list_keys())
 
 
-@pytest.mark.usefixtures("privkeys_present")
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
+@pytest.mark.usefixtures("_privkeys_present")
 def test_list_secret_keys(gpghome, gpg, gnupg):
     res = gpg.list_secret_keys(gnupghome=str(gpghome))
     assert len(res) == len(gnupg.list_keys(secret=True))
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 def test_list_secret_keys_in_keyring(gpghome, gpg, keyring_privkeys, gnupg_privkeyring):
     res = gpg.list_secret_keys(gnupghome=str(gpghome), keyring=keyring_privkeys)
     assert len(res) == len(gnupg_privkeyring.list_keys(secret=True))
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 @pytest.mark.requires_random_entropy
 def test_create_key(gpghome, gpg, gnupg):
     res = gpg.create_key(gnupghome=str(gpghome))
@@ -477,7 +474,6 @@ def test_create_key(gpghome, gpg, gnupg):
     assert gnupg.list_keys(secret=True, keys=res["fingerprint"])
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 @pytest.mark.requires_random_entropy
 def test_create_key_in_keyring(gpghome, gpg, gnupg, keyring, gnupg_keyring):
     res = gpg.create_key(gnupghome=str(gpghome), keyring=keyring)
@@ -490,10 +486,7 @@ def test_create_key_in_keyring(gpghome, gpg, gnupg, keyring, gnupg_keyring):
     assert gnupg_keyring.list_keys(secret=True, keys=res["fingerprint"])
 
 
-@pytest.mark.usefixtures("pubkeys_present")
-@pytest.mark.skip_unless_on_linux(
-    reason="Complains about deleting private keys first when they are absent"
-)
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_delete_key(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
     res = gpg.delete_key(
@@ -503,10 +496,7 @@ def test_delete_key(gpghome, gpg, gnupg, key_a_fp):
     assert not gnupg.list_keys(keys=key_a_fp)
 
 
-@pytest.mark.usefixtures("pubkeys_present")
-@pytest.mark.skip_unless_on_linux(
-    reason="Complains about deleting private keys first when they are absent"
-)
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_delete_key_from_keyring(gpghome, gpg, key_a_fp, keyring, gnupg, gnupg_keyring):
     assert gnupg.list_keys(keys=key_a_fp)
     assert gnupg_keyring.list_keys(keys=key_a_fp)
@@ -521,7 +511,7 @@ def test_delete_key_from_keyring(gpghome, gpg, key_a_fp, keyring, gnupg, gnupg_k
     assert not gnupg_keyring.list_keys(keys=key_a_fp)
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_get_key(gpghome, gpg, key_a_fp):
     res = gpg.get_key(fingerprint=key_a_fp, gnupghome=str(gpghome))
     assert res
@@ -541,8 +531,7 @@ def test_get_key_from_keyring(gpghome, gpg, key_a_fp, keyring, gnupg):
     assert res["keyLength"] == "1024"
 
 
-@pytest.mark.usefixtures("privkeys_present")
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
+@pytest.mark.usefixtures("_privkeys_present")
 def test_get_secret_key(gpghome, gpg, key_a_fp):
     res = gpg.get_secret_key(fingerprint=key_a_fp, gnupghome=str(gpghome))
     assert res
@@ -552,7 +541,6 @@ def test_get_secret_key(gpghome, gpg, key_a_fp):
     assert res["keyLength"] == "1024"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 def test_get_secret_key_from_keyring(gpghome, gpg, key_a_fp, keyring_privkeys, gnupg):
     assert not gnupg.list_keys(keys=key_a_fp, secret=True)
     res = gpg.get_secret_key(
@@ -588,7 +576,7 @@ def test_import_key_to_keyring(
     assert gnupg_keyring.list_keys(keys=key_d_fp)
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_export_key(gpghome, gpg, key_a_fp):
     res = gpg.export_key(keyids=key_a_fp, gnupghome=str(gpghome))
     assert res["res"]
@@ -605,7 +593,7 @@ def test_export_key_from_keyring(gpghome, gnupg, gpg, key_a_fp, keyring, gnupg_k
     assert res["comment"].endswith("-----END PGP PUBLIC KEY BLOCK-----\n")
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 @pytest.mark.parametrize("use_keyid", [True, False])
 def test_trust_key(gpghome, key_a_fp, gnupg, gpg, use_keyid):
     keyid = key_a_fp[-16:] if use_keyid else None
@@ -646,8 +634,7 @@ def test_trust_key_keyring(
     assert key_info[0]["trust"] == "u"
 
 
-@pytest.mark.usefixtures("privkeys_present")
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
+@pytest.mark.usefixtures("_privkeys_present")
 @pytest.mark.requires_random_entropy
 def test_sign(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(secret=True, keys=key_a_fp)
@@ -657,7 +644,6 @@ def test_sign(gpghome, gpg, gnupg, key_a_fp):
     assert res.endswith(b"-----END PGP SIGNATURE-----\n")
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 @pytest.mark.requires_random_entropy
 def test_sign_with_keyring(
     gpghome, gpg, gnupg, key_a_fp, gnupg_privkeyring, keyring_privkeys
@@ -680,7 +666,7 @@ def test_sign_with_keyring(
     ],
     indirect=["sig"],
 )
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_verify(gpg, gpghome, signed_data, sig, expected, key_a_fp):
     res = gpg.verify(filename=str(signed_data), gnupghome=str(gpghome), signature=sig)
     assert res["res"] is expected
@@ -723,7 +709,7 @@ def test_gpg_verify(gpg, gpghome, signed_data, sig, expected, key_a_fp):
     ],
     indirect=["sig"],
 )
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_verify_signed_by_any(
     gpg, gpghome, signed_data, sig, by, expected, request
 ):
@@ -767,7 +753,7 @@ def test_gpg_verify_signed_by_any(
     ],
     indirect=["sig"],
 )
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_verify_signed_by_all(
     gpg, gpghome, signed_data, sig, by, expected, request
 ):
@@ -781,7 +767,7 @@ def test_gpg_verify_signed_by_all(
     assert res["res"] is expected
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_verify(gpghome, gpg, sig, signed_data, key_a_fp):
     res = gpg.verify(
         filename=str(signed_data),
@@ -808,7 +794,7 @@ def test_verify_with_keyring(gpghome, gnupg, gpg, keyring, sig, signed_data, key
     assert res["key_id"] == key_a_fp[-16:]
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 @pytest.mark.requires_random_entropy
 def test_encrypt(gpghome, gpg, gnupg, key_b_fp):
     assert gnupg.list_keys(keys=key_b_fp)
@@ -843,8 +829,7 @@ def test_encrypt_with_keyring(gpghome, gpg, gnupg, key_a_fp, keyring, gnupg_keyr
     assert res["comment"].endswith(b"-----END PGP MESSAGE-----\n")
 
 
-@pytest.mark.usefixtures("privkeys_present")
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
+@pytest.mark.usefixtures("_privkeys_present")
 def test_decrypt(gpghome, gpg, gnupg, secret_message, key_a_fp):
     assert gnupg.list_keys(secret=True, keys=key_a_fp)
     res = gpg.decrypt(text=secret_message, gnupghome=str(gpghome))
@@ -853,7 +838,6 @@ def test_decrypt(gpghome, gpg, gnupg, secret_message, key_a_fp):
     assert res["comment"] == b"I like turtles"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 def test_decrypt_with_keyring(
     gpghome, gpg, gnupg, gnupg_privkeyring, keyring_privkeys, secret_message, key_a_fp
 ):

@@ -473,8 +473,8 @@ def create_key(
         an epoch value, or 0 for a non-expiring key.
 
     use_passphrase
-        Whether to use a passphrase with the signing key. Passphrase is retrieved
-        from Pillar value ``gpg_passphrase``.
+        Whether to use a passphrase with the signing key. The passphrase is
+        retrieved from the Pillar key ``gpg_passphrase``.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.
@@ -583,8 +583,8 @@ def delete_key(
         Specify the location where the GPG keyring and related files are stored.
 
     use_passphrase
-        Whether to use a passphrase with the signing key. Passphrase is retrieved
-        from Pillar value ``gpg_passphrase``. Note that this defaults to True here,
+        Whether to use a passphrase with the signing key. The passphrase is retrieved
+        from the Pillar key ``gpg_passphrase``. Note that this defaults to True here,
         contrary to the rest of the module functions that provide this parameter.
 
         .. versionadded:: 3003
@@ -923,7 +923,7 @@ def export_key(
 
     use_passphrase
         Whether to use a passphrase to export the secret key.
-        Passphrase is retrieved from Pillar value ``gpg_passphrase``.
+        The passphrase is retrieved from the Pillar key ``gpg_passphrase``.
 
         .. versionadded:: 3003
 
@@ -1222,8 +1222,8 @@ def sign(
         Instead of printing to standard out, write the output to this path.
 
     use_passphrase
-        Whether to use a passphrase with the signing key. Passphrase is retrieved
-        from Pillar value ``gpg_passphrase``.
+        Whether to use a passphrase with the signing key. The passphrase is
+        retrieved from the Pillar key ``gpg_passphrase``.
 
     gnupghome
         Specify the location where the GPG keyring and related files are stored.
@@ -1509,7 +1509,7 @@ def encrypt(
 
     use_passphrase
         Whether to use a passphrase with the signing key.
-        Passphrase is retrieved from Pillar value ``gpg_passphrase``.
+        The passphrase is retrieved from the Pillar key ``gpg_passphrase``.
 
     always_trust
         Skip key validation and assume that used keys are fully trusted.
