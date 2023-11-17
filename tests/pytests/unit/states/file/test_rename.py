@@ -139,55 +139,54 @@ def test_rename(tmp_path):
                             assert filestate.rename(name, source) == ret
 
     mock_lex = MagicMock(side_effect=[True, False, False])
-    with patch.object(os.path, "isabs", mock_t):
-        with patch.object(os.path, "lexists", mock_lex):
-            with patch.object(os.path, "isdir", mock_f):
-                with patch.dict(
-                    filestate.__salt__,
-                    {
-                        "file.makedirs": MagicMock(
-                            side_effect=filestate.CommandExecutionError()
-                        )
-                    },
-                ):
-                    with patch.object(os.path, "islink", mock_f):
-                        with patch.dict(filestate.__opts__, {"test": False}):
-                            with patch.object(shutil, "move", MagicMock()):
-                                if salt.utils.platform.is_windows():
-                                    comt = "Drive C: is not mapped"
-                                else:
-                                    comt = "Drive  is not mapped"
-                                ret.update(
-                                    {
-                                        "name": name,
-                                        "comment": comt,
-                                        "result": False,
-                                        "changes": {},
-                                    }
-                                )
-                                assert (
-                                    filestate.rename(name, source, makedirs=True) == ret
-                                )
+    with patch.object(os.path, "isabs", mock_t), patch.object(
+        os.path, "lexists", mock_lex
+    ), patch.object(os.path, "isdir", mock_f), patch.dict(
+        filestate.__salt__,
+        {"file.makedirs": MagicMock(side_effect=filestate.CommandExecutionError())},
+    ), patch.object(
+        os.path, "islink", mock_f
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.object(
+        shutil, "move", MagicMock()
+    ):
+        if salt.utils.platform.is_windows():
+            comt = "Drive C: is not mapped"
+        else:
+            comt = "Drive  is not mapped"
+        ret.update(
+            {
+                "name": name,
+                "comment": comt,
+                "result": False,
+                "changes": {},
+            }
+        )
+        assert filestate.rename(name, source, makedirs=True) == ret
 
     mock_lex = MagicMock(side_effect=[True, False, False])
     mock_link = str(tmp_path / "salt" / "link")
-    with patch.object(os.path, "isabs", mock_t):
-        with patch.object(os.path, "lexists", mock_lex):
-            with patch.object(os.path, "isdir", mock_t):
-                with patch.object(os.path, "islink", mock_t):
-                    with patch(
-                        "salt.utils.path.readlink", MagicMock(return_value=mock_link)
-                    ):
-                        with patch.dict(filestate.__opts__, {"test": False}):
-                            with patch.object(os, "symlink", MagicMock()):
-                                with patch.object(os, "unlink", MagicMock()):
-                                    comt = 'Moved "{}" to "{}"'.format(source, name)
-                                    ret.update(
-                                        {
-                                            "name": name,
-                                            "comment": comt,
-                                            "result": True,
-                                            "changes": {name: source},
-                                        }
-                                    )
-                                    assert filestate.rename(name, source) == ret
+    with patch.object(os.path, "isabs", mock_t), patch.object(
+        os.path, "lexists", mock_lex
+    ), patch.object(os.path, "isdir", mock_t), patch.object(
+        os.path, "islink", mock_t
+    ), patch(
+        "salt.utils.path.readlink", MagicMock(return_value=mock_link)
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.object(
+        os, "symlink", MagicMock()
+    ), patch.object(
+        os, "unlink", MagicMock()
+    ):
+        comt = 'Moved "{}" to "{}"'.format(source, name)
+        ret.update(
+            {
+                "name": name,
+                "comment": comt,
+                "result": True,
+                "changes": {name: source},
+            }
+        )
+        assert filestate.rename(name, source) == ret
