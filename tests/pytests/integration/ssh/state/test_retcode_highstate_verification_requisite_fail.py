@@ -39,38 +39,20 @@ def state_tree_req_fail(base_env_state_tree_root_dir):
         yield
 
 
-def test_retcode_state_sls_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.sls", "fail_req")
-    _assert_ret(ret, EX_AGGREGATE)
-
-
-def test_retcode_state_highstate_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.highstate")
-    _assert_ret(ret, EX_AGGREGATE)
-
-
-def test_retcode_state_show_sls_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.show_sls", "fail_req")
-    _assert_ret(ret, EX_AGGREGATE)
-
-
-def test_retcode_state_show_low_sls_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.show_low_sls", "fail_req")
-    _assert_ret(ret, EX_AGGREGATE)
-
-
-def test_retcode_state_show_lowstate_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.show_lowstate")
-    # state.show_lowstate exits with 0 for non-ssh as well
-    _assert_ret(ret, 0)
-
-
-def test_retcode_state_top_invalid_requisite(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.top", "top.sls")
-    _assert_ret(ret, EX_AGGREGATE)
-
-
-def _assert_ret(ret, retcode):
+@pytest.mark.parametrize(
+    "args,retcode",
+    (
+        (("state.sls", "fail_req"), EX_AGGREGATE),
+        (("state.highstate",), EX_AGGREGATE),
+        (("state.show_sls", "fail_req"), EX_AGGREGATE),
+        (("state.show_low_sls", "fail_req"), EX_AGGREGATE),
+        # state.show_lowstate exits with 0 for non-ssh as well
+        (("state.show_lowstate",), 0),
+        (("state.top", "top.sls"), EX_AGGREGATE),
+    ),
+)
+def test_it(salt_ssh_cli, args, retcode):
+    ret = salt_ssh_cli.run(*args)
     assert ret.returncode == retcode
     assert isinstance(ret.data, list)
     assert ret.data
