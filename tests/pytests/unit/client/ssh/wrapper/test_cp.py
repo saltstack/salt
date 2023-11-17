@@ -202,7 +202,7 @@ def _setup(fs_root, cache_root):
 
         path = os.path.join(saltenv_root, "foo.txt")
         with salt.utils.files.fopen(path, "w") as fp_:
-            fp_.write("This is a test file in the '{}' saltenv.\n".format(saltenv))
+            fp_.write(f"This is a test file in the '{saltenv}' saltenv.\n")
         (Path(saltenv_root) / "dirtofile").touch()
         (Path(saltenv_root) / "filetodir").mkdir()
         (Path(saltenv_root) / "filetodir" / "foo.sh").touch()
@@ -235,7 +235,7 @@ def test_cache_dir(client, cache_root):
     Ensure entire directory is cached to correct location
     """
     for saltenv in _saltenvs():
-        assert client.cache_dir("salt://{}".format(SUBDIR), saltenv, cachedir=None)
+        assert client.cache_dir(f"salt://{SUBDIR}", saltenv, cachedir=None)
         for subdir_file in _subdir_files():
             cache_loc = os.path.join(
                 cache_root,
@@ -282,9 +282,7 @@ def test_cache_dir_with_alternate_cachedir_and_absolute_path(
     alt_cachedir = os.path.join(tmp_path, "abs_cachedir")
 
     for saltenv in _saltenvs():
-        assert client.cache_dir(
-            "salt://{}".format(SUBDIR), saltenv, cachedir=alt_cachedir
-        )
+        assert client.cache_dir(f"salt://{SUBDIR}", saltenv, cachedir=alt_cachedir)
         for subdir_file in _subdir_files():
             cache_loc = os.path.join(
                 cache_root,
@@ -326,9 +324,7 @@ def test_cache_dir_with_alternate_cachedir_and_relative_path(client, cache_root)
     alt_cachedir = "foo"
 
     for saltenv in _saltenvs():
-        assert client.cache_dir(
-            "salt://{}".format(SUBDIR), saltenv, cachedir=alt_cachedir
-        )
+        assert client.cache_dir(f"salt://{SUBDIR}", saltenv, cachedir=alt_cachedir)
         for subdir_file in _subdir_files():
             cache_loc = os.path.join(
                 cache_root,
@@ -488,7 +484,7 @@ def test_cache_dest(client, cache_root):
         )
 
     def _check(ret, expected):
-        assert ret == expected, "{} != {}".format(ret, expected)
+        assert ret == expected, f"{ret} != {expected}"
 
     _check(client.cache_dest(f"https://{relpath}"), _external())
 
