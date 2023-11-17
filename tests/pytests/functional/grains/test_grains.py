@@ -1,9 +1,4 @@
-import logging
-
 import pytest
-
-log = logging.getLogger(__name__)
-
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
@@ -15,8 +10,10 @@ pytestmark = [
 
 
 def test_grains(grains):
-    log.warning(f"DGM test_grains '{grains}'")
-
+    """
+    Test to ensure that the lsb_distrib_xxxx grains are
+    populated on Debian machines
+    """
     assert "lsb_distrib_id" in grains
     assert "lsb_distrib_release" in grains
     assert "lsb_distrib_codename" in grains
