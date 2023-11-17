@@ -2175,8 +2175,9 @@ def _linux_distribution_data():
             "rocky",
             "ubuntu",
         ):
-            # Solely use os-release data. See description of the function.
-            return grains
+            if lsb_has_error is False:
+                # Solely use os-release data. See description of the function.
+                return grains
 
     except OSError:
         os_release = {}
