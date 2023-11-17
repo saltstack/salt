@@ -1,5 +1,6 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
+    :codeauthor: Gareth J. Greenaway <greenaway@vmware.com>
 """
 
 import pytest
@@ -18,6 +19,11 @@ pytestmark = [
 # Grab some small packages available online for brew
 
 
+@pytest.fixture(scope="module")
+def pkg(modules):
+    return modules.pkg
+
+
 @pytest.fixture(scope="function")
 def add_pkg():
     yield "algol68g"
@@ -29,72 +35,66 @@ def del_pkg():
 
 
 @pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli, add_pkg, del_pkg):
+def setup_teardown_vars(pkg, add_pkg, del_pkg):
     try:
         yield
     finally:
-        ret = salt_call_cli.run("pkg.list_pkgs")
-        pkg_list = ret.data
+        pkg_list = pkg.list_pkgs()
 
         # Remove any installed packages
         if add_pkg in pkg_list:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
         if del_pkg in pkg_list:
-            salt_call_cli.run("pkg.remove", del_pkg)
+            pkg.remove(del_pkg)
 
 
-def test_brew_install(salt_call_cli, add_pkg, setup_teardown_vars):
+def test_brew_install(pkg, add_pkg, setup_teardown_vars):
     """
     Tests the installation of packages
     """
     try:
-        salt_call_cli.run("pkg.install", add_pkg)
-        ret = salt_call_cli.run("pkg.list_pkgs")
-        pkg_list = ret.data
+        pkg.install(add_pkg)
+        pkg_list = pkg.list_pkgs()
         try:
             assert add_pkg in pkg_list
         except AssertionError:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
             raise
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", add_pkg)
+        pkg.remove(add_pkg)
         raise
 
 
-def test_remove(salt_call_cli, del_pkg, setup_teardown_vars):
+def test_remove(pkg, del_pkg, setup_teardown_vars):
     """
     Tests the removal of packages
     """
     try:
         # Install a package to delete - If unsuccessful, skip the test
-        salt_call_cli.run("pkg.install", del_pkg)
-        ret = salt_call_cli.run("pkg.list_pkgs")
-        pkg_list = ret.data
+        pkg.install(del_pkg)
+        pkg_list = pkg.list_pkgs()
         if del_pkg not in pkg_list:
-            salt_call_cli.run("pkg.install", del_pkg)
+            pkg.install(del_pkg)
             pytest.skip("Failed to install a package to delete")
 
         # Now remove the installed package
-        salt_call_cli.run("pkg.remove", del_pkg)
-        ret = salt_call_cli.run("pkg.list_pkgs")
-        del_list = ret.data
+        pkg.remove(del_pkg)
+        del_list = pkg.list_pkgs()
         assert del_pkg not in del_list
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", del_pkg)
+        pkg.remove(del_pkg)
         raise
 
 
-def test_version(salt_call_cli, add_pkg, setup_teardown_vars):
+def test_version(pkg, add_pkg, setup_teardown_vars):
     """
     Test pkg.version for mac. Installs a package and then checks we can get
     a version for the installed package.
     """
     try:
-        salt_call_cli.run("pkg.install", add_pkg)
-        ret = salt_call_cli.run("pkg.list_pkgs")
-        pkg_list = ret.data
-        ret = salt_call_cli.run("pkg.version", add_pkg)
-        version = ret.data
+        pkg.install(add_pkg)
+        pkg_list = pkg.list_pkgs()
+        version = pkg.version(add_pkg)
         try:
             assert version, "version: {} is empty, or other issue is present".format(
                 version
@@ -111,14 +111,14 @@ def test_version(salt_call_cli, add_pkg, setup_teardown_vars):
                 add_pkg, version, pkg_list[add_pkg]
             )
         except AssertionError:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
             raise
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", add_pkg)
+        pkg.remove(add_pkg)
         raise
 
 
-def test_latest_version(salt_call_cli, add_pkg, setup_teardown_vars):
+def test_latest_version(pkg, add_pkg, setup_teardown_vars):
     """
     Test pkg.latest_version:
       - get the latest version available
@@ -127,41 +127,38 @@ def test_latest_version(salt_call_cli, add_pkg, setup_teardown_vars):
       - check that the latest version is empty after installing it
     """
     try:
-        salt_call_cli.run("pkg.remove", add_pkg)
-        ret = salt_call_cli.run("pkg.latest_version", add_pkg)
-        uninstalled_latest = ret.data
+        pkg.remove(add_pkg)
+        uninstalled_latest = pkg.latest_version(add_pkg)
 
-        salt_call_cli.run("pkg.install", add_pkg)
-        ret = salt_call_cli.run("pkg.latest_version", add_pkg)
-        installed_latest = ret.data
-        version = salt_call_cli.run("pkg.version", add_pkg)
+        pkg.install(add_pkg)
+        installed_latest = pkg.latest_version(add_pkg)
+        version = pkg.version(add_pkg)
         try:
             assert isinstance(uninstalled_latest, str)
-            assert installed_latest == version.data
+            assert installed_latest == version
         except AssertionError:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
             raise
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", add_pkg)
+        pkg.remove(add_pkg)
         raise
 
 
-def test_refresh_db(salt_call_cli, setup_teardown_vars):
+def test_refresh_db(pkg, setup_teardown_vars):
     """
     Integration test to ensure pkg.refresh_db works with brew
     """
-    refresh_brew = salt_call_cli.run("pkg.refresh_db")
-    assert refresh_brew.data
+    refresh_brew = pkg.refresh_db()
+    assert refresh_brew
 
 
-def test_list_upgrades(salt_call_cli, add_pkg, setup_teardown_vars):
+def test_list_upgrades(pkg, add_pkg, setup_teardown_vars):
     """
     Test pkg.list_upgrades: data is in the form {'name1': 'version1',
     'name2': 'version2', ... }
     """
     try:
-        ret = salt_call_cli.run("pkg.list_upgrades")
-        upgrades = ret.data
+        upgrades = pkg.list_upgrades()
         try:
             assert isinstance(upgrades, dict)
             if upgrades:
@@ -169,30 +166,29 @@ def test_list_upgrades(salt_call_cli, add_pkg, setup_teardown_vars):
                     assert isinstance(name, str)
                     assert isinstance(upgrades[name], str)
         except AssertionError:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
             raise
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", add_pkg)
+        pkg.remove(add_pkg)
         raise
 
 
-def test_info_installed(salt_call_cli, add_pkg, setup_teardown_vars):
+def test_info_installed(pkg, add_pkg, setup_teardown_vars):
     """
     Test pkg.info_installed: info returned has certain fields used by
     mac_brew.latest_version
     """
     try:
-        salt_call_cli.run("pkg.install", add_pkg)
-        ret = salt_call_cli.run("pkg.info_installed", add_pkg)
-        info = ret.data
+        pkg.install(add_pkg)
+        info = pkg.info_installed(add_pkg)
         try:
             assert add_pkg in info
             assert "versions" in info[add_pkg]
             assert "revision" in info[add_pkg]
             assert "stable" in info[add_pkg]["versions"]
         except AssertionError:
-            salt_call_cli.run("pkg.remove", add_pkg)
+            pkg.remove(add_pkg)
             raise
     except CommandExecutionError:
-        salt_call_cli.run("pkg.remove", add_pkg)
+        pkg.remove(add_pkg)
         raise
