@@ -498,10 +498,10 @@ def dot_vals(value):
     """
     ret = {}
     for key, val in __pillar__.get("master", {}).items():
-        if key.startswith("{}.".format(value)):
+        if key.startswith(f"{value}."):
             ret[key] = val
     for key, val in __opts__.items():
-        if key.startswith("{}.".format(value)):
+        if key.startswith(f"{value}."):
             ret[key] = val
     return ret
 
