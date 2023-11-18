@@ -8,6 +8,10 @@ import salt.utils.pyinstaller.rthooks._overrides as overrides
 from tests.support import mock
 from tests.support.helpers import PatchedEnviron
 
+pytestmark = [
+    pytest.mark.skip(reason="PyInstaller is no longer used."),
+]
+
 
 @pytest.fixture(params=("LD_LIBRARY_PATH", "LIBPATH"))
 def envvar(request):
