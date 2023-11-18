@@ -154,14 +154,14 @@ def get_friendly_name(cert, password, legacy=False):
 
         salt '*' keychain.get_friendly_name /tmp/test.p12 test123 legacy=True
     """
-    legacy_arg = ""
+    openssl_cmd = "openssl pkcs12"
     if legacy:
-        legacy_arg = "-legacy"
+        openssl_cmd = f"{openssl_cmd} -legacy"
 
     cmd = (
-        "openssl pkcs12 {} -in {} -passin pass:{} -info -nodes -nokeys 2> /dev/null | "
+        "{} -in {} -passin pass:{} -info -nodes -nokeys 2> /dev/null | "
         "grep friendlyName:".format(
-            legacy_arg, shlex.quote(cert), shlex.quote(password)
+            openssl_cmd, shlex.quote(cert), shlex.quote(password)
         )
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
