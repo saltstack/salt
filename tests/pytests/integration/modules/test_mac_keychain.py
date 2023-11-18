@@ -98,7 +98,8 @@ def test_mac_keychain_get_friendly_name(setup_teardown_vars, salt_call_cli, shel
         salt_call_cli.run("keychain.uninstall", cert_alias)
         pytest.skip("Failed to install keychain")
 
-    openssl_version = shell.run("openssl", "version")
+    ret = shell.run("openssl", "version")
+    openssl_version = ret.stdout.split()[1]
 
     # openssl versions under 3.0.0 do not include legacy flag
     if salt.utils.versions.compare(ver1=openssl_version, oper="<", ver2="3.0.0"):
