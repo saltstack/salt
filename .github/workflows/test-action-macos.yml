@@ -202,11 +202,6 @@ jobs:
             -k "mac or darwin" --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
-      - name: ssh into vm
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-
       - name: Run Slow/Changed Tests
         id: run-slow-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
