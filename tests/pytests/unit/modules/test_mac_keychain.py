@@ -88,6 +88,7 @@ def test_get_friendly_name():
 
         assert out == expected
 
+    mock = MagicMock(return_value="friendlyName: ID Installer Salt")
     with patch.dict(keychain.__salt__, {"cmd.run": mock}):
         out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd", legacy=False)
         mock.assert_called_once_with(
