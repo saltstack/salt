@@ -313,8 +313,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-          cache-suffix: changelog
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-changelog
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -434,8 +433,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-          cache-suffix: build
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-build
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -2775,8 +2773,7 @@ jobs:
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-          cache-suffix: coverage
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-coverage
 
       - name: Install Nox
         run: |

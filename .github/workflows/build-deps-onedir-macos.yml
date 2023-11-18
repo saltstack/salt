@@ -64,8 +64,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}
-          cache-suffix: build-deps-macos
+          cache-prefix: ${{ inputs.cache-seed }}-build-deps-macos
 
       - name: Setup Relenv
         id: setup-relenv

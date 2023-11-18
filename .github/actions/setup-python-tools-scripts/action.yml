@@ -7,10 +7,6 @@ inputs:
     required: true
     type: string
     description: Seed used to invalidate caches
-  cache-suffix:
-    required: false
-    type: string
-    description: Seed used to invalidate caches
   cwd:
     type: string
     description: The directory the salt checkout is located in
@@ -42,8 +38,8 @@ runs:
       shell: bash
       run: |
         VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
-          steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}${{
-          inputs.cache-suffix || '' }}"  | sha256sum | cut -d ' ' -f 1)
+          steps.get-python-version.outputs.version-sha256sum }}|${{
+          hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
         echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
         echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
 
