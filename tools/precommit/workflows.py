@@ -122,6 +122,7 @@ def generate_workflows(ctx: Context):
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
             ("macos-13", "macOS 13", "x86_64"),
+            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
@@ -177,6 +178,7 @@ def generate_workflows(ctx: Context):
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
             ("macos-13", "macOS 13", "x86_64"),
+            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
@@ -226,6 +228,7 @@ def generate_workflows(ctx: Context):
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
             ("macos-13", "macOS 13", "x86_64"),
+            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
