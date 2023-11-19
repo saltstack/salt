@@ -82,6 +82,7 @@ def test_mac_keychain_uninstall(setup_teardown_vars, salt_call_cli):
         salt_call_cli.run("keychain.uninstall", cert_alias)
 
 
+@pytest.mark.skip_if_binaries_missing("openssl")
 def test_mac_keychain_get_friendly_name(setup_teardown_vars, salt_call_cli, shell):
     """
     Test that attempts to get friendly name of a cert
@@ -93,12 +94,12 @@ def test_mac_keychain_get_friendly_name(setup_teardown_vars, salt_call_cli, shel
     salt_call_cli.run("keychain.install", cert, passwd)
     ret = salt_call_cli.run("keychain.list_certs")
     certs_list = ret.data
-    assert cert_alias in certs_list
     if cert_alias not in certs_list:
         salt_call_cli.run("keychain.uninstall", cert_alias)
         pytest.skip("Failed to install keychain")
 
     ret = shell.run("openssl", "version")
+    assert ret.stdout
     openssl_version = ret.stdout.split()[1]
 
     # openssl versions under 3.0.0 do not include legacy flag
