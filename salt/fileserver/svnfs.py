@@ -49,6 +49,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
@@ -192,7 +193,7 @@ def init():
             # mountpoint not specified
             pass
 
-        hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+        hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
         repo_hash = hash_type(repo_url).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):

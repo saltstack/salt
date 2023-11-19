@@ -1,5 +1,4 @@
-  <%- for slug, display_name, arch, pkg_type in test_salt_pkg_listing["linux"] %>
-
+  <%- for slug, display_name, arch, pkg_type, fips in test_salt_pkg_listing["linux"] %>
     <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
 
   <{ job_name }>:
@@ -24,6 +23,9 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+    <%- if fips == "fips" %>
+      fips: true
+    <%- endif %>
 
   <%- endfor %>
 

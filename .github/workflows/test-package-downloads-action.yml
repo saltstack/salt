@@ -71,11 +71,17 @@ jobs:
           - distro-slug: almalinux-8-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: almalinux-8-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: almalinux-9
             arch: x86_64
             pkg-type: package
           - distro-slug: almalinux-9-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: almalinux-9-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: amazonlinux-2
             arch: x86_64
@@ -83,11 +89,26 @@ jobs:
           - distro-slug: amazonlinux-2-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: amazonlinux-2-arm64
+            arch: arm64
+            pkg-type: package
+          - distro-slug: amazonlinux-2023
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: amazonlinux-2023-arm64
+            arch: aarch64
+            pkg-type: package
+          - distro-slug: amazonlinux-2023-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: centos-7
             arch: x86_64
             pkg-type: package
           - distro-slug: centos-7-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: centos-7-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: centosstream-8
             arch: x86_64
@@ -95,11 +116,17 @@ jobs:
           - distro-slug: centosstream-8-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: centosstream-8-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: centosstream-9
             arch: x86_64
             pkg-type: package
           - distro-slug: centosstream-9-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: centosstream-9-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: debian-10
             arch: x86_64
@@ -122,11 +149,17 @@ jobs:
           - distro-slug: fedora-37-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: fedora-37-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: fedora-38
             arch: x86_64
             pkg-type: package
           - distro-slug: fedora-38-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: fedora-38-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: photonos-3
             arch: x86_64
@@ -134,17 +167,26 @@ jobs:
           - distro-slug: photonos-3-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: photonos-3-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: photonos-4
             arch: x86_64
             pkg-type: package
           - distro-slug: photonos-4-arm64
             arch: aarch64
             pkg-type: package
+          - distro-slug: photonos-4-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: photonos-5
             arch: x86_64
             pkg-type: package
           - distro-slug: photonos-5-arm64
             arch: aarch64
+            pkg-type: package
+          - distro-slug: photonos-5-arm64
+            arch: arm64
             pkg-type: package
           - distro-slug: ubuntu-20.04
             arch: x86_64
@@ -178,7 +220,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -186,13 +228,13 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
       - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
         with:
           path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache

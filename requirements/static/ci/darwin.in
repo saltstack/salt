@@ -5,7 +5,7 @@
 --constraint=../pkg/py{py_version}/{platform}.txt
 
 yamlordereddictloader
-pygit2>=1.2.0
+pygit2>=1.10.1
 yamllint
 mercurial
 hglib

@@ -16,7 +16,7 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
-      python-version:
+      gh-actions-python-version:
         required: false
         type: string
         description: The python version to run tests with
@@ -56,6 +56,16 @@ on:
         type: boolean
         description: Skip Publishing JUnit Reports
         default: false
+      workflow-slug:
+        required: false
+        type: string
+        description: Which workflow is running.
+        default: ci
+      default-timeout:
+        required: false
+        type: number
+        description: Timeout, in minutes, for the test job(Default 360, 6 hours).
+        default: 360
 
 env:
   COLUMNS: 190
@@ -85,14 +95,14 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix ${{ inputs.distro-slug }}
+          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
 
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
-    # Partial test runs(no chunk parallelization), 5 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && 120 || 300 }}
+    # Partial test runs(no chunk parallelization), 6 Hours
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     needs:
       - generate-matrix
     strategy:
@@ -137,16 +147,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.gh-actions-python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.gh-actions-python-version }}"
 
       - name: Install Nox
         run: |
@@ -391,10 +401,10 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.gh-actions-python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.gh-actions-python-version }}"
 
       - name: Install Nox
         run: |

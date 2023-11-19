@@ -181,7 +181,7 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
-typing-extensions==4.2.0
+typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils
