@@ -760,6 +760,23 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  macos-13-xlarge-ci-deps:
+    name: macOS 13 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-macos
+    uses: ./.github/workflows/build-deps-ci-action-macos.yml
+    with:
+      distro-slug: macos-13-xlarge
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   almalinux-8-ci-deps:
     name: Alma Linux 8 Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1909,6 +1926,28 @@ jobs:
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  macos-13-xlarge-pkg-tests:
+    name: macOS 13 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-macos-pkgs-onedir
+      - macos-13-xlarge-ci-deps
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-13-xlarge
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2138,6 +2177,28 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      workflow-slug: nightly
+      default-timeout: 360
+
+  macos-13-xlarge:
+    name: macOS 13 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - macos-13-xlarge-ci-deps
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: darwin
       arch: x86_64
@@ -2782,6 +2843,7 @@ jobs:
       - windows-2022-ci-deps
       - macos-12-ci-deps
       - macos-13-ci-deps
+      - macos-13-xlarge-ci-deps
       - almalinux-8-ci-deps
       - almalinux-8-arm64-ci-deps
       - almalinux-9-ci-deps
@@ -2822,6 +2884,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
+      - macos-13-xlarge
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
@@ -3737,6 +3800,7 @@ jobs:
       - windows-2022-ci-deps
       - macos-12-ci-deps
       - macos-13-ci-deps
+      - macos-13-xlarge-ci-deps
       - almalinux-8-ci-deps
       - almalinux-8-arm64-ci-deps
       - almalinux-9-ci-deps
@@ -3777,6 +3841,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
+      - macos-13-xlarge
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
@@ -3893,6 +3958,7 @@ jobs:
       - ubuntu-2204-arm64-pkg-tests
       - macos-12-pkg-tests
       - macos-13-pkg-tests
+      - macos-13-xlarge-pkg-tests
       - windows-2016-nsis-pkg-tests
       - windows-2016-msi-pkg-tests
       - windows-2019-nsis-pkg-tests
