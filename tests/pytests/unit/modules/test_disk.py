@@ -274,7 +274,7 @@ def test_fstype():
     """
     device = "/dev/sdX1"
     fs_type = "ext4"
-    mock = MagicMock(return_value="FSTYPE\n{}".format(fs_type))
+    mock = MagicMock(return_value=f"FSTYPE\n{fs_type}")
     with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch.dict(
         disk.__salt__, {"cmd.run": mock}
     ), patch("salt.utils.path.which", MagicMock(return_value=True)):
@@ -291,7 +291,7 @@ def test_resize2fs():
         "salt.utils.path.which", MagicMock(return_value=True)
     ):
         disk.resize2fs(device)
-        mock.assert_called_once_with("resize2fs {}".format(device), python_shell=False)
+        mock.assert_called_once_with(f"resize2fs {device}", python_shell=False)
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")
@@ -305,6 +305,21 @@ def test_format_():
     with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
         disk.format_(device=device)
         mock.assert_any_call(["mkfs", "-t", "ext4", device], ignore_retcode=True)
+
+
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
+def test_format__nodiscard():
+    """
+    unit tests for disk.format_ with nodiscard parameter
+    """
+    device = "/dev/sdX1"
+    mock = MagicMock(return_value=0)
+    with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
+        disk.format_(device=device, discard=False)
+        mock.assert_any_call(
+            ["mkfs", "-t", "ext4", "-Enodiscard", device], ignore_retcode=True
+        )
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")

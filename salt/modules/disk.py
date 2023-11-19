@@ -71,7 +71,7 @@ def _clean_flags(args, caller):
         if flag in allowed:
             flags += flag
         else:
-            raise CommandExecutionError("Invalid flag passed to {}".format(caller))
+            raise CommandExecutionError(f"Invalid flag passed to {caller}")
     return flags
 
 
@@ -108,7 +108,7 @@ def usage(args=None):
     else:
         cmd = "df"
     if flags:
-        cmd += " -{}".format(flags)
+        cmd += f" -{flags}"
     ret = {}
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     oldline = None
@@ -126,7 +126,7 @@ def usage(args=None):
         else:
             oldline = None
         while len(comps) >= 2 and not comps[1].isdigit():
-            comps[0] = "{} {}".format(comps[0], comps[1])
+            comps[0] = f"{comps[0]} {comps[1]}"
             comps.pop(1)
         if len(comps) < 2:
             continue
@@ -172,7 +172,7 @@ def inodeusage(args=None):
     else:
         cmd = "df -iP"
     if flags:
-        cmd += " -{}".format(flags)
+        cmd += f" -{flags}"
     ret = {}
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     for line in out:
@@ -239,7 +239,7 @@ def percent(args=None):
             continue
         comps = line.split()
         while len(comps) >= 2 and not comps[1].isdigit():
-            comps[0] = "{} {}".format(comps[0], comps[1])
+            comps[0] = f"{comps[0]} {comps[1]}"
             comps.pop(1)
         if len(comps) < 2:
             continue
@@ -344,10 +344,10 @@ def tune(device, **kwargs):
             else:
                 args.append("getro")
             if kwargs[key] == "True" or kwargs[key] is True:
-                opts += "--{} ".format(key)
+                opts += f"--{key} "
             else:
-                opts += "--{} {} ".format(switch, kwargs[key])
-    cmd = "blockdev {}{}".format(opts, device)
+                opts += f"--{switch} {kwargs[key]} "
+    cmd = f"blockdev {opts}{device}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return dump(device, args)
 
@@ -363,7 +363,7 @@ def wipe(device):
         salt '*' disk.wipe /dev/sda1
     """
 
-    cmd = "wipefs -a {}".format(device)
+    cmd = f"wipefs -a {device}"
     try:
         out = __salt__["cmd.run_all"](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
@@ -419,7 +419,7 @@ def resize2fs(device):
 
         salt '*' disk.resize2fs /dev/sda1
     """
-    cmd = "resize2fs {}".format(device)
+    cmd = f"resize2fs {device}"
     try:
         out = __salt__["cmd.run_all"](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
@@ -437,6 +437,7 @@ def format_(
     lazy_itable_init=None,
     fat=None,
     force=False,
+    discard=True,
 ):
     """
     Format a filesystem onto a device
@@ -475,6 +476,11 @@ def format_(
 
         This option is dangerous, use it with caution.
 
+    discard
+        Attempt to discard blocks at mkfs time (enabled by default)
+
+        This option is only enabled for ext and xfs filesystems
+
     CLI Example:
 
     .. code-block:: bash
@@ -486,10 +492,15 @@ def format_(
         if fs_type[:3] == "ext":
             cmd.extend(["-i", str(inode_size)])
         elif fs_type == "xfs":
-            cmd.extend(["-i", "size={}".format(inode_size)])
+            cmd.extend(["-i", f"size={inode_size}"])
     if lazy_itable_init is not None:
         if fs_type[:3] == "ext":
-            cmd.extend(["-E", "lazy_itable_init={}".format(lazy_itable_init)])
+            cmd.extend(["-E", f"lazy_itable_init={lazy_itable_init}"])
+    if not discard:
+        if fs_type[:3] == "ext":
+            cmd.append("-Enodiscard")
+        elif fs_type == "xfs":
+            cmd.append("-K")
     if fat is not None and fat in (12, 16, 32):
         if fs_type[-3:] == "fat":
             cmd.extend(["-F", fat])
@@ -523,9 +534,7 @@ def fstype(device):
         salt '*' disk.fstype /dev/sdX1
     """
     if salt.utils.path.which("lsblk"):
-        lsblk_out = __salt__["cmd.run"](
-            "lsblk -o fstype {}".format(device)
-        ).splitlines()
+        lsblk_out = __salt__["cmd.run"](f"lsblk -o fstype {device}").splitlines()
         if len(lsblk_out) > 1:
             fs_type = lsblk_out[1].strip()
             if fs_type:
@@ -535,15 +544,13 @@ def fstype(device):
         # the fstype was not set on the block device, so inspect the filesystem
         # itself for its type
         if __grains__["kernel"] == "AIX" and os.path.isfile("/usr/sysv/bin/df"):
-            df_out = __salt__["cmd.run"](
-                "/usr/sysv/bin/df -n {}".format(device)
-            ).split()
+            df_out = __salt__["cmd.run"](f"/usr/sysv/bin/df -n {device}").split()
             if len(df_out) > 2:
                 fs_type = df_out[2]
                 if fs_type:
                     return fs_type
         else:
-            df_out = __salt__["cmd.run"]("df -T {}".format(device)).splitlines()
+            df_out = __salt__["cmd.run"](f"df -T {device}").splitlines()
             if len(df_out) > 1:
                 fs_type = df_out[1]
                 if fs_type:
@@ -559,7 +566,7 @@ def _hdparm(args, failhard=True):
     Fail hard when required
     return output when possible
     """
-    cmd = "hdparm {}".format(args)
+    cmd = f"hdparm {args}"
     result = __salt__["cmd.run_all"](cmd)
     if result["retcode"] != 0:
         msg = "{}: {}".format(cmd, result["stderr"])
@@ -598,9 +605,9 @@ def hdparms(disks, args=None):
     out = {}
     for disk in disks:
         if not disk.startswith("/dev"):
-            disk = "/dev/{}".format(disk)
+            disk = f"/dev/{disk}"
         disk_data = {}
-        for line in _hdparm("-{} {}".format(args, disk), False).splitlines():
+        for line in _hdparm(f"-{args} {disk}", False).splitlines():
             line = line.strip()
             if not line or line == disk + ":":
                 continue
@@ -700,7 +707,7 @@ def hpa(disks, size=None):
         if size <= 0:
             size = data["total"]
 
-        _hdparm("--yes-i-know-what-i-am-doing -Np{} {}".format(size, disk))
+        _hdparm(f"--yes-i-know-what-i-am-doing -Np{size} {disk}")
 
 
 def smart_attributes(dev, attributes=None, values=None):
@@ -726,7 +733,7 @@ def smart_attributes(dev, attributes=None, values=None):
     if not dev.startswith("/dev/"):
         dev = "/dev/" + dev
 
-    cmd = "smartctl --attributes {}".format(dev)
+    cmd = f"smartctl --attributes {dev}"
     smart_result = __salt__["cmd.run_all"](cmd, output_loglevel="quiet")
     if smart_result["retcode"] != 0:
         raise CommandExecutionError(smart_result["stderr"])
@@ -819,9 +826,9 @@ def _iostat_fbsd(interval, count, disks):
     Tested on FreeBSD, quite likely other BSD's only need small changes in cmd syntax
     """
     if disks is None:
-        iostat_cmd = "iostat -xC -w {} -c {} ".format(interval, count)
+        iostat_cmd = f"iostat -xC -w {interval} -c {count} "
     elif isinstance(disks, str):
-        iostat_cmd = "iostat -x -w {} -c {} {}".format(interval, count, disks)
+        iostat_cmd = f"iostat -x -w {interval} -c {count} {disks}"
     else:
         iostat_cmd = "iostat -x -w {} -c {} {}".format(interval, count, " ".join(disks))
 
@@ -874,9 +881,9 @@ def _iostat_fbsd(interval, count, disks):
 
 def _iostat_linux(interval, count, disks):
     if disks is None:
-        iostat_cmd = "iostat -x {} {} ".format(interval, count)
+        iostat_cmd = f"iostat -x {interval} {count} "
     elif isinstance(disks, str):
-        iostat_cmd = "iostat -xd {} {} {}".format(interval, count, disks)
+        iostat_cmd = f"iostat -xd {interval} {count} {disks}"
     else:
         iostat_cmd = "iostat -xd {} {} {}".format(interval, count, " ".join(disks))
 
@@ -924,9 +931,9 @@ def _iostat_aix(interval, count, disks):
     log.debug("AIX disk iostat entry")
 
     if disks is None:
-        iostat_cmd = "iostat -dD {} {} ".format(interval, count)
+        iostat_cmd = f"iostat -dD {interval} {count} "
     elif isinstance(disks, str):
-        iostat_cmd = "iostat -dD {} {} {}".format(disks, interval, count)
+        iostat_cmd = f"iostat -dD {disks} {interval} {count}"
     else:
         iostat_cmd = "iostat -dD {} {} {}".format(" ".join(disks), interval, count)
 
