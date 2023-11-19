@@ -5733,11 +5733,14 @@ def check_file_meta(
                 )
             if sfn:
                 try:
-                    changes["diff"] = get_diff(
+                    diff = get_diff(
                         name, sfn, template=True, show_filenames=False
                     )
                 except CommandExecutionError as exc:
-                    changes["diff"] = exc.strerror
+                    diff = exc.strerror
+
+                if diff:
+                    changes["diff"] = diff
             else:
                 changes["sum"] = "Checksum differs"
 
