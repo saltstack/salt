@@ -2,8 +2,6 @@
 integration tests for mac_xattr
 """
 
-import os
-
 import pytest
 
 pytestmark = [
@@ -16,16 +14,16 @@ pytestmark = [
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(salt_call_cli, tmp_path):
-    test_file = str(tmp_path / "xattr_test_file.txt")
+    test_file = tmp_path / "xattr_test_file.txt"
     no_file = str(tmp_path / "xattr_no_file.txt")
 
-    salt_call_cli.run("file.touch", test_file)
+    test_file.touch()
 
     try:
-        yield test_file, no_file
+        yield str(test_file), no_file
     finally:
-        if os.path.exists(test_file):
-            os.remove(test_file)
+        if test_file.exists():
+            test_file.unlink()
 
 
 def test_list_no_xattr(salt_call_cli, setup_teardown_vars):

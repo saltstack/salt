@@ -13,8 +13,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli):
     AGREE_INSTALLED = False
     try:
         ret = salt_call_cli.run("pkg.list_pkgs")
@@ -26,7 +26,7 @@ def setup_teardown_vars(salt_call_cli):
             salt_call_cli.run("pkg.remove", "agree")
 
 
-def test_list_pkgs(salt_call_cli, setup_teardown_vars):
+def test_list_pkgs(salt_call_cli):
     """
     Test pkg.list_pkgs
     """
@@ -36,7 +36,7 @@ def test_list_pkgs(salt_call_cli, setup_teardown_vars):
     assert "agree" in pkg_list_ret.data
 
 
-def test_latest_version(salt_call_cli, setup_teardown_vars):
+def test_latest_version(salt_call_cli):
     """
     Test pkg.latest_version
     """
@@ -46,7 +46,7 @@ def test_latest_version(salt_call_cli, setup_teardown_vars):
     assert "agree" in result.data
 
 
-def test_remove(salt_call_cli, setup_teardown_vars):
+def test_remove(salt_call_cli):
     """
     Test pkg.remove
     """
@@ -57,7 +57,7 @@ def test_remove(salt_call_cli, setup_teardown_vars):
 
 
 @pytest.mark.destructive_test
-def test_install(salt_call_cli, setup_teardown_vars):
+def test_install(salt_call_cli):
     """
     Test pkg.install
     """
@@ -67,7 +67,7 @@ def test_install(salt_call_cli, setup_teardown_vars):
     assert "agree" in installed.data
 
 
-def test_list_upgrades(salt_call_cli, setup_teardown_vars):
+def test_list_upgrades(salt_call_cli):
     """
     Test pkg.list_upgrades
     """
@@ -75,7 +75,7 @@ def test_list_upgrades(salt_call_cli, setup_teardown_vars):
     assert isinstance(upgrade.data, dict)
 
 
-def test_upgrade_available(salt_call_cli, setup_teardown_vars):
+def test_upgrade_available(salt_call_cli):
     """
     Test pkg.upgrade_available
     """
@@ -86,7 +86,7 @@ def test_upgrade_available(salt_call_cli, setup_teardown_vars):
     assert not upgrade_available.data
 
 
-def test_refresh_db(salt_call_cli, setup_teardown_vars):
+def test_refresh_db(salt_call_cli):
     """
     Test pkg.refresh_db
     """
@@ -94,7 +94,7 @@ def test_refresh_db(salt_call_cli, setup_teardown_vars):
     assert refresh.data
 
 
-def test_upgrade(salt_call_cli, setup_teardown_vars):
+def test_upgrade(salt_call_cli):
     """
     Test pkg.upgrade
     """

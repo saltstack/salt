@@ -7,7 +7,6 @@ import os
 import pytest
 
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -18,7 +17,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function", autouse=True)
 def setup_teardown_vars(salt_call_cli, base_env_state_tree_root_dir):
     cert = os.path.join(RUNTIME_VARS.FILES, "file", "base", "certs", "salttest.p12")
     cert_alias = "Salt Test"
@@ -33,7 +32,7 @@ def setup_teardown_vars(salt_call_cli, base_env_state_tree_root_dir):
             salt_call_cli.run("keychain.uninstall", cert_alias)
 
 
-def test_mac_keychain_install(setup_teardown_vars, salt_call_cli):
+def test_mac_keychain_install(salt_call_cli):
     """
     Tests that attempts to install a certificate
     """
@@ -53,7 +52,7 @@ def test_mac_keychain_install(setup_teardown_vars, salt_call_cli):
     assert cert_alias in certs_list
 
 
-def test_mac_keychain_uninstall(setup_teardown_vars, salt_call_cli):
+def test_mac_keychain_uninstall(salt_call_cli):
     """
     Tests that attempts to uninstall a certificate
     """
@@ -76,14 +75,11 @@ def test_mac_keychain_uninstall(setup_teardown_vars, salt_call_cli):
     certs_list = ret.data
 
     # check to ensure the cert was uninstalled
-    try:
-        assert cert_alias not in str(certs_list)
-    except CommandExecutionError:
-        salt_call_cli.run("keychain.uninstall", cert_alias)
+    assert cert_alias not in str(certs_list)
 
 
 @pytest.mark.skip_if_binaries_missing("openssl")
-def test_mac_keychain_get_friendly_name(setup_teardown_vars, salt_call_cli, shell):
+def test_mac_keychain_get_friendly_name(salt_call_cli, shell):
     """
     Test that attempts to get friendly name of a cert
     """

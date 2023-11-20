@@ -13,8 +13,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli):
     ret = salt_call_cli.run("softwareupdate.list_ignored")
     IGNORED_LIST = ret.data
 
@@ -41,7 +41,7 @@ def setup_teardown_vars(salt_call_cli):
             salt_call_cli.run_function("softwareupdate.set_catalog", CATALOG)
 
 
-def test_list_available(salt_call_cli, setup_teardown_vars):
+def test_list_available(salt_call_cli):
     """
     Test softwareupdate.list_available
     """
@@ -51,7 +51,7 @@ def test_list_available(salt_call_cli, setup_teardown_vars):
     assert isinstance(ret.data, dict)
 
 
-def test_ignore(salt_call_cli, setup_teardown_vars):
+def test_ignore(salt_call_cli):
     """
     Test softwareupdate.ignore
     Test softwareupdate.list_ignored
@@ -99,7 +99,7 @@ def test_schedule(salt_call_cli):
     assert not ret.data
 
 
-def test_update(salt_call_cli, setup_teardown_vars):
+def test_update(salt_call_cli):
     """
     Test softwareupdate.update_all
     Test softwareupdate.update
@@ -122,7 +122,7 @@ def test_update(salt_call_cli, setup_teardown_vars):
     assert "Update not available" in ret.data
 
 
-def test_list_downloads(salt_call_cli, setup_teardown_vars):
+def test_list_downloads(salt_call_cli):
     """
     Test softwareupdate.list_downloads
     """
@@ -130,7 +130,7 @@ def test_list_downloads(salt_call_cli, setup_teardown_vars):
     assert isinstance(ret.data, list)
 
 
-def test_download(salt_call_cli, setup_teardown_vars):
+def test_download(salt_call_cli):
     """
     Test softwareupdate.download
 
@@ -142,7 +142,7 @@ def test_download(salt_call_cli, setup_teardown_vars):
     assert "Update not available" in ret.data
 
 
-def test_download_all(salt_call_cli, setup_teardown_vars):
+def test_download_all(salt_call_cli):
     """
     Test softwareupdate.download_all
     """
@@ -150,7 +150,7 @@ def test_download_all(salt_call_cli, setup_teardown_vars):
     assert isinstance(ret.data, list)
 
 
-def test_get_set_reset_catalog(salt_call_cli, setup_teardown_vars):
+def test_get_set_reset_catalog(salt_call_cli):
     """
     Test softwareupdate.download_all
     """
