@@ -489,7 +489,7 @@ pytest-system-statistics==1.0.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   pytest-salt-factories
-pytest-timeout==1.4.2
+pytest-timeout==2.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/pytest.txt
