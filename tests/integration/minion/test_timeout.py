@@ -25,14 +25,14 @@ class MinionTimeoutTestCase(ShellCase):
         return.
         """
         # Launch the command
-        sleep_length = 30
+        sleep_length = 10
         if salt.utils.platform.is_windows():
             popen_kwargs = {"env": dict(os.environ, PYTHONPATH=";".join(sys.path))}
         else:
             popen_kwargs = None
         ret = self.run_salt(
             "minion test.sleep {}".format(sleep_length),
-            timeout=90,
+            timeout=20,
             catch_stderr=True,
             popen_kwargs=popen_kwargs,
         )
