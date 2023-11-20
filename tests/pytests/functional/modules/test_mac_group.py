@@ -73,6 +73,8 @@ def test_mac_group_add(group, add_group):
     group_info = group.info(add_group)
     assert group_info["name"] == add_group
 
+    group.delete(add_group)
+
 
 def test_mac_group_delete(group, del_group):
     """
@@ -103,6 +105,8 @@ def test_mac_group_chgid(group, change_group):
     group_info = group.info(change_group)
     assert group_info["gid"] == 6789
 
+    group.delete(change_group)
+
 
 def test_mac_adduser(group, add_group, add_user):
     """
@@ -118,6 +122,8 @@ def test_mac_adduser(group, add_group, add_user):
     group_info = group.info(add_group)
     assert add_user == "".join(group_info["members"])
 
+    group.delete(add_group)
+
 
 def test_mac_deluser(group, add_group, add_user):
     """
@@ -132,10 +138,12 @@ def test_mac_deluser(group, add_group, add_user):
         pytest.skip("Failed to create a group to manipulate")
 
     delusr = group.deluser(add_group, add_user)
-    assert delusr.data
+    assert delusr
 
     group_info = group.info(add_group)
     assert add_user not in "".join(group_info["members"])
+
+    group.delete(add_group)
 
 
 def test_mac_members(group, add_group, add_user, rep_user_group):
@@ -160,6 +168,8 @@ def test_mac_members(group, add_group, add_user, rep_user_group):
     assert rep_user_group in str(group_info["members"])
     assert add_user not in str(group_info["members"])
 
+    group.delete(add_group)
+
 
 def test_mac_getent(group, add_group, add_user):
     """
@@ -176,6 +186,8 @@ def test_mac_getent(group, add_group, add_user):
         )
 
     getinfo = group.getent()
-    assert getinfo.data
+    assert getinfo
     assert add_group in str(getinfo)
     assert add_user in str(getinfo)
+
+    group.delete(add_group)
