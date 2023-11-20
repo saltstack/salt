@@ -293,6 +293,10 @@ def rsync(ctx: Context, name: str, download: bool = False):
                 "'-E VAR1 -E VAR2'."
             ),
         },
+        "test_timeout": {
+            "metavar": "TEST_TIMEOUT_SECONDS",
+            "help": "Max time a test is allowed to run. (Only for non Windows platforms)",
+        },
     }
 )
 def test(
@@ -307,6 +311,7 @@ def test(
     skip_code_coverage: bool = False,
     envvars: list[str] = None,
     fips: bool = False,
+    test_timeout: int = 30,
 ):
     """
     Run test in the VM.
@@ -339,6 +344,8 @@ def test(
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
     ):
         env["SKIP_REQUIREMENTS_INSTALL"] = "1"
+    if "windows" not in name:
+        env["PYTEST_TIMEOUT"] = str(test_timeout)
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
