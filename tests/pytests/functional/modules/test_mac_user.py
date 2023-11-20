@@ -17,8 +17,13 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module")
+def user(modules):
+    return modules.user
+
+
 @pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
+def setup_teardown_vars(user):
     ADD_USER = random_string("RS-", lowercase=False)
     DEL_USER = random_string("RS-", lowercase=False)
     PRIMARY_GROUP_USER = random_string("RS-", lowercase=False)
@@ -28,145 +33,133 @@ def setup_teardown_vars(salt_call_cli):
         yield ADD_USER, DEL_USER, PRIMARY_GROUP_USER, CHANGE_USER
     finally:
         # Delete ADD_USER
-        ret = salt_call_cli.run("user.info", ADD_USER)
-        add_info = ret.data
+        add_info = user.info(ADD_USER)
         if add_info:
-            salt_call_cli.run("user.delete", ADD_USER)
+            user.delete(ADD_USER)
 
         # Delete DEL_USER if something failed
-        ret = salt_call_cli.run("user.info", DEL_USER)
-        del_info = ret.data
+        del_info = user.info(DEL_USER)
         if del_info:
-            salt_call_cli.run("user.delete", DEL_USER)
+            user.delete(DEL_USER)
 
         # Delete CHANGE_USER
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        change_info = ret.data
+        change_info = user.info(CHANGE_USER)
         if change_info:
-            salt_call_cli.run("user.delete", CHANGE_USER)
+            user.delete(CHANGE_USER)
 
 
-def test_mac_user_add(salt_call_cli, setup_teardown_vars):
+def test_mac_user_add(user, setup_teardown_vars):
     """
     Tests the add function
     """
     ADD_USER = setup_teardown_vars[0]
 
-    salt_call_cli.run("user.add", ADD_USER)
-    ret = salt_call_cli.run("user.info", ADD_USER)
-    user_info = ret.data
+    user.add(ADD_USER)
+    user_info = user.info(ADD_USER)
     assert ADD_USER == user_info["name"]
 
 
 @pytest.mark.slow_test
-def test_mac_user_delete(salt_call_cli, setup_teardown_vars):
+def test_mac_user_delete(user, setup_teardown_vars):
     """
     Tests the delete function
     """
     DEL_USER = setup_teardown_vars[1]
 
     # Create a user to delete - If unsuccessful, skip the test
-    ret = salt_call_cli.run("user.add", DEL_USER)
-    if ret.data is not True:
-        salt_call_cli.run("user.delete", DEL_USER)
+    ret = user.add(DEL_USER)
+    if ret is not True:
+        user.delete(DEL_USER)
         pytest.skip("Failed to create a user to delete")
 
     # Now try to delete the added user
-    ret = salt_call_cli.run("user.delete", DEL_USER)
-    assert ret.data
+    ret = user.delete(DEL_USER)
+    assert ret
 
 
 @pytest.mark.slow_test
-def test_mac_user_primary_group(salt_call_cli, setup_teardown_vars):
+def test_mac_user_primary_group(user, setup_teardown_vars):
     """
     Tests the primary_group function
     """
     PRIMARY_GROUP_USER = setup_teardown_vars[2]
 
     # Create a user to test primary group function
-    ret = salt_call_cli.run("user.add", PRIMARY_GROUP_USER)
-    if ret.data is not True:
-        salt_call_cli.run("user.delete", PRIMARY_GROUP_USER)
+    ret = user.add(PRIMARY_GROUP_USER)
+    if ret is not True:
+        user.delete(PRIMARY_GROUP_USER)
         pytest.skip("Failed to create a user")
 
     # Test mac_user.primary_group
-    ret = salt_call_cli.run("user.primary_group", PRIMARY_GROUP_USER)
-    primary_group = ret.data
-    ret = salt_call_cli.run("user.info", PRIMARY_GROUP_USER)
-    uid_info = ret.data
+    primary_group = user.primary_group(PRIMARY_GROUP_USER)
+    uid_info = user.info(PRIMARY_GROUP_USER)
     assert primary_group in uid_info["groups"]
 
 
 @pytest.mark.slow_test
-def test_mac_user_changes(salt_call_cli, setup_teardown_vars):
+def test_mac_user_changes(user, setup_teardown_vars):
     """
     Tests mac_user functions that change user properties
     """
     CHANGE_USER = setup_teardown_vars[3]
 
     # Create a user to manipulate - if unsuccessful, skip the test
-    ret = salt_call_cli.run("user.add", CHANGE_USER)
-    if ret.data is not True:
-        salt_call_cli.run("user.delete", CHANGE_USER)
+    ret = user.add(CHANGE_USER)
+    if ret is not True:
+        user.delete(CHANGE_USER)
         pytest.skip("Failed to create a user")
 
     # Test mac_user.chuid
-    salt_call_cli.run("user.chuid", CHANGE_USER, 4376)
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    uid_info = ret.data
+    user.chuid(CHANGE_USER, 4376)
+    uid_info = user.info(CHANGE_USER)
     assert uid_info["uid"] == 4376
 
     # Test mac_user.chgid
-    salt_call_cli.run("user.chgid", CHANGE_USER, 4376)
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    gid_info = ret.data
+    user.chgid(CHANGE_USER, 4376)
+    gid_info = user.info(CHANGE_USER)
     assert gid_info["gid"] == 4376
 
     # Test mac.user.chshell
-    salt_call_cli.run("user.chshell", CHANGE_USER, "/bin/zsh")
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    shell_info = ret.data
+    user.chshell(CHANGE_USER, "/bin/zsh")
+    shell_info = user.info(CHANGE_USER)
     assert shell_info["shell"] == "/bin/zsh"
 
     # Test mac_user.chhome
-    salt_call_cli.run("user.chhome", CHANGE_USER, "/Users/foo")
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    home_info = ret.data
+    user.chhome(CHANGE_USER, "/Users/foo")
+    home_info = user.info(CHANGE_USER)
     assert home_info["home"] == "/Users/foo"
 
     # Test mac_user.chfullname
-    salt_call_cli.run("user.chfullname", CHANGE_USER, "Foo Bar")
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    fullname_info = ret.data
+    user.chfullname(CHANGE_USER, "Foo Bar")
+    fullname_info = user.info(CHANGE_USER)
     assert fullname_info["fullname"] == "Foo Bar"
 
     # Test mac_user.chgroups
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    pre_info = ret.data["groups"]
+    ret = user.info(CHANGE_USER)
+    pre_info = ret["groups"]
     expected = pre_info + ["wheel"]
-    salt_call_cli.run("user.chgroups", CHANGE_USER, "wheel")
-    ret = salt_call_cli.run("user.info", CHANGE_USER)
-    groups_info = ret.data
+    user.chgroups(CHANGE_USER, "wheel")
+    groups_info = user.info(CHANGE_USER)
     assert groups_info["groups"] == expected
 
 
 @pytest.mark.slow_test
-def test_mac_user_enable_auto_login(salt_call_cli):
+def test_mac_user_enable_auto_login(user):
     """
     Tests mac_user functions that enable auto login
     """
     # Make sure auto login is disabled before we start
-    if salt_call_cli.run("user.get_auto_login"):
+    if user.get_auto_login():
         pytest.skip("Auto login already enabled")
 
     try:
         # Does enable return True
-        ret = salt_call_cli.run("user.enable_auto_login", ["Spongebob", "Squarepants"])
-        assert ret.data
+        ret = user.enable_auto_login("Spongebob", "Squarepants")
+        assert ret
 
         # Did it set the user entry in the plist file
-        ret = salt_call_cli.run("user.get_auto_login")
-        assert ret.data == "Spongebob"
+        ret = user.get_auto_login()
+        assert ret == "Spongebob"
 
         # Did it generate the `/etc/kcpassword` file
         assert os.path.exists("/etc/kcpassword")
@@ -178,11 +171,11 @@ def test_mac_user_enable_auto_login(salt_call_cli):
         assert test_data == file_data
 
         # Does disable return True
-        ret = salt_call_cli.run("user.disable_auto_login")
-        assert ret.data
+        ret = user.disable_auto_login()
+        assert ret
 
         # Does it remove the user entry in the plist file
-        ret = salt_call_cli.run("user.get_auto_login")
+        ret = user.get_auto_login()
         assert not ret
 
         # Is the `/etc/kcpassword` file removed
@@ -190,51 +183,51 @@ def test_mac_user_enable_auto_login(salt_call_cli):
 
     finally:
         # Make sure auto_login is disabled
-        ret = salt_call_cli.run("user.disable_auto_login")
-        assert ret.data
+        ret = user.disable_auto_login()
+        assert ret
 
         # Make sure autologin is disabled
-        ret = salt_call_cli.run("user.get_auto_login")
-        if ret.data:
+        ret = user.get_auto_login()
+        if ret:
             raise Exception("Failed to disable auto login")
 
 
 @pytest.mark.slow_test
-def test_mac_user_disable_auto_login(salt_call_cli):
+def test_mac_user_disable_auto_login(user):
     """
     Tests mac_user functions that disable auto login
     """
     # Make sure auto login is enabled before we start
     # Is there an existing setting
-    if salt_call_cli.run("user.get_auto_login"):
+    if user.get_auto_login():
         pytest.skip("Auto login already enabled")
 
     try:
         # Enable auto login for the test
-        salt_call_cli.run("user.enable_auto_login", ["Spongebob", "Squarepants"])
+        user.enable_auto_login("Spongebob", "Squarepants")
 
         # Make sure auto login got set up
-        ret = salt_call_cli.run("user.get_auto_login")
-        if not ret.data == "Spongebob":
+        ret = user.get_auto_login()
+        if not ret == "Spongebob":
             raise Exception("Failed to enable auto login")
 
         # Does disable return True
-        ret = salt_call_cli.run("user.disable_auto_login")
-        assert ret.data
+        ret = user.disable_auto_login()
+        assert ret
 
         # Does it remove the user entry in the plist file
-        ret = salt_call_cli.run("user.get_auto_login")
-        assert not ret.data
+        ret = user.get_auto_login()
+        assert not ret
 
         # Is the `/etc/kcpassword` file removed
         assert not os.path.exists("/etc/kcpassword")
 
     finally:
         # Make sure auto login is disabled
-        ret = salt_call_cli.run("user.disable_auto_login")
-        assert ret.data
+        ret = user.disable_auto_login()
+        assert ret
 
         # Make sure auto login is disabled
-        ret = salt_call_cli.run("user.get_auto_login")
-        if ret.data:
+        ret = user.get_auto_login()
+        if ret:
             raise Exception("Failed to disable auto login")
