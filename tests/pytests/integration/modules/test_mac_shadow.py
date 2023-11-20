@@ -3,6 +3,7 @@ integration tests for mac_shadow
 """
 
 import datetime
+import types
 
 import pytest
 from saltfactories.utils import random_string
@@ -17,210 +18,175 @@ pytestmark = [
 
 
 @pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
-    TEST_USER = random_string("RS-", lowercase=False)
-    NO_USER = random_string("RS-", lowercase=False)
-
-    salt_call_cli.run("user.add", TEST_USER)
-
-    try:
-        yield TEST_USER, NO_USER
-    finally:
-        salt_call_cli.run("user.delete", TEST_USER)
+def accounts():
+    with pytest.helpers.create_account(create_group=True) as _account:
+        yield types.SimpleNamespace(
+            created=_account.username, not_created=random_string("RS-", lowercase=False)
+        )
 
 
-def test_info(salt_call_cli, setup_teardown_vars):
+def test_info(salt_call_cli, accounts):
     """
     Test shadow.info
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    ret = salt_call_cli.run("shadow.info", TEST_USER)
-    assert ret.data["name"] == TEST_USER
+    ret = salt_call_cli.run("shadow.info", accounts.created)
+    assert ret.data["name"] == accounts.created
 
     # User does not exist
-    ret = salt_call_cli.run("shadow.info", NO_USER)
+    ret = salt_call_cli.run("shadow.info", accounts.not_created)
     assert ret.data["name"] == ""
 
 
-def test_get_account_created(salt_call_cli, setup_teardown_vars):
+def test_get_account_created(salt_call_cli, accounts):
     """
     Test shadow.get_account_created
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    text_date = salt_call_cli.run("shadow.get_account_created", TEST_USER)
+    text_date = salt_call_cli.run("shadow.get_account_created", accounts.created)
     assert text_date.data != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.get_account_created", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_account_created", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_last_change(salt_call_cli, setup_teardown_vars):
+def test_get_last_change(salt_call_cli, accounts):
     """
     Test shadow.get_last_change
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    text_date = salt_call_cli.run("shadow.get_last_change", TEST_USER)
+    text_date = salt_call_cli.run("shadow.get_last_change", accounts.created)
     assert text_date != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.get_last_change", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_last_change", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_login_failed_last(salt_call_cli, setup_teardown_vars):
+def test_get_login_failed_last(salt_call_cli, accounts):
     """
     Test shadow.get_login_failed_last
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    text_date = salt_call_cli.run("shadow.get_login_failed_last", TEST_USER)
+    text_date = salt_call_cli.run("shadow.get_login_failed_last", accounts.created)
     assert text_date != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.get_login_failed_last", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_login_failed_last", accounts)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_login_failed_count(salt_call_cli, setup_teardown_vars):
+def test_get_login_failed_count(salt_call_cli, accounts):
     """
     Test shadow.get_login_failed_count
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.get_login_failed_count", TEST_USER) == "0"
+    assert salt_call_cli.run("shadow.get_login_failed_count", accounts.created) == "0"
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.get_login_failed_count", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_login_failed_count", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_set_maxdays(salt_call_cli, setup_teardown_vars):
+def test_get_set_maxdays(salt_call_cli, accounts):
     """
     Test shadow.get_maxdays
     Test shadow.set_maxdays
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.set_maxdays", TEST_USER, 20)
-    assert salt_call_cli.run("shadow.get_maxdays", TEST_USER) == 20
+    assert salt_call_cli.run("shadow.set_maxdays", accounts.created, 20)
+    assert salt_call_cli.run("shadow.get_maxdays", accounts.created) == 20
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.set_maxdays", NO_USER, 7)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.set_maxdays", accounts.not_created, 7)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
     assert (
-        salt_call_cli.run("shadow.get_maxdays", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_maxdays", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_set_change(salt_call_cli, setup_teardown_vars):
+def test_get_set_change(salt_call_cli, accounts):
     """
     Test shadow.get_change
     Test shadow.set_change
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.set_change", TEST_USER, "02/11/2011")
-    assert salt_call_cli.run("shadow.get_change", TEST_USER) == "02/11/2011"
+    assert salt_call_cli.run("shadow.set_change", accounts.created, "02/11/2011")
+    assert salt_call_cli.run("shadow.get_change", accounts.created) == "02/11/2011"
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.set_change", NO_USER, "02/11/2012")
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.set_change", accounts.not_created, "02/11/2012")
+        == f"ERROR: User not found: {accounts.not_created}"
     )
     assert (
-        salt_call_cli.run("shadow.get_change", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_change", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_get_set_expire(salt_call_cli, setup_teardown_vars):
+def test_get_set_expire(salt_call_cli, accounts):
     """
     Test shadow.get_expire
     Test shadow.set_expire
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.set_expire", TEST_USER, "02/11/2011")
-    assert salt_call_cli.run("shadow.get_expire", TEST_USER) == "02/11/2011"
+    assert salt_call_cli.run("shadow.set_expire", accounts.created, "02/11/2011")
+    assert salt_call_cli.run("shadow.get_expire", accounts.created) == "02/11/2011"
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.set_expire", NO_USER, "02/11/2012")
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.set_expire", accounts.not_created, "02/11/2012")
+        == f"ERROR: User not found: {accounts.not_created}"
     )
     assert (
-        salt_call_cli.run("shadow.get_expire", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.get_expire", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_del_password(salt_call_cli, setup_teardown_vars):
+def test_del_password(salt_call_cli, accounts):
     """
     Test shadow.del_password
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.del_password", TEST_USER)
-    assert salt_call_cli.run("shadow.info", TEST_USER)["passwd"] == "*"
+    assert salt_call_cli.run("shadow.del_password", accounts.created)
+    assert salt_call_cli.run("shadow.info", accounts.created)["passwd"] == "*"
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.del_password", NO_USER)
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.del_password", accounts.not_created)
+        == f"ERROR: User not found: {accounts.not_created}"
     )
 
 
-def test_set_password(salt_call_cli, setup_teardown_vars):
+def test_set_password(salt_call_cli, accounts):
     """
     Test shadow.set_password
     """
-    TEST_USER = setup_teardown_vars[0]
-    NO_USER = setup_teardown_vars[1]
-
     # Correct Functionality
-    assert salt_call_cli.run("shadow.set_password", TEST_USER, "Pa$$W0rd")
+    assert salt_call_cli.run("shadow.set_password", accounts.created, "Pa$$W0rd")
 
     # User does not exist
     assert (
-        salt_call_cli.run("shadow.set_password", NO_USER, "P@SSw0rd")
-        == f"ERROR: User not found: {NO_USER}"
+        salt_call_cli.run("shadow.set_password", accounts.not_created, "P@SSw0rd")
+        == f"ERROR: User not found: {accounts.not_created}"
     )

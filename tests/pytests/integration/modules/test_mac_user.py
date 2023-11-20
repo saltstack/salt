@@ -8,9 +8,6 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
-
-# Create user strings for tests
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -22,11 +19,6 @@ pytestmark = [
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(salt_call_cli):
-    ret = salt_call_cli.run("grains.item", "kernel")
-    os_grain = ret.data
-    if os_grain["kernel"] not in "Darwin":
-        pytest.skip("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
     ADD_USER = random_string("RS-", lowercase=False)
     DEL_USER = random_string("RS-", lowercase=False)
     PRIMARY_GROUP_USER = random_string("RS-", lowercase=False)
@@ -60,14 +52,10 @@ def test_mac_user_add(salt_call_cli, setup_teardown_vars):
     """
     ADD_USER = setup_teardown_vars[0]
 
-    try:
-        salt_call_cli.run("user.add", ADD_USER)
-        ret = salt_call_cli.run("user.info", ADD_USER)
-        user_info = ret.data
-        assert ADD_USER == user_info["name"]
-    except CommandExecutionError:
-        salt_call_cli.run("user.delete", ADD_USER)
-        raise
+    salt_call_cli.run("user.add", ADD_USER)
+    ret = salt_call_cli.run("user.info", ADD_USER)
+    user_info = ret.data
+    assert ADD_USER == user_info["name"]
 
 
 @pytest.mark.slow_test
@@ -101,17 +89,12 @@ def test_mac_user_primary_group(salt_call_cli, setup_teardown_vars):
         salt_call_cli.run("user.delete", PRIMARY_GROUP_USER)
         pytest.skip("Failed to create a user")
 
-    try:
-        # Test mac_user.primary_group
-        ret = salt_call_cli.run("user.primary_group", PRIMARY_GROUP_USER)
-        primary_group = ret.data
-        ret = salt_call_cli.run("user.info", PRIMARY_GROUP_USER)
-        uid_info = ret.data
-        assert primary_group in uid_info["groups"]
-
-    except AssertionError:
-        salt_call_cli.run("user.delete", PRIMARY_GROUP_USER)
-        raise
+    # Test mac_user.primary_group
+    ret = salt_call_cli.run("user.primary_group", PRIMARY_GROUP_USER)
+    primary_group = ret.data
+    ret = salt_call_cli.run("user.info", PRIMARY_GROUP_USER)
+    uid_info = ret.data
+    assert primary_group in uid_info["groups"]
 
 
 @pytest.mark.slow_test
@@ -127,49 +110,44 @@ def test_mac_user_changes(salt_call_cli, setup_teardown_vars):
         salt_call_cli.run("user.delete", CHANGE_USER)
         pytest.skip("Failed to create a user")
 
-    try:
-        # Test mac_user.chuid
-        salt_call_cli.run("user.chuid", CHANGE_USER, 4376)
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        uid_info = ret.data
-        assert uid_info["uid"] == 4376
+    # Test mac_user.chuid
+    salt_call_cli.run("user.chuid", CHANGE_USER, 4376)
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    uid_info = ret.data
+    assert uid_info["uid"] == 4376
 
-        # Test mac_user.chgid
-        salt_call_cli.run("user.chgid", CHANGE_USER, 4376)
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        gid_info = ret.data
-        assert gid_info["gid"] == 4376
+    # Test mac_user.chgid
+    salt_call_cli.run("user.chgid", CHANGE_USER, 4376)
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    gid_info = ret.data
+    assert gid_info["gid"] == 4376
 
-        # Test mac.user.chshell
-        salt_call_cli.run("user.chshell", CHANGE_USER, "/bin/zsh")
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        shell_info = ret.data
-        assert shell_info["shell"] == "/bin/zsh"
+    # Test mac.user.chshell
+    salt_call_cli.run("user.chshell", CHANGE_USER, "/bin/zsh")
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    shell_info = ret.data
+    assert shell_info["shell"] == "/bin/zsh"
 
-        # Test mac_user.chhome
-        salt_call_cli.run("user.chhome", CHANGE_USER, "/Users/foo")
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        home_info = ret.data
-        assert home_info["home"] == "/Users/foo"
+    # Test mac_user.chhome
+    salt_call_cli.run("user.chhome", CHANGE_USER, "/Users/foo")
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    home_info = ret.data
+    assert home_info["home"] == "/Users/foo"
 
-        # Test mac_user.chfullname
-        salt_call_cli.run("user.chfullname", CHANGE_USER, "Foo Bar")
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        fullname_info = ret.data
-        assert fullname_info["fullname"] == "Foo Bar"
+    # Test mac_user.chfullname
+    salt_call_cli.run("user.chfullname", CHANGE_USER, "Foo Bar")
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    fullname_info = ret.data
+    assert fullname_info["fullname"] == "Foo Bar"
 
-        # Test mac_user.chgroups
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        pre_info = ret.data["groups"]
-        expected = pre_info + ["wheel"]
-        salt_call_cli.run("user.chgroups", CHANGE_USER, "wheel")
-        ret = salt_call_cli.run("user.info", CHANGE_USER)
-        groups_info = ret.data
-        assert groups_info["groups"] == expected
-
-    except AssertionError:
-        salt_call_cli.run("user.delete", CHANGE_USER)
-        raise
+    # Test mac_user.chgroups
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    pre_info = ret.data["groups"]
+    expected = pre_info + ["wheel"]
+    salt_call_cli.run("user.chgroups", CHANGE_USER, "wheel")
+    ret = salt_call_cli.run("user.info", CHANGE_USER)
+    groups_info = ret.data
+    assert groups_info["groups"] == expected
 
 
 @pytest.mark.slow_test
