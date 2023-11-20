@@ -4,6 +4,8 @@ Integration tests for the mac_desktop execution module.
 
 import pytest
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
@@ -49,8 +51,9 @@ def test_screensaver(desktop):
     """
     Tests the return of the screensaver function.
     """
-    ret = desktop.screensaver()
-    if "does not exist" in ret:
+    try:
+        ret = desktop.screensaver()
+    except CommandExecutionError as exc:
         pytest.skip("Skipping. Screensaver unavailable.")
     assert ret
 
@@ -59,8 +62,9 @@ def test_lock(desktop):
     """
     Tests the return of the lock function.
     """
-    ret = desktop.lock()
-    if "Unable to run" in ret:
+    try:
+        ret = desktop.lock()
+    except CommandExecutionError as exc:
         pytest.skip("Skipping. Unable to lock screen.")
     assert ret
 

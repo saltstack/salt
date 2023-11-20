@@ -84,7 +84,7 @@ def test_mac_keychain_uninstall(keychain, setup_teardown_vars):
 
 
 @pytest.mark.skip_if_binaries_missing("openssl")
-def test_mac_keychain_get_friendly_name(keychain, shell):
+def test_mac_keychain_get_friendly_name(keychain, shell, setup_teardown_vars):
     """
     Test that attempts to get friendly name of a cert
     """
