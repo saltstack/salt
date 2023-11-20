@@ -4,6 +4,8 @@ integration tests for mac_power wake_on_modem
 
 import pytest
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
     pytest.mark.flaky(max_runs=10),
     pytest.mark.slow_test,
@@ -23,15 +25,16 @@ def test_wake_on_modem(power):
     Test power.get_wake_on_modem
     Test power.set_wake_on_modem
     """
-    WAKE_ON_MODEM = None
-    ret = power.get_wake_on_modem()
-    if isinstance(ret, bool):
-        WAKE_ON_MODEM = ret
+    try:
+        ret = power.get_wake_on_modem()
+        if isinstance(ret, bool):
+            WAKE_ON_MODEM = ret
+    except CommandExecutionError as exc:
+        WAKE_ON_MODEM = None
 
     if WAKE_ON_MODEM is None:
         # Check for not available
-        ret = power.get_wake_on_modem()
-        assert "Error" in ret
+        pytest.skip("Skipping. wake_on_modem unavailable.")
     else:
         ret = power.set_wake_on_modem("on")
         assert ret
