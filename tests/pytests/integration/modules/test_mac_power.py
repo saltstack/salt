@@ -14,20 +14,20 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
-    COMPUTER_SLEEP = salt_call_cli.run("power.get_computer_sleep")
-    DISPLAY_SLEEP = salt_call_cli.run("power.get_display_sleep")
-    HARD_DISK_SLEEP = salt_call_cli.run("power.get_harddisk_sleep")
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli):
+    computer_sleep = salt_call_cli.run("power.get_computer_sleep")
+    display_sleep = salt_call_cli.run("power.get_display_sleep")
+    hard_disk_sleep = salt_call_cli.run("power.get_harddisk_sleep")
     try:
         yield
     finally:
-        salt_call_cli.run("power.set_computer_sleep", COMPUTER_SLEEP)
-        salt_call_cli.run("power.set_display_sleep", DISPLAY_SLEEP)
-        salt_call_cli.run("power.set_harddisk_sleep", HARD_DISK_SLEEP)
+        salt_call_cli.run("power.set_computer_sleep", computer_sleep)
+        salt_call_cli.run("power.set_display_sleep", display_sleep)
+        salt_call_cli.run("power.set_harddisk_sleep", hard_disk_sleep)
 
 
-def test_computer_sleep(salt_call_cli, setup_teardown_vars):
+def test_computer_sleep(salt_call_cli):
     """
     Test power.get_computer_sleep
     Test power.set_computer_sleep
@@ -60,7 +60,7 @@ def test_computer_sleep(salt_call_cli, setup_teardown_vars):
     assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
-def test_display_sleep(salt_call_cli, setup_teardown_vars):
+def test_display_sleep(salt_call_cli):
     """
     Test power.get_display_sleep
     Test power.set_display_sleep
@@ -93,7 +93,7 @@ def test_display_sleep(salt_call_cli, setup_teardown_vars):
     assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
-def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
+def test_harddisk_sleep(salt_call_cli):
     """
     Test power.get_harddisk_sleep
     Test power.set_harddisk_sleep
@@ -126,7 +126,7 @@ def test_harddisk_sleep(salt_call_cli, setup_teardown_vars):
     assert "Invalid Boolean Value for Minutes" in ret.stderr
 
 
-def test_restart_freeze(salt_call_cli, setup_teardown_vars):
+def test_restart_freeze(salt_call_cli):
     """
     Test power.get_restart_freeze
     Test power.set_restart_freeze

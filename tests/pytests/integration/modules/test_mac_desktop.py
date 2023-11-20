@@ -24,19 +24,20 @@ def test_set_output_volume(salt_call_cli):
     """
     Tests the return of set_output_volume.
     """
-    ret = salt_call_cli.run("desktop.get_output_volume")
-    current_vol = ret.data
-    to_set = 10
-    if current_vol == str(to_set):
-        to_set += 2
-    ret = salt_call_cli.run("desktop.set_output_volume", str(to_set))
-    new_vol = ret.data
-    ret = salt_call_cli.run("desktop.get_output_volume")
-    check_vol = ret.data
-    assert new_vol == check_vol
-
-    # Set volume back to what it was before
-    salt_call_cli.run("desktop.set_output_volume", current_vol)
+    try:
+        ret = salt_call_cli.run("desktop.get_output_volume")
+        current_vol = ret.data
+        to_set = 10
+        if current_vol == str(to_set):
+            to_set += 2
+        ret = salt_call_cli.run("desktop.set_output_volume", str(to_set))
+        new_vol = ret.data
+        ret = salt_call_cli.run("desktop.get_output_volume")
+        check_vol = ret.data
+        assert new_vol == check_vol
+    finally:
+        # Set volume back to what it was before
+        salt_call_cli.run("desktop.set_output_volume", current_vol)
 
 
 def test_screensaver(salt_call_cli):

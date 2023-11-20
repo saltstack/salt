@@ -23,8 +23,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli):
     USE_NETWORK_TIME = salt_call_cli.run("timezone.get_using_network_time")
     TIME_SERVER = salt_call_cli.run("timezone.get_time_server")
     TIME_ZONE = salt_call_cli.run("timezone.get_zone")

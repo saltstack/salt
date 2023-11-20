@@ -17,8 +17,8 @@ def osa_script():
     yield "/usr/bin/osascript"
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli, osa_script):
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli, osa_script):
     salt_call_cli.run("assistive.install", osa_script, True)
     try:
         yield
@@ -36,7 +36,7 @@ def setup_teardown_vars(salt_call_cli, osa_script):
 
 
 @pytest.mark.slow_test
-def test_install_and_remove(salt_call_cli, osa_script, setup_teardown_vars):
+def test_install_and_remove(salt_call_cli, osa_script):
     """
     Tests installing and removing a bundled ID or command to use assistive access.
     """
@@ -48,7 +48,7 @@ def test_install_and_remove(salt_call_cli, osa_script, setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_installed(salt_call_cli, osa_script, setup_teardown_vars):
+def test_installed(salt_call_cli, osa_script):
     """
     Tests the True and False return of assistive.installed.
     """
@@ -63,7 +63,7 @@ def test_installed(salt_call_cli, osa_script, setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_enable(salt_call_cli, osa_script, setup_teardown_vars):
+def test_enable(salt_call_cli, osa_script):
     """
     Tests setting the enabled status of a bundled ID or command.
     """
@@ -83,7 +83,7 @@ def test_enable(salt_call_cli, osa_script, setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_enabled(salt_call_cli, osa_script, setup_teardown_vars):
+def test_enabled(salt_call_cli, osa_script):
     """
     Tests if a bundled ID or command is listed in assistive access returns True.
     """

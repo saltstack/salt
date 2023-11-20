@@ -20,8 +20,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
+@pytest.fixture(scope="function", autouse=True)
+def _setup_teardown_vars(salt_call_cli):
     ret = salt_call_cli.run("service.enabled", "com.apple.atrun")
     ATRUN_ENABLED = ret.data
 

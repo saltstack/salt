@@ -5,8 +5,6 @@
 import pytest
 from saltfactories.utils import random_string
 
-from salt.exceptions import CommandExecutionError
-
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
@@ -41,8 +39,8 @@ def rep_user_group():
     yield random_string("RS-", lowercase=False)
 
 
-@pytest.fixture(scope="module")
-def setup_teardown_vars(salt_call_cli, add_group, change_group, del_group):
+@pytest.fixture(scope="module", autouse=True)
+def _setup_teardown_vars(salt_call_cli, add_group, change_group, del_group):
     try:
         ret = salt_call_cli.run("grains.item", "kernel")
         os_grain = ret.data
@@ -69,21 +67,17 @@ def setup_teardown_vars(salt_call_cli, add_group, change_group, del_group):
             salt_call_cli.run("group.delete", change_group)
 
 
-def test_mac_group_add(salt_call_cli, add_group, setup_teardown_vars):
+def test_mac_group_add(salt_call_cli, add_group):
     """
     Tests the add group function
     """
-    try:
-        salt_call_cli.run("group.add", add_group, 3456)
-        ret = salt_call_cli.run("group.info", add_group)
-        group_info = ret.data
-        assert group_info["name"] == add_group
-    except CommandExecutionError:
-        salt_call_cli.run("group.delete", add_group)
-        raise
+    salt_call_cli.run("group.add", add_group, 3456)
+    ret = salt_call_cli.run("group.info", add_group)
+    group_info = ret.data
+    assert group_info["name"] == add_group
 
 
-def test_mac_group_delete(salt_call_cli, del_group, setup_teardown_vars):
+def test_mac_group_delete(salt_call_cli, del_group):
     """
     Tests the delete group function
     """
@@ -98,7 +92,7 @@ def test_mac_group_delete(salt_call_cli, del_group, setup_teardown_vars):
     assert ret
 
 
-def test_mac_group_chgid(salt_call_cli, change_group, setup_teardown_vars):
+def test_mac_group_chgid(salt_call_cli, change_group):
     """
     Tests changing the group id
     """
@@ -108,17 +102,13 @@ def test_mac_group_chgid(salt_call_cli, change_group, setup_teardown_vars):
         salt_call_cli.run("group.delete", change_group)
         pytest.skip("Failed to create a group to manipulate")
 
-    try:
-        salt_call_cli.run("group.chgid", change_group, 6789)
-        ret = salt_call_cli.run("group.info", change_group)
-        group_info = ret.data
-        assert group_info["gid"] == 6789
-    except AssertionError:
-        salt_call_cli.run("group.delete", change_group)
-        raise
+    salt_call_cli.run("group.chgid", change_group, 6789)
+    ret = salt_call_cli.run("group.info", change_group)
+    group_info = ret.data
+    assert group_info["gid"] == 6789
 
 
-def test_mac_adduser(salt_call_cli, add_group, add_user, setup_teardown_vars):
+def test_mac_adduser(salt_call_cli, add_group, add_user):
     """
     Tests adding user to the group
     """
@@ -128,17 +118,13 @@ def test_mac_adduser(salt_call_cli, add_group, add_user, setup_teardown_vars):
         salt_call_cli.run("group.delete", add_group)
         pytest.skip("Failed to create a group to manipulate")
 
-    try:
-        salt_call_cli.run("group.adduser", add_group, add_user)
-        ret = salt_call_cli.run("group.info", add_group)
-        group_info = ret.data
-        assert add_user == "".join(group_info["members"])
-    except AssertionError:
-        salt_call_cli.run("group.delete", add_group)
-        raise
+    salt_call_cli.run("group.adduser", add_group, add_user)
+    ret = salt_call_cli.run("group.info", add_group)
+    group_info = ret.data
+    assert add_user == "".join(group_info["members"])
 
 
-def test_mac_deluser(salt_call_cli, add_group, add_user, setup_teardown_vars):
+def test_mac_deluser(salt_call_cli, add_group, add_user):
     """
     Test deleting user from a group
     """
@@ -157,9 +143,7 @@ def test_mac_deluser(salt_call_cli, add_group, add_user, setup_teardown_vars):
     assert add_user.data not in "".join(group_info["members"])
 
 
-def test_mac_members(
-    salt_call_cli, add_group, add_user, rep_user_group, setup_teardown_vars
-):
+def test_mac_members(salt_call_cli, add_group, add_user, rep_user_group):
     """
     Test replacing members of a group
     """
@@ -182,7 +166,7 @@ def test_mac_members(
     assert add_user not in str(group_info.data["members"])
 
 
-def test_mac_getent(salt_call_cli, add_group, add_user, setup_teardown_vars):
+def test_mac_getent(salt_call_cli, add_group, add_user):
     """
     Test returning info on all groups
     """
