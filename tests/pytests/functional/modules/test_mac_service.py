@@ -22,7 +22,7 @@ def service(modules):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def service_name(service, service_name):
+def service_name(service):
 
     service_name = "com.salt.integration.test"
     service_path = "/Library/LaunchDaemons/com.salt.integration.test.plist"
@@ -41,7 +41,11 @@ def service_name(service, service_name):
     try:
         yield service_name
     finally:
-        service.stop(service_name)
+        # Try to stop the service if it's running
+        try:
+            service.stop(service_name)
+        except CommandExecutionError:
+            pass
         salt.utils.files.safe_rm(service_path)
 
 
@@ -52,7 +56,7 @@ def test_show(service, service_name):
     # Existing Service
     service_info = service.show(service_name)
     assert isinstance(service_info, dict)
-    assert service_info.data["plist"]["Label"] == service_name
+    assert service_info["plist"]["Label"] == service_name
 
     # Missing Service
     with pytest.raises(CommandExecutionError) as exc:
@@ -228,7 +232,7 @@ def test_get_all(service, service_name):
     """
     services = service.get_all()
     assert isinstance(services, list)
-    assert service_name in services.data
+    assert service_name in services
 
 
 def test_get_enabled(service, service_name):
@@ -237,7 +241,7 @@ def test_get_enabled(service, service_name):
     """
     services = service.get_enabled()
     assert isinstance(services, list)
-    assert service_name in services.data
+    assert service_name in services
 
 
 def test_service_laoded(service, service_name):
