@@ -7,6 +7,7 @@ import plistlib
 import pytest
 
 import salt.utils.files
+from salt.exceptions import CommandExecutionError
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -21,7 +22,7 @@ def service(modules):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def service_name(sergice, service_name):
+def service_name(service, service_name):
 
     service_name = "com.salt.integration.test"
     service_path = "/Library/LaunchDaemons/com.salt.integration.test.plist"
@@ -54,8 +55,9 @@ def test_show(service, service_name):
     assert service_info.data["plist"]["Label"] == service_name
 
     # Missing Service
-    ret = service.show("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.show("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_launchctl(service, service_name):
@@ -70,8 +72,9 @@ def test_launchctl(service, service_name):
     assert ret == "64: unknown error code"
 
     # Raise an error
-    ret = service.launchctl("error", "bootstrap")
-    assert "Failed to error service" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.launchctl("error", "bootstrap")
+        assert "Failed to error service" in str(exc.value)
 
 
 def test_list(service, service_name):
@@ -85,8 +88,9 @@ def test_list(service, service_name):
     assert "{" in ret
 
     # Service not found
-    ret = service.list("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.list("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_enable(service, service_name):
@@ -96,8 +100,9 @@ def test_enable(service, service_name):
     ret = service.enable(service_name)
     assert ret
 
-    ret = service.enable("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.enable("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_disable(service, service_name):
@@ -107,8 +112,9 @@ def test_disable(service, service_name):
     ret = service.disable(service_name)
     assert ret
 
-    ret = service.disable("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.disable("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_start(service, service_name):
@@ -121,8 +127,9 @@ def test_start(service, service_name):
     ret = service.start(service_name)
     assert ret
 
-    ret = service.start("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.start("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_stop(service, service_name):
@@ -132,8 +139,9 @@ def test_stop(service, service_name):
     ret = service.stop(service_name)
     assert ret
 
-    ret = service.stop("spongebob")
-    assert "Service not found" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.stop("spongebob")
+        assert "Service not found" in str(exc.value)
 
 
 def test_status(service, service_name):
@@ -185,8 +193,9 @@ def test_enabled(service, service_name):
     ret = service.enabled(service_name)
     assert ret
 
-    ret = service.enabled("spongebob")
-    assert "Service not found: spongebob" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.enabled("spongebob")
+        assert "Service not found: spongebob" in str(exc.value)
 
 
 def test_disabled(service, service_name):
@@ -208,8 +217,9 @@ def test_disabled(service, service_name):
     ret = service.enable(service_name)
     assert ret
 
-    ret = service.disable("spongebob")
-    assert "Service not found: spongebob" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = service.disable("spongebob")
+        assert "Service not found: spongebob" in str(exc.value)
 
 
 def test_get_all(service, service_name):

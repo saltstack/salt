@@ -4,6 +4,8 @@ integration tests for mac_power
 
 import pytest
 
+from salt.exceptions import SaltInvocationError
+
 pytestmark = [
     pytest.mark.flaky(max_runs=10),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
@@ -52,17 +54,21 @@ def test_computer_sleep(power):
     assert ret == "Never"
 
     # Test invalid input
-    ret = power.set_computer_sleep("spongebob")
-    assert "Invalid String Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_computer_sleep("spongebob")
+        assert "Invalid String Value for Minutes" in str(exc.value)
 
-    ret = power.set_computer_sleep(0)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_computer_sleep(0)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_computer_sleep(181)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_computer_sleep(181)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_computer_sleep(True)
-    assert "Invalid Boolean Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_computer_sleep(True)
+        assert "Invalid Boolean Value for Minutes" in str(exc.value)
 
 
 def test_display_sleep(power):
@@ -85,17 +91,21 @@ def test_display_sleep(power):
     assert ret == "Never"
 
     # Test invalid input
-    ret = power.set_display_sleep("spongebob")
-    assert "Invalid String Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_display_sleep("spongebob")
+        assert "Invalid String Value for Minutes" in str(exc.value)
 
-    ret = power.set_display_sleep(0)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_display_sleep(0)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_display_sleep(181)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_display_sleep(181)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_display_sleep(True)
-    assert "Invalid Boolean Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_display_sleep(True)
+        assert "Invalid Boolean Value for Minutes" in str(exc.value)
 
 
 def test_harddisk_sleep(power):
@@ -118,17 +128,21 @@ def test_harddisk_sleep(power):
     assert ret == "Never"
 
     # Test invalid input
-    ret = power.set_harddisk_sleep("spongebob")
-    assert "Invalid String Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_harddisk_sleep("spongebob")
+        assert "Invalid String Value for Minutes" in str(exc.value)
 
-    ret = power.set_harddisk_sleep(0)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_harddisk_sleep(0)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_harddisk_sleep(181)
-    assert "Invalid Integer Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_harddisk_sleep(181)
+        assert "Invalid Integer Value for Minutes" in str(exc.value)
 
-    ret = power.set_harddisk_sleep(True)
-    assert "Invalid Boolean Value for Minutes" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        power.set_harddisk_sleep(True)
+        assert "Invalid Boolean Value for Minutes" in str(exc.value)
 
 
 def test_restart_freeze(power):
