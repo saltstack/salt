@@ -12,87 +12,91 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module")
+def assistive(modules):
+    return modules.assistive
+
+
 @pytest.fixture(scope="function")
 def osa_script():
     yield "/usr/bin/osascript"
 
 
 @pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(salt_call_cli, osa_script):
-    salt_call_cli.run("assistive.install", osa_script, True)
+def _setup_teardown_vars(assistive, osa_script):
+    assistive.install(osa_script, True)
     try:
         yield
     finally:
-        ret = salt_call_cli.run("assistive.installed", osa_script)
-        osa_script_ret = ret.data
+        osa_script_ret = assistive.installed(osa_script)
         if osa_script_ret:
-            salt_call_cli.run("assistive.remove", osa_script)
+            assistive.remove(osa_script)
 
         smile_bundle = "com.smileonmymac.textexpander"
-        ret = salt_call_cli.run("assistive.installed", smile_bundle)
-        smile_bundle_present = ret.data
+        ret = assistive.installed(smile_bundle)
+        smile_bundle_present = ret
         if smile_bundle_present:
-            salt_call_cli.run("assistive.remove", smile_bundle)
+            assistive.remove(smile_bundle)
 
 
 @pytest.mark.slow_test
-def test_install_and_remove(salt_call_cli, osa_script):
+def test_install_and_remove(assistive, osa_script):
     """
     Tests installing and removing a bundled ID or command to use assistive access.
     """
     new_bundle = "com.smileonmymac.textexpander"
-    ret = salt_call_cli.run("assistive.install", new_bundle)
-    assert ret.data
-    ret = salt_call_cli.run("assistive.remove", new_bundle)
-    assert ret.data
+    ret = assistive.install(new_bundle)
+    assert ret
+    ret = assistive.remove(new_bundle)
+    assert ret
 
 
 @pytest.mark.slow_test
-def test_installed(salt_call_cli, osa_script):
+def test_installed(assistive, osa_script):
     """
     Tests the True and False return of assistive.installed.
     """
     # OSA script should have been installed in setUp function
-    ret = salt_call_cli.run("assistive.installed", osa_script)
-    assert ret.data
+    ret = assistive.installed(osa_script)
+    assert ret
     # Clean up install
-    salt_call_cli.run("assistive.remove", osa_script)
+    assistive.remove(osa_script)
     # Installed should now return False
-    ret = salt_call_cli.run("assistive.installed", osa_script)
-    assert not ret.data
+    ret = assistive.installed(osa_script)
+    assert not ret
 
 
 @pytest.mark.slow_test
-def test_enable(salt_call_cli, osa_script):
+def test_enable(assistive, osa_script):
     """
     Tests setting the enabled status of a bundled ID or command.
     """
     # OSA script should have been installed and enabled in setUp function
     # Now let's disable it, which should return True.
-    ret = salt_call_cli.run("assistive.enable", osa_script, False)
-    assert ret.data
+    ret = assistive.enable(osa_script, False)
+    assert ret
     # Double check the script was disabled, as intended.
-    ret = salt_call_cli.run("assistive.enabled", osa_script)
-    assert not ret.data
+    ret = assistive.enabled(osa_script)
+    assert not ret
     # Now re-enable
-    ret = salt_call_cli.run("assistive.enable", osa_script)
-    assert ret.data
+    ret = assistive.enable(osa_script)
+    assert ret
     # Double check the script was enabled, as intended.
-    ret = salt_call_cli.run("assistive.enabled", osa_script)
-    assert ret.data
+    ret = assistive.enabled(osa_script)
+    assert ret
 
 
 @pytest.mark.slow_test
-def test_enabled(salt_call_cli, osa_script):
+def test_enabled(assistive, osa_script):
     """
     Tests if a bundled ID or command is listed in assistive access returns True.
     """
     # OSA script should have been installed in setUp function, which sets
     # enabled to True by default.
-    ret = salt_call_cli.run("assistive.enabled", osa_script)
-    assert ret.data
+    ret = assistive.enabled(osa_script)
+    assert ret
     # Disable OSA Script
-    salt_call_cli.run("assistive.enable", osa_script, False)
+    assistive.enable(osa_script, False)
     # Assert against new disabled status
-    ret = salt_call_cli.run("assistive.enabled", osa_script)
-    assert not ret.data
+    ret = assistive.enabled(osa_script)
+    assert not ret
