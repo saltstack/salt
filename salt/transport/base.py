@@ -253,7 +253,9 @@ class PublishClient(Transport):
         raise NotImplementedError
 
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):  # pylint: disable=W0221
+    def connect(  # pylint: disable=arguments-differ
+        self, publish_port, connect_callback=None, disconnect_callback=None
+    ):
         """
         Create a network connection to the the PublishServer or broker.
         """
