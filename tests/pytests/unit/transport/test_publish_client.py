@@ -2,6 +2,7 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
+import aiohttp
 import asyncio
 import hashlib
 import logging
@@ -30,7 +31,7 @@ def transport_ids(value):
     return f"Transport({value})"
 
 
-@pytest.fixture(params=("zeromq", "tcp", "ws"), ids=transport_ids)
+@pytest.fixture(params=("zeromq", "tcp", "ws",), ids=transport_ids)
 def transport(request):
     return request.param
 
@@ -213,7 +214,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         task = asyncio.create_task(recv())
         # Sleep to allow zmq to do it's thing.
-        await socket.send(msg)
+        await sock.send(msg)
         await asyncio.sleep(0.03)
         await task
         response = task.result()
@@ -239,7 +240,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         await asyncio.sleep(0.03)
 
         msg = salt.payload.dumps({"meh": 123})
-        msg = salt.transport.frame.frame_msg(msg, header=None)
+        _msg = salt.transport.frame.frame_msg(msg, header=None)
 
         # This loop and timeout is needed to reliably run this test on windows.
         start = time.monotonic()
@@ -253,14 +254,10 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
             else:
                 break
 
-        conn.send(msg)
+        conn.send(_msg)
         response = await client.recv()
         assert msg == response
     elif transport == "ws":
-        import socket
-
-        import aiohttp
-
         client = salt.transport.ws.PublishClient(opts, io_loop, host=host, port=port)
         io_loop.spawn_callback(client.connect)
         assert client._ws is None
@@ -276,7 +273,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         async def handler(request):
             ws = aiohttp.web.WebSocketResponse()
             await ws.prepare(request)
-            data = salt.transport.dumps(msg)
+            data = salt.payload.dumps(msg)
             await ws.send_bytes(data)
 
         server = aiohttp.web.Server(handler)
@@ -286,7 +283,6 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         await site.start()
 
         await asyncio.sleep(0.03)
-
         response = await client.recv()
         assert msg == response
     else:
