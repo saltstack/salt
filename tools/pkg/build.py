@@ -10,7 +10,6 @@ import os
 import pathlib
 import shutil
 import tarfile
-import tempfile
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -98,18 +97,13 @@ def debian(
             os.environ[key] = value
             env_args.extend(["-e", key])
 
-    constraints = ["setuptools-scm<8"]
-    with tempfile.NamedTemporaryFile(
-        "w", prefix="reqs-constraints-", suffix=".txt", delete=False
-    ) as tfile:
-        with open(tfile.name, "w", encoding="utf-8") as wfh:
-            for req in constraints:
-                wfh.write(f"{req}\n")
-        env = os.environ.copy()
-        env["PIP_CONSTRAINT"] = str(tfile.name)
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
 
-        ctx.run("ln", "-sf", "pkg/debian/", ".")
-        ctx.run("debuild", *env_args, "-uc", "-us", env=env)
+    ctx.run("ln", "-sf", "pkg/debian/", ".")
+    ctx.run("debuild", *env_args, "-uc", "-us", env=env)
 
     ctx.info("Done")
 
@@ -174,20 +168,14 @@ def rpm(
         for key, value in new_env.items():
             os.environ[key] = value
 
-    constraints = ["setuptools-scm<8"]
-    with tempfile.NamedTemporaryFile(
-        "w", prefix="reqs-constraints-", suffix=".txt", delete=False
-    ) as tfile:
-        with open(tfile.name, "w", encoding="utf-8") as wfh:
-            for req in constraints:
-                wfh.write(f"{req}\n")
-        env = os.environ.copy()
-        env["PIP_CONSTRAINT"] = str(tfile.name)
-
-        spec_file = checkout / "pkg" / "rpm" / "salt.spec"
-        ctx.run(
-            "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
-        )
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    spec_file = checkout / "pkg" / "rpm" / "salt.spec"
+    ctx.run(
+        "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
+    )
 
     ctx.info("Done")
 
@@ -575,51 +563,31 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    constraints = ["setuptools-scm<8"]
-    with tempfile.NamedTemporaryFile(
-        "w", prefix="reqs-constraints-", suffix=".txt", delete=False
-    ) as tfile:
-        with open(tfile.name, "w", encoding="utf-8") as wfh:
-            for req in constraints:
-                wfh.write(f"{req}\n")
-        env["PIP_CONSTRAINT"] = str(tfile.name)
-        ctx.run(
-            str(python_bin),
-            "-m",
-            "pip",
-            "install",
-            "-U",
-            "wheel",
-            env=env,
-        )
-        ctx.run(
-            str(python_bin),
-            "-m",
-            "pip",
-            "install",
-            "-U",
-            "pip>=22.3.1,<23.0",
-            env=env,
-        )
-        ctx.run(
-            str(python_bin),
-            "-m",
-            "pip",
-            "install",
-            "-U",
-            "setuptools>=65.6.3,<66",
-            env=env,
-        )
-        ctx.run(
-            str(python_bin),
-            "-m",
-            "pip",
-            "install",
-            *install_args,
-            "-r",
-            str(requirements_file),
-            env=env,
-        )
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "setuptools",
+        "pip",
+        "wheel",
+        env=env,
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        *install_args,
+        "-r",
+        str(requirements_file),
+        env=env,
+    )
 
 
 @build.command(

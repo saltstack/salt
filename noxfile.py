@@ -251,13 +251,15 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return False
 
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
     install_command = [
         "python",
         "-m",
@@ -267,20 +269,8 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
     ]
     if upgrade:
         install_command.append("-U")
-    if onedir:
-        requirements = [
-            "pip>=22.3.1,<23.0",
-            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
-            "setuptools>=65.6.3,<66",
-            "wheel",
-        ]
-    else:
-        requirements = [
-            "pip>=20.2.4,<21.2",
-            "setuptools!=50.*,!=51.*,!=52.*,<59",
-        ]
-    install_command.extend(requirements)
-    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
+    install_command.extend(["setuptools", "pip", "wheel"])
+    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT, env=env)
     return True
 
 
@@ -293,20 +283,23 @@ def _install_requirements(
     if onedir and IS_LINUX:
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
-    if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
+    if not _upgrade_pip_setuptools_and_wheel(session):
         return False
 
     # Install requirements
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if extra_requirements:
         install_command = ["--progress-bar=off"]
         install_command += list(extra_requirements)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
@@ -318,13 +311,15 @@ def _install_requirements(
         # we're already using, we want to maintain the locked version
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     return True
 
 
 def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
+        env = os.environ.copy()
+        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"
@@ -341,7 +336,10 @@ def _install_coverage_requirement(session):
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
         session.install(
-            "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
+            "--progress-bar=off",
+            coverage_requirement,
+            silent=PIP_INSTALL_SILENT,
+            env=env,
         )
 
 
@@ -1854,7 +1852,7 @@ def ci_test_onedir_pkgs(session):
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
     # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
+    if _upgrade_pip_setuptools_and_wheel(session):
         _install_requirements(session, "pyzmq")
     env = {
         "ONEDIR_TESTRUN": "1",
