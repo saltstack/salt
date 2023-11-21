@@ -113,12 +113,11 @@ def test_directory_max_depth(file, tmp_path):
             assert _mode == _get_oct_mode(untouched_dir)
 
 
+@pytest.mark.skip_on_windows
 def test_directory_children_only(file, tmp_path):
     """
     file.directory with children_only=True
     """
-    if IS_WINDOWS:
-        pytest.skip("Skipped on windows")
 
     name = tmp_path / "directory_children_only_dir"
     name.mkdir(0o0700)
