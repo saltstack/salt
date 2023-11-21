@@ -22,7 +22,7 @@ def softwareupdate(modules):
 def _setup_teardown_vars(softwareupdate):
     IGNORED_LIST = softwareupdate.list_ignored()
 
-    SCHEDULE = softwareupdate.schedule()
+    SCHEDULE = softwareupdate.schedule_enabled()
 
     CATALOG = softwareupdate.get_catalog()
 
@@ -35,7 +35,7 @@ def _setup_teardown_vars(softwareupdate):
         else:
             softwareupdate.reset_ignored()
 
-        softwareupdate.schedule(SCHEDULE)
+        softwareupdate.schedule_enable(SCHEDULE)
 
         if CATALOG == "Default":
             softwareupdate.reset_catalog()
@@ -53,6 +53,7 @@ def test_list_available(softwareupdate):
     assert isinstance(ret, dict)
 
 
+@pytest.mark.skip(reason="Ignore removed from latest OS X.")
 def test_ignore(softwareupdate):
     """
     Test softwareupdate.ignore
@@ -95,7 +96,7 @@ def test_schedule(softwareupdate):
 
     # Test disable in case it was already enabled
     ret = softwareupdate.schedule_enable(False)
-    assert ret
+    assert not ret
 
     ret = softwareupdate.schedule_enabled()
     assert not ret
