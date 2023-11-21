@@ -49,7 +49,7 @@ def test_get_account_created(shadow, accounts):
     """
     # Correct Functionality
     text_date = shadow.get_account_created(accounts.created)
-    assert text_date.data != "Invalid Timestamp"
+    assert text_date != "Invalid Timestamp"
     obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
     assert isinstance(obj_date, datetime.date)
 
