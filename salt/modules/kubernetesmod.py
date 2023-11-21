@@ -77,6 +77,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "kubernetes",
+    "https://github.com/salt-extensions/saltext-kubernetes",
+)
+
 __virtualname__ = "kubernetes"
 
 
