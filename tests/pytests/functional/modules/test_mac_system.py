@@ -7,8 +7,6 @@ import logging
 import pytest
 from saltfactories.utils import random_string
 
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-
 log = logging.getLogger(__name__)
 
 pytestmark = [
@@ -19,55 +17,89 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def service(modules):
     return modules.service
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def system(modules):
     return modules.system
 
 
-@pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(service, system, grains):
+@pytest.fixture
+def _remote_login_cleanup(system, grains):
+    if grains["osmajorrelease"] >= 13:
+        pytest.skip("SKipping until we figure out how to have full dist access")
 
-    ATRUN_ENABLED = service.enabled("com.apple.atrun")
-
-    if grains["osrelease_info"][0] < 13:
-        # Skipping this MacOSX 13+ until we can figure how to have full disk access enabled.
-        REMOTE_LOGIN_ENABLED = system.get_remote_login()
-        REMOTE_EVENTS_ENABLED = system.get_remote_events()
-
-    SUBNET_NAME = system.get_subnet_name()
-
-    KEYBOARD_DISABLED = system.get_disable_keyboard_on_lock()
-
+    remote_login_enabled = system.get_remote_login()
     try:
         yield
     finally:
-        if not ATRUN_ENABLED:
+        if system.get_remote_login() != remote_login_enabled:
+            system.set_remote_login(remote_login_enabled)
+
+
+@pytest.fixture
+def _remote_events_cleanup(system, grains):
+    if grains["osmajorrelease"] >= 13:
+        pytest.skip("SKipping until we figure out how to have full dist access")
+
+    remote_events_enabled = system.get_remote_events()
+    try:
+        yield
+    finally:
+        if system.get_remote_events() != remote_events_enabled:
+            system.set_remote_events(remote_events_enabled)
+
+
+@pytest.fixture
+def _subnet_cleanup(system):
+    subnet_name = system.get_subnet_name()
+    try:
+        yield
+    finally:
+        if system.get_subnet_name() != subnet_name:
+            system.set_subnet_name(subnet_name)
+
+
+@pytest.fixture
+def _keyboard_cleanup(system):
+    keyboard_disabled = system.get_disable_keyboard_on_lock()
+    try:
+        yield
+    finally:
+        if system.get_disable_keyboard_on_lock() != keyboard_disabled:
+            system.set_disable_keyboard_on_lock(keyboard_disabled)
+
+
+@pytest.fixture
+def _computer_name_cleanup(system):
+    computer_name = system.get_computer_name()
+    try:
+        yield
+    finally:
+        if system.get_computer_name() != computer_name:
+            system.set_computer_name(computer_name)
+
+
+@pytest.fixture(autouse=True)
+def _setup_teardown_vars(service, system):
+    atrun_enabled = service.enabled("com.apple.atrun")
+    try:
+        yield
+    finally:
+        if not atrun_enabled:
             atrun = "/System/Library/LaunchDaemons/com.apple.atrun.plist"
             service.stop(atrun)
 
-        if grains["osrelease_info"][0] < 13:
-            # Skipping this MacOSX 13+ until we can figure how to have full disk access enabled.
-            system.set_remote_login(REMOTE_LOGIN_ENABLED)
-            system.set_remote_events(REMOTE_EVENTS_ENABLED)
-        system.set_subnet_name(SUBNET_NAME)
-        system.set_disable_keyboard_on_lock(KEYBOARD_DISABLED)
 
-
-def test_get_set_remote_login(system, grains):
+@pytest.mark.usefixtures("_remote_login_cleanup")
+def test_get_set_remote_login(system):
     """
     Test system.get_remote_login
     Test system.set_remote_login
     """
-    if grains["osrelease_info"][0] >= 13:
-        pytest.skip(
-            "Skipping this MacOSX 13+ until we can figure how to have full disk access enabled."
-        )
-
     # Normal Functionality
     ret = system.set_remote_login(True)
     assert ret
@@ -107,21 +139,16 @@ def test_get_set_remote_login(system, grains):
     assert ret
 
     # Test invalid input
-    with pytest.raises(CommandExecutionError) as exc:
-        system.set_remote_login("spongebob")
-        assert "Invalid String Value for Enabled" in str(exc.value)
+    ret = system.set_remote_login("spongebob")
+    assert "Invalid String Value for Enabled" in ret
 
 
-def test_get_set_remote_events(system, grains):
+@pytest.mark.usefixtures("_remote_events_cleanup")
+def test_get_set_remote_events(system):
     """
     Test system.get_remote_events
     Test system.set_remote_events
     """
-    if grains["osrelease_info"][0] >= 13:
-        pytest.skip(
-            "Skipping this MacOSX 13+ until we can figure how to have full disk access enabled."
-        )
-
     # Normal Functionality
     ret = system.set_remote_events(True)
     assert ret
@@ -161,23 +188,23 @@ def test_get_set_remote_events(system, grains):
     assert ret
 
     # Test invalid input
-    with pytest.raises(CommandExecutionError) as exc:
-        system.set_remote_events("spongebob")
-        assert "Invalid String Value for Enabled" in str(exc.value)
+    ret = system.set_remote_events("spongebob")
+    assert "Invalid String Value for Enabled" in ret
 
 
+@pytest.mark.usefixtures("_subnet_cleanup")
 def test_get_set_subnet_name(system):
     """
     Test system.get_subnet_name
     Test system.set_subnet_name
     """
-    SET_SUBNET_NAME = random_string("RS-", lowercase=False)
+    set_subnet_name = random_string("RS-", lowercase=False)
 
-    ret = system.set_subnet_name(SET_SUBNET_NAME)
+    ret = system.set_subnet_name(set_subnet_name)
     assert ret
 
     ret = system.get_subnet_name()
-    assert ret == SET_SUBNET_NAME
+    assert ret == set_subnet_name
 
 
 def test_get_list_startup_disk(system):
@@ -195,9 +222,8 @@ def test_get_list_startup_disk(system):
     assert startup_disk in ret
 
     # Test passing set a bad disk
-    with pytest.raises(SaltInvocationError) as exc:
-        system.set_startup_disk("spongebob")
-        assert "Invalid value passed for path." in str(exc.value)
+    ret = system.set_startup_disk("spongebob")
+    assert "Invalid value passed for path." in ret
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -216,11 +242,11 @@ def test_get_set_restart_delay(system):
     assert ret == "90 seconds"
 
     # Pass set bad value for seconds
-    with pytest.raises(CommandExecutionError) as exc:
-        system.set_restart_delay(70)
-        assert "Invalid value passed for seconds." in str(exc.value)
+    ret = system.set_restart_delay(70)
+    assert "Invalid value passed for seconds." in ret
 
 
+@pytest.mark.usefixtures("_keyboard_cleanup")
 def test_get_set_disable_keyboard_on_lock(system):
     """
     Test system.get_disable_keyboard_on_lock
@@ -265,9 +291,8 @@ def test_get_set_disable_keyboard_on_lock(system):
     assert ret
 
     # Test invalid input
-    with pytest.raises(SaltInvocationError) as exc:
-        system.set_disable_keyboard_on_lock("spongebob")
-        assert "Invalid String Value for Enabled" in str(exc.value)
+    ret = system.set_disable_keyboard_on_lock("spongebob")
+    assert "Invalid String Value for Enabled" in ret
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -292,9 +317,8 @@ def test_get_set_boot_arch(system):
     assert ret == "default"
 
     # Test invalid input
-    with pytest.raises(CommandExecutionError) as exc:
-        system.set_boot_arch("spongebob")
-        assert "Invalid value passed for arch" in str(exc.value)
+    ret = system.set_boot_arch("spongebob")
+    assert "Invalid value passed for arch" in ret
 
 
 # A similar test used to be skipped on py3 due to 'hanging', if we see
@@ -302,20 +326,21 @@ def test_get_set_boot_arch(system):
 # investigate
 # @pytest.mark.skipif(salt.utils.platform.is_darwin() and six.PY3, reason='This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
 @pytest.mark.destructive_test
+@pytest.mark.usefixtures("_computer_name_cleanup")
 def test_get_set_computer_name(system):
     """
     Test system.get_computer_name
     Test system.set_computer_name
     """
-    SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
+    set_computer_name = random_string("RS-", lowercase=False)
 
-    COMPUTER_NAME = system.get_computer_name()
+    computer_name = system.get_computer_name()
 
-    log.debug("Set name is %s", SET_COMPUTER_NAME)
-    ret = system.set_computer_name(SET_COMPUTER_NAME)
+    log.debug("set name is %s", set_computer_name)
+    ret = system.set_computer_name(set_computer_name)
     assert ret
 
     ret = system.get_computer_name()
-    assert ret == SET_COMPUTER_NAME
+    assert ret == set_computer_name
 
-    system.set_computer_name(COMPUTER_NAME)
+    system.set_computer_name(computer_name)
