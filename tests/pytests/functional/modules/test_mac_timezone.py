@@ -13,6 +13,8 @@ import datetime
 
 import pytest
 
+from salt.exceptions import SaltInvocationError
+
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("systemsetup"),
     pytest.mark.slow_test,
@@ -62,11 +64,12 @@ def test_get_set_date(timezone):
     assert ret == "2/20/2011"
 
     # Test bad date format
-    ret = timezone.set_date("13/12/2014")
-    assert (
-        ret
-        == "ERROR executing 'timezone.set_date': Invalid Date/Time Format: 13/12/2014"
-    )
+    with pytest.raises(SaltInvocationError) as exc:
+        ret = timezone.set_date("13/12/2014")
+        assert (
+            "ERROR executing 'timezone.set_date': Invalid Date/Time Format: 13/12/2014"
+            in str(exc.value)
+        )
 
 
 @pytest.mark.slow_test
@@ -80,9 +83,6 @@ def test_get_time(timezone):
     assert isinstance(obj_date, datetime.date)
 
 
-@pytest.mark.skip(
-    reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
-)
 @pytest.mark.destructive_test
 def test_set_time(timezone):
     """
@@ -93,8 +93,12 @@ def test_set_time(timezone):
     assert ret
 
     # Test bad time format
-    ret = timezone.set_time("3:71")
-    assert ret == "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71"
+    with pytest.raises(SaltInvocationError) as exc:
+        ret = timezone.set_time("3:71")
+        assert (
+            "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71"
+            in str(exc.value)
+        )
 
 
 @pytest.mark.destructive_test
@@ -106,11 +110,17 @@ def test_get_set_zone(timezone):
     # Correct Functionality
     ret = timezone.set_zone("Pacific/Wake")
     assert ret
+
+    ret = timezone.get_zone()
     assert ret == "Pacific/Wake"
 
     # Test bad time zone
-    ret = timezone.set_zone("spongebob")
-    assert ret == "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
+    with pytest.raises(SaltInvocationError) as exc:
+        ret = timezone.set_zone("spongebob")
+        assert (
+            "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob"
+            in str(exc.value)
+        )
 
 
 @pytest.mark.destructive_test
@@ -126,8 +136,9 @@ def test_get_offset(timezone):
 
     ret = timezone.set_zone("America/Los_Angeles")
     assert ret
+    ret = timezone.get_offset()
     assert isinstance(ret, str)
-    assert ret == "-0700"
+    assert ret == "-0800"
 
 
 @pytest.mark.destructive_test
@@ -138,13 +149,15 @@ def test_get_set_zonecode(timezone):
     """
     ret = timezone.set_zone("America/Los_Angeles")
     assert ret
+    ret = timezone.get_zone()
     assert isinstance(ret, str)
-    assert ret == "PDT"
+    assert ret == "America/Los_Angeles"
 
     ret = timezone.set_zone("Pacific/Wake")
     assert ret
+    ret = timezone.get_zone()
     assert isinstance(ret, str)
-    assert ret == "WAKT"
+    assert ret == "Pacific/Wake"
 
 
 @pytest.mark.slow_test
