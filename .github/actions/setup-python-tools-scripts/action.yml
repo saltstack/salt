@@ -33,7 +33,12 @@ runs:
       shell: bash
       working-directory: ${{ inputs.cwd }}
       run: |
-        python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        (python3 -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
+        if [ $exitcode -eq 0 ]; then
+          python3 -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        else
+          python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        fi
 
     - name: Get 'python-tools-scripts' Version
       id: get-version

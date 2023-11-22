@@ -2349,7 +2349,7 @@ def check_perms(
     deny_perms=None,
     inheritance=True,
     reset=False,
-    test_mode=None,
+    test_mode=False,
 ):
     """
     Check owner and permissions for the passed directory. This function checks
@@ -2429,9 +2429,6 @@ def check_perms(
                                           }
                                       })
     """
-    if test_mode is None:
-        test_mode = __opts__["test"]
-
     # Validate obj_type
     if obj_type.lower() not in flags().obj_type:
         raise SaltInvocationError('Invalid "obj_type" passed: {}'.format(obj_type))

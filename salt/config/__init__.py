@@ -49,6 +49,8 @@ log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
+DEFAULT_HASH_TYPE = "sha256"
+
 
 if salt.utils.platform.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -373,7 +375,7 @@ VALID_OPTS = immutabletypes.freeze(
         # applications that depend on the original format.
         "unique_jid": bool,
         # Governs whether state runs will queue or fail to run when a state is already running
-        "state_queue": bool,
+        "state_queue": (bool, int),
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
@@ -991,6 +993,8 @@ VALID_OPTS = immutabletypes.freeze(
         "maintenance_interval": int,
         # Fileserver process restart interval
         "fileserver_interval": int,
+        "request_channel_timeout": int,
+        "request_channel_tries": int,
     }
 )
 
@@ -1052,6 +1056,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "request_channel_timeout": 30,
+        "request_channel_tries": 3,
         "gpg_cache": False,
         "gpg_cache_ttl": 86400,
         "gpg_cache_backend": "disk",
@@ -1135,7 +1141,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gitfs_refspecs": _DFLT_REFSPECS,
         "gitfs_disable_saltenv_mapping": False,
         "unique_jid": False,
-        "hash_type": "sha256",
+        "hash_type": DEFAULT_HASH_TYPE,
         "optimization_order": [0, 1, 2],
         "disable_modules": [],
         "disable_returners": [],
@@ -1460,7 +1466,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fileserver_ignoresymlinks": False,
         "fileserver_verify_config": True,
         "max_open_files": 100000,
-        "hash_type": "sha256",
+        "hash_type": DEFAULT_HASH_TYPE,
         "optimization_order": [0, 1, 2],
         "conf_file": os.path.join(salt.syspaths.CONFIG_DIR, "master"),
         "open_mode": False,
@@ -2279,6 +2285,8 @@ def minion_config(
     """
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS.copy()
+        if role == "master":
+            defaults["default_include"] = DEFAULT_MASTER_OPTS["default_include"]
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.

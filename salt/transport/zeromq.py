@@ -11,12 +11,14 @@ import threading
 from random import randint
 
 import zmq.error
+import zmq.eventloop.future
 import zmq.eventloop.zmqstream
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
+import salt.ext.tornado.locks
 import salt.payload
 import salt.transport.base
 import salt.utils.files
@@ -428,7 +430,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, payload):
-        payload = self.decode_payload(payload)
+        try:
+            payload = self.decode_payload(payload)
+        except salt.exceptions.SaltDeserializationError:
+            self.stream.send(self.encode_payload({"msg": "bad load"}))
+            return
         # XXX: Is header really needed?
         reply = yield self.message_handler(payload)
         self.stream.send(self.encode_payload(reply))
@@ -508,15 +514,18 @@ class AsyncReqMessageClient:
         else:
             self.io_loop = io_loop
 
-        self.context = zmq.Context()
+        self.context = zmq.eventloop.future.Context()
 
         self.send_queue = []
-        # mapping of message -> future
-        self.send_future_map = {}
 
         self._closing = False
+        self._send_future_map = {}
+        self.lock = salt.ext.tornado.locks.Lock()
+        self.ident = threading.get_ident()
 
     def connect(self):
+        if hasattr(self, "socket") and self.socket:
+            return
         # wire up sockets
         self._init_socket()
 
@@ -531,30 +540,13 @@ class AsyncReqMessageClient:
             return
         else:
             self._closing = True
-            if hasattr(self, "stream") and self.stream is not None:
-                if ZMQ_VERSION_INFO < (14, 3, 0):
-                    # stream.close() doesn't work properly on pyzmq < 14.3.0
-                    if self.stream.socket:
-                        self.stream.socket.close()
-                    self.stream.io_loop.remove_handler(self.stream.socket)
-                    # set this to None, more hacks for messed up pyzmq
-                    self.stream.socket = None
-                    self.socket.close()
-                else:
-                    self.stream.close(1)
-                    self.socket = None
-                self.stream = None
+            if hasattr(self, "socket") and self.socket is not None:
+                self.socket.close(0)
+                self.socket = None
             if self.context.closed is False:
-                # This hangs if closing the stream causes an import error
                 self.context.term()
 
     def _init_socket(self):
-        if hasattr(self, "stream"):
-            self.stream.close()  # pylint: disable=E0203
-            self.socket.close()  # pylint: disable=E0203
-            del self.stream
-            del self.socket
-
         self.socket = self.context.socket(zmq.REQ)
 
         # socket options
@@ -568,24 +560,8 @@ class AsyncReqMessageClient:
                 self.socket.setsockopt(zmq.IPV6, 1)
             elif hasattr(zmq, "IPV4ONLY"):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
-        self.socket.linger = self.linger
+        self.socket.setsockopt(zmq.LINGER, self.linger)
         self.socket.connect(self.addr)
-        self.stream = zmq.eventloop.zmqstream.ZMQStream(
-            self.socket, io_loop=self.io_loop
-        )
-
-    def timeout_message(self, message):
-        """
-        Handle a message timeout by removing it from the sending queue
-        and informing the caller
-
-        :raises: SaltReqTimeoutError
-        """
-        future = self.send_future_map.pop(message, None)
-        # In a race condition the message might have been sent by the time
-        # we're timing it out. Make sure the future is not None
-        if future is not None:
-            future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
@@ -604,27 +580,32 @@ class AsyncReqMessageClient:
 
             future.add_done_callback(handle_future)
 
-        # Add this future to the mapping
-        self.send_future_map[message] = future
-
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(
-                timeout, self.timeout_message, message
+                timeout, self._timeout_message, future
             )
 
-        def mark_future(msg):
-            if not future.done():
-                data = salt.payload.loads(msg[0])
-                future.set_result(data)
-                self.send_future_map.pop(message)
+        self.io_loop.spawn_callback(self._send_recv, message, future)
 
-        self.stream.on_recv(mark_future)
-        yield self.stream.send(message)
         recv = yield future
+
         raise salt.ext.tornado.gen.Return(recv)
+
+    def _timeout_message(self, future):
+        if not future.done():
+            future.set_exception(SaltReqTimeoutError("Message timed out"))
+
+    @salt.ext.tornado.gen.coroutine
+    def _send_recv(self, message, future):
+        with (yield self.lock.acquire()):
+            yield self.socket.send(message)
+            recv = yield self.socket.recv()
+        if not future.done():
+            data = salt.payload.loads(recv)
+            future.set_result(data)
 
 
 class ZeroMQSocketMonitor:

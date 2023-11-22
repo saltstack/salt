@@ -31,6 +31,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      skip-test-pypi-publish:
+        type: boolean
+        default: false
+        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -62,7 +66,7 @@ concurrency:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -90,7 +94,7 @@ concurrency:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -154,13 +158,13 @@ concurrency:
           if-no-files-found: error
 
   <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-pkg-repo-downloads.yml.jinja" %>
+  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
-    if: ${{ github.event.repository.fork != true }}
+    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
@@ -179,7 +183,7 @@ concurrency:
       - linux
       - repo-<{ gh_environment }>
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

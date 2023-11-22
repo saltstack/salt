@@ -1,8 +1,8 @@
 #
 #   Proxy minion metaproxy modules
 #
-
 import concurrent.futures
+import copy
 import logging
 import os
 import signal
@@ -96,9 +96,11 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
+    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
-        self.opts["pillar"],
+        pillar,
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
@@ -580,7 +582,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
 
-def target(cls, minion_instance, opts, data, connected):
+def target(cls, minion_instance, opts, data, connected, creds_map):
     """
     Handle targeting of the minion.
 
@@ -593,6 +595,8 @@ def target(cls, minion_instance, opts, data, connected):
         minion_instance.opts["id"],
         opts["id"],
     )
+    if creds_map:
+        salt.crypt.AsyncAuth.creds_map = creds_map
 
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
@@ -1061,21 +1065,23 @@ def handle_decoded_payload(self, data):
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
     name = "ProcessPayload(jid={})".format(data["jid"])
+    creds_map = None
     if multiprocessing_enabled:
         if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we"re
             # running on spawning platforms
             instance = None
+            creds_map = salt.crypt.AsyncAuth.creds_map
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=target,
-                args=(self, instance, self.opts, data, self.connected),
+                args=(self, instance, self.opts, data, self.connected, creds_map),
                 name=name,
             )
     else:
         process = threading.Thread(
             target=target,
-            args=(self, instance, self.opts, data, self.connected),
+            args=(self, instance, self.opts, data, self.connected, creds_map),
             name=name,
         )
 

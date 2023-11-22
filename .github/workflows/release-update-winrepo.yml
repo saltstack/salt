@@ -19,16 +19,16 @@ permissions:
 jobs:
   update-winrepo:
     name: Update Winrepo
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     steps:
 
     - name: Checkout Salt
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: salt
 
     - name: Checkout WinRepo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: winrepo
         repository: twangboy/salt-winrepo-ng

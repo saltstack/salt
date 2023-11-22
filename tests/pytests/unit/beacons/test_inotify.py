@@ -26,6 +26,14 @@ def configure_loader_modules():
     return {inotify: {}}
 
 
+@pytest.fixture(autouse=True)
+def _close_inotify(configure_loader_modules):
+    try:
+        yield
+    finally:
+        inotify.close({})
+
+
 def test_non_list_config():
     config = {}
 

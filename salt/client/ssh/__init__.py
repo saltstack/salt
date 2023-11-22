@@ -11,9 +11,11 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import pathlib
 import queue
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -304,7 +306,7 @@ class SSH(MultiprocessingStateMixin):
         }
         if self.opts.get("rand_thin_dir"):
             self.defaults["thin_dir"] = os.path.join(
-                "/var/tmp", ".{}".format(uuid.uuid4().hex[:6])
+                "/var/tmp", f".{uuid.uuid4().hex[:6]}"
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
@@ -454,9 +456,9 @@ class SSH(MultiprocessingStateMixin):
             priv = self.opts.get(
                 "ssh_priv", os.path.join(self.opts["pki_dir"], "ssh", "salt-ssh.rsa")
             )
-        pub = "{}.pub".format(priv)
+        pub = f"{priv}.pub"
         with salt.utils.files.fopen(pub, "r") as fp_:
-            return "{} rsa root@master".format(fp_.read().split()[1])
+            return f"{fp_.read().split()[1]} rsa root@master"
 
     def key_deploy(self, host, ret):
         """
@@ -467,7 +469,14 @@ class SSH(MultiprocessingStateMixin):
             if target.get("passwd", False) or self.opts["ssh_passwd"]:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get("stderr", "").count("Permission denied"):
+        stderr = ret[host].get("stderr", "")
+        # -failed to upload file- is detecting scp errors
+        # Errors to ignore when Permission denied is in the stderr. For example
+        # scp can get a permission denied on the target host, but they where
+        # able to accurate authenticate against the box
+        ignore_err = ["failed to upload file"]
+        check_err = [x for x in ignore_err if stderr.count(x)]
+        if "Permission denied" in stderr and not check_err:
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(
@@ -500,7 +509,7 @@ class SSH(MultiprocessingStateMixin):
             mods=self.mods,
             fsclient=self.fsclient,
             thin=self.thin,
-            **target
+            **target,
         )
         if salt.utils.path.which("ssh-copy-id"):
             # we have ssh-copy-id, use it!
@@ -516,7 +525,7 @@ class SSH(MultiprocessingStateMixin):
                 mods=self.mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
-                **target
+                **target,
             )
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -543,7 +552,7 @@ class SSH(MultiprocessingStateMixin):
             fsclient=self.fsclient,
             thin=self.thin,
             mine=mine,
-            **target
+            **target,
         )
         ret = {"id": single.id}
         stdout, stderr, retcode = single.run()
@@ -552,6 +561,11 @@ class SSH(MultiprocessingStateMixin):
             data = salt.utils.json.find_json(stdout)
             if len(data) < 2 and "local" in data:
                 ret["ret"] = data["local"]
+                try:
+                    # Ensure a reported local retcode is kept
+                    retcode = data["local"]["retcode"]
+                except (KeyError, TypeError):
+                    pass
             else:
                 ret["ret"] = {
                     "stdout": stdout,
@@ -564,7 +578,7 @@ class SSH(MultiprocessingStateMixin):
                 "stderr": stderr,
                 "retcode": retcode,
             }
-        que.put(ret)
+        que.put((ret, retcode))
 
     def handle_ssh(self, mine=False):
         """
@@ -608,7 +622,7 @@ class SSH(MultiprocessingStateMixin):
                         "fun": "",
                         "id": host,
                     }
-                    yield {host: no_ret}
+                    yield {host: no_ret}, 1
                     continue
                 args = (
                     que,
@@ -622,11 +636,12 @@ class SSH(MultiprocessingStateMixin):
                 running[host] = {"thread": routine}
                 continue
             ret = {}
+            retcode = 0
             try:
-                ret = que.get(False)
+                ret, retcode = que.get(False)
                 if "id" in ret:
                     returned.add(ret["id"])
-                    yield {ret["id"]: ret["ret"]}
+                    yield {ret["id"]: ret["ret"]}, retcode
             except queue.Empty:
                 pass
             for host in running:
@@ -636,10 +651,10 @@ class SSH(MultiprocessingStateMixin):
                         # last checked
                         try:
                             while True:
-                                ret = que.get(False)
+                                ret, retcode = que.get(False)
                                 if "id" in ret:
                                     returned.add(ret["id"])
-                                    yield {ret["id"]: ret["ret"]}
+                                    yield {ret["id"]: ret["ret"]}, retcode
                         except queue.Empty:
                             pass
 
@@ -650,7 +665,7 @@ class SSH(MultiprocessingStateMixin):
                             )
                             ret = {"id": host, "ret": error}
                             log.error(error)
-                            yield {ret["id"]: ret["ret"]}
+                            yield {ret["id"]: ret["ret"]}, 1
                     running[host]["thread"].join()
                     rets.add(host)
             for host in rets:
@@ -705,8 +720,8 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret in self.handle_ssh(mine=mine):
-            host = next(iter(ret.keys()))
+        for ret, _ in self.handle_ssh(mine=mine):
+            host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(iter(ret.items()))
@@ -792,22 +807,16 @@ class SSH(MultiprocessingStateMixin):
             )
 
         if self.opts.get("verbose"):
-            msg = "Executing job with jid {}".format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
             print("-" * len(msg) + "\n")
             print("")
         sret = {}
         outputter = self.opts.get("output", "nested")
         final_exit = 0
-        for ret in self.handle_ssh():
-            host = next(iter(ret.keys()))
-            if isinstance(ret[host], dict):
-                host_ret = ret[host].get("retcode", 0)
-                if host_ret != 0:
-                    final_exit = 1
-            else:
-                # Error on host
-                final_exit = 1
+        for ret, retcode in self.handle_ssh():
+            host = next(iter(ret))
+            final_exit = max(final_exit, retcode)
 
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
@@ -883,7 +892,7 @@ class Single:
         remote_port_forwards=None,
         winrm=False,
         ssh_options=None,
-        **kwargs
+        **kwargs,
     ):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -1007,19 +1016,36 @@ class Single:
         """
         Run our pre_flight script before running any ssh commands
         """
-        script = os.path.join(tempfile.gettempdir(), self.ssh_pre_file)
+        with tempfile.NamedTemporaryFile() as temp:
+            # ensure we use copyfile to not copy the file attributes
+            # we want to ensure we use the perms set by the secure
+            # NamedTemporaryFile
+            try:
+                shutil.copyfile(self.ssh_pre_flight, temp.name)
+            except OSError as err:
+                return (
+                    "",
+                    "Could not copy pre flight script to temporary path",
+                    1,
+                )
+            target_script = f".{pathlib.Path(temp.name).name}"
+            log.trace("Copying the pre flight script to target")
+            stdout, stderr, retcode = self.shell.send(temp.name, target_script)
+            if retcode != 0:
+                # We could not copy the script to the target
+                log.error("Could not copy the pre flight script to target")
+                return stdout, stderr, retcode
 
-        self.shell.send(self.ssh_pre_flight, script)
-
-        return self.execute_script(script, script_args=self.ssh_pre_flight_args)
+            log.trace("Executing the pre flight script on target")
+            return self.execute_script(
+                target_script, script_args=self.ssh_pre_flight_args
+            )
 
     def check_thin_dir(self):
         """
         check if the thindir exists on the remote machine
         """
-        stdout, stderr, retcode = self.shell.exec_cmd(
-            "test -d {}".format(self.thin_dir)
-        )
+        stdout, stderr, retcode = self.shell.exec_cmd(f"test -d {self.thin_dir}")
         if retcode != 0:
             return False
         return True
@@ -1131,7 +1157,7 @@ class Single:
                 self.id,
                 fsclient=self.fsclient,
                 minion_opts=self.minion_opts,
-                **self.target
+                **self.target,
             )
 
             opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
@@ -1217,7 +1243,7 @@ class Single:
             self.id,
             fsclient=self.fsclient,
             minion_opts=self.minion_opts,
-            **self.target
+            **self.target,
         )
         wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
@@ -1265,7 +1291,7 @@ class Single:
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
-            result = "TypeError encountered executing {}: {}".format(self.fun, exc)
+            result = f"TypeError encountered executing {self.fun}: {exc}"
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:  # pylint: disable=broad-except
@@ -1274,6 +1300,10 @@ class Single:
             )
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
+
+        # Ensure retcode from wrappers is respected, especially state render exceptions
+        retcode = max(retcode, self.context.get("retcode", 0))
+
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and "local" in result:
@@ -1288,7 +1318,7 @@ class Single:
         """
         if self.target.get("sudo"):
             sudo = (
-                "sudo -p '{}'".format(salt.client.ssh.shell.SUDO_PROMPT)
+                f"sudo -p '{salt.client.ssh.shell.SUDO_PROMPT}'"
                 if self.target.get("passwd")
                 else "sudo"
             )
@@ -1360,20 +1390,18 @@ ARGS = {arguments}\n'''.format(
                 script_args = shlex.split(str(script_args))
             args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
-            ret = self.shell.exec_cmd('"powershell {}"'.format(script))
+            ret = self.shell.exec_cmd(f'"powershell {script}"')
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd(
-                    "/bin/sh '{}{}'{}".format(pre_dir, script, args)
-                )
+                ret = self.shell.exec_cmd(f"/bin/sh '{pre_dir}{script}'{args}")
             else:
                 ret = saltwinshell.call_python(self, script)
 
         # Remove file from target system
         if not self.winrm:
-            self.shell.exec_cmd("rm '{}{}'".format(pre_dir, script))
+            self.shell.exec_cmd(f"rm '{pre_dir}{script}'")
         else:
-            self.shell.exec_cmd("del {}".format(script))
+            self.shell.exec_cmd(f"del {script}")
 
         return ret
 
@@ -1388,18 +1416,20 @@ ARGS = {arguments}\n'''.format(
             return self.shell.exec_cmd(cmd_str)
 
         # Write the shim to a temporary file in the default temp directory
-        with tempfile.NamedTemporaryFile(
-            mode="w+b", prefix="shim_", delete=False
-        ) as shim_tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as shim_tmp_file:
             shim_tmp_file.write(salt.utils.stringutils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = ".{}.{}".format(
-            binascii.hexlify(os.urandom(6)).decode("ascii"), extension
-        )
+        target_shim_file = f".{pathlib.Path(shim_tmp_file.name).name}"
+
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
-        self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
+        stdout, stderr, retcode = self.shell.send(
+            shim_tmp_file.name, target_shim_file, makedirs=True
+        )
+        if retcode != 0:
+            log.error("Could not copy the shim script to target")
+            return stdout, stderr, retcode
 
         # Remove our shim file
         try:
@@ -1461,7 +1491,7 @@ ARGS = {arguments}\n'''.format(
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
-                return "ERROR: {}".format(error), stderr, retcode
+                return f"ERROR: {error}", stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
@@ -1521,7 +1551,7 @@ ARGS = {arguments}\n'''.format(
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return (
-                        "ERROR: Failure deploying ext_mods: {}".format(stdout),
+                        f"ERROR: Failure deploying ext_mods: {stdout}",
                         stderr,
                         retcode,
                     )
@@ -1629,7 +1659,7 @@ ARGS = {arguments}\n'''.format(
         return
 
 
-def lowstate_file_refs(chunks):
+def lowstate_file_refs(chunks):  # pragma: no cover
     """
     Create a list of file ref objects to reconcile
     """
@@ -1689,7 +1719,7 @@ def mod_data(fsclient):
             files = fsclient.file_list(env)
             for ref in sync_refs:
                 mods_data = {}
-                pref = "_{}".format(ref)
+                pref = f"_{ref}"
                 for fn_ in sorted(files):
                     if fn_.startswith(pref):
                         if fn_.endswith((".py", ".so", ".pyx")):
@@ -1711,9 +1741,7 @@ def mod_data(fsclient):
         ver_base = salt.utils.stringutils.to_bytes(ver_base)
 
         ver = hashlib.sha1(ver_base).hexdigest()
-        ext_tar_path = os.path.join(
-            fsclient.opts["cachedir"], "ext_mods.{}.tgz".format(ver)
-        )
+        ext_tar_path = os.path.join(fsclient.opts["cachedir"], f"ext_mods.{ver}.tgz")
         mods = {"version": ver, "file": ext_tar_path}
         if os.path.isfile(ext_tar_path):
             return mods
@@ -1762,7 +1790,7 @@ def _convert_args(args):
             for key in list(arg.keys()):
                 if key == "__kwarg__":
                     continue
-                converted.append("{}={}".format(key, arg[key]))
+                converted.append(f"{key}={arg[key]}")
         else:
             converted.append(arg)
     return converted

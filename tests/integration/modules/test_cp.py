@@ -89,12 +89,12 @@ class CPModuleTest(ModuleCase):
         """
         src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
         with salt.utils.files.fopen(src, "rb") as fp_:
-            hash_str = hashlib.md5(fp_.read()).hexdigest()
+            hash_str = hashlib.sha256(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
         with salt.utils.files.fopen(tgt, "rb") as scene:
             data = scene.read()
-        self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
+        self.assertEqual(hash_str, hashlib.sha256(data).hexdigest())
         data = salt.utils.stringutils.to_unicode(data)
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)

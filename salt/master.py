@@ -1798,7 +1798,7 @@ class AESFuncs(TransportMethods):
     def pub_ret(self, load):
         """
         Request the return data from a specific jid, only allowed
-        if the requesting minion also initialted the execution.
+        if the requesting minion also initiated the execution.
 
         :param dict load: The minion payload
 

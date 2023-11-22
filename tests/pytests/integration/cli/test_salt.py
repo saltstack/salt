@@ -24,6 +24,19 @@ pytestmark = [
 ]
 
 
+@pytest.fixture
+def salt_minion_2(salt_master):
+    """
+    A running salt-minion fixture
+    """
+    factory = salt_master.salt_minion_daemon(
+        "minion-2",
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
 def test_context_retcode_salt(salt_cli, salt_minion):
     """
     Test that a nonzero retcode set in the context dunder will cause the
@@ -132,7 +145,6 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
     assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret
 
 
-@pytest.mark.slow_test
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
 @pytest.mark.skip_initial_onedir_failure
 def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
@@ -235,3 +247,25 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     assert "Exiting gracefully on Ctrl-c" in ret.stderr
     assert "Exception ignored in" not in ret.stderr
     assert "This job's jid is" in ret.stderr
+
+
+def test_minion_65400(salt_cli, salt_minion, salt_minion_2, salt_master):
+    """
+    Ensure correct exit status when salt CLI starts correctly.
+
+    """
+    state = f"""
+    custom_test_state:
+      test.configurable_test_state:
+        - name: example
+        - changes: True
+        - result: False
+        - comment: 65400 regression test
+    """
+    with salt_master.state_tree.base.temp_file("test_65400.sls", state):
+        ret = salt_cli.run("state.sls", "test_65400", minion_tgt="*")
+        assert isinstance(ret.data, dict)
+        assert len(ret.data.keys()) == 2
+        for minion_id in ret.data:
+            assert ret.data[minion_id] != "Error: test.configurable_test_state"
+            assert isinstance(ret.data[minion_id], dict)

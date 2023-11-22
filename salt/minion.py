@@ -44,6 +44,7 @@ import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.error
 import salt.utils.event
+import salt.utils.extmods
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
@@ -111,6 +112,29 @@ log = logging.getLogger(__name__)
 # 4. Store the AES key
 # 5. Connect to the publisher
 # 6. Handle publications
+
+
+def _sync_grains(opts):
+    # need sync of custom grains as may be used in pillar compilation
+    # if coming up initially and remote client, the first sync _grains
+    # doesn't have opts["master_uri"] set yet during the sync, so need
+    # to force local, otherwise will throw an exception when attempting
+    # to retrieve opts["master_uri"] when retrieving key for remote communication
+    # in addition opts sometimes does not contain extmod_whitelist and extmod_blacklist
+    # hence set those to defaults, empty dict, if not part of opts, as ref'd in
+    # salt.utils.extmod sync function
+    if opts.get("extmod_whitelist", None) is None:
+        opts["extmod_whitelist"] = {}
+
+    if opts.get("extmod_blacklist", None) is None:
+        opts["extmod_blacklist"] = {}
+
+    if opts.get("file_client", "remote") == "remote" and not opts.get(
+        "master_uri", None
+    ):
+        salt.utils.extmods.sync(opts, "grains", force_local=True)
+    else:
+        salt.utils.extmods.sync(opts, "grains")
 
 
 def resolve_dns(opts, fallback=True):
@@ -327,9 +351,12 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     invalid_kwargs = []
 
     for arg in args:
-        if isinstance(arg, dict) and arg.pop("__kwarg__", False) is True:
+        if isinstance(arg, dict) and arg.get("__kwarg__", False) is True:
             # if the arg is a dict with __kwarg__ == True, then its a kwarg
             for key, val in arg.items():
+                # Skip __kwarg__ when checking kwargs
+                if key == "__kwarg__":
+                    continue
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -917,6 +944,7 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
+        _sync_grains(opts)
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
@@ -1607,7 +1635,9 @@ class Minion(MinionBase):
             "minion", opts=self.opts, listen=False
         ) as event:
             return event.fire_event(
-                load, "__master_req_channel_payload", timeout=timeout
+                load,
+                f"__master_req_channel_payload/{self.opts['master']}",
+                timeout=timeout,
             )
 
     @salt.ext.tornado.gen.coroutine
@@ -1624,7 +1654,9 @@ class Minion(MinionBase):
             "minion", opts=self.opts, listen=False
         ) as event:
             ret = yield event.fire_event_async(
-                load, "__master_req_channel_payload", timeout=timeout
+                load,
+                f"__master_req_channel_payload/{self.opts['master']}",
+                timeout=timeout,
             )
             raise salt.ext.tornado.gen.Return(ret)
 
@@ -1763,6 +1795,7 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        creds_map = None
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
         name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
@@ -1770,17 +1803,18 @@ class Minion(MinionBase):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
+                creds_map = salt.crypt.AsyncAuth.creds_map
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
                     name=name,
-                    args=(instance, self.opts, data, self.connected),
+                    args=(instance, self.opts, data, self.connected, creds_map),
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:
             process = threading.Thread(
                 target=self._target,
-                args=(instance, self.opts, data, self.connected),
+                args=(instance, self.opts, data, self.connected, creds_map),
                 name=name,
             )
 
@@ -1804,7 +1838,9 @@ class Minion(MinionBase):
         return exitstack
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, creds_map):
+        if creds_map:
+            salt.crypt.AsyncAuth.creds_map = creds_map
         if not minion_instance:
             minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
@@ -1998,7 +2034,20 @@ class Minion(MinionBase):
                 ret["return"] = "ERROR executing '{}': {}".format(function_name, exc)
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+            except SaltClientError as exc:
+                log.error(
+                    "Problem executing '%s': %s",
+                    function_name,
+                    exc,
+                )
+                ret["return"] = "ERROR executing '{}': {}".format(function_name, exc)
+                ret["out"] = "nested"
+                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except TypeError as exc:
+                # XXX: This can ba extreemly missleading when something outside of a
+                # execution module call raises a TypeError. Make this it's own
+                # type of exception when we start validating state and
+                # execution argument module inputs.
                 msg = "Passed invalid arguments to {}: {}\n{}".format(
                     function_name,
                     exc,
@@ -2040,6 +2089,8 @@ class Minion(MinionBase):
         ret["jid"] = data["jid"]
         ret["fun"] = data["fun"]
         ret["fun_args"] = data["arg"]
+        if "user" in data:
+            ret["user"] = data["user"]
         if "master_id" in data:
             ret["master_id"] = data["master_id"]
         if "metadata" in data:
@@ -2159,6 +2210,8 @@ class Minion(MinionBase):
             ret["jid"] = data["jid"]
             ret["fun"] = data["fun"]
             ret["fun_args"] = data["arg"]
+            if "user" in data:
+                ret["user"] = data["user"]
         if "metadata" in data:
             ret["metadata"] = data["metadata"]
         if minion_instance.connected:
@@ -2696,11 +2749,22 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("__master_req_channel_payload"):
-            yield _minion.req_channel.send(
-                data,
-                timeout=_minion._return_retry_timer(),
-                tries=_minion.opts["return_retry_tries"],
-            )
+            job_master = tag.rsplit("/", 1)[1]
+            if job_master == self.opts["master"]:
+                try:
+                    yield _minion.req_channel.send(
+                        data,
+                        timeout=_minion._return_retry_timer(),
+                        tries=_minion.opts["return_retry_tries"],
+                    )
+                except salt.exceptions.SaltReqTimeoutError:
+                    log.error("Timeout encountered while sending %r request", data)
+            else:
+                log.debug(
+                    "Skipping req for other master: cmd=%s master=%s",
+                    data["cmd"],
+                    job_master,
+                )
         elif tag.startswith("pillar_refresh"):
             yield _minion.pillar_refresh(
                 force_refresh=data.get("force_refresh", False),
@@ -3304,7 +3368,7 @@ class Syndic(Minion):
                 data["to"],
                 io_loop=self.io_loop,
                 callback=lambda _: None,
-                **kwargs
+                **kwargs,
             )
 
     def _send_req_sync(self, load, timeout):
@@ -3363,7 +3427,7 @@ class Syndic(Minion):
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
-        self.async_req_channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
@@ -3863,10 +3927,10 @@ class ProxyMinion(Minion):
         return mp_call(self, data)
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, creds_map):
 
         mp_call = _metaproxy_call(opts, "target")
-        return mp_call(cls, minion_instance, opts, data, connected)
+        return mp_call(cls, minion_instance, opts, data, connected, creds_map)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -3897,6 +3961,8 @@ class SProxyMinion(SMinion):
 
             salt '*' sys.reload_modules
         """
+        # need sync of custom grains as may be used in pillar compilation
+        salt.utils.extmods.sync(self.opts, "grains")
         self.opts["grains"] = salt.loader.grains(self.opts)
         self.opts["pillar"] = salt.pillar.get_pillar(
             self.opts,

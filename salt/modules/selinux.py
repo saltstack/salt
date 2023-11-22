@@ -477,8 +477,10 @@ def fcontext_get_policy(
     if filetype:
         _validate_filetype(filetype)
     re_spacer = "[ ]+"
+    re_optional_spacer = "[ |\t]*"
     cmd_kwargs = {
         "spacer": re_spacer,
+        "ospacer": re_optional_spacer,
         "filespec": re.escape(name),
         "sel_user": sel_user or "[^:]+",
         "sel_role": "[^:]+",  # se_role for file context is always object_r
@@ -490,7 +492,7 @@ def fcontext_get_policy(
     )
     cmd = (
         "semanage fcontext -l | egrep "
-        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(
+        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
             **cmd_kwargs
         )
     )
@@ -609,20 +611,29 @@ def _fcontext_add_or_delete_policy(
     """
     if action not in ["add", "delete"]:
         raise SaltInvocationError(
-            'Actions supported are "add" and "delete", not "{}".'.format(action)
+            f'Actions supported are "add" and "delete", not "{action}".'
         )
-    cmd = "semanage fcontext --{}".format(action)
+
+    if "add" == action:
+        # need to use --modify if context for name file exists, otherwise ValueError
+        filespec = re.escape(name)
+        cmd = f"semanage fcontext -l | egrep '{filespec}'"
+        current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
+        if current_entry_text != "":
+            action = "modify"
+
+    cmd = f"semanage fcontext --{action}"
     # "semanage --ftype a" isn't valid on Centos 6,
     # don't pass --ftype since "a" is the default filetype.
     if filetype is not None and filetype != "a":
         _validate_filetype(filetype)
-        cmd += " --ftype {}".format(filetype)
+        cmd += f" --ftype {filetype}"
     if sel_type is not None:
-        cmd += " --type {}".format(sel_type)
+        cmd += f" --type {sel_type}"
     if sel_user is not None:
-        cmd += " --seuser {}".format(sel_user)
+        cmd += f" --seuser {sel_user}"
     if sel_level is not None:
-        cmd += " --range {}".format(sel_level)
+        cmd += f" --range {sel_level}"
     cmd += " " + re.escape(name)
     return __salt__["cmd.run_all"](cmd)
 
