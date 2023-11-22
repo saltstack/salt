@@ -147,13 +147,14 @@ def test_stop(service, service_name):
         ret = service.stop("spongebob")
         assert "Service not found" in str(exc.value)
 
+    service.start(service_name)
+
 
 def test_status(service, service_name):
     """
     Test service.status
     """
     # A running service
-    service.start(service_name)
     ret = service.status(service_name)
     assert ret
 
@@ -165,6 +166,8 @@ def test_status(service, service_name):
     # Service not found
     ret = service.status("spongebob")
     assert not ret
+
+    service.start(service_name)
 
 
 def test_available(service, service_name):
@@ -206,9 +209,6 @@ def test_disabled(service, service_name):
     """
     Test service.disabled
     """
-    service.enabled(service_name)
-    service.start(service_name)
-
     ret = service.disabled(service_name)
     assert not ret
 

@@ -33,8 +33,7 @@ def _setup_teardown_vars(assistive, osa_script):
             assistive.remove(osa_script)
 
         smile_bundle = "com.smileonmymac.textexpander"
-        ret = assistive.installed(smile_bundle)
-        smile_bundle_present = ret
+        smile_bundle_present = assistive.installed(smile_bundle)
         if smile_bundle_present:
             assistive.remove(smile_bundle)
 
@@ -56,7 +55,7 @@ def test_installed(assistive, osa_script):
     """
     Tests the True and False return of assistive.installed.
     """
-    # OSA script should have been installed in setUp function
+    # OSA script should have been installed in _setup_teardown_vars function
     ret = assistive.installed(osa_script)
     assert ret
     # Clean up install
@@ -71,7 +70,7 @@ def test_enable(assistive, osa_script):
     """
     Tests setting the enabled status of a bundled ID or command.
     """
-    # OSA script should have been installed and enabled in setUp function
+    # OSA script should have been installed and enabled in _setup_teardown_vars function
     # Now let's disable it, which should return True.
     ret = assistive.enable(osa_script, False)
     assert ret
@@ -91,7 +90,7 @@ def test_enabled(assistive, osa_script):
     """
     Tests if a bundled ID or command is listed in assistive access returns True.
     """
-    # OSA script should have been installed in setUp function, which sets
+    # OSA script should have been installed in _setup_teardown_vars function, which sets
     # enabled to True by default.
     ret = assistive.enabled(osa_script)
     assert ret
