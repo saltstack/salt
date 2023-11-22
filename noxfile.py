@@ -1879,10 +1879,6 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
-    junit_report_filename = f"test-results-{chunk}"
-    runtests_log_filename = f"runtests-{chunk}"
-
-    pydir = _get_pydir(session)
 
     if IS_LINUX:
         # Fetch the toolchain
@@ -1904,12 +1900,39 @@ def ci_test_onedir_pkgs(session):
         + [
             "-c",
             str(REPO_ROOT / "pkg-tests-pytest.ini"),
-            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
+            f"--log-file=artifacts/logs/runtests-{chunk}.log",
         ]
         + session.posargs
     )
-    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    try:
+        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    except CommandFailed:
+
+        # Don't print the system information, not the test selection on reruns
+        global PRINT_TEST_SELECTION
+        global PRINT_SYSTEM_INFO
+        PRINT_TEST_SELECTION = False
+        PRINT_SYSTEM_INFO = False
+
+        pytest_args = (
+            cmd_args[:]
+            + [
+                "-c",
+                str(REPO_ROOT / "pkg-tests-pytest.ini"),
+                f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
+                f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
+                "--lf",
+            ]
+            + session.posargs
+        )
+        _pytest(
+            session,
+            coverage=False,
+            cmd_args=pytest_args,
+            env=env,
+            on_rerun=True,
+        )
 
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
@@ -1919,8 +1942,8 @@ def ci_test_onedir_pkgs(session):
                 "-c",
                 str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                f"--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
@@ -1928,5 +1951,31 @@ def ci_test_onedir_pkgs(session):
             pytest_args.append("--use-prev-version")
         if chunk in ("upgrade-classic", "downgrade-classic"):
             pytest_args.append("--classic")
-        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        try:
+            _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        except CommandFailed:
+            cmd_args = chunks["install"]
+            pytest_args = (
+                cmd_args[:]
+                + [
+                    "-c",
+                    str(REPO_ROOT / "pkg-tests-pytest.ini"),
+                    "--no-install",
+                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--lf",
+                ]
+                + session.posargs
+            )
+            if "downgrade" in chunk:
+                pytest_args.append("--use-prev-version")
+            if chunk in ("upgrade-classic", "downgrade-classic"):
+                pytest_args.append("--classic")
+            _pytest(
+                session,
+                coverage=False,
+                cmd_args=pytest_args,
+                env=env,
+                on_rerun=True,
+            )
     sys.exit(0)
