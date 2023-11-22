@@ -44,7 +44,7 @@ def rep_user_group():
     yield random_string("RS-", lowercase=False)
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def _setup_teardown_vars(group, add_group, change_group, del_group):
     try:
         yield
@@ -72,8 +72,6 @@ def test_mac_group_add(group, add_group):
     group.add(add_group, 3456)
     group_info = group.info(add_group)
     assert group_info["name"] == add_group
-
-    group.delete(add_group)
 
 
 def test_mac_group_delete(group, del_group):
@@ -105,8 +103,6 @@ def test_mac_group_chgid(group, change_group):
     group_info = group.info(change_group)
     assert group_info["gid"] == 6789
 
-    group.delete(change_group)
-
 
 def test_mac_adduser(group, add_group, add_user):
     """
@@ -121,8 +117,6 @@ def test_mac_adduser(group, add_group, add_user):
     group.adduser(add_group, add_user)
     group_info = group.info(add_group)
     assert add_user == "".join(group_info["members"])
-
-    group.delete(add_group)
 
 
 def test_mac_deluser(group, add_group, add_user):
@@ -142,8 +136,6 @@ def test_mac_deluser(group, add_group, add_user):
 
     group_info = group.info(add_group)
     assert add_user not in "".join(group_info["members"])
-
-    group.delete(add_group)
 
 
 def test_mac_members(group, add_group, add_user, rep_user_group):
@@ -168,8 +160,6 @@ def test_mac_members(group, add_group, add_user, rep_user_group):
     assert rep_user_group in str(group_info["members"])
     assert add_user not in str(group_info["members"])
 
-    group.delete(add_group)
-
 
 def test_mac_getent(group, add_group, add_user):
     """
@@ -189,5 +179,3 @@ def test_mac_getent(group, add_group, add_user):
     assert getinfo
     assert add_group in str(getinfo)
     assert add_user in str(getinfo)
-
-    group.delete(add_group)
