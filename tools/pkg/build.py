@@ -563,7 +563,6 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
