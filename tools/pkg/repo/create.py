@@ -51,11 +51,16 @@ _deb_distro_info = {
         "10": {
             "label": "deb10ary",
             "codename": "buster",
-            "suitename": "oldstable",
+            "suitename": "oldoldstable",
         },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
+            "suitename": "oldstable",
+        },
+        "12": {
+            "label": "deb12ary",
+            "codename": "bookworm",
             "suitename": "stable",
         },
     },
@@ -315,10 +320,10 @@ def debian(
 
 
 _rpm_distro_info = {
-    "amazon": ["2"],
+    "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
-    "photon": ["3", "4"],
+    "photon": ["3", "4", "5"],
 }
 
 
@@ -390,10 +395,6 @@ def rpm(
     if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
-
-    if distro_arch == "aarch64":
-        ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
-        distro_arch = "arm64"
 
     ctx.info("Creating repository directory structure ...")
     create_repo_path = create_top_level_repo_path(

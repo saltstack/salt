@@ -439,7 +439,7 @@ def _gen_recurse_managed_files(
     exclude_pat=None,
     maxdepth=None,
     include_empty=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Generate the list of files managed by a recurse state
@@ -1345,7 +1345,7 @@ def hardlink(
     user=None,
     group=None,
     dir_mode=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a hard link
@@ -1551,7 +1551,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a symbolic link (symlink, soft link)
@@ -1989,7 +1989,7 @@ def tidied(
     age_size_logical_operator="OR",
     age_size_only=None,
     rmlinks=True,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 3005,3006.0
@@ -2308,7 +2308,7 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Manage a given file, this function allows for a file to be downloaded from
@@ -3210,7 +3210,7 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
-                    **kwargs
+                    **kwargs,
                 )
 
                 if salt.utils.platform.is_windows():
@@ -3273,7 +3273,7 @@ def managed(
             skip_verify,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
-            **kwargs
+            **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["changes"] = {}
@@ -3328,7 +3328,7 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["changes"] = {}
@@ -3407,7 +3407,7 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["changes"] = {}
@@ -3495,7 +3495,7 @@ def directory(
     win_deny_perms=None,
     win_inheritance=True,
     win_perms_reset=False,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Ensure that a named directory is present and has the right perms
@@ -4210,7 +4210,7 @@ def recurse(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -4581,7 +4581,7 @@ def recurse(
             context=context,
             defaults=defaults,
             backup=backup,
-            **pass_kwargs
+            **pass_kwargs,
         )
         merge_ret(path, _ret)
 
@@ -6162,7 +6162,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
+    uncomment_regex = rf"^(?!\s*{char})\s*" + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
@@ -6906,7 +6906,7 @@ def patch(
     reject_file=None,
     strip=None,
     saltenv=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that a patch has been applied to the specified file or directory
@@ -7404,7 +7404,7 @@ def copy_(
     mode=None,
     dir_mode=None,
     subdir=False,
-    **kwargs
+    **kwargs,
 ):
     """
     If the file defined by the ``source`` option exists on the minion, copy it
@@ -7846,7 +7846,7 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Serializes dataset and store it into managed file. Useful for sharing
@@ -8182,7 +8182,7 @@ def serialize(
             saltenv=__env__,
             contents=contents,
             skip_verify=False,
-            **kwargs
+            **kwargs,
         )
 
         if ret["changes"]:
@@ -8563,7 +8563,7 @@ def shortcut(
     backupname=None,
     makedirs=False,
     user=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a Windows shortcut

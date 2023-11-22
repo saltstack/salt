@@ -60,7 +60,7 @@ def test_fileserver_duration():
         end = time.time()
         # Interval is equal to timeout so the _do_update method will be called
         # one time.
-        update.called_once()
+        update.assert_called_once()
         # Timeout is 1 second
         duration = end - start
         if duration > 2 and salt.utils.platform.spawning_platform():

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import pathlib
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
@@ -147,3 +148,75 @@ def download_pkgs_artifact(
         ctx=ctx, run_id=run_id, slug=slug, repository=repository
     )
     ctx.exit(exitcode)
+
+
+@download.command(
+    name="artifact",
+    arguments={
+        "artifact_name": {
+            "help": "The name of the artifact to download",
+        },
+        "dest": {
+            "help": "The path to the file downloaded",
+        },
+        "run_id": {
+            "help": "The workflow run ID from where to download artifacts from",
+        },
+        "branch": {
+            "help": "The branch from where to look for artifacts.",
+            "metavar": "BRANCH_NAME",
+        },
+        "pr": {
+            "help": "The pull-request from where to look for artifacts.",
+            "metavar": "PR_NUMBER",
+        },
+        "nightly": {
+            "help": "The nightly build branch from where to look for artifacts.",
+            "metavar": "BRANCH_NAME",
+        },
+        "repository": {
+            "help": "The repository to query, e.g. saltstack/salt",
+        },
+    },
+)
+def download_artifact(
+    ctx: Context,
+    artifact_name: pathlib.Path,
+    dest: pathlib.Path,
+    run_id: int = None,
+    branch: str = None,
+    nightly: str = None,
+    pr: int = None,
+    repository: str = "saltstack/salt",
+):
+    """
+    Download CI artifacts.
+    """
+    if TYPE_CHECKING:
+        assert artifact_name is not None
+        assert dest is not None
+
+    if run_id is not None:
+        actual_run_id = run_id
+    else:
+        potential_run_id = tools.utils.gh.discover_run_id(
+            ctx, branch=branch, nightly=nightly, pr=pr, repository=repository
+        )
+        if potential_run_id is not None:
+            actual_run_id = potential_run_id
+        else:
+            ctx.exit(1, "Could not discover run ID")
+
+    succeeded = tools.utils.gh.download_artifact(
+        ctx,
+        dest,
+        actual_run_id,
+        repository=repository,
+        artifact_name=str(artifact_name),
+    )
+    ctx.info(succeeded)
+    if succeeded:
+        ctx.info(f"Downloaded {artifact_name} to {dest}")
+        ctx.exit(0)
+    else:
+        ctx.exit(1)

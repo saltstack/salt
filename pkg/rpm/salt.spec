@@ -31,7 +31,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.3
+Version: 3006.4
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -266,7 +266,7 @@ install -p -m 0644 %{_salt_src}/pkg/common/salt-proxy@.service %{buildroot}%{_un
 # Logrotate
 #install -p %{SOURCE10} .
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
-install -p -m 0644 %{_salt_src}/pkg/common/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/salt
+install -p -m 0644 %{_salt_src}/pkg/common/logrotate/salt-common %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
 # Bash completion
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
@@ -463,8 +463,12 @@ if [ $1 -lt 2 ]; then
   # ensure hmac are up to date, master or minion, rest install one or the other
   # key used is from openssl/crypto/fips/fips_standalone_hmac.c openssl 1.1.1k
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    if [ -e /opt/saltstack/salt/lib/libssl.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+    fi
+    if [ -e /opt/saltstack/salt/lib/libcrypto.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    fi
   fi
 fi
 
@@ -482,8 +486,12 @@ if [ $1 -lt 2 ]; then
   # ensure hmac are up to date, master or minion, rest install one or the other
   # key used is from openssl/crypto/fips/fips_standalone_hmac.c openssl 1.1.1k
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-    /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    if [ -e /opt/saltstack/salt/lib/libssl.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libssl.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+    fi
+    if [ -e /opt/saltstack/salt/lib/libcrypto.so.1.1 ]; then
+      /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+    fi
   fi
 fi
 
@@ -537,8 +545,12 @@ if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-minion | grep Name | grep salt-minion)" ]; then
       # uninstall and no minion running
-      /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-      /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      if [ -e  /opt/saltstack/salt/lib/.libssl.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+      fi
+      if [ -e /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      fi
     fi
   fi
 fi
@@ -552,8 +564,12 @@ if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-master | grep Name | grep salt-master)" ]; then
       # uninstall and no master running
-      /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
-      /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      if [ -e /opt/saltstack/salt/lib/.libssl.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libssl.so.1.1.hmac || :
+      fi
+      if [ -e /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac ]; then
+        /bin/rm -f /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
+      fi
     fi
   fi
 fi
@@ -563,6 +579,19 @@ fi
 
 
 %changelog
+* Mon Oct 16 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.4
+
+# Security
+
+- Fix CVE-2023-34049 by ensuring we do not use a predictable name for the script and correctly check returncode of scp command.
+  This only impacts salt-ssh users using the pre-flight option. [#cve-2023-34049](https://github.com/saltstack/salt/issues/cve-2023-34049)
+- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c [#65163](https://github.com/saltstack/salt/issues/65163)
+- Bump to `cryptography==41.0.4` due to https://github.com/advisories/GHSA-v8gr-m533-ghj9 [#65268](https://github.com/saltstack/salt/issues/65268)
+- Upgrade relenv to 0.13.12 to address CVE-2023-4807 [#65316](https://github.com/saltstack/salt/issues/65316)
+- Bump to `urllib3==1.26.17` or `urllib3==2.0.6` due to https://github.com/advisories/GHSA-v845-jxx5-vc9f [#65334](https://github.com/saltstack/salt/issues/65334)
+- Bump to `gitpython==3.1.37` due to https://github.com/advisories/GHSA-cwvm-v4w8-q58c [#65383](https://github.com/saltstack/salt/issues/65383)
+
+
 * Wed Sep 06 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.3
 
 # Removed

@@ -7,19 +7,17 @@ import salt.states.file as file
 from tests.support.mock import MagicMock, call, create_autospec, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
         file: {
             "__opts__": {"test": False},
             "__env__": "base",
         }
     }
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_remove():
     fake_remove_mod = create_autospec(filemod.remove)
     with patch.dict(file.__salt__, {"file.remove": fake_remove_mod}):
@@ -87,6 +85,7 @@ def test_file_recurse_directory_test():
             "name": "/tmp/test",
             "result": False,
         }
-        assert salt_dunder["cp.list_master_dirs"].called_once_with(
-            prefix="does_not_exist/"
+        salt_dunder["cp.list_master_dirs"].assert_called_once_with(
+            saltenv="base",
+            prefix="does_not_exist/",
         )

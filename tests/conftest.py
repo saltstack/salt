@@ -15,6 +15,7 @@ from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
+import more_itertools
 import psutil
 import pytest
 
@@ -65,6 +66,9 @@ else:
     if MAYBE_RUN_COVERAGE:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
+
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
 
 # Define the pytest plugins we rely on
 pytest_plugins = ["helpers_namespace"]
@@ -396,9 +400,10 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     return soft, hard
 
 
-def pytest_report_header():
+def pytest_report_header(config):
     soft, hard = set_max_open_files_limits()
-    return "max open files; soft: {}; hard: {}".format(soft, hard)
+    transport = config.getoption("--transport")
+    return f"max open files: soft={soft}; hard={hard}\nsalt-transport: {transport}"
 
 
 def pytest_itemcollected(item):
@@ -799,33 +804,6 @@ def pytest_runtest_setup(item):
 
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
-def get_group_size_and_start(total_items, total_groups, group_id):
-    """
-    Calculate group size and start index.
-    """
-    base_size = total_items // total_groups
-    rem = total_items % total_groups
-
-    start = base_size * (group_id - 1) + min(group_id - 1, rem)
-    size = base_size + 1 if group_id <= rem else base_size
-
-    return (start, size)
-
-
-def get_group(items, total_groups, group_id):
-    """
-    Get the items from the passed in group based on group size.
-    """
-    if not 0 < group_id <= total_groups:
-        raise ValueError("Invalid test-group argument")
-
-    start, size = get_group_size_and_start(len(items), total_groups, group_id)
-    selected = items[start : start + size]
-    deselected = items[:start] + items[start + size :]
-    assert len(selected) + len(deselected) == len(items)
-    return selected, deselected
-
-
 def groups_collection_modifyitems(config, items):
     group_count = config.getoption("test-group-count")
     group_id = config.getoption("test-group")
@@ -834,17 +812,38 @@ def groups_collection_modifyitems(config, items):
         # We're not selection tests using groups, don't do any filtering
         return
 
+    if group_count == 1:
+        # Just one group, don't do any filtering
+        return
+
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+
+    if config.getoption("--last-failed") or config.getoption("--failed-first"):
+        # This is a test failure rerun, applying test groups would break this
+        terminal_reporter.write(
+            "\nNot splitting collected tests into chunks since --lf/--last-failed or "
+            "-ff/--failed-first was passed on the CLI.\n",
+            yellow=True,
+        )
+        return
+
     total_items = len(items)
 
-    tests_in_group, deselected = get_group(items, group_count, group_id)
+    # Devide into test groups
+    test_groups = more_itertools.divide(group_count, items)
+    # Pick the right group
+    tests_in_group = list(test_groups.pop(group_id - 1))
+    # The rest are deselected tests
+    deselected = list(more_itertools.collapse(test_groups))
+    # Sanity check
+    assert len(tests_in_group) + len(deselected) == total_items
     # Replace all items in the list
     items[:] = tests_in_group
     if deselected:
         config.hook.pytest_deselected(items=deselected)
 
-    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
     )
 
@@ -1058,7 +1057,10 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1171,7 +1173,10 @@ def salt_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1279,6 +1284,7 @@ def salt_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1310,6 +1316,7 @@ def salt_sub_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1438,13 +1445,15 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/libexec/openssh/sftp-server",
         # Arch Linux
         "/usr/lib/ssh/sftp-server",
+        # Photon OS 5
+        "/usr/libexec/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
         if os.path.exists(path):
             sftp_server_path = path
     if sftp_server_path is None:
-        log.warning(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
     else:
         sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(

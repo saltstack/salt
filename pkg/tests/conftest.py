@@ -25,6 +25,9 @@ from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
 
 @pytest.fixture(scope="session")
 def version(install_salt):
@@ -76,7 +79,7 @@ def pytest_addoption(parser):
     """
     test_selection_group = parser.getgroup("Tests Runtime Selection")
     test_selection_group.addoption(
-        "--system-service",
+        "--pkg-system-service",
         default=False,
         action="store_true",
         help="Run the daemons as system services",
@@ -148,7 +151,7 @@ def pytest_runtest_setup(item):
 @pytest.fixture(scope="session")
 def salt_factories_root_dir(request, tmp_path_factory):
     root_dir = SaltPkgInstall.salt_factories_root_dir(
-        request.config.getoption("--system-service")
+        request.config.getoption("--pkg-system-service")
     )
     if root_dir is not None:
         yield root_dir
@@ -169,7 +172,7 @@ def salt_factories_config(salt_factories_root_dir):
     return {
         "code_dir": CODE_DIR,
         "root_dir": salt_factories_root_dir,
-        "system_install": True,
+        "system_service": True,
     }
 
 
@@ -177,7 +180,7 @@ def salt_factories_config(salt_factories_root_dir):
 def install_salt(request, salt_factories_root_dir):
     with SaltPkgInstall(
         conf_dir=salt_factories_root_dir / "etc" / "salt",
-        system_service=request.config.getoption("--system-service"),
+        pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
@@ -336,6 +339,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
+        "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     test_user = False
     master_config = install_salt.config_path / "master"
@@ -391,26 +396,30 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             master_script = False
 
     if master_script:
-        salt_factories.system_install = False
+        salt_factories.system_service = False
+        salt_factories.generate_scripts = True
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
-        config_overrides["open_mode"] = True
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         if install_salt.classic:
             python_executable = install_salt.bin_dir / "python.exe"
         if install_salt.relenv:
             python_executable = install_salt.install_dir / "Scripts" / "python.exe"
+        salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMasterWindows,
             salt_pkg_install=install_salt,
-            python_executable=python_executable,
         )
-        salt_factories.system_install = True
+        salt_factories.system_service = True
     else:
+
+        if install_salt.classic and platform.is_darwin():
+            os.environ["PATH"] += ":/opt/salt/bin"
+
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
@@ -464,6 +473,8 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "id": minion_id,
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     if platform.is_windows():
         config_overrides[
@@ -473,11 +484,19 @@ def salt_minion(salt_factories, salt_master, install_salt):
             "winrepo_dir_ng"
         ] = rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
         config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
+
+    if install_salt.classic and platform.is_windows():
+        salt_factories.python_executable = None
+
+    if install_salt.classic and platform.is_darwin():
+        os.environ["PATH"] += ":/opt/salt/bin"
+
     factory = salt_master.salt_minion_daemon(
         minion_id,
         overrides=config_overrides,
         defaults=config_defaults,
     )
+
     # Salt factories calls salt.utils.verify.verify_env
     # which sets root perms on /srv/salt and /srv/pillar since we are running
     # the test suite as root, but we want to run Salt master as salt
