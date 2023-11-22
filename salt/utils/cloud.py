@@ -63,7 +63,7 @@ try:
     from pypsexec.client import Client as PsExecClient
     from pypsexec.exceptions import SCMRException
     from pypsexec.scmr import Service as ScmrService
-    from smbprotocol.exceptions import SMBResponseException
+    from smbprotocol.exceptions import CannotDelete, SMBResponseException
     from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
@@ -910,7 +910,12 @@ class Client:
         return self._client.connect()
 
     def disconnect(self):
-        self._client.cleanup()  # This removes the lingering PAExec binary
+        try:
+            # This removes any lingering PAExec binaries
+            self._client.cleanup()
+        except CannotDelete as exc:
+            # We shouldn't hard crash here, so just log the error
+            log.debug("Exception cleaning up PAexec: %r", exc)
         return self._client.disconnect()
 
     def create_service(self):
