@@ -1421,6 +1421,27 @@ def user_list(**connection_args):
     log.debug(results)
     return results
 
+def _check_comments_supported(server_version):
+    comments_version = "8.0.21"
+    err = None
+    # Check if MariaDB is used
+    if "MariaDB" in server_version:
+        # it is not supported in MariaDB
+        err = (
+            "MariaDB Error: Comments are not supported for MariaDB."
+        )
+        log.error(err)
+        return (False, err)
+    # Check if MySQL version is supported
+    elif salt.utils.versions.version_cmp(server_version, comments_version) < 0:
+        # it is not supported in MySQL version lower than 8.0.21
+        err = (
+            "MySQL Error: Comments are supported only in MySQL version 8.0.21 or higher."
+        )
+        log.error(err)
+        return (False, err)
+    return (True, err)
+
 
 def _mysql_user_exists(
     user,
@@ -1431,6 +1452,7 @@ def _mysql_user_exists(
     unix_socket=False,
     password_column=None,
     auth_plugin="mysql_native_password",
+    comments=None,
     **connection_args,
 ):
 
@@ -1440,7 +1462,8 @@ def _mysql_user_exists(
     args = {}
     args["user"] = user
     args["host"] = host
-
+    if comments:
+         qry += " AND JSON_UNQUOTE(JSON_EXTRACT(User_attributes, '$.metadata.comment')) = %(comments)s"
     if salt.utils.data.is_true(passwordless):
         if salt.utils.data.is_true(unix_socket):
             qry += " AND plugin=%(unix_socket)s"
@@ -1508,6 +1531,7 @@ def user_exists(
     passwordless=False,
     unix_socket=False,
     password_column=None,
+    comments=None,
     **connection_args,
 ):
     """
@@ -1570,6 +1594,12 @@ def user_exists(
     auth_plugin = __get_auth_plugin(user, host, **connection_args)
 
     cur = dbc.cursor()
+    # Check if comments are supported
+    if comments:
+        result = _check_comments_supported(server_version)
+        if not result[0]:
+            __context__["mysql.error"] = result[1]
+            return False
     if "MariaDB" in server_version:
         qry, args = _mariadb_user_exists(
             user,
@@ -1592,6 +1622,7 @@ def user_exists(
             unix_socket,
             password_column=password_column,
             auth_plugin=auth_plugin,
+            comments=comments,
             **connection_args,
         )
 
@@ -1647,6 +1678,7 @@ def _mysql_user_create(
     unix_socket=False,
     password_column=None,
     auth_plugin="mysql_native_password",
+    comments=None,
     **connection_args,
 ):
 
@@ -1698,6 +1730,9 @@ def _mysql_user_create(
                     "allow_passwordless=True"
                 )
                 qry = False
+    if comments:
+        args["comments"] = comments
+        qry += " COMMENT %(comments)s"
     return qry, args
 
 
@@ -1756,6 +1791,7 @@ def user_create(
     unix_socket=False,
     password_column=None,
     auth_plugin="mysql_native_password",
+    comments=None,
     **connection_args,
 ):
     """
@@ -1823,8 +1859,15 @@ def user_create(
             )
             log.error(err)
             return False
+    # Check if comments are supported
+    if comments:
+        result = _check_comments_supported(server_version)
+        # result is a tuple (True/False, error message)
+        if not result[0]:
+            __context__["mysql.error"] = result[1]
+            return False
 
-    if user_exists(user, host, **connection_args):
+    if user_exists(user, host, comments=comments, **connection_args):
         log.info("User '%s'@'%s' already exists", user, host)
         return False
 
@@ -1858,6 +1901,7 @@ def user_create(
             unix_socket,
             password_column=password_column,
             auth_plugin=auth_plugin,
+            comments=comments,
             **connection_args,
         )
 
@@ -1878,6 +1922,7 @@ def user_create(
         password,
         password_hash,
         password_column=password_column,
+        comments=comments,
         **connection_args,
     ):
         msg = f"User '{user}'@'{host}' has been created"
