@@ -14,7 +14,6 @@ import datetime
 import pytest
 
 pytestmark = [
-    pytest.mark.flaky(max_runs=4),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
