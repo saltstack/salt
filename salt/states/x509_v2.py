@@ -82,7 +82,7 @@ the certificate to the mine, where it can be easily retrieved by other minions.
         - keysize: 4096
         - backup: true
         - require:
-          - file: /etc/pki
+          - file: /etc/pki/issued_certs
 
     Create self-signed CA certificate:
       x509.certificate_managed:
@@ -390,7 +390,7 @@ def certificate_managed(
     if days_valid is None and not_after is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
             )
             days_valid = 365
@@ -400,7 +400,7 @@ def certificate_managed(
     if days_remaining is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_remaining` will change to 7. Please adapt your code accordingly.",
             )
             days_remaining = 90
@@ -409,7 +409,7 @@ def certificate_managed(
 
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -782,7 +782,7 @@ def crl_managed(
     if days_valid is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
             )
             days_valid = 100
@@ -792,7 +792,7 @@ def crl_managed(
     if days_remaining is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_remaining` will change to 3. Please adapt your code accordingly.",
             )
             days_remaining = 30
@@ -804,14 +804,14 @@ def crl_managed(
         parsed = {}
         if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "Revoked certificates should be specified as a simple list of dicts.",
             )
             for val in rev[next(iter(rev))]:
                 parsed.update(val)
         if "reason" in (parsed or rev):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
             )
             salt.utils.dictupdate.set_dict_key_value(
@@ -1056,7 +1056,7 @@ def csr_managed(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -1274,7 +1274,7 @@ def private_key_managed(
     keysize
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
-        Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
+        Irrelevant for Edwards-curve schemes (``ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
@@ -1323,7 +1323,7 @@ def private_key_managed(
     # Deprecation checks vs the old x509 module
     if "bits" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`bits` has been renamed to `keysize`. Please update your code.",
         )
         keysize = kwargs.pop("bits")
@@ -1450,7 +1450,7 @@ def private_key_managed(
                 and algo in ("rsa", "ec")
                 and current.key_size != check_keysize
             ):
-                changes["keysize"] = keysize
+                changes["keysize"] = check_keysize
             if encoding != current_encoding:
                 changes["encoding"] = encoding
         elif file_exists and new:

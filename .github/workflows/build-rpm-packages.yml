@@ -8,9 +8,25 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
 
 env:
   COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
   build:
@@ -26,14 +42,13 @@ jobs:
           - x86_64
           - aarch64
         source:
-          - onedir
-          - src
+          - ${{ inputs.source }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
@@ -68,8 +83,8 @@ jobs:
 
       - name: Build RPM
         run: |
-          tools pkg build rpm ${{
-              matrix.source == 'onedir' &&
+          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
@@ -78,7 +93,7 @@ jobs:
       - name: Set Artifact Name
         id: set-artifact-name
         run: |
-          if [ "${{ matrix.source }}" != "src" ]; then
+          if [ "${{ inputs.source }}" != "src" ]; then
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
           else
             echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"

@@ -8,6 +8,14 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
       sign-packages:
         type: boolean
         default: false
@@ -16,6 +24,17 @@ on:
         type: string
         description: The GitHub Environment where this workflow should run
         default: ci
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
 
@@ -30,8 +49,7 @@ jobs:
           - x86
           - amd64
         source:
-          - onedir
-          - src
+          - ${{ inputs.source }}
 
     runs-on:
       - windows-latest
@@ -67,7 +85,7 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: 3.9
@@ -99,8 +117,8 @@ jobs:
 
       - name: Build Windows Packages
         run: |
-          tools pkg build windows ${{
-            matrix.source == 'onedir' &&
+          tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+            inputs.source == 'onedir' &&
             format(
               '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',
               inputs.salt-version,
@@ -115,7 +133,7 @@ jobs:
         id: set-artifact-name
         shell: bash
         run: |
-          if [ "${{ matrix.source }}" != "src" ]; then
+          if [ "${{ inputs.source }}" != "src" ]; then
             echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS" >> "$GITHUB_OUTPUT"
             echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI" >> "$GITHUB_OUTPUT"
           else

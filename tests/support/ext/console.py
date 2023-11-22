@@ -1,4 +1,3 @@
-# vim: sw=4 ts=4 fenc=utf-8
 """
 getTerminalSize()
  - get width and height of console
@@ -115,4 +114,4 @@ def _getTerminalSize_linux():
 
 if __name__ == "__main__":
     sizex, sizey = getTerminalSize()
-    print("width = {}  height = {}".format(sizex, sizey))
+    print(f"width = {sizex}  height = {sizey}")

@@ -2,7 +2,7 @@
 Grains from cloud metadata servers at 169.254.169.254 in
 google compute engine
 
-.. versionadded:: 3005.0
+.. versionadded:: 3005
 
 :depends: requests
 

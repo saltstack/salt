@@ -2,13 +2,12 @@
 Jinja loading utils to enable a more powerful backend for jinja templates
 """
 
-
 import itertools
 import logging
 import os.path
-import pipes
 import pprint
 import re
+import shlex
 import time
 import uuid
 import warnings
@@ -242,11 +241,11 @@ class PrintableDict(OrderedDict):
             if isinstance(value, str):
                 # keeps quotes around strings
                 # pylint: disable=repr-flag-used-in-string
-                output.append("{!r}: {!r}".format(key, value))
+                output.append(f"{key!r}: {value!r}")
                 # pylint: enable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append("{!r}: {!s}".format(key, value))
+                output.append(f"{key!r}: {value!s}")
         return "{" + ", ".join(output) + "}"
 
     def __repr__(self):  # pylint: disable=W0221
@@ -255,7 +254,7 @@ class PrintableDict(OrderedDict):
             # Raw string formatter required here because this is a repr
             # function.
             # pylint: disable=repr-flag-used-in-string
-            output.append("{!r}: {!r}".format(key, value))
+            output.append(f"{key!r}: {value!r}")
             # pylint: enable=repr-flag-used-in-string
         return "{" + ", ".join(output) + "}"
 
@@ -441,7 +440,7 @@ def quote(txt):
 
         'my_text'
     """
-    return pipes.quote(txt)
+    return shlex.quote(txt)
 
 
 @jinja_filter()
@@ -1095,13 +1094,13 @@ class SerializerExtension(Extension):
                 # to the stringified version of the exception.
                 msg += str(exc)
             else:
-                msg += "{}\n".format(problem)
+                msg += f"{problem}\n"
                 msg += salt.utils.stringutils.get_context(
                     buf, line, marker="    <======================"
                 )
             raise TemplateRuntimeError(msg)
         except AttributeError:
-            raise TemplateRuntimeError("Unable to load yaml from {}".format(value))
+            raise TemplateRuntimeError(f"Unable to load yaml from {value}")
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -1109,7 +1108,7 @@ class SerializerExtension(Extension):
         try:
             return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
-            raise TemplateRuntimeError("Unable to load json from {}".format(value))
+            raise TemplateRuntimeError(f"Unable to load json from {value}")
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
@@ -1144,7 +1143,7 @@ class SerializerExtension(Extension):
         return self._parse_profile_block(parser, label, "profile block", body, lineno)
 
     def _create_profile_id(self, parser):
-        return "_salt_profile_{}".format(parser.free_identifier().name)
+        return f"_salt_profile_{parser.free_identifier().name}"
 
     def _profile_start(self, label, source):
         return (label, source, time.time())
@@ -1186,7 +1185,7 @@ class SerializerExtension(Extension):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
         if filter_name not in self.environment.filters:
-            parser.fail("Unable to parse {}".format(filter_name), lineno)
+            parser.fail(f"Unable to parse {filter_name}", lineno)
 
         parser.stream.expect("name:as")
         target = parser.parse_assign_target()
@@ -1225,7 +1224,7 @@ class SerializerExtension(Extension):
                 nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
                     nodes.Name(target, "load").set_lineno(lineno),
-                    "load_{}".format(converter),
+                    f"load_{converter}",
                     [],
                     [],
                     None,
@@ -1234,7 +1233,7 @@ class SerializerExtension(Extension):
             ).set_lineno(lineno),
         ]
         return self._parse_profile_block(
-            parser, import_node.template, "import_{}".format(converter), body, lineno
+            parser, import_node.template, f"import_{converter}", body, lineno
         )
 
     def dict_to_sls_yaml_params(self, value, flow_style=False):

@@ -37,6 +37,12 @@ from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
 
 ZABBIX_TOP_LEVEL_OBJECTS = (
@@ -146,7 +152,7 @@ def _query(method, params, url, auth=None):
 
     :return: Response from API with desired data in JSON format. In case of error returns more specific description.
 
-    .. versionchanged:: 2017.7
+    .. versionchanged:: 2017.7.0
     """
 
     unauthenticated_methods = [
@@ -189,11 +195,9 @@ def _query(method, params, url, auth=None):
             )
         return ret
     except ValueError as err:
-        raise SaltException(
-            "URL or HTTP headers are probably not correct! ({})".format(err)
-        )
+        raise SaltException(f"URL or HTTP headers are probably not correct! ({err})")
     except OSError as err:
-        raise SaltException("Check hostname in URL! ({})".format(err))
+        raise SaltException(f"Check hostname in URL! ({err})")
 
 
 def _login(**kwargs):
@@ -232,9 +236,9 @@ def _login(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.get"]("zabbix.{}".format(name), None) or __salt__[
+            val = __salt__["config.get"](f"zabbix.{name}", None) or __salt__[
                 "config.get"
-            ]("zabbix:{}".format(name), None)
+            ](f"zabbix:{name}", None)
             if val is not None:
                 connargs[key] = val
 
@@ -258,7 +262,7 @@ def _login(**kwargs):
         else:
             raise KeyError
     except KeyError as err:
-        raise SaltException("URL is probably not correct! ({})".format(err))
+        raise SaltException(f"URL is probably not correct! ({err})")
 
 
 def _params_extend(params, _ignore_name=False, **kwargs):
@@ -311,7 +315,7 @@ def _map_to_list_of_dicts(source, key):
 
 def get_zabbix_id_mapper():
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Make ZABBIX_ID_MAPPER constant available to state modules.
 
@@ -328,7 +332,7 @@ def get_zabbix_id_mapper():
 
 def substitute_params(input_object, extend_params=None, filter_key="name", **kwargs):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Go through Zabbix object params specification and if needed get given object ID from Zabbix API and put it back
     as a value. Definition of the object is done via dict with keys "query_object" and "query_name".
@@ -385,7 +389,7 @@ def substitute_params(input_object, extend_params=None, filter_key="name", **kwa
 # pylint: disable=too-many-return-statements,too-many-nested-blocks
 def compare_params(defined, existing, return_old_value=False):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Compares Zabbix object definition against existing Zabbix object.
 
@@ -471,7 +475,7 @@ def compare_params(defined, existing, return_old_value=False):
 
 def get_object_id_by_params(obj, params=None, **connection_args):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Get ID of single Zabbix object specified by its name.
 
@@ -2143,7 +2147,7 @@ def usermacro_get(
     hostmacroids=None,
     globalmacroids=None,
     globalmacro=False,
-    **connection_args
+    **connection_args,
 ):
     """
     Retrieve user macros according to the given parameters.
@@ -2703,7 +2707,7 @@ def run_query(method, params, **connection_args):
 
 def configuration_import(config_file, rules=None, file_format="xml", **connection_args):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Imports Zabbix configuration specified in file to Zabbix server.
 

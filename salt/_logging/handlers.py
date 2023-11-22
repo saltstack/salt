@@ -87,7 +87,7 @@ class DeferredStreamHandler(StreamHandler):
     If anything goes wrong before logging is properly setup, all stored messages
     will be flushed to the handler's stream, ie, written to console.
 
-    .. versionadded:: 3005.0
+    .. versionadded:: 3005
     """
 
     def __init__(self, stream, max_queue_size=10000):
@@ -115,6 +115,7 @@ class DeferredStreamHandler(StreamHandler):
                 super().handle(record)
             finally:
                 self.__emitting = False
+        # This will raise a ValueError if the file handle has been closed.
         super().flush()
 
     def sync_with_handlers(self, handlers=()):

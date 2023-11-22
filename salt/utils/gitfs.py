@@ -3,6 +3,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
 
+import base64
 import contextlib
 import copy
 import errno
@@ -11,6 +12,7 @@ import glob
 import hashlib
 import io
 import logging
+import multiprocessing
 import os
 import shlex
 import shutil
@@ -23,6 +25,7 @@ from datetime import datetime
 import tornado.ioloop
 
 import salt.fileserver
+import salt.utils.cache
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -214,7 +217,7 @@ def failhard(role):
     """
     Fatal configuration issue, raise an exception
     """
-    raise FileserverConfigError("Failed to load {}".format(role))
+    raise FileserverConfigError(f"Failed to load {role}")
 
 
 class GitProvider:
@@ -225,6 +228,10 @@ class GitProvider:
     self.provider should be set in the sub-class' __init__ function before
     invoking the parent class' __init__.
     """
+
+    # master lock should only be locked for very short periods of times "seconds"
+    # the master lock should be used when ever git provider reads or writes to one if it locks
+    _master_lock = multiprocessing.Lock()
 
     def __init__(
         self,
@@ -239,14 +246,13 @@ class GitProvider:
         self.opts = opts
         self.role = role
         self.global_saltenv = salt.utils.data.repack_dictlist(
-            self.opts.get("{}_saltenv".format(self.role), []),
+            self.opts.get(f"{self.role}_saltenv", []),
             strict=True,
             recurse=True,
             key_cb=str,
             val_cb=lambda x, y: str(y),
         )
         self.conf = copy.deepcopy(per_remote_defaults)
-
         # Remove the 'salt://' from the beginning of any globally-defined
         # per-saltenv mountpoints
         for saltenv, saltenv_conf in self.global_saltenv.items():
@@ -402,7 +408,7 @@ class GitProvider:
             # when instantiating an instance of a GitBase subclass. Make sure
             # that we set this attribute so we at least have a sane default and
             # are able to fetch.
-            key = "{}_refspecs".format(self.role)
+            key = f"{self.role}_refspecs"
             try:
                 default_refspecs = _DEFAULT_MASTER_OPTS[key]
             except KeyError:
@@ -450,17 +456,38 @@ class GitProvider:
                 self.id,
             )
             failhard(self.role)
-
-        hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
-        # We loaded this data from yaml configuration files, so, its safe
-        # to use UTF-8
-        self.hash = hash_type(self.id.encode("utf-8")).hexdigest()
-        self.cachedir_basename = getattr(self, "name", self.hash)
-        self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
-        self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
-
-        if not os.path.isdir(self.cachedir):
-            os.makedirs(self.cachedir)
+        if hasattr(self, "name"):
+            self._cache_basehash = self.name
+        else:
+            hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+            # We loaded this data from yaml configuration files, so, its safe
+            # to use UTF-8
+            self._cache_basehash = str(
+                base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
+                encoding="ascii",  # base64 only outputs ascii
+            ).replace(
+                "/", "_"
+            )  # replace "/" with "_" to not cause trouble with file system
+        self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
+        self._cache_basename = "_"
+        if self.id.startswith("__env__"):
+            try:
+                self._cache_basename = self.get_checkout_target()
+            except AttributeError:
+                log.critical(f"__env__ cant generate basename: {self.role} {self.id}")
+                failhard(self.role)
+        self._cache_full_basename = salt.utils.path.join(
+            self._cache_basehash, self._cache_basename
+        )
+        self._cachedir = salt.utils.path.join(self._cache_hash, self._cache_basename)
+        self._salt_working_dir = salt.utils.path.join(
+            cache_root, "work", self._cache_full_basename
+        )
+        self._linkdir = salt.utils.path.join(
+            cache_root, "links", self._cache_full_basename
+        )
+        if not os.path.isdir(self._cachedir):
+            os.makedirs(self._cachedir)
 
         try:
             self.new = self.init_remote()
@@ -472,6 +499,32 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
+        self.verify_auth()
+        self.setup_callbacks()
+        if not os.path.isdir(self._salt_working_dir):
+            os.makedirs(self._salt_working_dir)
+        self.fetch_request_check()
+
+    def get_cache_basehash(self):
+        return self._cache_basehash
+
+    def get_cache_hash(self):
+        return self._cache_hash
+
+    def get_cache_basename(self):
+        return self._cache_basename
+
+    def get_cache_full_basename(self):
+        return self._cache_full_basename
+
+    def get_cachedir(self):
+        return self._cachedir
+
+    def get_linkdir(self):
+        return self._linkdir
+
+    def get_salt_working_dir(self):
+        return self._salt_working_dir
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -513,7 +566,7 @@ class GitProvider:
         return ret
 
     def _get_lock_file(self, lock_type="update"):
-        return salt.utils.path.join(self.gitdir, lock_type + ".lk")
+        return salt.utils.path.join(self._salt_working_dir, lock_type + ".lk")
 
     @classmethod
     def add_conf_overlay(cls, name):
@@ -600,7 +653,7 @@ class GitProvider:
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = salt.utils.path.join(self.cachedir, self.root()).rstrip(os.sep)
+        root_dir = salt.utils.path.join(self._cachedir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -662,6 +715,19 @@ class GitProvider:
     def clear_lock(self, lock_type="update"):
         """
         Clear update.lk
+        """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self._clear_lock(lock_type)
+        finally:
+            self.__class__._master_lock.release()
+
+    def _clear_lock(self, lock_type="update"):
+        """
+        Clear update.lk without MultiProcessing locks
         """
         lock_file = self._get_lock_file(lock_type=lock_type)
 
@@ -759,7 +825,7 @@ class GitProvider:
                 desired_refspecs,
             )
             if refspecs != desired_refspecs:
-                conf.set_multivar(remote_section, "fetch", self.refspecs)
+                conf.set_multivar(remote_section, "fetch", desired_refspecs)
                 log.debug(
                     "Refspecs for %s remote '%s' set to %s",
                     self.role,
@@ -838,6 +904,20 @@ class GitProvider:
         """
         Place a lock file if (and only if) it does not already exist.
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self.__lock(lock_type, failhard)
+        finally:
+            self.__class__._master_lock.release()
+
+    def __lock(self, lock_type="update", failhard=False):
+        """
+        Place a lock file if (and only if) it does not already exist.
+        Without MultiProcessing locks.
+        """
         try:
             fh_ = os.open(
                 self._get_lock_file(lock_type), os.O_CREAT | os.O_EXCL | os.O_WRONLY
@@ -870,7 +950,7 @@ class GitProvider:
                         )
                     )
                     if pid:
-                        msg += " Process {} obtained the lock".format(pid)
+                        msg += f" Process {pid} obtained the lock"
                         if not pid_exists(pid):
                             msg += (
                                 " but this process is not running. The "
@@ -904,9 +984,9 @@ class GitProvider:
                             lock_type,
                             lock_file,
                         )
-                    success, fail = self.clear_lock()
+                    success, fail = self._clear_lock()
                     if success:
-                        return self._lock(lock_type="update", failhard=failhard)
+                        return self.__lock(lock_type="update", failhard=failhard)
                     elif failhard:
                         raise
                     return
@@ -916,7 +996,7 @@ class GitProvider:
                 )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
-        msg = "Set {} lock for {} remote '{}'".format(lock_type, self.role, self.id)
+        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}'"
         log.debug(msg)
         return msg
 
@@ -945,7 +1025,7 @@ class GitProvider:
         Set and automatically clear a lock
         """
         if not isinstance(lock_type, str):
-            raise GitLockError(errno.EINVAL, "Invalid lock_type '{}'".format(lock_type))
+            raise GitLockError(errno.EINVAL, f"Invalid lock_type '{lock_type}'")
 
         # Make sure that we have a positive integer timeout, otherwise just set
         # it to zero.
@@ -998,7 +1078,7 @@ class GitProvider:
         """
         raise NotImplementedError()
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         This function must be overridden in a sub-class
         """
@@ -1073,7 +1153,7 @@ class GitProvider:
 
         for ref_type in self.ref_types:
             try:
-                func_name = "get_tree_from_{}".format(ref_type)
+                func_name = f"get_tree_from_{ref_type}"
                 func = getattr(self, func_name)
             except AttributeError:
                 log.error(
@@ -1089,7 +1169,7 @@ class GitProvider:
         if self.fallback:
             for ref_type in self.ref_types:
                 try:
-                    func_name = "get_tree_from_{}".format(ref_type)
+                    func_name = f"get_tree_from_{ref_type}"
                     func = getattr(self, func_name)
                 except AttributeError:
                     log.error(
@@ -1121,6 +1201,21 @@ class GitProvider:
         else:
             self.url = self.id
 
+    def fetch_request_check(self):
+        fetch_request = salt.utils.path.join(self._salt_working_dir, "fetch_request")
+        if os.path.isfile(fetch_request):
+            log.debug(f"Fetch request: {self._salt_working_dir}")
+            try:
+                os.remove(fetch_request)
+            except OSError as exc:
+                log.error(
+                    f"Failed to remove Fetch request: {self._salt_working_dir} {exc}",
+                    exc_info=True,
+                )
+            self.fetch()
+            return True
+        return False
+
     @property
     def linkdir_walk(self):
         """
@@ -1147,14 +1242,14 @@ class GitProvider:
                         dirs = []
                     self._linkdir_walk.append(
                         (
-                            salt.utils.path.join(self.linkdir, *parts[: idx + 1]),
+                            salt.utils.path.join(self._linkdir, *parts[: idx + 1]),
                             dirs,
                             [],
                         )
                     )
                 try:
                     # The linkdir itself goes at the beginning
-                    self._linkdir_walk.insert(0, (self.linkdir, [parts[0]], []))
+                    self._linkdir_walk.insert(0, (self._linkdir, [parts[0]], []))
                 except IndexError:
                     pass
             return self._linkdir_walk
@@ -1204,13 +1299,17 @@ class GitPython(GitProvider):
             role,
         )
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the configured branch/tag. We catch an "Exception" class here
         instead of a specific exception class because the exceptions raised by
         GitPython when running these functions vary in different versions of
         GitPython.
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
+        self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
         try:
             head_sha = self.repo.rev_parse("HEAD").hexsha
@@ -1274,6 +1373,15 @@ class GitPython(GitProvider):
             except Exception:  # pylint: disable=broad-except
                 continue
             return self.check_root()
+        if fetch_on_fail:
+            log.debug(
+                "Failed to checkout %s from %s remote '%s': fetch and try again",
+                tgt_ref,
+                self.role,
+                self.id,
+            )
+            self.fetch()
+            return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
             tgt_ref,
@@ -1289,16 +1397,16 @@ class GitPython(GitProvider):
         initialized by this function.
         """
         new = False
-        if not os.listdir(self.cachedir):
+        if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there
-            self.repo = git.Repo.init(self.cachedir)
+            self.repo = git.Repo.init(self._cachedir)
             new = True
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = git.Repo(self.cachedir)
+                self.repo = git.Repo(self._cachedir)
             except git.exc.InvalidGitRepositoryError:
-                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
+                log.error(_INVALID_REPO, self._cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.working_dir, ".git")
@@ -1462,7 +1570,7 @@ class GitPython(GitProvider):
         """
         try:
             return git.RemoteReference(
-                self.repo, "refs/remotes/origin/{}".format(ref)
+                self.repo, f"refs/remotes/origin/{ref}"
             ).commit.tree
         except ValueError:
             return None
@@ -1472,7 +1580,7 @@ class GitPython(GitProvider):
         Return a git.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return git.TagReference(self.repo, "refs/tags/{}".format(ref)).commit.tree
+            return git.TagReference(self.repo, f"refs/tags/{ref}").commit.tree
         except ValueError:
             return None
 
@@ -1532,10 +1640,14 @@ class Pygit2(GitProvider):
         except AttributeError:
             return obj.get_object()
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the configured branch/tag
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
+        self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
         local_ref = "refs/heads/" + tgt_ref
         remote_ref = "refs/remotes/origin/" + tgt_ref
@@ -1725,6 +1837,15 @@ class Pygit2(GitProvider):
                 exc_info=True,
             )
             return None
+        if fetch_on_fail:
+            log.debug(
+                "Failed to checkout %s from %s remote '%s': fetch and try again",
+                tgt_ref,
+                self.role,
+                self.id,
+            )
+            self.fetch()
+            return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
             tgt_ref,
@@ -1766,16 +1887,16 @@ class Pygit2(GitProvider):
         home = os.path.expanduser("~")
         pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
-        if not os.listdir(self.cachedir):
+        if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there
-            self.repo = pygit2.init_repository(self.cachedir)
+            self.repo = pygit2.init_repository(self._cachedir)
             new = True
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self._cachedir)
             except KeyError:
-                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
+                log.error(_INVALID_REPO, self._cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
@@ -2029,7 +2150,7 @@ class Pygit2(GitProvider):
         """
         try:
             return self.peel(
-                self.repo.lookup_reference("refs/remotes/origin/{}".format(ref))
+                self.repo.lookup_reference(f"refs/remotes/origin/{ref}")
             ).tree
         except KeyError:
             return None
@@ -2039,9 +2160,7 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return self.peel(
-                self.repo.lookup_reference("refs/tags/{}".format(ref))
-            ).tree
+            return self.peel(self.repo.lookup_reference(f"refs/tags/{ref}")).tree
         except KeyError:
             return None
 
@@ -2295,6 +2414,7 @@ class GitBase:
         self.file_list_cachedir = salt.utils.path.join(
             self.opts["cachedir"], "file_lists", self.role
         )
+        salt.utils.cache.verify_cache_version(self.cache_root)
         if init_remotes:
             self.init_remotes(
                 remotes if remotes is not None else [],
@@ -2319,9 +2439,7 @@ class GitBase:
         # error out and do not proceed.
         override_params = copy.deepcopy(per_remote_overrides)
         global_auth_params = [
-            "{}_{}".format(self.role, x)
-            for x in AUTH_PARAMS
-            if self.opts["{}_{}".format(self.role, x)]
+            f"{self.role}_{x}" for x in AUTH_PARAMS if self.opts[f"{self.role}_{x}"]
         ]
         if self.provider in AUTH_PROVIDERS:
             override_params += AUTH_PARAMS
@@ -2344,7 +2462,7 @@ class GitBase:
         global_values = set(override_params)
         global_values.update(set(global_only))
         for param in global_values:
-            key = "{}_{}".format(self.role, param)
+            key = f"{self.role}_{param}"
             if key not in self.opts:
                 log.critical(
                     "Key '%s' not present in global configuration. This is "
@@ -2367,8 +2485,6 @@ class GitBase:
             )
             if hasattr(repo_obj, "repo"):
                 # Sanity check and assign the credential parameter
-                repo_obj.verify_auth()
-                repo_obj.setup_callbacks()
                 if self.opts["__role"] == "minion" and repo_obj.new:
                     # Perform initial fetch on masterless minion
                     repo_obj.fetch()
@@ -2417,7 +2533,7 @@ class GitBase:
         # Don't allow collisions in cachedir naming
         cachedir_map = {}
         for repo in self.remotes:
-            cachedir_map.setdefault(repo.cachedir, []).append(repo.id)
+            cachedir_map.setdefault(repo.get_cachedir(), []).append(repo.id)
 
         collisions = [x for x in cachedir_map if len(cachedir_map[x]) > 1]
         if collisions:
@@ -2434,48 +2550,42 @@ class GitBase:
         if any(x.new for x in self.remotes):
             self.write_remote_map()
 
+    def _remove_cache_dir(self, cache_dir):
+        try:
+            shutil.rmtree(cache_dir)
+        except OSError as exc:
+            log.error(
+                "Unable to remove old %s remote cachedir %s: %s",
+                self.role,
+                cache_dir,
+                exc,
+            )
+            return False
+        log.debug("%s removed old cachedir %s", self.role, cache_dir)
+        return True
+
+    def _iter_remote_hashes(self):
+        for item in os.listdir(self.cache_root):
+            if item in ("hash", "refs", "links", "work"):
+                continue
+            if os.path.isdir(salt.utils.path.join(self.cache_root, item)):
+                yield item
+
     def clear_old_remotes(self):
         """
         Remove cache directories for remotes no longer configured
         """
-        try:
-            cachedir_ls = os.listdir(self.cache_root)
-        except OSError:
-            cachedir_ls = []
-        # Remove actively-used remotes from list
-        for repo in self.remotes:
-            try:
-                cachedir_ls.remove(repo.cachedir_basename)
-            except ValueError:
-                pass
-        to_remove = []
-        for item in cachedir_ls:
-            if item in ("hash", "refs"):
-                continue
-            path = salt.utils.path.join(self.cache_root, item)
-            if os.path.isdir(path):
-                to_remove.append(path)
-        failed = []
-        if to_remove:
-            for rdir in to_remove:
-                try:
-                    shutil.rmtree(rdir)
-                except OSError as exc:
-                    log.error(
-                        "Unable to remove old %s remote cachedir %s: %s",
-                        self.role,
-                        rdir,
-                        exc,
-                    )
-                    failed.append(rdir)
-                else:
-                    log.debug("%s removed old cachedir %s", self.role, rdir)
-        for fdir in failed:
-            to_remove.remove(fdir)
-        ret = bool(to_remove)
-        if ret:
+        change = False
+        # Remove all hash dirs not part of this group
+        remote_set = {r.get_cache_basehash() for r in self.remotes}
+        for item in self._iter_remote_hashes():
+            if item not in remote_set:
+                change = self._remove_cache_dir(
+                    salt.utils.path.join(self.cache_root, item) or change
+                )
+        if not change:
             self.write_remote_map()
-        return ret
+        return change
 
     def clear_cache(self):
         """
@@ -2487,7 +2597,7 @@ class GitBase:
                 try:
                     shutil.rmtree(rdir)
                 except OSError as exc:
-                    errors.append("Unable to delete {}: {}".format(rdir, exc))
+                    errors.append(f"Unable to delete {rdir}: {exc}")
         return errors
 
     def clear_lock(self, remote=None, lock_type="update"):
@@ -2534,6 +2644,27 @@ class GitBase:
             name = getattr(repo, "name", None)
             if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
+                    # Find and place fetch_request file for all the other branches for this repo
+                    repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
+                    for branch in os.listdir(repo_work_hash):
+                        # Don't place fetch request in current branch being updated
+                        if branch == repo.get_cache_basename():
+                            continue
+                        branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
+                        fetch_path = salt.utils.path.join(
+                            branch_salt_dir, "fetch_request"
+                        )
+                        if os.path.isdir(branch_salt_dir):
+                            try:
+                                with salt.utils.files.fopen(fetch_path, "w"):
+                                    pass
+                            except OSError as exc:  # pylint: disable=broad-except
+                                log.error(
+                                    f"Failed to make fetch request: {fetch_path} {exc}",
+                                    exc_info=True,
+                                )
+                        else:
+                            log.error(f"Failed to make fetch request: {fetch_path}")
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
                         # because the data could still have changed if old
@@ -2642,10 +2773,10 @@ class GitBase:
         """
         Determine which provider to use
         """
-        if "verified_{}_provider".format(self.role) in self.opts:
-            self.provider = self.opts["verified_{}_provider".format(self.role)]
+        if f"verified_{self.role}_provider" in self.opts:
+            self.provider = self.opts[f"verified_{self.role}_provider"]
         else:
-            desired_provider = self.opts.get("{}_provider".format(self.role))
+            desired_provider = self.opts.get(f"{self.role}_provider")
             if not desired_provider:
                 if self.verify_pygit2(quiet=True):
                     self.provider = "pygit2"
@@ -2716,7 +2847,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "gitpython"
+        self.opts[f"verified_{self.role}_provider"] = "gitpython"
         log.debug("gitpython %s_provider enabled", self.role)
         return True
 
@@ -2772,7 +2903,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "pygit2"
+        self.opts[f"verified_{self.role}_provider"] = "pygit2"
         log.debug("pygit2 %s_provider enabled", self.role)
         return True
 
@@ -2784,11 +2915,11 @@ class GitBase:
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# {}_remote map as of {}\n".format(self.role, timestamp))
+                fp_.write(f"# {self.role}_remote map as of {timestamp}\n")
                 for repo in self.remotes:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{} = {}\n".format(repo.cachedir_basename, repo.id)
+                            f"{repo.get_cache_basehash()} = {repo.id}\n"
                         )
                     )
         except OSError:
@@ -2796,15 +2927,18 @@ class GitBase:
         else:
             log.info("Wrote new %s remote map to %s", self.role, remote_map)
 
-    def do_checkout(self, repo):
+    def do_checkout(self, repo, fetch_on_fail=True):
         """
         Common code for git_pillar/winrepo to handle locking and checking out
         of a repo.
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         time_start = time.time()
         while time.time() - time_start <= 5:
             try:
-                return repo.checkout()
+                return repo.checkout(fetch_on_fail=fetch_on_fail)
             except GitLockError as exc:
                 if exc.errno == errno.EEXIST:
                     time.sleep(0.1)
@@ -2935,12 +3069,12 @@ class GitFS(GitBase):
 
         dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
         hashes_glob = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.*".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.*"
         )
         blobshadest = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.blob_sha1".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, "{}.lk".format(path))
+        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
@@ -3199,14 +3333,17 @@ class GitPillar(GitBase):
 
     role = "git_pillar"
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the targeted branches/tags from the git_pillar remotes
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         self.pillar_dirs = OrderedDict()
         self.pillar_linked_dirs = []
         for repo in self.remotes:
-            cachedir = self.do_checkout(repo)
+            cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
                 if repo.branch == "__env__" and hasattr(repo, "all_saltenvs"):
@@ -3223,8 +3360,8 @@ class GitPillar(GitBase):
                         env = "base" if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
-                        self.pillar_dirs[repo.linkdir] = env
-                        self.pillar_linked_dirs.append(repo.linkdir)
+                        self.pillar_dirs[repo.get_linkdir()] = env
+                        self.pillar_linked_dirs.append(repo.get_linkdir())
                 else:
                     self.pillar_dirs[cachedir] = env
 
@@ -3233,17 +3370,19 @@ class GitPillar(GitBase):
         Ensure that the mountpoint is present in the correct location and
         points at the correct path
         """
-        lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
-        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
+        lcachelink = salt.utils.path.join(repo.get_linkdir(), repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.get_cachedir(), repo.root()).rstrip(
+            os.sep
+        )
         wipe_linkdir = False
         create_link = False
         try:
             with repo.gen_lock(lock_type="mountpoint", timeout=10):
-                walk_results = list(os.walk(repo.linkdir, followlinks=False))
+                walk_results = list(os.walk(repo.get_linkdir(), followlinks=False))
                 if walk_results != repo.linkdir_walk:
                     log.debug(
                         "Results of walking %s differ from expected results",
-                        repo.linkdir,
+                        repo.get_linkdir(),
                     )
                     log.debug("Walk results: %s", walk_results)
                     log.debug("Expected results: %s", repo.linkdir_walk)
@@ -3304,7 +3443,7 @@ class GitPillar(GitBase):
                     # Wiping implies that we need to create the link
                     create_link = True
                     try:
-                        shutil.rmtree(repo.linkdir)
+                        shutil.rmtree(repo.get_linkdir())
                     except OSError:
                         pass
                     try:
@@ -3356,6 +3495,9 @@ class GitPillar(GitBase):
 class WinRepo(GitBase):
     """
     Functionality specific to the winrepo runner
+
+    fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
     """
 
     role = "winrepo"
@@ -3363,12 +3505,12 @@ class WinRepo(GitBase):
     # out the repos.
     winrepo_dirs = {}
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the targeted branches/tags from the winrepo remotes
         """
         self.winrepo_dirs = {}
         for repo in self.remotes:
-            cachedir = self.do_checkout(repo)
+            cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
                 self.winrepo_dirs[repo.id] = cachedir

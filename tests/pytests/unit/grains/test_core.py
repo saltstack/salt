@@ -450,7 +450,7 @@ def test_gnu_slash_linux_in_os_name():
     ), patch.object(
         os.path, "exists", path_exists_mock
     ), patch(
-        "{}.__import__".format(built_in), side_effect=_import_mock
+        f"{built_in}.__import__", side_effect=_import_mock
     ), patch.object(
         os.path, "isfile", path_isfile_mock
     ), patch.object(
@@ -528,7 +528,7 @@ def test_suse_os_from_cpe_data():
     ), patch.object(
         os.path, "exists", path_exists_mock
     ), patch(
-        "{}.__import__".format(built_in), side_effect=_import_mock
+        f"{built_in}.__import__", side_effect=_import_mock
     ), patch.object(
         os.path, "isfile", MagicMock(return_value=False)
     ), patch.object(
@@ -603,7 +603,7 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     ), patch.object(
         os.path, "exists", path_isfile_mock
     ), patch(
-        "{}.__import__".format(built_in), side_effect=_import_mock
+        f"{built_in}.__import__", side_effect=_import_mock
     ), patch.object(
         os.path, "isfile", path_isfile_mock
     ), patch.object(
@@ -886,6 +886,36 @@ def test_debian_11_os_grains():
         "osrelease_info": (11,),
         "osmajorrelease": 11,
         "osfinger": "Debian-11",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_debian_12_os_grains():
+    """
+    Test if OS grains are parsed correctly in Debian 12 "bookworm"
+    """
+    # /etc/os-release data taken from base-files 12.4
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "12",
+        "VERSION": "12 (bookworm)",
+        "VERSION_CODENAME": "bookworm",
+        "ID": "debian",
+        "HOME_URL": "https://www.debian.org/",
+        "SUPPORT_URL": "https://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
+    expectation = {
+        "os": "Debian",
+        "os_family": "Debian",
+        "oscodename": "bookworm",
+        "osfullname": "Debian GNU/Linux",
+        "osrelease": "12",
+        "osrelease_info": (12,),
+        "osmajorrelease": 12,
+        "osfinger": "Debian-12",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
@@ -1679,7 +1709,7 @@ def test_docker_virtual(cgroup_substr):
     """
     Test if virtual grains are parsed correctly in Docker.
     """
-    cgroup_data = "10:memory{}a_long_sha256sum".format(cgroup_substr)
+    cgroup_data = f"10:memory{cgroup_substr}a_long_sha256sum"
     log.debug("Testing Docker cgroup substring '%s'", cgroup_substr)
     with patch.object(os.path, "isdir", MagicMock(return_value=False)), patch.object(
         os.path,
@@ -1814,7 +1844,7 @@ def test_illumos_virtual():
         if cmd == "/usr/bin/zonename":
             # NOTE: we return the name of the zone
             return "myzone"
-        mylogdebug = "cmd.run_all: '{}'".format(cmd)
+        mylogdebug = f"cmd.run_all: '{cmd}'"
         log.debug(mylogdebug)
 
     def _cmd_all_side_effect(cmd):
@@ -1918,7 +1948,7 @@ def _check_ipaddress(value, ip_v):
     """
     for val in value:
         assert isinstance(val, str)
-        ip_method = "is_ipv{}".format(ip_v)
+        ip_method = f"is_ipv{ip_v}"
         assert getattr(salt.utils.network, ip_method)(val)
 
 
@@ -1928,11 +1958,9 @@ def _check_empty(key, value, empty):
     if empty is True and value exists assert error
     """
     if not empty and not value:
-        raise Exception("{} is empty, expecting a value".format(key))
+        raise Exception(f"{key} is empty, expecting a value")
     elif empty and value:
-        raise Exception(
-            "{} is suppose to be empty. value: {} exists".format(key, value)
-        )
+        raise Exception(f"{key} is suppose to be empty. value: {value} exists")
 
 
 def _check_ip_fqdn_set(value, empty, _set=None):
@@ -2305,7 +2333,7 @@ def test_core_virtual():
                         "pid": 78,
                         "retcode": 0,
                         "stderr": "",
-                        "stdout": "\n\n{}".format(virt),
+                        "stdout": f"\n\n{virt}",
                     }
                 )
             },
