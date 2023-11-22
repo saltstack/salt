@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/cloud.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/cloud.in requirements/static/ci/common.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.8.5
+aiohttp==3.9.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   etcd3-py
@@ -92,7 +92,6 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   aiohttp
     #   requests
 cheetah3==3.2.6.post2
     # via
