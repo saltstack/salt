@@ -7,7 +7,6 @@ import pytest
 from salt.exceptions import CommandExecutionError
 
 pytestmark = [
-    pytest.mark.flaky(max_runs=10),
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,

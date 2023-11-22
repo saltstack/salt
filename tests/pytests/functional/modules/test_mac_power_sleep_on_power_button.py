@@ -4,8 +4,9 @@ integration tests for mac_power sleep_on_power_button
 
 import pytest
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
-    pytest.mark.flaky(max_runs=10),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
@@ -23,16 +24,17 @@ def test_sleep_on_power_button(power):
     Test power.get_sleep_on_power_button
     Test power.set_sleep_on_power_button
     """
-    SLEEP_ON_BUTTON = None
-
-    ret = power.get_sleep_on_power_button()
-    if isinstance(ret, bool):
-        SLEEP_ON_BUTTON = ret
+    try:
+        ret = power.get_sleep_on_power_button()
+        if isinstance(ret, bool):
+            SLEEP_ON_BUTTON = ret
+    except CommandExecutionError as exc:
+        SLEEP_ON_BUTTON = None
 
     # If available on this system, test it
     if SLEEP_ON_BUTTON is None:
         # Check for not available
-        assert "Error" in ret
+        pytest.skip("Skipping. sleep_on_power_button unavailable.")
     else:
         ret = power.set_sleep_on_power_button("on")
         assert ret

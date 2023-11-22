@@ -7,16 +7,15 @@ import logging
 import pytest
 from saltfactories.utils import random_string
 
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.flaky(max_runs=10),
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
-    pytest.mark.usefixtures("salt_sub_minion"),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
-    pytest.mark.skip_initial_gh_actions_failure,
 ]
 
 
@@ -31,12 +30,14 @@ def system(modules):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(service, system):
+def _setup_teardown_vars(service, system, grains):
+
     ATRUN_ENABLED = service.enabled("com.apple.atrun")
 
-    REMOTE_LOGIN_ENABLED = system.get_remote_login()
-
-    REMOTE_EVENTS_ENABLED = system.get_remote_events()
+    if grains["osrelease_info"][0] < 13:
+        # Skipping this MacOSX 13+ until we can figure how to have full disk access enabled.
+        REMOTE_LOGIN_ENABLED = system.get_remote_login()
+        REMOTE_EVENTS_ENABLED = system.get_remote_events()
 
     SUBNET_NAME = system.get_subnet_name()
 
@@ -49,17 +50,24 @@ def _setup_teardown_vars(service, system):
             atrun = "/System/Library/LaunchDaemons/com.apple.atrun.plist"
             service.stop(atrun)
 
-        system.set_remote_login(REMOTE_LOGIN_ENABLED)
-        system.set_remote_events(REMOTE_EVENTS_ENABLED)
+        if grains["osrelease_info"][0] < 13:
+            # Skipping this MacOSX 13+ until we can figure how to have full disk access enabled.
+            system.set_remote_login(REMOTE_LOGIN_ENABLED)
+            system.set_remote_events(REMOTE_EVENTS_ENABLED)
         system.set_subnet_name(SUBNET_NAME)
         system.set_disable_keyboard_on_lock(KEYBOARD_DISABLED)
 
 
-def test_get_set_remote_login(system):
+def test_get_set_remote_login(system, grains):
     """
     Test system.get_remote_login
     Test system.set_remote_login
     """
+    if grains["osrelease_info"][0] >= 13:
+        pytest.skip(
+            "Skipping this MacOSX 13+ until we can figure how to have full disk access enabled."
+        )
+
     # Normal Functionality
     ret = system.set_remote_login(True)
     assert ret
@@ -99,15 +107,21 @@ def test_get_set_remote_login(system):
     assert ret
 
     # Test invalid input
-    ret = system.set_remote_login("spongebob")
-    assert "Invalid String Value for Enabled" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        system.set_remote_login("spongebob")
+        assert "Invalid String Value for Enabled" in str(exc.value)
 
 
-def test_get_set_remote_events(system):
+def test_get_set_remote_events(system, grains):
     """
     Test system.get_remote_events
     Test system.set_remote_events
     """
+    if grains["osrelease_info"][0] >= 13:
+        pytest.skip(
+            "Skipping this MacOSX 13+ until we can figure how to have full disk access enabled."
+        )
+
     # Normal Functionality
     ret = system.set_remote_events(True)
     assert ret
@@ -147,8 +161,9 @@ def test_get_set_remote_events(system):
     assert ret
 
     # Test invalid input
-    ret = system.set_remote_events("spongebob")
-    assert "Invalid String Value for Enabled" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        system.set_remote_events("spongebob")
+        assert "Invalid String Value for Enabled" in str(exc.value)
 
 
 def test_get_set_subnet_name(system):
@@ -180,8 +195,9 @@ def test_get_list_startup_disk(system):
     assert startup_disk in ret
 
     # Test passing set a bad disk
-    ret = system.set_startup_disk("spongebob")
-    assert "Invalid value passed for path." in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        system.set_startup_disk("spongebob")
+        assert "Invalid value passed for path." in str(exc.value)
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -200,8 +216,9 @@ def test_get_set_restart_delay(system):
     assert ret == "90 seconds"
 
     # Pass set bad value for seconds
-    ret = system.set_restart_delay(70)
-    assert "Invalid value passed for seconds." in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        system.set_restart_delay(70)
+        assert "Invalid value passed for seconds." in str(exc.value)
 
 
 def test_get_set_disable_keyboard_on_lock(system):
@@ -248,8 +265,9 @@ def test_get_set_disable_keyboard_on_lock(system):
     assert ret
 
     # Test invalid input
-    ret = system.set_disable_keyboard_on_lock("spongebob")
-    assert "Invalid String Value for Enabled" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        system.set_disable_keyboard_on_lock("spongebob")
+        assert "Invalid String Value for Enabled" in str(exc.value)
 
 
 @pytest.mark.skip(reason="Skip this test until mac fixes it.")
@@ -274,8 +292,9 @@ def test_get_set_boot_arch(system):
     assert ret == "default"
 
     # Test invalid input
-    ret = system.set_boot_arch("spongebob")
-    assert "Invalid value passed for arch" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        system.set_boot_arch("spongebob")
+        assert "Invalid value passed for arch" in str(exc.value)
 
 
 # A similar test used to be skipped on py3 due to 'hanging', if we see

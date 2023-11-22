@@ -31,16 +31,13 @@ def test_set_output_volume(desktop):
     """
     Tests the return of set_output_volume.
     """
+    current_vol = desktop.get_output_volume()
     try:
-        ret = desktop.get_output_volume()
-        current_vol = ret
         to_set = 10
         if current_vol == str(to_set):
             to_set += 2
-        ret = desktop.set_output_volume(str(to_set))
-        new_vol = ret
-        ret = desktop.get_output_volume()
-        check_vol = ret
+        new_vol = desktop.set_output_volume(str(to_set))
+        check_vol = desktop.get_output_volume()
         assert new_vol == check_vol
     finally:
         # Set volume back to what it was before

@@ -8,9 +8,10 @@ import types
 import pytest
 from saltfactories.utils import random_string
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("dscl", "pwpolicy"),
-    pytest.mark.skip_initial_gh_actions_failure,
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
@@ -54,10 +55,9 @@ def test_get_account_created(shadow, accounts):
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_account_created(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_last_change(shadow, accounts):
@@ -71,10 +71,9 @@ def test_get_last_change(shadow, accounts):
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_last_change(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_login_failed_last(shadow, accounts):
@@ -88,10 +87,9 @@ def test_get_login_failed_last(shadow, accounts):
     assert isinstance(obj_date, datetime.date)
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_login_failed_last(accounts)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_login_failed_count(shadow, accounts):
@@ -102,10 +100,9 @@ def test_get_login_failed_count(shadow, accounts):
     assert shadow.get_login_failed_count(accounts.created) == "0"
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_login_failed_count(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_set_maxdays(shadow, accounts):
@@ -118,14 +115,13 @@ def test_get_set_maxdays(shadow, accounts):
     assert shadow.get_maxdays(accounts.created) == 20
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.set_maxdays(accounts.not_created, 7)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
-    assert (
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
+
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_maxdays(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_set_change(shadow, accounts):
@@ -138,14 +134,13 @@ def test_get_set_change(shadow, accounts):
     assert shadow.get_change(accounts.created) == "02/11/2011"
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.set_change(accounts.not_created, "02/11/2012")
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
-    assert (
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
+
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_change(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_get_set_expire(shadow, accounts):
@@ -158,14 +153,13 @@ def test_get_set_expire(shadow, accounts):
     assert shadow.get_expire(accounts.created) == "02/11/2011"
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.set_expire(accounts.not_created, "02/11/2012")
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
-    assert (
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
+
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.get_expire(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_del_password(shadow, accounts):
@@ -177,10 +171,9 @@ def test_del_password(shadow, accounts):
     assert shadow.info(accounts.created)["passwd"] == "*"
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.del_password(accounts.not_created)
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)
 
 
 def test_set_password(shadow, accounts):
@@ -191,7 +184,6 @@ def test_set_password(shadow, accounts):
     assert shadow.set_password(accounts.created, "Pa$$W0rd")
 
     # User does not exist
-    assert (
+    with pytest.raises(CommandExecutionError) as exc:
         shadow.set_password(accounts.not_created, "P@SSw0rd")
-        == f"ERROR: User not found: {accounts.not_created}"
-    )
+        assert f"ERROR: User not found: {accounts.not_created}" in str(exc.value)

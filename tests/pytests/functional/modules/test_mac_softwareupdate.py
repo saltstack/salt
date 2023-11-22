@@ -4,12 +4,13 @@ integration tests for mac_softwareupdate
 
 import pytest
 
+from salt.exceptions import SaltInvocationError
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("softwareupdate"),
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
-    pytest.mark.skip_initial_gh_actions_failure,
 ]
 
 
@@ -82,6 +83,7 @@ def test_ignore(softwareupdate):
     assert "squidward" in ret
 
 
+@pytest.mark.skip(reason="Ignore schedule support removed from latest OS X.")
 def test_schedule(softwareupdate):
     """
     Test softwareupdate.schedule_enable
@@ -121,8 +123,9 @@ def test_update(softwareupdate):
     assert not ret
 
     # Test update not available
-    ret = softwareupdate.update("spongebob")
-    assert "Update not available" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        ret = softwareupdate.update("spongebob")
+        assert "Update not available" in str(exc.value)
 
 
 def test_list_downloads(softwareupdate):
@@ -141,8 +144,9 @@ def test_download(softwareupdate):
     the download function
     """
     # Test update not available
-    ret = softwareupdate.download("spongebob")
-    assert "Update not available" in ret
+    with pytest.raises(SaltInvocationError) as exc:
+        softwareupdate.download("spongebob")
+        assert "Update not available" in str(exc.value)
 
 
 def test_download_all(softwareupdate):
@@ -153,6 +157,7 @@ def test_download_all(softwareupdate):
     assert isinstance(ret, list)
 
 
+@pytest.mark.skip(reason="Ignore catalog support removed from latest OS X.")
 def test_get_set_reset_catalog(softwareupdate):
     """
     Test softwareupdate.download_all

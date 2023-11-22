@@ -7,7 +7,6 @@ import pytest
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [
-    pytest.mark.flaky(max_runs=10),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
     pytest.mark.slow_test,
     pytest.mark.destructive_test,

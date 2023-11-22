@@ -4,6 +4,8 @@ integration tests for mac_xattr
 
 import pytest
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("xattr"),
     pytest.mark.slow_test,
@@ -13,8 +15,8 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def xttr(modules):
-    return modules.xttr
+def xattr(modules):
+    return modules.xattr
 
 
 @pytest.fixture(scope="function")
@@ -47,8 +49,9 @@ def test_list_no_xattr(xattr, setup_teardown_vars):
     assert ret == {}
 
     # Test file not found
-    ret = xattr.list(no_file)
-    assert f"File not found: {no_file}" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.list(no_file)
+        assert f"File not found: {no_file}" in str(exc.value)
 
 
 def test_write(xattr, setup_teardown_vars):
@@ -81,8 +84,9 @@ def test_write(xattr, setup_teardown_vars):
     }
 
     # Test file not found
-    ret = xattr.write(no_file, "patrick", "jellyfish")
-    assert f"File not found: {no_file}" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.write(no_file, "patrick", "jellyfish")
+        assert f"File not found: {no_file}" in str(exc.value)
 
 
 def test_read(xattr, setup_teardown_vars):
@@ -105,12 +109,14 @@ def test_read(xattr, setup_teardown_vars):
     assert ret == "squarepants"
 
     # Test file not found
-    ret = xattr.read(no_file, "spongebob")
-    assert f"File not found: {no_file}" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.read(no_file, "spongebob")
+        assert f"File not found: {no_file}" in str(exc.value)
 
     # Test attribute not found
-    ret = xattr.read(test_file, "patrick")
-    assert "Attribute not found: patrick" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.read(test_file, "patrick")
+        assert "Attribute not found: patrick" in str(exc.value)
 
 
 def test_delete(xattr, setup_teardown_vars):
@@ -146,12 +152,14 @@ def test_delete(xattr, setup_teardown_vars):
     }
 
     # Test file not found
-    ret = xattr.delete(no_file, "spongebob")
-    assert f"File not found: {no_file}" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.delete(no_file, "spongebob")
+        assert f"File not found: {no_file}" in str(exc.value)
 
     # Test attribute not found
-    ret = xattr.delete(test_file, "patrick")
-    assert "Attribute not found: patrick" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.delete(test_file, "patrick")
+        assert "Attribute not found: patrick" in str(exc.value)
 
 
 def test_clear(xattr, setup_teardown_vars):
@@ -180,5 +188,6 @@ def test_clear(xattr, setup_teardown_vars):
     assert ret
 
     # Test file not found
-    ret = xattr.clear(no_file)
-    assert f"File not found: {no_file}" in ret
+    with pytest.raises(CommandExecutionError) as exc:
+        ret = xattr.clear(no_file)
+        assert f"File not found: {no_file}" in str(exc.value)

@@ -5,7 +5,6 @@ integration tests for mac_power wake_on_network
 import pytest
 
 pytestmark = [
-    pytest.mark.flaky(max_runs=10),
     pytest.mark.skip_if_binaries_missing("systemsetup"),
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,

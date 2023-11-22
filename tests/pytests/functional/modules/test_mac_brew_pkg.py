@@ -13,13 +13,14 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("brew"),
 ]
 
-# Brew doesn't support local package installation - So, let's
-# Grab some small packages available online for brew
-
 
 @pytest.fixture(scope="module")
 def pkg(modules):
     return modules.pkg
+
+
+# Brew doesn't support local package installation - So, let's
+# Grab some small packages available online for brew
 
 
 @pytest.fixture(scope="function")
