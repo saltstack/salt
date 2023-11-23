@@ -550,9 +550,6 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-                print("%" * 80)
-                print(f"get event {wait}")
-                print("%" * 80)
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
@@ -639,9 +636,6 @@ class SaltEvent:
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         """
-        print("%" * 80)
-        print("GET EVENT CALLED")
-        print("%" * 80)
         log.trace("Get event. tag: %s", tag)
         assert self._run_io_loop_sync
 
