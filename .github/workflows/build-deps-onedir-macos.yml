@@ -46,7 +46,10 @@ jobs:
       matrix:
         arch:
           - x86_64
-    runs-on: macos-12
+          - aarch64
+    runs-on:
+      - ${{ matrix.arch == 'aarch64' && 'macos-13-xlarge' || 'macos-12' }}
+
     steps:
 
       - name: "Throttle Builds"
@@ -75,51 +78,6 @@ jobs:
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version }}
-
-      - name: Install Salt Packaging Dependencies into Relenv Onedir
-        uses: ./.github/actions/build-onedir-deps
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-          python-version: "${{ inputs.python-version }}"
-          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
-
-  build-deps-macos-arm64:
-    name: macOS
-    if: ${{ inputs.github-hosted-runners }}
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - aarch64
-    runs-on: macos-13-xlarge
-    steps:
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
-
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Relenv
-        id: setup-relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-          version: ${{ inputs.relenv-version }}
-          cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Install Salt Packaging Dependencies into Relenv Onedir
         uses: ./.github/actions/build-onedir-deps
