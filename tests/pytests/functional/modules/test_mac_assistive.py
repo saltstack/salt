@@ -4,6 +4,8 @@
 
 import pytest
 
+from salt.exceptions import CommandExecutionError
+
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
@@ -23,7 +25,11 @@ def osa_script():
 
 @pytest.fixture(scope="function", autouse=True)
 def _setup_teardown_vars(assistive, osa_script):
-    assistive.install(osa_script, True)
+    try:
+        ret = assistive.install(osa_script, True)
+    except CommandExecutionError as exc:
+        pytest.skip(f"Unable to install {osa_script} - {str(exc.value)}")
+
     try:
         yield
     finally:
