@@ -106,7 +106,7 @@ def test_issue_2401_file_comment(modules, tmp_path):
     tmp_file.write_text("hello\nworld\n")
     # create the sls template
     template_lines = [
-        "{}:".format(tmp_file),
+        f"{tmp_file}:",
         "  file.comment:",
         "    - regex: ^world",
     ]
@@ -122,3 +122,16 @@ def test_issue_2401_file_comment(modules, tmp_path):
     for state_run in ret:
         assert state_run.result is True
         assert "Pattern already commented" in state_run.comment
+
+
+def test_issue_65501(file, tmp_path):
+    tmp_file = tmp_path / "issue-65501.txt"
+    tmp_file.write_text("first\n#PermitRootLogin prohibit-password\nlast")
+    ret = file.comment(
+        name=str(tmp_file),
+        regex="^PermitRootLogin[ \t]+.*$",
+        char="# NEXT LINE COMMENT SALTSTACK openssh-server_comment_permitrootlogin_sshd_config\n# ",
+        ignore_missing=True,
+    )
+    assert ret.result is True
+    assert ret.comment == "Pattern not found and ignore_missing set to True"

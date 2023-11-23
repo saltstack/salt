@@ -15,6 +15,10 @@ from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 @pytest.fixture
 def job1():
@@ -196,6 +200,38 @@ def test_build_schedule_item_invalid_jobs_args():
         assert schedule.build_schedule_item(
             "job1", function="test.args", job_args={"positional"}
         ) == {"comment": comment2, "result": False}
+
+
+def test_build_schedule_item_jid_include():
+    """
+    Test build_schedule_item when jid_include is passed and not passed
+    """
+    ret = schedule.build_schedule_item("job1", function="test.args", jid_include=False)
+    assert ret == {
+        "function": "test.args",
+        "maxrunning": 1,
+        "name": "job1",
+        "enabled": True,
+        "jid_include": False,
+    }
+
+    ret = schedule.build_schedule_item("job1", function="test.args", jid_include=True)
+    assert ret == {
+        "function": "test.args",
+        "maxrunning": 1,
+        "name": "job1",
+        "enabled": True,
+        "jid_include": True,
+    }
+
+    ret = schedule.build_schedule_item("job1", function="test.args")
+    assert ret == {
+        "function": "test.args",
+        "maxrunning": 1,
+        "name": "job1",
+        "enabled": True,
+        "jid_include": True,
+    }
 
 
 # 'add' function tests: 1

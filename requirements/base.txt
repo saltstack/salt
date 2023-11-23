@@ -3,12 +3,33 @@ jmespath
 msgpack>=1.0.0
 PyYAML
 MarkupSafe
-requests>=1.0.0
+requests>=2.25.1
 distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
 looseversion
-# We need contextvars for salt-ssh
+tornado>=6.3.3
+
+# We need contextvars for salt-ssh.
+# Even on python versions which ships with contextvars in the standard library!
 contextvars
-tornado>=6.2.0 ; python_version < '3.8'
-tornado>=6.3.2 ; python_version >= '3.8'
+
+setproctitle>=1.2.3
+timelib>=0.2.5
+pyopenssl>=20.0.1
+python-dateutil>=2.8.1
+python-gnupg>=0.4.7
+cherrypy>=18.6.1
+importlib-metadata>=3.3.0
+cryptography>=41.0.3
+
+# From old requirements/static/pkg/linux.in
+rpm-vercmp; sys_platform == 'linux'
+
+# From old windows.txt requirements file
+pywin32>=305; sys_platform == 'win32'
+wmi>=1.5.1; sys_platform == 'win32'
+pythonnet>=3.0.1; sys_platform == 'win32'
+pymssql>=2.2.1; sys_platform == 'win32'
+pymysql>=1.0.2; sys_platform == 'win32'
+lxml>=4.6.3; sys_platform == 'win32'

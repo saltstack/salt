@@ -1542,6 +1542,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
+    follow_symlinks=True,
     **kwargs,
 ):
     """
@@ -1647,12 +1648,24 @@ def symlink(
         override this behavior.
 
         .. versionadded:: 3006.0
+
+    follow_symlinks (bool):
+        If set to ``False``, the underlying ``file.symlink`` execution module
+        and any checks in this state will use ``os.path.lexists()`` for
+        existence checks instead of ``os.path.exists()``.
+
+        .. versionadded:: 3007.0
     """
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not name:
         return _error(ret, "Must provide name to file.symlink")
+
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
@@ -1834,7 +1847,7 @@ def symlink(
                         )
             return ret
 
-    elif os.path.exists(name):
+    elif exists(name):
         # It is not a link, but a file, dir, socket, FIFO etc.
         if backupname is not None:
             if not os.path.isabs(backupname):
@@ -1892,7 +1905,9 @@ def symlink(
             )
 
     try:
-        __salt__["file.symlink"](target, name, force=force, atomic=atomic)
+        __salt__["file.symlink"](
+            target, name, force=force, atomic=atomic, follow_symlinks=follow_symlinks
+        )
     except (CommandExecutionError, OSError) as exc:
         ret["result"] = False
         ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
@@ -4481,10 +4496,8 @@ def recurse(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv)
-    if srcpath not in master_dirs and not any(
-        x for x in master_dirs if x.startswith(srcpath + "/")
-    ):
+    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv, prefix=srcpath + "/")
+    if srcpath not in master_dirs:
         ret["result"] = False
         ret["comment"] = (
             "The directory '{}' does not exist on the salt fileserver "
@@ -6158,7 +6171,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = rf"^(?!\s*{char}).*" + unanchor_regex
+    uncomment_regex = rf"^(?!\s*{char})\s*" + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing

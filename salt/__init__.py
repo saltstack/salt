@@ -12,7 +12,7 @@ import warnings
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-if sys.version_info < (3,):
+if sys.version_info < (3,):  # pragma: no cover
     sys.stderr.write(
         "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
     )
@@ -89,6 +89,12 @@ warnings.filterwarnings(
     message="Setuptools is replacing distutils.",
     category=UserWarning,
     module="_distutils_hack",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    message="invalid escape sequence.*",
+    category=DeprecationWarning,
 )
 
 
