@@ -46,7 +46,7 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.18.3"
+    rev: "0.18.5"
     hooks:
       - id: tools
         alias: check-changelog-entries
@@ -1762,7 +1762,7 @@ repos:
           - types-attrs
           - types-pyyaml
           - types-requests
-          - python-tools-scripts>=0.18.3
+          - python-tools-scripts>=0.18.4
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12
