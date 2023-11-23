@@ -8,7 +8,6 @@ import warnings
 import aiohttp
 import aiohttp.web
 import tornado.ioloop
-from tornado.locks import Lock
 
 import salt.payload
 import salt.transport.base
@@ -44,7 +43,6 @@ class PublishClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
         self.io_loop = io_loop
-        self.unpacker = salt.utils.msgpack.Unpacker()
 
         self.connected = False
         self._closing = False
@@ -52,8 +50,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closed = False
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
-        self.resolver = kwargs.get("resolver")
-        self._read_in_progress = Lock()
         self.poller = None
 
         self.host = kwargs.get("host", None)
@@ -104,11 +100,10 @@ class PublishClient(salt.transport.base.PublishClient):
     # pylint: enable=W1701
     def _decode_messages(self, messages):
         if not isinstance(messages, dict):
-            body =salt.payload.loads(messages)
+            body = salt.payload.loads(messages)
         else:
             body = messages
         return body
-
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -185,8 +180,6 @@ class PublishClient(salt.transport.base.PublishClient):
             await self.connect()
             await asyncio.sleep(0.001)
         if timeout == 0:
-            for msg in self.unpacker:
-                return msg
             try:
                 raw_msg = await asyncio.wait_for(self._ws.receive(), 0.0001)
             except TimeoutError:
@@ -195,9 +188,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 if raw_msg.data == "close":
                     await self._ws.close()
             if raw_msg.type == aiohttp.WSMsgType.BINARY:
-                self.unpacker.feed(raw_msg.data)
-                for msg in self.unpacker:
-                    return msg
+                return salt.payload.loads(raw_msg.data, raw=True)
             elif raw_msg.type == aiohttp.WSMsgType.ERROR:
                 log.error(
                     "ws connection closed with exception %s", self._ws.exception()
@@ -205,19 +196,13 @@ class PublishClient(salt.transport.base.PublishClient):
         elif timeout:
             return await asyncio.wait_for(self.recv(), timeout=timeout)
         else:
-            for msg in self.unpacker:
-                return msg
             while True:
-                for msg in self.unpacker:
-                    return msg
                 raw_msg = await self._ws.receive()
                 if raw_msg.type == aiohttp.WSMsgType.TEXT:
                     if raw_msg.data == "close":
                         await self._ws.close()
                 if raw_msg.type == aiohttp.WSMsgType.BINARY:
-                    self.unpacker.feed(raw_msg.data)
-                    for msg in self.unpacker:
-                        return msg
+                    return salt.payload.loads(raw_msg.data, raw=True)
                 elif raw_msg.type == aiohttp.WSMsgType.ERROR:
                     log.error(
                         "ws connection closed with exception %s",
@@ -388,7 +373,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         await self.puller.wait_closed()
 
     async def pull_handler(self, reader, writer):
-        unpacker = salt.utils.msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker(raw=True)
         while True:
             data = await reader.read(1024)
             unpacker.feed(data)
@@ -445,11 +430,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.pub_writer:
             await self.connect()
-        self.pub_writer.write(salt.payload.dumps(payload))
+        self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
         await self.pub_writer.drain()
 
     async def publish_payload(self, package, *args):
-        payload = salt.payload.dumps(package)
+        payload = salt.payload.dumps(package, use_bin_type=True)
         for ws in list(self.clients):
             try:
                 await ws.send_bytes(payload)
