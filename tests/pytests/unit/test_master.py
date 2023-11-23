@@ -1,5 +1,5 @@
-import time
 import os
+import time
 
 import pytest
 
@@ -186,17 +186,17 @@ def test_when_syndic_return_processes_load_then_correct_values_should_be_returne
     [
         (
             ["minion1", "minion2"],
-            set(["minion1", "minion2"]),
+            {"minion1", "minion2"},
         ),
         (
             ["minion1"],
-            set(["minion1", "minion2"]),
+            {"minion1", "minion2"},
         ),
         (
             ["minion1", "minion2"],
-            set(["minion1"]),
+            {"minion1"},
         ),
-    ]
+    ],
 )
 def test_handle_presence(maintenance, presence_cache_data, connected_ids):
     """
@@ -213,9 +213,7 @@ def test_handle_presence(maintenance, presence_cache_data, connected_ids):
     presence_cache.clear()
     presence_cache["present"] = presence_cache_data
 
-    with patch(
-        "salt.master.Maintenance.run", MagicMock()
-    ), patch(
+    with patch("salt.master.Maintenance.run", MagicMock()), patch(
         "salt.master.Maintenance.presence_events", True, create=True
     ), patch(
         "salt.master.Maintenance.event",
@@ -226,9 +224,7 @@ def test_handle_presence(maintenance, presence_cache_data, connected_ids):
         create=True,
     ), patch(
         "salt.master.Maintenance.ckminions",
-        MagicMock(
-            connected_ids=MagicMock(return_value=connected_ids)
-        ),
+        MagicMock(connected_ids=MagicMock(return_value=connected_ids)),
         create=True,
     ):
         maintenance.handle_presence(set(presence_cache["present"]))
@@ -236,17 +232,19 @@ def test_handle_presence(maintenance, presence_cache_data, connected_ids):
         assert fire_event.called
 
         args, _ = fire_event.call_args
-        assert set(args[0]["present"]) == connected_ids, (
-            "The presence event sent does not contain the expected minions"
-        )
+        assert (
+            set(args[0]["present"]) == connected_ids
+        ), "The presence event sent does not contain the expected minions"
 
         # reload the presence data from disk
         new_presence_cache = salt.utils.cache.CacheFactory.factory(
             "disk",
             3600,
-            minion_cache_path=os.path.join(maintenance.opts["cachedir"], "presence-data"),
+            minion_cache_path=os.path.join(
+                maintenance.opts["cachedir"], "presence-data"
+            ),
         )
         new_present = set(new_presence_cache["present"])
-        assert new_present == connected_ids, (
-            "The presence cache on disk does not contain the expected minions"
-        )
+        assert (
+            new_present == connected_ids
+        ), "The presence cache on disk does not contain the expected minions"
