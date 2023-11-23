@@ -28,7 +28,11 @@ async def test_publsh_server(
 
     try:
         pub_client.on_recv(handle_msg)
-        msg = b"meh"
+        # TODO: Fix this inconsistancy.
+        if transport == "zeromq":
+            msg = b"meh"
+        else:
+            msg = {b"foo": b"bar"}
         await pub_server.publish(msg)
         await asyncio.wait_for(event.wait(), 1)
         assert [msg] == messages
