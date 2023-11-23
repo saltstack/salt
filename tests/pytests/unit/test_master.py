@@ -5,7 +5,7 @@ import pytest
 
 import salt.master
 import salt.utils.platform
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -182,23 +182,28 @@ def test_when_syndic_return_processes_load_then_correct_values_should_be_returne
 
 
 @pytest.mark.parametrize(
-    "presence_cache_data,connected_ids",
+    "presence_cache_data,connected_ids,change_expected",
     [
         (
             ["minion1", "minion2"],
             {"minion1", "minion2"},
+            False,
         ),
         (
             ["minion1"],
             {"minion1", "minion2"},
+            True,
         ),
         (
             ["minion1", "minion2"],
             {"minion1"},
+            True,
         ),
     ],
 )
-def test_handle_presence(maintenance, presence_cache_data, connected_ids):
+def test_handle_presence(
+    maintenance, presence_cache_data, connected_ids, change_expected
+):
     """
     Test the handle_presence function inside Maintenance class.
     """
@@ -231,9 +236,22 @@ def test_handle_presence(maintenance, presence_cache_data, connected_ids):
 
         assert fire_event.called
 
-        args, _ = fire_event.call_args
+        if change_expected:
+            assert fire_event.call_count == 2
+            change_events = [
+                call[0][0]
+                for call in fire_event.call_args_list
+                if "/change" in call[0][1]
+            ]
+            assert change_events
+        else:
+            assert fire_event.call_count == 1
+
+        present_event = [
+            call[0][0] for call in fire_event.call_args_list if "/present" in call[0][1]
+        ][0]
         assert (
-            set(args[0]["present"]) == connected_ids
+            set(present_event["present"]) == connected_ids
         ), "The presence event sent does not contain the expected minions"
 
         # reload the presence data from disk
