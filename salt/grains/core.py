@@ -9,7 +9,7 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-import datetime
+from datetime import datetime, timezone
 import hashlib
 import locale
 import logging
@@ -2698,7 +2698,7 @@ def locale_info():
     grains["locale_info"]["timezone"] = "unknown"
     if _DATEUTIL_TZ:
         try:
-            grains["locale_info"]["timezone"] = datetime.datetime.now(
+            grains["locale_info"]["timezone"] = datetime.now(
                 dateutil.tz.tzlocal()
             ).tzname()
         except UnicodeDecodeError:
@@ -2810,11 +2810,11 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
-                start_time = datetime.datetime.utcnow()
+                start_time = datetime.now(tz=timezone.utc)
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
-                timediff = datetime.datetime.utcnow() - start_time
+                timediff = datetime.now(tz=timezone.utc) - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '

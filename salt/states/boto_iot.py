@@ -70,7 +70,7 @@ config:
 
 """
 
-import datetime
+from datetime import datetime, timezone
 import logging
 import os
 import time
@@ -284,11 +284,11 @@ def thing_type_absent(
             if _tz_index != -1:
                 _deprecation_date_str = _deprecation_date_str[:_tz_index]
 
-            _deprecation_date = datetime.datetime.strptime(
+            _deprecation_date = datetime.strptime(
                 _deprecation_date_str, "%Y-%m-%d %H:%M:%S.%f"
             )
 
-            _elapsed_time_delta = datetime.datetime.utcnow() - _deprecation_date
+            _elapsed_time_delta = datetime.now(tz=timezone.utc) - _deprecation_date
             if _elapsed_time_delta.seconds >= 300:
                 _delete_wait_timer = 0
             else:

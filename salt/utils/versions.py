@@ -8,7 +8,7 @@
 """
 
 
-import datetime
+from datetime import datetime, timezone, date
 import inspect
 import logging
 import numbers
@@ -206,7 +206,7 @@ def warn_until_date(
     be raised to remind the developers to remove the warning because the
     target date has been reached.
 
-    :param date: A ``datetime.date`` or ``datetime.datetime`` instance.
+    :param date: A ``date`` or ``datetime`` instance.
     :param message: The warning message to be displayed.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
@@ -218,26 +218,26 @@ def warn_until_date(
                                 checks to raise a ``RuntimeError``.
     """
     _strptime_fmt = "%Y%m%d"
-    if not isinstance(date, (str, datetime.date, datetime.datetime)):
+    if not isinstance(date, (str, date, datetime)):
         raise RuntimeError(
             "The 'date' argument should be passed as a 'datetime.date()' or "
-            "'datetime.datetime()' objects or as string parserable by "
-            "'datetime.datetime.strptime()' with the following format '{}'.".format(
+            "'datetime()' objects or as string parserable by "
+            "'datetime.strptime()' with the following format '{}'.".format(
                 _strptime_fmt
             )
         )
     elif isinstance(date, str):
-        date = datetime.datetime.strptime(date, _strptime_fmt)
+        date = datetime.strptime(date, _strptime_fmt)
 
     # We're really not interested in the time
-    if isinstance(date, datetime.datetime):
+    if isinstance(date, datetime):
         date = date.date()
 
     if stacklevel is None:
         # Attribute the warning to the calling function, not to warn_until_date()
         stacklevel = 2
 
-    today = _current_date or datetime.datetime.utcnow().date()
+    today = _current_date or datetime.now(tz=timezone.utc).date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(

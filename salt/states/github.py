@@ -14,7 +14,7 @@ This state is used to ensure presence of users in the Organization.
             - username: 'gitexample'
 """
 
-import datetime
+from datetime import datetime, timezone
 import logging
 import time
 
@@ -335,7 +335,7 @@ def team_present(
 
     manage_members = members is not None
 
-    mfa_deadline = datetime.datetime.utcnow() - datetime.timedelta(
+    mfa_deadline = datetime.now(tz=timezone.utc) - datetime.timedelta(
         seconds=no_mfa_grace_seconds
     )
     members_no_mfa = __salt__["github.list_members_without_mfa"](profile=profile)
@@ -442,7 +442,7 @@ def team_present(
 def _member_violates_mfa(member, member_info, mfa_deadline, members_without_mfa):
     if member_info.get("mfa_exempt", False):
         return False
-    enforce_mfa_from = datetime.datetime.strptime(
+    enforce_mfa_from = datetime.strptime(
         member_info.get("enforce_mfa_from", "1970/01/01"), "%Y/%m/%d"
     )
     return member.lower() in members_without_mfa and (mfa_deadline > enforce_mfa_from)

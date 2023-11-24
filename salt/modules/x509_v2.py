@@ -134,7 +134,7 @@ Note that when a ``ca_server`` is involved, both peers must use the updated modu
 """
 import base64
 import copy
-import datetime
+from datetime import datetime, timezone, timedelta
 import glob
 import logging
 import os.path
@@ -1374,7 +1374,7 @@ def expires(certificate, days=0):
     """
     cert = x509util.load_cert(certificate)
     # dates are encoded in UTC/GMT, they are returned as a naive datetime object
-    return cert.not_valid_after <= datetime.datetime.utcnow() + datetime.timedelta(
+    return cert.not_valid_after <= datetime.now(tz=timezone.utc) + timedelta(
         days=days
     )
 

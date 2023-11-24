@@ -49,7 +49,7 @@ included:
 """
 
 import base64
-import datetime
+from datetime import datetime, timezone
 import http.client
 import inspect
 import logging
@@ -1159,7 +1159,7 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
     if (not user) or (not ssh_keyfile) or (not ssh_keyname) or (not location):
         return None
 
-    timenow = datetime.datetime.utcnow()
+    timenow = datetime.now(tz=timezone.utc)
     timestamp = timenow.strftime("%a, %d %b %Y %H:%M:%S %Z").strip()
     rsa_key = salt.crypt.get_rsa_key(ssh_keyfile, None)
     if HAS_M2:
