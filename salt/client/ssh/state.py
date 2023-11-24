@@ -74,7 +74,6 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper, context=context)
         self.matchers = salt.loader.matchers(self.opts)
-        self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
         self._pydsl_render_stack = []
@@ -92,32 +91,7 @@ class SSHHighState(salt.state.BaseHighState):
         """
         Evaluate master_tops locally
         """
-        if "id" not in self.opts:
-            log.error("Received call for external nodes without an id")
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
-            return {}
-        # Evaluate all configured master_tops interfaces
-
-        grains = {}
-        ret = {}
-
-        if "grains" in self.opts:
-            grains = self.opts["grains"]
-        for fun in self.tops:
-            if fun not in self.opts.get("master_tops", {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:  # pylint: disable=broad-except
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    "Top function %s failed with error %s for minion %s",
-                    fun,
-                    exc,
-                    self.opts["id"],
-                )
-        return ret
+        return self._local_master_tops()
 
     def destroy(self):
         if self.client:
