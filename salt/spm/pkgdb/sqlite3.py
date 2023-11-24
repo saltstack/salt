@@ -167,7 +167,7 @@ def register_pkg(name, formula_def, conn=None):
             name,
             formula_def["version"],
             formula_def["release"],
-            datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+            datetime.datetime.now(tz=timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
             formula_def.get("os", None),
             formula_def.get("os_family", None),
             formula_def.get("dependencies", None),

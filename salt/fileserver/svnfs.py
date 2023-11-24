@@ -38,7 +38,7 @@ import hashlib
 import logging
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.fileserver
 import salt.utils.data

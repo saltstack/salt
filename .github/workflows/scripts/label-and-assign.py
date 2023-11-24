@@ -72,7 +72,7 @@ def label_and_assign_issue(options):
         json.dumps(
             {
                 "username": next_triage_account.login,
-                "when": str(datetime.datetime.utcnow()),
+                "when": str(datetime.datetime.now(tz=timezone.utc)),
             }
         )
     )

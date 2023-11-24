@@ -14,7 +14,7 @@ import ctypes
 import logging
 import platform
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.utils.functools
 import salt.utils.locales

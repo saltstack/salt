@@ -44,7 +44,7 @@ States for managing zfs datasets
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from salt.utils.odict import OrderedDict
 

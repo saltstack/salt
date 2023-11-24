@@ -215,7 +215,7 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
         capture=True,
         check=True,
     ).stdout.decode()
-    dt = datetime.datetime.utcnow()
+    dt = datetime.datetime.now(tz=timezone.utc)
     date = dt.strftime("%a %b %d %Y")
     header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
     parts = orig.split("%changelog")
@@ -258,7 +258,7 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
     formated = "\n".join([f"  {_.replace('-', '*', 1)}" for _ in changes.split("\n")])
-    dt = datetime.datetime.utcnow()
+    dt = datetime.datetime.now(tz=timezone.utc)
     date = dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
     tmpchanges = "pkg/rpm/salt.spec.1"
     debian_changelog_path = "pkg/debian/changelog"

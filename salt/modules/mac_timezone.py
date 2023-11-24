@@ -4,7 +4,7 @@ Module for editing date/time settings on macOS
  .. versionadded:: 2016.3.0
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.utils.mac_utils
 import salt.utils.platform

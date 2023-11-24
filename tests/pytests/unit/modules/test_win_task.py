@@ -1,7 +1,7 @@
 """
 Test the win_task execution module
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 

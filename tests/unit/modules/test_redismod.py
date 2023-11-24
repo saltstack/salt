@@ -2,7 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.modules.redismod as redismod
 from tests.support.mixins import LoaderModuleMockMixin

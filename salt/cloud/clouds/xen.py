@@ -59,7 +59,7 @@ Example profile configuration:
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.config as config
 import salt.utils.cloud

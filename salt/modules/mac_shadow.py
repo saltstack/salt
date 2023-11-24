@@ -10,7 +10,7 @@ of a configuration profile.
 # https://developer.apple.com/library/mac/documentation/Networking/Conceptual/Open_Directory/openDirectoryConcepts/openDirectoryConcepts.html#//apple_ref/doc/uid/TP40000917-CH3-CIFCAIBB
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.utils.mac_utils
 import salt.utils.platform

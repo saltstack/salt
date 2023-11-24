@@ -34,7 +34,7 @@ several functions to help manage it and its containers.
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.utils.decorators.path
 import salt.utils.files

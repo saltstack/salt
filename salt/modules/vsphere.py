@@ -3878,7 +3878,7 @@ def update_host_datetime(
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
         try:
-            date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
+            date_time_manager.UpdateDateTime(datetime.datetime.now(tz=timezone.utc))
         except vim.fault.HostConfigFault as err:
             msg = "'vsphere.update_date_time' failed for host {}: {}".format(
                 host_name, err

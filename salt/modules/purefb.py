@@ -51,7 +51,7 @@ Installation Prerequisites
 
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from salt.exceptions import CommandExecutionError
 
@@ -195,7 +195,7 @@ def snap_create(name, suffix=None):
     blade = _get_blade()
     if suffix is None:
         suffix = "snap-" + str(
-            (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
+            (datetime.now(tz=timezone.utc) - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")
     if _get_fs(name, blade) is not None:

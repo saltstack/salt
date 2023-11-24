@@ -11,7 +11,7 @@ You can list all tasks, folders, triggers, and actions.
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import salt.utils.platform
 import salt.utils.winapi

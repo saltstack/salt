@@ -335,7 +335,7 @@ def team_present(
 
     manage_members = members is not None
 
-    mfa_deadline = datetime.datetime.utcnow() - datetime.timedelta(
+    mfa_deadline = datetime.datetime.now(tz=timezone.utc) - datetime.timedelta(
         seconds=no_mfa_grace_seconds
     )
     members_no_mfa = __salt__["github.list_members_without_mfa"](profile=profile)

@@ -21,7 +21,7 @@ import sys
 import tempfile
 import textwrap
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 import pytest
 from pytestshellutils.utils.processes import terminate_process
