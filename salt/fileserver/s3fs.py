@@ -721,6 +721,8 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                 # hashes match we have a cache hit
                 if cached_md5 == file_md5:
                     return
+                else:
+                    log.info(f"found different hash for file {path}, updating...")
             else:
                 cached_file_stat = os.stat(cached_file_path)
                 cached_file_size = cached_file_stat.st_size
