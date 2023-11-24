@@ -5,7 +5,7 @@ Module to interact with keystores
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 

@@ -8,7 +8,7 @@ Beacon to monitor certificate expiration dates from files on the filesystem.
 :depends: OpenSSL
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 import salt.utils.beacons
 import salt.utils.files

@@ -52,7 +52,7 @@ Installation Prerequisites
 
 import os
 import platform
-from datetime import datetime, timezone
+from datetime import datetime
 
 from salt.exceptions import CommandExecutionError
 
@@ -235,7 +235,7 @@ def snap_create(name, suffix=None):
     array = _get_system()
     if suffix is None:
         suffix = "snap-" + str(
-            (datetime.now(tz=timezone.utc) - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
+            (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")
     if _get_volume(name, array) is not None:

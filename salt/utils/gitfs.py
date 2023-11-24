@@ -20,7 +20,7 @@ import stat
 import subprocess
 import time
 import weakref
-from datetime import datetime, timezone
+from datetime import datetime
 
 import tornado.ioloop
 

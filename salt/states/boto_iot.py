@@ -288,7 +288,7 @@ def thing_type_absent(
                 _deprecation_date_str, "%Y-%m-%d %H:%M:%S.%f"
             )
 
-            _elapsed_time_delta = datetime.datetime.now(tz=timezone.utc) - _deprecation_date
+            _elapsed_time_delta = datetime.datetime.utcnow() - _deprecation_date
             if _elapsed_time_delta.seconds >= 300:
                 _delete_wait_timer = 0
             else:

@@ -2810,11 +2810,11 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
-                start_time = datetime.datetime.now(tz=timezone.utc)
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
-                timediff = datetime.datetime.now(tz=timezone.utc) - start_time
+                timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '

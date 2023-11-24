@@ -15,7 +15,7 @@ import logging
 import random
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import salt.config
 import salt.utils.hashutils
@@ -145,7 +145,7 @@ def creds(provider):
     ## if needed
     if provider["id"] == IROLE_CODE or provider["key"] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if not __Expiration__ or __Expiration__ < datetime.now(tz=timezone.utc).strftime(
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ):
             # We don't have any cached credentials, or they are expired, get them
@@ -188,7 +188,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
     http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
     """
-    timenow = datetime.now(tz=timezone.utc)
+    timenow = datetime.utcnow()
     timestamp = timenow.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Retrieve access credentials from meta-data, or use provided
@@ -225,7 +225,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
     valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
 
     # current time in epoch seconds
-    now = time.mktime(datetime.now(tz=timezone.utc).timetuple())
+    now = time.mktime(datetime.utcnow().timetuple())
 
     for key, creds in copy.deepcopy(__AssumeCache__).items():
         if (creds["Expiration"] - now) <= 120:
@@ -298,7 +298,7 @@ def sig4(
     http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     """
-    timenow = datetime.now(tz=timezone.utc)
+    timenow = datetime.utcnow()
 
     # Retrieve access credentials from meta-data, or use provided
     if role_arn is None:

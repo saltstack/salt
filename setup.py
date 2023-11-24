@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime
 
 # pylint: disable=no-name-in-module
 from distutils import log
@@ -54,7 +54,7 @@ except ImportError:
 try:
     DATE = datetime.utcfromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]))
 except (KeyError, ValueError):
-    DATE = datetime.now(tz=timezone.utc)
+    DATE = datetime.utcnow()
 
 # Change to salt source's directory prior to running any command
 try:

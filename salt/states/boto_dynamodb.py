@@ -830,7 +830,7 @@ def _next_datetime_with_utc_hour(table_name, utc_hour):
         second=_get_deterministic_value_for_table_name(table_name, 60),
     )
 
-    if start_date_time < datetime.datetime.now(tz=timezone.utc):
+    if start_date_time < datetime.datetime.utcnow():
         one_day = datetime.timedelta(days=1)
         start_date_time += one_day
 

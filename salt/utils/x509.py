@@ -315,12 +315,12 @@ def build_crt(
     not_before = (
         datetime.datetime.strptime(not_before, TIME_FMT)
         if not_before
-        else datetime.datetime.now(tz=timezone.utc)
+        else datetime.datetime.utcnow()
     )
     not_after = (
         datetime.datetime.strptime(not_after, TIME_FMT)
         if not_after
-        else datetime.datetime.now(tz=timezone.utc) + datetime.timedelta(days=days_valid)
+        else datetime.datetime.utcnow() + datetime.timedelta(days=days_valid)
     )
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
@@ -440,14 +440,14 @@ def build_crl(
             raise SaltInvocationError("Need serial_number or certificate")
         serial_number = _get_serial_number(serial_number)
         if not_after and not include_expired:
-            if datetime.datetime.now(tz=timezone.utc) > not_after:
+            if datetime.datetime.utcnow() > not_after:
                 continue
         if "revocation_date" in rev:
             revocation_date = datetime.datetime.strptime(
                 rev["revocation_date"], TIME_FMT
             )
         else:
-            revocation_date = datetime.datetime.now(tz=timezone.utc)
+            revocation_date = datetime.datetime.utcnow()
 
         revoked_cert = cx509.RevokedCertificateBuilder(
             serial_number=serial_number, revocation_date=revocation_date

@@ -17,7 +17,7 @@ import subprocess
 import sys
 import textwrap
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
@@ -1081,7 +1081,7 @@ class VM:
                     }
                 )
         else:
-            name = f"{self.name} started on {datetime.now(tz=timezone.utc)}"
+            name = f"{self.name} started on {datetime.utcnow()}"
         tags.append(
             {
                 "Key": "Name",

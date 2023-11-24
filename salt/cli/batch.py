@@ -6,7 +6,7 @@ import copy
 import logging
 import math
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 import salt.client
 import salt.exceptions

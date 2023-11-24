@@ -25,7 +25,7 @@ Module for managing Windows Users.
 import logging
 import shlex
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import salt.utils.args
 import salt.utils.dateutils

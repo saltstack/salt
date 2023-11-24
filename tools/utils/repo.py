@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from ptscripts import Context
@@ -87,7 +87,7 @@ def create_top_level_repo_path(
             create_repo_path
             / "salt-dev"
             / nightly_build_from
-            / datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+            / datetime.utcnow().strftime("%Y-%m-%d")
         )
         create_repo_path.mkdir(exist_ok=True, parents=True)
         with ctx.chdir(create_repo_path.parent):

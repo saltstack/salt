@@ -105,7 +105,7 @@ import math
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import salt.utils.data
 import salt.utils.files
@@ -357,7 +357,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                 try:
                     days = (
                         datetime.strptime(cert.get_notAfter(), "%Y%m%d%H%M%SZ")
-                        - datetime.now(tz=timezone.utc)
+                        - datetime.utcnow()
                     ).days
                 except (ValueError, TypeError):
                     days = 365
@@ -763,7 +763,7 @@ def create_ca(
                     err,
                 )
                 bck = "{}.unloadable.{}".format(
-                    ca_keyp, datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
+                    ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S")
                 )
                 log.info("Saving unloadable CA ssl key in %s", bck)
                 os.rename(ca_keyp, bck)
@@ -821,7 +821,7 @@ def create_ca(
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
     write_key = True
     if os.path.exists(ca_keyp):
-        bck = "{}.{}".format(ca_keyp, datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S"))
+        bck = "{}.{}".format(ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S"))
         with salt.utils.files.fopen(ca_keyp) as fic:
             old_key = salt.utils.stringutils.to_unicode(fic.read()).strip()
             if old_key.strip() == keycontent.strip():
@@ -1912,7 +1912,7 @@ def revoke_cert(
     )
     index_r_data = "R\t{}\t{}\t{}".format(
         expire_date,
-        _four_digit_year_to_two_digit(datetime.now(tz=timezone.utc)),
+        _four_digit_year_to_two_digit(datetime.utcnow()),
         index_serial_subject,
     )
 
