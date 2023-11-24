@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 pytestmark = [
@@ -94,12 +92,7 @@ def test_state_low(salt_ssh_cli):
     ret = salt_ssh_cli.run(
         "state.low", '{"state": "cmd", "fun": "run", "name": "echo blah"}'
     )
-    assert (
-        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
-            "changes"
-        ]["stdout"]
-        == "blah"
-    )
+    assert ret.data["cmd_|-echo blah_|-echo blah_|-run"]["changes"]["stdout"] == "blah"
 
 
 def test_state_high(salt_ssh_cli):
@@ -107,9 +100,4 @@ def test_state_high(salt_ssh_cli):
     test state.high with salt-ssh
     """
     ret = salt_ssh_cli.run("state.high", '{"echo blah": {"cmd": ["run"]}}')
-    assert (
-        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
-            "changes"
-        ]["stdout"]
-        == "blah"
-    )
+    assert ret.data["cmd_|-echo blah_|-echo blah_|-run"]["changes"]["stdout"] == "blah"
