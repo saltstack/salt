@@ -1537,7 +1537,7 @@ def user_exists(
     .. versionadded:: 0.16.2
         The ``passwordless`` option was added.
 
-    .. versionadded:: [TODO]
+    .. versionadded:: 3007.0
         The ``comments`` option was added.
 
     CLI Example:
@@ -1833,7 +1833,7 @@ def user_create(
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
 
-    .. versionadded:: [TODO]
+    .. versionadded:: 3007.0
         The ``comments`` option was added.
 
     CLI Examples:
