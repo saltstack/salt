@@ -73,6 +73,7 @@ def present(
     unix_socket=False,
     password_column=None,
     auth_plugin="mysql_native_password",
+    comments=None,
     **connection_args
 ):
     """
@@ -247,6 +248,7 @@ def present(
             unix_socket=unix_socket,
             password_column=password_column,
             auth_plugin=auth_plugin,
+            comments=comments,
             **connection_args
         ):
             ret["comment"] = "The user {}@{} has been added".format(name, host)
