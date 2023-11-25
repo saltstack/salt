@@ -537,7 +537,6 @@ def _grant_to_tokens(grant):
     current_grant = ""
 
     for token in exploded_grant[position_tracker:]:
-
         if token == "," and phrase == "grants":
             position_tracker += 1
             continue
@@ -1421,23 +1420,20 @@ def user_list(**connection_args):
     log.debug(results)
     return results
 
+
 def _check_comments_supported(server_version):
     comments_version = "8.0.21"
     err = None
     # Check if MariaDB is used
     if "MariaDB" in server_version:
         # it is not supported in MariaDB
-        err = (
-            "MariaDB Error: Comments are not supported for MariaDB."
-        )
+        err = "MariaDB Error: Comments are not supported for MariaDB."
         log.error(err)
         return (False, err)
     # Check if MySQL version is supported
     elif salt.utils.versions.version_cmp(server_version, comments_version) < 0:
         # it is not supported in MySQL version lower than 8.0.21
-        err = (
-            "MySQL Error: Comments are supported only in MySQL version 8.0.21 or higher."
-        )
+        err = "MySQL Error: Comments are supported only in MySQL version 8.0.21 or higher."
         log.error(err)
         return (False, err)
     return (True, err)
@@ -1455,7 +1451,6 @@ def _mysql_user_exists(
     comments=None,
     **connection_args,
 ):
-
     server_version = salt.utils.data.decode(version(**connection_args))
     compare_version = "8.0.11"
     qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
@@ -1463,7 +1458,7 @@ def _mysql_user_exists(
     args["user"] = user
     args["host"] = host
     if comments:
-         qry += " AND JSON_UNQUOTE(JSON_EXTRACT(User_attributes, '$.metadata.comment')) = %(comments)s"
+        qry += " AND JSON_UNQUOTE(JSON_EXTRACT(User_attributes, '$.metadata.comment')) = %(comments)s"
     if salt.utils.data.is_true(passwordless):
         if salt.utils.data.is_true(unix_socket):
             qry += " AND plugin=%(unix_socket)s"
@@ -1501,7 +1496,6 @@ def _mariadb_user_exists(
     auth_plugin="mysql_native_password",
     **connection_args,
 ):
-
     qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
@@ -1681,7 +1675,6 @@ def _mysql_user_create(
     comments=None,
     **connection_args,
 ):
-
     server_version = salt.utils.data.decode(version(**connection_args))
     compare_version = "8.0.11"
 
@@ -1747,7 +1740,6 @@ def _mariadb_user_create(
     auth_plugin="mysql_native_password",
     **connection_args,
 ):
-
     qry = "CREATE USER %(user)s@%(host)s"
     args = {}
     args["user"] = user
@@ -2032,7 +2024,6 @@ def _mariadb_user_chpass(
     auth_plugin="mysql_native_password",
     **connection_args,
 ):
-
     server_version = salt.utils.data.decode(version(**connection_args))
     compare_version = "10.4"
 

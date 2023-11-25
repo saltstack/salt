@@ -178,7 +178,6 @@ def present(
     if __salt__["mysql.user_exists"](
         name, host, unix_socket=unix_socket, **connection_args
     ):
-
         # The user is present, change the password
         if __opts__["test"]:
             ret["comment"] = "Password for user {}@{} is set to be ".format(name, host)
@@ -219,7 +218,6 @@ def present(
                 )
             ret["result"] = False
     else:
-
         err = _get_mysql_error()
         if err is not None:
             ret["comment"] = err
