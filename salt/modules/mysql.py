@@ -1459,6 +1459,7 @@ def _mysql_user_exists(
     args["host"] = host
     if comments:
         qry += " AND JSON_UNQUOTE(JSON_EXTRACT(User_attributes, '$.metadata.comment')) = %(comments)s"
+        args["comments"] = comments
     if salt.utils.data.is_true(passwordless):
         if salt.utils.data.is_true(unix_socket):
             qry += " AND plugin=%(unix_socket)s"
@@ -1536,6 +1537,9 @@ def user_exists(
     .. versionadded:: 0.16.2
         The ``passwordless`` option was added.
 
+    .. versionadded:: [TODO]
+        The ``comments`` option was added.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1544,6 +1548,7 @@ def user_exists(
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_exists 'username' passwordless=True
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
+        salt '*' mysql.user_exists 'username' 'hostname' 'password' comments='comment'
     """
     run_verify = False
     server_version = salt.utils.data.decode(version(**connection_args))
@@ -1822,8 +1827,14 @@ def user_create(
     auth_plugin
         The authentication plugin to use, default is to use the mysql_native_password plugin.
 
+    comments
+        The comments to use for the user.
+
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
+
+    .. versionadded:: [TODO]
+        The ``comments`` option was added.
 
     CLI Examples:
 
@@ -1832,6 +1843,7 @@ def user_create(
         salt '*' mysql.user_create 'username' 'hostname' 'password'
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
+        salt '*' mysql.user_create 'username' 'hostname' 'password' comments='comment'
     """
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version and password:
