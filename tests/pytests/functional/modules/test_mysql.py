@@ -719,7 +719,6 @@ def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
 
 
 def test_plugin_add_status_remove(mysql, mysql_combo):
-
     if "mariadb" in mysql_combo.mysql_name:
         plugin = "simple_password_check"
     else:
@@ -907,6 +906,50 @@ def test_create_alter_password_hash(mysql):
         host="%",
     )
     assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="%")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_comments_feature(mysql, mysql_container):
+    if "mariadb" in mysql_container.mysql_name:
+        pytest.skip(
+            "The comments feature is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    if version_cmp(mysql_container.mysql_version, "8.0.21") < 0:
+        pytest.skip(
+            "The comments feature is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="%",
+        password="badpassword",
+        comments="This is a comment",
+    )
+    assert ret
+
+    # Check the comment exists
+    ret = mysql.user_info("george", host="%")
+    assert ret
+    assert ret["User_attributes"]["metadata"]["comment"] == "This is a comment"
 
     # Remove the user
     ret = mysql.user_remove("george", host="%")
