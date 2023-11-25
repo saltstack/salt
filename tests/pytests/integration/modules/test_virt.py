@@ -2,13 +2,11 @@
 Validate the virt module
 """
 import logging
-import sys
 from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
 
-import salt.version
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -17,52 +15,8 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.skip_unless_on_linux,
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
-
-
-def _install_salt_dependencies(container):
-    ret = container.run("bash", "-c", "echo $SALT_PY_VERSION")
-    assert ret.returncode == 0
-    if not ret.stdout:
-        log.warning(
-            "The 'SALT_PY_VERSION' environment variable is not set on the container"
-        )
-        salt_py_version = 3
-        ret = container.run(
-            "python3",
-            "-c",
-            "import sys; sys.stderr.write('{}.{}'.format(*sys.version_info))",
-        )
-        assert ret.returncode == 0
-        if not ret.stdout:
-            requirements_py_version = "py{}.{}".format(*sys.version_info)
-        else:
-            requirements_py_version = ret.stdout.strip()
-    else:
-        salt_py_version = requirements_py_version = ret.stdout.strip()
-
-    container.python_executable = f"python{salt_py_version}"
-
-    dependencies = []
-    for package, version in salt.version.dependency_information():
-        if package not in ("packaging", "looseversion"):
-            # These are newer base dependencies which the container might not
-            # yet have
-            continue
-        dependencies.append(f"{package}=={version}")
-    if dependencies:
-        ret = container.run(
-            container.python_executable,
-            "-m",
-            "pip",
-            "install",
-            f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
-            *dependencies,
-        )
-        log.debug("Install missing dependecies ret: %s", ret)
-        assert ret.returncode == 0
 
 
 @pytest.fixture(scope="module")
@@ -105,7 +59,6 @@ def virt_minion_0(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
-    factory.before_start(_install_salt_dependencies, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
@@ -143,7 +96,6 @@ def virt_minion_1(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
-    factory.before_start(_install_salt_dependencies, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
