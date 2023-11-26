@@ -8,27 +8,16 @@ import json
 import logging
 import os
 import pathlib
-import sys
 import tempfile
 import time
 
+import boto3
 import virustotal3.core
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.repo
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 

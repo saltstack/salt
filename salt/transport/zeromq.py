@@ -207,6 +207,7 @@ class PublishClient(salt.transport.base.PublishClient):
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+        self._connect_called = True
         self.publish_port = publish_port
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",
@@ -214,7 +215,8 @@ class PublishClient(salt.transport.base.PublishClient):
         )
         log.debug("%r connecting to %s", self, self.master_pub)
         self._socket.connect(self.master_pub)
-        connect_callback(True)
+        if connect_callback is not None:
+            connect_callback(True)
 
     @property
     def master_pub(self):
@@ -529,14 +531,8 @@ class AsyncReqMessageClient:
         # wire up sockets
         self._init_socket()
 
-    # TODO: timeout all in-flight sessions, or error
     def close(self):
-        try:
-            if self._closing:
-                return
-        except AttributeError:
-            # We must have been called from __del__
-            # The python interpreter has nuked most attributes already
+        if self._closing:
             return
         else:
             self._closing = True
@@ -661,7 +657,10 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
-        self._socket.disable_monitor()
+        try:
+            self._socket.disable_monitor()
+        except zmq.Error:
+            pass
         self._socket = None
         self._monitor_socket = None
         if self._monitor_stream is not None:
@@ -880,6 +879,7 @@ class RequestClient(salt.transport.base.RequestClient):
     ttype = "zeromq"
 
     def __init__(self, opts, io_loop):  # pylint: disable=W0231
+        super().__init__(opts, io_loop)
         self.opts = opts
         master_uri = self.get_master_uri(opts)
         self.message_client = AsyncReqMessageClient(
@@ -887,17 +887,24 @@ class RequestClient(salt.transport.base.RequestClient):
             master_uri,
             io_loop=io_loop,
         )
+        self._closing = False
+        self._connect_called = False
 
+    @salt.ext.tornado.gen.coroutine
     def connect(self):
+        self._connect_called = True
         self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, timeout=60):
-        self.connect()
+        yield self.connect()
         ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
+        if self._closing:
+            return
+        self._closing = True
         self.message_client.close()
 
     @staticmethod

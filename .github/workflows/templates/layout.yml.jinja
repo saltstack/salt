@@ -34,7 +34,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 <%- endblock env %>
@@ -184,6 +184,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
 
       - name: Pretty Print The GH Actions Event
         run:

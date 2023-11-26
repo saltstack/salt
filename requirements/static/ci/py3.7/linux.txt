@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.7/linux.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.8.5
+aiohttp==3.8.6
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp

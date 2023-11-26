@@ -113,6 +113,48 @@ def test_directory_max_depth(file, tmp_path):
             assert _mode == _get_oct_mode(untouched_dir)
 
 
+@pytest.mark.skip_on_windows
+def test_directory_children_only(file, tmp_path):
+    """
+    file.directory with children_only=True
+    """
+
+    name = tmp_path / "directory_children_only_dir"
+    name.mkdir(0o0700)
+
+    strayfile = name / "strayfile"
+    strayfile.touch()
+    os.chmod(strayfile, 0o700)
+
+    straydir = name / "straydir"
+    straydir.mkdir(0o0700)
+
+    # none of the children nor parent are currently set to the correct mode
+    ret = file.directory(
+        name=str(name),
+        file_mode="0644",
+        dir_mode="0755",
+        recurse=["mode"],
+        children_only=True,
+    )
+    assert ret.result is True
+
+    # Assert parent directory's mode remains unchanged
+    assert (
+        oct(name.stat().st_mode)[-3:] == "700"
+    ), f"Expected mode 700 for {name}, got {oct(name.stat().st_mode)[-3:]}"
+
+    # Assert child file's mode is changed
+    assert (
+        oct(strayfile.stat().st_mode)[-3:] == "644"
+    ), f"Expected mode 644 for {strayfile}, got {oct(strayfile.stat().st_mode)[-3:]}"
+
+    # Assert child directory's mode is changed
+    assert (
+        oct(straydir.stat().st_mode)[-3:] == "755"
+    ), f"Expected mode 755 for {straydir}, got {oct(straydir.stat().st_mode)[-3:]}"
+
+
 def test_directory_clean(file, tmp_path):
     """
     file.directory with clean=True
