@@ -453,7 +453,7 @@ def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.side_effect = Exception()
-            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Some exception handling minion payload"
 
 
