@@ -4799,8 +4799,6 @@ class _policy_info:
         """
         converts a list of pysid objects to string representations
         """
-        if isinstance(val, str):
-            val = val.split(",")
         usernames = []
         for _sid in val:
             try:
@@ -4918,11 +4916,11 @@ class _policy_info:
             return None
         if value_lookup:
             if not isinstance(item, list):
-                return "Invalid Value"
+                return "Invalid Value: Not a list"
             ret_val = 0
         else:
             if not isinstance(item, int):
-                return "Invalid Value"
+                return "Invalid Value: Not an int"
             ret_val = []
         if "lookup" in kwargs:
             for k, v in kwargs["lookup"].items():
@@ -4937,7 +4935,7 @@ class _policy_info:
                     if do_test and isinstance(k, int) and item & k == k:
                         ret_val.append(v)
         else:
-            return "Invalid Value"
+            return "Invalid Value: No lookup passed"
         return ret_val
 
     @classmethod
