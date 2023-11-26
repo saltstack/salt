@@ -34,6 +34,7 @@ import types
 
 import attr
 import pytest
+import pytestskipmarkers.utils.platform
 import tornado.ioloop
 import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
@@ -1644,6 +1645,10 @@ class VirtualEnv:
         return pathlib.Path(self.venv_python).parent
 
     def __enter__(self):
+        if pytestskipmarkers.utils.platform.is_fips_enabled():
+            pytest.skip(
+                "Test cannot currently create virtual environments on a FIPS enabled platform"
+            )
         try:
             self._create_virtualenv()
         except subprocess.CalledProcessError:

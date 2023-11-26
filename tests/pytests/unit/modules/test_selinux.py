@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 import salt.modules.selinux as selinux
@@ -376,3 +378,35 @@ SELINUXTYPE=targeted
         for line in writes:
             if line.startswith("SELINUX="):
                 assert line == "SELINUX=disabled"
+
+
+@pytest.mark.parametrize(
+    "name,sel_type",
+    (
+        ("/srv/ssl/ldap/.*[.]key", "slapd_cert_t"),
+        ("/srv/ssl/ldap(/.*[.](pem|crt))?", "cert_t"),
+    ),
+)
+def test_selinux_add_policy_regex(name, sel_type):
+    """
+    Test adding policy with regex components parsing the stdout response of restorecon used in fcontext_policy_applied, new style.
+    """
+    mock_cmd_shell = MagicMock(return_value={"retcode": 0})
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+
+    with patch.dict(selinux.__salt__, {"cmd.shell": mock_cmd_shell}), patch.dict(
+        selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}
+    ):
+        selinux.fcontext_add_policy(name, sel_type=sel_type)
+        filespec = re.escape(name)
+        expected_cmd_shell = f"semanage fcontext -l | egrep '{filespec}'"
+        mock_cmd_shell.assert_called_once_with(
+            expected_cmd_shell,
+            ignore_retcode=True,
+        )
+        expected_cmd_run_all = (
+            f"semanage fcontext --modify --type {sel_type} {filespec}"
+        )
+        mock_cmd_run_all.assert_called_once_with(
+            expected_cmd_run_all,
+        )

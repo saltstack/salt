@@ -61,7 +61,6 @@ def minion_opts(tmp_path, minion_opts):
             "file_roots": {"test": [str(tmp_path / "files" / "test")]},
             "pillar_roots": {"test": [str(tmp_path / "files" / "test")]},
             "fileserver_backend": ["roots"],
-            "hash_type": "md5",
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
