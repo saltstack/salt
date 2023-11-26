@@ -14,6 +14,7 @@ from tests.conftest import CODE_DIR
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.skip_on_photonos,
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
 
