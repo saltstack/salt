@@ -21,7 +21,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -70,6 +70,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
 
       - name: Pretty Print The GH Actions Event
         run:
@@ -142,6 +144,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -329,6 +333,38 @@ jobs:
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-ci-deps:
+    name: Amazon Linux 2023 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-arm64-ci-deps:
+    name: Amazon Linux 2023 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -792,6 +828,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Backup Previous Releases
         id: backup
@@ -822,6 +860,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Publish Release Repository
         env:
@@ -842,6 +882,8 @@ jobs:
       - almalinux-9-ci-deps
       - amazonlinux-2-arm64-ci-deps
       - amazonlinux-2-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
       - centos-7-arm64-ci-deps
       - centos-7-ci-deps
       - centosstream-8-arm64-ci-deps
@@ -904,6 +946,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Setup GnuPG
         run: |
@@ -1007,6 +1051,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Setup GnuPG
         run: |
@@ -1068,6 +1114,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps

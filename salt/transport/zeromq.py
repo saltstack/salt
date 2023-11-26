@@ -254,7 +254,7 @@ class PublishClient(salt.transport.base.PublishClient):
     async def connect(
         self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
     ):
-        self.connect_called = True
+        self._connect_called = True
         if port is not None:
             self.port = port
         if self.path:
@@ -277,7 +277,7 @@ class PublishClient(salt.transport.base.PublishClient):
             await connect_callback(True)
 
     async def connect_uri(self, uri, connect_callback=None, disconnect_callback=None):
-        self.connect_called = True
+        self._connect_called = True
         log.debug("Connecting the publisher client to: %s", uri)
         # log.debug("%r connecting to %s", self, self.master_pub)
         self.uri = uri
@@ -647,14 +647,8 @@ class AsyncReqMessageClient:
         # wire up sockets
         self._init_socket()
 
-    # TODO: timeout all in-flight sessions, or error
     def close(self):
-        try:
-            if self._closing:
-                return
-        except AttributeError:
-            # We must have been called from __del__
-            # The python interpreter has nuked most attributes already
+        if self._closing:
             return
         else:
             self._closing = True
@@ -794,7 +788,10 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
-        self._socket.disable_monitor()
+        try:
+            self._socket.disable_monitor()
+        except zmq.Error:
+            pass
         self._socket = None
         self._running.clear()
         self._monitor_socket = None
@@ -1037,6 +1034,7 @@ class RequestClient(salt.transport.base.RequestClient):
     ttype = "zeromq"
 
     def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231
+        super().__init__(opts, io_loop)
         self.opts = opts
         # XXX Support host, port, path, instead of using get_master_uri
         self.master_uri = self.get_master_uri(opts)
@@ -1055,6 +1053,7 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def connect(self):
         if self.socket is None:
+            self._connect_called = True
             self._closing = False
             # wire up sockets
             self._init_socket()

@@ -25,6 +25,9 @@ from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
 
 @pytest.fixture(scope="session")
 def version(install_salt):
@@ -336,6 +339,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
+        "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     test_user = False
     master_config = install_salt.config_path / "master"
@@ -396,7 +401,6 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
-        config_overrides["open_mode"] = True
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         if install_salt.classic:
             python_executable = install_salt.bin_dir / "python.exe"
@@ -469,6 +473,8 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "id": minion_id,
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     if platform.is_windows():
         config_overrides[

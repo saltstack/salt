@@ -454,6 +454,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
             if value != default:
                 # The user passed an argument, we won't override it with the
                 # one from Saltfile, if any
+                cli_config.pop(option.dest)
                 continue
 
             # We reached this far! Set the Saltfile value on the option
@@ -477,6 +478,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
                 if value != default:
                     # The user passed an argument, we won't override it with
                     # the one from Saltfile, if any
+                    cli_config.pop(option.dest)
                     continue
 
                 setattr(self.options, option.dest, cli_config[option.dest])

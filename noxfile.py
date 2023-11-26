@@ -1552,7 +1552,7 @@ def lint_salt(session):
         paths = session.posargs
     else:
         # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
+        paths = ["setup.py", "noxfile.py", "salt/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
@@ -1692,37 +1692,6 @@ def docs_man(session, compress, update, clean):
     if compress:
         session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
     os.chdir("..")
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run invoke tasks
-    """
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session)
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
-    cmd = ["inv"]
-    files = []
-
-    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
-    # Let's make it behave properly
-    for idx, posarg in enumerate(session.posargs):
-        if idx == 0:
-            cmd.append(posarg)
-            continue
-        if posarg.startswith("--"):
-            cmd.append(posarg)
-            continue
-        files.append(posarg)
-    if files:
-        cmd.append("--files={}".format(" ".join(files)))
-    session.run(*cmd)
 
 
 @nox.session(name="changelog", python="3")
@@ -1925,10 +1894,6 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
-    junit_report_filename = f"test-results-{chunk}"
-    runtests_log_filename = f"runtests-{chunk}"
-
-    pydir = _get_pydir(session)
 
     if IS_LINUX:
         # Fetch the toolchain
@@ -1950,12 +1915,39 @@ def ci_test_onedir_pkgs(session):
         + [
             "-c",
             str(REPO_ROOT / "pkg-tests-pytest.ini"),
-            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
+            f"--log-file=artifacts/logs/runtests-{chunk}.log",
         ]
         + session.posargs
     )
-    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    try:
+        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    except CommandFailed:
+
+        # Don't print the system information, not the test selection on reruns
+        global PRINT_TEST_SELECTION
+        global PRINT_SYSTEM_INFO
+        PRINT_TEST_SELECTION = False
+        PRINT_SYSTEM_INFO = False
+
+        pytest_args = (
+            cmd_args[:]
+            + [
+                "-c",
+                str(REPO_ROOT / "pkg-tests-pytest.ini"),
+                f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
+                f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
+                "--lf",
+            ]
+            + session.posargs
+        )
+        _pytest(
+            session,
+            coverage=False,
+            cmd_args=pytest_args,
+            env=env,
+            on_rerun=True,
+        )
 
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
@@ -1965,8 +1957,8 @@ def ci_test_onedir_pkgs(session):
                 "-c",
                 str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                f"--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
@@ -1974,5 +1966,31 @@ def ci_test_onedir_pkgs(session):
             pytest_args.append("--use-prev-version")
         if chunk in ("upgrade-classic", "downgrade-classic"):
             pytest_args.append("--classic")
-        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        try:
+            _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        except CommandFailed:
+            cmd_args = chunks["install"]
+            pytest_args = (
+                cmd_args[:]
+                + [
+                    "-c",
+                    str(REPO_ROOT / "pkg-tests-pytest.ini"),
+                    "--no-install",
+                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--lf",
+                ]
+                + session.posargs
+            )
+            if "downgrade" in chunk:
+                pytest_args.append("--use-prev-version")
+            if chunk in ("upgrade-classic", "downgrade-classic"):
+                pytest_args.append("--classic")
+            _pytest(
+                session,
+                coverage=False,
+                cmd_args=pytest_args,
+                env=env,
+                on_rerun=True,
+            )
     sys.exit(0)

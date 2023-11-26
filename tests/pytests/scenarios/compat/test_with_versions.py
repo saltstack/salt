@@ -29,7 +29,7 @@ pytestmark = [
 
 
 def _get_test_versions_ids(value):
-    return "SaltMinion~={}".format(value)
+    return f"SaltMinion~={value}"
 
 
 @pytest.fixture(
@@ -41,13 +41,13 @@ def compat_salt_version(request):
 
 @pytest.fixture(scope="module")
 def minion_image_name(compat_salt_version):
-    return "salt-{}".format(compat_salt_version)
+    return f"salt-{compat_salt_version}"
 
 
 @pytest.fixture(scope="function")
 def minion_id(compat_salt_version):
     return random_string(
-        "salt-{}-".format(compat_salt_version),
+        f"salt-{compat_salt_version}-",
         uppercase=False,
     )
 
@@ -70,7 +70,10 @@ def salt_minion(
     config_overrides = {
         "master": salt_master.config["interface"],
         "user": False,
-        "pytest-minion": {"log": {"host": host_docker_network_ip_address}},
+        "pytest-minion": {
+            "log": {"host": host_docker_network_ip_address},
+            "returner_address": {"host": host_docker_network_ip_address},
+        },
         # We also want to scrutinize the key acceptance
         "open_mode": False,
     }

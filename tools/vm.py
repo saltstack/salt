@@ -21,32 +21,21 @@ from datetime import datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
+import attr
+import boto3
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 from requests.exceptions import ConnectTimeout
+from rich.progress import (
+    BarColumn,
+    Column,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 import tools.utils
-
-try:
-    import attr
-    import boto3
-    from botocore.exceptions import ClientError
-    from rich.progress import (
-        BarColumn,
-        Column,
-        Progress,
-        TaskProgressColumn,
-        TextColumn,
-        TimeRemainingColumn,
-    )
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
-
 
 if TYPE_CHECKING:
     # pylint: disable=no-name-in-module
@@ -222,14 +211,18 @@ def ssh(ctx: Context, name: str, command: list[str], sudo: bool = False):
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "download": {
+            "help": "Rsync from the remote target to local salt checkout",
+            "action": "store_true",
+        },
     }
 )
-def rsync(ctx: Context, name: str):
+def rsync(ctx: Context, name: str, download: bool = False):
     """
     Sync local checkout to VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.upload_checkout()
+    vm.upload_checkout(download=download)
 
 
 @vm.command(
@@ -302,6 +295,7 @@ def test(
     print_system_info: bool = False,
     skip_code_coverage: bool = False,
     envvars: list[str] = None,
+    fips: bool = False,
 ):
     """
     Run test in the VM.
@@ -337,6 +331,9 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+        if fips:
+            env["FIPS_TESTRUN"] = "1"
+            vm.run(["tdnf", "install", "-y", "openssl-fips-provider"], sudo=True)
     if envvars:
         for key in envvars:
             if key not in os.environ:
@@ -849,6 +846,9 @@ class VM:
             forward_agent = "no"
         else:
             forward_agent = "yes"
+        ciphers = ""
+        if "photonos" in self.name:
+            ciphers = "Ciphers=aes256-gcm@openssh.com,aes256-cbc,aes256-ctr,chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes128-gcm@openssh.com"
         ssh_config = textwrap.dedent(
             f"""\
             Host {self.name}
@@ -860,7 +860,8 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
-              PasswordAuthentication no
+              PasswordAuthentication=no
+              {ciphers}
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -1293,13 +1294,15 @@ class VM:
             shutil.rmtree(self.state_dir, ignore_errors=True)
             self.instance = None
 
-    def upload_checkout(self, verbose=True):
+    def upload_checkout(self, verbose=True, download=False):
         rsync_flags = [
             "--delete",
             "--no-group",
             "--no-owner",
             "--exclude",
             ".nox/",
+            "--exclude",
+            ".tools-venvs/",
             "--exclude",
             ".pytest_cache/",
             "--exclude",
@@ -1326,14 +1329,19 @@ class VM:
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         rsync_remote_path = remote_path
-        if self.is_windows:
+        if sys.platform == "win32":
             for drive in ("c:", "C:"):
                 source = source.replace(drive, "/cygdrive/c")
-                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
             source = source.replace("\\", "/")
+        if self.is_windows:
+            for drive in ("c:", "C:"):
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
-        self.rsync(source, destination, description, rsync_flags)
+        if download:
+            self.rsync(f"{destination}/*", source, description, rsync_flags)
+        else:
+            self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
             # rsync sets very strict file permissions and disables inheritance
             # we only need to reset permissions so they inherit from the parent
@@ -1520,16 +1528,17 @@ class VM:
             self.ctx.exit(1, "Could find the 'rsync' binary")
         if TYPE_CHECKING:
             assert rsync
+        ssh_cmd = " ".join(
+            self.ssh_command_args(
+                include_vm_target=False, log_command_level=logging.NOTSET
+            )
+        )
         cmd: list[str] = [
-            rsync,
+            f'"{rsync}"' if sys.platform == "win32" else rsync,
             "-az",
             "--info=none,progress2",
             "-e",
-            " ".join(
-                self.ssh_command_args(
-                    include_vm_target=False, log_command_level=logging.NOTSET
-                )
-            ),
+            f'"{ssh_cmd}"' if sys.platform == "win32" else ssh_cmd,
         ]
         if rsync_flags:
             cmd.extend(rsync_flags)
@@ -1542,6 +1551,8 @@ class VM:
         log.info(f"Running {' '.join(cmd)!r}")  # type: ignore[arg-type]
         progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
+        if sys.platform == "win32":
+            cmd = [" ".join(cmd)]
         with progress:
             proc = subprocess.Popen(cmd, bufsize=1, stdout=subprocess.PIPE, text=True)
             completed = 0

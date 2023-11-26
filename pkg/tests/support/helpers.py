@@ -78,19 +78,20 @@ class SaltPkgInstall:
     distro_name: str = attr.ib(init=False)
     distro_version: str = attr.ib(init=False)
 
-    # Package (and management) metadata
-    pkg_mngr: str = attr.ib(init=False)
-    rm_pkg: str = attr.ib(init=False)
-    salt_pkgs: List[str] = attr.ib(init=False)
-    pkgs: List[str] = attr.ib(factory=list)
-    file_ext: bool = attr.ib(default=None)
-    relenv: bool = attr.ib(default=True)
-
     # Version information
     prev_version: str = attr.ib()
     use_prev_version: str = attr.ib()
     artifact_version: str = attr.ib(init=False)
     version: str = attr.ib(init=False)
+
+    # Package (and management) metadata
+    pkg_mngr: str = attr.ib(init=False)
+    rm_pkg: str = attr.ib(init=False)
+    dbg_pkg: str = attr.ib(init=False)
+    salt_pkgs: List[str] = attr.ib(init=False)
+    pkgs: List[str] = attr.ib(factory=list)
+    file_ext: bool = attr.ib(default=None)
+    relenv: bool = attr.ib(default=True)
 
     @proc.default
     def _default_proc(self):
@@ -106,11 +107,16 @@ class SaltPkgInstall:
 
     @distro_name.default
     def _default_distro_name(self):
-        if distro.name():
-            return distro.name().split()[0].lower()
+        name = distro.name()
+        if name:
+            if "vmware" in name.lower():
+                return name.split()[1].lower()
+            return name.split()[0].lower()
 
     @distro_version.default
     def _default_distro_version(self):
+        if self.distro_name == "photon":
+            return distro.version().split(".")[0]
         return distro.version().lower()
 
     @pkg_mngr.default
@@ -129,6 +135,15 @@ class SaltPkgInstall:
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
 
+    @dbg_pkg.default
+    def _default_dbg_pkg(self):
+        dbg_pkg = None
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+            dbg_pkg = "salt-debuginfo"
+        elif self.distro_id in ("ubuntu", "debian"):
+            dbg_pkg = "salt-dbg"
+        return dbg_pkg
+
     @salt_pkgs.default
     def _default_salt_pkgs(self):
         salt_pkgs = [
@@ -143,6 +158,9 @@ class SaltPkgInstall:
             salt_pkgs.append("salt")
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
+        if packaging.version.parse(self.version) >= packaging.version.parse("3006.3"):
+            if self.dbg_pkg:
+                salt_pkgs.append(self.dbg_pkg)
         return salt_pkgs
 
     @install_dir.default
@@ -445,9 +463,14 @@ class SaltPkgInstall:
                 ]
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             args = extra_args + self.pkgs
+            upgrade_cmd = "upgrade"
+            if self.distro_id == "photon":
+                # tdnf does not detect nightly build versions to be higher version
+                # than release versions
+                upgrade_cmd = "install"
             ret = self.proc.run(
                 self.pkg_mngr,
-                "upgrade",
+                upgrade_cmd,
                 "-y",
                 *args,
                 _timeout=120,
@@ -511,7 +534,14 @@ class SaltPkgInstall:
         if self.classic:
             root_url = "py3/"
 
-        if self.distro_name in ["redhat", "centos", "amazon", "fedora", "vmware"]:
+        if self.distro_name in [
+            "redhat",
+            "centos",
+            "amazon",
+            "fedora",
+            "vmware",
+            "photon",
+        ]:
             # Removing EPEL repo files
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
@@ -522,7 +552,12 @@ class SaltPkgInstall:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
 
             if platform.is_aarch64():
-                arch = "aarch64"
+                arch = "arm64"
+                # Starting with 3006.5, we prioritize the aarch64 repo paths for rpm-based distros
+                if packaging.version.parse(
+                    self.prev_version
+                ) >= packaging.version.parse("3006.5"):
+                    arch = "aarch64"
             else:
                 arch = "x86_64"
             ret = self.proc.run(
@@ -535,7 +570,11 @@ class SaltPkgInstall:
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
-            ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+            if self.distro_name == "photon":
+                # yum version on photon doesn't support expire-cache
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+            else:
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
             self._check_retcode(ret)
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
@@ -549,6 +588,11 @@ class SaltPkgInstall:
                 idx = list_ret.index("Available Packages")
                 old_ver = list_ret[idx + 1].split()[1]
                 pkgs_to_install = [f"{pkg}-{old_ver}" for pkg in pkgs_to_install]
+                if self.dbg_pkg:
+                    # self.dbg_pkg does not exist on classic packages
+                    dbg_exists = [x for x in pkgs_to_install if self.dbg_pkg in x]
+                    if dbg_exists:
+                        pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
             ret = self.proc.run(
                 self.pkg_mngr,

@@ -12,7 +12,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -171,6 +171,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
 
       - name: Pretty Print The GH Actions Event
         run:
@@ -309,28 +311,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
-          python-binary: python3
+          python-version: "3.10"
 
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Cache Python Tools Docs Virtualenv
-        uses: actions/cache@v3
         with:
-          path: .tools-venvs/docs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
-
-      - name: Cache Python Tools Changelog Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/changelog
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|changelog|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/changelog.txt') }}
-
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-changelog
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -415,6 +404,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           SKIP: lint-salt,lint-tests
+          PRE_COMMIT_COLOR: always
         run: |
           # Run it twice so that pre-commit can fix anything that can be automatically fixed.
           git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
@@ -461,27 +451,16 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-build
 
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-
-      - name: Cache Python Tools Build Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/build
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|build|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/build.txt') }}
 
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball
@@ -499,7 +478,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-deps-onedir-windows:
@@ -513,7 +492,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-deps-onedir-macos:
@@ -527,7 +506,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-linux:
@@ -543,7 +522,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-windows:
@@ -559,7 +538,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-salt-onedir-macos:
@@ -575,7 +554,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.11"
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
 
   build-rpm-pkgs-onedir:
@@ -587,7 +566,8 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -600,7 +580,8 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -613,7 +594,8 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -626,7 +608,8 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -639,7 +622,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -652,7 +636,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -665,7 +650,8 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "onedir"
 
@@ -678,7 +664,8 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "0.14.2"
       python-version: "3.10.13"
       source: "src"
 
@@ -861,6 +848,40 @@ jobs:
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-ci-deps:
+    name: Amazon Linux 2023 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  amazonlinux-2023-arm64-ci-deps:
+    name: Amazon Linux 2023 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -1350,6 +1371,72 @@ jobs:
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  amazonlinux-2-arm64-pkg-tests:
+    name: Amazon Linux 2 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  amazonlinux-2023-pkg-tests:
+    name: Amazon Linux 2023 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2023-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  amazonlinux-2023-arm64-pkg-tests:
+    name: Amazon Linux 2023 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - amazonlinux-2023-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   centos-7-pkg-tests:
     name: CentOS 7 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1407,6 +1494,28 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  centosstream-9-arm64-pkg-tests:
+    name: CentOS Stream 9 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs-onedir
+      - centosstream-9-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       nox-version: 2022.8.7
@@ -1591,6 +1700,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
 
   photonos-4-arm64-pkg-tests:
     name: Photon OS 4 Arm64 Package Test
@@ -1613,6 +1723,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
 
   photonos-5-pkg-tests:
     name: Photon OS 5 Package Test
@@ -1635,6 +1746,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
 
   photonos-5-arm64-pkg-tests:
     name: Photon OS 5 Arm64 Package Test
@@ -1657,6 +1769,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Test
@@ -1935,7 +2048,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -1957,7 +2070,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -1979,7 +2092,7 @@ jobs:
       platform: windows
       arch: amd64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2001,7 +2114,7 @@ jobs:
       platform: darwin
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2023,7 +2136,7 @@ jobs:
       platform: darwin
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2045,7 +2158,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2067,7 +2180,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2089,7 +2202,73 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      workflow-slug: scheduled
+      default-timeout: 360
+
+  amazonlinux-2-arm64:
+    name: Amazon Linux 2 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      workflow-slug: scheduled
+      default-timeout: 360
+
+  amazonlinux-2023:
+    name: Amazon Linux 2023 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2023-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2023
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: false
+      skip-junit-reports: false
+      workflow-slug: scheduled
+      default-timeout: 360
+
+  amazonlinux-2023-arm64:
+    name: Amazon Linux 2023 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - amazonlinux-2023-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2023-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2111,7 +2290,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2133,7 +2312,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2155,7 +2334,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2177,7 +2356,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2199,7 +2378,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2221,7 +2400,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2243,7 +2422,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2265,7 +2444,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2287,7 +2466,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2309,7 +2488,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2331,7 +2510,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2353,7 +2532,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2375,7 +2554,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2397,7 +2576,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2419,7 +2598,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2427,6 +2606,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
+      fips: true
 
   photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
@@ -2441,7 +2621,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2449,6 +2629,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
+      fips: true
 
   photonos-5:
     name: Photon OS 5 Test
@@ -2463,7 +2644,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2471,6 +2652,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
+      fips: true
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
@@ -2485,7 +2667,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2493,6 +2675,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
+      fips: true
 
   ubuntu-2004:
     name: Ubuntu 20.04 Test
@@ -2507,7 +2690,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2529,7 +2712,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2551,7 +2734,7 @@ jobs:
       platform: linux
       arch: x86_64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2573,7 +2756,7 @@ jobs:
       platform: linux
       arch: aarch64
       nox-version: 2022.8.7
-      python-version: "3.10"
+      gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -2599,6 +2782,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps
@@ -2634,6 +2819,9 @@ jobs:
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
+      - amazonlinux-2-arm64
+      - amazonlinux-2023
+      - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
       - centosstream-8
@@ -2668,6 +2856,8 @@ jobs:
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-coverage
 
       - name: Install Nox
         run: |
@@ -2794,6 +2984,8 @@ jobs:
       - almalinux-9-arm64-ci-deps
       - amazonlinux-2-ci-deps
       - amazonlinux-2-arm64-ci-deps
+      - amazonlinux-2023-ci-deps
+      - amazonlinux-2023-arm64-ci-deps
       - archlinux-lts-ci-deps
       - centos-7-ci-deps
       - centos-7-arm64-ci-deps
@@ -2829,6 +3021,9 @@ jobs:
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
+      - amazonlinux-2-arm64
+      - amazonlinux-2023
+      - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
       - centosstream-8
@@ -2852,9 +3047,13 @@ jobs:
       - ubuntu-2204
       - ubuntu-2204-arm64
       - amazonlinux-2-pkg-tests
+      - amazonlinux-2-arm64-pkg-tests
+      - amazonlinux-2023-pkg-tests
+      - amazonlinux-2023-arm64-pkg-tests
       - centos-7-pkg-tests
       - centosstream-8-pkg-tests
       - centosstream-9-pkg-tests
+      - centosstream-9-arm64-pkg-tests
       - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests

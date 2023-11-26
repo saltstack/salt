@@ -14,7 +14,9 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Any
 
+import boto3
 import packaging.version
+from botocore.exceptions import ClientError
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -220,7 +222,7 @@ def download_file(
     ctx: Context,
     url: str,
     dest: pathlib.Path,
-    auth: str | None = None,
+    auth: tuple[str, str] | None = None,
     headers: dict[str, str] | None = None,
 ) -> pathlib.Path:
     ctx.info(f"Downloading {dest.name!r} @ {url} ...")
@@ -238,7 +240,7 @@ def download_file(
         return dest
     wget = shutil.which("wget")
     if wget is not None:
-        with ctx.cwd(dest.parent):
+        with ctx.chdir(dest.parent):
             command = [wget, "--no-verbose"]
             if headers:
                 for key, value in headers.items():
@@ -251,7 +253,8 @@ def download_file(
         return dest
     # NOTE the stream=True parameter below
     with ctx.web as web:
-        web.headers.update(headers)
+        if headers:
+            web.headers.update(headers)
         with web.get(url, stream=True, auth=auth) as r:
             r.raise_for_status()
             with dest.open("wb") as f:

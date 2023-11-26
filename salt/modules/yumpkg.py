@@ -14,11 +14,10 @@ Support for YUM/DNF
 
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
+
 .. versionadded:: 3007.0
     Support for ``dnf5``` on Fedora 39
 """
-
-
 import configparser
 import contextlib
 import datetime
@@ -31,7 +30,6 @@ import string
 
 import salt.utils.args
 import salt.utils.data
-import salt.utils.decorators.path
 import salt.utils.environment
 import salt.utils.files
 import salt.utils.functools
@@ -44,13 +42,6 @@ import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
-
-try:
-    import yum
-
-    HAS_YUM = True
-except ImportError:
-    HAS_YUM = False
 
 log = logging.getLogger(__name__)
 
@@ -354,67 +345,46 @@ def _get_yum_config(strict_parser=True):
     This is currently only used to get the reposdir settings, but could be used
     for other things if needed.
 
-    If the yum python library is available, use that, which will give us all of
-    the options, including all of the defaults not specified in the yum config.
-    Additionally, they will all be of the correct object type.
-
-    If the yum library is not available, we try to read the yum.conf
-    directly ourselves with a minimal set of "defaults".
+    We try to read the yum.conf directly ourselves with a minimal set of
+    "defaults".
     """
     # in case of any non-fatal failures, these defaults will be used
     conf = {
         "reposdir": ["/etc/yum/repos.d", "/etc/yum.repos.d"],
     }
 
-    if HAS_YUM:
-        try:
-            yb = yum.YumBase()
-            yb.preconf.init_plugins = False
-            for name, value in yb.conf.items():
-                conf[name] = value
-        except (AttributeError, yum.Errors.ConfigError) as exc:
-            raise CommandExecutionError(f"Could not query yum config: {exc}")
-        except yum.Errors.YumBaseError as yum_base_error:
-            raise CommandExecutionError(
-                f"Error accessing yum or rpmdb: {yum_base_error}"
-            )
+    # fall back to parsing the config ourselves
+    # Look for the config the same order yum does
+    fn = None
+    paths = (
+        "/etc/yum/yum.conf",
+        "/etc/yum.conf",
+        "/etc/dnf/dnf.conf",
+        "/etc/tdnf/tdnf.conf",
+    )
+    for path in paths:
+        if os.path.exists(path):
+            fn = path
+            break
+
+    if not fn:
+        raise CommandExecutionError(f"No suitable yum config file found in: {paths}")
+
+    cp = configparser.ConfigParser(strict=strict_parser)
+    try:
+        cp.read(fn)
+    except OSError as exc:
+        raise CommandExecutionError(f"Unable to read from {fn}: {exc}")
+
+    if cp.has_section("main"):
+        for opt in cp.options("main"):
+            if opt in ("reposdir", "commands", "excludes"):
+                # these options are expected to be lists
+                conf[opt] = [x.strip() for x in cp.get("main", opt).split(",")]
+            else:
+                conf[opt] = cp.get("main", opt)
     else:
-        # fall back to parsing the config ourselves
-        # Look for the config the same order yum does
-        fn = None
-        paths = (
-            "/etc/yum/yum.conf",
-            "/etc/yum.conf",
-            "/etc/dnf/dnf.conf",
-            "/etc/tdnf/tdnf.conf",
-        )
-        for path in paths:
-            if os.path.exists(path):
-                fn = path
-                break
-
-        if not fn:
-            raise CommandExecutionError(
-                f"No suitable yum config file found in: {paths}"
-            )
-
-        cp = configparser.ConfigParser(strict=strict_parser)
-        try:
-            cp.read(fn)
-        except OSError as exc:
-            raise CommandExecutionError(f"Unable to read from {fn}: {exc}")
-
-        if cp.has_section("main"):
-            for opt in cp.options("main"):
-                if opt in ("reposdir", "commands", "excludes"):
-                    # these options are expected to be lists
-                    conf[opt] = [x.strip() for x in cp.get("main", opt).split(",")]
-                else:
-                    conf[opt] = cp.get("main", opt)
-        else:
-            log.warning(
-                "Could not find [main] section in %s, using internal defaults", fn
-            )
+        log.warning("Could not find [main] section in %s, using internal defaults", fn)
 
     return conf
 
@@ -2848,7 +2818,7 @@ def group_install(name, skip=(), include=(), **kwargs):
     if not pkgs:
         return {}
 
-    return install(pkgs=pkgs, **kwargs)
+    return install(pkgs=list(set(pkgs)), **kwargs)
 
 
 groupinstall = salt.utils.functools.alias_function(group_install, "groupinstall")
@@ -3345,7 +3315,6 @@ def modified(*packages, **flags):
     return __salt__["lowpkg.modified"](*packages, **flags)
 
 
-@salt.utils.decorators.path.which("yumdownloader")
 def download(*packages, **kwargs):
     """
     .. versionadded:: 2015.5.0
@@ -3365,6 +3334,9 @@ def download(*packages, **kwargs):
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
     """
+    if not salt.utils.path.which("yumdownloader"):
+        raise CommandExecutionError("'yumdownloader' command not available")
+
     if not packages:
         raise SaltInvocationError("No packages were specified")
 

@@ -34,6 +34,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.verify
 import salt.utils.versions
+from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import CommandExecutionError, MinionError, SaltClientError
 from salt.utils.openstack.swift import SaltSwift
 
@@ -1046,7 +1047,7 @@ class PillarClient(Client):
             # Local file path
             fnd_path = fnd
 
-        hash_type = self.opts.get("hash_type", "md5")
+        hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
         ret["hsum"] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret["hash_type"] = hash_type
         return ret
@@ -1077,7 +1078,7 @@ class PillarClient(Client):
             except Exception:  # pylint: disable=broad-except
                 fnd_stat = None
 
-        hash_type = self.opts.get("hash_type", "md5")
+        hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
         ret["hsum"] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret["hash_type"] = hash_type
         return ret, fnd_stat
@@ -1296,7 +1297,7 @@ class RemoteClient(Client):
                         hsum = salt.utils.hashutils.get_hash(
                             dest,
                             salt.utils.stringutils.to_str(
-                                data.get("hash_type", b"md5")
+                                data.get("hash_type", DEFAULT_HASH_TYPE)
                             ),
                         )
                         if hsum != data["hsum"]:
@@ -1410,7 +1411,7 @@ class RemoteClient(Client):
                 return {}, None
             else:
                 ret = {}
-                hash_type = self.opts.get("hash_type", "md5")
+                hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
                 ret["hsum"] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret["hash_type"] = hash_type
                 return ret

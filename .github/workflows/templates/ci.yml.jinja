@@ -59,28 +59,19 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
+    <%- if not prepare_actual_release %>
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
-          python-binary: python3
+          python-version: "3.10"
+
+    <%- endif %>
 
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Cache Python Tools Docs Virtualenv
-        uses: actions/cache@v3
         with:
-          path: .tools-venvs/docs
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
-
-      - name: Cache Python Tools Changelog Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/changelog
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|changelog|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/changelog.txt') }}
-
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-changelog
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -168,6 +159,7 @@
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           SKIP: lint-salt,lint-tests
+          PRE_COMMIT_COLOR: always
         run: |
           # Run it twice so that pre-commit can fix anything that can be automatically fixed.
           git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
@@ -227,27 +219,16 @@
         with:
           python-version: "3.10"
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
       - name: Setup Python Tools Scripts
-        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-build
 
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-
-      - name: Cache Python Tools Build Virtualenv
-        uses: actions/cache@v3
-        with:
-          path: .tools-venvs/build
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|build|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/build.txt') }}
 
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball
@@ -351,6 +332,8 @@
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-coverage
 
       - name: Install Nox
         run: |

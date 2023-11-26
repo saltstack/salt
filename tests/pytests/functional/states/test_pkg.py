@@ -43,7 +43,10 @@ def PKG_TARGETS(grains):
     if grains["os"] == "Windows":
         _PKG_TARGETS = ["vlc", "putty"]
     elif grains["os"] == "Amazon":
-        _PKG_TARGETS = ["lynx", "gnuplot"]
+        if grains["osfinger"] == "Amazon Linux-2023":
+            _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
+        else:
+            _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             if grains["osmajorrelease"] >= 5:

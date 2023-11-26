@@ -2,7 +2,6 @@
 Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
-
 import base64
 import contextlib
 import copy
@@ -38,6 +37,7 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
+from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
@@ -459,7 +459,7 @@ class GitProvider:
         if hasattr(self, "name"):
             self._cache_basehash = self.name
         else:
-            hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+            hash_type = getattr(hashlib, self.opts.get("hash_type", DEFAULT_HASH_TYPE))
             # We loaded this data from yaml configuration files, so, its safe
             # to use UTF-8
             self._cache_basehash = str(

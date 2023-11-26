@@ -1,5 +1,6 @@
 import os.path
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -42,7 +43,22 @@ def test_salt_versions_report_minion(salt_cli, salt_minion):
     """
     Test running test.versions_report on minion
     """
-    ret = salt_cli.run("test.versions_report", minion_tgt=salt_minion.id)
+    # Make sure the minion is running
+    assert salt_minion.is_running()
+    # Make sure we can ping the minion ...
+    ret = salt_cli.run(
+        "--timeout=240", "test.ping", minion_tgt=salt_minion.id, _timeout=240
+    )
+    assert ret.returncode == 0
+    assert ret.data is True
+    ret = salt_cli.run(
+        "--hard-crash",
+        "--failhard",
+        "--timeout=240",
+        "test.versions_report",
+        minion_tgt=salt_minion.id,
+        _timeout=240,
+    )
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
 
 
@@ -109,14 +125,14 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     package of the same version. For example, v3004~rc1 should be less than
     v3004.
     """
-    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
+    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora", "photon"):
         pytest.skip("Only tests rpm packages")
 
     pkg = [x for x in install_salt.pkgs if "rpm" in x]
     if not pkg:
         pytest.skip("Not testing rpm packages")
     pkg = pkg[0].split("/")[-1]
-    if "rc" not in pkg:
+    if "rc" not in ".".join(pkg.split(".")[:2]):
         pytest.skip("Not testing an RC package")
     assert "~" in pkg
     comp_pkg = pkg.split("~")[0]

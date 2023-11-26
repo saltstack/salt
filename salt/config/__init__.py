@@ -49,6 +49,8 @@ log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
+DEFAULT_HASH_TYPE = "sha256"
+
 
 if salt.utils.platform.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -1147,7 +1149,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gitfs_refspecs": _DFLT_REFSPECS,
         "gitfs_disable_saltenv_mapping": False,
         "unique_jid": False,
-        "hash_type": "sha256",
+        "hash_type": DEFAULT_HASH_TYPE,
         "optimization_order": [0, 1, 2],
         "disable_modules": [],
         "disable_returners": [],
@@ -1471,7 +1473,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fileserver_ignoresymlinks": False,
         "fileserver_verify_config": True,
         "max_open_files": 100000,
-        "hash_type": "sha256",
+        "hash_type": DEFAULT_HASH_TYPE,
         "optimization_order": [0, 1, 2],
         "conf_file": os.path.join(salt.syspaths.CONFIG_DIR, "master"),
         "open_mode": False,

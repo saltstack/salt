@@ -11,6 +11,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.url
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ def sync(
                         log.info("Copying '%s' to '%s'", fn_, dest)
                         if os.path.isfile(dest):
                             # The file is present, if the sum differs replace it
-                            hash_type = opts.get("hash_type", "md5")
+                            hash_type = opts.get("hash_type", DEFAULT_HASH_TYPE)
                             src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
                             dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
                             if src_digest != dst_digest:
