@@ -3,14 +3,12 @@ import os
 import shutil
 import sys
 
-import attr
 import pytest
 from pytestshellutils.utils import ports
-from saltfactories.daemons import master
-from saltfactories.daemons.container import SaltDaemon, SaltMinion
+from saltfactories.daemons.container import SaltMaster, SaltMinion
 from saltfactories.utils import random_string
 
-from salt.version import SaltVersionsInfo, __version__
+from salt.version import SaltVersionsInfo
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
@@ -20,35 +18,32 @@ pytestmark = [
 ]
 
 
-@attr.s(kw_only=True, slots=True)
-class SaltMaster(SaltDaemon, master.SaltMaster):
-    """
-    Salt minion daemon implementation running in a docker container.
-    """
-
-    def get_display_name(self):
-        """
-        Returns a human readable name for the factory.
-        """
-        return master.SaltMaster.get_display_name(self)
-
-    def get_check_events(self):
-        """
-        Return salt events to check.
-
-        Return a list of tuples in the form of `(master_id, event_tag)` check against to ensure the daemon is running
-        """
-        return master.SaltMaster.get_check_events(self)
-
-
 @pytest.fixture
 def prev_version():
     return str(SaltVersionsInfo.previous_release().info[0])
 
 
 @pytest.fixture
+def prev_container_image(shell, prev_version):
+    container = f"ghcr.io/saltstack/salt-ci-containers/salt:{prev_version}"
+    ret = shell.run("docker", "pull", container, check=False)
+    if ret.returncode:
+        pytest.skip(f"Failed to pull docker image '{container}':\n{ret}")
+    return container
+
+
+@pytest.fixture
 def curr_version():
     return str(SaltVersionsInfo.current_release().info[0])
+
+
+@pytest.fixture
+def curr_container_image(shell):
+    container = "ghcr.io/saltstack/salt-ci-containers/salt:latest"
+    ret = shell.run("docker", "pull", container, check=False)
+    if ret.returncode:
+        pytest.skip(f"Failed to pull docker image '{container}':\n{ret}")
+    return container
 
 
 @pytest.fixture
@@ -64,6 +59,7 @@ def prev_master(
     docker_network_name,
     prev_version,
     prev_master_id,
+    prev_container_image,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon(prev_master_id)
     conf_dir = root_dir / "conf"
@@ -93,14 +89,14 @@ def prev_master(
         overrides=config_overrides,
         factory_class=SaltMaster,
         base_script_args=["--log-level=debug"],
-        image=f"ghcr.io/saltstack/salt-ci-containers/salt:{prev_version}",
+        image=prev_container_image,
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": prev_master_id,
         },
         start_timeout=120,
-        max_start_attempts=1,
-        pull_before_start=True,
+        max_start_attempts=3,
+        pull_before_start=False,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
@@ -138,6 +134,7 @@ def prev_minion(
     prev_version,
     host_docker_network_ip_address,
     docker_network_name,
+    prev_container_image,
 ):
     config_overrides = {
         "master": prev_master.id,
@@ -154,14 +151,14 @@ def prev_minion(
         overrides=config_overrides,
         factory_class=SaltMinion,
         base_script_args=["--log-level=debug"],
-        image=f"ghcr.io/saltstack/salt-ci-containers/salt:{prev_version}",
+        image=prev_container_image,
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": prev_minion_id,
         },
-        start_timeout=60,
-        max_start_attempts=1,
-        pull_before_start=True,
+        start_timeout=120,
+        max_start_attempts=3,
+        pull_before_start=False,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
@@ -220,6 +217,7 @@ def curr_master(
     host_docker_network_ip_address,
     docker_network_name,
     curr_master_id,
+    curr_container_image,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon(curr_master_id)
     conf_dir = root_dir / "conf"
@@ -251,7 +249,7 @@ def curr_master(
         overrides=config_overrides,
         factory_class=SaltMaster,
         base_script_args=["--log-level=debug"],
-        image="ghcr.io/saltstack/salt-ci-containers/salt:current",
+        image=curr_container_image,
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": curr_master_id,
@@ -261,8 +259,8 @@ def curr_master(
             },
         },
         start_timeout=120,
-        max_start_attempts=1,
-        pull_before_start=True,
+        max_start_attempts=3,
+        pull_before_start=False,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
@@ -301,6 +299,7 @@ def curr_minion(
     curr_master,
     host_docker_network_ip_address,
     docker_network_name,
+    curr_container_image,
 ):
     config_overrides = {
         "master": curr_master.id,
@@ -317,7 +316,7 @@ def curr_minion(
         overrides=config_overrides,
         factory_class=SaltMinion,
         base_script_args=["--log-level=debug"],
-        image="ghcr.io/saltstack/salt-ci-containers/salt:current",
+        image=curr_container_image,
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": curr_minion_id,
@@ -327,8 +326,8 @@ def curr_minion(
             },
         },
         start_timeout=120,
-        max_start_attempts=1,
-        pull_before_start=True,
+        max_start_attempts=3,
+        pull_before_start=False,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
