@@ -258,7 +258,7 @@ everywhere, unfortunately.
 [hints]: #hints
 
 To generate an interface out of the signatures of some package, it is
-just enough to take a reference package and do something like this: 
+just enough to take a reference package and do something like this:
 
 
     cat zypper.py | grep '^def [a-z]' | sed -e 's/(/(self, /g' | sed -e 's/def/    def/g'

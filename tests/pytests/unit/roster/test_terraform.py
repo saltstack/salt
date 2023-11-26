@@ -27,10 +27,6 @@ def pki_dir():
 
 @pytest.fixture
 def configure_loader_modules(roster_file, pki_dir):
-    # opts = salt.config.master_config(
-    #     os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
-    # )
-    # utils = salt.loader.utils(opts, whitelist=["roster_matcher"])
     return {
         terraform: {
             "__utils__": {

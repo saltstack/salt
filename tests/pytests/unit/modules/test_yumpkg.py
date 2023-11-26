@@ -1,6 +1,8 @@
 import logging
 import os
 
+import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
@@ -8,11 +10,6 @@ import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +72,7 @@ def list_repos_var():
 
 
 @pytest.fixture(
-    ids=["yum", "dnf"],
+    ids=["yum", "dnf", "dnf5"],
     params=[
         {
             "context": {"yum_bin": "yum"},
@@ -86,6 +83,11 @@ def list_repos_var():
             "context": {"yum_bin": "dnf"},
             "grains": {"os": "Fedora", "osrelease": 27},
             "cmd": ["dnf", "-y", "--best", "--allowerasing"],
+        },
+        {
+            "context": {"yum_bin": "dnf5"},
+            "grains": {"os": "Fedora", "osrelease": 39},
+            "cmd": ["dnf5", "-y"],
         },
     ],
 )
@@ -121,9 +123,10 @@ def test_list_pkgs():
         "openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485",
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
+    cmd_mod = MagicMock(return_value=os.linesep.join(rpm_out))
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
         yumpkg.__salt__,
-        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        {"cmd.run": cmd_mod},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
         yumpkg.__salt__,
         {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
@@ -150,6 +153,18 @@ def test_list_pkgs():
         }.items():
             assert pkgs.get(pkg_name) is not None
             assert pkgs[pkg_name] == [pkg_version]
+        cmd_mod.assert_called_once_with(
+            [
+                "rpm",
+                "-qa",
+                "--nodigest",
+                "--nosignature",
+                "--queryformat",
+                "%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-(none)_|-%{INSTALLTIME}\n",
+            ],
+            output_loglevel="trace",
+            python_shell=False,
+        )
 
 
 def test_list_pkgs_no_context():
@@ -695,7 +710,7 @@ def test_list_repo_pkgs_with_options(list_repos_var):
                         except AssertionError:
                             continue
                     else:
-                        pytest.fail("repo '{}' not checked".format(repo))
+                        pytest.fail(f"repo '{repo}' not checked")
 
 
 def test_list_upgrades_dnf():
@@ -1972,24 +1987,25 @@ def test_call_yum_default():
             )
 
 
-@patch("salt.utils.systemd.has_scope", MagicMock(return_value=True))
 def test_call_yum_in_scope():
     """
     Call Yum/Dnf within the scope.
     :return:
     """
-    with patch.dict(yumpkg.__context__, {"yum_bin": "fake-yum"}):
-        with patch.dict(
-            yumpkg.__salt__,
-            {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
-        ):
-            yumpkg._call_yum(["-y", "--do-something"])  # pylint: disable=W0106
-            yumpkg.__salt__["cmd.run_all"].assert_called_once_with(
-                ["systemd-run", "--scope", "fake-yum", "-y", "--do-something"],
-                env={},
-                output_loglevel="trace",
-                python_shell=False,
-            )
+    with patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=True)
+    ), patch.dict(yumpkg.__context__, {"yum_bin": "fake-yum"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
+    ):
+
+        yumpkg._call_yum(["-y", "--do-something"])  # pylint: disable=W0106
+        yumpkg.__salt__["cmd.run_all"].assert_called_once_with(
+            ["systemd-run", "--scope", "fake-yum", "-y", "--do-something"],
+            env={},
+            output_loglevel="trace",
+            python_shell=False,
+        )
 
 
 def test_call_yum_with_kwargs():
@@ -2087,7 +2103,10 @@ def test_59705_version_as_accidental_float_should_become_text(
     new, full_pkg_string, yum_and_dnf
 ):
     name = "fnord"
-    expected_cmd = yum_and_dnf + ["install", full_pkg_string]
+    expected_cmd = yum_and_dnf + ["install"]
+    if expected_cmd[0] == "dnf5":
+        expected_cmd += ["--best", "--allowerasing"]
+    expected_cmd += [full_pkg_string]
     cmd_mock = MagicMock(
         return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
     )

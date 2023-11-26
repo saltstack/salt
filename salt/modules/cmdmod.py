@@ -217,7 +217,7 @@ def _gather_pillar(pillarenv, pillar_override):
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         pillar_override=pillar_override,
@@ -254,6 +254,34 @@ def _check_avail(cmd):
         # If no whitelist set then alls good!
         wret = True
     return bret and wret
+
+
+def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
+    """
+    Prep cmd when shell is powershell
+    """
+
+    # If this is running on Windows wrap
+    # the shell in quotes in case there are
+    # spaces in the paths.
+    if salt.utils.platform.is_windows():
+        shell = '"{}"'.format(shell)
+
+    # extract_stack() returns a list of tuples.
+    # The last item in the list [-1] is the current method.
+    # The third item[2] in each tuple is the name of that method.
+    if stack[-2][2] == "script":
+        cmd = (
+            "{} -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}".format(
+                shell, cmd
+            )
+        )
+    elif encoded_cmd:
+        cmd = "{} -NonInteractive -NoProfile -EncodedCommand {}".format(shell, cmd)
+    else:
+        cmd = '{} -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
+
+    return cmd
 
 
 def _run(
@@ -368,19 +396,7 @@ def _run(
         # Else just run a Powershell command.
         stack = traceback.extract_stack(limit=2)
 
-        # extract_stack() returns a list of tuples.
-        # The last item in the list [-1] is the current method.
-        # The third item[2] in each tuple is the name of that method.
-        if stack[-2][2] == "script":
-            cmd = '"{}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}'.format(
-                shell, cmd
-            )
-        elif encoded_cmd:
-            cmd = '"{}" -NonInteractive -NoProfile -EncodedCommand {}'.format(
-                shell, cmd
-            )
-        else:
-            cmd = '"{}" -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
+        cmd = _prep_powershell_cmd(shell, cmd, stack, encoded_cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)

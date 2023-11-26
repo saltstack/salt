@@ -44,4 +44,3 @@ Salt Vagrant Demo
 A Salt Demo using Vagrant.
 
 https://github.com/UtahDave/salt-vagrant-demo
-

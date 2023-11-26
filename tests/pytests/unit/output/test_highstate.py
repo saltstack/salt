@@ -1,13 +1,11 @@
 import copy
 import logging
-import sys
 
 import pytest
 
 import salt.output.highstate as highstate
 import salt.utils.stringutils
 from tests.support.mock import patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -247,7 +245,6 @@ def test_pct_summary_output():
     assert "                  file2" in actual_output
 
 
-@skipIf(sys.version_info < (3, 6), "RIP Python 3.5")
 def test__compress_ids():
     """
     Tests for expected data return for _compress_ids
@@ -857,7 +854,6 @@ def test_nested_output():
                 "salt_|-nested_|-state.orchestrate_|-runner": {
                     "comment": "Runner function 'state.orchestrate' executed.",
                     "name": "state.orchestrate",
-                    "__orchestration__": True,
                     "start_time": "09:22:53.158742",
                     "result": True,
                     "duration": 980.694,

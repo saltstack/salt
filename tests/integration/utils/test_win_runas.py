@@ -9,15 +9,15 @@ import threading
 import time
 import traceback
 
-import yaml
+import pytest
 
 import salt.utils.files
 import salt.utils.win_runas
+import salt.utils.yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mock import Mock
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import servicemanager
@@ -271,7 +271,7 @@ def wait_for_service(name, timeout=200):
         time.sleep(0.3)
 
 
-@skipIf(not HAS_WIN32, "This test runs only on windows.")
+@pytest.mark.skipif(not HAS_WIN32, reason="This test runs only on windows.")
 class RunAsTest(ModuleCase):
     @classmethod
     def setUpClass(cls):
@@ -658,7 +658,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 1, ret
 
     @with_system_user(
@@ -676,7 +676,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 1, ret
 
     @with_system_user(
@@ -698,7 +698,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret
 
     @with_system_user(
@@ -720,7 +720,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret
 
     def test_runas_service_system_user(self):
@@ -735,5 +735,5 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret

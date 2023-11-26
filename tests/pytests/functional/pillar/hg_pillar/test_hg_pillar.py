@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-import salt.config
 import salt.pillar.hg_pillar as hg_pillar
 
 try:
@@ -16,12 +15,8 @@ except ImportError:
 
 
 @pytest.fixture(scope="module")
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-    cache = tempfile.TemporaryDirectory(dir="/tmp")
-    opts["cachedir"] = cache.name
-    yield {hg_pillar: {"__opts__": opts}}
-    cache.cleanup()
+def configure_loader_modules(master_opts):
+    yield {hg_pillar: {"__opts__": master_opts}}
 
 
 @pytest.fixture

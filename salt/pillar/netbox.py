@@ -56,34 +56,34 @@ site_prefixes: ``True``
     Whether should retrieve the prefixes of the site the device belongs to.
 
 devices: ``True``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve physical devices.
 
 virtual_machines: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve virtual machines.
 
 interfaces: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve the interfaces of the device.
 
 interface_ips: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve the IP addresses for interfaces of the device.
     (interfaces must be set to True as well)
 
 api_query_result_limit: ``Use NetBox default``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     An integer specifying how many results should be returned for each query
     to the NetBox API. Leaving this unset will use NetBox's default value.
 
 connected_devices: ``False``
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Whether connected_devices key should be populated with device objects.
     If set to True it will force `interfaces` to also be true as a dependency
@@ -1109,7 +1109,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # Fetch device from API
     headers = {}
     if api_token:
-        headers = {"Authorization": "Token {}".format(api_token)}
+        headers = {"Authorization": f"Token {api_token}"}
     else:
         log.error("The value for api_token is not set")
         return ret

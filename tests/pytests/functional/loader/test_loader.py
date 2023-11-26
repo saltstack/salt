@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-import salt.utils.versions
+from salt.utils.versions import Version
 from tests.support.helpers import SaltVirtualEnv
 from tests.support.pytest.helpers import FakeSaltExtension
 
@@ -275,7 +275,7 @@ def test_extension_discovery_without_reload_with_bundled_importlib_metadata(
     assert salt_extension.name not in installed_packages
     if "importlib-metadata" in installed_packages:
         importlib_metadata_version = installed_packages["importlib-metadata"]
-        if salt.utils.versions.StrictVersion(importlib_metadata_version) >= "3.3.0":
+        if Version(importlib_metadata_version) >= Version("3.3.0"):
             venv.install("-U", "importlib-metadata<3.3.0")
     code = """
     import sys

@@ -15,6 +15,11 @@ import salt.utils.platform
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 @pytest.fixture
 def root_dir(tmp_path):
     return str(tmp_path / "root_dir")

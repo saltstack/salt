@@ -8,12 +8,16 @@ import salt.state
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 @pytest.fixture
-def minion_config():
-    cfg = salt.config.DEFAULT_MINION_OPTS.copy()
-    cfg["file_client"] = "local"
-    cfg["id"] = "foo01"
-    return cfg
+def minion_config(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts["id"] = "foo01"
+    return minion_opts
 
 
 def test_global_state_conditions_unconfigured(minion_config):

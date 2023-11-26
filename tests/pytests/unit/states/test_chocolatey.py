@@ -1,8 +1,10 @@
+"""
+Unit tests for chocolatey state
+"""
 import logging
 
 import pytest
 
-import salt.config
 import salt.modules.chocolatey as chocolatey_mod
 import salt.states.chocolatey as chocolatey
 from tests.support.mock import MagicMock, patch
@@ -16,16 +18,15 @@ def choco_path():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     return {
         chocolatey: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": {},
             "__context__": {},
         },
         chocolatey_mod: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__context__": {},
         },
     }
@@ -76,6 +77,7 @@ def test_source_present(list_sources):
         chocolatey.__salt__,
         {
             "chocolatey.list_sources": list_sources_sideeffect,
+            "chocolatey.add_source": chocolatey_mod.add_source,
         },
     ):
 
@@ -86,11 +88,6 @@ def test_source_present(list_sources):
         cmd_run_all_mock = MagicMock(return_value={"retcode": 0, "stdout": stdout_ret})
         cmd_run_which_mock = MagicMock(return_value=choco_path)
         with patch.dict(
-            chocolatey.__salt__,
-            {
-                "chocolatey.add_source": chocolatey_mod.add_source,
-            },
-        ), patch.dict(
             chocolatey_mod.__salt__,
             {
                 "cmd.which": cmd_run_which_mock,

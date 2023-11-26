@@ -1,16 +1,16 @@
 """
 Test generic roster matching utility.
 """
-
-
 import os
+
+import pytest
 
 import salt.config
 import salt.loader
 import salt.utils.roster_matcher
 from tests.support import mixins
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 EXPECTED = {
     "host1": {
@@ -170,7 +170,9 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         with self.assertRaises(RuntimeError):
             salt.utils.roster_matcher.targets(EXPECTED, None, "range")
 
-    @skipIf(not salt.utils.roster_matcher.HAS_RANGE, "seco.range is not installed")
+    @pytest.mark.skipif(
+        not salt.utils.roster_matcher.HAS_RANGE, reason="seco.range is not installed"
+    )
     def test_ret_range_minions(self):
         """
         Test that range matcher raises a Runtime Error if seco.range is not installed.

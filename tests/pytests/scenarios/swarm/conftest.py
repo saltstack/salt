@@ -9,7 +9,7 @@ from saltfactories.utils import random_string
 def salt_master_factory(salt_factories):
     factory = salt_factories.salt_master_daemon(
         random_string("swarm-master-"),
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
 
@@ -41,7 +41,7 @@ def salt_cli(salt_master):
 @pytest.fixture(scope="package")
 def minion_count():
     # Allow this to be changed via an environment variable if needed
-    return int(os.environ.get("SALT_CI_MINION_SWARM_COUNT", 20))
+    return int(os.environ.get("SALT_CI_MINION_SWARM_COUNT", 15))
 
 
 @pytest.fixture(scope="package")
@@ -53,8 +53,8 @@ def minion_swarm(salt_master, minion_count):
     with ExitStack() as stack:
         for idx in range(minion_count):
             minion_factory = salt_master.salt_minion_daemon(
-                random_string("swarm-minion-{}-".format(idx)),
-                extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+                random_string(f"swarm-minion-{idx}-"),
+                extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             )
             stack.enter_context(minion_factory.started())
             minions.append(minion_factory)

@@ -13,7 +13,7 @@ try:
     if twilio_version > (5,):
         from twilio.rest import Client as TwilioRestClient
     else:
-        from twilio.rest import TwilioRestClient
+        from twilio.rest import TwilioRestClient  # pylint: disable=no-name-in-module
     HAS_TWILIO = True
 except ImportError:
     HAS_TWILIO = False

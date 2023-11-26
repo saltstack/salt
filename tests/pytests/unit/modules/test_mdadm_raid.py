@@ -6,7 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 import re
-import sys
 
 import pytest
 
@@ -19,9 +18,6 @@ def configure_loader_modules():
     return {mdadm: {}}
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
-)
 def test_create():
     mock = MagicMock(return_value="salt")
     with patch.dict(mdadm.__salt__, {"cmd.run": mock}), patch(
@@ -60,9 +56,6 @@ def test_create():
         )
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
-)
 def test_create_metadata():
     mock = MagicMock(return_value="salt")
     with patch.dict(mdadm.__salt__, {"cmd.run": mock}), patch(

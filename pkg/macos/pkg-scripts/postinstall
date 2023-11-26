@@ -1,0 +1,185 @@
+#!/bin/bash
+###############################################################################
+#
+# Title: Post Script for Salt Installation
+# Authors: Shane Lee
+# Date: December 2015
+#
+# Description: This script copies the minion config file and starts the salt
+#              service. It also adds /opt/salt to the path.
+#
+# Requirements:
+#    - None
+#
+# Usage:
+#     This script is run as a part of the macOS Salt Installation
+#
+###############################################################################
+
+#-------------------------------------------------------------------------------
+# Define Variables
+#-------------------------------------------------------------------------------
+INSTALL_DIR="/opt/salt"
+BIN_DIR="$INSTALL_DIR/bin"
+CONFIG_DIR="/etc/salt"
+TEMP_DIR="/tmp"
+SBIN_DIR="/usr/local/sbin"
+
+#-------------------------------------------------------------------------------
+# Define Functions
+#-------------------------------------------------------------------------------
+log () {
+    if [ -f "$TEMP_DIR/postinstall.txt" ]; then
+        echo "$1" >> "$TEMP_DIR/postinstall.txt"
+    else
+        echo "$1" > "$TEMP_DIR/postinstall.txt"
+    fi
+}
+
+quit_on_error() {
+    log "$(basename "$0") caught error: $1 on line : $2 command was: $3"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Set up logging and error handling
+#-------------------------------------------------------------------------------
+log "Post install script started on: $(date '+%Y/%m/%d %H:%M:%S')"
+trap 'quit_on_error $? $LINENO $BASH_COMMAND' ERR
+
+#-------------------------------------------------------------------------------
+# Check for existing minion config, copy if it doesn't exist
+#-------------------------------------------------------------------------------
+if [ ! -f "$CONFIG_DIR/minion" ]; then
+    log "Config: Copy Started..."
+    cp "$CONFIG_DIR/minion.dist" "$CONFIG_DIR/minion"
+    if [ -f "$CONFIG_DIR/minion" ]; then
+        log "Config: Copied Successfully"
+    else
+        log "Config: Failed to copy minion config"
+        log "Config: $CONFIG_DIR/minion"
+    fi
+fi
+
+#-------------------------------------------------------------------------------
+# Create symlink to salt-config.sh
+#-------------------------------------------------------------------------------
+if [ ! -d "$SBIN_DIR" ]; then
+    log "Symlink: Creating $SBIN_DIR..."
+    mkdir "$SBIN_DIR"
+    if [ -d "$SBIN_DIR" ]; then
+        log "Symlink: Created $SBIN_DIR"
+    else
+        log "Symlink: Failed to create $SBIN_DIR"
+    fi
+fi
+
+# This is a special tool to make it easier for the user to get started setting
+# up salt
+log "Symlink: Creating symlink for salt-config..."
+ln -sf "$INSTALL_DIR/salt-config.sh" "$SBIN_DIR/salt-config"
+if [ -f "$SBIN_DIR/salt-config" ]; then
+    log "Symlink: Created Successfully"
+else
+    log "Symlink: Failed to create symlink"
+fi
+
+log "Symlink: Creating symlinks for salt..."
+ln -sf "$INSTALL_DIR/salt" "$SBIN_DIR/salt"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-api..."
+ln -sf "$INSTALL_DIR/salt-api" "$SBIN_DIR/salt-api"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-call..."
+ln -sf "$INSTALL_DIR/salt-call" "$SBIN_DIR/salt-call"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-cloud..."
+ln -sf "$INSTALL_DIR/salt-cloud" "$SBIN_DIR/salt-cloud"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-cp..."
+ln -sf "$INSTALL_DIR/salt-cp" "$SBIN_DIR/salt-cp"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-key..."
+ln -sf "$INSTALL_DIR/salt-key" "$SBIN_DIR/salt-key"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-master..."
+ln -sf "$INSTALL_DIR/salt-master" "$SBIN_DIR/salt-master"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-minion..."
+ln -sf "$INSTALL_DIR/salt-minion" "$SBIN_DIR/salt-minion"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-proxy..."
+ln -sf "$INSTALL_DIR/salt-proxy" "$SBIN_DIR/salt-proxy"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-run..."
+ln -sf "$INSTALL_DIR/salt-run" "$SBIN_DIR/salt-run"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for spm..."
+ln -sf "$INSTALL_DIR/spm" "$SBIN_DIR/spm"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-ssh..."
+ln -sf "$INSTALL_DIR/salt-ssh" "$SBIN_DIR/salt-ssh"
+log "Symlink: Created Successfully"
+
+log "Symlink: Creating symlinks for salt-syndic..."
+ln -sf "$INSTALL_DIR/salt-syndic" "$SBIN_DIR/salt-syndic"
+log "Symlink: Created Successfully"
+
+#-------------------------------------------------------------------------------
+# Add salt to paths.d
+#-------------------------------------------------------------------------------
+if [ ! -d "/etc/paths.d" ]; then
+    log "Path: Creating paths.d directory..."
+    mkdir /etc/paths.d
+    log "Path: Created Successfully"
+fi
+log "Path: Adding salt to the path..."
+sh -c "echo \"$INSTALL_DIR\" > /etc/paths.d/salt"
+sh -c "echo \"$INSTALL_DIR\" >> /etc/paths.d/salt"
+log "Path: Added Successfully"
+
+#-------------------------------------------------------------------------------
+# Register Salt as a service
+#-------------------------------------------------------------------------------
+log "Service: Configuring..."
+
+log "Service: Enabling salt-minion..."
+launchctl enable system/com.saltstack.salt.minion
+log "Service: Enabled Successfully"
+
+log "Service: Bootstrapping salt-minion..."
+launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+log "Service: Bootstrapped Successfully"
+
+if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+    log "Service: Service Running"
+else
+    log "Service: Kickstarting Service..."
+    launchctl kickstart -kp system/com.saltstack.salt.minion
+    log "Service: Kickstarted Successfully"
+fi
+
+log "Service: Started Successfully"
+
+log "Service: Disabling Master, Syndic, and API services"
+launchctl disable system/com.saltstack.salt.master
+launchctl disable system/com.saltstack.salt.syndic
+launchctl disable system/com.saltstack.salt.api
+log "Service: Disabled Successfully"
+
+log "Service: Configured Successfully"
+
+log "Post install completed successfully on: $(date '+%Y/%m/%d %H:%M:%S')"
+
+exit 0

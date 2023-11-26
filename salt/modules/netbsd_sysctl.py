@@ -58,11 +58,11 @@ def show(config_file=False):
     out = __salt__["cmd.run"](cmd, output_loglevel="trace")
     comps = [""]
     for line in out.splitlines():
-        if any([line.startswith("{}.".format(root)) for root in roots]):
+        if any([line.startswith(f"{root}.") for root in roots]):
             comps = re.split("[=:]", line, 1)
             ret[comps[0]] = comps[1]
         elif comps[0]:
-            ret[comps[0]] += "{}\n".format(line)
+            ret[comps[0]] += f"{line}\n"
         else:
             continue
     return ret
@@ -78,7 +78,7 @@ def get(name):
 
         salt '*' sysctl.get hw.physmem
     """
-    cmd = "sysctl -n {}".format(name)
+    cmd = f"sysctl -n {name}"
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -94,7 +94,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.inet.icmp.icmplim 50
     """
     ret = {}
-    cmd = 'sysctl -w {}="{}"'.format(name, value)
+    cmd = f'sysctl -w {name}="{value}"'
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if data["retcode"] != 0:
@@ -130,7 +130,7 @@ def persist(name, value, config="/etc/sysctl.conf"):
     with salt.utils.files.fopen(config, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line)
-            m = re.match(r"{}(\??=)".format(name), line)
+            m = re.match(rf"{name}(\??=)", line)
             if not m:
                 nlines.append(line)
                 continue
@@ -145,13 +145,13 @@ def persist(name, value, config="/etc/sysctl.conf"):
                     rest = rest[len(rest_v) :]
                 if rest_v == value:
                     return "Already set"
-                new_line = "{}{}{}{}".format(name, m.group(1), value, rest)
+                new_line = f"{name}{m.group(1)}{value}{rest}"
                 nlines.append(new_line)
                 edited = True
 
     if not edited:
-        newline = "{}={}".format(name, value)
-        nlines.append("{}\n".format(newline))
+        newline = f"{name}={value}"
+        nlines.append(f"{newline}\n")
 
     with salt.utils.files.fopen(config, "wb") as ofile:
         ofile.writelines(salt.utils.data.encode(nlines))
@@ -159,6 +159,3 @@ def persist(name, value, config="/etc/sysctl.conf"):
     assign(name, value)
 
     return "Updated"
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

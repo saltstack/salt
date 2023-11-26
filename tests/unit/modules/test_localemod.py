@@ -1,21 +1,15 @@
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
+from tests.support.unit import TestCase
 
 
-@skipIf(not pytest, False)
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.localemod

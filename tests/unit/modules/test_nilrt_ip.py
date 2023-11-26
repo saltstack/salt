@@ -1,15 +1,13 @@
+import pytest
+
 import salt.modules.nilrt_ip as nilrt_ip
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-try:
-    import pyiface
-except ImportError:
-    pyiface = None
+pytest.importorskip("pyiface")
 
 
-@skipIf(not pyiface, "The python pyiface package is not installed")
 class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
     """
     TestCase for salt.modules.nilrt_ip module
@@ -30,7 +28,7 @@ class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nilrt_ip._change_dhcp_config", return_value=True
             ) as change_dhcp_config_mock:
                 assert nilrt_ip._change_state("test_interface", "down")
-                assert change_dhcp_config_mock.called_with("test_interface", False)
+                change_dhcp_config_mock.assert_called_with("test_interface", False)
 
     def test_change_state_up_state(self):
         """
@@ -44,7 +42,7 @@ class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nilrt_ip._change_dhcp_config", return_value=True
             ) as change_dhcp_config_mock:
                 assert nilrt_ip._change_state("test_interface", "up")
-                assert change_dhcp_config_mock.called_with("test_interface")
+                change_dhcp_config_mock.assert_called_with("test_interface")
 
     def test_set_static_all_with_dns(self):
         """

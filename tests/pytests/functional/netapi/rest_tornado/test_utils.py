@@ -1,4 +1,5 @@
-import salt.ext.tornado.concurrent
+import tornado.concurrent
+
 from salt.netapi.rest_tornado import saltnado
 
 
@@ -9,7 +10,7 @@ async def test_any_future():
     # create a few futures
     futures = []
     for _ in range(3):
-        future = salt.ext.tornado.concurrent.Future()
+        future = tornado.concurrent.Future()
         futures.append(future)
 
     # create an any future, make sure it isn't immediately done
@@ -20,6 +21,7 @@ async def test_any_future():
     futures[0].set_result("foo")
 
     await futures[0]
+    await any_
 
     assert any_.done() is True
     assert futures[0].done() is True
@@ -34,6 +36,7 @@ async def test_any_future():
     any_ = saltnado.Any(futures)
     futures[0].set_result("foo")
     await futures[0]
+    await any_
 
     assert any_.done() is True
     assert futures[0].done() is True

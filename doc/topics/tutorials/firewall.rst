@@ -28,7 +28,7 @@ FirewallD use the command line client ``firewall-cmd``.
 
     firewall-cmd --permanent --zone=<zone> --add-port=4505-4506/tcp
 
-A network zone defines the security level of trust for the network. 
+A network zone defines the security level of trust for the network.
 The user should choose an appropriate zone value for their setup.
 Possible values include: drop, block, public, external, dmz, work, home, internal, trusted.
 

@@ -22,6 +22,12 @@ import os
 # Define the module's virtual name
 __virtualname__ = "zabbix"
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     if zbx():
@@ -91,4 +97,4 @@ def returner(ret):
                 )
 
     if not changes and not errors:
-        zabbix_send("salt.trap.info", "SALT {} OK".format(job_minion_id))
+        zabbix_send("salt.trap.info", f"SALT {job_minion_id} OK")

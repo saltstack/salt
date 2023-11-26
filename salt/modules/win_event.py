@@ -1,13 +1,11 @@
 """
 A module for working with the Windows Event log system.
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 """
 # https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging
 
 import collections
 import logging
-
-import xmltodict
 
 import salt.utils.platform
 import salt.utils.stringutils
@@ -18,6 +16,9 @@ try:
     import win32evtlog
     import win32evtlogutil
     import winerror
+
+    # Only windows needs this dependency at runtime
+    import xmltodict
 
     IMPORT_STATUS = True
 except ImportError:

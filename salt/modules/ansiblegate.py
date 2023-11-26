@@ -64,7 +64,7 @@ def _set_callables(modules):
     :return:
     """
 
-    def _set_function(cmd_name, doc):
+    def _set_function(real_cmd_name, doc):
         """
         Create a Salt function for the Ansible module.
         """
@@ -73,14 +73,14 @@ def _set_callables(modules):
             """
             Call an Ansible module as a function from the Salt.
             """
-            return call(cmd_name, *args, **kwargs)
+            return call(real_cmd_name, *args, **kwargs)
 
         _cmd.__doc__ = doc
         return _cmd
 
-    for mod, doc in modules.items():
+    for mod, (real_mod, doc) in modules.items():
         __load__.append(mod)
-        setattr(sys.modules[__name__], mod, _set_function(mod, doc))
+        setattr(sys.modules[__name__], mod, _set_function(real_mod, doc))
 
 
 def __virtual__():
@@ -114,13 +114,34 @@ def __virtual__():
             "Failed to get the listing of ansible modules:\n{}".format(proc.stderr),
         )
 
+    module_funcs = dir(sys.modules[__name__])
     ansible_module_listing = salt.utils.json.loads(proc.stdout)
+    salt_ansible_modules_mapping = {}
     for key in list(ansible_module_listing):
-        if key.startswith("ansible."):
-            # Fyi, str.partition() is faster than str.replace()
-            _, _, alias = key.partition(".")
-            ansible_module_listing[alias] = ansible_module_listing[key]
-    _set_callables(ansible_module_listing)
+        if not key.startswith("ansible."):
+            salt_ansible_modules_mapping[key] = (key, ansible_module_listing[key])
+            continue
+
+        # Strip 'ansible.' from the module
+        # Fyi, str.partition() is faster than str.replace()
+        _, _, alias = key.partition(".")
+        if alias in salt_ansible_modules_mapping:
+            continue
+        if alias in module_funcs:
+            continue
+        salt_ansible_modules_mapping[alias] = (key, ansible_module_listing[key])
+        if alias.startswith(("builtin.", "system.")):
+            # Strip "builtin." or "system." so that we can do something like
+            # "salt-call ansible.ping" instead of "salt-call ansible.builtin.ping",
+            # although both formats can be used
+            _, _, alias = alias.partition(".")
+            if alias in salt_ansible_modules_mapping:
+                continue
+            if alias in module_funcs:
+                continue
+            salt_ansible_modules_mapping[alias] = (key, ansible_module_listing[key])
+
+    _set_callables(salt_ansible_modules_mapping)
     return __virtualname__
 
 
@@ -389,6 +410,7 @@ def playbooks(
         },
         "cwd": rundir,
         "cmd": " ".join(command),
+        "reset_system_locale": False,
     }
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
@@ -585,7 +607,9 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
         check_command = ["ansible-playbook", "--syntax-check"]
         try:
             for pb in list(ret):
-                if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                if __salt__["cmd.retcode"](
+                    check_command + [ret[pb]], reset_system_locale=False
+                ):
                     del ret[pb]
         except Exception as exc:
             raise CommandExecutionError(

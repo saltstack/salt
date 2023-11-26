@@ -127,6 +127,23 @@ A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
 be required to allow http(s) repositories to continue to be fetched.
 
 
+Debian Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+The Debian repos currently have older versions of pygit2 (package
+``python3-pygit2``). These older versions may have issues using newer SSH keys
+(see [this issue](https://github.com/saltstack/salt/issues/61790)). Instead,
+``pygit2`` can be installed from Pypi, but you will need a version that
+matches the ``libgit2`` version from Debian. This is version 1.6.1.
+
+.. code-block:: bash
+
+    # apt-get install libgit2
+    # salt-pip install pygit2==1.6.1 --no-deps
+
+Note that the above instructions assume a onedir installation. The need for
+`--no-deps` is to prevent the CFFI package from mismatching with Salt.
+
 GitPython
 ---------
 

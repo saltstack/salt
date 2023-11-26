@@ -36,6 +36,7 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
     inv = salt.modules.cmdmod.run(
         "ansible-inventory -i {} --list {}".format(inventory, " ".join(extra_cmd)),
         env={"ANSIBLE_DEPRECATION_WARNINGS": "0"},
+        reset_system_locale=False,
     )
     if yaml:
         return salt.utils.stringutils.to_str(inv)

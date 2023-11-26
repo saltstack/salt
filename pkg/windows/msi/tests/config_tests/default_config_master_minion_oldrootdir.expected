@@ -1,0 +1,10 @@
+# This is the template from the msi store line 1/6
+#master: salt
+master: cli.master.oldrootdir
+# This is the template from the msi store line 2/6
+#id:
+id: cli.minion.oldrootdir
+# This is the template from the msi store line 3/6
+# This is the template from the msi store line 4/6
+# This is the template from the msi store line 5/6
+# This is the template from the msi store line 6/6

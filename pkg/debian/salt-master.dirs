@@ -1,0 +1,15 @@
+/etc/salt/master.d
+/etc/salt/pki/master/minions
+/etc/salt/pki/master/minions_autosign
+/etc/salt/pki/master/minions_denied
+/etc/salt/pki/master/minions_pre
+/etc/salt/pki/master/minions_rejected
+/var/cache/salt/master
+/var/cache/salt/minion
+/var/cache/salt/master/jobs
+/var/cache/salt/master/proc
+/var/cache/salt/master/queues
+/var/cache/salt/master/roots
+/var/cache/salt/master/syndics
+/var/cache/salt/master/tokens
+/var/run/salt/master

@@ -2,11 +2,7 @@
 A runner to access data from the salt mine
 """
 
-import logging
-
 import salt.daemons.masterapi
-
-log = logging.getLevelName(__name__)
 
 
 def get(tgt, fun, tgt_type="glob"):

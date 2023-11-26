@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.saltstack.salt.syndic</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/salt/salt-syndic</string>
+    </array>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>100000</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>100000</integer>
+    </dict>
+    <!-- uncomment the lines below to debug launchd issues -->
+    <!--
+    <key>StandardOutPath</key>
+    <string>/tmp/salt-minion.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/salt-minion.err</string>
+    -->
+  </dict>
+</plist>

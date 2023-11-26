@@ -1,17 +1,12 @@
-"""
-Test module for syslog_ng
-"""
-
-# Import Python modules
-
 import os
 from textwrap import dedent
 
+import pytest
+
 import salt.modules.syslog_ng as syslog_ng
-import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 _VERSION = "3.6.0alpha0"
 _MODULES = (
@@ -232,7 +227,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
-    @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @pytest.mark.skip_on_windows(reason="Module not available on Windows")
     def test_version(self):
         cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
         expected_output = {"retcode": 0, "stdout": _VERSION}
@@ -256,7 +251,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 cmd_args, env=self.mocked_env, python_shell=False
             )
 
-    @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @pytest.mark.skip_on_windows(reason="Module not available on Windows")
     def test_stats(self):
         cmd_ret = {"retcode": 0, "stdout": STATS_OUTPUT}
         cmd_args = ["syslog-ng-ctl", "stats"]
@@ -279,7 +274,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 cmd_args, env=self.mocked_env, python_shell=False
             )
 
-    @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @pytest.mark.skip_on_windows(reason="Module not available on Windows")
     def test_modules(self):
         cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
         expected_output = {"retcode": 0, "stdout": _MODULES}
@@ -303,7 +298,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 cmd_args, env=self.mocked_env, python_shell=False
             )
 
-    @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @pytest.mark.skip_on_windows(reason="Module not available on Windows")
     def test_config_test(self):
         cmd_ret = {"retcode": 0, "stderr": "", "stdout": "Foo"}
         cmd_args = ["syslog-ng", "--syntax-only"]
@@ -326,7 +321,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 cmd_args, env=self.mocked_env, python_shell=False
             )
 
-    @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @pytest.mark.skip_on_windows(reason="Module not available on Windows")
     def test_config_test_cfgfile(self):
         cfgfile = "/path/to/syslog-ng.conf"
         cmd_ret = {"retcode": 1, "stderr": "Syntax error...", "stdout": ""}

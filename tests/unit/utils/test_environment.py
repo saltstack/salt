@@ -1,17 +1,10 @@
 """
 Test case for utils/__init__.py
 """
-
 import salt.utils.environment
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class UtilsTestCase(TestCase):
     """
     Test case for utils/__init__.py

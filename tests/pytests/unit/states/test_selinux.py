@@ -7,6 +7,8 @@ import pytest
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 
+pytestmark = [pytest.mark.skip_unless_on_linux]
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -77,7 +79,7 @@ def test_boolean():
 
     mock_en = MagicMock(return_value=[])
     with patch.dict(selinux.__salt__, {"selinux.list_sebool": mock_en}):
-        comt = "Boolean {} is not available".format(name)
+        comt = f"Boolean {name} is not available"
         ret.update({"comment": comt})
         assert selinux.boolean(name, value) == ret
 

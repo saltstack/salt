@@ -14,6 +14,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "apache"
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 
 def __virtual__():
     """
@@ -73,9 +79,9 @@ def a2enmod(mod):
     ret["Mod"] = mod
 
     if status == 1:
-        ret["Status"] = "Mod {} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {} enabled".format(mod)
+        ret["Status"] = f"Mod {mod} enabled"
     else:
         ret["Status"] = status
 
@@ -104,9 +110,9 @@ def a2dismod(mod):
     ret["Mod"] = mod
 
     if status == 256:
-        ret["Status"] = "Mod {} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {} disabled".format(mod)
+        ret["Status"] = f"Mod {mod} disabled"
     else:
         ret["Status"] = status
 

@@ -11,7 +11,6 @@ import pytest
 import salt.config
 import salt.loader
 import salt.utils.files
-import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 from tests.support.helpers import with_tempdir

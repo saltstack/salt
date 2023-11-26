@@ -35,9 +35,3 @@ In an issue report, please include the following information:
  .. note::
 
     Please be certain to scrub any logs or SLS files for sensitive data!
-
-
-
-
-
-

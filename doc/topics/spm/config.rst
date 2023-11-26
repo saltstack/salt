@@ -87,4 +87,3 @@ The files in this type of package are configuration files for Salt, which
 normally live in the ``/etc/salt/`` directory. Configuration files for packages
 other than Salt can and should be handled with a Salt State (using a ``formula``
 type of package).
-

@@ -7,5 +7,3 @@ APIs
 
     ../ref/clients/index
     netapi/index
-
-

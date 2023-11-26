@@ -157,6 +157,13 @@ class NetapiClient:
                 "Invalid client specified: '{}'".format(low.get("client"))
             )
 
+        if low.get("client") not in self.opts.get("netapi_enable_clients"):
+            raise salt.exceptions.SaltInvocationError(
+                "Client disabled: '{}'. Add to 'netapi_enable_clients' master config option to enable.".format(
+                    low.get("client")
+                )
+            )
+
         if not ("token" in low or "eauth" in low):
             raise salt.exceptions.EauthAuthenticationError(
                 "No authentication credentials given"

@@ -26,4 +26,3 @@ B:
         - LC_ALL: "en_US.utf8"
     - require:
         - mysql_database: A
-

@@ -1,0 +1,35 @@
+---
+name: setup-shellcheck
+description: Setup shellcheck
+inputs:
+  version:
+    description: The version of shellcheck
+    default: v0.9.0
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+
+runs:
+  using: composite
+  steps:
+
+    - name: Cache shellcheck Binary
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/bin/shellcheck
+        key: ${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|shellcheck|${{ inputs.version }}
+
+    - name: Setup shellcheck
+      shell: bash
+      run: |
+        if ! command -v shellcheck; then
+          wget https://github.com/koalaman/shellcheck/releases/download/${{ inputs.version }}/shellcheck-${{ inputs.version }}.${{ runner.os }}.x86_64.tar.xz
+          tar xf shellcheck-${{ inputs.version }}.${{ runner.os }}.x86_64.tar.xz
+          mv shellcheck-${{ inputs.version }}/shellcheck /usr/local/bin/shellcheck
+          rm -rf shellcheck-${{ inputs.version }}.${{ runner.os }}.x86_64.tar.xz shellcheck-${{ inputs.version }}
+        fi
+    - name: Show shellcheck Version
+      shell: bash
+      run: |
+        shellcheck --version

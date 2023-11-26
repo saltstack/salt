@@ -1,6 +1,5 @@
 import pytest
 
-import salt.config
 import salt.runners.saltutil as saltutil
 from tests.support.mock import MagicMock, patch
 
@@ -69,10 +68,8 @@ def module_sync_functions():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-
-    return {saltutil: {"opts": opts}}
+def configure_loader_modules(master_opts):
+    return {saltutil: {"opts": master_opts}}
 
 
 def test_sync_all():

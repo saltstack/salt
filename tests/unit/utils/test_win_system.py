@@ -1,8 +1,9 @@
 import os
 
-import salt.utils.platform
+import pytest
+
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import salt.utils.win_system as win_system
@@ -22,7 +23,7 @@ class WinSystemImportTestCase(TestCase):
             )
 
 
-@skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")
+@pytest.mark.skip_unless_on_windows
 class WinSystemTestCase(TestCase):
     """
     Test cases for salt.utils.win_system

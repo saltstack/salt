@@ -32,7 +32,7 @@ def get(
     saltenv=None,
 ):
     """
-    .. versionadded:: 0.14
+    .. versionadded:: 0.14.0
 
     Attempt to retrieve the named value from :ref:`in-memory pillar data
     <pillar-in-memory>`. If the pillar key is not present in the in-memory
@@ -184,7 +184,7 @@ def get(
 
     ret = salt.utils.data.traverse_dict_and_list(pillar_dict, key, default, delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {}".format(key))
+        raise KeyError(f"Pillar key not found: {key}")
 
     return ret
 
@@ -264,9 +264,7 @@ def items(*args, **kwargs):
                 valid_rend=__opts__["decrypt_pillar_renderers"],
             )
         except Exception as exc:  # pylint: disable=broad-except
-            raise CommandExecutionError(
-                "Failed to decrypt pillar override: {}".format(exc)
-            )
+            raise CommandExecutionError(f"Failed to decrypt pillar override: {exc}")
 
     pillar = salt.pillar.get_pillar(
         __opts__,
@@ -295,7 +293,7 @@ def _obfuscate_inner(var):
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
-        return "<{}>".format(var.__class__.__name__)
+        return f"<{var.__class__.__name__}>"
 
 
 def obfuscate(*args, **kwargs):
@@ -538,10 +536,10 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {}".format(key))
+        raise KeyError(f"Pillar key not found: {key}")
 
     if not isinstance(ret, dict):
-        raise ValueError("Pillar value in key {} is not a dict".format(key))
+        raise ValueError(f"Pillar value in key {key} is not a dict")
 
     return list(ret)
 

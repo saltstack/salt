@@ -417,7 +417,7 @@ Changelog for v2017.7.7..v2017.7.8
 
 * **ISSUE** `#47689`_: (`OrlandoArcapix`_) Poor performance of pip.installed when given a list of packages (refs: `#47734`_)
 
-* **PR** `#47734`_: (`OrlandoArcapix`_) `#47689`_ improve run-speed of pip package state 
+* **PR** `#47734`_: (`OrlandoArcapix`_) `#47689`_ improve run-speed of pip package state
   @ *2018-07-31 19:15:35 UTC*
 
   * c8e69431ff Merge pull request `#47734`_ from OrlandoArcapix/Issue47689-pip-state-performance
@@ -958,7 +958,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 739bf92599 upgrade dependencies for pytest tests
 
-* **PR** `#48491`_: (`grokrecursion`_) Group gid fixed as integer 
+* **PR** `#48491`_: (`grokrecursion`_) Group gid fixed as integer
   @ *2018-07-10 19:31:40 UTC*
 
   * 5372b60137 Merge pull request `#48491`_ from grokrecursion/group-fix-v2
@@ -1063,7 +1063,7 @@ Changelog for v2017.7.7..v2017.7.8
 
 * **ISSUE** `#38914`_: (`hgfischer`_) Uppercase checksums are not accepted by archive.extracted (refs: `#40754`_, `#48422`_)
 
-* **PR** `#48422`_: (`rallytime`_) Allow file.managed to work with uppercase source_hash in test=true mode 
+* **PR** `#48422`_: (`rallytime`_) Allow file.managed to work with uppercase source_hash in test=true mode
   @ *2018-07-03 16:40:59 UTC*
 
   * **PR** `#40754`_: (`lordcirth`_) file.manage_file: uppercase checksums now work (refs: `#48422`_)
@@ -1501,7 +1501,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 6fe711ad76 Reverse monkeypatching after test_symlink_list finishes
 
-* **PR** `#48088`_: (`rallytime`_) Update release versions for the 2017.7 branch 
+* **PR** `#48088`_: (`rallytime`_) Update release versions for the 2017.7 branch
   @ *2018-06-13 14:03:03 UTC*
 
   * 053b019a8f Merge pull request `#48088`_ from rallytime/update_version_doc_2017.7

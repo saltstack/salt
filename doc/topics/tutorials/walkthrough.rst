@@ -5,15 +5,14 @@ Salt in 10 Minutes
 ==================
 
 .. note::
-    Welcome to SaltStack! I am excited that you are interested in Salt and
+    Welcome to Salt Project! I am excited that you are interested in Salt and
     starting down the path to better infrastructure management. I developed
     (and am continuing to develop) Salt with the goal of making the best
     software available to manage computers of almost any kind. I hope you enjoy
     working with Salt and that the software can solve your real world needs!
 
     - Thomas S Hatch
-    - Salt creator and Chief Developer
-    - CTO of SaltStack, Inc.
+    - Salt Project creator and Chief Developer of Salt Project
 
 
 Getting Started

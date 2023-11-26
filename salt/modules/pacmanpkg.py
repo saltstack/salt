@@ -20,7 +20,7 @@ import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -542,7 +542,6 @@ def install(
         cmd.extend(["systemd-run", "--scope"])
     cmd.append("pacman")
 
-    targets = []
     errors = []
     targets = []
     if pkg_type == "file":
@@ -567,11 +566,9 @@ def install(
                     if prefix == "=":
                         wildcards.append((param, verstr))
                     else:
-                        errors.append(
-                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
-                        )
+                        errors.append(f"Invalid wildcard for {param}{prefix}{verstr}")
                     continue
-                targets.append("{}{}{}".format(param, prefix, verstr))
+                targets.append(f"{param}{prefix}{verstr}")
 
         if wildcards:
             # Resolve wildcard matches
@@ -1036,7 +1033,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1047,7 +1044,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret

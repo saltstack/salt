@@ -51,6 +51,15 @@ class GlobalConfig:
 
 
 @pytest.fixture
+def session_instance():
+    GlobalConfig.conn_parameters["key"] = "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
+    )
+    with patch("boto3.session.Session") as patched_session:
+        yield patched_session()
+
+
+@pytest.fixture
 def configure_loader_modules(minion_opts):
     minion_opts["grains"] = salt.loader.grains(minion_opts)
     ctx = {}
@@ -81,13 +90,7 @@ def configure_loader_modules(minion_opts):
     }
 
 
-def test_present_when_domain_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_domain_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.side_effect = GlobalConfig.not_found_error
@@ -105,13 +108,7 @@ def test_present_when_domain_does_not_exist():
     assert result["changes"]["new"]["domain"]["ElasticsearchClusterConfig"] is None
 
 
-def test_present_when_domain_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_domain_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.return_value = {
@@ -133,13 +130,7 @@ def test_present_when_domain_exists():
     }
 
 
-def test_present_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.side_effect = GlobalConfig.not_found_error
@@ -156,16 +147,10 @@ def test_present_with_failure():
     assert "An error occurred" in result["comment"]
 
 
-def test_absent_when_domain_does_not_exist():
+def test_absent_when_domain_does_not_exist(session_instance):
     """
     Tests absent on a domain that does not exist.
     """
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.side_effect = GlobalConfig.not_found_error
@@ -176,13 +161,7 @@ def test_absent_when_domain_does_not_exist():
     assert result["changes"] == {}
 
 
-def test_absent_when_domain_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_domain_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.return_value = {
@@ -198,13 +177,7 @@ def test_absent_when_domain_exists():
     assert result["changes"]["new"]["domain"] is None
 
 
-def test_absent_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_elasticsearch_domain.return_value = {

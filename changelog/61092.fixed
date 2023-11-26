@@ -1,3 +1,0 @@
-state.orchestrate_single only passes a pillar if it is set to the state
-function. This allows it to be used with state functions that don't accept a
-pillar keyword argument.

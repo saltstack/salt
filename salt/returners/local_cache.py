@@ -16,6 +16,7 @@ import salt.payload
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.minions
 import salt.utils.msgpack
 import salt.utils.stringutils
@@ -410,7 +411,8 @@ def clean_old_jobs():
     """
     Clean out the old jobs from the job cache
     """
-    if __opts__["keep_jobs"] != 0:
+    keep_jobs_seconds = salt.utils.job.get_keep_jobs_seconds(__opts__)
+    if keep_jobs_seconds != 0:
         jid_root = _job_dir()
 
         if not os.path.exists(jid_root):
@@ -440,8 +442,8 @@ def clean_old_jobs():
                     _remove_job_dir(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (time.time() - jid_ctime) / 3600.0
-                    if hours_difference > __opts__["keep_jobs"] and os.path.exists(
+                    seconds_difference = time.time() - jid_ctime
+                    if seconds_difference > keep_jobs_seconds and os.path.exists(
                         t_path
                     ):
                         # Remove the entire f_path from the original JID dir
@@ -456,8 +458,8 @@ def clean_old_jobs():
                 # Checking the time again prevents a possible race condition where
                 # t_path JID dirs were created, but not yet populated by a jid file.
                 t_path_ctime = os.stat(t_path).st_ctime
-                hours_difference = (time.time() - t_path_ctime) / 3600.0
-                if hours_difference > __opts__["keep_jobs"]:
+                seconds_difference = time.time() - t_path_ctime
+                if seconds_difference > keep_jobs_seconds:
                     _remove_job_dir(t_path)
 
 

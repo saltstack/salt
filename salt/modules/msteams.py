@@ -70,8 +70,16 @@ def post_card(message, hook_url=None, title=None, theme_color=None):
 
     payload = {"text": message, "title": title, "themeColor": theme_color}
 
+    headers = {
+        "Content-Type": "application/json",
+    }
+
     result = salt.utils.http.query(
-        hook_url, method="POST", data=salt.utils.json.dumps(payload), status=True
+        hook_url,
+        method="POST",
+        header_dict=headers,
+        data=salt.utils.json.dumps(payload),
+        status=True,
     )
 
     if result["status"] <= 201:

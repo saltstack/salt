@@ -478,7 +478,7 @@ def test_dead_with_missing_service():
         ret = service.dead(name=name)
         assert ret == {
             "changes": {},
-            "comment": "The named service {} is not available".format(name),
+            "comment": f"The named service {name} is not available",
             "result": True,
             "name": name,
         }
@@ -587,6 +587,7 @@ def test_mod_watch():
         assert service.mod_watch("salt", "stack") == ret[1]
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a service
@@ -708,7 +709,7 @@ def test_running_with_reload(minion_opts):
         service_name = "Spooler"
 
     if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-        pytest.skip("{} is not installed".format(cmd_name))
+        pytest.skip(f"{cmd_name} is not installed")
 
     pre_srv_enabled = (
         True if service_name in modules["service.get_enabled"]() else False
@@ -732,9 +733,9 @@ def test_running_with_reload(minion_opts):
             result = service.running(name=service_name, enable=True, reload=False)
 
         if salt.utils.platform.is_windows():
-            comment = "Started service {}".format(service_name)
+            comment = f"Started service {service_name}"
         else:
-            comment = "Service {} has been enabled, and is running".format(service_name)
+            comment = f"Service {service_name} has been enabled, and is running"
         expected = {
             "changes": {service_name: True},
             "comment": comment,

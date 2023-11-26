@@ -94,7 +94,7 @@ def test_mounted():
                 ret.update(
                     {
                         "comment": comt,
-                        "result": None,
+                        "result": False,
                         "changes": {"umount": umount1},
                     }
                 )
@@ -115,7 +115,7 @@ def test_mounted():
                     "os.path.exists", MagicMock(return_value=False)
                 ):
                     comt = "{} does not exist and would not be created".format(name)
-                    ret.update({"comment": comt, "changes": {}})
+                    ret.update({"comment": comt, "changes": {}, "result": None})
                     assert mount.mounted(name, device, fstype) == ret
 
                 with patch.dict(mount.__opts__, {"test": False}):

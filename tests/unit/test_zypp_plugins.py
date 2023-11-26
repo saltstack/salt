@@ -4,8 +4,10 @@
 import imp
 import os
 
+import pytest
+
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from zypp_plugin import BogusIO
@@ -22,15 +24,15 @@ ZYPPNOTIFY_FILE = os.path.sep.join(
 )
 
 
-@skipIf(not HAS_ZYPP_PLUGIN, "zypp_plugin is missing.")
+@pytest.mark.skipif(not HAS_ZYPP_PLUGIN, reason="zypp_plugin is missing.")
 class ZyppPluginsTestCase(TestCase):
     """
     Test shipped libzypp plugins.
     """
 
-    @skipIf(
+    @pytest.mark.skipif(
         not os.path.exists(ZYPPNOTIFY_FILE),
-        "Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
+        reason="Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
     )
     def test_drift_detector(self):
         """

@@ -34,7 +34,7 @@ for any OS with a Bourne shell:
     curl -L https://bootstrap.saltstack.com -o bootstrap_salt.sh
     sudo sh bootstrap_salt.sh
 
-Before run the script, it is a good practice to verify the checksum of the downloaded 
+Before run the script, it is a good practice to verify the checksum of the downloaded
 file. You can verify the checksum with SHA256 by running this command:
 
 .. code-block:: bash
@@ -45,7 +45,7 @@ file. You can verify the checksum with SHA256 by running this command:
        || echo "File does not match checksum"
 
 .. note::
-    
+
     The previous example is the preferred method because by downloading the script
     you can investigate the contents of the bootstrap script or using it again later.
     Alternatively, if you want to download the bash script and run it immediately,

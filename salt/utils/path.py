@@ -224,6 +224,8 @@ def which_bin(exes):
     """
     Scan over some possible executables and return the first one that is found
     """
+    if isinstance(exes, str):
+        exes = [exes]
     if not isinstance(exes, Iterable):
         return None
     for exe in exes:

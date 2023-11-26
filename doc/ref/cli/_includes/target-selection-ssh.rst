@@ -8,4 +8,3 @@ minion id. See https://docs.python.org/3/library/fnmatch.html#module-fnmatch.
 
     The target expression will be interpreted as a PCRE regular expression
     rather than a shell glob.
-

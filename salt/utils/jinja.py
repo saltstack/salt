@@ -2,13 +2,12 @@
 Jinja loading utils to enable a more powerful backend for jinja templates
 """
 
-
 import itertools
 import logging
 import os.path
-import pipes
 import pprint
 import re
+import shlex
 import time
 import uuid
 import warnings
@@ -33,20 +32,20 @@ import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     from markupsafe import Markup
 except ImportError:
     # jinja < 3.1
-    from jinja2 import Markup
+    from jinja2 import Markup  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
 __all__ = ["SaltCacheLoader", "SerializerExtension"]
 
 GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
-JINJA_VERSION = LooseVersion(jinja2.__version__)
+JINJA_VERSION = Version(jinja2.__version__)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -57,19 +56,6 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     """
-
-    _cached_pillar_client = None
-    _cached_client = None
-
-    @classmethod
-    def shutdown(cls):
-        for attr in ("_cached_client", "_cached_pillar_client"):
-            client = getattr(cls, attr, None)
-            if client is not None:
-                # PillarClient and LocalClient objects do not have a destroy method
-                if hasattr(client, "destroy"):
-                    client.destroy()
-                setattr(cls, attr, None)
 
     def __init__(
         self,
@@ -93,8 +79,7 @@ class SaltCacheLoader(BaseLoader):
         log.debug("Jinja search path: %s", self.searchpath)
         self.cached = []
         self._file_client = _file_client
-        # Instantiate the fileclient
-        self.file_client()
+        self._close_file_client = _file_client is None
 
     def file_client(self):
         """
@@ -108,18 +93,10 @@ class SaltCacheLoader(BaseLoader):
             or not hasattr(self._file_client, "opts")
             or self._file_client.opts["file_roots"] != self.opts["file_roots"]
         ):
-            attr = "_cached_pillar_client" if self.pillar_rend else "_cached_client"
-            cached_client = getattr(self, attr, None)
-            if (
-                cached_client is None
-                or not hasattr(cached_client, "opts")
-                or cached_client.opts["file_roots"] != self.opts["file_roots"]
-            ):
-                cached_client = salt.fileclient.get_file_client(
-                    self.opts, self.pillar_rend
-                )
-                setattr(SaltCacheLoader, attr, cached_client)
-            self._file_client = cached_client
+            self._file_client = salt.fileclient.get_file_client(
+                self.opts, self.pillar_rend
+            )
+            self._close_file_client = True
         return self._file_client
 
     def cache_file(self, template):
@@ -221,6 +198,27 @@ class SaltCacheLoader(BaseLoader):
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
 
+    def destroy(self):
+        if self._close_file_client is False:
+            return
+        if self._file_client is None:
+            return
+        file_client = self._file_client
+        self._file_client = None
+
+        try:
+            file_client.destroy()
+        except AttributeError:
+            # PillarClient and LocalClient objects do not have a destroy method
+            pass
+
+    def __enter__(self):
+        self.file_client()
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
 
 class PrintableDict(OrderedDict):
     """
@@ -243,11 +241,11 @@ class PrintableDict(OrderedDict):
             if isinstance(value, str):
                 # keeps quotes around strings
                 # pylint: disable=repr-flag-used-in-string
-                output.append("{!r}: {!r}".format(key, value))
+                output.append(f"{key!r}: {value!r}")
                 # pylint: enable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append("{!r}: {!s}".format(key, value))
+                output.append(f"{key!r}: {value!s}")
         return "{" + ", ".join(output) + "}"
 
     def __repr__(self):  # pylint: disable=W0221
@@ -256,7 +254,7 @@ class PrintableDict(OrderedDict):
             # Raw string formatter required here because this is a repr
             # function.
             # pylint: disable=repr-flag-used-in-string
-            output.append("{!r}: {!r}".format(key, value))
+            output.append(f"{key!r}: {value!r}")
             # pylint: enable=repr-flag-used-in-string
         return "{" + ", ".join(output) + "}"
 
@@ -442,7 +440,7 @@ def quote(txt):
 
         'my_text'
     """
-    return pipes.quote(txt)
+    return shlex.quote(txt)
 
 
 @jinja_filter()
@@ -728,12 +726,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
 
 
 try:
-    contextfunction = jinja2.contextfunction
+    pass_context = jinja2.pass_context
 except AttributeError:
-    contextfunction = jinja2.pass_context
+    # Old and deprecated method
+    pass_context = jinja2.contextfunction
 
 
-@contextfunction
+@pass_context
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}
@@ -1095,13 +1094,13 @@ class SerializerExtension(Extension):
                 # to the stringified version of the exception.
                 msg += str(exc)
             else:
-                msg += "{}\n".format(problem)
+                msg += f"{problem}\n"
                 msg += salt.utils.stringutils.get_context(
                     buf, line, marker="    <======================"
                 )
             raise TemplateRuntimeError(msg)
         except AttributeError:
-            raise TemplateRuntimeError("Unable to load yaml from {}".format(value))
+            raise TemplateRuntimeError(f"Unable to load yaml from {value}")
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -1109,7 +1108,7 @@ class SerializerExtension(Extension):
         try:
             return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
-            raise TemplateRuntimeError("Unable to load json from {}".format(value))
+            raise TemplateRuntimeError(f"Unable to load json from {value}")
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
@@ -1144,7 +1143,7 @@ class SerializerExtension(Extension):
         return self._parse_profile_block(parser, label, "profile block", body, lineno)
 
     def _create_profile_id(self, parser):
-        return "_salt_profile_{}".format(parser.free_identifier().name)
+        return f"_salt_profile_{parser.free_identifier().name}"
 
     def _profile_start(self, label, source):
         return (label, source, time.time())
@@ -1186,7 +1185,7 @@ class SerializerExtension(Extension):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
         if filter_name not in self.environment.filters:
-            parser.fail("Unable to parse {}".format(filter_name), lineno)
+            parser.fail(f"Unable to parse {filter_name}", lineno)
 
         parser.stream.expect("name:as")
         target = parser.parse_assign_target()
@@ -1225,7 +1224,7 @@ class SerializerExtension(Extension):
                 nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
                     nodes.Name(target, "load").set_lineno(lineno),
-                    "load_{}".format(converter),
+                    f"load_{converter}",
                     [],
                     [],
                     None,
@@ -1234,7 +1233,7 @@ class SerializerExtension(Extension):
             ).set_lineno(lineno),
         ]
         return self._parse_profile_block(
-            parser, import_node.template, "import_{}".format(converter), body, lineno
+            parser, import_node.template, f"import_{converter}", body, lineno
         )
 
     def dict_to_sls_yaml_params(self, value, flow_style=False):

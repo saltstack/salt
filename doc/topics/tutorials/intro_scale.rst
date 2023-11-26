@@ -241,7 +241,7 @@ the retention time defined by
 
 .. code-block:: yaml
 
-    keep_jobs: 24
+    keep_jobs_seconds: 86400
 
 .. code-block:: text
 

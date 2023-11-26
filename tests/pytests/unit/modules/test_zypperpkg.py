@@ -232,7 +232,6 @@ def test_pkg_list_holds():
         ("vim", "1.1", "1.2", [], "vim", [], None),
     ],
 )
-@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
 def test_upgrade(
     package,
     pre_version,
@@ -242,7 +241,7 @@ def test_upgrade(
     pkgs_param,
     diff_attr_param,
 ):
-    with patch(
+    with patch.object(zypper, "refresh_db", MagicMock(return_value=True)), patch(
         "salt.modules.zypperpkg.__zypper__.noraise.call"
     ) as zypper_mock, patch.object(
         zypper,
@@ -276,9 +275,8 @@ def test_upgrade(
         ("emacs", "1.1", "1.2", ["Dummy", "Dummy2"]),
     ],
 )
-@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
 def test_dist_upgrade(package, pre_version, post_version, fromrepo_param):
-    with patch(
+    with patch.object(zypper, "refresh_db", MagicMock(return_value=True)), patch(
         "salt.modules.zypperpkg.__zypper__.noraise.call"
     ) as zypper_mock, patch.object(
         zypper,
@@ -302,9 +300,8 @@ def test_dist_upgrade(package, pre_version, post_version, fromrepo_param):
         ("emacs", "1.1", "1.1", ["Dummy", "Dummy2"]),
     ],
 )
-@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
 def test_dist_upgrade_dry_run(package, pre_version, post_version, fromrepo_param):
-    with patch(
+    with patch.object(zypper, "refresh_db", MagicMock(return_value=True)), patch(
         "salt.modules.zypperpkg.__zypper__.noraise.call"
     ) as zypper_mock, patch.object(
         zypper,
@@ -323,7 +320,6 @@ def test_dist_upgrade_dry_run(package, pre_version, post_version, fromrepo_param
         zypper_mock.assert_any_call(*expected_call)
 
 
-@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
 def test_dist_upgrade_failure():
     zypper_output = textwrap.dedent(
         """\
@@ -340,7 +336,9 @@ def test_dist_upgrade_failure():
     zypper_mock.stderr = ""
     zypper_mock.exit_code = 3
     zypper_mock.noraise.call = call_spy
-    with patch("salt.modules.zypperpkg.__zypper__", zypper_mock), patch.object(
+    with patch.object(zypper, "refresh_db", MagicMock(return_value=True)), patch(
+        "salt.modules.zypperpkg.__zypper__", zypper_mock
+    ), patch.object(
         zypper, "list_pkgs", MagicMock(side_effect=[{"vim": 1.1}, {"vim": 1.1}])
     ):
         expected_call = [

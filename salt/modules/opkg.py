@@ -33,6 +33,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
+from salt.utils.versions import Version
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
@@ -1229,9 +1230,7 @@ def version_cmp(
         ["opkg", "--version"], output_loglevel="trace", python_shell=False
     )
     opkg_version = output.split(" ")[2].strip()
-    if salt.utils.versions.LooseVersion(
-        opkg_version
-    ) >= salt.utils.versions.LooseVersion("0.3.4"):
+    if Version(opkg_version) >= Version("0.3.4"):
         cmd_compare = ["opkg", "compare-versions"]
     elif salt.utils.path.which("opkg-compare-versions"):
         cmd_compare = ["opkg-compare-versions"]

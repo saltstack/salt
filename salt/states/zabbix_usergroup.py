@@ -5,6 +5,12 @@ Management of Zabbix user groups.
 
 """
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """
@@ -50,14 +56,14 @@ def present(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_usergroup_created = "User group {} created.".format(name)
-    comment_usergroup_updated = "User group {} updated.".format(name)
-    comment_usergroup_notcreated = "Unable to create user group: {}. ".format(name)
-    comment_usergroup_exists = "User group {} already exists.".format(name)
+    comment_usergroup_created = f"User group {name} created."
+    comment_usergroup_updated = f"User group {name} updated."
+    comment_usergroup_notcreated = f"Unable to create user group: {name}. "
+    comment_usergroup_exists = f"User group {name} already exists."
     changes_usergroup_created = {
         name: {
-            "old": "User group {} does not exist.".format(name),
-            "new": "User group {} created.".format(name),
+            "old": f"User group {name} does not exist.",
+            "new": f"User group {name} created.",
         }
     }
 
@@ -219,13 +225,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_usergroup_deleted = "User group {} deleted.".format(name)
-    comment_usergroup_notdeleted = "Unable to delete user group: {}. ".format(name)
-    comment_usergroup_notexists = "User group {} does not exist.".format(name)
+    comment_usergroup_deleted = f"User group {name} deleted."
+    comment_usergroup_notdeleted = f"Unable to delete user group: {name}. "
+    comment_usergroup_notexists = f"User group {name} does not exist."
     changes_usergroup_deleted = {
         name: {
-            "old": "User group {} exists.".format(name),
-            "new": "User group {} deleted.".format(name),
+            "old": f"User group {name} exists.",
+            "new": f"User group {name} deleted.",
         }
     }
 

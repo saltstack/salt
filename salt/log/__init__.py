@@ -9,6 +9,8 @@
     are made to assure backwards compatibility.
 """
 
+# pylint: disable = no-name-in-module
+
 # Import several classes/functions from salt.log.setup for backwards compatibility
 from salt._logging import LOG_LEVELS, SORTED_LEVEL_NAMES
 from salt.log.setup import (

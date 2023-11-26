@@ -7,12 +7,11 @@ import os
 import pytest
 
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("xattr")
+@pytest.mark.skip_unless_on_darwin
 class MacXattrModuleTest(ModuleCase):
     """
     Validate the mac_xattr module

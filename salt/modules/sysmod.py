@@ -546,7 +546,7 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_state_functions 'file.*'
         salt '*' sys.list_state_functions 'file.s*'
 
-    .. versionadded:: 2016.9
+    .. versionadded:: 2016.9.0
 
     .. code-block:: bash
 

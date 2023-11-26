@@ -10,13 +10,23 @@ Example Config
           cmd: /some/script.py -a 1 -b 2
           output: json
           interval: 5
+          onchange: false
 
 Script engine configs:
 
-    cmd: Script or command to execute
-    output: Any available saltstack deserializer
-    interval: How often in seconds to execute the command
+cmd
+    Script or command to execute
 
+output
+    Any available saltstack deserializer
+
+interval
+    How often in seconds to execute the command
+
+onchange
+    .. versionadded:: 3006.0
+
+    Only fire an event if the tag-specific output changes. Defaults to False.
 """
 
 import logging
@@ -53,7 +63,7 @@ def _get_serializer(output):
         )
 
 
-def start(cmd, output="json", interval=1):
+def start(cmd, output="json", interval=1, onchange=False):
     """
     Parse stdout of a command and generate an event
 
@@ -80,6 +90,7 @@ def start(cmd, output="json", interval=1):
     :param cmd: The command to execute
     :param output: How to deserialize stdout of the script
     :param interval: How often to execute the script
+    :param onchange: Only fire an event if the tag-specific output changes
     """
     try:
         cmd = shlex.split(cmd)
@@ -96,8 +107,10 @@ def start(cmd, output="json", interval=1):
     else:
         fire_master = __salt__["event.send"]
 
-    while True:
+    if onchange:
+        events = {}
 
+    while True:
         try:
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -116,8 +129,12 @@ def start(cmd, output="json", interval=1):
                     data["id"] = __opts__["id"]
 
                 if tag:
+                    if onchange and tag in events and events[tag] == data:
+                        continue
                     log.info("script engine firing event with tag %s", tag)
                     fire_master(tag=tag, data=data)
+                    if onchange:
+                        events[tag] = data
 
             log.debug("Closing script with pid %d", proc.pid)
             proc.stdout.close()

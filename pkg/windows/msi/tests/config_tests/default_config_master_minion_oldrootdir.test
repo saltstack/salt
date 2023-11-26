@@ -1,0 +1,2 @@
+properties START_MINION="" MASTER=cli.master.oldrootdir MINION_ID=cli.minion.oldrootdir INSTALLDIR=c:\salt ROOTDIR=c:\salt
+dormant

@@ -4,6 +4,12 @@ Management of Zabbix usermacros.
 
 """
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """
@@ -54,26 +60,26 @@ def present(name, value, hostid=None, **kwargs):
             name, hostid
         )
         comment_usermacro_notcreated = (
-            "Unable to create usermacro: {} on hostid {}. ".format(name, hostid)
+            f"Unable to create usermacro: {name} on hostid {hostid}. "
         )
         comment_usermacro_exists = "Usermacro {} already exists on hostid {}.".format(
             name, hostid
         )
         changes_usermacro_created = {
             name: {
-                "old": "Usermacro {} does not exist on hostid {}.".format(name, hostid),
-                "new": "Usermacro {} created on hostid {}.".format(name, hostid),
+                "old": f"Usermacro {name} does not exist on hostid {hostid}.",
+                "new": f"Usermacro {name} created on hostid {hostid}.",
             }
         }
     else:
-        comment_usermacro_created = "Usermacro {} created.".format(name)
-        comment_usermacro_updated = "Usermacro {} updated.".format(name)
-        comment_usermacro_notcreated = "Unable to create usermacro: {}. ".format(name)
-        comment_usermacro_exists = "Usermacro {} already exists.".format(name)
+        comment_usermacro_created = f"Usermacro {name} created."
+        comment_usermacro_updated = f"Usermacro {name} updated."
+        comment_usermacro_notcreated = f"Unable to create usermacro: {name}. "
+        comment_usermacro_exists = f"Usermacro {name} already exists."
         changes_usermacro_created = {
             name: {
-                "old": "Usermacro {} does not exist.".format(name),
-                "new": "Usermacro {} created.".format(name),
+                "old": f"Usermacro {name} does not exist.",
+                "new": f"Usermacro {name} created.",
             }
         }
 
@@ -203,25 +209,25 @@ def absent(name, hostid=None, **kwargs):
             name, hostid
         )
         comment_usermacro_notdeleted = (
-            "Unable to delete usermacro: {} from hostid {}.".format(name, hostid)
+            f"Unable to delete usermacro: {name} from hostid {hostid}."
         )
         comment_usermacro_notexists = (
-            "Usermacro {} does not exist on hostid {}.".format(name, hostid)
+            f"Usermacro {name} does not exist on hostid {hostid}."
         )
         changes_usermacro_deleted = {
             name: {
-                "old": "Usermacro {} exists on hostid {}.".format(name, hostid),
-                "new": "Usermacro {} deleted from {}.".format(name, hostid),
+                "old": f"Usermacro {name} exists on hostid {hostid}.",
+                "new": f"Usermacro {name} deleted from {hostid}.",
             }
         }
     else:
-        comment_usermacro_deleted = "Usermacro {} deleted.".format(name)
-        comment_usermacro_notdeleted = "Unable to delete usermacro: {}.".format(name)
-        comment_usermacro_notexists = "Usermacro {} does not exist.".format(name)
+        comment_usermacro_deleted = f"Usermacro {name} deleted."
+        comment_usermacro_notdeleted = f"Unable to delete usermacro: {name}."
+        comment_usermacro_notexists = f"Usermacro {name} does not exist."
         changes_usermacro_deleted = {
             name: {
-                "old": "Usermacro {} exists.".format(name),
-                "new": "Usermacro {} deleted.".format(name),
+                "old": f"Usermacro {name} exists.",
+                "new": f"Usermacro {name} deleted.",
             }
         }
     if hostid:

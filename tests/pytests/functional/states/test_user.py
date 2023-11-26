@@ -76,6 +76,7 @@ def existing_account():
         yield _account
 
 
+@pytest.mark.slow_test
 def test_user_absent(states):
     """
     Test user.absent with a non existing account
@@ -116,7 +117,6 @@ def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     ret = states.user.present(
         name=existing_account.username,
         home=existing_account.info.home,
-        remove_groups=False,
     )
     assert ret.result is True
     assert pathlib.Path(existing_account.info.home).is_dir()
@@ -190,13 +190,21 @@ def test_user_present_usergroup_true(modules, states, username, user_home, group
     assert group_name == group_1.name
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
 @pytest.mark.skipif(
     ANSI_FILESYSTEM_ENCODING,
     reason=(
-        "A system encoding which supports Unicode characters must be set. Current setting is: {}. "
-        "Try setting $LANG='en_US.UTF-8'".format(ANSI_FILESYSTEM_ENCODING)
+        "A system encoding which supports Unicode characters must be set. "
+        f"Current setting is: {sys.getfilesystemencoding()}. "
+        "Try setting $LANG='en_US.UTF-8'"
     ),
 )
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_user_present_unicode(states, username, subtests):
     """
     It ensures that unicode GECOS data will be properly handled, without
@@ -219,7 +227,6 @@ def test_user_present_unicode(states, username, subtests):
             roomnumber="①②③",
             workphone="١٢٣٤",
             homephone="६७८",
-            remove_groups=False,
         )
         assert ret.result is True
 
@@ -341,7 +348,7 @@ def test_user_present_change_gid_but_keep_group(
 
 @pytest.mark.skip_unless_on_windows
 def test_user_present_existing(states, username):
-    win_profile = "C:\\User\\{}".format(username)
+    win_profile = f"C:\\User\\{username}"
     win_logonscript = "C:\\logon.vbs"
     win_description = "Test User Account"
     ret = states.user.present(
@@ -353,7 +360,7 @@ def test_user_present_existing(states, username):
     )
     assert ret.result is True
 
-    win_profile = "C:\\Users\\{}".format(username)
+    win_profile = f"C:\\Users\\{username}"
     win_description = "Temporary Account"
     ret = states.user.present(
         name=username,
@@ -420,3 +427,75 @@ def test_user_present_change_optional_groups(
     user_info = modules.user.info(username)
     assert user_info
     assert user_info["groups"] == [group_1.name]
+
+
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+def test_user_present_no_groups(modules, states, username):
+    """
+    test user.present when groups arg is not
+    included by the group is created in another
+    state. Re-run the states to ensure there are
+    not changes and it is idempotent.
+    """
+    groups = ["testgroup1", "testgroup2"]
+    try:
+        ret = states.group.present(name=username, gid=61121)
+        assert ret.result is True
+
+        ret = states.user.present(
+            name=username,
+            uid=61121,
+            gid=61121,
+        )
+        assert ret.result is True
+        assert ret.changes["groups"] == [username]
+        assert ret.changes["name"] == username
+
+        ret = states.group.present(
+            name=groups[0],
+            members=[username],
+        )
+        assert ret.changes["members"] == [username]
+
+        ret = states.group.present(
+            name=groups[1],
+            members=[username],
+        )
+        assert ret.changes["members"] == [username]
+
+        user_info = modules.user.info(username)
+        assert user_info
+        assert user_info["groups"] == [username, groups[0], groups[1]]
+
+        # run again, expecting no changes
+        ret = states.group.present(name=username)
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.user.present(
+            name=username,
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.group.present(
+            name=groups[0],
+            members=[username],
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.group.present(
+            name=groups[1],
+            members=[username],
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        user_info = modules.user.info(username)
+        assert user_info
+        assert user_info["groups"] == [username, groups[0], groups[1]]
+    finally:
+        for group in groups:
+            ret = states.group.absent(name=group)
+            assert ret.result is True

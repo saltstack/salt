@@ -14,7 +14,10 @@ from tests.support.mock import MagicMock, patch
 def configure_loader_modules(tmp_path):
     return {
         postgres_local_cache: {
-            "__opts__": {"cachedir": str(tmp_path / "cache_dir"), "keep_jobs": 1}
+            "__opts__": {
+                "cachedir": str(tmp_path / "cache_dir"),
+                "keep_jobs_seconds": 3600,
+            }
         }
     }
 

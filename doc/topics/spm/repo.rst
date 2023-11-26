@@ -47,4 +47,3 @@ create_repo`` command:
 SPM generates the repository metadata for all of the packages in that directory
 and places it in an ``SPM-METADATA`` file at the folder root. This command is
 used even if repository metadata already exists in that directory.
-

@@ -1,0 +1,39 @@
+Index: salt-2015.8.0/conf/master
+===================================================================
+--- salt-2015.8.0.orig/conf/master
++++ salt-2015.8.0/conf/master
+@@ -25,7 +25,7 @@
+ # permissions to allow the specified user to run the master. The exception is
+ # the job cache, which must be deleted if this user is changed. If the
+ # modified files cause conflicts, set verify_env to False.
+-#user: root
++user: salt
+
+ # Max open files
+ #
+Index: salt-2015.8.0/pkg/salt-common.logrotate
+===================================================================
+--- salt-2015.8.0.orig/pkg/salt-common.logrotate
++++ salt-2015.8.0/pkg/salt-common.logrotate
+@@ -1,4 +1,5 @@
+ /var/log/salt/master {
++	su salt salt
+ 	weekly
+ 	missingok
+ 	rotate 7
+@@ -7,6 +8,7 @@
+ }
+
+ /var/log/salt/minion {
++	su salt salt
+ 	weekly
+ 	missingok
+ 	rotate 7
+@@ -15,6 +17,7 @@
+ }
+
+ /var/log/salt/key {
++	su salt salt
+ 	weekly
+ 	missingok
+ 	rotate 7

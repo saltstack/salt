@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 
@@ -5,7 +6,14 @@ import attr
 from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
 
-from tests.support.runtests import RUNTIME_VARS
+from tests.conftest import CODE_DIR
+
+log = logging.getLogger(__name__)
+
+
+def _install_salt_in_container(container):
+    ret = container.run("python3", "-m", "pip", "install", "/salt")
+    log.debug("Install Salt in the container: %s", ret)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -29,10 +37,10 @@ class SaltVirtMinionContainerFactory(SaltMinion):
     tls_uri = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        self.uri = "localhost:{}".format(self.sshd_port)
-        self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
-        self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
-        self.tls_uri = "qemu+tls://127.0.0.1:{}/system".format(self.libvirt_tls_port)
+        self.uri = f"localhost:{self.sshd_port}"
+        self.ssh_uri = f"qemu+ssh://{self.uri}/system"
+        self.tcp_uri = f"qemu+tcp://localhost:{self.libvirt_tcp_port}/system"
+        self.tls_uri = f"qemu+tls://127.0.0.1:{self.libvirt_tls_port}/system"
 
         if "environment" not in self.container_run_kwargs:
             self.container_run_kwargs["environment"] = {}
@@ -45,6 +53,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
                 "NO_START_MINION": "1",
                 "HOST_UUID": self.host_uuid,
                 "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPATH": str(CODE_DIR),
             }
         )
         super().__attrs_post_init__()
@@ -52,11 +61,10 @@ class SaltVirtMinionContainerFactory(SaltMinion):
             self.container_run_kwargs["volumes"] = {}
         self.container_run_kwargs["volumes"].update(
             {
-                RUNTIME_VARS.CODE_DIR: {"bind": "/salt", "mode": "z"},
-                RUNTIME_VARS.CODE_DIR: {"bind": RUNTIME_VARS.CODE_DIR, "mode": "z"},
+                str(CODE_DIR): {"bind": "/salt", "mode": "z"},
             }
         )
-        self.container_run_kwargs["working_dir"] = RUNTIME_VARS.CODE_DIR
+        self.container_run_kwargs["working_dir"] = str(CODE_DIR)
         self.container_run_kwargs["network_mode"] = "host"
         self.container_run_kwargs["cap_add"] = ["ALL"]
         self.container_run_kwargs["privileged"] = True
@@ -64,6 +72,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.container_start_check(self._check_script_path_exists)
         for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
             self.check_ports[port] = port
+        self.before_start(_install_salt_in_container, self, on_container=False)
 
     def _check_script_path_exists(self, timeout_at):
         while time.time() <= timeout_at:

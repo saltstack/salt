@@ -9,8 +9,11 @@ Module for running ethtool command
 :platform:      linux
 """
 
-
 import logging
+import os
+
+import salt.utils.path
+from salt.exceptions import CommandExecutionError
 
 try:
     import ethtool
@@ -299,3 +302,144 @@ def set_offload(devname, **kwargs):
                 return "Not supported"
 
     return show_offload(devname)
+
+
+def _ethtool_command(devname, *args, **kwargs):
+    """
+    Helper function to build an ethtool command
+    """
+    ethtool = salt.utils.path.which("ethtool")
+    if not ethtool:
+        raise CommandExecutionError("Command 'ethtool' cannot be found")
+    switches = " ".join(arg for arg in args)
+    params = " ".join("{} {}".format(key, val) for key, val in kwargs.items())
+    cmd = "{} {} {} {}".format(ethtool, switches, devname, params).strip()
+    ret = __salt__["cmd.run"](cmd, ignore_retcode=True).splitlines()
+    if ret and ret[0].startswith("Cannot"):
+        raise CommandExecutionError(ret[0])
+    return ret
+
+
+def _validate_params(valid_params, kwargs):
+    """
+    Helper function to validate parameters to ethtool commands. Boolean values
+    will be transformed into ``on`` and ``off`` to match expected syntax.
+    """
+    validated = {}
+    for key, val in kwargs.items():
+        key = key.lower()
+        if key in valid_params:
+            if val is True:
+                val = "on"
+            elif val is False:
+                val = "off"
+            validated[key] = val
+    if not validated:
+        raise CommandExecutionError(
+            "None of the valid parameters were provided: {}".format(valid_params)
+        )
+    return validated
+
+
+def show_pause(devname):
+    """
+    .. versionadded:: 3006.0
+
+    Queries the specified network device for associated pause information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ethtool.show_pause <devname>
+    """
+    data = {}
+
+    content = _ethtool_command(devname, "-a")
+
+    for line in content[1:]:
+        if line.strip():
+            (key, value) = (s.strip() for s in line.split(":", 1))
+            data[key] = value == "on"
+
+    return data
+
+
+def set_pause(devname, **kwargs):
+    """
+    .. versionadded:: 3006.0
+
+    Changes the pause parameters of the specified network device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ethtool.set_pause <devname> autoneg=off rx=off tx=off
+    """
+    valid_params = ["autoneg", "rx", "tx"]
+    params = _validate_params(valid_params, kwargs)
+    ret = _ethtool_command(devname, "-A", **params)
+    if not ret:
+        return True
+    return ret
+
+
+def show_features(devname):
+    """
+    .. versionadded:: 3006.0
+
+    Queries the specified network device for associated feature information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ethtool.show_features <devname>
+    """
+    data = {}
+
+    content = _ethtool_command(devname, "-k")
+
+    for line in content[1:]:
+        if ":" in line:
+            key, value = (s.strip() for s in line.strip().split(":", 1))
+            fixed = "fixed" in value
+            if fixed:
+                value = value.split()[0].strip()
+            data[key.strip()] = {"on": value == "on", "fixed": fixed}
+
+    return data
+
+
+def set_feature(devname, **kwargs):
+    """
+    .. versionadded:: 3006.0
+
+    Changes the feature parameters of the specified network device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ethtool.set_feature <devname> sg=off
+    """
+    valid_params = [
+        "rx",
+        "tx",
+        "sg",
+        "tso",
+        "ufo",
+        "gso",
+        "gro",
+        "lro",
+        "rxvlan",
+        "txvlan",
+        "ntuple",
+        "rxhash",
+    ]
+    params = _validate_params(valid_params, kwargs)
+    ret = _ethtool_command(devname, "-K", **params)
+    if not ret:
+        return True
+    return os.linesep.join(ret)

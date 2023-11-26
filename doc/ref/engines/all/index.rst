@@ -23,6 +23,7 @@ engine modules
     redis_sentinel
     script
     slack
+    slack_bolt_engine
     sqs_events
     stalekey
     test

@@ -3,12 +3,13 @@
 """
 import os
 
+import pytest
 import yaml
 
 import salt.modules.junos as junos
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from lxml import etree
@@ -28,7 +29,9 @@ except ImportError:
     HAS_JUNOS = False
 
 
-@skipIf(not HAS_JUNOS, "The junos-eznc and jxmlease modules are required")
+@pytest.mark.skipif(
+    not HAS_JUNOS, reason="The junos-eznc and jxmlease modules are required"
+)
 class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def setup_loader_modules(self):
         return {

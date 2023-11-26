@@ -1,0 +1,2 @@
+opt/saltstack/salt/salt-pip /usr/bin/salt-pip
+opt/saltstack/salt/salt-call /usr/bin/salt-call

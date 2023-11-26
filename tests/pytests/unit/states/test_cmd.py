@@ -77,7 +77,9 @@ def test_run():
 
         with patch.dict(cmd.__opts__, {"test": True}):
             comt = 'Command "cmd.script" would have been executed'
-            ret.update({"comment": comt, "result": None, "changes": {}})
+            ret.update(
+                {"comment": comt, "result": None, "changes": {"cmd": "cmd.script"}}
+            )
             assert cmd.run(name) == ret
 
 

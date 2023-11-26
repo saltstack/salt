@@ -9,7 +9,7 @@ import pytest
 
 from salt.cloud.clouds import dimensiondata
 from salt.exceptions import SaltCloudSystemExit
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mock import MagicMock
 from tests.support.mock import __version__ as mock_version
 from tests.support.mock import patch
@@ -29,7 +29,7 @@ try:
         # with this work-around. This work-around can be removed when the
         # required minimum version of libcloud is 2.0.0 (See PR #40837 - which
         # is implemented in Salt 2018.3.0).
-        if LooseVersion(libcloud.__version__) < LooseVersion("1.4.0"):
+        if Version(libcloud.__version__) < Version("1.4.0"):
             import certifi
 
             libcloud.security.CA_CERTS_PATH.append(certifi.where())
@@ -144,7 +144,7 @@ def test_import():
     with patch("salt.config.check_driver_dependencies", return_value=True) as p:
         get_deps = dimensiondata.get_dependencies()
         assert get_deps is True
-        if LooseVersion(mock_version) >= LooseVersion("2.0.0"):
+        if Version(mock_version) >= Version("2.0.0"):
             assert p.call_count >= 1
 
 
