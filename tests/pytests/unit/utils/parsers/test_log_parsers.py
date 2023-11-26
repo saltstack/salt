@@ -432,10 +432,7 @@ def test_get_log_level_default(
     # Check log file logger
     assert log_impl.log_level_logfile == default_log_level
     # Check help message
-    assert (
-        "Default: '{}'.".format(default_log_level)
-        in instance.get_option("--log-level").help
-    )
+    assert f"Default: '{default_log_level}'." in instance.get_option("--log-level").help
 
 
 # log file configuration tests
@@ -458,7 +455,7 @@ def test_get_log_file_cli(
     log_level = testing_config[loglevel_config_setting_name]
 
     # Set log file in CLI
-    log_file = "{}_cli.log".format(log_file)
+    log_file = f"{log_file}_cli.log"
     args = ["--log-file", log_file] + args
 
     instance = parser()
@@ -497,7 +494,7 @@ def test_get_log_file_config(
     log_level = testing_config[loglevel_config_setting_name]
 
     # Set log file in config
-    log_file = "{}_config.log".format(log_file)
+    log_file = f"{log_file}_config.log"
     testing_config.update({logfile_config_setting_name: log_file})
 
     instance = parser()
@@ -555,10 +552,7 @@ def test_get_log_file_default(
     # Check log file logger
     assert log_impl.log_file == log_file
     # Check help message
-    assert (
-        "Default: '{}'.".format(default_log_file)
-        in instance.get_option("--log-file").help
-    )
+    assert f"Default: '{default_log_file}'." in instance.get_option("--log-file").help
 
 
 # log file log level configuration tests
@@ -683,7 +677,7 @@ def test_get_log_file_level_default(
     assert log_impl.log_level_logfile == log_level_logfile
     # Check help message
     assert (
-        "Default: '{}'.".format(default_log_level)
+        f"Default: '{default_log_level}'."
         in instance.get_option("--log-file-level").help
     )
 

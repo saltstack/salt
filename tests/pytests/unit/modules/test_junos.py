@@ -2686,7 +2686,7 @@ def test_get_table_wrong_path():
         "out": False,
         "hostname": "1.1.1.1",
         "tablename": "ModuleTable",
-        "message": "Given table file {} cannot be located".format(file),
+        "message": f"Given table file {file} cannot be located",
     }
     with patch.dict(
         junos.__salt__, {"file.file_exists": MagicMock(return_value=False)}
@@ -2706,7 +2706,7 @@ def test_get_table_no_path_no_file():
         "out": False,
         "hostname": "1.1.1.1",
         "tablename": "ModuleTable",
-        "message": "Given table file {} cannot be located".format(file),
+        "message": f"Given table file {file} cannot be located",
     }
     with patch.dict(
         junos.__salt__, {"file.file_exists": MagicMock(return_value=False)}

@@ -39,7 +39,7 @@ def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
         path=testfile_path
     )
     with pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+        f"{sls_name}.sls", sls_contents, base_env_state_tree_root_dir
     ):
         yield sls_name
 

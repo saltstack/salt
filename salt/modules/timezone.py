@@ -145,7 +145,7 @@ def _get_zone_etc_timezone():
             return salt.utils.stringutils.to_unicode(fp_.read()).strip()
     except OSError as exc:
         raise CommandExecutionError(
-            "Problem reading timezone file {}: {}".format(tzfile, exc.strerror)
+            f"Problem reading timezone file {tzfile}: {exc.strerror}"
         )
 
 
@@ -241,7 +241,7 @@ def get_offset():
     salt_path = "/opt/salt/bin/date"
 
     if not os.path.exists(salt_path):
-        return "date in salt binaries does not exist: {}".format(salt_path)
+        return f"date in salt binaries does not exist: {salt_path}"
 
     return __salt__["cmd.run"]([salt_path, "+%z"], python_shell=False)
 
@@ -274,24 +274,24 @@ def set_zone(timezone):
     """
     if salt.utils.path.which("timedatectl"):
         try:
-            __salt__["cmd.run"]("timedatectl set-timezone {}".format(timezone))
+            __salt__["cmd.run"](f"timedatectl set-timezone {timezone}")
         except CommandExecutionError:
             pass
 
     if "Solaris" in __grains__["os_family"] or "AIX" in __grains__["os_family"]:
-        zonepath = "/usr/share/lib/zoneinfo/{}".format(timezone)
+        zonepath = f"/usr/share/lib/zoneinfo/{timezone}"
     else:
-        zonepath = "/usr/share/zoneinfo/{}".format(timezone)
+        zonepath = f"/usr/share/zoneinfo/{timezone}"
 
     if not os.path.exists(zonepath) and "AIX" not in __grains__["os_family"]:
-        return "Zone does not exist: {}".format(zonepath)
+        return f"Zone does not exist: {zonepath}"
 
     tzfile = _get_localtime_path()
     if os.path.exists(tzfile):
         os.unlink(tzfile)
 
     if "Solaris" in __grains__["os_family"]:
-        __salt__["file.sed"]("/etc/default/init", "^TZ=.*", "TZ={}".format(timezone))
+        __salt__["file.sed"]("/etc/default/init", "^TZ=.*", f"TZ={timezone}")
     elif "AIX" in __grains__["os_family"]:
         # timezone could be Olson or Posix
         curtzstring = get_zone()
@@ -308,12 +308,10 @@ def set_zone(timezone):
         os.symlink(zonepath, tzfile)
 
     if "RedHat" in __grains__["os_family"]:
-        __salt__["file.sed"](
-            "/etc/sysconfig/clock", "^ZONE=.*", 'ZONE="{}"'.format(timezone)
-        )
+        __salt__["file.sed"]("/etc/sysconfig/clock", "^ZONE=.*", f'ZONE="{timezone}"')
     elif "Suse" in __grains__["os_family"]:
         __salt__["file.sed"](
-            "/etc/sysconfig/clock", "^TIMEZONE=.*", 'TIMEZONE="{}"'.format(timezone)
+            "/etc/sysconfig/clock", "^TIMEZONE=.*", f'TIMEZONE="{timezone}"'
         )
     elif "Debian" in __grains__["os_family"] or "Gentoo" in __grains__["os_family"]:
         with salt.utils.files.fopen("/etc/timezone", "w") as ofh:
@@ -362,9 +360,7 @@ def zone_compare(timezone):
     except OSError as exc:
         problematic_file = exc.filename
         if problematic_file == zonepath:
-            raise SaltInvocationError(
-                'Can\'t find a local timezone "{}"'.format(timezone)
-            )
+            raise SaltInvocationError(f'Can\'t find a local timezone "{timezone}"')
         elif problematic_file == tzfile:
             raise CommandExecutionError(
                 "Failed to read {} to determine current timezone: {}".format(
@@ -384,7 +380,7 @@ def _get_localtime_path():
 
 
 def _get_zone_file(timezone):
-    return "/usr/share/zoneinfo/{}".format(timezone)
+    return f"/usr/share/zoneinfo/{timezone}"
 
 
 def get_hwclock():
@@ -454,7 +450,7 @@ def get_hwclock():
                                 if line == "local":
                                     return "LOCAL"
                         raise CommandExecutionError(
-                            "Correct offset value not found in {}".format(offset_file)
+                            f"Correct offset value not found in {offset_file}"
                         )
                 except OSError as exc:
                     raise CommandExecutionError(
@@ -556,10 +552,10 @@ def set_hwclock(clock):
             cmd = ["rtc", "-z", "GMT" if clock.lower() == "utc" else timezone]
             return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
-        zonepath = "/usr/share/zoneinfo/{}".format(timezone)
+        zonepath = f"/usr/share/zoneinfo/{timezone}"
 
         if not os.path.exists(zonepath):
-            raise CommandExecutionError("Zone '{}' does not exist".format(zonepath))
+            raise CommandExecutionError(f"Zone '{zonepath}' does not exist")
 
         os.unlink("/etc/localtime")
         os.symlink(zonepath, "/etc/localtime")
@@ -573,13 +569,13 @@ def set_hwclock(clock):
             return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
         elif "RedHat" in __grains__["os_family"]:
             __salt__["file.sed"](
-                "/etc/sysconfig/clock", "^ZONE=.*", 'ZONE="{}"'.format(timezone)
+                "/etc/sysconfig/clock", "^ZONE=.*", f'ZONE="{timezone}"'
             )
         elif "Suse" in __grains__["os_family"]:
             __salt__["file.sed"](
                 "/etc/sysconfig/clock",
                 "^TIMEZONE=.*",
-                'TIMEZONE="{}"'.format(timezone),
+                f'TIMEZONE="{timezone}"',
             )
         elif "Debian" in __grains__["os_family"]:
             if clock == "UTC":
@@ -591,14 +587,10 @@ def set_hwclock(clock):
                 raise SaltInvocationError("Only 'UTC' and 'localtime' are allowed")
             if clock == "localtime":
                 clock = "local"
-            __salt__["file.sed"](
-                "/etc/conf.d/hwclock", "^clock=.*", 'clock="{}"'.format(clock)
-            )
+            __salt__["file.sed"]("/etc/conf.d/hwclock", "^clock=.*", f'clock="{clock}"')
         elif "Slackware" in os_family:
             if clock not in ("UTC", "localtime"):
                 raise SaltInvocationError("Only 'UTC' and 'localtime' are allowed")
-            __salt__["file.sed"](
-                "/etc/hardwareclock", "^(UTC|localtime)", "{}".format(clock)
-            )
+            __salt__["file.sed"]("/etc/hardwareclock", "^(UTC|localtime)", f"{clock}")
 
     return True
