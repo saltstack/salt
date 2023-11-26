@@ -9,7 +9,7 @@ import salt.utils.hashutils
 import salt.utils.stringutils
 import salt.utils.thin
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.conftest import CODE_DIR
 
 
 def _mock_popen(return_value=None, side_effect=None, returncode=0):
