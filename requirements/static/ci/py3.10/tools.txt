@@ -53,7 +53,7 @@ python-dateutil==2.8.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   botocore
-python-tools-scripts==0.18.3
+python-tools-scripts==0.18.5
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.1
     # via

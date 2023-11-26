@@ -517,7 +517,7 @@ pytest-httpserver==1.0.6
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc27
+pytest-salt-factories==1.0.0rc28
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/pytest.txt
