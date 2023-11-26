@@ -2,15 +2,11 @@
 Salt package
 """
 
-import asyncio
 import importlib
 import locale
 import os
 import sys
 import warnings
-
-if sys.platform.startswith("win"):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if sys.version_info < (3,):  # pragma: no cover
     sys.stderr.write(
