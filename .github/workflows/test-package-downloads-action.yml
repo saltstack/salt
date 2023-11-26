@@ -242,6 +242,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-linux
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -696,6 +698,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-windows
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
