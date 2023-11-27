@@ -2231,6 +2231,11 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
                             cpe.get("version") and cpe.get("vendor") == "opensuse"
                         ):  # Keep VERSION_ID for SLES
                             grains["lsb_distrib_release"] = cpe["version"]
+                if grains["lsb_distrib_codename"]:
+                    test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
+                    if len(test_strg) >= 2:
+                        test_strg_2 = test_strg[1].split(")", maxsplit=1)
+                        grains["lsb_distrib_codename"] = test_strg_2[0]
 
             elif os.path.isfile("/etc/SuSE-release"):
                 log.trace("Parsing distrib info from /etc/SuSE-release")
@@ -2348,9 +2353,7 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         ):
             grains.pop("lsb_distrib_release", None)
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
-    grains["oscodename"] = grains.get("lsb_distrib_codename", "").strip() or oscodename
-    if "Red Hat" in grains["oscodename"]:
-        grains["oscodename"] = oscodename
+    grains["oscodename"] = oscodename or grains.get("lsb_distrib_codename", "").strip()
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
     # this assigns family names based on the os name
