@@ -456,6 +456,10 @@ pyeapi==0.8.3
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   napalm
+pyfakefs==5.3.1
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/pytest.txt
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt

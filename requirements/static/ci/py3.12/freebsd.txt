@@ -277,6 +277,8 @@ pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   -r requirements/crypto.txt
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
