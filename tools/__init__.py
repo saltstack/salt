@@ -17,6 +17,7 @@ PKG_REQUIREMENTS_FILES_PATH = (
 )
 DEFAULT_REQS_CONFIG = DefaultRequirementsConfig(
     pip_args=[
+        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
         f"--constraint={PKG_REQUIREMENTS_FILES_PATH / 'linux.txt'}",
     ],
     requirements_files=[
@@ -25,6 +26,13 @@ DEFAULT_REQS_CONFIG = DefaultRequirementsConfig(
     ],
 )
 RELEASE_VENV_CONFIG = VirtualEnvConfig(
+    env={
+        "PIP_CONSTRAINT": str(REQUIREMENTS_FILES_PATH / "constraints.txt"),
+    },
+    pip_args=[
+        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
+        f"--constraint={PKG_REQUIREMENTS_FILES_PATH / 'linux.txt'}",
+    ],
     requirements_files=[
         CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
     ],
