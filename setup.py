@@ -1225,4 +1225,9 @@ if __name__ == "__main__":
     warnings.warn(
         "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
     )
+    warnings.warn(
+        "In Salt 3009, the `setup.py` file will be stripped of it's custom additions and migrated to a plain "
+        "`pyproject.toml` python package or whatever is found best during the process of removing the customizations. "
+        "If you're relying on these customizations please stop as your workflow will break in the future."
+    )
     setup(distclass=SaltDistribution)

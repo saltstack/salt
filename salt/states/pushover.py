@@ -27,6 +27,12 @@ The api key can be specified in the master or minion configuration like below:
 
 """
 
+__deprecated__ = (
+    3009,
+    "pushover",
+    "https://github.com/saltstack/saltext-pushover",
+)
+
 
 def __virtual__():
     """
@@ -109,11 +115,11 @@ def post_message(
         return ret
 
     if not user:
-        ret["comment"] = "PushOver user is missing: {}".format(user)
+        ret["comment"] = f"PushOver user is missing: {user}"
         return ret
 
     if not message:
-        ret["comment"] = "PushOver message is missing: {}".format(message)
+        ret["comment"] = f"PushOver message is missing: {message}"
         return ret
 
     result = __salt__["pushover.post_message"](
@@ -129,8 +135,8 @@ def post_message(
 
     if result:
         ret["result"] = True
-        ret["comment"] = "Sent message: {}".format(name)
+        ret["comment"] = f"Sent message: {name}"
     else:
-        ret["comment"] = "Failed to send message: {}".format(name)
+        ret["comment"] = f"Failed to send message: {name}"
 
     return ret

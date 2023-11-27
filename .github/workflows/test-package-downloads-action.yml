@@ -131,10 +131,19 @@ jobs:
           - distro-slug: photonos-3
             arch: x86_64
             pkg-type: package
+          - distro-slug: photonos-3-arm64
+            arch: aarch64
+            pkg-type: package
           - distro-slug: photonos-4
             arch: x86_64
             pkg-type: package
           - distro-slug: photonos-4-arm64
+            arch: aarch64
+            pkg-type: package
+          - distro-slug: photonos-5
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: photonos-5-arm64
             arch: aarch64
             pkg-type: package
           - distro-slug: ubuntu-20.04
@@ -385,7 +394,10 @@ jobs:
           - distro-slug: macos-12
             arch: x86_64
             pkg-type: package
-          - distro-slug: macos-12
+          - distro-slug: macos-13
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: macos-13
             arch: x86_64
             pkg-type: onedir
 

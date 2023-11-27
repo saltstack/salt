@@ -1,4 +1,5 @@
   <%- for slug, display_name, arch, pkg_type in test_salt_pkg_listing["linux"] %>
+
     <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
 
   <{ job_name }>:

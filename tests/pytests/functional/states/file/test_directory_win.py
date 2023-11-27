@@ -2,8 +2,6 @@ import os
 
 import pytest
 
-import salt.modules.win_file as win_file
-import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions as win_functions
 
@@ -20,28 +18,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def configure_loader_modules():
-    return {
-        file: {
-            "__opts__": {"test": False},
-            "__salt__": {
-                "file.mkdir": win_file.mkdir,
-                "file.check_perms": win_file.check_perms,
-            },
-        },
-        win_file: {
-            "__utils__": {
-                "dacl.check_perms": win_dacl.check_perms,
-                "dacl.set_owner": win_dacl.set_owner,
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-        },
-        win_dacl: {"__opts__": {"test": False}},
-    }
-
-
-def test_directory_new(tmp_path):
+def test_directory_new(file, tmp_path):
     """
     Test file.directory when the directory does not exist
     Should just return "New Dir"
@@ -107,7 +84,7 @@ def test_directory_new(tmp_path):
     assert permissions == expected
 
 
-def test_directory_new_no_inherit(tmp_path):
+def test_directory_new_no_inherit(file, tmp_path):
     """
     Test file.directory when the directory does not exist
     Should just return "New Dir"
@@ -127,7 +104,7 @@ def test_directory_new_no_inherit(tmp_path):
     assert permissions["Inherited"] == {}
 
 
-def test_directory_new_reset(tmp_path):
+def test_directory_new_reset(file, tmp_path):
     """
     Test file.directory when the directory does not exist
     Should just return "New Dir"
@@ -182,7 +159,7 @@ def test_directory_new_reset(tmp_path):
     assert permissions == expected
 
 
-def test_directory_new_reset_no_inherit(tmp_path):
+def test_directory_new_reset_no_inherit(file, tmp_path):
     """
     Test file.directory when the directory does not exist
     Should just return "New Dir"
@@ -219,7 +196,7 @@ def test_directory_new_reset_no_inherit(tmp_path):
     assert permissions == expected
 
 
-def test_directory_existing(tmp_path):
+def test_directory_existing(file, tmp_path):
     path = str(tmp_path)
     ret = file.directory(
         name=path,
@@ -293,7 +270,7 @@ def test_directory_existing(tmp_path):
     assert permissions == expected
 
 
-def test_directory_existing_existing_user(tmp_path):
+def test_directory_existing_existing_user(file, tmp_path):
     path = str(tmp_path)
     win_dacl.set_permissions(
         obj_name=path,
@@ -374,7 +351,7 @@ def test_directory_existing_existing_user(tmp_path):
     assert permissions == expected
 
 
-def test_directory_existing_no_inherit(tmp_path):
+def test_directory_existing_no_inherit(file, tmp_path):
     path = str(tmp_path)
     ret = file.directory(
         name=path,
@@ -398,7 +375,7 @@ def test_directory_existing_no_inherit(tmp_path):
     assert permissions["Inherited"] == {}
 
 
-def test_directory_existing_reset(tmp_path):
+def test_directory_existing_reset(file, tmp_path):
     path = str(tmp_path)
     win_dacl.set_permissions(
         obj_name=path,
@@ -462,7 +439,7 @@ def test_directory_existing_reset(tmp_path):
     assert permissions == expected
 
 
-def test_directory_existing_reset_no_inherit(tmp_path):
+def test_directory_existing_reset_no_inherit(file, tmp_path):
     path = str(tmp_path)
     ret = file.directory(
         name=path,
