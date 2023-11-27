@@ -70,7 +70,7 @@ def PKG_CAP_TARGETS(grains):
     _PKG_CAP_TARGETS = []
     if grains["os_family"] == "Suse":
         if grains["os"] == "SUSE":
-            _PKG_CAP_TARGETS = [("perl(ZNC)", "znc-perl")]
+            _PKG_CAP_TARGETS = [("perl(YAML)", "perl-YAML")]
     if not _PKG_CAP_TARGETS:
         pytest.skip("Capability not provided")
     return _PKG_CAP_TARGETS
