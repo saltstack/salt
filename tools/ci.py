@@ -939,7 +939,7 @@ def get_pr_test_labels(
             ctx.exit(1)
 
         if "pull_request" not in gh_event:
-            ctx.warning("The 'pull_request' key was not found on the event payload.")
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
             ctx.exit(1)
 
         pr = gh_event["pull_request"]["number"]
@@ -1159,6 +1159,9 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     if not codecov:
         ctx.error("Could not find the path to the 'codecov' binary")
         ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert commit_sha is not None
 
     codecov_args = [
         codecov,
