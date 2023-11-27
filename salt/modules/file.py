@@ -6414,7 +6414,7 @@ def manage_file(
     makes the appropriate modifications (if necessary).
 
     name
-        The location of the file to manage, as an absolute path.
+        The location of the file to be managed, as an absolute path.
 
     sfn
         location of cached file on the minion
