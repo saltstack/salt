@@ -733,7 +733,9 @@ ttp==0.9.5
     #   napalm
     #   ttp-templates
 types-pyyaml==6.0.12.12
-    # via responses
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   responses
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt

@@ -17,9 +17,9 @@ annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   pydantic
-ansible-core==2.16.0
+ansible-core==2.15.6
     # via ansible
-ansible==9.0.1 ; python_version >= "3.9"
+ansible==8.6.1 ; python_version >= "3.9"
     # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
