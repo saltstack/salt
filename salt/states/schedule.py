@@ -216,6 +216,8 @@ def present(name, **kwargs):
 
     offline
         Add the scheduled job to the Salt minion when the Salt minion is not running.
+
+        .. versionadded:: 3006.3
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
