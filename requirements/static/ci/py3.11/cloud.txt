@@ -396,6 +396,10 @@ pycryptodomex==3.9.8
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/crypto.txt
+pyfakefs==5.3.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/pytest.txt
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
