@@ -36,7 +36,7 @@ runs:
         ${{ steps.pre-commit-virtualenv.outputs.python-executable }} -m pip install pre-commit==${{ inputs.version }}
 
     - name: Cache Pre-Commit Hooks
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       id: pre-commit-hooks-cache
       with:
         key: ${{ steps.pre-commit-virtualenv.outputs.cache-key }}|${{ inputs.version }}|${{ hashFiles('.pre-commit-config.yaml') }}
