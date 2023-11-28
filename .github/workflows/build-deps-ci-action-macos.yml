@@ -68,7 +68,7 @@ jobs:
 
       - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
