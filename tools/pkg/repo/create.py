@@ -890,6 +890,8 @@ def _create_onedir_based_repo(
             arch = "x86"
         elif "-aarch64" in dpath.name.lower():
             arch = "aarch64"
+        elif "-arm64" in dpath.name.lower():
+            arch = "arm64"
         else:
             ctx.error(
                 f"Cannot pickup the right architecture from the filename '{dpath.name}'."
