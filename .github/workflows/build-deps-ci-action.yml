@@ -72,7 +72,7 @@ jobs:
 
       - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
@@ -102,6 +102,8 @@ jobs:
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
 
       - name: Get Salt Project GitHub Actions Bot Environment
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
