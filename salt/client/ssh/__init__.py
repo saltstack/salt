@@ -1196,9 +1196,11 @@ class Single:
                 for grain in self.target["grains"]:
                     opts_pkg["grains"][grain] = self.target["grains"][grain]
 
+            # Pillar compilation needs the master opts primarily,
+            # same as during regular operation.
             popts = {}
-            popts.update(opts_pkg["__master_opts__"])
             popts.update(opts_pkg)
+            popts.update(opts_pkg["__master_opts__"])
             pillar = salt.pillar.Pillar(
                 popts,
                 opts_pkg["grains"],

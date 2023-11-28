@@ -353,6 +353,8 @@ pydantic==1.10.8
     #   inflect
 pyeapi==1.0.0
     # via napalm
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11

@@ -279,6 +279,8 @@ pydantic==1.10.8
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   inflect
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.7 ; sys_platform == "win32"

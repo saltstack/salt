@@ -324,6 +324,8 @@ pydantic==1.10.8
     #   inflect
 pyeapi==1.0.0
     # via napalm
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pynacl==1.5.0

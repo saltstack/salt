@@ -1,8 +1,18 @@
+import logging
+
 import msgpack
 import pytest
 
 import salt.config
+import salt.transport.base
 import salt.transport.zeromq
+
+log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 async def test_req_server_garbage_request(io_loop):

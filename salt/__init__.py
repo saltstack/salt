@@ -93,6 +93,17 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+warnings.filterwarnings(
+    "ignore",
+    "Deprecated call to `pkg_resources.declare_namespace.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    ".*pkg_resources is deprecated as an API.*",
+    category=DeprecationWarning,
+)
+
 
 def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
