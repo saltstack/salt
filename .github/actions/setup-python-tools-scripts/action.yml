@@ -50,7 +50,7 @@ runs:
         cache-seed: tools|${{ steps.venv-hash.outputs.venv-hash }}
 
     - name: Restore Python Tools Virtualenvs Cache
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ inputs.cwd }}/.tools-venvs
         key: ${{ inputs.cache-prefix }}|${{ steps.venv-hash.outputs.venv-hash }}

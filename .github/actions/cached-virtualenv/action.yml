@@ -54,7 +54,7 @@ runs:
 
     - name: Cache VirtualEnv
       id: cache-virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         key: ${{ steps.setup-cache-key.outputs.cache-key }}
         path: ${{ steps.virtualenv-path.outputs.venv-path }}
