@@ -43,6 +43,7 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
+import salt.utils.verify
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -483,19 +484,19 @@ class Compiler:
                     else:
                         fun = 0
                         if "." in state:
+                            # This should not happen usually since `pad_funcs`
+                            # is run on rendered templates
                             fun += 1
                         for arg in body[state]:
                             if isinstance(arg, str):
                                 fun += 1
                                 if " " in arg.strip():
                                     errors.append(
-                                        'The function "{}" in state '
-                                        '"{}" in SLS "{}" has '
+                                        f'The function "{arg}" in state '
+                                        f'"{name}" in SLS "{body["__sls__"]}" has '
                                         "whitespace, a function with whitespace is "
-                                        "not supported, perhaps this is an argument "
-                                        'that is missing a ":"'.format(
-                                            arg, name, body["__sls__"]
-                                        )
+                                        "not supported, perhaps this is an argument"
+                                        ' that is missing a ":"'
                                     )
                             elif isinstance(arg, dict):
                                 # The arg is a dict, if the arg is require or
@@ -591,14 +592,22 @@ class Compiler:
                             if state == "require" or state == "watch":
                                 continue
                             errors.append(
-                                "No function declared in state '{}' in SLS '{}'".format(
-                                    state, body["__sls__"]
-                                )
+                                f"No function declared in state '{name}' in SLS "
+                                f"'{body['__sls__']}'"
                             )
                         elif fun > 1:
+                            funs = (
+                                [state.split(".", maxsplit=1)[1]]
+                                if "." in state
+                                else []
+                            )
+                            funs.extend(
+                                arg for arg in body[state] if isinstance(arg, str)
+                            )
                             errors.append(
-                                "Too many functions declared in state '{}' in "
-                                "SLS '{}'".format(state, body["__sls__"])
+                                f"Too many functions declared in state '{name}' in "
+                                f"SLS '{body['__sls__']}'. Please choose one of "
+                                "the following: " + ", ".join(funs)
                             )
         return errors
 
@@ -1506,17 +1515,21 @@ class State:
                 else:
                     fun = 0
                     if "." in state:
+                        # This should not happen usually since `_handle_state_decls`
+                        # is run on rendered templates
                         fun += 1
                     for arg in body[state]:
                         if isinstance(arg, str):
                             fun += 1
                             if " " in arg.strip():
                                 errors.append(
-                                    'The function "{}" in state "{}" in SLS "{}" has '
-                                    "whitespace, a function with whitespace is not "
-                                    "supported, perhaps this is an argument that is "
-                                    'missing a ":"'.format(arg, name, body["__sls__"])
+                                    f'The function "{arg}" in state '
+                                    f'"{name}" in SLS "{body["__sls__"]}" has '
+                                    "whitespace, a function with whitespace is "
+                                    "not supported, perhaps this is an argument"
+                                    ' that is missing a ":"'
                                 )
+
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
@@ -1609,14 +1622,16 @@ class State:
                         if state == "require" or state == "watch":
                             continue
                         errors.append(
-                            "No function declared in state '{}' in SLS '{}'".format(
-                                state, body["__sls__"]
-                            )
+                            f"No function declared in state '{name}' in SLS "
+                            f"'{body['__sls__']}'"
                         )
                     elif fun > 1:
+                        funs = [state.split(".", maxsplit=1)[1]] if "." in state else []
+                        funs.extend(arg for arg in body[state] if isinstance(arg, str))
                         errors.append(
-                            "Too many functions declared in state '{}' in "
-                            "SLS '{}'".format(state, body["__sls__"])
+                            f"Too many functions declared in state '{name}' in "
+                            f"SLS '{body['__sls__']}'. Please choose one of "
+                            "the following: " + ", ".join(funs)
                         )
         return errors
 
@@ -4229,7 +4244,42 @@ class BaseHighState:
         Get results from the master_tops system. Override this function if the
         execution of the master_tops needs customization.
         """
+        if self.opts.get("file_client", "remote") == "local":
+            return self._local_master_tops()
         return self.client.master_tops()
+
+    def _local_master_tops(self):
+        # return early if we got nothing to do
+        if "master_tops" not in self.opts:
+            return {}
+        if "id" not in self.opts:
+            log.error("Received call for external nodes without an id")
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
+            return {}
+        if getattr(self, "tops", None) is None:
+            self.tops = salt.loader.tops(self.opts)
+        grains = {}
+        ret = {}
+
+        if "grains" in self.opts:
+            grains = self.opts["grains"]
+        for fun in self.tops:
+            if fun not in self.opts["master_tops"]:
+                continue
+            try:
+                ret = salt.utils.dictupdate.merge(
+                    ret, self.tops[fun](opts=self.opts, grains=grains), merge_lists=True
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    "Top function %s failed with error %s for minion %s",
+                    fun,
+                    exc,
+                    self.opts["id"],
+                )
+        return ret
 
     def load_dynamic(self, matches):
         """

@@ -162,6 +162,7 @@ def test_pub_server_channel(
         log.debug("Payload handler got %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
+
     if master_config["transport"] == "zeromq":
         p = Path(str(master_config["sock_dir"])) / "workers.ipc"
         start = time.time()
