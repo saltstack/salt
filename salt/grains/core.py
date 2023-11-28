@@ -2353,7 +2353,9 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         ):
             grains.pop("lsb_distrib_release", None)
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
-    grains["oscodename"] = oscodename or grains.get("lsb_distrib_codename", "").strip()
+    grains["oscodename"] = grains.get("lsb_distrib_codename", "").strip() or oscodename
+    if "Red Hat" in grains["oscodename"]:
+        grains["oscodename"] = oscodename
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
     # this assigns family names based on the os name
