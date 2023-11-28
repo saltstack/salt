@@ -1,8 +1,6 @@
-import socket
-from contextlib import closing
-
 import pytest
 import requests
+from pytestshellutils.utils import ports
 from werkzeug.wrappers import Response  # pylint: disable=3rd-party-module-not-gated
 
 import salt.utils.http as http
@@ -150,10 +148,7 @@ def test_query_null_response():
     """
     host = "127.0.0.1"
 
-    # Find unused port
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        sock.bind((host, 0))
-        port = sock.getsockname()[1]
+    port = ports.get_unused_localhost_port()
 
     url = "http://{host}:{port}/".format(host=host, port=port)
     result = http.query(url, raise_error=False)
