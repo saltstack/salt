@@ -2106,9 +2106,11 @@ def _os_release_quirks_for_osrelease(os_release):
     if os_release["ID"] in ("mendel",):
         # Mendel sets VERSION_CODENAME but not VERSION_ID.
         # Only PRETTY_NAME mentions the version number.
-        match = _PRETTY_NAME_RE.match(os_release["PRETTY_NAME"])
-        if match:
-            return match.group("version")
+        # for example: Mendel GNU/Linux 5 (Eagle)
+        test_strg = os_release["PRETTY_NAME"].split()
+        if len(test_strg) >= 3:
+            return test_strg[2]
+
     return None
 
 
@@ -2231,11 +2233,10 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
                             cpe.get("version") and cpe.get("vendor") == "opensuse"
                         ):  # Keep VERSION_ID for SLES
                             grains["lsb_distrib_release"] = cpe["version"]
-                if grains["lsb_distrib_codename"]:
-                    test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
-                    if len(test_strg) >= 2:
-                        test_strg_2 = test_strg[1].split(")", maxsplit=1)
-                        grains["lsb_distrib_codename"] = test_strg_2[0]
+                if "ID" in os_release and os_release["ID"].strip() == "mendel":
+                    test_strg = os_release["PRETTY_NAME"].split()
+                    if len(test_strg) >= 3:
+                        grains["lsb_distrib_release"] = test_strg[2]
 
             elif os.path.isfile("/etc/SuSE-release"):
                 log.trace("Parsing distrib info from /etc/SuSE-release")
@@ -2353,6 +2354,21 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         ):
             grains.pop("lsb_distrib_release", None)
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
+
+    # allow for codename being within brackets on certain OS
+    if grains["lsb_distrib_codename"] and (
+        grains["os"] == "Rocky"
+        or grains["os"] == "AlmaLinux"
+        or grains["os"] == "AstraLinuxSE"
+    ):
+        test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
+        if len(test_strg) >= 2:
+            test_strg_2 = test_strg[1].split(")", maxsplit=1)
+            if grains["os"] == "AstraLinuxSE":
+                grains["lsb_distrib_codename"] = test_strg_2[0].lower()
+            else:
+                grains["lsb_distrib_codename"] = test_strg_2[0]
+
     grains["oscodename"] = grains.get("lsb_distrib_codename", "").strip() or oscodename
     if "Red Hat" in grains["oscodename"]:
         grains["oscodename"] = oscodename
