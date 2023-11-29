@@ -6001,6 +6001,7 @@ def keyvalue(
     key_ignore_case=False,
     value_ignore_case=False,
     create_if_missing=False,
+    prune=False,
 ):
     """
     Key/Value based editing of a file.
@@ -6078,6 +6079,11 @@ def keyvalue(
         Create the file if the destination file is not found.
 
         .. versionadded:: 3007.0
+
+    prune
+        Delete lines not matching ``key`` or any of the keys in ``key_values``.
+
+        .. versionadded:: 3008.0
 
     An example of using ``file.keyvalue`` to ensure sshd does not allow
     for root to login with a password and at the same time setting the
@@ -6169,6 +6175,8 @@ def keyvalue(
     diff = []
     # store the final content of the file in case it needs to be rewritten
     content = []
+    # unmanaged lines
+    not_matched = []
     # target format is templated like this
     tmpl = "{key}{sep}{value}" + os.linesep
     # number of lines changed
@@ -6184,23 +6192,27 @@ def keyvalue(
         if key_ignore_case:
             test_line = test_line.lower()
 
+        # if the testline got uncommented then the real line needs to
+        # be uncommented too, otherwhise there might be separation on
+        # a character which is part of the comment set
+        working_line = line.lstrip(uncomment) if did_uncomment else line
+
+        # try to separate the line into its components
+        line_key, line_sep, line_value = working_line.partition(separator)
+
+        if prune:
+            if not test_line.startswith(
+                tuple(
+                    key.lower() if key_ignore_case else key for key in key_values.keys()
+                )
+            ):
+                not_matched.append(line)
+                continue
+
         for key, value in key_values.items():
             test_key = key.lower() if key_ignore_case else key
-            # if the line starts with the key
-            if test_line.startswith(test_key):
-                # if the testline got uncommented then the real line needs to
-                # be uncommented too, otherwhise there might be separation on
-                # a character which is part of the comment set
-                working_line = line.lstrip(uncomment) if did_uncomment else line
 
-                # try to separate the line into its' components
-                line_key, line_sep, line_value = working_line.partition(separator)
-
-                # if separation was unsuccessful then line_sep is empty so
-                # no need to keep trying. continue instead
-                if line_sep != separator:
-                    continue
-
+            if test_line.startswith(test_key) and line_sep == separator:
                 # start on the premises the key does not match the actual line
                 keys_match = False
                 if key_ignore_case:
@@ -6318,12 +6330,20 @@ def keyvalue(
                 content.insert(0, line)
                 changes += 1
 
+    deletions = len(not_matched)
+
+    if prune:
+        for line in not_matched:
+            diff.insert(1, f"- {line}")
+
     # if a diff was made
-    if changes > 0:
+    if changes > 0 or deletions > 0:
         # return comment of changes if test
         if __opts__["test"]:
-            ret["comment"] = "File {n} is set to be changed ({c} lines)".format(
-                n=name, c=changes
+            ret["comment"] = (
+                "File {n} is set to be changed ({c} lines modified, {d} deleted)".format(
+                    n=name, c=changes, d=deletions
+                )
             )
             if show_changes:
                 # For some reason, giving an actual diff even in test=True mode
@@ -6340,7 +6360,7 @@ def keyvalue(
 
         # otherwise return the actual diff lines
         else:
-            ret["comment"] = f"Changed {changes} lines"
+            ret["comment"] = f"Changed {changes}, deleted {deletions} lines"
             if show_changes:
                 ret["changes"]["diff"] = "".join(diff)
     else:
