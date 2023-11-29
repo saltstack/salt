@@ -10,7 +10,7 @@ autocommand==2.2.2
     # via jaraco.text
 certifi==2023.07.22
     # via requests
-cffi==1.14.6
+cffi==1.16.0
     # via cryptography
 charset-normalizer==3.2.0
     # via requests

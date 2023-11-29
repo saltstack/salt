@@ -58,7 +58,7 @@ certifi==2023.07.22
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/static/ci/common.in
