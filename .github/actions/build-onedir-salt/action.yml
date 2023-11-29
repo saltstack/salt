@@ -43,7 +43,7 @@ runs:
 
     - name: Download Cached Deps Onedir Package Directory
       id: onedir-bare-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >

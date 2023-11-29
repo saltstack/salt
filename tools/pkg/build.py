@@ -483,6 +483,9 @@ def onedir_dependencies(
         assert package_name is not None
         assert platform is not None
 
+    if platform in ("macos", "darwin") and arch == "aarch64":
+        arch = "arm64"
+
     shared_constants = _get_shared_constants()
     if not python_version:
         python_version = shared_constants["python_version"]

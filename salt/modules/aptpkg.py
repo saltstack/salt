@@ -203,16 +203,27 @@ if not HAS_APT:
                 repo_line.append("#")
 
             repo_line.append(self.type)
-            opts = []
+            opts = _get_opts(self.line)
             if self.architectures:
-                opts.append("arch={}".format(",".join(self.architectures)))
+                archs = ",".join(self.architectures)
+                opts["arch"]["full"] = f"arch={archs}"
+                opts["arch"]["value"] = self.architectures
             if self.signedby:
-                opts.append(f"signed-by={self.signedby}")
+                opts["signedby"]["full"] = f"signed-by={self.signedby}"
+                opts["signedby"]["value"] = self.signedby
 
-            if opts:
-                repo_line.append("[{}]".format(" ".join(opts)))
+            ordered_opts = [
+                opt_type for opt_type, opt in opts.items() if opt["full"] != ""
+            ]
 
-            repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
+            for opt in opts.values():
+                if opt["full"] != "":
+                    ordered_opts[opt["index"]] = opt["full"]
+
+            if ordered_opts:
+                repo_line.append("[{}]".format(" ".join(ordered_opts)))
+
+            repo_line += [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
                 repo_line.append(f"#{self.comment}")
             return " ".join(repo_line) + "\n"
@@ -2924,6 +2935,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if "comments" in kwargs:
         kwargs["comments"] = salt.utils.pkg.deb.combine_comments(kwargs["comments"])
 
+    repo_source_entry = SourceEntry(repo)
     if not mod_source:
         mod_source = SourceEntry(repo)
         if "comments" in kwargs:
@@ -2932,12 +2944,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    if HAS_APT:
-        # workaround until python3-apt supports signedby
-        if str(mod_source) != str(SourceEntry(repo)) and "signed-by" in str(mod_source):
-            rline = SourceEntry(repo)
-            mod_source.line = rline.line
-
+    mod_source.line = repo_source_entry.line
     if not mod_source.line.endswith("\n"):
         mod_source.line = mod_source.line + "\n"
 

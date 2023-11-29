@@ -71,7 +71,7 @@ jobs:
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: .tools-venvs/docs
           key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}

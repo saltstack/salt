@@ -74,6 +74,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}-build-salt-onedir-macos
 
       - name: Setup Salt Version
         id: setup-salt-version

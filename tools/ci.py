@@ -1219,7 +1219,6 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
         ctx.exit(1)
 
     if TYPE_CHECKING:
-        assert codecov is not None
         assert commit_sha is not None
 
     codecov_args: list[str] = [

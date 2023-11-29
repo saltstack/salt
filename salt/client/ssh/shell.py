@@ -464,6 +464,19 @@ class Shell:
                 if stdout:
                     old_stdout = stdout
                 time.sleep(0.01)
-            return ret_stdout, ret_stderr, term.exitstatus
         finally:
             term.close(terminate=True, kill=True)
+        # Ensure term.close is called before querying the exitstatus, otherwise
+        # it might still be None.
+        ret_status = term.exitstatus
+        if ret_status is None:
+            if term.signalstatus is not None:
+                # The process died because of an unhandled signal, report
+                # a non-zero exitcode bash-style.
+                ret_status = 128 + term.signalstatus
+            else:
+                log.warning(
+                    "VT reported both exitstatus and signalstatus as None. "
+                    "This is likely a bug."
+                )
+        return ret_stdout, ret_stderr, ret_status

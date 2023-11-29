@@ -245,6 +245,22 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  macos-13-xlarge-ci-deps:
+    name: macOS 13 Arm64 Deps
+    needs:
+      - prepare-workflow
+      - download-onedir-artifact
+    uses: ./.github/workflows/build-deps-ci-action-macos.yml
+    with:
+      distro-slug: macos-13-xlarge
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   almalinux-8-ci-deps:
     name: Alma Linux 8 Deps
     needs:
@@ -901,6 +917,7 @@ jobs:
       - fedora-38-ci-deps
       - macos-12-ci-deps
       - macos-13-ci-deps
+      - macos-13-xlarge-ci-deps
       - photonos-3-arm64-ci-deps
       - photonos-3-ci-deps
       - photonos-4-arm64-ci-deps
@@ -1108,6 +1125,7 @@ jobs:
       - windows-2022-ci-deps
       - macos-12-ci-deps
       - macos-13-ci-deps
+      - macos-13-xlarge-ci-deps
       - almalinux-8-ci-deps
       - almalinux-8-arm64-ci-deps
       - almalinux-9-ci-deps
