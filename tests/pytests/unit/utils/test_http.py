@@ -150,7 +150,7 @@ def test_query_null_response():
 
     port = ports.get_unused_localhost_port()
 
-    url = "http://{host}:{port}/".format(host=host, port=port)
+    url = f"http://{host}:{port}/"
     result = http.query(url, raise_error=False)
     assert result == {"body": None}, result
 
