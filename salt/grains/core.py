@@ -2356,16 +2356,15 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
 
     # allow for codename being within brackets on certain OS
-    if grains["lsb_distrib_codename"] and (
-        grains["os"] == "Rocky"
-        or grains["os"] == "AlmaLinux"
-        or grains["os"] == "AstraLinuxSE"
+    if grains.get("lsb_distrib_codename", "") and (
+        any(os in grains.get("os", "") for os in ["Rocky", "AlmaLinux", "AstraLinuxSE"])
     ):
         test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
         if len(test_strg) >= 2:
             test_strg_2 = test_strg[1].split(")", maxsplit=1)
             if grains["os"] == "AstraLinuxSE":
-                grains["lsb_distrib_codename"] = test_strg_2[0].lower()
+                # AstraLinuxSE has version aka 'Smolensk 1.6'
+                grains["lsb_distrib_codename"] = test_strg_2[0].split()[0].lower()
             else:
                 grains["lsb_distrib_codename"] = test_strg_2[0]
 
