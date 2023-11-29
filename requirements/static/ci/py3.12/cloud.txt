@@ -484,7 +484,7 @@ pyparsing==3.0.9
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-pypsexec==0.1.0
+pypsexec==0.3.0
     # via -r requirements/static/ci/cloud.in
 pyrsistent==0.19.3
     # via
@@ -673,7 +673,6 @@ six==1.16.0
     #   more-itertools
     #   ncclient
     #   profitbricks
-    #   pypsexec
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
