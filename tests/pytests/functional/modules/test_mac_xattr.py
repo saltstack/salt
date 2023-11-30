@@ -19,64 +19,56 @@ def xattr(modules):
     return modules.xattr
 
 
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli, tmp_path):
-    test_file = tmp_path / "xattr_test_file.txt"
-    no_file = str(tmp_path / "xattr_no_file.txt")
-
-    test_file.touch()
-
-    try:
-        yield str(test_file), no_file
-    finally:
-        if test_file.exists():
-            test_file.unlink()
+@pytest.fixture
+def existing_file(tmp_path):
+    fpath = tmp_path / "xattr_test_file.txt"
+    fpath.touch()
+    return fpath
 
 
-def test_list_no_xattr(xattr, setup_teardown_vars):
+@pytest.fixture
+def non_existing_file(tmp_path):
+    return tmp_path / "xattr_no_file"
+
+
+def test_list_no_xattr(xattr, existing_file, non_existing_file):
     """
     Make sure there are no attributes
     """
-    test_file = setup_teardown_vars[0]
-    no_file = setup_teardown_vars[1]
-
     # Clear existing attributes
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Test no attributes
-    ret = xattr.list(test_file)
+    ret = xattr.list(existing_file)
     assert ret == {}
 
     # Test file not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.list(no_file)
-        assert f"File not found: {no_file}" in str(exc.value)
+        ret = xattr.list(non_existing_file)
+        assert f"File not found: {non_existing_file}" in str(exc.value)
 
 
-def test_write(xattr, setup_teardown_vars):
+def test_write(xattr, existing_file, non_existing_file):
     """
     Write an attribute
     """
-    test_file = setup_teardown_vars[0]
-    no_file = setup_teardown_vars[1]
-
     # Clear existing attributes
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Write some attributes
-    ret = xattr.write(test_file, "spongebob", "squarepants")
+    ret = xattr.write(existing_file, "spongebob", "squarepants")
     assert ret
 
-    ret = xattr.write(test_file, "squidward", "plankton")
+    ret = xattr.write(existing_file, "squidward", "plankton")
     assert ret
 
-    ret = xattr.write(test_file, "crabby", "patty")
+    ret = xattr.write(existing_file, "crabby", "patty")
     assert ret
 
     # Test that they were actually added
-    ret = xattr.list(test_file)
+    ret = xattr.list(existing_file)
     assert ret == {
         "spongebob": "squarepants",
         "squidward": "plankton",
@@ -85,67 +77,61 @@ def test_write(xattr, setup_teardown_vars):
 
     # Test file not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.write(no_file, "patrick", "jellyfish")
-        assert f"File not found: {no_file}" in str(exc.value)
+        ret = xattr.write(non_existing_file, "patrick", "jellyfish")
+        assert f"File not found: {non_existing_file}" in str(exc.value)
 
 
-def test_read(xattr, setup_teardown_vars):
+def test_read(xattr, existing_file, non_existing_file):
     """
     Test xattr.read
     """
-    test_file = setup_teardown_vars[0]
-    no_file = setup_teardown_vars[1]
-
     # Clear existing attributes
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Write an attribute
-    ret = xattr.write(test_file, "spongebob", "squarepants")
+    ret = xattr.write(existing_file, "spongebob", "squarepants")
     assert ret
 
     # Read the attribute
-    ret = xattr.read(test_file, "spongebob")
+    ret = xattr.read(existing_file, "spongebob")
     assert ret == "squarepants"
 
     # Test file not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.read(no_file, "spongebob")
-        assert f"File not found: {no_file}" in str(exc.value)
+        ret = xattr.read(non_existing_file, "spongebob")
+        assert f"File not found: {non_existing_file}" in str(exc.value)
 
     # Test attribute not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.read(test_file, "patrick")
+        ret = xattr.read(existing_file, "patrick")
         assert "Attribute not found: patrick" in str(exc.value)
 
 
-def test_delete(xattr, setup_teardown_vars):
+def test_delete(xattr, existing_file, non_existing_file):
     """
     Test xattr.delete
     """
-    test_file = setup_teardown_vars[0]
-    no_file = setup_teardown_vars[1]
-
     # Clear existing attributes
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Write some attributes
-    ret = xattr.write(test_file, "spongebob", "squarepants")
+    ret = xattr.write(existing_file, "spongebob", "squarepants")
     assert ret
 
-    ret = xattr.write(test_file, "squidward", "plankton")
+    ret = xattr.write(existing_file, "squidward", "plankton")
     assert ret
 
-    ret = xattr.write(test_file, "crabby", "patty")
+    ret = xattr.write(existing_file, "crabby", "patty")
     assert ret
 
     # Delete an attribute
-    ret = xattr.delete(test_file, "squidward")
+    ret = xattr.delete(existing_file, "squidward")
     assert ret
 
     # Make sure it was actually deleted
-    ret = xattr.list(test_file)
+    ret = xattr.list(existing_file)
     assert ret == {
         "spongebob": "squarepants",
         "crabby": "patty",
@@ -153,41 +139,38 @@ def test_delete(xattr, setup_teardown_vars):
 
     # Test file not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.delete(no_file, "spongebob")
-        assert f"File not found: {no_file}" in str(exc.value)
+        ret = xattr.delete(non_existing_file, "spongebob")
+        assert f"File not found: {non_existing_file}" in str(exc.value)
 
     # Test attribute not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.delete(test_file, "patrick")
+        ret = xattr.delete(existing_file, "patrick")
         assert "Attribute not found: patrick" in str(exc.value)
 
 
-def test_clear(xattr, setup_teardown_vars):
+def test_clear(xattr, existing_file, non_existing_file):
     """
     Test xattr.clear
     """
-    test_file = setup_teardown_vars[0]
-    no_file = setup_teardown_vars[1]
-
     # Clear existing attributes
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Write some attributes
-    ret = xattr.write(test_file, "spongebob", "squarepants")
+    ret = xattr.write(existing_file, "spongebob", "squarepants")
     assert ret
 
-    ret = xattr.write(test_file, "squidward", "plankton")
+    ret = xattr.write(existing_file, "squidward", "plankton")
     assert ret
 
-    ret = xattr.write(test_file, "crabby", "patty")
+    ret = xattr.write(existing_file, "crabby", "patty")
     assert ret
 
     # Test Clear
-    ret = xattr.clear(test_file)
+    ret = xattr.clear(existing_file)
     assert ret
 
     # Test file not found
     with pytest.raises(CommandExecutionError) as exc:
-        ret = xattr.clear(no_file)
-        assert f"File not found: {no_file}" in str(exc.value)
+        ret = xattr.clear(non_existing_file)
+        assert f"File not found: {non_existing_file}" in str(exc.value)

@@ -18,89 +18,101 @@ def pkg(modules):
     return modules.pkg
 
 
+@pytest.fixture
+def uninstalled_pkg_name(pkg):
+    pkgname = installed_pkg_name
+    try:
+        pkg.refresh_db()
+        yield pkgname
+    finally:
+        if pkgname in pkg.list_pkgs():
+            pkg.remove(pkgname)
+
+
+@pytest.fixture
+def installed_pkg_name(uninstalled_pkg_name):
+    pkg.install(uninstalled_pkg_name)
+    return uninstalled_pkg_name
+
+
 @pytest.fixture(scope="function", autouse=True)
 def _setup_teardown_vars(pkg):
     AGREE_INSTALLED = False
     try:
         ret = pkg.list_pkgs()
-        AGREE_INSTALLED = "agree" in ret
+        AGREE_INSTALLED = installed_pkg_name in ret
         pkg.refresh_db()
         yield
     finally:
         if AGREE_INSTALLED:
-            pkg.remove("agree")
+            pkg.remove(installed_pkg_name)
 
 
-def test_list_pkgs(pkg):
+def test_list_pkgs(pkg, installed_pkg_name):
     """
     Test pkg.list_pkgs
     """
-    pkg.install("agree")
     pkg_list_ret = pkg.list_pkgs()
     assert isinstance(pkg_list_ret, dict)
-    assert "agree" in pkg_list_ret
+    assert installed_pkg_name in pkg_list_ret
 
 
-def test_latest_version(pkg):
+def test_latest_version(pkg, installed_pkg_name):
     """
     Test pkg.latest_version
     """
-    pkg.install("agree")
-    result = pkg.latest_version("agree", refresh=False)
+    result = pkg.latest_version(installed_pkg_name, refresh=False)
     assert isinstance(result, dict)
-    assert "agree" in result.data
+    assert installed_pkg_name in result.data
 
 
-def test_remove(pkg):
+def test_remove(pkg, installed_pkg_name):
     """
     Test pkg.remove
     """
-    pkg.install("agree")
-    removed = pkg.remove("agree")
-    assert isinstance(removed, dict)
-    assert "agree" in removed
+    ret = pkg.remove(installed_pkg_name)
+    assert isinstance(ret, dict)
+    assert installed_pkg_name in ret
 
 
 @pytest.mark.destructive_test
-def test_install(pkg):
+def test_install(pkg, uninstalled_pkg_name):
     """
     Test pkg.install
     """
-    pkg.remove("agree")
-    installed = pkg.install("agree")
-    assert isinstance(installed, dict)
-    assert "agree" in installed
+    ret = pkg.install(uninstalled_pkg_name)
+    assert isinstance(ret, dict)
+    assert uninstalled_pkg_name in ret
 
 
-def test_list_upgrades(pkg):
+def test_list_upgrades_type(pkg):
     """
-    Test pkg.list_upgrades
+    Test pkg.list_upgrades return type
     """
-    upgrade = pkg.list_upgrades(refresh=False)
-    assert isinstance(upgrade, dict)
+    ret = pkg.list_upgrades(refresh=False)
+    assert isinstance(ret, dict)
 
 
-def test_upgrade_available(pkg):
+def test_upgrade_available(pkg, installed_pkg_name):
     """
     Test pkg.upgrade_available
     """
-    pkg.install("agree")
-    upgrade_available = pkg.upgrade_available("agree", refresh=False)
-    assert not upgrade_available.data
+    ret = pkg.upgrade_available(installed_pkg_name, refresh=False)
+    assert not ret.data
 
 
 def test_refresh_db(pkg):
     """
     Test pkg.refresh_db
     """
-    refresh = pkg.refresh_db()
-    assert refresh
+    ret = pkg.refresh_db()
+    assert ret
 
 
 def test_upgrade(pkg):
     """
     Test pkg.upgrade
     """
-    results = pkg.upgrade(refresh=False)
-    assert isinstance(results, dict)
-    assert results.data["result"]
+    ret = pkg.upgrade(refresh=False)
+    assert isinstance(ret, dict)
+    assert ret.data["result"]

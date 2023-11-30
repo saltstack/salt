@@ -19,29 +19,35 @@ def softwareupdate(modules):
     return modules.softwareupdate
 
 
-@pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(softwareupdate):
-    IGNORED_LIST = softwareupdate.list_ignored()
-
-    SCHEDULE = softwareupdate.schedule_enabled()
-
-    CATALOG = softwareupdate.get_catalog()
-
+@pytest.fixture
+def _reset_schedule_enabled(softwareupdate):
+    ret = softwareupdate.schedule_enabled()
     try:
-        yield IGNORED_LIST, SCHEDULE, CATALOG
+        yield
     finally:
-        if IGNORED_LIST:
-            for item in IGNORED_LIST:
-                softwareupdate.ignore(item)
-        else:
-            softwareupdate.reset_ignored()
+        softwareupdate.schedule_enable(ret)
 
-        softwareupdate.schedule_enable(SCHEDULE)
 
-        if CATALOG == "Default":
+@pytest.fixture
+def _reset_catalog(softwareupdate):
+    ret = softwareupdate.get_catalog()
+    try:
+        yield
+    finally:
+        if ret == "Default":
             softwareupdate.reset_catalog()
         else:
-            softwareupdate.set_catalog(CATALOG)
+            softwareupdate.set_catalog(ret)
+
+
+@pytest.fixture
+def _reset_ignored(softwareupdate):
+    ret = softwareupdate.list_ignored() or ()
+    try:
+        yield
+    finally:
+        for item in ret:
+            softwareupdate.ignore(item)
 
 
 def test_list_available(softwareupdate):
@@ -54,6 +60,7 @@ def test_list_available(softwareupdate):
     assert isinstance(ret, dict)
 
 
+@pytest.mark.usefixtures("_reset_ignored")
 @pytest.mark.skip(reason="Ignore removed from latest OS X.")
 def test_ignore(softwareupdate):
     """
@@ -83,6 +90,7 @@ def test_ignore(softwareupdate):
     assert "squidward" in ret
 
 
+@pytest.mark.usefixtures("_reset_schedule_enabled")
 @pytest.mark.skip(reason="Ignore schedule support removed from latest OS X.")
 def test_schedule(softwareupdate):
     """
@@ -157,6 +165,7 @@ def test_download_all(softwareupdate):
     assert isinstance(ret, list)
 
 
+@pytest.mark.usefixtures("_reset_catalog")
 @pytest.mark.skip(reason="Ignore catalog support removed from latest OS X.")
 def test_get_set_reset_catalog(softwareupdate):
     """
