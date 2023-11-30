@@ -248,6 +248,11 @@ def certificate_managed(
     This function accepts the same arguments as :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`,
     as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
 
+    .. note::
+
+        Since ``file.managed`` also has an ``encoding`` param, it can be passed
+        as ``file_encoding`` instead.
+
     name
         The path the certificate should be present at.
 
@@ -1468,6 +1473,67 @@ def private_key_managed(
         ret["result"] = False
         ret["comment"] = str(err)
         ret["changes"] = {}
+    return ret
+
+
+def certificate_managed_ssh(
+    name, result, comment, changes, encoding=None, contents=None, **kwargs
+):
+    """
+    Helper for the SSH wrapper module.
+    This receives a base64/PEM-encoded certificate and dumps the data to the target.
+    A ``file.managed`` sub-state run will be performed.
+    """
+    ret = {"name": name, "result": result, "comment": comment, "changes": changes}
+    if not result:
+        return ret
+    file_managed_ret = _file_managed(name, replace=False, **kwargs)
+    _add_sub_state_run(ret, file_managed_ret)
+    if not _check_file_ret(file_managed_ret, ret, __salt__["file.file_exists"](name)):
+        return ret
+    if contents is not None:
+        if __opts__["test"]:
+            ret["comment"] += (
+                '. The file was not actually updated - please pass test=opts.get("test") '
+                "into the wrapper to enable proper test mode support."
+            )
+            return ret
+        if encoding in ("pem", "pkcs7_pem"):
+            contents = contents.encode()
+        else:
+            contents = base64.b64decode(contents)
+        _safe_atomic_write(name, contents, kwargs.get("backup", ""))
+    return ret
+
+
+def private_key_managed_ssh(name, result, comment, changes, tempfile=None, **kwargs):
+    """
+    Helper for the SSH wrapper module to report the correct return and
+    perform a ``file.managed`` sub-state run.
+    """
+    ret = {"name": name, "result": result, "comment": comment, "changes": changes}
+    if not result:
+        return ret
+    file_managed_ret = _file_managed(name, replace=False, **kwargs)
+    if tempfile is not None:
+        if __opts__["test"]:
+            ret["comment"] += (
+                '. The file was not actually updated - please pass test=opts.get("test") '
+                "into the wrapper to enable proper test mode support."
+            )
+            try:
+                __salt__["file.remove"](tempfile)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return ret
+        try:
+            __salt__["file.move"](tempfile, name)
+        except Exception as err:  # pylint: disable=broad-except
+            ret["result"] = False
+            ret["comment"] += f". But: Failed moving the private key into place: {err}"
+            ret["changes"] = {}
+            return ret
+    _add_sub_state_run(ret, file_managed_ret)
     return ret
 
 
