@@ -129,6 +129,7 @@ jobs:
                 - .github/actions/**/action.yml
                 - .github/workflows/*.yml
                 - .github/workflows/templates/*.yml.jinja2
+                - tools/precommit/workflows.py
             salt:
               - added|modified: &salt_added_modified
                 - setup.py
