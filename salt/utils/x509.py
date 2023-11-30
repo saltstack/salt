@@ -11,7 +11,7 @@ from urllib.parse import urlparse, urlunparse
 
 import cryptography
 from cryptography import x509 as cx509
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
@@ -475,6 +475,287 @@ def build_crl(
             critical=critical,
         )
     return builder, signing_private_key
+
+
+def check_cert_changes(
+    name,
+    days_remaining,
+    days_valid,
+    not_before,
+    not_after,
+    ca_server,
+    signing_policy_contents,
+    encoding,
+    append_certs,
+    digest,
+    signing_private_key=None,
+    signing_private_key_passphrase=None,
+    signing_cert=None,
+    public_key=None,
+    private_key=None,
+    private_key_passphrase=None,
+    csr=None,
+    subject=None,
+    serial_number=None,
+    pkcs12_passphrase=None,
+    pkcs12_encryption_compat=False,
+    pkcs12_friendlyname=None,
+    **cert_args,
+):
+    """
+    Check if the on-disk certificate needs to be updated.
+    Extracted from the state module to be able to use this in the SSH wrapper.
+    """
+    current = None
+    changes = {}
+    replace = False
+    private_key_loaded = None
+    try:
+        (
+            current,
+            current_encoding,
+            current_chain,
+            current_extra,
+        ) = load_cert(name, passphrase=pkcs12_passphrase, get_encoding=True)
+    except SaltInvocationError as err:
+        if "Bad decrypt" in str(err):
+            changes["pkcs12_passphrase"] = True
+        elif any(
+            (
+                "Could not deserialize binary data" in str(err),
+                "Could not load PEM-encoded" in str(err),
+            )
+        ):
+            replace = True
+        else:
+            raise
+    else:
+        if encoding != current_encoding:
+            changes["encoding"] = encoding
+        elif encoding == "pkcs12" and current_extra.cert.friendly_name != (
+            salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
+            if pkcs12_friendlyname
+            else None
+        ):
+            changes["pkcs12_friendlyname"] = pkcs12_friendlyname
+
+        try:
+            curr_not_after = current.not_valid_after_utc
+        except AttributeError:
+            # naive datetime object, release <42 (it's always UTC)
+            curr_not_after = current.not_valid_after.replace(
+                tzinfo=timezone.utc
+            )
+
+        if curr_not_after < datetime.now(tz=timezone.utc) + timedelta(
+            days=days_remaining
+        ):
+            changes["expiration"] = True
+
+        current_chain = current_chain or []
+        ca_chain = [load_cert(x) for x in append_certs]
+        if not compare_ca_chain(current_chain, ca_chain):
+            changes["additional_certs"] = True
+
+        (
+            builder,
+            private_key_loaded,
+            signing_cert_loaded,
+            final_kwargs,
+        ) = _build_cert_with_policy(
+            signing_policy_contents=signing_policy_contents,
+            ca_server=ca_server,
+            digest=digest,  # passed because of signing_policy merging
+            signing_private_key=signing_private_key,
+            signing_private_key_passphrase=signing_private_key_passphrase,
+            signing_cert=signing_cert,
+            public_key=public_key,
+            private_key=private_key,
+            private_key_passphrase=private_key_passphrase,
+            csr=csr,
+            subject=subject,
+            serial_number=serial_number,
+            not_before=not_before,
+            not_after=not_after,
+            days_valid=days_valid,
+            **cert_args,
+        )
+
+        try:
+            if current.signature_hash_algorithm is not None and not isinstance(
+                current.signature_hash_algorithm,
+                type(get_hashing_algorithm(final_kwargs["digest"])),
+            ):
+                # ed25519, ed448 do not use a separate hash for signatures, hence algo is None
+                changes["digest"] = digest
+        except UnsupportedAlgorithm:
+            # this eg happens with sha3 in cryptography < v39
+            log.warning(
+                "Could not determine signature hash algorithm of '%s'. "
+                "Continuing anyways",
+                name,
+            )
+
+        changes.update(
+            _compare_cert(
+                current,
+                builder,
+                signing_cert=signing_cert_loaded,
+                serial_number=serial_number,
+                not_before=not_before,
+                not_after=not_after,
+            )
+        )
+    return current, changes, replace, private_key_loaded
+
+
+def _build_cert_with_policy(
+    signing_policy_contents, ca_server=None, signing_private_key=None, **kwargs
+):
+    final_kwargs = copy.deepcopy(kwargs)
+    final_kwargs["signing_private_key"] = signing_private_key
+    merge_signing_policy(
+        signing_policy_contents,
+        final_kwargs,
+    )
+    signing_private_key = final_kwargs.pop("signing_private_key")
+
+    builder, _, private_key_loaded, signing_cert = build_crt(
+        signing_private_key,
+        skip_load_signing_private_key=ca_server is not None,
+        **final_kwargs,
+    )
+    return builder, private_key_loaded, signing_cert, final_kwargs
+
+
+def _compare_cert(current, builder, signing_cert, serial_number, not_before, not_after):
+    changes = {}
+
+    if (
+        serial_number is not None
+        and getattr_safe(builder, "_serial_number") != current.serial_number
+    ):
+        changes["serial_number"] = serial_number
+
+    if not match_pubkey(getattr_safe(builder, "_public_key"), current.public_key()):
+        changes["private_key"] = True
+
+    if signing_cert and not verify_signature(current, signing_cert.public_key()):
+        changes["signing_private_key"] = True
+
+    if getattr_safe(builder, "_subject_name") != current.subject:
+        changes["subject_name"] = getattr_safe(
+            builder, "_subject_name"
+        ).rfc4514_string()
+
+    if getattr_safe(builder, "_issuer_name") != current.issuer:
+        changes["issuer_name"] = getattr_safe(builder, "_issuer_name").rfc4514_string()
+
+    ext_changes = compare_exts(current, builder)
+    if any(ext_changes.values()):
+        changes["extensions"] = ext_changes
+    return changes
+
+
+def compare_exts(current, builder):
+    """
+    Compare an extensions on an existing entity (certificate, CRL, CSR) to those
+    on a builder instance to check for changes.
+    """
+
+    def getextname(ext):
+        try:
+            return ext.oid._name
+        except AttributeError:
+            return ext.oid.dotted_string
+
+    added = []
+    changed = []
+    removed = []
+    builder_extensions = cx509.Extensions(getattr_safe(builder, "_extensions"))
+
+    # iter is unnecessary, but avoids a pylint < 2.13.6 crash
+    for ext in iter(builder_extensions):
+        try:
+            cur_ext = current.extensions.get_extension_for_oid(ext.value.oid)
+            if cur_ext.critical != ext.critical or cur_ext.value != ext.value:
+                changed.append(getextname(ext))
+        except cx509.ExtensionNotFound:
+            added.append(getextname(ext))
+
+    for ext in current.extensions:
+        try:
+            builder_extensions.get_extension_for_oid(ext.value.oid)
+        except cx509.ExtensionNotFound:
+            removed.append(getextname(ext))
+
+    return {"added": added, "changed": changed, "removed": removed}
+
+
+def compare_ca_chain(current, new):
+    """
+    Compare two lists of certificates for equality.
+    """
+    if not len(current) == len(new):
+        return False
+    for i, new_cert in enumerate(new):
+        if new_cert.fingerprint(hashes.SHA256()) != current[i].fingerprint(
+            hashes.SHA256()
+        ):
+            return False
+    return True
+
+
+def getattr_safe(obj, attr):
+    """
+    Since we cannot get the certificate object without signing,
+    we need to compare attributes marked as internal. At least
+    convert possible exceptions into some description.
+    """
+    try:
+        return getattr(obj, attr)
+    except AttributeError as err:
+        raise CommandExecutionError(
+            f"Could not get attribute {attr} from {obj.__class__.__name__}. "
+            "Did the internal API of cryptography change?"
+        ) from err
+
+
+def split_file_kwargs(kwargs):
+    """
+    From given kwargs, split valid arguments for file.managed
+    and return two dicts, the split args and the rest.
+    """
+    valid_file_args = [
+        "user",
+        "group",
+        "mode",
+        "attrs",
+        "makedirs",
+        "dir_mode",
+        "backup",
+        "create",
+        "follow_symlinks",
+        "check_cmd",
+        "tmp_dir",
+        "tmp_ext",
+        "selinux",
+        "encoding",
+        "encoding_errors",
+        "win_owner",
+        "win_perms",
+        "win_deny_perms",
+        "win_inheritance",
+        "win_perms_reset",
+    ]
+    file_args = {"show_changes": False}
+    extra_args = {}
+    for k, v in kwargs.items():
+        if k in valid_file_args:
+            file_args[k] = v
+        else:
+            extra_args[k] = v
+    return file_args, extra_args
 
 
 def generate_rsa_privkey(keysize=2048):
