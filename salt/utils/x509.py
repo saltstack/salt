@@ -740,7 +740,7 @@ def split_file_kwargs(kwargs):
         "tmp_dir",
         "tmp_ext",
         "selinux",
-        "encoding",
+        "file_encoding",
         "encoding_errors",
         "win_owner",
         "win_perms",
@@ -755,6 +755,8 @@ def split_file_kwargs(kwargs):
             file_args[k] = v
         else:
             extra_args[k] = v
+    if "file_encoding" in file_args:
+        file_args["encoding"] = file_args.pop("file_encoding")
     return file_args, extra_args
 
 
