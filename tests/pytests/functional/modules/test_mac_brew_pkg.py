@@ -19,83 +19,69 @@ def pkg(modules):
     return modules.pkg
 
 
-# Brew doesn't support local package installation - So, let's
-# Grab some small packages available online for brew
-
-
-@pytest.fixture(scope="function")
-def add_pkg():
-    yield "algol68g"
-
-
-@pytest.fixture(scope="function")
-def del_pkg():
-    yield "acme"
-
-
-@pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(pkg, add_pkg, del_pkg):
+@pytest.fixture
+def pkg_1_name(pkg):
+    pkg_name = "algol68g"
     try:
-        yield
+        yield pkg_name
     finally:
         pkg_list = pkg.list_pkgs()
 
-        # Remove any installed packages
-        if add_pkg in pkg_list:
-            pkg.remove(add_pkg)
-        if del_pkg in pkg_list:
-            pkg.remove(del_pkg)
+        # Remove package if installed
+        if pkg_name in pkg_list:
+            pkg.remove(pkg_name)
 
 
-def test_brew_install(pkg, add_pkg):
+@pytest.fixture
+def pkg_2_name(pkg):
+    pkg_name = "acme"
+    try:
+        pkg.install(pkg_name)
+        pkg_list = pkg.list_pkgs()
+        if pkg_name not in pkg_list:
+            pytest.skip(f"Failed to install the '{pkg_name}' package to delete")
+        yield pkg_name
+    finally:
+        pkg_list = pkg.list_pkgs()
+
+        # Remove package if still installed
+        if pkg_name in pkg_list:
+            pkg.remove(pkg_name)
+
+
+def test_brew_install(pkg, pkg_1_name):
     """
     Tests the installation of packages
     """
-    pkg.install(add_pkg)
+    pkg.install(pkg_1_name)
     pkg_list = pkg.list_pkgs()
-    assert add_pkg in pkg_list
+    assert pkg_1_name in pkg_list
 
 
-def test_remove(pkg, del_pkg):
+def test_remove(pkg, pkg_2_name):
     """
     Tests the removal of packages
     """
-    # Install a package to delete - If unsuccessful, skip the test
-    pkg.install(del_pkg)
+    pkg.remove(pkg_2_name)
     pkg_list = pkg.list_pkgs()
-    if del_pkg not in pkg_list:
-        pkg.install(del_pkg)
-        pytest.skip("Failed to install a package to delete")
-
-    # Now remove the installed package
-    pkg.remove(del_pkg)
-    del_list = pkg.list_pkgs()
-    assert del_pkg not in del_list
+    assert pkg_2_name not in pkg_list
 
 
-def test_version(pkg, add_pkg):
+def test_version(pkg, pkg_1_name):
     """
     Test pkg.version for mac. Installs a package and then checks we can get
     a version for the installed package.
     """
-    pkg.install(add_pkg)
+    pkg.install(pkg_1_name)
     pkg_list = pkg.list_pkgs()
-    version = pkg.version(add_pkg)
-    assert version, f"version: {version} is empty, or other issue is present"
-    assert (
-        add_pkg in pkg_list
-    ), "package: {} is not in the list of installed packages: {}".format(
-        add_pkg, pkg_list
-    )
+    version = pkg.version(pkg_1_name)
+    assert version
+    assert pkg_1_name in pkg_list
     # make sure the version is accurate and is listed in the pkg_list
-    assert version in str(
-        pkg_list[add_pkg]
-    ), "The {} version: {} is not listed in the pkg_list: {}".format(
-        add_pkg, version, pkg_list[add_pkg]
-    )
+    assert version in str(pkg_list[pkg_1_name])
 
 
-def test_latest_version(pkg, add_pkg):
+def test_latest_version(pkg, pkg_1_name):
     """
     Test pkg.latest_version:
       - get the latest version available
@@ -103,12 +89,12 @@ def test_latest_version(pkg, add_pkg):
       - get the latest version available
       - check that the latest version is empty after installing it
     """
-    pkg.remove(add_pkg)
-    uninstalled_latest = pkg.latest_version(add_pkg)
+    pkg.remove(pkg_1_name)
+    uninstalled_latest = pkg.latest_version(pkg_1_name)
 
-    pkg.install(add_pkg)
-    installed_latest = pkg.latest_version(add_pkg)
-    version = pkg.version(add_pkg)
+    pkg.install(pkg_1_name)
+    installed_latest = pkg.latest_version(pkg_1_name)
+    version = pkg.version(pkg_1_name)
     assert isinstance(uninstalled_latest, str)
     assert installed_latest == version
 
@@ -121,10 +107,9 @@ def test_refresh_db(pkg):
     assert refresh_brew
 
 
-def test_list_upgrades(pkg, add_pkg):
+def test_list_upgrades(pkg, pkg_1_name):
     """
-    Test pkg.list_upgrades: data is in the form {'name1': 'version1',
-    'name2': 'version2', ... }
+    Test pkg.list_upgrades: data is in the form {'name1': 'version1', 'name2': 'version2', ... }
     """
     upgrades = pkg.list_upgrades()
     assert isinstance(upgrades, dict)
@@ -134,14 +119,14 @@ def test_list_upgrades(pkg, add_pkg):
             assert isinstance(upgrades[name], str)
 
 
-def test_info_installed(pkg, add_pkg):
+def test_info_installed(pkg, pkg_1_name):
     """
     Test pkg.info_installed: info returned has certain fields used by
     mac_brew.latest_version
     """
-    pkg.install(add_pkg)
-    info = pkg.info_installed(add_pkg)
-    assert add_pkg in info
-    assert "versions" in info[add_pkg]
-    assert "revision" in info[add_pkg]
-    assert "stable" in info[add_pkg]["versions"]
+    pkg.install(pkg_1_name)
+    info = pkg.info_installed(pkg_1_name)
+    assert pkg_1_name in info
+    assert "versions" in info[pkg_1_name]
+    assert "revision" in info[pkg_1_name]
+    assert "stable" in info[pkg_1_name]["versions"]
