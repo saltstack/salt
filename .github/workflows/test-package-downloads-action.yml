@@ -442,10 +442,10 @@ jobs:
             arch: x86_64
             pkg-type: package
           - distro-slug: macos-13-xlarge
-            arch: aarch64
+            arch: arm64
             pkg-type: package
           - distro-slug: macos-13-xlarge
-            arch: aarch64
+            arch: arm64
             pkg-type: onedir
 
     steps:
