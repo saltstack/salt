@@ -18,40 +18,39 @@ def assistive(modules):
     return modules.assistive
 
 
-@pytest.fixture(scope="function")
-def osa_script():
-    yield "/usr/bin/osascript"
-
-
-@pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(assistive, osa_script):
+@pytest.fixture
+def osa_script(assistive):
+    osa_script_path = "/usr/bin/osascript"
     try:
-        ret = assistive.install(osa_script, True)
+        ret = assistive.install(osa_script_path, True)
+        yield osa_script_path
     except CommandExecutionError as exc:
-        pytest.skip(f"Unable to install {osa_script} - {str(exc.value)}")
-
-    try:
-        yield
+        pytest.skip(f"Unable to install {osa_script}: {exc}")
     finally:
-        osa_script_ret = assistive.installed(osa_script)
+        osa_script_ret = assistive.installed(osa_script_path)
         if osa_script_ret:
-            assistive.remove(osa_script)
+            assistive.remove(osa_script_path)
 
-        smile_bundle = "com.smileonmymac.textexpander"
+
+@pytest.fixture
+def install_remove_pkg_name(assistive):
+    smile_bundle = "com.smileonmymac.textexpander"
+    try:
+        yield smile_bundle
+    finally:
         smile_bundle_present = assistive.installed(smile_bundle)
         if smile_bundle_present:
             assistive.remove(smile_bundle)
 
 
 @pytest.mark.slow_test
-def test_install_and_remove(assistive, osa_script):
+def test_install_and_remove(assistive, install_remove_pkg_name):
     """
     Tests installing and removing a bundled ID or command to use assistive access.
     """
-    new_bundle = "com.smileonmymac.textexpander"
-    ret = assistive.install(new_bundle)
+    ret = assistive.install(install_remove_pkg_name)
     assert ret
-    ret = assistive.remove(new_bundle)
+    ret = assistive.remove(install_remove_pkg_name)
     assert ret
 
 

@@ -29,29 +29,57 @@ def timezone(modules):
     return modules.timezone
 
 
-@pytest.fixture(scope="function", autouse=True)
-def _setup_teardown_vars(timezone):
-    USE_NETWORK_TIME = timezone.get_using_network_time()
-    TIME_SERVER = timezone.get_time_server()
-    TIME_ZONE = timezone.get_zone()
-    CURRENT_DATE = timezone.get_date()
-    CURRENT_TIME = timezone.get_time()
-
-    timezone.set_using_network_time(False)
-    timezone.set_zone("America/Denver")
-
+@pytest.fixture
+def _reset_time_server(timezone):
+    ret = timezone.get_time_server()
     try:
         yield
     finally:
-        timezone.set_time_server(TIME_SERVER)
-        timezone.set_using_network_time(USE_NETWORK_TIME)
-        timezone.set_zone(TIME_ZONE)
-        if not USE_NETWORK_TIME:
-            timezone.set_date(CURRENT_DATE)
-            timezone.set_time(CURRENT_TIME)
+        if timezone.get_time_server() != ret:
+            timezone.set_time_server(ret)
 
 
-@pytest.mark.destructive_test
+@pytest.fixture
+def _reset_using_network_time(timezone):
+    ret = timezone.get_using_network_time()
+    try:
+        timezone.set_using_network_time(False)
+        yield ret
+    finally:
+        timezone.set_using_network_time(ret)
+
+
+@pytest.fixture
+def _reset_time(timezone, _reset_using_network_time):
+    ret = timezone.get_time()
+    try:
+        yield
+    finally:
+        if not _reset_using_network_time:
+            timezone.set_time(ret)
+
+
+@pytest.fixture
+def _reset_date(timezone, _reset_using_network_time):
+    ret = timezone.get_date()
+    try:
+        yield
+    finally:
+        if not _reset_using_network_time:
+            timezone.set_date(ret)
+
+
+@pytest.fixture
+def _reset_zone(timezone):
+    ret = timezone.get_zone()
+    try:
+        timezone.set_zone("America/Denver")
+        yield
+    finally:
+        timezone.set_zone(ret)
+
+
+@pytest.mark.usefixtures("_reset_date")
 def test_get_set_date(timezone):
     """
     Test timezone.get_date
@@ -83,7 +111,7 @@ def test_get_time(timezone):
     assert isinstance(obj_date, datetime.date)
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_time")
 def test_set_time(timezone):
     """
     Test timezone.set_time
@@ -101,7 +129,7 @@ def test_set_time(timezone):
         )
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_zone")
 def test_get_set_zone(timezone):
     """
     Test timezone.get_zone
@@ -123,7 +151,7 @@ def test_get_set_zone(timezone):
         )
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_zone")
 def test_get_offset(timezone):
     """
     Test timezone.get_offset
@@ -141,7 +169,7 @@ def test_get_offset(timezone):
     assert ret == "-0800"
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_zone")
 def test_get_set_zonecode(timezone):
     """
     Test timezone.get_zonecode
@@ -171,20 +199,18 @@ def test_list_zones(timezone):
     assert "America/Los_Angeles" in zones
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_zone")
 def test_zone_compare(timezone):
     """
     Test timezone.zone_compare
     """
-    ret = timezone.set_zone("America/Denver")
-    assert ret
     ret = timezone.zone_compare("America/Denver")
     assert ret
     ret = timezone.zone_compare("Pacific/Wake")
     assert not ret
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_using_network_time")
 def test_get_set_using_network_time(timezone):
     """
     Test timezone.get_using_network_time
@@ -203,7 +229,7 @@ def test_get_set_using_network_time(timezone):
     assert not ret
 
 
-@pytest.mark.destructive_test
+@pytest.mark.usefixtures("_reset_time_server")
 def test_get_set_time_server(timezone):
     """
     Test timezone.get_time_server
