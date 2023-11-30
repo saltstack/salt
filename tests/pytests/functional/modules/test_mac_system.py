@@ -85,17 +85,6 @@ def computer_name(system):
             system.set_computer_name(computer_name)
 
 
-@pytest.fixture(autouse=True)
-def _setup_teardown_vars(service, system):
-    atrun_enabled = service.enabled("com.apple.atrun")
-    try:
-        yield
-    finally:
-        if not atrun_enabled:
-            atrun = "/System/Library/LaunchDaemons/com.apple.atrun.plist"
-            service.stop(atrun)
-
-
 @pytest.mark.usefixtures("_remote_login_cleanup")
 def test_get_set_remote_login(system):
     """
