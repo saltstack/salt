@@ -780,6 +780,7 @@ def states(
     proxy=None,
     context=None,
     loaded_base_name=None,
+    file_client=None,
 ):
     """
     Returns the state modules
@@ -817,6 +818,7 @@ def states(
             "__utils__": utils,
             "__serializers__": serializers,
             "__context__": context,
+            "__file_client__": file_client,
         },
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
