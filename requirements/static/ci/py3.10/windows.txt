@@ -66,7 +66,7 @@ cherrypy==18.6.1
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-click==8.1.7
+click==7.1.2
     # via geomet
 clr-loader==0.2.4
     # via
@@ -75,9 +75,7 @@ clr-loader==0.2.4
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
 colorama==0.4.1
-    # via
-    #   click
-    #   pytest
+    # via pytest
 contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
