@@ -38,10 +38,23 @@ import sys
 
 import salt.fileclient
 import salt.utils.decorators.path
+from salt.loader.dunder import __file_client__
 from salt.utils.decorators import depends
 
 log = logging.getLogger(__name__)
 __virtualname__ = "ansible"
+
+
+def _file_client():
+    """
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
+    """
+    if __file_client__:
+        return __file_client__.value()
+    return salt.fileclient.get_file_client(__opts__)
 
 
 @depends("ansible")
@@ -162,7 +175,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     }
     if git_repo:
         if not isinstance(rundir, str) or not os.path.isdir(rundir):
-            with salt.fileclient.get_file_client(__opts__) as client:
+            with _file_client() as client:
                 rundir = client._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
