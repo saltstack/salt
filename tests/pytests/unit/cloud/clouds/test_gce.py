@@ -11,10 +11,7 @@ import pytest
 
 from salt.cloud.clouds import gce
 from salt.exceptions import SaltCloudSystemExit
-from salt.utils.versions import Version
-from tests.support.mock import MagicMock
-from tests.support.mock import __version__ as mock_version
-from tests.support.mock import call, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -281,8 +278,7 @@ def test_import():
     with patch("salt.config.check_driver_dependencies", return_value=True) as p:
         get_deps = gce.get_dependencies()
         assert get_deps is True
-        if Version(mock_version) >= Version("2.0.0"):
-            p.assert_called_once()
+        p.assert_called_once()
 
 
 @pytest.mark.parametrize(

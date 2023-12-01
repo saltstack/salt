@@ -232,8 +232,6 @@ markupsafe==2.1.2
     #   werkzeug
 mercurial==6.4.4
     # via -r requirements/static/ci/freebsd.in
-mock==5.1.0
-    # via -r requirements/pytest.txt
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt

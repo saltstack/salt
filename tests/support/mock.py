@@ -17,37 +17,33 @@
 import copy
 import errno
 import fnmatch
+import importlib
 import sys
 
-# By these days, we should blowup if mock is not available
-import mock  # pylint: disable=blacklisted-external-import
+current_version = (sys.version_info.major, sys.version_info.minor)
 
-# pylint: disable=no-name-in-module,no-member
-from mock import (
-    ANY,
-    DEFAULT,
-    FILTER_DIR,
-    AsyncMock,
-    MagicMock,
-    Mock,
-    NonCallableMagicMock,
-    NonCallableMock,
-    PropertyMock,
-    __version__,
-    call,
-    create_autospec,
-    patch,
-    sentinel,
-)
+# Prefer unittest.mock for Python versions that are sufficient
+if current_version >= (3, 8):
+    mock = importlib.import_module("unittest.mock")
+else:
+    mock = importlib.import_module("mock")
+
+ANY = mock.ANY
+DEFAULT = mock.DEFAULT
+FILTER_DIR = mock.FILTER_DIR
+MagicMock = mock.MagicMock
+Mock = mock.Mock
+NonCallableMagicMock = mock.NonCallableMagicMock
+NonCallableMock = mock.NonCallableMock
+PropertyMock = mock.PropertyMock
+call = mock.call
+create_autospec = mock.create_autospec
+patch = mock.patch
+sentinel = mock.sentinel
 
 import salt.utils.stringutils
 
 # pylint: disable=no-name-in-module,no-member
-
-
-__mock_version = tuple(
-    int(part) for part in mock.__version__.split(".") if part.isdigit()
-)  # pylint: disable=no-member
 
 
 class MockFH:
