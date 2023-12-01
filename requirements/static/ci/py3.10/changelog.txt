@@ -6,7 +6,7 @@
 #
 click-default-group==1.2.2
     # via towncrier
-click==7.1.1
+click==8.1.7
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   click-default-group
