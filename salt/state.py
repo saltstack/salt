@@ -1287,6 +1287,7 @@ class State:
                 self.serializers,
                 context=self.state_con,
                 proxy=self.proxy,
+                file_client=salt.fileclient.ContextlessFileClient(self.file_client),
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1300,7 +1301,7 @@ class State:
             self.state_con,
             utils=self.utils,
             proxy=self.proxy,
-            file_client=self.file_client,
+            file_client=salt.fileclient.ContextlessFileClient(self.file_client),
         )
         if isinstance(data, dict):
             if data.get("provider", False):

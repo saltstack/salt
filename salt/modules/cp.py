@@ -160,13 +160,13 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
 
 def _client():
     """
-    Return a client, hashed by the list of masters
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
     """
     if __file_client__:
-        val = __file_client__.value()
-        fc = salt.fileclient.ContextlessFileClient(val)
-        log.error("Using context client %r %r", val, fc)
-        return fc
+        return __file_client__.value()
     return salt.fileclient.get_file_client(__opts__)
 
 
