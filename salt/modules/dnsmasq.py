@@ -175,7 +175,7 @@ def _discover_configs(dnsopts):
             continue
         if filename.endswith("~"):
             continue
-        if filename.endswith("#") and filename.endswith("#"):
+        if filename.startswith("#") and filename.endswith("#"):
             continue
         config_files.append(filename)
 
