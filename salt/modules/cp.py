@@ -20,6 +20,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
+from salt.loader.dunder import __file_client__
 
 log = logging.getLogger(__name__)
 
@@ -161,6 +162,11 @@ def _client():
     """
     Return a client, hashed by the list of masters
     """
+    if __file_client__:
+        val = __file_client__.value()
+        fc = salt.fileclient.ContextlessFileClient(val)
+        log.error("Using context client %r %r", val, fc)
+        return fc
     return salt.fileclient.get_file_client(__opts__)
 
 

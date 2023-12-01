@@ -84,11 +84,7 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.value()[item] = value
 
     def __bool__(self):
-        try:
-            self.loader
-        except LookupError:
-            return False
-        return True
+        return bool(self.value())
 
     def __len__(self):
         return self.value().__len__()

@@ -263,6 +263,7 @@ def minion_mods(
     notify=False,
     static_modules=None,
     proxy=None,
+    file_client=None,
 ):
     """
     Load execution modules
@@ -314,6 +315,7 @@ def minion_mods(
             "__utils__": utils,
             "__proxy__": proxy,
             "__opts__": opts,
+            "__file_client__": file_client,
         },
         whitelist=whitelist,
         loaded_base_name=loaded_base_name,

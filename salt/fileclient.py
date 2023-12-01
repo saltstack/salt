@@ -1532,3 +1532,17 @@ class DumbAuth:
 
     def gen_token(self, clear_tok):
         return clear_tok
+
+
+class ContextlessFileClient:
+    def __init__(self, file_client):
+        self.file_client = file_client
+
+    def __getattr__(self, key):
+        return getattr(self.file_client, key)
+
+    def __exit__(self, *_):
+        pass
+
+    def __enter__(self):
+        return self
