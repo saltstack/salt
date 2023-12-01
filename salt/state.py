@@ -758,6 +758,7 @@ class State:
         mocked=False,
         loader="states",
         initial_pillar=None,
+        file_client=None,
     ):
         self._init_kwargs = {
             "opts": opts,
@@ -774,6 +775,12 @@ class State:
         if "grains" not in opts:
             opts["grains"] = salt.loader.grains(opts)
         self.opts = opts
+        if file_client:
+            self.file_client = file_client
+            self.preserve_file_client = True
+        else:
+            self.file_client = salt.fileclient.get_file_client(self.opts)
+            self.preserve_file_client = False
         self.proxy = proxy
         self._pillar_override = pillar_override
         if pillar_enc is not None:
@@ -798,7 +805,11 @@ class State:
                     self.opts.get("pillar_merge_lists", False),
                 )
         log.debug("Finished gathering pillar data for state run")
-        self.state_con = context or {}
+        if context is None:
+            self.state_con = {}
+        else:
+            self.state_con = context
+        self.state_con["fileclient"] = self.file_client
         self.load_modules()
         self.active = set()
         self.mod_init = set()
@@ -1285,7 +1296,11 @@ class State:
         log.info("Loading fresh modules for state activity")
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(
-            self.opts, self.state_con, utils=self.utils, proxy=self.proxy
+            self.opts,
+            self.state_con,
+            utils=self.utils,
+            proxy=self.proxy,
+            file_client=self.file_client,
         )
         if isinstance(data, dict):
             if data.get("provider", False):
@@ -3672,6 +3687,16 @@ class State:
             return errors
         return self.call_high(high)
 
+    def destroy(self):
+        if not self.preserve_file_client:
+            self.file_client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 class LazyAvailStates:
     """
@@ -4917,9 +4942,15 @@ class HighState(BaseHighState):
         mocked=False,
         loader="states",
         initial_pillar=None,
+        file_client=None,
     ):
         self.opts = opts
-        self.client = salt.fileclient.get_file_client(self.opts)
+        if file_client:
+            self.client = file_client
+            self.preserve_client = True
+        else:
+            self.client = salt.fileclient.get_file_client(self.opts)
+            self.preserve_client = False
         BaseHighState.__init__(self, opts)
         self.state = State(
             self.opts,
@@ -4931,6 +4962,7 @@ class HighState(BaseHighState):
             mocked=mocked,
             loader=loader,
             initial_pillar=initial_pillar,
+            file_client=self.client,
         )
         self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
@@ -4965,7 +4997,8 @@ class HighState(BaseHighState):
             return None
 
     def destroy(self):
-        self.client.destroy()
+        if not self.preserve_client:
+            self.client.destroy()
 
     def __enter__(self):
         return self
