@@ -3,14 +3,17 @@ import datetime
 import logging
 import os
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, rsa
 
 import salt.utils.files
 import salt.utils.timeutil as time
+import salt.utils.x509 as x509util
 
 try:
     from cryptography.hazmat.primitives.serialization import (
+        Encoding,
+        PublicFormat,
         SSHCertificate,
         SSHCertificateBuilder,
         SSHCertificateType,
@@ -25,6 +28,8 @@ except ImportError:
     from cryptography.hazmat.primitives.serialization import (
         load_ssh_private_key,
         load_ssh_public_key,
+        Encoding,
+        PublicFormat,
     )
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -160,6 +165,366 @@ def build_crt(
             builder = builder.add_extension(ext.encode(), extval.encode())
 
     return builder, signing_private_key
+
+
+def check_cert_changes(
+    name,
+    signing_policy_contents,
+    ca_server=None,
+    ttl=None,
+    ttl_remaining=None,
+    backend=None,
+    signing_private_key=None,
+    signing_private_key_passphrase=None,
+    cert_type=None,
+    public_key=None,
+    private_key=None,
+    private_key_passphrase=None,
+    serial_number=None,
+    not_before=None,
+    not_after=None,
+    critical_options=None,
+    extensions=None,
+    valid_principals=None,
+    all_principals=None,
+    key_id=None,
+):
+    """
+    Check if the on-disk certificate needs to be updated.
+    Extracted from the state module to be able to use this in the SSH wrapper.
+    """
+    if CERT_SUPPORT is False:
+        raise CommandExecutionError(
+            "Certificate support requires at least cryptography release 40"
+        )
+    current = None
+    changes = {}
+    replace = False
+
+    try:
+        current = load_cert(name)
+    except CommandExecutionError as err:
+        if any(
+            (
+                "Could not deserialize binary data" in str(err),
+                "Could not load OpenSSH certificate" in str(err),
+            )
+        ):
+            replace = True
+        else:
+            raise
+    else:
+        if current.type == SSHCertificateType.USER:
+            ttl_remaining = ttl_remaining if ttl_remaining is not None else 3600  # 1h
+        elif current.type == SSHCertificateType.HOST:
+            ttl_remaining = ttl_remaining if ttl_remaining is not None else 604800  # 7d
+        else:
+            raise CommandExecutionError(f"Unknown cert_type: {current.type}")
+        if datetime.datetime.fromtimestamp(
+            current.valid_before
+        ) < datetime.datetime.utcnow() + datetime.timedelta(
+            seconds=time.timestring_map(ttl_remaining)
+        ):
+            changes["expiration"] = True
+
+        (builder, _), signing_pubkey = _build_cert_with_policy(
+            ca_server=ca_server,
+            backend=backend,
+            signing_policy_contents=signing_policy_contents,
+            signing_private_key=signing_private_key,
+            signing_private_key_passphrase=signing_private_key_passphrase,
+            cert_type=cert_type,
+            public_key=public_key,
+            private_key=private_key,
+            private_key_passphrase=private_key_passphrase,
+            serial_number=serial_number,
+            not_before=not_before,
+            not_after=not_after,
+            ttl=ttl,
+            critical_options=critical_options,
+            extensions=extensions,
+            valid_principals=valid_principals,
+            all_principals=all_principals,
+            key_id=key_id,
+        )
+
+        changes.update(
+            _compare_cert(
+                current,
+                builder,
+                serial_number=serial_number,
+                not_before=not_before,
+                not_after=not_after,
+                signing_pubkey=signing_pubkey,
+            )
+        )
+    return current, changes, replace
+
+
+def _build_cert_with_policy(
+    ca_server,
+    signing_policy_contents,
+    signing_private_key,
+    backend=None,
+    **kwargs,
+):
+    backend = backend or "ssh_pki"
+    skip_load_signing_private_key = False
+    final_kwargs = copy.deepcopy(kwargs)
+    merge_signing_policy(signing_policy_contents, final_kwargs)
+    signing_pubkey = final_kwargs.pop("signing_public_key", None)
+    if ca_server is None and backend == "ssh_pki":
+        if not signing_private_key:
+            raise SaltInvocationError(
+                "signing_private_key is required - this is most likely a bug"
+            )
+        signing_pubkey = load_privkey(
+            signing_private_key, passphrase=kwargs.get("signing_private_key_passphrase")
+        )
+    elif signing_pubkey is None:
+        raise SaltInvocationError(
+            "The remote CA server or backend module did not deliver the CA pubkey"
+        )
+    else:
+        skip_load_signing_private_key = True
+
+    return (
+        build_crt(
+            signing_private_key,
+            skip_load_signing_private_key=skip_load_signing_private_key,
+            **final_kwargs,
+        ),
+        signing_pubkey,
+    )
+
+
+def _compare_cert(
+    current, builder, serial_number, not_before, not_after, signing_pubkey
+):
+    changes = {}
+
+    if (
+        serial_number is not None
+        and _getattr_safe(builder, "_serial") != current.serial
+    ):
+        changes["serial_number"] = serial_number
+
+    if not x509util.match_pubkey(
+        _getattr_safe(builder, "_public_key"), current.public_key()
+    ):
+        changes["private_key"] = True
+
+    if not verify_signature(current, signing_pubkey):
+        changes["signing_private_key"] = True
+
+    # Some backends might compute the key ID themselves,
+    # so only report changes if it was set.
+    if (
+        _getattr_safe(builder, "_key_id") is not None
+        and builder._key_id != current.key_id
+    ):
+        changes["key_id"] = {
+            "old": current.key_id.decode(),
+            "new": builder._key_id.decode(),
+        }
+
+    new_cert_type = _getattr_safe(builder, "_type")
+    if current.type is not new_cert_type:
+        changes["cert_type"] = (
+            "user" if new_cert_type is SSHCertificateType.USER else "host"
+        )
+
+    ext_changes = _compare_exts(current, builder)
+    if any(ext_changes.values()):
+        changes["extensions"] = ext_changes
+    opt_changes = _compare_opts(current, builder)
+    if any(opt_changes.values()):
+        changes["critical_options"] = opt_changes
+    added_principals = []
+    removed_principals = []
+    valid_new_principals = _getattr_safe(builder, "_valid_principals")
+    if valid_new_principals == []:
+        if current.valid_principals:
+            added_principals = "*ALL*"
+    else:
+        added_principals = [
+            x.decode()
+            for x in set(valid_new_principals) - set(current.valid_principals)
+        ]
+        removed_principals = [
+            x.decode()
+            for x in set(current.valid_principals) - set(valid_new_principals)
+        ]
+        if current.valid_principals == []:
+            removed_principals = "*ALL*"
+    if added_principals or removed_principals:
+        changes["principals"] = {
+            "added": added_principals,
+            "removed": removed_principals,
+        }
+
+    return changes
+
+
+def _compare_exts(current, builder):
+    added = []
+    changed = []
+    removed = []
+
+    builder_extensions = _getattr_safe(builder, "_extensions")
+
+    for ext, extval in builder_extensions:
+        try:
+            if current.extensions[ext] != extval:
+                changed.append(ext.decode())
+        except KeyError:
+            added.append(ext.decode())
+
+    for ext in current.extensions:
+        if not any(x[0] == ext for x in builder_extensions):
+            removed.append(ext.decode())
+
+    return {"added": added, "changed": changed, "removed": removed}
+
+
+def _compare_opts(current, builder):
+    added = []
+    changed = []
+    removed = []
+
+    builder_options = _getattr_safe(builder, "_critical_options")
+
+    for opt, optval in builder_options:
+        try:
+            if current.critical_options[opt] != optval:
+                changed.append(opt.decode())
+        except KeyError:
+            added.append(opt.decode())
+
+    for opt in current.critical_options:
+        if not any(x[0] == opt for x in builder_options):
+            removed.append(opt.decode())
+
+    return {"added": added, "changed": changed, "removed": removed}
+
+
+def _getattr_safe(obj, attr):
+    try:
+        return getattr(obj, attr)
+    except AttributeError as err:
+        # Since we cannot get the certificate object without signing,
+        # we need to compare attributes marked as internal. At least
+        # convert possible exceptions into some description.
+        raise CommandExecutionError(
+            f"Could not get attribute {attr} from {obj.__class__.__name__}. "
+            "Did the internal API of cryptography change?"
+        ) from err
+
+
+def get_public_key(key, passphrase=None):
+    """
+    Returns a public key derived from some reference.
+    The reference should be a public key, certificate or private key.
+
+    key
+        A reference to the structure to look the public key up for.
+
+    passphrase
+        If ``key`` is encrypted, the passphrase to decrypt it.
+    """
+    try:
+        return encode_public_key(load_pubkey(key)).decode()
+    except (CommandExecutionError, SaltInvocationError, UnsupportedAlgorithm):
+        pass
+    try:
+        return encode_public_key(load_cert(key).public_key()).decode()
+    except (CommandExecutionError, SaltInvocationError, UnsupportedAlgorithm):
+        pass
+    try:
+        return encode_public_key(
+            load_privkey(key, passphrase=passphrase).public_key()
+        ).decode()
+    except (CommandExecutionError, SaltInvocationError, UnsupportedAlgorithm):
+        pass
+    raise CommandExecutionError(
+        "Could not load key as certificate, public key or private key"
+    )
+
+
+def encode_public_key(public_key):
+    """
+    Serializes a public key object into a string
+    """
+    return public_key.public_bytes(
+        encoding=Encoding.OpenSSH,
+        format=PublicFormat.OpenSSH,
+    )
+
+
+def verify_signature(certificate, signing_pub_key, signing_pub_key_passphrase=None):
+    """
+    Verify that a signature on a certificate was made
+    by the private key corresponding to the public key associated
+    with the specified certificate.
+
+    certificate
+        The certificate to check the signature on.
+
+    signing_pub_key
+        Any reference that can be passed to ``get_public_key`` to retrieve
+        the public key of the signing entity from.
+
+    signing_pub_key_passphrase
+        If ``signing_pub_key`` is encrypted, the passphrase to decrypt it.
+    """
+    cert = load_cert(certificate, verify=False)
+    pubkey = load_pubkey(
+        get_public_key(signing_pub_key, passphrase=signing_pub_key_passphrase)
+    )
+    try:
+        cert.verify_cert_signature()
+    except InvalidSignature:
+        return False
+    return x509util.match_pubkey(cert.signature_key(), pubkey)
+
+
+def split_file_kwargs(kwargs):
+    """
+    From given kwargs, split valid arguments for file.managed
+    and return two dicts, the split args and the rest.
+    """
+    valid_file_args = [
+        "user",
+        "group",
+        "mode",
+        "attrs",
+        "makedirs",
+        "dir_mode",
+        "backup",
+        "create",
+        "follow_symlinks",
+        "check_cmd",
+        "tmp_dir",
+        "tmp_ext",
+        "selinux",
+        "file_encoding",
+        "encoding_errors",
+        "win_owner",
+        "win_perms",
+        "win_deny_perms",
+        "win_inheritance",
+        "win_perms_reset",
+    ]
+    file_args = {"show_changes": False}
+    extra_args = {}
+    for k, v in kwargs.items():
+        if k in valid_file_args:
+            file_args[k] = v
+        else:
+            extra_args[k] = v
+    if "file_encoding" in file_args:
+        file_args["encoding"] = file_args.pop("file_encoding")
+    return file_args, extra_args
 
 
 def _get_serial_number(sn=None):
