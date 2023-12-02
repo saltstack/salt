@@ -53,7 +53,7 @@ def smb_dict(tmp_path):
     username = getpass.getuser()
     with salt.utils.files.fopen(passwdb, "w") as fp:
         fp.write(
-            "{username}:0:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:AC8E657F8"
+            f"{username}:0:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:AC8E657F8"
             "3DF82BEEA5D43BDAF7800CC:[U          ]:LCT-507C14C7:"
         )
     samba_conf = tmp_path / "smb.conf"
@@ -90,7 +90,6 @@ def smb_dict(tmp_path):
         )
 
     _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
-    ## DGM time.sleep(1)
     time.sleep(5)
     conn_dict = {
         "tmpdir": tmp_path,
