@@ -151,18 +151,13 @@ the SSH server to use it.
           - ssh_pki: /etc/ssh/ssh_host_rsa_key
           - ssh_pki: /etc/ssh/ssh_host_rsa_key.pub
 """
-import copy
-import datetime
 import logging
 import os.path
 
-import salt.utils.timeutil as time
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 try:
-    from cryptography.hazmat.primitives import serialization
-
     import salt.utils.sshpki as sshpki
     import salt.utils.x509 as x509util
 
@@ -213,6 +208,11 @@ def certificate_managed(
     This function accepts the same arguments as
     :py:func:`ssh_pki.create_certificate <salt.modules.ssh_pki.create_certificate>`,
     as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
+
+    .. note::
+
+        Since ``file.managed`` also has an ``encoding`` param, it can be passed
+        as ``file_encoding`` instead.
 
     name
         The path the certificate should be present at.
@@ -322,7 +322,9 @@ def certificate_managed(
     backend = backend or "ssh_pki"
     backend_args = backend_args or {}
 
-    file_args, unknown_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, unknown_args = sshpki.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
     invalid_args = [key for key in unknown_args if not key.startswith("_")]
     if invalid_args:
         raise SaltInvocationError(
@@ -356,68 +358,32 @@ def certificate_managed(
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
-            try:
-                current = sshpki.load_cert(real_name)
-            except CommandExecutionError as err:
-                if any(
-                    (
-                        "Could not deserialize binary data" in str(err),
-                        "Could not load OpenSSH certificate" in str(err),
-                    )
-                ):
-                    replace = True
-                else:
-                    raise
-            else:
-                if current.type == serialization.SSHCertificateType.USER:
-                    ttl_remaining = (
-                        ttl_remaining if ttl_remaining is not None else 3600
-                    )  # 1h
-                elif current.type == serialization.SSHCertificateType.HOST:
-                    ttl_remaining = (
-                        ttl_remaining if ttl_remaining is not None else 604800
-                    )  # 7d
-                else:
-                    raise CommandExecutionError(f"Unknown cert_type: {current.thpe}")
-                if datetime.datetime.fromtimestamp(
-                    current.valid_before
-                ) < datetime.datetime.utcnow() + datetime.timedelta(
-                    seconds=time.timestring_map(ttl_remaining)
-                ):
-                    changes["expiration"] = True
-
-                (builder, _), signing_pubkey = _build_cert(
-                    ca_server=ca_server,
-                    backend=backend,
-                    backend_args=backend_args,
-                    signing_policy=signing_policy,
-                    signing_private_key=signing_private_key,
-                    signing_private_key_passphrase=signing_private_key_passphrase,
-                    cert_type=cert_type,
-                    public_key=public_key,
-                    private_key=private_key,
-                    private_key_passphrase=private_key_passphrase,
-                    serial_number=serial_number,
-                    not_before=not_before,
-                    not_after=not_after,
-                    ttl=ttl,
-                    critical_options=critical_options,
-                    extensions=extensions,
-                    valid_principals=valid_principals,
-                    all_principals=all_principals,
-                    key_id=key_id,
-                )
-
-                changes.update(
-                    _compare_cert(
-                        current,
-                        builder,
-                        serial_number=serial_number,
-                        not_before=not_before,
-                        not_after=not_after,
-                        signing_pubkey=signing_pubkey,
-                    )
-                )
+            signing_policy_contents = __salt__[f"{backend}.get_signing_policy"](
+                signing_policy, ca_server=ca_server, **(backend_args or {})
+            )
+            current, checked_changes, replace = sshpki.check_cert_changes(
+                real_name,
+                ca_server=ca_server,
+                backend=backend,
+                signing_policy_contents=signing_policy_contents,
+                signing_private_key=signing_private_key,
+                signing_private_key_passphrase=signing_private_key_passphrase,
+                cert_type=cert_type,
+                public_key=public_key,
+                private_key=private_key,
+                private_key_passphrase=private_key_passphrase,
+                serial_number=serial_number,
+                not_before=not_before,
+                not_after=not_after,
+                ttl=ttl,
+                ttl_remaining=ttl_remaining,
+                critical_options=critical_options,
+                extensions=extensions,
+                valid_principals=valid_principals,
+                all_principals=all_principals,
+                key_id=key_id,
+            )
+            changes.update(checked_changes)
         else:
             changes["created"] = name
 
@@ -560,7 +526,9 @@ def private_key_managed(
     current = None
     changes = {}
     verb = "create"
-    file_args, unknown_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, unknown_args = sshpki.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
     invalid_args = [key for key in unknown_args if not key.startswith("_")]
     if invalid_args:
         raise SaltInvocationError(
@@ -762,7 +730,9 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
     }
     current = None
     verb = "create"
-    file_args, unknown_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, unknown_args = sshpki.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
     invalid_args = [key for key in unknown_args if not key.startswith("_")]
     if invalid_args:
         raise SaltInvocationError(
@@ -820,39 +790,6 @@ def _filter_state_internal_kwargs(kwargs):
     return {k: v for k, v in kwargs.items() if k not in ignore}
 
 
-def _split_file_kwargs(kwargs):
-    valid_file_args = [
-        "user",
-        "group",
-        "mode",
-        "attrs",
-        "makedirs",
-        "dir_mode",
-        "backup",
-        "create",
-        "follow_symlinks",
-        "check_cmd",
-        "tmp_dir",
-        "tmp_ext",
-        "selinux",
-        "encoding",
-        "encoding_errors",
-        "win_owner",
-        "win_perms",
-        "win_deny_perms",
-        "win_inheritance",
-        "win_perms_reset",
-    ]
-    file_args = {"show_changes": False}
-    extra_args = {}
-    for k, v in kwargs.items():
-        if k in valid_file_args:
-            file_args[k] = v
-        else:
-            extra_args[k] = v
-    return file_args, extra_args
-
-
 def _add_sub_state_run(ret, sub):
     sub["low"] = {
         "name": ret["name"],
@@ -882,169 +819,3 @@ def _check_file_ret(fret, ret, current):
         ret["changes"] = {}
         return False
     return True
-
-
-def _build_cert(
-    ca_server,
-    backend,
-    backend_args,
-    signing_policy,
-    signing_private_key,
-    **kwargs,
-):
-    backend = backend or "ssh_pki"
-    skip_load_signing_private_key = False
-    final_kwargs = copy.deepcopy(kwargs)
-    sshpki.merge_signing_policy(
-        __salt__[f"{backend}.get_signing_policy"](
-            signing_policy, ca_server=ca_server, **(backend_args or {})
-        ),
-        final_kwargs,
-    )
-    signing_pubkey = final_kwargs.pop("signing_public_key", None)
-    if ca_server is None and backend == "ssh_pki":
-        if not signing_private_key:
-            raise SaltInvocationError(
-                "signing_private_key is required - this is most likely a bug"
-            )
-        signing_pubkey = sshpki.load_privkey(
-            signing_private_key, passphrase=kwargs.get("signing_private_key_passphrase")
-        )
-    elif signing_pubkey is None:
-        raise SaltInvocationError(
-            "The remote CA server or backend module did not deliver the CA pubkey"
-        )
-    else:
-        skip_load_signing_private_key = True
-
-    return (
-        sshpki.build_crt(
-            signing_private_key,
-            skip_load_signing_private_key=skip_load_signing_private_key,
-            **final_kwargs,
-        ),
-        signing_pubkey,
-    )
-
-
-def _compare_cert(
-    current, builder, serial_number, not_before, not_after, signing_pubkey
-):
-    changes = {}
-
-    if (
-        serial_number is not None
-        and _getattr_safe(builder, "_serial") != current.serial
-    ):
-        changes["serial_number"] = serial_number
-
-    if not x509util.match_pubkey(
-        _getattr_safe(builder, "_public_key"), current.public_key()
-    ):
-        changes["private_key"] = True
-
-    if not __salt__["ssh_pki.verify_signature"](current, signing_pubkey):
-        changes["signing_private_key"] = True
-
-    # Some backends might compute the key ID themselves,
-    # so only report changes if it was set.
-    if (
-        _getattr_safe(builder, "_key_id") is not None
-        and builder._key_id != current.key_id
-    ):
-        changes["key_id"] = {
-            "old": current.key_id.decode(),
-            "new": builder._key_id.decode(),
-        }
-
-    new_cert_type = _getattr_safe(builder, "_type")
-    if current.type is not new_cert_type:
-        changes["cert_type"] = (
-            "user" if new_cert_type is serialization.SSHCertificateType.USER else "host"
-        )
-
-    ext_changes = _compare_exts(current, builder)
-    if any(ext_changes.values()):
-        changes["extensions"] = ext_changes
-    opt_changes = _compare_opts(current, builder)
-    if any(opt_changes.values()):
-        changes["critical_options"] = opt_changes
-    added_principals = []
-    removed_principals = []
-    valid_new_principals = _getattr_safe(builder, "_valid_principals")
-    if valid_new_principals == []:
-        if current.valid_principals:
-            added_principals = "*ALL*"
-    else:
-        added_principals = [
-            x.decode()
-            for x in set(valid_new_principals) - set(current.valid_principals)
-        ]
-        removed_principals = [
-            x.decode()
-            for x in set(current.valid_principals) - set(valid_new_principals)
-        ]
-        if current.valid_principals == []:
-            removed_principals = "*ALL*"
-    if added_principals or removed_principals:
-        changes["principals"] = {
-            "added": added_principals,
-            "removed": removed_principals,
-        }
-
-    return changes
-
-
-def _compare_exts(current, builder):
-    added = []
-    changed = []
-    removed = []
-
-    builder_extensions = _getattr_safe(builder, "_extensions")
-
-    for ext, extval in builder_extensions:
-        try:
-            if current.extensions[ext] != extval:
-                changed.append(ext.decode())
-        except KeyError:
-            added.append(ext.decode())
-
-    for ext in current.extensions:
-        if not any(x[0] == ext for x in builder_extensions):
-            removed.append(ext.decode())
-
-    return {"added": added, "changed": changed, "removed": removed}
-
-
-def _compare_opts(current, builder):
-    added = []
-    changed = []
-    removed = []
-
-    builder_options = _getattr_safe(builder, "_critical_options")
-
-    for opt, optval in builder_options:
-        try:
-            if current.critical_options[opt] != optval:
-                changed.append(opt.decode())
-        except KeyError:
-            added.append(opt.decode())
-
-    for opt in current.critical_options:
-        if not any(x[0] == opt for x in builder_options):
-            removed.append(opt.decode())
-
-    return {"added": added, "changed": changed, "removed": removed}
-
-
-def _getattr_safe(obj, attr):
-    try:
-        return getattr(obj, attr)
-    except AttributeError as err:
-        # Since we cannot get the certificate object without signing,
-        # we need to compare attributes marked as internal. At least
-        # convert possible exceptions into some description.
-        raise CommandExecutionError(
-            f"Could not get attribute {attr} from {obj.__class__.__name__}. "
-            "Did the internal API of cryptography change?"
-        ) from err
