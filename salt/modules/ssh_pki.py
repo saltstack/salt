@@ -10,6 +10,9 @@ Manage OpenSSH keys and certificates
 .. note::
 
     * Certificate operations require at least cryptography release 40
+    * Certificate operations with ``force-command`` and ``source-address``
+      (or any critical option/extension with a value) should only be relied
+      upon in releases >= 41.0.2 (https://github.com/pyca/cryptography/issues/9207)
     * Operations with encrypted private keys require the
       ``bcrypt`` module, which is installable as ``cryptography[ssh]`` as well.
 
@@ -133,6 +136,7 @@ except ImportError:
 import salt.utils.atomicfile
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.stringutils
 import salt.utils.timeutil as time
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -290,6 +294,11 @@ def create_certificate(
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
     return f"Certificate written to {path}"
+
+
+create_certificate_ssh = salt.utils.functools.alias_function(
+    create_certificate, "create_certificate_ssh"
+)
 
 
 def _create_certificate_remote(
