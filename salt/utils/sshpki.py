@@ -444,8 +444,11 @@ def get_public_key(key, passphrase=None):
         return encode_public_key(
             load_privkey(key, passphrase=passphrase).public_key()
         ).decode()
-    except (CommandExecutionError, SaltInvocationError, UnsupportedAlgorithm):
+    except (CommandExecutionError, SaltInvocationError):
         pass
+    except UnsupportedAlgorithm as err:
+        if "Need bcrypt module" in str(err):
+            raise CommandExecutionError(str(err))
     raise CommandExecutionError(
         "Could not load key as certificate, public key or private key"
     )
