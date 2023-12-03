@@ -173,6 +173,16 @@ def existing_cert(ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey, request, pk_
     yield cert_args["name"]
 
 
+@pytest.fixture(params=["1234"])
+def existing_file(tmp_path, request):
+    text = request.param
+    if callable(text):
+        text = request.getfixturevalue(text.__name__)
+    test_file = tmp_path / "existingfile"
+    test_file.write_text(text)
+    yield test_file
+
+
 def test_certificate_managed_remote(ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey):
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
@@ -319,6 +329,57 @@ def test_certificate_managed_remote_no_changes_signing_policy_override(
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
     assert ret.data[next(iter(ret.data))]["changes"] == {}
+
+
+@pytest.mark.parametrize("overwrite", (False, True))
+def test_certificate_managed_privkey_managed_existing_not_a_privkey(
+    ssh_salt_ssh_cli, cert_args, ca_key, existing_file, overwrite
+):
+    """
+    If an existing managed private key cannot be read, it should be
+    possible to overwrite it by specifying `overwrite: true`.
+    """
+    cert_args["private_key_managed"] = {
+        "name": str(existing_file),
+        "overwrite": overwrite,
+    }
+    ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
+    assert (ret.returncode == 0) is overwrite
+    if not overwrite:
+        state = next(x for x in ret.data if x.endswith("private_key_managed_ssh"))
+        assert "pass overwrite: true" in ret.data[state]["comment"]
+        return
+    cert = _get_cert(cert_args["name"])
+    privkey = _get_privkey(cert_args["private_key_managed"]["name"])
+    assert cert.key_id == b"from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, privkey)
+    assert ret.data
+    assert len(ret.data) == 4
+    for state in ret.data:
+        if state.startswith("ssh_pki") or "_crt" in state:
+            assert ret.data[state]["changes"]
+        else:
+            # key file sub state run
+            assert not ret.data[state]["changes"]
+
+
+def test_certificate_managed_existing_not_a_cert(
+    ssh_salt_ssh_cli, cert_args, existing_file, rsa_privkey, ca_key
+):
+    """
+    If `name` is not a valid certificate, a new one should be issued at the path
+    """
+    cert_args["name"] = str(existing_file)
+    ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
+    assert ret.returncode == 0
+    cert_state = next(x for x in ret.data if x.endswith("certificate_managed_ssh"))
+    assert "created" in ret.data[cert_state]["changes"]
+    assert ret.data[cert_state]["changes"]["created"] == str(existing_file)
+    cert = _get_cert(cert_args["name"])
+    assert cert.key_id == b"from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
 
 
 @pytest.mark.usefixtures("existing_cert")

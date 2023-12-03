@@ -445,17 +445,16 @@ def certificate_managed_wrapper(
             if not _check_ret(__salt__["file.file_exists"](private_key)):
                 create_private_key = True
             else:
-                public_key = _check_ret(
-                    __salt__["ssh_pki.get_public_key"](
-                        pk_args["name"],
-                        pk_args.get("passphrase"),
-                    )
+                public_key, create_private_key = _load_privkey(
+                    pk_args["name"],
+                    pk_args.get("passphrase"),
+                    pk_args.get("overwrite", False),
                 )
         elif private_key:
             if not _check_ret(__salt__["file.file_exists"](private_key)):
                 raise SaltInvocationError("Specified private key does not exist")
-            public_key = _check_ret(
-                __salt__["ssh_pki.get_public_key"](private_key, private_key_passphrase)
+            public_key, create_private_key = _load_privkey(
+                private_key, private_key_passphrase
             )
         elif public_key:
             # todo usually can be specified as the key itself
@@ -643,3 +642,31 @@ def certificate_managed_wrapper(
 
 def _filter_cert_managed_state_args(kwargs):
     return {k: v for k, v in kwargs.items() if k != "ttl_remaining"}
+
+
+def _load_privkey(pk, passphrase, overwrite=False):
+    public_key = None
+    create_private_key = False
+    try:
+        public_key = _check_ret(
+            __salt__["ssh_pki.get_public_key"](
+                pk,
+                passphrase,
+            )
+        )
+    except CommandExecutionError as err:
+        # All errors currently get mangled into this one.
+        # TODO: Subclass more specific errors to CommandExecutionError
+        # and reraise them in get_public_key
+        if "Could not load key as" in str(err):
+            if not overwrite:
+                raise CommandExecutionError(
+                    "The private key file could not be loaded. This can either "
+                    "the file is encrypted and the provided passphrase is wrong "
+                    "or the file is not a private key at all. Either way, you can "
+                    "pass overwrite: true to force regeneration"
+                )
+            create_private_key = True
+        else:
+            raise
+    return public_key, create_private_key
