@@ -266,7 +266,7 @@ install -p -m 0644 %{_salt_src}/pkg/common/salt-proxy@.service %{buildroot}%{_un
 # Logrotate
 #install -p %{SOURCE10} .
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
-install -p -m 0644 %{_salt_src}/pkg/common/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/salt
+install -p -m 0644 %{_salt_src}/pkg/common/logrotate/salt-common %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
 # Bash completion
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
