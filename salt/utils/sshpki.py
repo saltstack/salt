@@ -1,7 +1,7 @@
 import copy
-import datetime
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 
 from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, rsa
@@ -139,16 +139,15 @@ def build_crt(
         )
 
     not_before = (
-        datetime.datetime.strptime(not_before, x509.TIME_FMT).timestamp()
+        datetime.strptime(not_before, x509.TIME_FMT).timestamp()
         if not_before
-        else datetime.datetime.utcnow().timestamp()
+        else datetime.now(tz=timezone.utc).timestamp()
     )
     not_after = (
-        datetime.datetime.strptime(not_after, x509.TIME_FMT).timestamp()
+        datetime.strptime(not_after, x509.TIME_FMT).timestamp()
         if not_after
         else (
-            datetime.datetime.utcnow()
-            + datetime.timedelta(seconds=time.timestring_map(ttl))
+            datetime.now(tz=timezone.utc) + timedelta(seconds=time.timestring_map(ttl))
         ).timestamp()
     )
     builder = builder.valid_after(not_before).valid_before(not_after)
@@ -220,11 +219,9 @@ def check_cert_changes(
             ttl_remaining = ttl_remaining if ttl_remaining is not None else 604800  # 7d
         else:
             raise CommandExecutionError(f"Unknown cert_type: {current.type}")
-        if datetime.datetime.fromtimestamp(
-            current.valid_before
-        ) < datetime.datetime.utcnow() + datetime.timedelta(
-            seconds=time.timestring_map(ttl_remaining)
-        ):
+        if datetime.fromtimestamp(current.valid_before, tz=timezone.utc) < datetime.now(
+            tz=timezone.utc
+        ) + timedelta(seconds=time.timestring_map(ttl_remaining)):
             changes["expiration"] = True
 
         (builder, _), signing_pubkey = _build_cert_with_policy(
