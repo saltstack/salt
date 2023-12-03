@@ -199,14 +199,15 @@ def _parse_dnamasq(filename):
             if line.startswith("#"):
                 continue
             if "=" in line:
-                comps = line.split("=")
-                if comps[0] in fileopts:
-                    if isinstance(fileopts[comps[0]], str):
-                        temp = fileopts[comps[0]]
-                        fileopts[comps[0]] = [temp]
-                    fileopts[comps[0]].append(comps[1])
+                comps = line.split(sep="=", maxsplit=1)
+                key = comps[0].rstrip()
+                if key in fileopts:
+                    if isinstance(fileopts[key], str):
+                        temp = fileopts[key]
+                        fileopts[key] = [temp]
+                    fileopts[key].append(comps[1].lstrip())
                 else:
-                    fileopts[comps[0]] = comps[1]
+                    fileopts[key] = comps[1].lstrip()
             else:
                 fileopts[line] = True
     return fileopts
