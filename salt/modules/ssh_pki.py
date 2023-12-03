@@ -119,9 +119,9 @@ or compound matcher (for the latter, see the notes above).
 """
 import base64
 import copy
-import datetime
 import logging
 import os.path
+from datetime import datetime, timedelta, timezone
 
 try:
     from cryptography.hazmat.primitives import hashes, serialization
@@ -481,11 +481,9 @@ def expires(certificate, ttl=0):
     """
     cert = sshpki.load_cert(certificate)
     # dates are encoded in UTC/GMT, they are returned as a naive datetime object
-    return datetime.datetime.fromtimestamp(
-        cert.valid_before
-    ) <= datetime.datetime.utcnow() + datetime.timedelta(
-        seconds=time.timestring_map(ttl)
-    )
+    return datetime.fromtimestamp(cert.valid_before, tz=timezone.utc) <= datetime.now(
+        tz=timezone.utc
+    ) + timedelta(seconds=time.timestring_map(ttl))
 
 
 def get_private_key_size(private_key, passphrase=None):
@@ -597,11 +595,11 @@ def read_certificate(certificate):
         "key_type": key_type,
         "serial_number": x509util.dec2hex(cert.serial),
         "issuer_public_key": sshpki.encode_public_key(cert.signature_key()).decode(),
-        "not_before": datetime.datetime.fromtimestamp(
-            cert.valid_after, tz=datetime.timezone.utc
+        "not_before": datetime.fromtimestamp(
+            cert.valid_after, tz=timezone.utc
         ).strftime(x509util.TIME_FMT),
-        "not_after": datetime.datetime.fromtimestamp(
-            cert.valid_before, tz=datetime.timezone.utc
+        "not_after": datetime.fromtimestamp(
+            cert.valid_before, tz=timezone.utc
         ).strftime(x509util.TIME_FMT),
         "public_key": sshpki.encode_public_key(cert.public_key()).decode(),
         "critical_options": _parse_options(cert),
