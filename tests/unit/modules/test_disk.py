@@ -1,5 +1,5 @@
 import unittest
-from your_module import _parse_numbers
+from salt.modules.disk import _parse_numbers
 
 class TestParseNumbers(unittest.TestCase):
 
