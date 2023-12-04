@@ -1527,6 +1527,7 @@ def private_key_managed_ssh(name, result, comment, changes, tempfile=None, **kwa
                 pass
             return ret
         try:
+            # This will replace symlinks with the file
             __salt__["file.move"](tempfile, name)
         except Exception as err:  # pylint: disable=broad-except
             ret["result"] = False
