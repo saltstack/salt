@@ -468,9 +468,7 @@ def certificate_managed_wrapper(
         elif private_key:
             if not _check_ret(__salt__["file.file_exists"](private_key)):
                 raise SaltInvocationError("Specified private key does not exist")
-            public_key, create_private_key = _load_privkey(
-                private_key, private_key_passphrase
-            )
+            public_key, _ = _load_privkey(private_key, private_key_passphrase)
         elif public_key:
             # todo usually can be specified as the key itself
             if not _check_ret(__salt__["file.file_exists"](public_key)):
@@ -678,10 +676,10 @@ def _load_privkey(pk, passphrase, overwrite=False):
         if "Could not load key as" in str(err):
             if not overwrite:
                 raise CommandExecutionError(
-                    "The private key file could not be loaded. This can either "
+                    "The private key file could not be loaded. This can either mean "
                     "the file is encrypted and the provided passphrase is wrong "
                     "or the file is not a private key at all. Either way, you can "
-                    "pass overwrite: true to force regeneration"
+                    "pass overwrite: true to force regeneration if the file is managed"
                 )
             create_private_key = True
         else:
