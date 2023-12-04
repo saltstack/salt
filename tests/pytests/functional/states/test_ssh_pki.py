@@ -392,7 +392,10 @@ def existing_symlink(request):
     existing = request.getfixturevalue(request.param)
     test_file = Path(existing).with_name("symlink")
     test_file.symlink_to(existing)
-    yield test_file
+    try:
+        yield test_file
+    finally:
+        test_file.unlink(missing_ok=True)
 
 
 @pytest.mark.parametrize("cert_type", ["user", "host"])
