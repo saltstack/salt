@@ -21,32 +21,21 @@ from datetime import datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
+import attr
+import boto3
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 from requests.exceptions import ConnectTimeout
+from rich.progress import (
+    BarColumn,
+    Column,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 import tools.utils
-
-try:
-    import attr
-    import boto3
-    from botocore.exceptions import ClientError
-    from rich.progress import (
-        BarColumn,
-        Column,
-        Progress,
-        TaskProgressColumn,
-        TextColumn,
-        TimeRemainingColumn,
-    )
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
-
 
 if TYPE_CHECKING:
     # pylint: disable=no-name-in-module
@@ -1312,6 +1301,8 @@ class VM:
             "--no-owner",
             "--exclude",
             ".nox/",
+            "--exclude",
+            ".tools-venvs/",
             "--exclude",
             ".pytest_cache/",
             "--exclude",

@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/linux.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.8.5
+aiohttp==3.9.0
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
@@ -77,7 +77,6 @@ cffi==1.14.6
 charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
-    #   aiohttp
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
@@ -104,7 +103,7 @@ contextvars==2.4
     #   -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==41.0.4
+cryptography==41.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/static/pkg/linux.in
@@ -334,6 +333,8 @@ pycryptodomex==3.9.8
     #   -r requirements/crypto.txt
 pyeapi==0.8.3
     # via napalm
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
@@ -370,7 +371,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc27
+pytest-salt-factories==1.0.0rc28
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories

@@ -24,6 +24,17 @@ if sys.version_info < (3, 11):
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
+try:
+    import boto3
+except ImportError:
+    print(
+        "\nPlease run 'python -m pip install -r "
+        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+        file=sys.stderr,
+        flush=True,
+    )
+    raise
+
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -743,49 +754,6 @@ def pkg_matrix(
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     if TYPE_CHECKING:
         assert testing_releases
-    _matrix = []
-    sessions = [
-        "install",
-    ]
-    # OSs that where never included in 3005
-    # We cannot test an upgrade for this OS on this version
-    not_3005 = ["amazonlinux-2-arm64", "photonos-5", "photonos-5-arm64"]
-    # OSs that where never included in 3006
-    # We cannot test an upgrade for this OS on this version
-    not_3006 = ["photonos-5", "photonos-5-arm64"]
-    if (
-        distro_slug
-        not in [
-            "amazon-2023",
-            "amazon-2023-arm64",
-            "debian-11-arm64",
-            # TODO: remove debian 12 once debian 12 pkgs are released
-            "debian-12-arm64",
-            "debian-12",
-            # TODO: remove amazon 2023 once amazon 2023 pkgs are released
-            "amazonlinux-2023",
-            "amazonlinux-2023-arm64",
-            "ubuntu-20.04-arm64",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-            "amazonlinux-2-arm64",
-            "amazonlinux-2023",
-            "amazonlinux-2023-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # These OS's never had arm64 packages built for them
-        # with the tiamat onedir packages.
-        # we will need to ensure when we release 3006.0
-        # we allow for 3006.0 jobs to run, because then
-        # we will have arm64 onedir packages to upgrade from
-        sessions.append("upgrade")
-        sessions.append("downgrade")
 
     still_testing_3005 = False
     for release_version in testing_releases:
@@ -797,78 +765,110 @@ def pkg_matrix(
     if still_testing_3005 is False:
         ctx.error(
             f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error"
+            "and remove this error and the logic above the error. There may "
+            "be other places that need code removed as well."
         )
         ctx.exit(1)
 
-    # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
-    if (
-        distro_slug
-        not in [
-            "amazon-2023",
-            "amazon-2023-arm64",
-            "centosstream-9",
-            "debian-11-arm64",
-            "debian-12-arm64",
-            "debian-12",
-            "amazonlinux-2023",
-            "amazonlinux-2023-arm64",
-            "ubuntu-22.04",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # Packages for these OSs where never built for classic previously
-        sessions.append("upgrade-classic")
-        sessions.append("downgrade-classic")
+    adjusted_versions = []
+    for ver in testing_releases:
+        if ver < tools.utils.Version("3006.0"):
+            adjusted_versions.append((ver, "classic"))
+            adjusted_versions.append((ver, "tiamat"))
+        else:
+            adjusted_versions.append((ver, "relenv"))
+    ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
-    for session in sessions:
-        versions: list[str | None] = [None]
-        if session in ("upgrade", "downgrade"):
-            versions = [str(version) for version in testing_releases]
-        elif session in ("upgrade-classic", "downgrade-classic"):
-            versions = [
-                str(version)
-                for version in testing_releases
-                if version < tools.utils.Version("3006.0")
-            ]
-        for version in versions:
-            if (
-                version
-                and distro_slug in not_3005
-                and version < tools.utils.Version("3006.0")
-            ):
-                # We never build packages for these OSs in 3005
-                continue
-            elif (
-                version
-                and distro_slug in not_3006
-                and version < tools.utils.Version("3007.0")
-            ):
-                # We never build packages for these OSs in 3006
-                continue
-            if (
-                version
-                and distro_slug.startswith("amazonlinux-2023")
-                and version < tools.utils.Version("3006.6")
-            ):
-                # We never build packages for AmazonLinux 2023 prior to 3006.5
-                continue
-            _matrix.append(
-                {
-                    "tests-chunk": session,
-                    "version": version,
-                }
+    # Filter out the prefixes to look under
+    if "macos-" in distro_slug:
+        # We don't have golden images for macos, handle these separately
+        prefixes = {
+            "classic": "osx/",
+            "tiamat": "salt/py3/macos/minor/",
+            "relenv": "salt/py3/macos/minor/",
+        }
+    else:
+        parts = distro_slug.split("-")
+        name = parts[0]
+        version = parts[1]
+        if name in ("debian", "ubuntu"):
+            arch = "amd64"
+        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
+            arch = "x86_64"
+        if len(parts) > 2:
+            arch = parts[2]
+        if name == "amazonlinux":
+            name = "amazon"
+        if "centos" in name:
+            name = "redhat"
+        if "photon" in name:
+            name = "photon"
+        if name == "windows":
+            prefixes = {
+                "classic": "windows/",
+                "tiamat": "salt/py3/windows/minor",
+                "relenv": "salt/py3/windows/minor",
+            }
+        else:
+            prefixes = {
+                "classic": f"py3/{name}/{version}/{arch}/",
+                "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
+                "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
+            }
+
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    _matrix = [
+        {
+            "test-chunk": "install",
+            "version": None,
+        }
+    ]
+
+    for version, backend in adjusted_versions:
+        prefix = prefixes[backend]
+        # TODO: Remove this after 3009.0
+        if backend == "relenv" and version >= tools.utils.Version("3006.5"):
+            prefix.replace("/arm64/", "/aarch64/")
+        # Using a paginator allows us to list recursively and avoid the item limit
+        page_iterator = paginator.paginate(
+            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
+            Prefix=prefix,
+        )
+        # Uses a jmespath expression to test if the wanted version is in any of the filenames
+        key_filter = f"Contents[?contains(Key, '{version}')][]"
+        if pkg_type == "MSI":
+            # TODO: Add this back when we add MSI upgrade and downgrade tests
+            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            continue
+        elif pkg_type == "NSIS":
+            key_filter = (
+                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
-            if fips is True and distro_slug.startswith(("photonos-4", "photonos-5")):
-                # Repeat the last one, but with fips
-                _matrix.append({"fips": "fips", **_matrix[-1]})
+        objects = list(page_iterator.search(key_filter))
+        # Testing using `any` because sometimes the paginator returns `[None]`
+        if any(objects):
+            ctx.info(
+                f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
+            )
+            for session in ("upgrade", "downgrade"):
+                if backend == "classic":
+                    session += "-classic"
+                _matrix.append(
+                    {
+                        "test-chunk": session,
+                        "version": str(version),
+                    }
+                )
+                if (
+                    backend == "relenv"
+                    and fips is True
+                    and distro_slug.startswith(("photonos-4", "photonos-5"))
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
+        else:
+            ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -939,7 +939,7 @@ def get_pr_test_labels(
             ctx.exit(1)
 
         if "pull_request" not in gh_event:
-            ctx.warning("The 'pull_request' key was not found on the event payload.")
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
             ctx.exit(1)
 
         pr = gh_event["pull_request"]["number"]
@@ -1159,6 +1159,9 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     if not codecov:
         ctx.error("Could not find the path to the 'codecov' binary")
         ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert commit_sha is not None
 
     codecov_args = [
         codecov,

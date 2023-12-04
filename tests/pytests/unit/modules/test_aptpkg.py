@@ -1,11 +1,3 @@
-"""
-    :synopsis: Unit Tests for Advanced Packaging Tool module 'module.aptpkg'
-    :platform: Linux
-    :maturity: develop
-    versionadded:: 2017.7.0
-"""
-
-
 import copy
 import importlib
 import logging
@@ -24,7 +16,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.odict import OrderedDict
-from tests.support.mock import MagicMock, Mock, call, mock_open, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 
 try:
     from aptsources.sourceslist import (  # pylint: disable=unused-import
@@ -1556,31 +1548,35 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
         ]
 
 
+@pytest.fixture
+def _test_sourceslist_multiple_comps_fs(fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file(
+        "/etc/apt/sources.list",
+        contents="deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    )
+    yield
+
+
 @pytest.mark.skipif(
     HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
 )
+@pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
     with patch.object(aptpkg, "HAS_APT", return_value=True):
-        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
-            with patch("pathlib.Path.is_file", side_effect=[True, False]):
-                sources = aptpkg.SourcesList()
-                for source in sources:
-                    assert source.type == "deb"
-                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-                    assert source.comps == ["main", "restricted"]
-                    assert source.dist == "focal-updates"
+        sources = aptpkg.SourcesList()
+        for source in sources:
+            assert source.type == "deb"
+            assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+            assert source.comps == ["main", "restricted"]
+            assert source.dist == "focal-updates"
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
-@pytest.mark.parametrize(
-    "repo_line",
-    [
+@pytest.fixture(
+    params=(
         "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
@@ -1588,24 +1584,31 @@ def test_sourceslist_multiple_comps():
         "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
-    ],
+    )
+)
+def repo_line(request, fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file("/etc/apt/sources.list", contents=request.param)
+    yield request.param
+
+
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
 )
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
     """
-    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
-        with patch("pathlib.Path.is_file", side_effect=[True, False]):
-            sources = aptpkg.SourcesList()
-            for source in sources:
-                assert source.type == "deb"
-                assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-                assert source.comps == ["main", "restricted"]
-                assert source.dist == "focal-updates"
-                if "," in repo_line:
-                    assert source.architectures == ["amd64", "armel"]
-                else:
-                    assert source.architectures == ["amd64"]
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
+        if "," in repo_line:
+            assert source.architectures == ["amd64", "armel"]
+        else:
+            assert source.architectures == ["amd64"]
 
 
 @pytest.mark.parametrize(
