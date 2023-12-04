@@ -122,7 +122,7 @@ def _get_user_info(user=None):
             # if it doesn't exist then fall back to user Salt running as
             userinfo = _get_user_info()
         else:
-            raise SaltInvocationError("User {} does not exist".format(user))
+            raise SaltInvocationError(f"User {user} does not exist")
 
     return userinfo
 
@@ -556,15 +556,13 @@ def delete_key(
         return ret
 
     gpg = _create_gpg(user, gnupghome)
-    key = get_key(keyid, fingerprint, user)
+    key = get_key(keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome)
 
     def __delete_key(fingerprint, secret, use_passphrase):
-        if use_passphrase:
+        if secret and use_passphrase:
             gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
             if not gpg_passphrase:
-                ret["res"] = False
-                ret["message"] = "gpg_passphrase not available in pillar."
-                return ret
+                return "gpg_passphrase not available in pillar."
             else:
                 out = gpg.delete_keys(fingerprint, secret, passphrase=gpg_passphrase)
         else:
@@ -573,7 +571,7 @@ def delete_key(
 
     if key:
         fingerprint = key["fingerprint"]
-        skey = get_secret_key(keyid, fingerprint, user)
+        skey = get_secret_key(keyid, fingerprint, user, gnupghome=gnupghome)
         if skey:
             if not delete_secret:
                 ret["res"] = False
@@ -582,19 +580,29 @@ def delete_key(
                 ] = "Secret key exists, delete first or pass delete_secret=True."
                 return ret
             else:
-                if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":
+                out = __delete_key(fingerprint, True, use_passphrase)
+                if str(out) == "ok":
                     # Delete the secret key
-                    ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
+                    ret["message"] = f"Secret key for {fingerprint} deleted\n"
+                else:
+                    ret["res"] = False
+                    ret[
+                        "message"
+                    ] = f"Failed to delete secret key for {fingerprint}: {out}"
+                    return ret
 
         # Delete the public key
-        if str(__delete_key(fingerprint, False, use_passphrase)) == "ok":
-            ret["message"] += "Public key for {} deleted".format(fingerprint)
-        ret["res"] = True
-        return ret
+        out = __delete_key(fingerprint, False, use_passphrase)
+        if str(out) == "ok":
+            ret["res"] = True
+            ret["message"] += f"Public key for {fingerprint} deleted"
+        else:
+            ret["res"] = False
+            ret["message"] += f"Failed to delete public key for {fingerprint}: {out}"
     else:
         ret["res"] = False
         ret["message"] = "Key not available in keychain."
-        return ret
+    return ret
 
 
 def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
@@ -909,7 +917,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
         salt '*' gpg.receive_keys keys=3FAD9F1E user=username
 
     """
-    ret = {"res": True, "changes": {}, "message": []}
+    ret = {"res": True, "message": []}
 
     gpg = _create_gpg(user, gnupghome)
 
@@ -920,18 +928,30 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
         keys = keys.split(",")
 
     recv_data = gpg.recv_keys(keyserver, *keys)
-    for result in recv_data.results:
-        if "ok" in result:
-            if result["ok"] == "1":
-                ret["message"].append(
-                    "Key {} added to keychain".format(result["fingerprint"])
-                )
-            elif result["ok"] == "0":
-                ret["message"].append(
-                    "Key {} already exists in keychain".format(result["fingerprint"])
-                )
-        elif "problem" in result:
-            ret["message"].append("Unable to add key to keychain")
+    try:
+        if recv_data.results:
+            for result in recv_data.results:
+                if "ok" in result:
+                    if result["ok"] == "1":
+                        ret["message"].append(
+                            f"Key {result['fingerprint']} added to keychain"
+                        )
+                    elif result["ok"] == "0":
+                        ret["message"].append(
+                            f"Key {result['fingerprint']} already exists in keychain"
+                        )
+                elif "problem" in result:
+                    ret["message"].append(
+                        f"Unable to add key to keychain: {result.get('text', 'No further description')}"
+                    )
+
+        if not recv_data:
+            ret["res"] = False
+            ret["message"].append(f"GPG reported failure: {recv_data.stderr}")
+    except AttributeError:
+        ret["res"] = False
+        ret["message"] = ["Invalid return from python-gpg"]
+
     return ret
 
 
@@ -986,12 +1006,12 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             if key:
                 if "fingerprint" not in key:
                     ret["res"] = False
-                    ret["message"] = "Fingerprint not found for keyid {}".format(keyid)
+                    ret["message"] = f"Fingerprint not found for keyid {keyid}"
                     return ret
                 fingerprint = key["fingerprint"]
             else:
                 ret["res"] = False
-                ret["message"] = "KeyID {} not in GPG keychain".format(keyid)
+                ret["message"] = f"KeyID {keyid} not in GPG keychain"
                 return ret
         else:
             ret["res"] = False
@@ -1001,7 +1021,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
     if trust_level not in _VALID_TRUST_LEVELS:
         return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
 
-    stdin = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
+    stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
     cmd = [_gpg(), "--import-ownertrust"]
     _user = user
 
@@ -1397,7 +1417,7 @@ def encrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Encrypted data has been written to {}".format(output)
+                ret["comment"] = f"Encrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:
@@ -1485,7 +1505,7 @@ def decrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Decrypted data has been written to {}".format(output)
+                ret["comment"] = f"Decrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:
