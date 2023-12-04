@@ -4369,9 +4369,6 @@ class BaseHighState:
                     else:
                         include = state.pop("include")
 
-                # Keep track if the state only includes includes
-                empty_state_dict = len(state) == 0
-
                 self._handle_extend(state, sls, saltenv, errors)
                 self._handle_exclude(state, sls, saltenv, errors)
                 self._handle_state_decls(state, sls, saltenv, errors)
