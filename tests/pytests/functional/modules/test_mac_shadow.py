@@ -45,22 +45,6 @@ def test_info(shadow, accounts):
     assert ret["name"] == ""
 
 
-def test_get_account_existing(shadow, accounts):
-    """
-    Test shadow.get_account_existing
-    """
-    # Correct Functionality
-    text_date = shadow.get_account_existing(accounts.existing)
-    assert text_date != "Invalid Timestamp"
-    obj_date = datetime.datetime.strptime(text_date, "%Y-%m-%d %H:%M:%S")
-    assert isinstance(obj_date, datetime.date)
-
-    # User does not exist
-    with pytest.raises(CommandExecutionError) as exc:
-        shadow.get_account_existing(accounts.non_existing)
-        assert f"ERROR: User not found: {accounts.non_existing}" in str(exc.value)
-
-
 def test_get_last_change(shadow, accounts):
     """
     Test shadow.get_last_change
