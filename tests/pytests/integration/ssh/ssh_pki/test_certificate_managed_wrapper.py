@@ -183,6 +183,17 @@ def existing_file(tmp_path, request):
     yield test_file
 
 
+@pytest.fixture(params=["sshpki_data"])
+def existing_symlink(request):
+    existing = request.getfixturevalue(request.param)
+    test_file = Path(existing).with_name("symlink")
+    test_file.symlink_to(existing)
+    try:
+        yield test_file
+    finally:
+        test_file.unlink(missing_ok=True)
+
+
 def test_certificate_managed_remote(ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey):
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
@@ -339,8 +350,32 @@ def test_certificate_managed_privkey_managed_existing_not_a_privkey(
     If an existing managed private key cannot be read, it should be
     possible to overwrite it by specifying `overwrite: true`.
     """
+    _test_certificate_managed_existing_path(
+        ssh_salt_ssh_cli, cert_args, ca_key, existing_file, overwrite
+    )
+
+
+@pytest.mark.parametrize("overwrite", (False, True))
+def test_certificate_managed_privkey_managed_existing_symlink(
+    ssh_salt_ssh_cli, cert_args, ca_key, existing_symlink, overwrite
+):
+    """
+    If an existing managed private key is a symlink, it will be
+    written over instead of followed. Ensure the user is warned
+    about that and needs to opt-in.
+    """
+    # This test is essentially the same as for existing files, but
+    # parametrized fixtures cannot be requested with request.getfixturevalue
+    _test_certificate_managed_existing_path(
+        ssh_salt_ssh_cli, cert_args, ca_key, existing_symlink, overwrite
+    )
+
+
+def _test_certificate_managed_existing_path(
+    ssh_salt_ssh_cli, cert_args, ca_key, existing, overwrite
+):
     cert_args["private_key_managed"] = {
-        "name": str(existing_file),
+        "name": str(existing),
         "overwrite": overwrite,
     }
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
@@ -359,9 +394,11 @@ def test_certificate_managed_privkey_managed_existing_not_a_privkey(
     for state in ret.data:
         if state.startswith("ssh_pki") or "_crt" in state:
             assert ret.data[state]["changes"]
+            if "symlink" in existing.name and state.endswith("private_key_managed_ssh"):
+                assert "removed_link" in ret.data[state]["changes"]
         else:
             # key file sub state run
-            assert not ret.data[state]["changes"]
+            assert bool(ret.data[state]["changes"]) is ("symlink" in existing.name)
 
 
 def test_certificate_managed_existing_not_a_cert(
