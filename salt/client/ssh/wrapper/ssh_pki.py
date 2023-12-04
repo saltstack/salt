@@ -380,6 +380,7 @@ def certificate_managed_wrapper(
         This is required if ``private_key`` or ``public_key``
         have not been specified.
         Key rotation will be performed automatically if ``new: true``.
+        Note that the specified file path must not be a symlink.
 
     private_key
         The path of a private key to use for public key derivation
@@ -436,6 +437,7 @@ def certificate_managed_wrapper(
     ret = {}
     current = None
     cert_changes = {}
+    pk_changes = {}
     pk_temp_file = None
 
     try:
@@ -443,6 +445,19 @@ def certificate_managed_wrapper(
         if pk_args:
             private_key = pk_args["name"]
             if not _check_ret(__salt__["file.file_exists"](private_key)):
+                create_private_key = True
+            elif __salt__["file.is_link"](private_key):
+                if not pk_args.get("overwrite"):
+                    raise CommandExecutionError(
+                        "Specified private key path exists, but is a symlink, "
+                        "which is disallowed. Either specify the target path of "
+                        "the link or pass overwrite: true to force regeneration"
+                    )
+                if not (test or __opts__.get("test")):
+                    # The link would be written over anyways by `file.move`, but
+                    # let's remove it here in case that assumption fails
+                    __salt__["file.remove"](private_key)
+                pk_changes["removed_link"] = pk_args["name"]
                 create_private_key = True
             else:
                 public_key, create_private_key = _load_privkey(
@@ -502,6 +517,7 @@ def certificate_managed_wrapper(
                 }
                 if create_private_key or recreate_private_key:
                     pp = "created" if not recreate_private_key else "recreated"
+                    pk_ret["changes"] = pk_changes
                     pk_ret["changes"][pp] = pk_args["name"]
                     pk_ret["comment"] = f"The private key would have been {pp}"
                 ret[pk_args["name"] + "_key"] = {
@@ -566,6 +582,7 @@ def certificate_managed_wrapper(
             }
             if create_private_key or recreate_private_key:
                 pp = "created" if not recreate_private_key else "recreated"
+                pk_ret["changes"] = pk_changes
                 pk_ret["changes"][pp] = pk_args["name"]
                 pk_ret["comment"] = f"The private key has been {pp}"
             ret[pk_args["name"] + "_key"] = {
