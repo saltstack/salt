@@ -1,3 +1,4 @@
+import logging
 import os
 import signal
 
@@ -43,10 +44,13 @@ def test_log_sanitize(test_cmd, caplog):
         cmd,
         log_stdout=True,
         log_stderr=True,
+        log_stdout_level="debug",
+        log_stderr_level="debug",
         log_sanitize=password,
         stream_stdout=False,
         stream_stderr=False,
     )
-    ret = term.recv()
+    with caplog.at_level(logging.DEBUG):
+        ret = term.recv()
     assert password not in caplog.text
     assert "******" in caplog.text
