@@ -90,3 +90,18 @@ def test_versions_report(salt_cli):
     assert "relenv" in ret_dict["Dependency Versions"]
     assert "Salt Extensions" in ret_dict
     assert "salt-analytics-framework" in ret_dict["Salt Extensions"]
+
+
+def test_help_log(salt_cli):
+    """
+    Test to ensure when we pass in `--help` the insecure
+    log warning is included.
+    """
+    ret = salt_cli.run("--help")
+    count = 0
+    stdout = ret.stdout.split("\n")
+    for line in stdout:
+        if "sensitive data:" in line:
+            count += 1
+            assert line.strip() == "sensitive data: all, debug, garbage, profile, trace"
+    assert count == 2
