@@ -13,7 +13,7 @@ import tempfile
 import pytest
 
 try:
-    from smbprotocol.exceptions import CannotDelete
+    from smbprotocol.exceptions import CannotDelete, SMBResponseException
 
     HAS_PSEXEC = True
 except ImportError:
@@ -217,6 +217,7 @@ def test_deploy_windows_custom_port():
 @pytest.mark.skipif(not HAS_PSEXEC, reason="Missing SMB Protocol Library")
 def test_run_psexec_command_cleanup_lingering_paexec(caplog):
     pytest.importorskip("pypsexec.client", reason="Requires PyPsExec")
+
     mock_psexec = patch("salt.utils.cloud.PsExecClient", autospec=True)
     mock_scmr = patch("salt.utils.cloud.ScmrService", autospec=True)
     # We're mocking 'remove_service' because all we care about is the cleanup
@@ -249,7 +250,9 @@ def test_run_psexec_command_cleanup_lingering_paexec(caplog):
             "BarnicleBoy",
         )
         # pylint: disable=no-value-for-parameter
-        mock_client.return_value.cleanup = MagicMock(side_effect=CannotDelete())
+        mock_client.return_value.cleanup = MagicMock(
+            side_effect=CannotDelete(SMBResponseException)
+        )
 
         cloud.run_psexec_command(
             "spongebob",
