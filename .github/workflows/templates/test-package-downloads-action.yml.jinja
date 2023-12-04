@@ -318,7 +318,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Install System Dependencies
