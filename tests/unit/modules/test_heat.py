@@ -4,7 +4,6 @@ import salt.modules.file as file_
 import salt.modules.heat as heat
 import salt.modules.win_file as win_file
 import salt.utils.platform
-import salt.utils.win_dacl as dacl
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -78,10 +77,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                     "config.backup_mode": MagicMock(return_value=False),
                 },
             },
-            win_file: {
-                "__utils__": {"dacl.check_perms": salt.utils.win_dacl.check_perms}
-            },
-            dacl: {"__opts__": {"test": False}},
+            win_file: {"__opts__": {"test": False}},
         }
 
     def setUp(self):
@@ -166,7 +162,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {
             "result": False,
-            "comment": "Can not open environment: {}, ".format(env_file),
+            "comment": f"Can not open environment: {env_file}, ",
         }
 
     def test_heat_update_stack(self):

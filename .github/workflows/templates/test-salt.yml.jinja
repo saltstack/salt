@@ -1,3 +1,8 @@
+<%- if workflow_slug in ("nightly", "scheduled") %>
+  <%- set timeout_value = 360 %>
+<%- else %>
+  <%- set timeout_value = 180 %>
+<%- endif %>
 
   <%- for slug, display_name, arch in test_salt_listing["windows"] %>
 
@@ -21,6 +26,8 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
+      workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>
 
@@ -47,6 +54,8 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
+      workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>
 
@@ -73,5 +82,7 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
+      workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
 
   <%- endfor %>

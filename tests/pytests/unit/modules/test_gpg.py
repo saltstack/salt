@@ -15,7 +15,7 @@ import psutil
 import pytest
 
 import salt.modules.gpg as gpg
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 
 pytest.importorskip("gnupg")
 
@@ -466,8 +466,8 @@ def test_delete_key_with_passphrase_without_gpg_passphrase_in_pillar(gpghome):
     ]
 
     _expected_result = {
-        "res": True,
-        "message": "gpg_passphrase not available in pillar.",
+        "res": False,
+        "message": "Failed to delete secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx: gpg_passphrase not available in pillar.",
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -546,10 +546,15 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 ) as gnupg_delete_keys:
                     ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                     assert ret == _expected_result
+                    gnupg_delete_keys.assert_any_call(
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        True,
+                        passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    )
                     gnupg_delete_keys.assert_called_with(
                         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         False,
-                        passphrase=GPG_TEST_KEY_PASSPHRASE,
+                        expect_passphrase=False,
                     )
 
 
@@ -1039,3 +1044,76 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
                     gnupghome=str(gpghome.path),
                 )
                 assert ret["res"] is True
+
+
+@pytest.fixture(params={})
+def _import_result_mock(request):
+    defaults = {
+        "gpg": Mock(),
+        "imported": 0,
+        "results": [],
+        "fingerprints": [],
+        "count": 0,
+        "no_user_id": 0,
+        "imported_rsa": 0,
+        "unchanged": 0,
+        "n_uids": 0,
+        "n_subk": 0,
+        "n_sigs": 0,
+        "n_revoc": 0,
+        "sec_read": 0,
+        "sec_imported": 0,
+        "sec_dups": 0,
+        "not_imported": 0,
+        "stderr": "",
+        "data": b"",
+    }
+    defaults.update(request.param)
+    import_result = MagicMock()
+    import_result.__bool__.return_value = False
+    for var, val in defaults.items():
+        setattr(import_result, var, val)
+    return import_result
+
+
+@pytest.mark.parametrize(
+    "_import_result_mock",
+    (
+        {
+            "count": 1,
+            "stderr": "gpg: key ABCDEF0123456789: no user ID\ngpg: Total number processed: 1\n[GNUPG:] IMPORT_RES 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n",
+        },
+    ),
+    indirect=True,
+)
+def test_gpg_receive_keys_no_user_id(_import_result_mock):
+    with patch("salt.modules.gpg._create_gpg") as create:
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            create.return_value.recv_keys.return_value = _import_result_mock
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert any("no user ID" in x for x in res["message"])
+
+
+@pytest.mark.parametrize(
+    "_import_result_mock",
+    (
+        {
+            "results": [{"fingerprint": None, "problem": "0", "text": "Other failure"}],
+            "stderr": "[GNUPG:] FAILURE recv-keys 167772346\ngpg: keyserver receive failed: No keyserver available\n",
+            "returncode": 2,
+        },
+    ),
+    indirect=True,
+)
+def test_gpg_receive_keys_keyserver_unavailable(_import_result_mock):
+    with patch("salt.modules.gpg._create_gpg") as create:
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            create.return_value.recv_keys.return_value = _import_result_mock
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert any("No keyserver available" in x for x in res["message"])

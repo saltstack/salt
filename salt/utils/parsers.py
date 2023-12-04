@@ -41,7 +41,7 @@ import salt.utils.yaml
 import salt.version as version
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt.utils.verify import verify_log, verify_log_files
+from salt.utils.verify import insecure_log, verify_log, verify_log_files
 
 log = logging.getLogger(__name__)
 
@@ -610,9 +610,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
             *self._console_log_level_cli_flags,
             dest=self._loglevel_config_setting_name_,
             choices=list(salt._logging.LOG_LEVELS),
-            help="Console logging log level. One of {}. Default: '{}'.".format(
+            help="Console logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join([f"'{n}'" for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
+                ", ".join(insecure_log()),
             ),
         )
 
@@ -636,9 +638,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
             "--log-file-level",
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(salt._logging.SORTED_LEVEL_NAMES),
-            help="Logfile logging log level. One of {}. Default: '{}'.".format(
+            help="Logfile logging log level. One of {}. Default: '{}'. \n "
+            "The following log levels are INSECURE and may log sensitive data: {}".format(
                 ", ".join([f"'{n}'" for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
+                ", ".join(insecure_log()),
             ),
         )
         self._mixin_after_parsed_funcs.append(self.__setup_logging_routines)

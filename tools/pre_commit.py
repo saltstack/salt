@@ -85,7 +85,7 @@ def generate_workflows(ctx: Context):
         },
     }
     test_salt_listing = {
-        "linux": (
+        "linux": [
             ("almalinux-8", "Alma Linux 8", "x86_64"),
             ("almalinux-9", "Alma Linux 9", "x86_64"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
@@ -102,22 +102,28 @@ def generate_workflows(ctx: Context):
             ("fedora-38", "Fedora 38", "x86_64"),
             ("opensuse-15", "Opensuse 15", "x86_64"),
             ("photonos-3", "Photon OS 3", "x86_64"),
+            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64"),
             ("photonos-4", "Photon OS 4", "x86_64"),
             ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64"),
+            ("photonos-5", "Photon OS 5", "x86_64"),
+            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64"),
             ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
             ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
             ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64"),
-        ),
-        "macos": (("macos-12", "macOS 12", "x86_64"),),
-        "windows": (
+        ],
+        "macos": [
+            ("macos-12", "macOS 12", "x86_64"),
+            ("macos-13", "macOS 13", "x86_64"),
+        ],
+        "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
             ("windows-2019", "Windows 2019", "amd64"),
             ("windows-2022", "Windows 2022", "amd64"),
-        ),
+        ],
     }
     test_salt_pkg_listing = {
-        "linux": (
+        "linux": [
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm"),
             ("centos-7", "CentOS 7", "x86_64", "rpm"),
             ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm"),
@@ -128,19 +134,25 @@ def generate_workflows(ctx: Context):
             ("debian-12", "Debian 12", "x86_64", "deb"),
             ("debian-12-arm64", "Debian 12 Arm64", "aarch64", "deb"),
             ("photonos-3", "Photon OS 3", "x86_64", "rpm"),
+            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64", "rpm"),
             ("photonos-4", "Photon OS 4", "x86_64", "rpm"),
             ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64", "rpm"),
+            ("photonos-5", "Photon OS 5", "x86_64", "rpm"),
+            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64", "rpm"),
             ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "deb"),
             ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "deb"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "deb"),
             ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "deb"),
-        ),
-        "macos": (("macos-12", "macOS 12", "x86_64"),),
-        "windows": (
+        ],
+        "macos": [
+            ("macos-12", "macOS 12", "x86_64"),
+            ("macos-13", "macOS 13", "x86_64"),
+        ],
+        "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
             ("windows-2019", "Windows 2019", "amd64"),
             ("windows-2022", "Windows 2022", "amd64"),
-        ),
+        ],
     }
     build_ci_deps_listing = {
         "linux": [
@@ -168,8 +180,11 @@ def generate_workflows(ctx: Context):
             ("fedora-38-arm64", "Fedora 38 Arm64", "aarch64"),
             ("opensuse-15", "Opensuse 15", "x86_64"),
             ("photonos-3", "Photon OS 3", "x86_64"),
+            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64"),
             ("photonos-4", "Photon OS 4", "x86_64"),
             ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64"),
+            ("photonos-5", "Photon OS 5", "x86_64"),
+            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64"),
             ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
             ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
@@ -177,6 +192,7 @@ def generate_workflows(ctx: Context):
         ],
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
+            ("macos-13", "macOS 13", "x86_64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),

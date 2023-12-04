@@ -6171,7 +6171,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = rf"^(?!\s*{char}).*" + unanchor_regex
+    uncomment_regex = rf"^(?!\s*{char})\s*" + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing

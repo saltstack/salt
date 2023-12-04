@@ -11,6 +11,7 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.file as file
 import salt.modules.gpg as gpg
+import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.mock import Mock, patch
@@ -52,7 +53,9 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
+    osarch = cmd.run("dpkg --print-architecture").strip()
+    grains.update({"osarch": osarch})
     return {
         aptpkg: {
             "__salt__": {
@@ -63,8 +66,15 @@ def configure_loader_modules(minion_opts):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
+                "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
+                "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
+                "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
+                "pkg_resource.stringify": pkg_resource.stringify,
             },
             "__opts__": minion_opts,
+            "__grains__": grains,
         },
         file: {
             "__salt__": {"cmd.run_all": cmd.run_all},
@@ -80,6 +90,9 @@ def configure_loader_modules(minion_opts):
         },
         config: {
             "__opts__": minion_opts,
+        },
+        pkg_resource: {
+            "__grains__": grains,
         },
     }
 
@@ -374,3 +387,14 @@ def test_add_del_repo_key(get_key_file, aptkey):
             assert not keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert "0E08A149DE57BFBE" not in query_key
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_wildcard():
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
+    ret = aptpkg.remove(name="nginx-*")
+    assert not ret["nginx-light"]["new"]
+    assert ret["nginx-light"]["old"]
+    assert not ret["nginx-doc"]["new"]
+    assert ret["nginx-doc"]["old"]
