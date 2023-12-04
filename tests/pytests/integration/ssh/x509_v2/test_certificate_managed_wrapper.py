@@ -110,6 +110,27 @@ def existing_cert(x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey, request, pk
     yield cert_args["name"]
 
 
+@pytest.fixture(params=["1234"])
+def existing_file(tmp_path, request):
+    text = request.param
+    if callable(text):
+        text = request.getfixturevalue(text.__name__)
+    test_file = tmp_path / "existingfile"
+    test_file.write_text(text)
+    yield test_file
+
+
+@pytest.fixture(params=["x509_data"])
+def existing_symlink(request):
+    existing = request.getfixturevalue(request.param)
+    test_file = Path(existing).with_name("symlink")
+    test_file.symlink_to(existing)
+    try:
+        yield test_file
+    finally:
+        test_file.unlink(missing_ok=True)
+
+
 def test_certificate_managed_remote(x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey):
     ret = x509_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
@@ -136,6 +157,83 @@ def test_certificate_managed_remote_with_privkey_managed(
     for state in ret.data:
         # file.managed creates the files before moving data into them
         assert ret.data[state]["changes"]
+
+
+@pytest.mark.parametrize("overwrite", (False, True))
+def test_certificate_managed_privkey_managed_existing_not_a_privkey(
+    x509_salt_ssh_cli, cert_args, ca_key, existing_file, overwrite
+):
+    """
+    If an existing managed private key cannot be read, it should be
+    possible to overwrite it by specifying `overwrite: true`.
+    """
+    _test_certificate_managed_existing_privkey_path(
+        x509_salt_ssh_cli, cert_args, ca_key, existing_file, overwrite
+    )
+
+
+@pytest.mark.parametrize("overwrite", (False, True))
+def test_certificate_managed_privkey_managed_existing_symlink(
+    x509_salt_ssh_cli, cert_args, ca_key, existing_symlink, overwrite
+):
+    """
+    If an existing managed private key is a symlink, it will be
+    written over instead of followed. Ensure the user is warned
+    about that and needs to opt-in.
+    """
+    # This test is essentially the same as for existing files, but
+    # parametrized fixtures cannot be requested with request.getfixturevalue
+    _test_certificate_managed_existing_privkey_path(
+        x509_salt_ssh_cli, cert_args, ca_key, existing_symlink, overwrite
+    )
+
+
+def _test_certificate_managed_existing_privkey_path(
+    x509_salt_ssh_cli, cert_args, ca_key, existing, overwrite
+):
+    cert_args["private_key_managed"] = {
+        "name": str(existing),
+        "overwrite": overwrite,
+    }
+    ret = x509_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
+    assert (ret.returncode == 0) is overwrite
+    if not overwrite:
+        state = next(x for x in ret.data if x.endswith("private_key_managed_ssh"))
+        assert "pass overwrite: true" in ret.data[state]["comment"]
+        return
+    cert = _get_cert(cert_args["name"])
+    privkey = _get_privkey(cert_args["private_key_managed"]["name"])
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, privkey)
+    assert ret.data
+    assert len(ret.data) == 4
+    for state in ret.data:
+        if state.startswith("x509") or "_crt" in state:
+            assert ret.data[state]["changes"]
+            if "symlink" in existing.name and state.endswith("private_key_managed_ssh"):
+                assert "removed_link" in ret.data[state]["changes"]
+        else:
+            # key file sub state run
+            assert bool(ret.data[state]["changes"]) is ("symlink" in existing.name)
+
+
+def test_certificate_managed_existing_not_a_cert(
+    x509_salt_ssh_cli, cert_args, existing_file, rsa_privkey, ca_key
+):
+    """
+    If `name` is not a valid certificate, a new one should be issued at the path
+    """
+    cert_args["name"] = str(existing_file)
+    ret = x509_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
+    assert ret.returncode == 0
+    cert_state = next(x for x in ret.data if x.endswith("certificate_managed_ssh"))
+    assert "created" in ret.data[cert_state]["changes"]
+    assert ret.data[cert_state]["changes"]["created"] == str(existing_file)
+    cert = _get_cert(cert_args["name"])
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
 
 
 @pytest.mark.usefixtures("existing_cert")
