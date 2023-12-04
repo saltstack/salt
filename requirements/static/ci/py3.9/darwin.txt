@@ -380,7 +380,7 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
-pyspnego==0.10.2 ; sys_platform != "win32"
+pyspnego==0.10.2 ; sys_platform != "win32" and python_version >= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   smbprotocol
@@ -512,7 +512,7 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smbprotocol==1.12.0 ; sys_platform != "win32"
+smbprotocol==1.12.0 ; sys_platform != "win32" and python_version >= "3.9"
     # via -r requirements/static/ci/common.in
 smmap==4.0.0
     # via

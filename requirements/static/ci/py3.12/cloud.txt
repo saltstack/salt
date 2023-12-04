@@ -457,7 +457,7 @@ pyrsistent==0.17.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jsonschema
-pyspnego==0.10.2 ; sys_platform != "win32"
+pyspnego==0.10.2 ; sys_platform != "win32" and python_version >= "3.9"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -632,7 +632,7 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smbprotocol==1.12.0 ; sys_platform != "win32"
+smbprotocol==1.12.0 ; sys_platform != "win32" and python_version >= "3.9"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
