@@ -401,8 +401,6 @@ def setup_macos(
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if package_type == "package":
-        if arch == "aarch64":
-            arch = "arm64"
 
         if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
             mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"

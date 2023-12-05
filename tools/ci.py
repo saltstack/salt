@@ -1272,8 +1272,22 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 "--flags",
                 flags,
                 check=False,
+                capture=True,
             )
+            stdout = ret.stdout.strip().decode()
+            stderr = ret.stderr.strip().decode()
             if ret.returncode == 0:
+                ctx.console_stdout.print(stdout)
+                ctx.console.print(stderr)
+                break
+
+            if (
+                "Too many uploads to this commit" in stdout
+                or "Too many uploads to this commit" in stderr
+            ):
+                # Let's just stop trying
+                ctx.console_stdout.print(stdout)
+                ctx.console.print(stderr)
                 break
 
             if current_attempt >= max_attempts:

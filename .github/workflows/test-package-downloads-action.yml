@@ -442,10 +442,10 @@ jobs:
             arch: x86_64
             pkg-type: package
           - distro-slug: macos-13-xlarge
-            arch: aarch64
+            arch: arm64
             pkg-type: package
           - distro-slug: macos-13-xlarge
-            arch: aarch64
+            arch: arm64
             pkg-type: onedir
 
     steps:
@@ -461,7 +461,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Install System Dependencies
@@ -473,7 +473,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
