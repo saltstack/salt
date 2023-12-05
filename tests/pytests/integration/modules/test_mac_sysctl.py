@@ -34,6 +34,9 @@ def setup_teardown_vars(salt_call_cli, assign_cmd, config_file):
     ret = salt_call_cli.run("sysctl.get", assign_cmd, config_file)
     val = ret.data
 
+    if val is None:
+        pytest.skip(f"The call 'sysctl.get {assign_cmd}' returned: None")
+
     # If sysctl file is present, make a copy
     # Remove original file so we can replace it with test files
     if os.path.isfile(config_file):
