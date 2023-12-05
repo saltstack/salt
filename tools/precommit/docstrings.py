@@ -10,7 +10,6 @@ import ast
 import os
 import pathlib
 import re
-import sys
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
@@ -831,8 +830,7 @@ def annotate(
     # Print it to stdout so that the GitHub runner pick's it up and adds the annotation
     ctx.print(
         f"::{kind} file={fpath},line={start_lineno},endLine={end_lineno}::{message}",
-        file=sys.stdout,
-        flush=True,
+        soft_wrap=True,
     )
 
 
