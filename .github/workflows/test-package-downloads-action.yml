@@ -473,7 +473,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
