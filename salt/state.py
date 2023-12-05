@@ -106,6 +106,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "use_in",
         "__env__",
         "__sls__",
+        "__sls_included_from__",
         "__id__",
         "__orchestration_jid__",
         "__pub_user",
@@ -1703,6 +1704,8 @@ class State:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
                     chunk["__env__"] = body["__env__"]
+                if "__sls_included_from__" in body:
+                    chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = name
                 for arg in run:
                     if isinstance(arg, str):
@@ -2912,7 +2915,9 @@ class State:
                     for chunk in chunks:
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk["__sls__"], req_val):
+                            if fnmatch.fnmatch(
+                                chunk["__sls__"], req_val
+                            ) or req_val in chunk.get("__sls_included_from__", []):
                                 found = True
                                 reqs[r_state].append(chunk)
                             continue
@@ -4460,6 +4465,16 @@ class BaseHighState:
                                     context=context,
                                 )
                                 if nstate:
+                                    for item in nstate:
+                                        # Skip existing state keywords
+                                        if item.startswith("__"):
+                                            continue
+                                        if "__sls_included_from__" not in nstate[item]:
+                                            nstate[item]["__sls_included_from__"] = []
+                                        nstate[item]["__sls_included_from__"].append(
+                                            sls
+                                        )
+
                                     self.merge_included_states(state, nstate, errors)
                                     state.update(nstate)
                                 if err:
