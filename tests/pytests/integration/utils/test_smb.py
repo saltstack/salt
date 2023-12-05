@@ -90,7 +90,7 @@ def smb_dict(tmp_path):
         )
 
     _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
-    time.sleep(5)
+    time.sleep(10)
     conn_dict = {
         "tmpdir": tmp_path,
         "samba_dir": samba_dir,
