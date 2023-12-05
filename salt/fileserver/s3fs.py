@@ -134,7 +134,7 @@ def update():
                         cached_file_path = _get_cached_file_name(
                             bucket, saltenv, file_path
                         )
-                        log.info("%s - %s : %s", bucket, saltenv, file_path)
+                        log.debug("%s - %s : %s", bucket, saltenv, file_path)
 
                         # load the file from S3 if it's not in the cache or it's old
                         _get_file_from_s3(
