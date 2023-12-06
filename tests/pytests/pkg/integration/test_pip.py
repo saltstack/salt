@@ -42,6 +42,14 @@ def wipe_pydeps(shell, install_salt, extras_pypath):
             shutil.rmtree(dirname, ignore_errors=True)
 
 
+@pytest.fixture
+def pkg_tests_account_environ(pkg_tests_account):
+    environ = os.environ.copy()
+    environ["LOGNAME"] = environ["USER"] = pkg_tests_account.username
+    environ["HOME"] = pkg_tests_account.info.home
+    return environ
+
+
 def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
@@ -98,18 +106,25 @@ def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
     assert ret.returncode == 0
 
 
-def demote(user_uid, user_gid):
+def demote(account):
     def result():
         # os.setgid does not remove group membership, so we remove them here so they are REALLY non-root
         os.setgroups([])
-        os.setgid(user_gid)
-        os.setuid(user_uid)
+        os.setgid(account.info.gid)
+        os.setuid(account.info.uid)
 
     return result
 
 
 @pytest.mark.skip_on_windows(reason="We can't easily demote users on Windows")
-def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin, pypath):
+def test_pip_non_root(
+    shell,
+    install_salt,
+    pkg_tests_account,
+    extras_pypath_bin,
+    pypath,
+    pkg_tests_account_environ,
+):
     if install_salt.classic:
         pytest.skip("We can install non-root for classic packages")
     check_path = extras_pypath_bin / "pep8"
@@ -118,8 +133,8 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin, pypa
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
-        preexec_fn=demote(test_account.uid, test_account.gid),
-        env=test_account.env,
+        preexec_fn=demote(pkg_tests_account),
+        env=pkg_tests_account_environ,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -141,8 +156,8 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin, pypa
     # Now, we should still not be able to install as non-root
     ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["install", "pep8"],
-        preexec_fn=demote(test_account.uid, test_account.gid),
-        env=test_account.env,
+        preexec_fn=demote(pkg_tests_account),
+        env=pkg_tests_account_environ,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
