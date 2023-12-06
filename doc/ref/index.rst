@@ -12,7 +12,6 @@ This section contains a list of the Python modules that are used to extend the v
     ../ref/beacons/all/index
     ../ref/cache/all/index
     ../ref/clouds/all/index
-    ../ref/configuration/index
     ../ref/engines/all/index
     ../ref/modules/all/index
     ../ref/executors/all/index
