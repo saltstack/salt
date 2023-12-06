@@ -49,11 +49,13 @@ def test_salt_call_local_sys_doc_aliases(salt_call_cli):
 
 
 @pytest.mark.skip_on_windows()
-def test_salt_call_cmd_run_id_runas(salt_call_cli, test_account, caplog):
+def test_salt_call_cmd_run_id_runas(salt_call_cli, pkg_tests_account, caplog):
     """
     Test salt-call --local cmd_run id with runas
     """
-    ret = salt_call_cli.run("--local", "cmd.run", "id", runas=test_account.username)
+    ret = salt_call_cli.run(
+        "--local", "cmd.run", "id", runas=pkg_tests_account.username
+    )
     assert "Environment could not be retrieved for user" not in caplog.text
-    assert str(test_account.uid) in ret.stdout
-    assert str(test_account.gid) in ret.stdout
+    assert str(pkg_tests_account.info.uid) in ret.stdout
+    assert str(pkg_tests_account.info.gid) in ret.stdout

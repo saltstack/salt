@@ -12,15 +12,8 @@ from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 import salt.config
-from tests.pytests.pkg.support.helpers import (
-    CODE_DIR,
-    TESTS_DIR,
-    ApiRequest,
-    SaltMaster,
-    SaltMasterWindows,
-    SaltPkgInstall,
-    TestUser,
-)
+from tests.conftest import CODE_DIR, TESTS_DIR
+from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkgInstall
 
 log = logging.getLogger(__name__)
 
@@ -303,7 +296,9 @@ def sls(state_tree):
 
 
 @pytest.fixture(scope="session")
-def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
+def salt_master(
+    salt_factories, install_salt, state_tree, pillar_tree, pkg_tests_account
+):
     """
     Start up a master
     """
@@ -327,7 +322,13 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "pillar_roots": pillar_tree.as_dict(),
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
         "netapi_enable_clients": ["local"],
-        "external_auth": {"auto": {"saltdev": [".*"]}},
+        "external_auth": {
+            "auto": {
+                pkg_tests_account.username: [
+                    ".*",
+                ],
+            },
+        },
         "fips_mode": FIPS_TESTRUN,
         "open_mode": True,
     }
@@ -520,9 +521,9 @@ def salt_call_cli(salt_minion):
     return salt_minion.salt_call_cli()
 
 
-@pytest.fixture(scope="module")
-def test_account(salt_call_cli):
-    with TestUser(salt_call_cli=salt_call_cli) as account:
+@pytest.fixture(scope="session")
+def pkg_tests_account():
+    with pytest.helpers.create_account() as account:
         yield account
 
 
@@ -557,6 +558,8 @@ def salt_api(salt_master, install_salt, extras_pypath):
 
 
 @pytest.fixture(scope="module")
-def api_request(test_account, salt_api):
-    with ApiRequest(salt_api=salt_api, test_account=test_account) as session:
+def api_request(pkg_tests_account, salt_api):
+    with ApiRequest(
+        port=salt_api.config["rest_cherrypy"]["port"], account=pkg_tests_account
+    ) as session:
         yield session
