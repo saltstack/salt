@@ -6,4 +6,7 @@ import salt.loader.context
 loader_context = salt.loader.context.LoaderContext()
 
 
+__context__ = loader_context.named_context("__context__")
+__pillar__ = loader_context.named_context("__pillar__")
+__grains__ = loader_context.named_context("__grains__")
 __file_client__ = loader_context.named_context("__file_client__")
