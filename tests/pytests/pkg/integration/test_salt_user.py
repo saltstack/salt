@@ -175,7 +175,7 @@ def test_pkg_paths(
 
 @pytest.mark.skip_if_binaries_missing("logrotate")
 def test_paths_log_rotation(
-    salt_master, salt_minion, salt_call_cli, install_salt, test_account
+    salt_master, salt_minion, salt_call_cli, install_salt, pkg_tests_account
 ):
     """
     Test the correct ownership is assigned when log rotation occurs
@@ -267,7 +267,7 @@ def test_paths_log_rotation(
                                 "file.replace",
                                 f"{install_salt.conf_dir}/master",
                                 "user: salt",
-                                f"user: {test_account.username}",
+                                f"user: {pkg_tests_account.username}",
                                 "flags=['IGNORECASE']",
                                 "append_if_not_found=True",
                             )
@@ -276,7 +276,7 @@ def test_paths_log_rotation(
                             # change ownership of appropriate paths to user
                             for _path in log_pkg_paths:
                                 chg_ownership_cmd = (
-                                    f"chown -R {test_account.username} {_path}"
+                                    f"chown -R {pkg_tests_account.username} {_path}"
                                 )
                                 ret = salt_call_cli.run(
                                     "--local", "cmd.run", chg_ownership_cmd
@@ -317,7 +317,9 @@ def test_paths_log_rotation(
                                 for _path in log_files_list:
                                     log_path = pathlib.Path(_path)
                                     assert log_path.exists()
-                                    assert log_path.owner() == test_account.username
+                                    assert (
+                                        log_path.owner() == pkg_tests_account.username
+                                    )
                                     assert log_path.stat().st_mode & 0o7777 == 0o640
 
                             # cleanup
@@ -328,7 +330,7 @@ def test_paths_log_rotation(
                                 "--local",
                                 "file.replace",
                                 f"{install_salt.conf_dir}/master",
-                                f"user: {test_account.username}",
+                                f"user: {pkg_tests_account.username}",
                                 "user: salt",
                                 "flags=['IGNORECASE']",
                                 "append_if_not_found=True",

@@ -1,8 +1,7 @@
 import subprocess
+import textwrap
 
 import pytest
-
-from tests.pytests.pkg.support.helpers import TESTS_DIR
 
 
 @pytest.fixture
@@ -13,13 +12,40 @@ def python_script_bin(install_salt):
     return install_salt.binary_paths["python"]
 
 
+@pytest.fixture
+def check_python_file(tmp_path):
+    script_path = tmp_path / "check_python.py"
+    script_path.write_text(
+        textwrap.dedent(
+            """
+        import sys
+
+        import salt.utils.data
+
+        user_arg = sys.argv
+
+        if user_arg[1] == "raise":
+            raise Exception("test")
+
+        if salt.utils.data.is_true(user_arg[1]):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+        """
+        )
+    )
+    return script_path
+
+
 @pytest.mark.parametrize("exp_ret,user_arg", [(1, "false"), (0, "true")])
-def test_python_script(install_salt, exp_ret, user_arg, python_script_bin):
+def test_python_script(
+    install_salt, exp_ret, user_arg, python_script_bin, check_python_file
+):
     ret = install_salt.proc.run(
         *(
             python_script_bin
             + [
-                str(TESTS_DIR / "pytests" / "pkg" / "files" / "check_python.py"),
+                str(check_python_file),
                 user_arg,
             ]
         ),
@@ -32,12 +58,12 @@ def test_python_script(install_salt, exp_ret, user_arg, python_script_bin):
     assert ret.returncode == exp_ret, ret.stderr
 
 
-def test_python_script_exception(install_salt, python_script_bin):
+def test_python_script_exception(install_salt, python_script_bin, check_python_file):
     ret = install_salt.proc.run(
         *(
             python_script_bin
             + [
-                str(TESTS_DIR / "pytests" / "pkg" / "files" / "check_python.py"),
+                str(check_python_file),
                 "raise",
             ]
         ),

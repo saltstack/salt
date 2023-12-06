@@ -30,22 +30,9 @@ from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
 
 import salt.utils.files
+from tests.conftest import CODE_DIR
+from tests.support.pytest.helpers import TestAccount
 
-try:
-    import crypt
-
-    HAS_CRYPT = True
-except ImportError:
-    HAS_CRYPT = False
-try:
-    import pwd
-
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
-
-TESTS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent.parent
-CODE_DIR = TESTS_DIR.parent
 ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 
 log = logging.getLogger(__name__)
@@ -1452,81 +1439,9 @@ class SaltKey(PkgMixin, key.SaltKey):
 
 
 @attr.s(kw_only=True, slots=True)
-class TestUser:
-    """
-    Add a test user
-    """
-
-    salt_call_cli = attr.ib()
-
-    username = attr.ib(default="saltdev")
-    # Must follow Windows Password Complexity requirements
-    password = attr.ib(default="P@ssW0rd")
-    _pw_record = attr.ib(init=False, repr=False, default=None)
-
-    def salt_call_local(self, *args):
-        ret = self.salt_call_cli.run("--local", *args)
-        if ret.returncode != 0:
-            log.error(ret)
-        assert ret.returncode == 0
-        return ret.data
-
-    def add_user(self):
-        log.debug("Adding system account %r", self.username)
-        if platform.is_windows():
-            self.salt_call_local("user.add", self.username, self.password)
-        else:
-            self.salt_call_local("user.add", self.username)
-            hash_passwd = crypt.crypt(self.password, crypt.mksalt(crypt.METHOD_SHA512))
-            self.salt_call_local("shadow.set_password", self.username, hash_passwd)
-        assert self.username in self.salt_call_local("user.list_users")
-
-    def remove_user(self):
-        log.debug("Removing system account %r", self.username)
-        if platform.is_windows():
-            self.salt_call_local(
-                "user.delete", self.username, "purge=True", "force=True"
-            )
-        else:
-            self.salt_call_local("user.delete", self.username, "remove=True")
-
-    @property
-    def pw_record(self):
-        if self._pw_record is None and HAS_PWD:
-            self._pw_record = pwd.getpwnam(self.username)
-        return self._pw_record
-
-    @property
-    def uid(self):
-        if HAS_PWD:
-            return self.pw_record.pw_uid
-        return None
-
-    @property
-    def gid(self):
-        if HAS_PWD:
-            return self.pw_record.pw_gid
-        return None
-
-    @property
-    def env(self):
-        environ = os.environ.copy()
-        environ["LOGNAME"] = environ["USER"] = self.username
-        environ["HOME"] = self.pw_record.pw_dir
-        return environ
-
-    def __enter__(self):
-        self.add_user()
-        return self
-
-    def __exit__(self, *_):
-        self.remove_user()
-
-
-@attr.s(kw_only=True, slots=True)
 class ApiRequest:
-    salt_api: SaltApi = attr.ib(repr=False)
-    test_account: TestUser = attr.ib(repr=False)
+    port: int = attr.ib(repr=False)
+    account: TestAccount = attr.ib(repr=False)
     session: requests.Session = attr.ib(init=False, repr=False)
     api_uri: str = attr.ib(init=False)
     auth_data: Dict[str, str] = attr.ib(init=False)
@@ -1537,13 +1452,13 @@ class ApiRequest:
 
     @api_uri.default
     def _default_api_uri(self):
-        return f"http://localhost:{self.salt_api.config['rest_cherrypy']['port']}"
+        return f"http://localhost:{self.port}"
 
     @auth_data.default
     def _default_auth_data(self):
         return {
-            "username": self.test_account.username,
-            "password": self.test_account.password,
+            "username": self.account.username,
+            "password": self.account.password,
             "eauth": "auto",
             "out": "json",
         }
