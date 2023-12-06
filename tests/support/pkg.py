@@ -197,7 +197,8 @@ class SaltPkgInstall:
         The version of the local salt artifacts being tested, based on regex matching
         """
         version = ""
-        for artifact in ARTIFACTS_DIR.glob("**/*.*"):
+        artifacts = list(ARTIFACTS_DIR.glob("**/*.*"))
+        for artifact in artifacts:
             version = re.search(
                 r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(exe|msi|pkg|rpm|deb))",
                 artifact.name,
@@ -206,6 +207,11 @@ class SaltPkgInstall:
                 version = version.groups()[0].replace("_", "-").replace("~", "")
                 version = version.split("-")[0]
                 break
+        if not version:
+            pytest.fail(
+                f"Failed to package artifacts in '{ARTIFACTS_DIR}'. "
+                f"Directory Contents:\n{pprint.pformat(artifacts)}"
+            )
         return version
 
     def update_process_path(self):
