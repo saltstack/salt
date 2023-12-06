@@ -21,7 +21,6 @@ from tests.pytests.pkg.support.helpers import (
     SaltPkgInstall,
     TestUser,
 )
-from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
@@ -35,16 +34,6 @@ def version(install_salt):
     get version number from artifact
     """
     return install_salt.version
-
-
-@pytest.fixture(scope="session")
-def sminion():
-    return create_sminion()
-
-
-@pytest.fixture(scope="session")
-def grains(sminion):
-    return sminion.opts["grains"].copy()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -510,7 +499,7 @@ def salt_minion(salt_factories, salt_master, install_salt):
             subprocess.run(["chown", "-R", "salt:salt", str(_dir)], check=True)
 
     factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key_pkg, salt_master, factory.id
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
     with factory.started(start_timeout=start_timeout):
         yield factory
