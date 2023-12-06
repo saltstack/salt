@@ -925,10 +925,13 @@ class SaltPkgInstall:
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
+    # pylint: disable=access-member-before-definition
     def get_service_name(self):
         if self._service_name is None:
             self._service_name = self.factory.script_name
         return self._service_name
+
+    # pylint: enable=access-member-before-definition
 
 
 @attr.s(kw_only=True)
@@ -1008,12 +1011,12 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         # We completely override the parent class method because we're not using
         # the self._terminal property, it's a launchd service
         if self._process is None:  # pragma: no cover
+            # pylint: disable=access-member-before-definition
             if TYPE_CHECKING:
                 # Make mypy happy
                 assert self._terminal_result
-            return (
-                self._terminal_result
-            )  # pylint: disable=access-member-before-definition
+            return self._terminal_result
+            # pylint: enable=access-member-before-definition
 
         atexit.unregister(self.terminate)
         log.info("Stopping %s", self.factory)
@@ -1021,12 +1024,10 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         # Collect any child processes information before terminating the process
         with contextlib.suppress(psutil.NoSuchProcess):
             for child in psutil.Process(pid).children(recursive=True):
-                if (
-                    child not in self._children
-                ):  # pylint: disable=access-member-before-definition
-                    self._children.append(
-                        child
-                    )  # pylint: disable=access-member-before-definition
+                # pylint: disable=access-member-before-definition
+                if child not in self._children:
+                    self._children.append(child)
+                # pylint: enable=access-member-before-definition
 
         if self._process.is_running():  # pragma: no cover
             cmdline = _get_cmdline(self._process)
@@ -1065,10 +1066,12 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
             slow_stop=self.factory.slow_stop,
         )
 
+        # pylint: disable=access-member-before-definition
         if self._terminal_stdout is not None:
-            self._terminal_stdout.close()  # pylint: disable=access-member-before-definition
+            self._terminal_stdout.close()
         if self._terminal_stderr is not None:
-            self._terminal_stderr.close()  # pylint: disable=access-member-before-definition
+            self._terminal_stderr.close()
+        # pylint: enable=access-member-before-definition
         stdout = stderr = ""
         try:
             self._terminal_result = ProcessResult(
@@ -1143,12 +1146,12 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         # We completely override the parent class method because we're not using the
         # self._terminal property, it's a systemd service
         if self._process is None:  # pragma: no cover
+            # pylint: disable=access-member-before-definition
             if TYPE_CHECKING:
                 # Make mypy happy
                 assert self._terminal_result
-            return (
-                self._terminal_result
-            )  # pylint: disable=access-member-before-definition
+            return self._terminal_result
+            # pylint: enable=access-member-before-definition
 
         atexit.unregister(self.terminate)
         log.info("Stopping %s", self.factory)
@@ -1156,12 +1159,10 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         # Collect any child processes information before terminating the process
         with contextlib.suppress(psutil.NoSuchProcess):
             for child in psutil.Process(pid).children(recursive=True):
-                if (
-                    child not in self._children
-                ):  # pylint: disable=access-member-before-definition
-                    self._children.append(
-                        child
-                    )  # pylint: disable=access-member-before-definition
+                # pylint: disable=access-member-before-definition
+                if child not in self._children:
+                    self._children.append(child)
+                # pylint: enable=access-member-before-definition
 
         if self._process.is_running():  # pragma: no cover
             cmdline = _get_cmdline(self._process)
@@ -1201,10 +1202,12 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
             slow_stop=self.factory.slow_stop,
         )
 
+        # pylint: disable=access-member-before-definition
         if self._terminal_stdout is not None:
-            self._terminal_stdout.close()  # pylint: disable=access-member-before-definition
+            self._terminal_stdout.close()
         if self._terminal_stderr is not None:
-            self._terminal_stderr.close()  # pylint: disable=access-member-before-definition
+            self._terminal_stderr.close()
+        # pylint: enable=access-member-before-definition
         stdout = stderr = ""
         try:
             self._terminal_result = ProcessResult(
