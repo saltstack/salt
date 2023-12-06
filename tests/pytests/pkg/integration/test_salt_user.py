@@ -252,7 +252,8 @@ def test_paths_log_rotation(
                                         f"cp -a {_path}/* {str(temp_dir_path_4)}/"
                                     )
                                 elif bkup_count > 5:
-                                    assert bkupcount < bkup_count_max  # force assertion
+                                    # force assertion
+                                    assert bkup_count < bkup_count_max
 
                                 ret = salt_call_cli.run(
                                     "--local", "cmd.run", cmd_to_run
@@ -349,7 +350,8 @@ def test_paths_log_rotation(
                                     # use --update since /opt/saltstack/salt and would get SIGSEGV since mucking with running code
                                     cmd_to_run = f"cp -a --update --force {str(temp_dir_path_4)}/* {_path}/"
                                 elif bkup_count > 5:
-                                    assert bkupcount < bkup_count_max  # force assertion
+                                    # force assertion
+                                    assert bkup_count < bkup_count_max
 
                                 ret = salt_call_cli.run(
                                     "--local", "cmd.run", cmd_to_run
