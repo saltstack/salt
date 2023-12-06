@@ -1,6 +1,5 @@
 import os.path
 import pathlib
-import re
 import subprocess
 
 import pytest
