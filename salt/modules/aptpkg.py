@@ -1057,9 +1057,9 @@ def _uninstall(action="remove", name=None, pkgs=None, **kwargs):
 
     old = list_pkgs()
     old_removed = list_pkgs(removed=True)
-    targets = [x for x in pkg_params if x in old]
+    targets = salt.utils.pkg.match_wildcard(old, pkg_params)
     if action == "purge":
-        targets.extend([x for x in pkg_params if x in old_removed])
+        targets.update(salt.utils.pkg.match_wildcard(old_removed, pkg_params))
     if not targets:
         return {}
     cmd = ["apt-get", "-q", "-y", action]

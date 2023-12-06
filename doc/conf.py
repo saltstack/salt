@@ -3,12 +3,18 @@
 Sphinx documentation for Salt
 """
 import os
+import pathlib
 import re
+import shutil
 import sys
+import textwrap
 import time
 import types
 
 from sphinx.directives.other import TocTree
+from sphinx.util import logging
+
+log = logging.getLogger(__name__)
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
@@ -414,6 +420,67 @@ class ReleasesTree(TocTree):
         return rst
 
 
+def copy_release_templates_pre(app):
+    app._copied_release_files = []
+    docs_path = pathlib.Path(docs_basepath)
+    release_files_dir = docs_path / "topics" / "releases"
+    release_template_files_dir = release_files_dir / "templates"
+    for fpath in release_template_files_dir.iterdir():
+        dest = release_files_dir / fpath.name.replace(".template", "")
+        if dest.exists():
+            continue
+        log.info(
+            "Copying '%s' -> '%s' just for this build ...",
+            fpath.relative_to(docs_path),
+            dest.relative_to(docs_path),
+        )
+        app._copied_release_files.append(dest)
+        shutil.copyfile(fpath, dest)
+
+
+def copy_release_templates_post(app, exception):
+    docs_path = pathlib.Path(docs_basepath)
+    for fpath in app._copied_release_files:
+        log.info(
+            "The release file '%s' was copied for the build, but its not in "
+            "version control system. Deleting.",
+            fpath.relative_to(docs_path),
+        )
+        fpath.unlink()
+
+
+def extract_module_deprecations(app, what, name, obj, options, lines):
+    """
+    Add a warning to the modules being deprecated into extensions.
+    """
+    # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#event-autodoc-process-docstring
+    if what != "module":
+        # We're only interested in module deprecations
+        return
+
+    try:
+        deprecated_info = obj.__deprecated__
+    except AttributeError:
+        # The module is not deprecated
+        return
+
+    _version, _extension, _url = deprecated_info
+    msg = textwrap.dedent(
+        f"""
+        .. warning::
+
+            This module will be removed from Salt in version {_version} in favor of
+            the `{_extension} Salt Extension <{_url}>`_.
+
+        """
+    )
+    # Modify the docstring lines in-place
+    lines[:] = msg.splitlines() + lines
+
+
 def setup(app):
     app.add_directive("releasestree", ReleasesTree)
     app.connect("autodoc-skip-member", skip_mod_init_member)
+    app.connect("builder-inited", copy_release_templates_pre)
+    app.connect("build-finished", copy_release_templates_post)
+    app.connect("autodoc-process-docstring", extract_module_deprecations)

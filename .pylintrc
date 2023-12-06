@@ -697,7 +697,8 @@ allowed-3rd-party-modules=msgpack,
                           fnmatch,
                           ptscripts,
                           packaging,
-                          looseversion
+                          looseversion,
+                          pytestskipmarkers
 
 [EXCEPTIONS]
 
