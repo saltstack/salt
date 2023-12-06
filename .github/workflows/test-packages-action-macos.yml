@@ -214,6 +214,7 @@ jobs:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
             artifacts
+            !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
