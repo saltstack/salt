@@ -22,7 +22,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-7  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -3728,6 +3728,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-x86_64.tar.xz
+          path: artifacts/pkgs/incoming
+
+      - name: Download macOS arm64 Onedir Archive
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-aarch64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive
