@@ -55,6 +55,8 @@ repos:
           - pre-commit
           - changelog
           - pre-commit-checks
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: generate-workflows
@@ -65,6 +67,8 @@ repos:
           - pre-commit
           - workflows
           - generate-workflows
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: actionlint
@@ -76,6 +80,8 @@ repos:
           - pre-commit
           - workflows
           - actionlint
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: check-docs
@@ -85,6 +91,8 @@ repos:
           - pre-commit
           - docs
           - check
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: check-docstrings
@@ -99,6 +107,8 @@ repos:
           - pre-commit
           - docstrings
           - check
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: check-known-missing-docstrings
@@ -114,6 +124,8 @@ repos:
           - pre-commit
           - docstrings
           - check
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: loader-check-virtual
@@ -128,6 +140,8 @@ repos:
           - pre-commit
           - salt-loaders
           - check-virtual
+        additional_dependencies:
+          - urllib3<2.0
 
       - id: tools
         alias: check-filemap
@@ -138,6 +152,8 @@ repos:
           - pre-commit
           - filemap
           - check
+        additional_dependencies:
+          - urllib3<2.0
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
 
