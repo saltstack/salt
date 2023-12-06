@@ -1560,40 +1560,6 @@ class ApiRequest:
 
 
 @pytest.helpers.register
-def remove_stale_minion_key_pkg(master, minion_id):
-    key_path = os.path.join(master.config["pki_dir"], "minions", minion_id)
-    if os.path.exists(key_path):
-        os.unlink(key_path)
-    else:
-        log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
-
-
-@pytest.helpers.register
-def remove_stale_master_key(master):
-    keys_path = os.path.join(master.config["pki_dir"], "master")
-    for key_name in ("master.pem", "master.pub"):
-        key_path = os.path.join(keys_path, key_name)
-        if os.path.exists(key_path):
-            os.unlink(key_path)
-        else:
-            log.debug(
-                "The master(id=%r) %s key was not found at %s",
-                master.id,
-                key_name,
-                key_path,
-            )
-    key_path = os.path.join(master.config["pki_dir"], "minion", "minion_master.pub")
-    if os.path.exists(key_path):
-        os.unlink(key_path)
-    else:
-        log.debug(
-            "The master(id=%r) minion_master.pub key was not found at %s",
-            master.id,
-            key_path,
-        )
-
-
-@pytest.helpers.register
 def download_file(url, dest, auth=None):
     # NOTE the stream=True parameter below
     with requests.get(url, stream=True, auth=auth) as r:
