@@ -9,10 +9,9 @@ import pytest
 import yaml
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
-from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 import salt.config
-from tests.conftest import CODE_DIR, TESTS_DIR
+from tests.conftest import CODE_DIR
 from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkgInstall
 
 log = logging.getLogger(__name__)
@@ -181,127 +180,20 @@ def salt_factories(salt_factories, salt_factories_root_dir):
 
 
 @pytest.fixture(scope="session")
-def state_tree():
-    if platform.is_windows():
-        file_root = pathlib.Path("C:/salt/srv/salt")
-    elif platform.is_darwin():
-        file_root = pathlib.Path("/opt/srv/salt")
-    else:
-        file_root = pathlib.Path("/srv/salt")
-    envs = {
-        "base": [
-            str(file_root),
-            str(TESTS_DIR / "pytests" / "pkg" / "files"),
-        ],
-    }
-    tree = SaltStateTree(envs=envs)
-    test_sls_contents = """
-    test_foo:
-      test.succeed_with_changes:
-          - name: foo
-    """
-    states_sls_contents = """
-    update:
-      pkg.installed:
-        - name: bash
-    salt_dude:
-      user.present:
-        - name: dude
-        - fullname: Salt Dude
-    """
-    win_states_sls_contents = """
-    create_empty_file:
-      file.managed:
-        - name: C://salt/test/txt
-    salt_dude:
-      user.present:
-        - name: dude
-        - fullname: Salt Dude
-    """
-    with tree.base.temp_file("test.sls", test_sls_contents), tree.base.temp_file(
-        "states.sls", states_sls_contents
-    ), tree.base.temp_file("win_states.sls", win_states_sls_contents):
-        yield tree
-
-
-@pytest.fixture(scope="session")
-def pillar_tree():
-    """
-    Add pillar files
-    """
-    if platform.is_windows():
-        pillar_root = pathlib.Path("C:/salt/srv/pillar")
-    elif platform.is_darwin():
-        pillar_root = pathlib.Path("/opt/srv/pillar")
-    else:
-        pillar_root = pathlib.Path("/srv/pillar")
-    pillar_root.mkdir(mode=0o777, parents=True, exist_ok=True)
-    tree = SaltPillarTree(
-        envs={
-            "base": [
-                str(pillar_root),
-            ]
-        },
-    )
-    top_file_contents = """
-    base:
-      '*':
-        - test
-    """
-    test_file_contents = """
-    info: test
-    """
-    with tree.base.temp_file("top.sls", top_file_contents), tree.base.temp_file(
-        "test.sls", test_file_contents
-    ):
-        yield tree
-
-
-@pytest.fixture(scope="module")
-def sls(state_tree):
-    """
-    Add an sls file
-    """
-    test_sls_contents = """
-    test_foo:
-      test.succeed_with_changes:
-          - name: foo
-    """
-    states_sls_contents = """
-    update:
-      pkg.installed:
-        - name: bash
-    salt_dude:
-      user.present:
-        - name: dude
-        - fullname: Salt Dude
-    """
-    win_states_sls_contents = """
-    create_empty_file:
-      file.managed:
-        - name: C://salt/test/txt
-    salt_dude:
-      user.present:
-        - name: dude
-        - fullname: Salt Dude
-    """
-    with state_tree.base.temp_file(
-        "tests.sls", test_sls_contents
-    ), state_tree.base.temp_file(
-        "states.sls", states_sls_contents
-    ), state_tree.base.temp_file(
-        "win_states.sls", win_states_sls_contents
-    ):
-        yield
-
-
-@pytest.fixture(scope="session")
-def salt_master(
-    salt_factories, install_salt, state_tree, pillar_tree, pkg_tests_account
-):
+def salt_master(salt_factories, install_salt, pkg_tests_account):
     """
     Start up a master
     """
+    if platform.is_windows():
+        state_tree = "C:/salt/srv/salt"
+        pillar_tree = "C:/salt/srv/pillar"
+    elif platform.is_darwin():
+        state_tree = "/opt/srv/salt"
+        pillar_tree = "/opt/srv/pillar"
+    else:
+        state_tree = "/srv/salt"
+        pillar_tree = "/srv/pillar"
+
     start_timeout = None
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
@@ -318,9 +210,20 @@ def salt_master(
         config_defaults["enable_fqdns_grains"] = False
     config_overrides = {
         "timeout": 30,
-        "file_roots": state_tree.as_dict(),
-        "pillar_roots": pillar_tree.as_dict(),
-        "rest_cherrypy": {"port": 8000, "disable_ssl": True},
+        "file_roots": {
+            "base": [
+                state_tree,
+            ]
+        },
+        "pillar_roots": {
+            "base": [
+                pillar_tree,
+            ]
+        },
+        "rest_cherrypy": {
+            "port": 8000,
+            "disable_ssl": True,
+        },
         "netapi_enable_clients": ["local"],
         "external_auth": {
             "auto": {
@@ -432,15 +335,14 @@ def salt_master(
             ],
             check=True,
         )
+
         # The engines_dirs is created in .nox path. We need to set correct perms
         # for the user running the Salt Master
-        subprocess.run(
-            ["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")], check=False
-        )
-        file_roots = pathlib.Path("/srv/", "salt")
-        pillar_roots = pathlib.Path("/srv/", "pillar")
-        for _dir in [file_roots, pillar_roots]:
-            subprocess.run(["chown", "-R", "salt:salt", str(_dir)], check=False)
+        check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
+        for path in check_paths:
+            if os.path.exists(path) is False:
+                continue
+            subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
 
     with factory.started(start_timeout=start_timeout):
         yield factory
@@ -494,10 +396,13 @@ def salt_minion(salt_factories, salt_master, install_salt):
     # which sets root perms on /srv/salt and /srv/pillar since we are running
     # the test suite as root, but we want to run Salt master as salt
     if not platform.is_windows() and not platform.is_darwin():
-        file_roots = pathlib.Path("/srv/", "salt")
-        pillar_roots = pathlib.Path("/srv/", "pillar")
-        for _dir in [file_roots, pillar_roots]:
-            subprocess.run(["chown", "-R", "salt:salt", str(_dir)], check=True)
+        state_tree = "/srv/salt"
+        pillar_tree = "/srv/pillar"
+        check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
+        for path in check_paths:
+            if os.path.exists(path) is False:
+                continue
+            subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
 
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
