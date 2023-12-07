@@ -12,26 +12,17 @@ STATIC_REQUIREMENTS_PATH = REQUIREMENTS_FILES_PATH / "static"
 CI_REQUIREMENTS_FILES_PATH = (
     STATIC_REQUIREMENTS_PATH / "ci" / "py{}.{}".format(*sys.version_info)
 )
-PKG_REQUIREMENTS_FILES_PATH = (
-    STATIC_REQUIREMENTS_PATH / "pkg" / "py{}.{}".format(*sys.version_info)
-)
 DEFAULT_REQS_CONFIG = DefaultRequirementsConfig(
     pip_args=[
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-        f"--constraint={PKG_REQUIREMENTS_FILES_PATH / 'linux.txt'}",
     ],
     requirements_files=[
-        REQUIREMENTS_FILES_PATH / "base.txt",
         CI_REQUIREMENTS_FILES_PATH / "tools.txt",
     ],
 )
 RELEASE_VENV_CONFIG = VirtualEnvConfig(
-    env={
-        "PIP_CONSTRAINT": str(REQUIREMENTS_FILES_PATH / "constraints.txt"),
-    },
     pip_args=[
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-        f"--constraint={PKG_REQUIREMENTS_FILES_PATH / 'linux.txt'}",
     ],
     requirements_files=[
         CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
