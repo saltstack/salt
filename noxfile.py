@@ -1842,7 +1842,9 @@ def ci_test_onedir_pkgs(session):
         )
 
     chunks = {
-        "install": ["tests/pytests/pkg/"],
+        "install": [
+            "tests/pytests/pkg/",
+        ],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
@@ -1895,8 +1897,6 @@ def ci_test_onedir_pkgs(session):
     pytest_args = (
         cmd_args[:]
         + [
-            "-c",
-            str(REPO_ROOT / "pkg-tests-pytest.ini"),
             f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
             f"--log-file=artifacts/logs/runtests-{chunk}.log",
         ]
@@ -1915,8 +1915,6 @@ def ci_test_onedir_pkgs(session):
         pytest_args = (
             cmd_args[:]
             + [
-                "-c",
-                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
                 f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
                 "--lf",
@@ -1936,8 +1934,6 @@ def ci_test_onedir_pkgs(session):
         pytest_args = (
             cmd_args[:]
             + [
-                "-c",
-                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
                 f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 f"--log-file=artifacts/logs/runtests-install.log",
@@ -1955,8 +1951,6 @@ def ci_test_onedir_pkgs(session):
             pytest_args = (
                 cmd_args[:]
                 + [
-                    "-c",
-                    str(REPO_ROOT / "pkg-tests-pytest.ini"),
                     "--no-install",
                     f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
                     f"--log-file=artifacts/logs/runtests-install-rerun.log",
