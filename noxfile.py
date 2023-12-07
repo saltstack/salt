@@ -1894,6 +1894,8 @@ def ci_test_onedir_pkgs(session):
     if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
 
+    cmd_args.append("--pkg-system-service")
+
     pytest_args = (
         cmd_args[:]
         + [
