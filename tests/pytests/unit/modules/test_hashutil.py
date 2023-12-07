@@ -61,6 +61,7 @@ def test_base64_decodestring(the_string, the_string_base64):
     assert hashutil.base64_decodestring(the_string_base64) == the_string
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_md5_digest(the_string, the_string_md5):
     assert hashutil.md5_digest(the_string) == the_string_md5
 

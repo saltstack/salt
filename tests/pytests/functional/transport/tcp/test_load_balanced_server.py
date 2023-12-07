@@ -13,6 +13,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_tcp_load_balancer_server(master_opts, io_loop):
 
     messages = []
@@ -27,7 +28,7 @@ def test_tcp_load_balancer_server(master_opts, io_loop):
     def run_loop():
         try:
             io_loop.start()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             print(f"Caught exeption {exc}")
 
     thread = threading.Thread(target=server.run)
@@ -50,7 +51,7 @@ def test_tcp_load_balancer_server(master_opts, io_loop):
             if time.monotonic() - start > 30:
                 break
 
-    io_loop.run_sync(lambda: check_test())
+    io_loop.run_sync(lambda: check_test())  # pylint: disable=unnecessary-lambda
 
     try:
         if time.monotonic() - start > 30:

@@ -25,6 +25,10 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 REQUIRED_BOTO3_VERSION = "1.2.1"
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 def __virtual__():
     """

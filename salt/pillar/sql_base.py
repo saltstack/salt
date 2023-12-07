@@ -198,20 +198,18 @@ More complete example for MySQL (to also show configuration)
             with_lists: [1,3]
 """
 
-import abc  # Added in python2.6 so always available
+import abc
 import logging
 
 from salt.utils.dictupdate import update
 from salt.utils.odict import OrderedDict
 
+log = logging.getLogger(__name__)
+
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
 
 # tests/unit/pillar/mysql_test.py may help understand this code.
-
-
-# Set up logging
-log = logging.getLogger(__name__)
 
 
 # This ext_pillar is abstract and cannot be used directory
