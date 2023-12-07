@@ -1905,6 +1905,9 @@ def ci_test_onedir_pkgs(session):
     try:
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     except CommandFailed:
+        if os.environ.get("RERUN_FAILURES", "0") == "0":
+            # Don't rerun on failures
+            return
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
