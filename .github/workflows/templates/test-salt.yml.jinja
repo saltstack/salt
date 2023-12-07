@@ -1,8 +1,10 @@
-<%- if workflow_slug in ("nightly", "scheduled") %>
-  <%- set timeout_value = 360 %>
-<%- else %>
-  <%- set timeout_value = 180 %>
-<%- endif %>
+{#-
+  Full test runs. Each chunk should never take more than 2 hours. We allow 3, and on windows we add 30 more minutes.
+  Partial test runs(no chunk parallelization), 6 Hours
+#}
+<%- set full_testrun_timeout_value = 180 %>
+<%- set partial_testrun_timeout_value = 360 %>
+<%- set windows_full_testrun_timeout_value = full_testrun_timeout_value + 30 %>
 
   <%- for slug, display_name, arch in test_salt_listing["windows"] %>
 
@@ -27,7 +29,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
-      default-timeout: <{ timeout_value }>
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ windows_full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
 
   <%- endfor %>
 
@@ -55,7 +57,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
-      default-timeout: <{ timeout_value }>
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
 
   <%- endfor %>
 
@@ -82,7 +84,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
-      default-timeout: <{ timeout_value }>
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>
