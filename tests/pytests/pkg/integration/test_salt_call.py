@@ -6,8 +6,8 @@ def test_salt_call_local(salt_call_cli):
     Test salt-call --local test.ping
     """
     ret = salt_call_cli.run("--local", "test.ping")
-    assert ret.data is True
     assert ret.returncode == 0
+    assert ret.data is True
 
 
 def test_salt_call(salt_call_cli):
@@ -15,19 +15,31 @@ def test_salt_call(salt_call_cli):
     Test salt-call test.ping
     """
     ret = salt_call_cli.run("test.ping")
-    assert ret.data is True
     assert ret.returncode == 0
+    assert ret.data is True
 
 
-def test_sls(salt_call_cli):
+@pytest.fixture
+def state_name(salt_master):
+    name = "some-test-state"
+    sls_contents = """
+    test_foo:
+      test.succeed_with_changes:
+          - name: foo
+    """
+    with salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents):
+        yield name
+
+
+def test_sls(salt_call_cli, state_name):
     """
     Test calling a sls file
     """
-    ret = salt_call_cli.run("state.apply", "test")
-    assert ret.data, ret
+    ret = salt_call_cli.run("state.apply", state_name)
+    assert ret.returncode == 0
+    assert ret.data
     sls_ret = ret.data[next(iter(ret.data))]
     assert sls_ret["changes"]["testing"]["new"] == "Something pretended to change"
-    assert ret.returncode == 0
 
 
 def test_salt_call_local_sys_doc_none(salt_call_cli):
@@ -35,8 +47,8 @@ def test_salt_call_local_sys_doc_none(salt_call_cli):
     Test salt-call --local sys.doc none
     """
     ret = salt_call_cli.run("--local", "sys.doc", "none")
-    assert not ret.data
     assert ret.returncode == 0
+    assert not ret.data
 
 
 def test_salt_call_local_sys_doc_aliases(salt_call_cli):
@@ -44,11 +56,11 @@ def test_salt_call_local_sys_doc_aliases(salt_call_cli):
     Test salt-call --local sys.doc aliases
     """
     ret = salt_call_cli.run("--local", "sys.doc", "aliases.list_aliases")
-    assert "aliases.list_aliases" in ret.data
     assert ret.returncode == 0
+    assert "aliases.list_aliases" in ret.data
 
 
-@pytest.mark.skip_on_windows()
+@pytest.mark.skip_on_windows
 def test_salt_call_cmd_run_id_runas(salt_call_cli, pkg_tests_account, caplog):
     """
     Test salt-call --local cmd_run id with runas
