@@ -2,14 +2,13 @@
 virt execution module unit tests
 """
 
-# pylint: disable=3rd-party-module-not-gated
-
-
 import datetime
 import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
+
+import pytest
 
 import salt.config
 import salt.modules.config as config
@@ -17,17 +16,13 @@ import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# pylint: disable=import-error
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-# pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
 
-
-class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
+class LibvirtMock(MagicMock):
     """
     Libvirt library mock
     """
@@ -130,7 +125,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "model": "virtio",
                     "filename": "myvm_system.qcow2",
                     "image": "/path/to/image",
-                    "source_file": "{}{}myvm_system.qcow2".format(root_dir, os.sep),
+                    "source_file": f"{root_dir}{os.sep}myvm_system.qcow2",
                 },
                 {
                     "name": "data",
@@ -139,7 +134,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "format": "raw",
                     "model": "virtio",
                     "filename": "myvm_data.raw",
-                    "source_file": "{}{}myvm_data.raw".format(root_dir, os.sep),
+                    "source_file": f"{root_dir}{os.sep}myvm_data.raw",
                 },
             ],
             disks,
@@ -1882,6 +1877,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_init(self):
         """
         Test init() function
@@ -2127,7 +2123,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(definition.find("./devices/disk[2]/source"))
                 self.assertEqual(
                     mock_run.call_args[0][0],
-                    'qemu-img create -f qcow2 "{}" 10240M'.format(expected_disk_path),
+                    f'qemu-img create -f qcow2 "{expected_disk_path}" 10240M',
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
 
@@ -4389,7 +4385,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "tag": "first-snap",
                         "vmsize": 1234,
                         "date": datetime.datetime.fromtimestamp(
-                            float("{}.{}".format(1528877587, 380589000))
+                            float(f"{1528877587}.{380589000}")
                         ).isoformat(),
                         "vmclock": "00:00:00",
                     },
@@ -4398,7 +4394,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "tag": "second snap",
                         "vmsize": 4567,
                         "date": datetime.datetime.fromtimestamp(
-                            float("{}.{}".format(1528877592, 933509000))
+                            float(f"{1528877592}.{933509000}")
                         ).isoformat(),
                         "vmclock": "00:00:00",
                     },
@@ -5301,9 +5297,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for i in range(2):
             net_mock = MagicMock()
 
-            net_mock.name.return_value = "net{}".format(i)
+            net_mock.name.return_value = f"net{i}"
             net_mock.UUIDString.return_value = "some-uuid"
-            net_mock.bridgeName.return_value = "br{}".format(i)
+            net_mock.bridgeName.return_value = f"br{i}"
             net_mock.autostart.return_value = True
             net_mock.isActive.return_value = False
             net_mock.isPersistent.return_value = True
@@ -5763,8 +5759,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_mocks = []
         for i in range(2):
             pool_mock = MagicMock()
-            pool_mock.name.return_value = "pool{}".format(i)
-            pool_mock.UUIDString.return_value = "some-uuid-{}".format(i)
+            pool_mock.name.return_value = f"pool{i}"
+            pool_mock.UUIDString.return_value = f"some-uuid-{i}"
             pool_mock.info.return_value = [0, 1234, 5678, 123]
             pool_mock.autostart.return_value = True
             pool_mock.isPersistent.return_value = True
@@ -6294,7 +6290,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for idx, disk in enumerate(vms_disks):
             vm = MagicMock()
             # pylint: disable=no-member
-            vm.name.return_value = "vm{}".format(idx)
+            vm.name.return_value = f"vm{idx}"
             vm.XMLDesc.return_value = """
                     <domain type='kvm' id='1'>
                       <name>vm{}</name>
@@ -6833,7 +6829,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         def create_mock_vm(idx):
             mock_vm = MagicMock()
-            mock_vm.name.return_value = "vm{}".format(idx)
+            mock_vm.name.return_value = f"vm{idx}"
             return mock_vm
 
         mock_vms = [create_mock_vm(idx) for idx in range(3)]

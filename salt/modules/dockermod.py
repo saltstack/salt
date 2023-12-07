@@ -222,6 +222,7 @@ import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.loader.dunder import __file_client__
 from salt.state import HighState
 
 __docformat__ = "restructuredtext en"
@@ -329,6 +330,18 @@ def __virtual__():
             ),
         )
     return (False, "Could not import docker module, is docker-py installed?")
+
+
+def _file_client():
+    """
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
+    """
+    if __file_client__:
+        return __file_client__.value()
+    return salt.fileclient.get_file_client(__opts__)
 
 
 class DockerJSONDecoder(json.JSONDecoder):
@@ -531,11 +544,11 @@ def _clear_context():
             pass
 
 
-def _get_md5(name, path):
+def _get_sha256(name, path):
     """
-    Get the MD5 checksum of a file from a container
+    Get the sha256 checksum of a file from a container
     """
-    output = run_stdout(name, f"md5sum {shlex.quote(path)}", ignore_retcode=True)
+    output = run_stdout(name, f"sha256sum {shlex.quote(path)}", ignore_retcode=True)
     try:
         return output.split()[0]
     except IndexError:
@@ -3634,8 +3647,8 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
             raise SaltInvocationError(f"Source file {source} does not exist")
 
     # Before we try to replace the file, compare checksums.
-    source_md5 = _get_md5(name, source)
-    if source_md5 == __salt__["file.get_sum"](dest, "md5"):
+    source_sha256 = _get_sha256(name, source)
+    if source_sha256 == __salt__["file.get_sum"](dest, "sha256"):
         log.debug("%s:%s and %s are the same file, skipping copy", name, source, dest)
         return True
 
@@ -3647,7 +3660,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
         src_path = f"{name}:{source}"
     cmd = ["docker", "cp", src_path, dest_dir]
     __salt__["cmd.run"](cmd, python_shell=False)
-    return source_md5 == __salt__["file.get_sum"](dest, "md5")
+    return source_sha256 == __salt__["file.get_sum"](dest, "sha256")
 
 
 # Docker cp gets a file from the container, alias this to copy_from
@@ -6639,7 +6652,7 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=""
     # reuse it from salt.ssh, however this function should
     # be somewhere else
     refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
-    with salt.fileclient.get_file_client(__opts__) as fileclient:
+    with _file_client() as fileclient:
         return salt.client.ssh.state.prep_trans_tar(
             fileclient, chunks, refs, pillar, name
         )

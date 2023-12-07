@@ -39,7 +39,7 @@ runs:
 
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >

@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 import uuid
 
@@ -9,11 +10,6 @@ from saltfactories.daemons.container import SaltMinion
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
-
-
-def _install_salt_in_container(container):
-    ret = container.run("python3", "-m", "pip", "install", "/salt")
-    log.debug("Install Salt in the container: %s", ret)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -72,7 +68,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.container_start_check(self._check_script_path_exists)
         for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
             self.check_ports[port] = port
-        self.before_start(_install_salt_in_container, self, on_container=False)
+        self.before_start(self._install_salt_in_container, on_container=False)
 
     def _check_script_path_exists(self, timeout_at):
         while time.time() <= timeout_at:
@@ -85,3 +81,37 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         else:
             return False
         return True
+
+    def _install_salt_in_container(self):
+        ret = self.run("bash", "-c", "echo $SALT_PY_VERSION")
+        assert ret.returncode == 0
+        if not ret.stdout:
+            log.warning(
+                "The 'SALT_PY_VERSION' environment variable is not set on the container"
+            )
+            salt_py_version = 3
+            ret = self.run(
+                "python3",
+                "-c",
+                "import sys; sys.stderr.write('{}.{}'.format(*sys.version_info))",
+            )
+            assert ret.returncode == 0
+            if not ret.stdout:
+                requirements_py_version = "{}.{}".format(*sys.version_info)
+            else:
+                requirements_py_version = ret.stdout.strip()
+        else:
+            salt_py_version = requirements_py_version = ret.stdout.strip()
+
+        self.python_executable = f"python{salt_py_version}"
+
+        ret = self.run(
+            self.python_executable,
+            "-m",
+            "pip",
+            "install",
+            f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
+            "/salt",
+        )
+        log.debug("Install Salt in the container: %s", ret)
+        assert ret.returncode == 0

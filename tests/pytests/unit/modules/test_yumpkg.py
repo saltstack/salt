@@ -1,3 +1,4 @@
+import configparser
 import logging
 import os
 
@@ -8,10 +9,14 @@ import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
+
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+]
 
 
 @pytest.fixture
@@ -28,7 +33,9 @@ def configure_loader_modules():
                 "os_family": "RedHat",
                 "osmajorrelease": 7,
             },
-            "__salt__": {"pkg_resource.add_pkg": _add_data},
+            "__salt__": {
+                "pkg_resource.add_pkg": _add_data,
+            },
         },
         pkg_resource: {},
     }
@@ -36,7 +43,6 @@ def configure_loader_modules():
 
 @pytest.fixture(scope="module")
 def list_repos_var():
-
     return {
         "base": {
             "file": "/etc/yum.repos.d/CentOS-Base.repo",
@@ -96,6 +102,71 @@ def yum_and_dnf(request):
         yumpkg.__grains__, request.param["grains"]
     ), patch.dict(pkg_resource.__grains__, request.param["grains"]):
         yield request.param["cmd"]
+
+
+def test__virtual_normal():
+    assert yumpkg.__virtual__() == "pkg"
+
+
+def test__virtual_yumpkg_api():
+    with patch.dict(yumpkg.__opts__, {"yum_provider": "yumpkg_api"}):
+        assert yumpkg.__virtual__() == (
+            False,
+            "Module yumpkg: yumpkg_api provider not available",
+        )
+
+
+def test__virtual_exception():
+    with patch.dict(yumpkg.__grains__, {"os": 1}):
+        assert yumpkg.__virtual__() == (
+            False,
+            "Module yumpkg: no yum based system detected",
+        )
+
+
+def test__virtual_no_yum():
+    with patch.object(yumpkg, "_yum", MagicMock(return_value=None)):
+        assert yumpkg.__virtual__() == (False, "DNF nor YUM found")
+
+
+def test__virtual_non_yum_system():
+    with patch.dict(yumpkg.__grains__, {"os_family": "ubuntu"}):
+        assert yumpkg.__virtual__() == (
+            False,
+            "Module yumpkg: no yum based system detected",
+        )
+
+
+def test_strip_headers():
+    output = os.linesep.join(["spongebob", "squarepants", "squidward"])
+    args = ("spongebob", "squarepants")
+    assert yumpkg._strip_headers(output, *args) == "squidward\n"
+
+
+def test_get_copr_repo():
+    result = yumpkg._get_copr_repo("copr:spongebob/squarepants")
+    assert result == "copr:copr.fedorainfracloud.org:spongebob:squarepants"
+
+
+def test_get_hold():
+    line = "vim-enhanced-2:7.4.827-1.fc22"
+    with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")):
+        assert yumpkg._get_hold(line) == "vim-enhanced-2:7.4.827-1.fc22"
+
+
+def test_get_options():
+    result = yumpkg._get_options(
+        repo="spongebob",
+        disableexcludes="squarepants",
+        __dunder_keyword="this is skipped",
+        stringvalue="string_value",
+        boolvalue=True,
+        get_extra_options=True,
+    )
+    assert "--enablerepo=spongebob" in result
+    assert "--disableexcludes=squarepants" in result
+    assert "--stringvalue=string_value" in result
+    assert "--boolvalue" in result
 
 
 def test_list_pkgs():
@@ -473,6 +544,16 @@ def test_list_patches():
             assert _patch in patches["my-fake-patch-installed-1234"]["summary"]
 
 
+def test_list_patches_refresh():
+    expected = ["spongebob"]
+    mock_get_patches = MagicMock(return_value=expected)
+    patch_get_patches = patch.object(yumpkg, "_get_patches", mock_get_patches)
+    patch_refresh_db = patch.object(yumpkg, "refresh_db", MagicMock())
+    with patch_refresh_db, patch_get_patches:
+        result = yumpkg.list_patches(refresh=True)
+        assert result == expected
+
+
 def test_latest_version_with_options():
     with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})):
 
@@ -562,6 +643,66 @@ def test_latest_version_with_options():
                     output_loglevel="trace",
                     python_shell=False,
                 )
+
+
+def test_list_repo_pkgs_attribute_error():
+    patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+    mock_run = MagicMock(return_value="3.4.5")
+    patch_run = patch.dict(yumpkg.__salt__, {"cmd.run": mock_run})
+    mock_yum = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    patch_yum = patch.object(yumpkg, "_call_yum", mock_yum)
+    with patch_get_options, patch_run, patch_yum:
+        assert yumpkg.list_repo_pkgs(fromrepo=1, disablerepo=2, enablerepo=3) == {}
+
+
+def test_list_repo_pkgs_byrepo(list_repos_var):
+    patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+    stdout_installed = """\
+Installed Packages
+spongebob.x86_64     1.1.el9_1    @bikini-bottom-rpms
+squarepants.x86_64   1.2.el9_1    @bikini-bottom-rpms
+patrick.noarch       1.3.el9_1    @rock-bottom-rpms
+squidward.x86_64     1.4.el9_1    @rock-bottom-rpms"""
+    stdout_available = """\
+Available Packages
+plankton.noarch      2.1-1.el9_2    bikini-bottom-rpms
+dennis.x86_64        2.2-2.el9      bikini-bottom-rpms
+man-ray.x86_64       2.3-1.el9_2    bikini-bottom-rpms
+doodlebob.x86_64     2.4-1.el9_2    bikini-bottom-rpms"""
+    run_all_side_effect = (
+        {"retcode": 0, "stdout": stdout_installed},
+        {"retcode": 0, "stdout": stdout_available},
+    )
+    patch_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "cmd.run": MagicMock(return_value="3.4.5"),
+            "cmd.run_all": MagicMock(side_effect=run_all_side_effect),
+            "config.get": MagicMock(return_value=False),
+        },
+    )
+    patch_list_repos = patch.object(
+        yumpkg,
+        "list_repos",
+        MagicMock(return_value=list_repos_var),
+    )
+    with patch_get_options, patch_salt, patch_list_repos:
+        expected = {
+            "bikini-bottom-rpms": {
+                "dennis": ["2.2-2.el9"],
+                "doodlebob": ["2.4-1.el9_2"],
+                "man-ray": ["2.3-1.el9_2"],
+                "plankton": ["2.1-1.el9_2"],
+                "spongebob": ["1.1.el9_1"],
+                "squarepants": ["1.2.el9_1"],
+            },
+            "rock-bottom-rpms": {
+                "patrick": ["1.3.el9_1"],
+                "squidward": ["1.4.el9_1"],
+            },
+        }
+        result = yumpkg.list_repo_pkgs(byrepo=True)
+        assert result == expected
 
 
 def test_list_repo_pkgs_with_options(list_repos_var):
@@ -767,6 +908,87 @@ def test_list_upgrades_dnf():
             )
 
 
+def test_list_upgrades_refresh():
+    mock_call_yum = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.object(yumpkg, "refresh_db", MagicMock()):
+        with patch.object(yumpkg, "_call_yum", mock_call_yum):
+            assert yumpkg.list_upgrades(refresh=True) == {}
+
+
+def test_list_upgrades_error():
+    mock_return = {"retcode": 1, "Error:": "Error"}
+    mock_call_yum = MagicMock(return_value=mock_return)
+    with patch.object(yumpkg, "_call_yum", mock_call_yum):
+        assert yumpkg.list_upgrades(refresh=False) == {}
+
+
+def test_list_downloaded():
+    mock_walk = MagicMock(
+        return_value=[
+            (
+                "/var/cache/yum",
+                [],
+                ["pkg1-3.1-16.1.x86_64.rpm", "pkg2-1.2-13.2.x86_64.rpm"],
+            )
+        ]
+    )
+    mock_pkginfo = MagicMock(
+        side_effect=[
+            {
+                "name": "pkg1",
+                "version": "3.1",
+            },
+            {
+                "name": "pkg2",
+                "version": "1.2",
+            },
+        ]
+    )
+    mock_getctime = MagicMock(return_value=1696536082.861206)
+    mock_getsize = MagicMock(return_value=75701688)
+    with patch.dict(yumpkg.__salt__, {"lowpkg.bin_pkg_info": mock_pkginfo}), patch(
+        "salt.utils.path.os_walk", mock_walk
+    ), patch("os.path.getctime", mock_getctime), patch("os.path.getsize", mock_getsize):
+        result = yumpkg.list_downloaded()
+    expected = {
+        "pkg1": {
+            "3.1": {
+                "creation_date_time": "2023-10-05T14:01:22",
+                "creation_date_time_t": 1696536082,
+                "path": "/var/cache/yum/pkg1-3.1-16.1.x86_64.rpm",
+                "size": 75701688,
+            },
+        },
+        "pkg2": {
+            "1.2": {
+                "creation_date_time": "2023-10-05T14:01:22",
+                "creation_date_time_t": 1696536082,
+                "path": "/var/cache/yum/pkg2-1.2-13.2.x86_64.rpm",
+                "size": 75701688,
+            },
+        },
+    }
+    assert (
+        result["pkg1"]["3.1"]["creation_date_time_t"]
+        == expected["pkg1"]["3.1"]["creation_date_time_t"]
+    )
+    assert result["pkg1"]["3.1"]["path"] == expected["pkg1"]["3.1"]["path"]
+    assert result["pkg1"]["3.1"]["size"] == expected["pkg1"]["3.1"]["size"]
+    assert (
+        result["pkg2"]["1.2"]["creation_date_time_t"]
+        == expected["pkg2"]["1.2"]["creation_date_time_t"]
+    )
+    assert result["pkg2"]["1.2"]["path"] == expected["pkg2"]["1.2"]["path"]
+    assert result["pkg2"]["1.2"]["size"] == expected["pkg2"]["1.2"]["size"]
+
+
+def test_list_installed_patches():
+    mock_get_patches = MagicMock(return_value="spongebob")
+    with patch.object(yumpkg, "_get_patches", mock_get_patches):
+        result = yumpkg.list_installed_patches()
+        assert result == "spongebob"
+
+
 def test_list_upgrades_yum():
     """
     The subcommand should be "updates" with yum
@@ -818,6 +1040,213 @@ def test_list_upgrades_yum():
             ignore_retcode=True,
             python_shell=False,
         )
+
+
+def test_modified():
+    mock = MagicMock()
+    with patch.dict(yumpkg.__salt__, {"lowpkg.modified": mock}):
+        yumpkg.modified("spongebob", "squarepants")
+        mock.assert_called_once_with("spongebob", "squarepants")
+
+
+def test_clean_metadata_with_options():
+
+    with patch("salt.utils.pkg.clear_rtag", Mock()):
+
+        # With check_update=True we will do a cmd.run to run the clean_cmd, and
+        # then a separate cmd.retcode to check for updates.
+
+        # with fromrepo
+        yum_call = MagicMock()
+        with patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_all": yum_call, "config.get": MagicMock(return_value=False)},
+        ):
+            yumpkg.clean_metadata(check_update=True, fromrepo="good", branch="foo")
+
+            assert yum_call.call_count == 2
+            yum_call.assert_any_call(
+                [
+                    "yum",
+                    "--quiet",
+                    "--assumeyes",
+                    "clean",
+                    "expire-cache",
+                    "--disablerepo=*",
+                    "--enablerepo=good",
+                    "--branch=foo",
+                ],
+                env={},
+                ignore_retcode=True,
+                output_loglevel="trace",
+                python_shell=False,
+            )
+            yum_call.assert_any_call(
+                [
+                    "yum",
+                    "--quiet",
+                    "--assumeyes",
+                    "check-update",
+                    "--setopt=autocheck_running_kernel=false",
+                    "--disablerepo=*",
+                    "--enablerepo=good",
+                    "--branch=foo",
+                ],
+                output_loglevel="trace",
+                env={},
+                ignore_retcode=True,
+                python_shell=False,
+            )
+
+
+def test_del_repo_error():
+    basedir = "/mr/krabs"
+    ret_dict = {
+        "spongebob": {"file": "/square/pants"},
+        "patrick": {"file": "/squid/ward"},
+    }
+    mock_list = MagicMock(return_value=ret_dict)
+    patch_list = patch.object(yumpkg, "list_repos", mock_list)
+    with patch_list:
+        result = yumpkg.del_repo("plankton", basedir=basedir)
+        expected = "Error: the plankton repo does not exist in ['/mr/krabs']"
+        assert result == expected
+
+        result = yumpkg.del_repo("copr:plankton/karen", basedir=basedir)
+        expected = "Error: the copr:copr.fedorainfracloud.org:plankton:karen repo does not exist in ['/mr/krabs']"
+        assert result == expected
+
+
+def test_del_repo_single_file():
+    basedir = "/mr/krabs"
+    ret_dict = {
+        "spongebob": {"file": "/square/pants"},
+        "patrick": {"file": "/squid/ward"},
+    }
+    mock_list = MagicMock(return_value=ret_dict)
+    patch_list = patch.object(yumpkg, "list_repos", mock_list)
+    with patch_list, patch("os.remove"):
+        result = yumpkg.del_repo("spongebob", basedir=basedir)
+        expected = "File /square/pants containing repo spongebob has been removed"
+        assert result == expected
+
+
+def test_download_error_no_packages():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    with patch_which, pytest.raises(SaltInvocationError):
+        yumpkg.download()
+
+
+def test_download():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    patch_exists = patch("os.path.exists", MagicMock(return_value=False))
+    patch_makedirs = patch("os.makedirs")
+    mock_listdir = MagicMock(side_effect=([], ["spongebob-1.2.rpm"]))
+    patch_listdir = patch("os.listdir", mock_listdir)
+    mock_run = MagicMock()
+    dict_salt = {
+        "cmd.run": mock_run,
+    }
+    patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
+    with patch_which, patch_exists, patch_makedirs, patch_listdir, patch_salt:
+        result = yumpkg.download("spongebob")
+        cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
+        mock_run.assert_called_once_with(
+            cmd, output_loglevel="trace", python_shell=False
+        )
+        expected = {"spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm"}
+        assert result == expected
+
+
+def test_download_failed():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    patch_exists = patch("os.path.exists", MagicMock(return_value=True))
+    mock_listdir = MagicMock(return_value=["spongebob-1.2.rpm", "junk.txt"])
+    patch_listdir = patch("os.listdir", mock_listdir)
+    patch_unlink = patch("os.unlink")
+    mock_run = MagicMock()
+    dict_salt = {
+        "cmd.run": mock_run,
+    }
+    patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
+        result = yumpkg.download("spongebob", "patrick")
+        cmd = [
+            "yumdownloader",
+            "-q",
+            "--destdir=/var/cache/yum/packages",
+            "spongebob",
+            "patrick",
+        ]
+        mock_run.assert_called_once_with(
+            cmd, output_loglevel="trace", python_shell=False
+        )
+        expected = {
+            "_error": "The following package(s) failed to download: patrick",
+            "spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm",
+        }
+        assert result == expected
+
+
+def test_download_missing_yumdownloader():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value=None))
+    with patch_which, pytest.raises(CommandExecutionError):
+        yumpkg.download("spongebob")
+
+
+def test_download_to_purge():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    patch_exists = patch("os.path.exists", MagicMock(return_value=True))
+    mock_listdir = MagicMock(return_value=["spongebob-1.2.rpm", "junk.txt"])
+    patch_listdir = patch("os.listdir", mock_listdir)
+    patch_unlink = patch("os.unlink")
+    mock_run = MagicMock()
+    dict_salt = {
+        "cmd.run": mock_run,
+    }
+    patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
+        result = yumpkg.download("spongebob")
+        cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
+        mock_run.assert_called_once_with(
+            cmd, output_loglevel="trace", python_shell=False
+        )
+        expected = {"spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm"}
+        assert result == expected
+
+
+def test_download_unlink_error():
+    patch_which = patch("salt.utils.path.which", MagicMock(return_value="path.exe"))
+    patch_exists = patch("os.path.exists", MagicMock(return_value=True))
+    se_listdir = (
+        ["spongebob-1.2.rpm", "junk.txt"],
+        ["spongebob1.2.rpm", "junk.txt"],
+    )
+    mock_listdir = MagicMock(side_effect=se_listdir)
+    patch_listdir = patch("os.listdir", mock_listdir)
+    patch_unlink = patch("os.unlink", MagicMock(side_effect=OSError))
+    mock_run = MagicMock()
+    dict_salt = {
+        "cmd.run": mock_run,
+    }
+    patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
+    with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
+        with pytest.raises(CommandExecutionError):
+            yumpkg.download("spongebob")
+
+
+def test_file_dict():
+    mock = MagicMock()
+    with patch.dict(yumpkg.__salt__, {"lowpkg.file_dict": mock}):
+        yumpkg.file_dict("spongebob", "squarepants")
+        mock.assert_called_once_with("spongebob", "squarepants")
+
+
+def test_file_list():
+    mock = MagicMock()
+    with patch.dict(yumpkg.__salt__, {"lowpkg.file_list": mock}):
+        yumpkg.file_list("spongebob", "squarepants")
+        mock.assert_called_once_with("spongebob", "squarepants")
 
 
 def test_refresh_db_with_options():
@@ -1045,6 +1474,36 @@ def test_install_with_options():
             )
 
 
+def test_remove_retcode_error():
+    """
+    Tests that we throw an error if retcode isn't 0
+    """
+    name = "foo"
+    installed = "8:3.8.12-4.n.el7"
+    list_pkgs_mock = MagicMock(
+        side_effect=lambda **kwargs: {
+            name: [installed] if kwargs.get("versions_as_list", False) else installed
+        }
+    )
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 1, "stdout": "", "stderr": "error"}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: installed}, "repository")
+        ),
+    }
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock), patch.dict(
+        yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+    ):
+        with pytest.raises(CommandExecutionError):
+            yumpkg.remove("spongebob")
+
+
 def test_remove_with_epoch():
     """
     Tests that we properly identify a version containing an epoch for
@@ -1233,6 +1692,54 @@ def test_install_with_epoch():
             assert call == expected, call
 
 
+def test_install_minion_error():
+    patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+    patch_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(side_effect=MinionError),
+        },
+    )
+    with patch_get_options, patch_salt:
+        with pytest.raises(CommandExecutionError):
+            yumpkg.install("spongebob")
+
+
+def test_install_no_pkg_params():
+    patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+    parse_return = ("", "junk")
+    patch_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(return_value=parse_return),
+        },
+    )
+    with patch_get_options, patch_salt:
+        assert yumpkg.install("spongebob") == {}
+
+
+# My dufus attempt... but I gave up
+# def test_install_repo_fancy_versions():
+#     patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+#     packages = {
+#         "spongbob": "1*",
+#         "squarepants": ">1.2",
+#     }
+#     parse_return = (packages, "repository")
+#     patch_salt = patch.dict(
+#         yumpkg.__salt__,
+#         {
+#             "pkg_resource.parse_targets": MagicMock(return_value=parse_return),
+#         },
+#     )
+#     list_pkgs = {"vim": "1.1,1.2", "git": "2.1,2.2"}
+#     list_pkgs_list = {"vim": ["1.1", "1.2"], "git": ["2.1", "2.2"]}
+#     mock_list_pkgs = MagicMock(side_effect=(list_pkgs, list_pkgs_list))
+#     patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+#     with patch_get_options, patch_salt, patch_list_pkgs:
+#         assert yumpkg.install("spongebob") == {}
+
+
 @pytest.mark.skipif(not salt.utils.platform.is_linux(), reason="Only run on Linux")
 def test_install_error_reporting():
     """
@@ -1269,6 +1776,13 @@ def test_install_error_reporting():
         with pytest.raises(CommandExecutionError) as exc_info:
             yumpkg.install("foo", version=new)
         assert exc_info.value.info == expected, exc_info.value.info
+
+
+def test_remove_error():
+    mock_salt = {"pkg_resource.parse_targets": MagicMock(side_effect=MinionError)}
+    with patch.dict(yumpkg.__salt__, mock_salt):
+        with pytest.raises(CommandExecutionError):
+            yumpkg.remove("spongebob")
 
 
 def test_remove_not_installed():
@@ -1308,6 +1822,17 @@ def test_remove_not_installed():
             cmd_mock.assert_not_called()
 
 
+def test_upgrade_error():
+    patch_yum = patch.object(yumpkg, "_yum", return_value="yum")
+    patch_get_options = patch.object(yumpkg, "_get_options")
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs")
+    salt_dict = {"pkg_resource.parse_targets": MagicMock(side_effect=MinionError)}
+    patch_salt = patch.dict(yumpkg.__salt__, salt_dict)
+    with patch_yum, patch_get_options, patch_list_pkgs, patch_salt:
+        with pytest.raises(CommandExecutionError):
+            yumpkg.upgrade("spongebob", refresh=False)
+
+
 def test_upgrade_with_options():
     with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
         "salt.utils.systemd.has_scope", MagicMock(return_value=False)
@@ -1322,6 +1847,7 @@ def test_upgrade_with_options():
                 exclude="kernel*",
                 branch="foo",
                 setopt="obsoletes=0,plugins=0",
+                skip_verify=True,
             )
             cmd.assert_called_once_with(
                 [
@@ -1336,12 +1862,26 @@ def test_upgrade_with_options():
                     "--setopt",
                     "plugins=0",
                     "--exclude=kernel*",
+                    "--nogpgcheck",
                     "upgrade",
                 ],
                 env={},
                 output_loglevel="trace",
                 python_shell=False,
             )
+
+        # with fromrepo
+        cmd = MagicMock(return_value={"retcode": 1})
+        with patch.dict(yumpkg.__salt__, {"cmd.run_all": cmd}):
+            with pytest.raises(CommandExecutionError):
+                yumpkg.upgrade(
+                    refresh=False,
+                    fromrepo="good",
+                    exclude="kernel*",
+                    branch="foo",
+                    setopt="obsoletes=0,plugins=0",
+                    skip_verify=True,
+                )
 
         # without fromrepo
         cmd = MagicMock(return_value={"retcode": 0})
@@ -1373,6 +1913,64 @@ def test_upgrade_with_options():
                 output_loglevel="trace",
                 python_shell=False,
             )
+
+
+def test_upgrade_available():
+    mock_return = MagicMock(return_value="non-empty value")
+    patch_latest_version = patch.object(yumpkg, "latest_version", mock_return)
+    with patch_latest_version:
+        assert yumpkg.upgrade_available("foo") is True
+
+
+def test_verify_args():
+    mock_verify = MagicMock()
+    with patch.dict(yumpkg.__salt__, {"lowpkg.verify": mock_verify}):
+        yumpkg.verify("spongebob")
+        mock_verify.assert_called_once_with("spongebob")
+
+
+def test_verify_kwargs():
+    mock_verify = MagicMock()
+    with patch.dict(yumpkg.__salt__, {"lowpkg.verify": mock_verify}):
+        yumpkg.verify(spongebob="squarepants")
+        mock_verify.assert_called_once_with(spongebob="squarepants")
+
+
+def test_purge_not_installed():
+    """
+    Tests that no exception raised on purging not installed package
+    """
+    name = "foo"
+    list_pkgs_mock = MagicMock(return_value={})
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: None}, "repository")
+        ),
+    }
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        # Test yum
+        with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+        ):
+            yumpkg.purge(name)
+            cmd_mock.assert_not_called()
+
+        # Test dnf
+        yumpkg.__context__.pop("yum_bin")
+        cmd_mock.reset_mock()
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}
+        ):
+            yumpkg.purge(name)
+            cmd_mock.assert_not_called()
 
 
 def test_info_installed_with_all_versions():
@@ -1530,6 +2128,260 @@ def test_pkg_hold_tdnf():
             yumpkg.hold("foo")
 
 
+def test_hold_empty():
+    """
+    Tests that we raise a SaltInvocationError if nothing is passed
+    """
+    with patch.object(yumpkg, "_check_versionlock", MagicMock()):
+        with pytest.raises(SaltInvocationError):
+            yumpkg.hold()
+
+
+def test_hold_pkgs_and_sources_error():
+    """
+    Tests that we raise a SaltInvocationError if both pkgs and sources is passed
+    """
+    with patch.object(yumpkg, "_check_versionlock", MagicMock()):
+        with pytest.raises(SaltInvocationError):
+            yumpkg.hold(pkgs=["foo", "bar"], sources=["src1", "src2"])
+
+
+def test_hold_pkgs_sources():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_list_holds = patch.object(yumpkg, "list_holds", MagicMock())
+    mock_call_yum = MagicMock(return_value={"retcode": 0})
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": False})
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {
+                "new": "hold",
+                "old": "",
+            },
+            "result": True,
+            "comment": "Package foo is now being held.",
+        },
+        "bar": {
+            "name": "bar",
+            "changes": {
+                "new": "hold",
+                "old": "",
+            },
+            "result": True,
+            "comment": "Package bar is now being held.",
+        },
+    }
+    sources = [{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]
+    pkgs = ["foo", "bar"]
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts:
+        result = yumpkg.hold(sources=sources)
+        assert result == expected
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts:
+        result = yumpkg.hold(pkgs=pkgs)
+        assert result == expected
+
+
+def test_hold_test_true():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_list_holds = patch.object(yumpkg, "list_holds", MagicMock())
+    mock_call_yum = MagicMock(return_value={"retcode": 0})
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": True})
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts:
+        result = yumpkg.hold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": None,
+            "comment": "Package foo is set to be held.",
+        },
+    }
+    assert result == expected
+
+
+def test_hold_fails():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_list_holds = patch.object(yumpkg, "list_holds", MagicMock())
+    mock_call_yum = MagicMock(return_value={"retcode": 1})
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": False})
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts:
+        result = yumpkg.hold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": False,
+            "comment": "Package foo was unable to be held.",
+        },
+    }
+    assert result == expected
+
+
+def test_hold_already_held():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    mock_list_holds = MagicMock(return_value=["foo"])
+    patch_list_holds = patch.object(yumpkg, "list_holds", mock_list_holds)
+    with patch_versionlock, patch_list_holds:
+        result = yumpkg.hold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": True,
+            "comment": "Package foo is already set to be held.",
+        },
+    }
+    assert result == expected
+
+
+def test_unhold_empty():
+    """
+    Tests that we raise a SaltInvocationError if nothing is passed
+    """
+    with patch.object(yumpkg, "_check_versionlock", MagicMock()):
+        with pytest.raises(SaltInvocationError):
+            yumpkg.unhold()
+
+
+def test_unhold_pkgs_and_sources_error():
+    """
+    Tests that we raise a SaltInvocationError if both pkgs and sources is passed
+    """
+    with patch.object(yumpkg, "_check_versionlock", MagicMock()):
+        with pytest.raises(SaltInvocationError):
+            yumpkg.unhold(pkgs=["foo", "bar"], sources=["src1", "src2"])
+
+
+def test_unhold_pkgs_sources():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    mock_list_holds = MagicMock(return_value=["foo", "bar"])
+    patch_list_holds = patch.object(yumpkg, "list_holds", mock_list_holds)
+    mock_call_yum = MagicMock(return_value={"retcode": 0})
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": False})
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf"))
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {
+                "new": "",
+                "old": "hold",
+            },
+            "result": True,
+            "comment": "Package foo is no longer held.",
+        },
+        "bar": {
+            "name": "bar",
+            "changes": {
+                "new": "",
+                "old": "hold",
+            },
+            "result": True,
+            "comment": "Package bar is no longer held.",
+        },
+    }
+    sources = [{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]
+    pkgs = ["foo", "bar"]
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts, patch_yum:
+        result = yumpkg.unhold(sources=sources)
+        assert result == expected
+
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts, patch_yum:
+        result = yumpkg.unhold(pkgs=pkgs)
+        assert result == expected
+
+
+def test_unhold_test_true():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    mock_list_holds = MagicMock(return_value=["foo"])
+    patch_list_holds = patch.object(yumpkg, "list_holds", mock_list_holds)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": True})
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf"))
+    with patch_versionlock, patch_list_holds, patch_opts, patch_yum:
+        result = yumpkg.unhold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": None,
+            "comment": "Package foo is set to be unheld.",
+        },
+    }
+    assert result == expected
+
+
+def test_unhold_fails():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    mock_list_holds = MagicMock(return_value=["foo"])
+    patch_list_holds = patch.object(yumpkg, "list_holds", mock_list_holds)
+    mock_call_yum = MagicMock(return_value={"retcode": 1})
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    patch_opts = patch.dict(yumpkg.__opts__, {"test": False})
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf"))
+    with patch_versionlock, patch_list_holds, patch_call_yum, patch_opts, patch_yum:
+        result = yumpkg.unhold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": False,
+            "comment": "Package foo was unable to be unheld.",
+        },
+    }
+    assert result == expected
+
+
+def test_unhold_already_unheld():
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    mock_list_holds = MagicMock(return_value=[])
+    patch_list_holds = patch.object(yumpkg, "list_holds", mock_list_holds)
+    with patch_versionlock, patch_list_holds:
+        result = yumpkg.unhold(name="foo")
+    expected = {
+        "foo": {
+            "name": "foo",
+            "changes": {},
+            "result": True,
+            "comment": "Package foo is not being held.",
+        },
+    }
+    assert result == expected
+
+
+def test_owner_empty():
+    assert yumpkg.owner() == ""
+
+
+def test_owner_not_owned():
+    mock_stdout = MagicMock(return_value="not owned")
+    expected = {
+        "/fake/path1": "",
+        "/fake/path2": "",
+    }
+    with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_stdout}):
+        result = yumpkg.owner(*expected.keys())
+        assert result == expected
+
+
+def test_owner_not_owned_single():
+    mock_stdout = MagicMock(return_value="not owned")
+    with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_stdout}):
+        result = yumpkg.owner("/fake/path")
+        assert result == ""
+
+
+def test_parse_repo_file_error():
+    mock_read = MagicMock(
+        side_effect=configparser.MissingSectionHeaderError("spongebob", 101, "test2")
+    )
+    with patch.object(configparser.ConfigParser, "read", mock_read):
+        result = yumpkg._parse_repo_file("spongebob")
+        assert result == ("", {})
+
+
 def test_pkg_hold_dnf():
     """
     Tests that we properly identify versionlock plugin when using dnf
@@ -1611,12 +2463,82 @@ def test_pkg_hold_dnf():
         )
 
 
-@pytest.mark.skipif(not yumpkg.HAS_YUM, reason="Could not import yum")
-def test_yum_base_error():
-    with patch("yum.YumBase") as mock_yum_yumbase:
-        mock_yum_yumbase.side_effect = CommandExecutionError
+def test_get_yum_config_no_config():
+    with patch("os.path.exists", MagicMock(return_value=False)):
         with pytest.raises(CommandExecutionError):
             yumpkg._get_yum_config()
+
+
+def test_get_yum_config(grains):
+    os_family = grains["os_family"]
+    if os_family in ("Arch", "Debian", "Suse"):
+        pytest.skip(f"{os_family} does not have yum.conf")
+    setting = "cache_dir"
+    if os_family == "RedHat":
+        # This one seems to be in all of them...
+        # If this ever breaks in the future, we'll need to get more specific
+        # than os_family
+        setting = "installonly_limit"
+    result = yumpkg._get_yum_config()
+    assert setting in result
+
+
+def test_get_yum_config_value_none(grains):
+    os_family = grains["os_family"]
+    if os_family in ("Arch", "Debian", "Suse"):
+        pytest.skip(f"{os_family} does not have yum.conf")
+    result = yumpkg._get_yum_config_value("spongebob")
+    assert result is None
+
+
+def test_get_yum_config_unreadable():
+    with patch.object(
+        configparser.ConfigParser, "read", MagicMock(side_effect=OSError)
+    ):
+        with pytest.raises(CommandExecutionError):
+            yumpkg._get_yum_config()
+
+
+def test_get_yum_config_no_main(caplog):
+    mock_false = MagicMock(return_value=False)
+    with patch.object(configparser.ConfigParser, "read"), patch.object(
+        configparser.ConfigParser, "has_section", mock_false
+    ), patch("os.path.exists", MagicMock(return_value=True)):
+        yumpkg._get_yum_config()
+        assert "Could not find [main] section" in caplog.text
+
+
+def test_normalize_basedir_str():
+    basedir = "/etc/yum/yum.conf,/etc/yum.conf"
+    result = yumpkg._normalize_basedir(basedir)
+    assert result == ["/etc/yum/yum.conf", "/etc/yum.conf"]
+
+
+def test_normalize_basedir_error():
+    basedir = 1
+    with pytest.raises(SaltInvocationError):
+        yumpkg._normalize_basedir(basedir)
+
+
+def test_normalize_name_noarch():
+    assert yumpkg.normalize_name("zsh.noarch") == "zsh"
+
+
+def test_latest_version_no_names():
+    assert yumpkg.latest_version() == ""
+
+
+def test_latest_version_nonzero_retcode():
+    yum_ret = {"retcode": 1, "stderr": "some error"}
+    mock_call_yum = MagicMock(return_value=yum_ret)
+    patch_call_yum = patch.object(yumpkg, "_call_yum", mock_call_yum)
+    list_pkgs_ret = {"foo": "1.1", "bar": "2.2"}
+    mock_list_pkgs = MagicMock(return_value=list_pkgs_ret)
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+    patch_get_options = patch.object(yumpkg, "_get_options", MagicMock())
+    patch_refresh_db = patch.object(yumpkg, "refresh_db", MagicMock())
+    with patch_list_pkgs, patch_call_yum, patch_get_options, patch_refresh_db:
+        assert yumpkg.latest_version("foo", "bar") == {"foo": "", "bar": ""}
 
 
 def test_group_info():
@@ -1860,6 +2782,180 @@ def test_group_info():
         assert info == expected
 
 
+def test_group_install():
+    group_info = (
+        {
+            "default": ["spongebob", "gary", "patrick"],
+            "mandatory": ["spongebob", "gary"],
+        },
+        {
+            "default": ["mr_krabs", "pearl_krabs", "plankton"],
+            "mandatory": ["mr_krabs", "pearl_krabs"],
+        },
+    )
+    mock_info = MagicMock(side_effect=group_info)
+    patch_info = patch.object(yumpkg, "group_info", mock_info)
+    mock_list_pkgs = MagicMock(return_value=[])
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+    patch_install = patch.object(yumpkg, "install", MagicMock())
+    expected = [
+        "mr_krabs",
+        "gary",
+        "pearl_krabs",
+        "plankton",
+        "spongebob",
+        "patrick",
+    ]
+    with patch_info, patch_list_pkgs, patch_install:
+        yumpkg.group_install("spongebob,mr_krabs")
+        _, kwargs = yumpkg.install.call_args
+        assert kwargs["pkgs"].sort() == expected.sort()
+
+
+def test_group_install_include():
+    group_info = (
+        {
+            "default": ["spongebob", "gary", "patrick"],
+            "mandatory": ["spongebob", "gary"],
+        },
+        {
+            "default": ["mr_krabs", "pearl_krabs", "plankton"],
+            "mandatory": ["mr_krabs", "pearl_krabs"],
+        },
+    )
+    mock_info = MagicMock(side_effect=group_info)
+    patch_info = patch.object(yumpkg, "group_info", mock_info)
+    mock_list_pkgs = MagicMock(return_value=[])
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+    patch_install = patch.object(yumpkg, "install", MagicMock())
+    expected = [
+        "mr_krabs",
+        "gary",
+        "pearl_krabs",
+        "plankton",
+        "spongebob",
+        "patrick",
+    ]
+    with patch_info, patch_list_pkgs, patch_install:
+        yumpkg.group_install("spongebob,mr_krabs", include="napoleon")
+        _, kwargs = yumpkg.install.call_args
+        expected.append("napoleon")
+        assert kwargs["pkgs"].sort() == expected.sort()
+
+
+def test_group_install_skip():
+    group_info = (
+        {
+            "default": ["spongebob", "gary", "patrick"],
+            "mandatory": ["spongebob", "gary"],
+        },
+        {
+            "default": ["mr_krabs", "pearl_krabs", "plankton"],
+            "mandatory": ["mr_krabs", "pearl_krabs"],
+        },
+    )
+    mock_info = MagicMock(side_effect=group_info)
+    patch_info = patch.object(yumpkg, "group_info", mock_info)
+    mock_list_pkgs = MagicMock(return_value=[])
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+    patch_install = patch.object(yumpkg, "install", MagicMock())
+    expected = [
+        "mr_krabs",
+        "gary",
+        "pearl_krabs",
+        "spongebob",
+        "patrick",
+    ]
+    with patch_info, patch_list_pkgs, patch_install:
+        yumpkg.group_install("spongebob,mr_krabs", skip="plankton")
+        _, kwargs = yumpkg.install.call_args
+        assert kwargs["pkgs"].sort() == expected.sort()
+
+
+def test_group_install_already_present():
+    group_info = (
+        {
+            "default": ["spongebob", "gary", "patrick"],
+            "mandatory": ["spongebob", "gary"],
+        },
+        {
+            "default": ["mr_krabs", "pearl_krabs", "plankton"],
+            "mandatory": ["mr_krabs", "pearl_krabs"],
+        },
+    )
+    mock_info = MagicMock(side_effect=group_info)
+    patch_info = patch.object(yumpkg, "group_info", mock_info)
+    patch_install = patch.object(yumpkg, "install", MagicMock())
+    expected = [
+        "mr_krabs",
+        "gary",
+        "pearl_krabs",
+        "plankton",
+        "spongebob",
+        "patrick",
+    ]
+    mock_list_pkgs = MagicMock(return_value=expected)
+    patch_list_pkgs = patch.object(yumpkg, "list_pkgs", mock_list_pkgs)
+    with patch_info, patch_list_pkgs, patch_install:
+        assert yumpkg.group_install("spongebob,mr_krabs") == {}
+
+
+def test_group_install_no_groups():
+    with pytest.raises(SaltInvocationError):
+        yumpkg.group_install(None)
+
+
+def test_group_install_non_list_groups():
+    with pytest.raises(SaltInvocationError):
+        yumpkg.group_install(1)
+
+
+def test_group_install_non_list_skip():
+    with pytest.raises(SaltInvocationError):
+        yumpkg.group_install(name="string", skip=1)
+
+
+def test_group_install_non_list_include():
+    with pytest.raises(SaltInvocationError):
+        yumpkg.group_install(name="string", include=1)
+
+
+def test_group_list():
+    mock_out = MagicMock(
+        return_value="""\
+Available Environment Groups:
+   Spongebob
+   Squarepants
+Installed Environment Groups:
+   Patrick
+Installed Groups:
+   Squidward
+   Sandy
+Available Groups:
+   Mr. Krabs
+   Plankton
+Available Language Groups:
+   Gary the Snail [sb]\
+    """
+    )
+    patch_grplist = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_out})
+    with patch_grplist:
+        result = yumpkg.group_list()
+    expected = {
+        "installed": ["Squidward", "Sandy"],
+        "available": ["Mr. Krabs", "Plankton"],
+        "installed environments": ["Patrick"],
+        "available environments": ["Spongebob", "Squarepants"],
+        "available languages": {
+            "Gary the Snail [sb]": {
+                "language": "sb",
+                "name": "Gary the Snail",
+            },
+        },
+    }
+    assert result == expected
+
+
 def test_get_repo_with_existent_repo(list_repos_var):
     """
     Test get_repo with an existent repository
@@ -2066,6 +3162,15 @@ def test_services_need_restart_requires_dnf():
     """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
     with patch("salt.modules.yumpkg._yum", Mock(return_value="yum")):
         pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+
+def test_services_need_restart_no_dnf_output():
+    patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    patch_booted = patch("salt.utils.systemd.booted", Mock(return_value=True))
+    mock_run_stdout = MagicMock(return_value="")
+    patch_run_stdout = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_run_stdout})
+    with patch_yum, patch_booted, patch_run_stdout:
+        assert yumpkg.services_need_restart() == []
 
 
 def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():

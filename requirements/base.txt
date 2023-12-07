@@ -1,3 +1,5 @@
+--constraint=constraints.txt
+
 Jinja2
 jmespath
 msgpack>=1.0.0
