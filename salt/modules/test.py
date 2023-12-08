@@ -16,7 +16,9 @@ import salt.utils.args
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.versions
 import salt.version
+from salt.config import DEFAULT_HASH_TYPE
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ["*"]
@@ -77,7 +79,7 @@ def module_report():
             if hasattr(__salt__, ref):
                 ret["module_attrs"].append(ref)
             for func in __salt__[ref]:
-                full = "{}.{}".format(ref, func)
+                full = f"{ref}.{func}"
                 if hasattr(getattr(__salt__, ref), func):
                     ret["function_attrs"].append(full)
                 if func in __salt__[ref]:
@@ -425,7 +427,7 @@ def provider(module):
     """
     func = ""
     for key in __salt__:
-        if not key.startswith("{}.".format(module)):
+        if not key.startswith(f"{module}."):
             continue
         func = key
         break
@@ -527,7 +529,7 @@ def random_hash(size=9999999999, hash_type=None):
         salt '*' test.random_hash hash_type=sha512
     """
     if not hash_type:
-        hash_type = __opts__.get("hash_type", "md5")
+        hash_type = __opts__.get("hash_type", DEFAULT_HASH_TYPE)
     return salt.utils.hashutils.random_hash(size=size, hash_type=hash_type)
 
 
@@ -675,3 +677,27 @@ def raise_exception(name, *args, **kwargs):
     except AttributeError:
         log.error("No such exception: %s", name)
         return False
+
+
+def deprecation_warning():
+    r"""
+    Return True, but also produce two DeprecationWarnings. One by date, the
+    other by the codename - release Oganesson, which should correspond to Salt
+    3108.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt \* test.deprecation_warning
+    """
+    # This warn should always stay in Salt.
+    salt.utils.versions.warn_until(
+        3108,
+        "This is a test deprecation warning by version.",
+    )
+    salt.utils.versions.warn_until_date(
+        "30000101",
+        "This is a test deprecation warning by date very far into the future ({date}).",
+    )
+    return True

@@ -4,9 +4,7 @@ Unit tests for the Snapper module
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 """
-
-
-import sys
+import pytest
 
 import salt.modules.snapper as snapper
 import salt.utils.files
@@ -15,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 DBUS_RET = {
     "ListSnapshots": [
@@ -185,7 +183,7 @@ MODULE_RET = {
 }
 
 
-@skipIf(sys.platform.startswith("win"), "Snapper not available on Windows")
+@pytest.mark.skip_on_windows(reason="Snapper not available on Windows")
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         class DBusException(BaseException):
@@ -496,16 +494,10 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.snapper.snapper.ListConfigs",
             MagicMock(return_value=DBUS_RET["ListConfigs"]),
         ):
-            if sys.version_info < (2, 7):
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo26"]}
-                )
-            else:
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
-                )
+            self.assertEqual(
+                snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
+            )
 
-    @skipIf(sys.version_info < (2, 7), "Python 2.7 required to compare diff properly")
     def test_diff_text_files(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(55, 0))
@@ -591,7 +583,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertEqual(snapper.diff(), module_ret)
 
-    @skipIf(salt.utils.platform.is_linux() is False, "This is a linux only test")
+    @pytest.mark.skip_unless_on_linux(reason="This is a linux only test")
     @with_tempfile()
     def test__is_text_file(self, tempfile):
         with salt.utils.files.fopen(tempfile, "w") as wfh:

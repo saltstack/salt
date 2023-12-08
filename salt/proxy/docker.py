@@ -35,10 +35,16 @@ name
 __proxyenabled__ = ["docker"]
 __virtualname__ = "docker"
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 

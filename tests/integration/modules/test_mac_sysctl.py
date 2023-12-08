@@ -10,16 +10,15 @@ import pytest
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Module Variables
-ASSIGN_CMD = "net.inet.icmp.icmplim"
+ASSIGN_CMD = "net.inet.icmp.timestamp"
 CONFIG = "/etc/sysctl.conf"
 
 
 @pytest.mark.destructive_test
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class DarwinSysctlModuleTest(ModuleCase):
     """
     Integration tests for the darwin_sysctl module
@@ -75,7 +74,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
         try:
             self.run_function("sysctl.persist", [ASSIGN_CMD, 10])
-            line = "{}={}".format(ASSIGN_CMD, 10)
+            line = f"{ASSIGN_CMD}={10}"
             found = self.__check_string(CONFIG, line)
             self.assertTrue(found)
         except CommandExecutionError:

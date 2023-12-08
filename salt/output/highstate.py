@@ -810,7 +810,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
             )
         fmt_string += " {0} Name: {1} - Function: {2}.{3} - Result: {4}"
         if __opts__.get("state_output_profile") and "start_time" in ret:
-            fmt_string += " Started: - {6[start_time]!s} Duration: {6[duration]!s} ms"
+            fmt_string += " - Started: {6[start_time]!s} - Duration: {6[duration]!s} ms"
         fmt_string += "{5}"
 
     msg = fmt_string.format(

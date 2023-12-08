@@ -30,8 +30,8 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - pytests.unit.states.test_service
-  - integration.modules.test_service
-  - integration.states.test_service
+  - pytests.functional.modules.test_service
+  - pytests.functional.states.test_service
 
 
 salt/modules/ansiblegate.py:
@@ -62,7 +62,7 @@ salt/modules/cp.py:
   - pytests.unit.modules.file.test_file_selinux
   - pytests.unit.states.file.test_copy
   - integration.modules.test_file
-  - integration.states.test_file
+  - pytests.functional.states.file.test_copy
 
 salt/modules/dockermod.py:
   - pytests.unit.states.test_docker_image
@@ -113,7 +113,8 @@ salt/auth/*:
   - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
-  - unit.cache.test_cache
+  - pytests.unit.cache.test_cache
+  - pytests.unit.cache.test_memcache
   - pytests.functional.cache.test_consul
   - pytests.functional.cache.test_etcd
   - pytests.functional.cache.test_localfs
@@ -159,7 +160,7 @@ salt/matchers/*:
   - integration.states.test_match
   - pytests.integration.cli.test_matcher
   - pytests.unit.modules.test_match
-  - unit.matchers.test_confirm_top
+  - pytests.unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell
@@ -322,9 +323,16 @@ salt/(minion\.py|channel/.+|transport/.+):
 tests/support/mock.py:
   - unit.test_mock
 
+tests/support/virt.py:
+  - pytests.integration.modules.test_virt
+
 tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
   - pytests.functional.modules.test_mysql
+
+tests/support/pytest/transport.py:
+  - pytests.functional.transport.ipc.test_pub_server_channel
+  - pytests.functional.transport.zeromq.test_pub_server_channel
 
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster
@@ -332,3 +340,8 @@ tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+tests/integration/files/ssh/.*:
+  - integration.modules.test_ssh
+  - integration.states.test_ssh_auth
+  - integration.states.test_ssh_known_hosts

@@ -6,6 +6,7 @@ from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -570,7 +571,6 @@ def test_issue_38683_require_order_failhard_combination(state, state_tree):
         assert ret[state_id].comment == "Failure!"
 
 
-@pytest.mark.slow_test
 @pytest.mark.skip_on_windows
 def test_parallel_state_with_requires(state, state_tree):
     """
@@ -609,7 +609,7 @@ def test_parallel_state_with_requires(state, state_tree):
         assert (end_time - start_time) < 30
 
         for item in range(1, 10):
-            _id = "cmd_|-blah-{}_|-sleep 2_|-run".format(item)
+            _id = f"cmd_|-blah-{item}_|-sleep 2_|-run"
             assert "__parallel__" in ret[_id]
 
 

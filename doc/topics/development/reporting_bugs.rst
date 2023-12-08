@@ -23,7 +23,7 @@ In an issue report, please include the following information:
 
  * Any configuration options set in a configuration file that may be relevant.
 
- * A reproduceable test case. This may be as simple as an SLS file that
+ * A reproducible test case. This may be as simple as an SLS file that
    illustrates a problem or it may be a link to a repository that contains a
    number of SLS files that can be used together to re-produce a problem. If
    the problem is transitory, any information that can be used to try and
@@ -35,9 +35,3 @@ In an issue report, please include the following information:
  .. note::
 
     Please be certain to scrub any logs or SLS files for sensitive data!
-
-
-
-
-
-

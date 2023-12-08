@@ -40,6 +40,7 @@ EXPECTED_VARIABLES = (
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "SPM_PARENT_PATH",
@@ -193,6 +194,10 @@ BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
 if BASE_MASTER_ROOTS_DIR is None:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, "salt-master")
 
+LIB_STATE_DIR = __generated_syspaths.LIB_STATE_DIR
+if LIB_STATE_DIR is None:
+    LIB_STATE_DIR = CONFIG_DIR
+
 LOGS_DIR = __generated_syspaths.LOGS_DIR
 if LOGS_DIR is None:
     LOGS_DIR = os.path.join(ROOT_DIR, "var", "log", "salt")
@@ -236,6 +241,7 @@ __all__ = [
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "INSTALL_DIR",

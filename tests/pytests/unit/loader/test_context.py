@@ -45,3 +45,12 @@ def test_named_loader_context_deepcopy():
     assert coppied.name == named_context.name
     assert id(coppied.loader_context) == id(named_context.loader_context)
     assert id(coppied.default) != id(named_context.default)
+
+
+def test_named_loader_context_opts():
+    loader_context = salt.loader.context.LoaderContext()
+    opts = loader_context.named_context("__opts__")
+    loader = salt.loader.lazy.LazyLoader(["/foo"], opts={"foo": "bar"})
+    with salt.loader.context.loader_context(loader):
+        assert "foo" in opts
+        assert opts["foo"] == "bar"

@@ -64,7 +64,7 @@ class MockSubscriber:
     def __init__(self, *args, **kwargs):
         return
 
-    def read(self, timeout=None):
+    def recv(self, timeout=None):
         """
         Mock IPCMessageSubcriber read method.
 
@@ -140,7 +140,7 @@ class MockSubscriber:
             },
             use_bin_type=True,
         )
-        tag = "salt/job/{}/ret".format(jid).encode()
+        tag = f"salt/job/{jid}/ret".encode()
         return b"".join([tag, b"\n\n", dumped])
 
     def connect(self, timeout=None):
@@ -170,7 +170,7 @@ def test_batch_issue_56273():
         "extension_modules": "",
         "failhard": True,
     }
-    with patch("salt.transport.ipc.IPCMessageSubscriber", MockSubscriber):
+    with patch("salt.transport.tcp.TCPPubClient", MockSubscriber):
         batch = salt.cli.batch.Batch(opts, quiet=True)
         with patch.object(batch.local, "pub", Mock(side_effect=mock_pub)):
             with patch.object(

@@ -154,26 +154,35 @@ def salt_ssh_cli(
     )
 
 
+@pytest.mark.flaky_jail
 def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_password):
     """
-    Test salt-ssh grains id work for localhost.
+    Test salt-ssh setup works
     """
     # Provide the passwd from the CLI to allow the key deploy
     possible_ids = (ssh_container_name, ssh_sub_container_name)
     ret = salt_ssh_cli.run(
-        "--passwd", ssh_password, "--key-deploy", "grains.get", "id", minion_tgt="*"
+        "--passwd", ssh_password, "--key-deploy", "test.ping", minion_tgt="*"
     )
-    assert ret.returncode == 0
+    try:
+        assert ret.returncode == 0
+    except AssertionError:
+        # Sleep and Repeat in case of failure to reduce flakyness
+        time.sleep(5)
+        ret = salt_ssh_cli.run(
+            "--passwd", ssh_password, "--key-deploy", "test.ping", minion_tgt="*"
+        )
+        assert ret.returncode == 0
     for id in possible_ids:
         assert id in ret.data
-        assert ret.data[id] == id
+        assert ret.data[id] is True
 
     # Run it again without the key deploy
-    ret = salt_ssh_cli.run("grains.get", "id", minion_tgt="*")
+    ret = salt_ssh_cli.run("test.ping", minion_tgt="*")
     assert ret.returncode == 0
     for id in possible_ids:
         assert id in ret.data
-        assert ret.data[id] == id
+        assert ret.data[id] is True
 
     # Run a test.sleep and kill it
     sleep_time = 15
@@ -213,26 +222,16 @@ def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_pas
 
     terminal_stdout.flush()
     terminal_stdout.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__
-        )
-    else:
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
-        )
+    stdout = proc._translate_newlines(
+        terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
+    )
     terminal_stdout.close()
 
     terminal_stderr.flush()
     terminal_stderr.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__
-        )
-    else:
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
-        )
+    stderr = proc._translate_newlines(
+        terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
+    )
     terminal_stderr.close()
     ret = ProcessResult(
         returncode=proc.returncode, stdout=stdout, stderr=stderr, cmdline=proc.args

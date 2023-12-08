@@ -4,12 +4,13 @@
 
 import sys
 
-import salt.utils.platform
+import pytest
+
 import salt.utils.win_osinfo as win_osinfo
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_windows(), "Requires Windows")
+@pytest.mark.skip_unless_on_windows
 class WinOsInfo(TestCase):
     """
     Test cases for salt/utils/win_osinfo.py

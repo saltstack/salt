@@ -1,0 +1,53 @@
+/var/log/salt/master {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}
+
+/var/log/salt/minion {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}
+
+/var/log/salt/key {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}
+
+/var/log/salt/api {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}
+
+/var/log/salt/syndic {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}
+
+/var/log/salt/proxy {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+	create 0640
+}

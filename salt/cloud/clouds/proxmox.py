@@ -21,6 +21,11 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       driver: proxmox
       verify_ssl: True
 
+.. warning::
+    This cloud provider will be removed from Salt in version 3009.0 in favor of
+    the `saltext.proxmox Salt Extension
+    <https://github.com/salt-extensions/saltext-proxmox>`_
+
 :maintainer: Frank Klaassen <frank@cloudright.nl>
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
@@ -31,6 +36,7 @@ import pprint
 import re
 import socket
 import time
+import urllib
 
 import salt.config as config
 import salt.utils.cloud
@@ -59,6 +65,12 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = "proxmox"
+
+__deprecated__ = (
+    3009,
+    "proxmox",
+    "https://github.com/salt-extensions/saltext-proxmox",
+)
 
 
 def __virtual__():
@@ -134,9 +146,11 @@ def _authenticate():
     )
 
     connect_data = {"username": username, "password": passwd}
-    full_url = "https://{}:{}/api2/json/access/ticket".format(url, port)
+    full_url = f"https://{url}:{port}/api2/json/access/ticket"
 
-    returned_data = requests.post(full_url, verify=verify_ssl, data=connect_data).json()
+    response = requests.post(full_url, verify=verify_ssl, data=connect_data)
+    response.raise_for_status()
+    returned_data = response.json()
 
     ticket = {"PVEAuthCookie": returned_data["data"]["ticket"]}
     csrf = str(returned_data["data"]["CSRFPreventionToken"])
@@ -150,7 +164,7 @@ def query(conn_type, option, post_data=None):
         log.debug("Not authenticated yet, doing that now..")
         _authenticate()
 
-    full_url = "https://{}:{}/api2/json/{}".format(url, port, option)
+    full_url = f"https://{url}:{port}/api2/json/{option}"
 
     log.debug("%s: %s (%s)", conn_type, full_url, post_data)
 
@@ -190,7 +204,12 @@ def query(conn_type, option, post_data=None):
     elif conn_type == "get":
         response = requests.get(full_url, verify=verify_ssl, cookies=ticket)
 
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
+        # Log the details of the response.
+        log.error("Error in %s query to %s:\n%s", conn_type, full_url, response.text)
+        raise
 
     try:
         returned_data = response.json()
@@ -435,9 +454,7 @@ def avail_images(call=None, location="local"):
 
     ret = {}
     for host_name, host_details in avail_locations().items():
-        for item in query(
-            "get", "nodes/{}/storage/{}/content".format(host_name, location)
-        ):
+        for item in query("get", f"nodes/{host_name}/storage/{location}/content"):
             ret[item["volid"]] = item
     return ret
 
@@ -544,7 +561,7 @@ def _dictionary_to_stringlist(input_dict):
 
     setting1=value1,setting2=value2
     """
-    return ",".join("{}={}".format(k, input_dict[k]) for k in sorted(input_dict.keys()))
+    return ",".join(f"{k}={input_dict[k]}" for k in sorted(input_dict.keys()))
 
 
 def _reconfigure_clone(vm_, vmid):
@@ -558,20 +575,18 @@ def _reconfigure_clone(vm_, vmid):
         log.warning("Reconfiguring clones is only available under `qemu`")
         return
 
-    # TODO: Support other settings here too as these are not the only ones that can be modified after a clone operation
+    # Determine which settings can be reconfigured.
+    query_path = "nodes/{}/qemu/{}/config"
+    valid_settings = set(_get_properties(query_path.format("{node}", "{vmid}"), "POST"))
+
     log.info("Configuring cloned VM")
 
     # Modify the settings for the VM one at a time so we can see any problems with the values
     # as quickly as possible
     for setting in vm_:
-        if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
-            postParams = {setting: vm_[setting]}
-            query(
-                "post",
-                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
-                postParams,
-            )
-
+        postParams = None
+        if setting == "vmid":
+            pass  # vmid gets passed in the URL and can't be reconfigured
         elif re.match(r"^net(\d+)$", setting):
             # net strings are a list of comma seperated settings. We need to merge the settings so that
             # the setting in the profile only changes the settings it touches and the other settings
@@ -591,6 +606,13 @@ def _reconfigure_clone(vm_, vmid):
 
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
+
+        elif setting == "sshkeys":
+            postParams = {setting: urllib.parse.quote(vm_[setting], safe="")}
+        elif setting in valid_settings:
+            postParams = {setting: vm_[setting]}
+
+        if postParams:
             query(
                 "post",
                 "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
@@ -655,12 +677,18 @@ def create(vm_):
         newid = _get_next_vmid()
         data = create_node(vm_, newid)
     except Exception as exc:  # pylint: disable=broad-except
+        msg = str(exc)
+        if (
+            isinstance(exc, requests.exceptions.RequestException)
+            and exc.response is not None
+        ):
+            msg = msg + "\n" + exc.response.text
         log.error(
             "Error creating %s on PROXMOX\n\n"
             "The following exception was thrown when trying to "
             "run the initial deployment: \n%s",
             vm_["name"],
-            exc,
+            msg,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
@@ -668,10 +696,7 @@ def create(vm_):
 
     ret["creation_data"] = data
     name = vm_["name"]  # hostname which we know
-    if "clone" in vm_ and vm_["clone"] is True:
-        vmid = newid
-    else:
-        vmid = data["vmid"]  # vmid which we have received
+    vmid = data["vmid"]  # vmid which we have received
     host = data["node"]  # host which we have received
     nodeType = data["technology"]  # VM tech (Qemu / OpenVZ)
 
@@ -692,7 +717,7 @@ def create(vm_):
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data["upid"], timeout=300):
-        return {"Error": "Unable to create {}, command timed out".format(name)}
+        return {"Error": f"Unable to create {name}, command timed out"}
 
     if vm_.get("clone") is True:
         _reconfigure_clone(vm_, vmid)
@@ -705,7 +730,7 @@ def create(vm_):
     # Wait until the VM has fully started
     log.debug('Waiting for state "running" for vm %s on %s', vmid, host)
     if not wait_for_state(vmid, "running"):
-        return {"Error": "Unable to start {}, command timed out".format(name)}
+        return {"Error": f"Unable to start {name}, command timed out"}
 
     if agent_get_ip is True:
         try:
@@ -845,7 +870,7 @@ def _import_api():
     Load this json content into global variable "api"
     """
     global api
-    full_url = "https://{}:{}/pve-docs/api-viewer/apidoc.js".format(url, port)
+    full_url = f"https://{url}:{port}/pve-docs/api-viewer/apidoc.js"
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile(" (?:pveapi|apiSchema) = (.*)^;", re.DOTALL | re.MULTILINE)
@@ -1007,6 +1032,7 @@ def create_node(vm_, newid):
         )
         for prop in _get_properties("/nodes/{node}/qemu", "POST", static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
+                # If specified, vmid will override newid.
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
@@ -1026,6 +1052,8 @@ def create_node(vm_, newid):
     if "clone" in vm_ and vm_["clone"] is True and vm_["technology"] == "qemu":
         postParams = {}
         postParams["newid"] = newnode["vmid"]
+        if "pool" in vm_:
+            postParams["pool"] = vm_["pool"]
 
         for prop in "description", "format", "full", "name":
             if (
@@ -1047,7 +1075,12 @@ def create_node(vm_, newid):
         )
     else:
         node = query("post", "nodes/{}/{}".format(vmhost, vm_["technology"]), newnode)
-    return _parse_proxmox_upid(node, vm_)
+    result = _parse_proxmox_upid(node, vm_)
+
+    # When cloning, the upid contains the clone_from vmid instead of the new vmid
+    result["vmid"] = newnode["vmid"]
+
+    return result
 
 
 def show_instance(name, call=None):
@@ -1071,12 +1104,12 @@ def get_vmconfig(vmid, node=None, node_type="openvz"):
     if node is None:
         # We need to figure out which node this VM is on.
         for host_name, host_details in avail_locations().items():
-            for item in query("get", "nodes/{}/{}".format(host_name, node_type)):
+            for item in query("get", f"nodes/{host_name}/{node_type}"):
                 if item["vmid"] == vmid:
                     node = host_name
 
     # If we reached this point, we have all the information we need
-    data = query("get", "nodes/{}/{}/{}/config".format(node, node_type, vmid))
+    data = query("get", f"nodes/{node}/{node_type}/{vmid}/config")
 
     return data
 
@@ -1148,7 +1181,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1162,7 +1195,7 @@ def destroy(name, call=None):
 
         # wait until stopped
         if not wait_for_state(vmobj["vmid"], "stopped"):
-            return {"Error": "Unable to stop {}, command timed out".format(name)}
+            return {"Error": f"Unable to stop {name}, command timed out"}
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
@@ -1172,7 +1205,7 @@ def destroy(name, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1182,7 +1215,7 @@ def destroy(name, call=None):
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
 
-        return {"Destroyed": "{} was destroyed.".format(name)}
+        return {"Destroyed": f"{name} was destroyed."}
 
 
 def set_vm_status(status, name=None, vmid=None):
@@ -1271,7 +1304,7 @@ def start(name, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'started'
 
-    return {"Started": "{} was started.".format(name)}
+    return {"Started": f"{name} was started."}
 
 
 def stop(name, vmid=None, call=None):
@@ -1293,7 +1326,7 @@ def stop(name, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
-    return {"Stopped": "{} was stopped.".format(name)}
+    return {"Stopped": f"{name} was stopped."}
 
 
 def shutdown(name=None, vmid=None, call=None):
@@ -1317,4 +1350,4 @@ def shutdown(name=None, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
-    return {"Shutdown": "{} was shutdown.".format(name)}
+    return {"Shutdown": f"{name} was shutdown."}

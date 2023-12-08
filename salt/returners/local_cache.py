@@ -16,6 +16,7 @@ import salt.payload
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.minions
 import salt.utils.msgpack
 import salt.utils.stringutils
@@ -392,11 +393,26 @@ def get_jids_filter(count, filter_find_job=True):
     return ret
 
 
+def _remove_job_dir(job_path):
+    """
+    Try to remove job dir. In rare cases NotADirectoryError can raise because node corruption.
+    :param job_path: Path to job
+    """
+    # Remove job dir
+    try:
+        shutil.rmtree(job_path)
+    except (NotADirectoryError, OSError) as err:
+        log.error("Unable to remove %s: %s", job_path, err)
+        return False
+    return True
+
+
 def clean_old_jobs():
     """
     Clean out the old jobs from the job cache
     """
-    if __opts__["keep_jobs"] != 0:
+    keep_jobs_seconds = salt.utils.job.get_keep_jobs_seconds(__opts__)
+    if keep_jobs_seconds != 0:
         jid_root = _job_dir()
 
         if not os.path.exists(jid_root):
@@ -423,18 +439,15 @@ def clean_old_jobs():
                 if not os.path.isfile(jid_file) and os.path.exists(f_path):
                     # No jid file means corrupted cache entry, scrub it
                     # by removing the entire f_path directory
-                    shutil.rmtree(f_path)
+                    _remove_job_dir(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (time.time() - jid_ctime) / 3600.0
-                    if hours_difference > __opts__["keep_jobs"] and os.path.exists(
+                    seconds_difference = time.time() - jid_ctime
+                    if seconds_difference > keep_jobs_seconds and os.path.exists(
                         t_path
                     ):
                         # Remove the entire f_path from the original JID dir
-                        try:
-                            shutil.rmtree(f_path)
-                        except OSError as err:
-                            log.error("Unable to remove %s: %s", f_path, err)
+                        _remove_job_dir(f_path)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -445,9 +458,9 @@ def clean_old_jobs():
                 # Checking the time again prevents a possible race condition where
                 # t_path JID dirs were created, but not yet populated by a jid file.
                 t_path_ctime = os.stat(t_path).st_ctime
-                hours_difference = (time.time() - t_path_ctime) / 3600.0
-                if hours_difference > __opts__["keep_jobs"]:
-                    shutil.rmtree(t_path)
+                seconds_difference = time.time() - t_path_ctime
+                if seconds_difference > keep_jobs_seconds:
+                    _remove_job_dir(t_path)
 
 
 def update_endtime(jid, time):

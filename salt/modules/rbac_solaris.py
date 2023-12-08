@@ -21,7 +21,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{} module can only be loaded on a solaris like system".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded on a solaris like system",
     )
 
 
@@ -152,7 +152,7 @@ def profile_add(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
                 login=user,
@@ -209,7 +209,7 @@ def profile_rm(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
                 login=user,
@@ -351,7 +351,7 @@ def role_add(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
                 login=user,
@@ -408,7 +408,7 @@ def role_rm(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
                 login=user,
@@ -459,7 +459,7 @@ def auth_list():
 
             # add auth info to dict
             if auth[0][-1:] == ".":
-                auth[0] = "{}*".format(auth[0])
+                auth[0] = f"{auth[0]}*"
             auths[auth[0]] = auth[3]
 
     return auths
@@ -509,7 +509,7 @@ def auth_get(user, computed=True):
 
     ## also parse auths command
     if computed:
-        res = __salt__["cmd.run_all"]("auths {}".format(user))
+        res = __salt__["cmd.run_all"](f"auths {user}")
         if res["retcode"] == 0:
             for auth in res["stdout"].splitlines():
                 if "," in auth:
@@ -550,7 +550,7 @@ def auth_add(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
                 login=user,
@@ -607,7 +607,7 @@ def auth_rm(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
                 login=user,
@@ -634,6 +634,3 @@ def auth_rm(user, auth):
             ret[a] = "Remove"
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

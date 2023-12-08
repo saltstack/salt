@@ -47,4 +47,3 @@
       - artifacts/
       - .kitchen/
     expire_in: 6 months
-

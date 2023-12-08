@@ -229,24 +229,42 @@ def test_gunzip(archive, unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("zip")
-def test_cmd_zip(archive, unicode_filename):
+def test_cmd_zip(archive, unicode_filename, grains):
     """
     Validate using the cmd_zip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
         ret = archive.cmd_zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
+        if (
+            "*** buffer overflow detected ***: terminated" in ret
+            and grains["os"] == "Fedora"
+            and int(grains["osmajorrelease"]) >= 37
+        ):
+            pytest.skip(
+                f"Calling the system zip on {grains['os']} {grains['osmajorrelease']} "
+                "is currently failing with a buffer overflow error"
+            )
         arch.assert_artifacts_in_ret(ret)
 
 
 @pytest.mark.skip_if_binaries_missing("zip", "unzip")
-def test_cmd_unzip(archive, unicode_filename):
+def test_cmd_unzip(archive, unicode_filename, grains):
     """
     Validate using the cmd_unzip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
         ret = archive.cmd_zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
+        if (
+            "*** buffer overflow detected ***: terminated" in ret
+            and grains["os"] == "Fedora"
+            and int(grains["osmajorrelease"]) >= 37
+        ):
+            pytest.skip(
+                f"Calling the system unzip on {grains['os']} {grains['osmajorrelease']} "
+                "is currently failing with a buffer overflow error"
+            )
         arch.assert_artifacts_in_ret(ret)
 
         ret = archive.cmd_unzip(str(arch.archive), str(arch.dst))

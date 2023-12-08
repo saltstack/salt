@@ -135,7 +135,7 @@ def test_retention_schedule():
     def run_checks(isdir=mock_t, strptime_format=None, test=False):
         expected_ret = {
             "name": fake_name,
-            "changes": {"retained": [], "deleted": [], "ignored": []},
+            "changes": {},
             "result": True,
             "comment": "Name provided to file.retention must be a directory",
         }

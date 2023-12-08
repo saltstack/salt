@@ -16,9 +16,9 @@ import types
 import warnings
 from contextlib import contextmanager
 
-import _pytest._version
 import attr
 import pytest
+import requests
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
 
@@ -27,9 +27,6 @@ import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -74,9 +71,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -122,9 +117,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -165,7 +158,7 @@ def salt_loader_module_functions(module):
             # Not a function? carry on
             continue
         funcname = func_alias.get(func.__name__) or func.__name__
-        funcs["{}.{}".format(virtualname, funcname)] = func
+        funcs[f"{virtualname}.{funcname}"] = func
     return funcs
 
 
@@ -182,7 +175,7 @@ def remove_stale_minion_key(master, minion_id):
 def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
     cachefile = os.path.join(
         proxy_minion.config["cachedir"],
-        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+        f"dummy-proxy-{minion_id or proxy_minion.id}.cache",
     )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
@@ -253,7 +246,7 @@ class TestAccount:
     hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
     group_name = attr.ib()
-    _group = attr.ib(init=False, repr=False)
+    _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -277,7 +270,7 @@ class TestAccount:
     @group_name.default
     def _default_group_name(self):
         if self.create_group:
-            return "group-{}".format(self.username)
+            return f"group-{self.username}"
         return None
 
     @_group.default
@@ -298,6 +291,10 @@ class TestAccount:
                 "account. There's no group attribute in this account instance."
             )
         return self._group
+
+    @group.setter
+    def _set_group(self, value):
+        self._group = value
 
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
@@ -381,6 +378,7 @@ def create_account(
     hashed_password=attr.NOTHING,
     group_name=attr.NOTHING,
     create_group=False,
+    group=attr.NOTHING,
     sminion=attr.NOTHING,
 ):
     with TestAccount(
@@ -390,6 +388,7 @@ def create_account(
         hashed_password=hashed_password,
         group_name=group_name,
         create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
@@ -694,10 +693,6 @@ class EntropyGenerator:
         if self.current_entropy >= self.minimum_entropy:
             return
 
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
-
         rngd = shutil.which("rngd")
         openssl = shutil.which("openssl")
         timeout = time.time() + max_time
@@ -712,7 +707,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
                 self.current_entropy = int(kernel_entropy_file.read_text().strip())
@@ -730,7 +725,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
@@ -762,7 +757,7 @@ class EntropyGenerator:
                 )
             )
             if self.skip:
-                raise pytest.skip.Exception(message, **exc_kwargs)
+                raise pytest.skip.Exception(message, _use_item_location=True)
             raise pytest.fail(message)
 
     def __enter__(self):
@@ -771,6 +766,35 @@ class EntropyGenerator:
 
     def __exit__(self, *_):
         pass
+
+
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
+
+
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    # NOTE the stream=True parameter below
+    with requests.get(url, allow_redirects=True, stream=True, auth=auth) as r:
+        r.raise_for_status()
+        with salt.utils.files.fopen(dest, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+    return dest
 
 
 # Only allow star importing the functions defined in this module

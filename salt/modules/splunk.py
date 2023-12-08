@@ -300,7 +300,7 @@ def update_user(email, profile="splunk", **kwargs):
             elif resource_value != v:
                 kwargs[k] = v
 
-    if len(kwargs) > 0:
+    if kwargs:
         user.update(**kwargs).refresh()
 
         fields_modified = {}

@@ -90,7 +90,7 @@ def _parse_xfs_info(data):
     spr = re.compile(r"\s+")
     entry = None
     for line in [spr.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
-        if not line:
+        if not line or "=" not in line:
             continue
         nfo = _xfs_info_get_kv(line)
         if not line.startswith("="):

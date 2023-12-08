@@ -31,6 +31,12 @@ PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
 GLOBAL_ONLY = ("branch",)
 
 
+def _legacy_git():
+    return not any(
+        (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
+    )
+
+
 def genrepo(opts=None, fire_event=True):
     """
     Generate winrepo_cachefile based on sls files in the winrepo_dir
@@ -154,9 +160,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
 
     ret = {}
     for remotes, base_dir in winrepo_cfg:
-        if not any(
-            (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
-        ):
+        if _legacy_git():
             # Use legacy code
             winrepo_result = {}
             for remote_info in remotes:

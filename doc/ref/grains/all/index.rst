@@ -31,6 +31,7 @@ grains modules
     nvme
     nxos
     opts
+    package
     panos
     pending_reboot
     philips_hue

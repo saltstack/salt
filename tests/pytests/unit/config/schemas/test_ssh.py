@@ -10,17 +10,17 @@ import pytest
 import salt.utils.stringutils
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import jsonschema
     import jsonschema.exceptions
 
     HAS_JSONSCHEMA = True
-    JSONSCHEMA_VERSION = _LooseVersion(jsonschema.__version__)
+    JSONSCHEMA_VERSION = Version(jsonschema.__version__)
 except ImportError:
     HAS_JSONSCHEMA = False
-    JSONSCHEMA_VERSION = _LooseVersion("0")
+    JSONSCHEMA_VERSION = Version("0")
 
 
 def test_config():
@@ -273,7 +273,7 @@ def test_roster_config_validate():
             ssh_schemas.RosterItem.serialize(),
             format_checker=jsonschema.FormatChecker(),
         )
-    if JSONSCHEMA_VERSION < _LooseVersion("2.6.0"):
+    if JSONSCHEMA_VERSION < Version("2.6.0"):
         assert (
             "Additional properties are not allowed ('target-1:1' was unexpected)"
             in excinfo.value.message

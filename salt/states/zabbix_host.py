@@ -12,6 +12,12 @@ from copy import deepcopy
 import salt.utils.dictdiffer
 import salt.utils.json
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """
@@ -85,14 +91,14 @@ def present(host, groups, interfaces, **kwargs):
     ret = {"name": host, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_host_created = "Host {} created.".format(host)
-    comment_host_updated = "Host {} updated.".format(host)
-    comment_host_notcreated = "Unable to create host: {}. ".format(host)
-    comment_host_exists = "Host {} already exists.".format(host)
+    comment_host_created = f"Host {host} created."
+    comment_host_updated = f"Host {host} updated."
+    comment_host_notcreated = f"Unable to create host: {host}. "
+    comment_host_exists = f"Host {host} already exists."
     changes_host_created = {
         host: {
-            "old": "Host {} does not exist.".format(host),
-            "new": "Host {} created.".format(host),
+            "old": f"Host {host} does not exist.",
+            "new": f"Host {host} created.",
         }
     }
 
@@ -206,7 +212,7 @@ def present(host, groups, interfaces, **kwargs):
             try:
                 groupids.append(int(groupid[0]["groupid"]))
             except TypeError:
-                ret["comment"] = "Invalid group {}".format(group)
+                ret["comment"] = f"Invalid group {group}"
                 return ret
         else:
             groupids.append(group)
@@ -224,23 +230,23 @@ def present(host, groups, interfaces, **kwargs):
                     {
                         "output": "proxyid",
                         "selectInterface": "extend",
-                        "filter": {"host": "{}".format(proxy_host)},
+                        "filter": {"host": f"{proxy_host}"},
                     },
-                    **connection_args
+                    **connection_args,
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
+                ret["comment"] = f"Invalid proxy_host {proxy_host}"
                 return ret
         # Otherwise lookup proxy_host as proxyid
         else:
             try:
                 proxy_hostid = __salt__["zabbix.run_query"](
                     "proxy.get",
-                    {"proxyids": "{}".format(proxy_host), "output": "proxyid"},
-                    **connection_args
+                    {"proxyids": f"{proxy_host}", "output": "proxyid"},
+                    **connection_args,
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
+                ret["comment"] = f"Invalid proxy_host {proxy_host}"
                 return ret
 
     # Selects if the current inventory should be substituted by the new one
@@ -459,7 +465,7 @@ def present(host, groups, interfaces, **kwargs):
                             useip=interface["useip"],
                             port=interface["port"],
                             details=interface["details"],
-                            **connection_args
+                            **connection_args,
                         )
                     else:
                         interfaceid = interfaceid_by_type[interface["type"]].pop(0)
@@ -472,7 +478,7 @@ def present(host, groups, interfaces, **kwargs):
                             useip=interface["useip"],
                             port=interface["port"],
                             details=interface["details"],
-                            **connection_args
+                            **connection_args,
                         )
                     return ret
 
@@ -516,7 +522,7 @@ def present(host, groups, interfaces, **kwargs):
             proxy_hostid=proxy_hostid,
             inventory=new_inventory,
             visible_name=visible_name,
-            **sum_kwargs
+            **sum_kwargs,
         )
 
         if "error" not in host_create:
@@ -556,13 +562,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_host_deleted = "Host {} deleted.".format(name)
-    comment_host_notdeleted = "Unable to delete host: {}. ".format(name)
-    comment_host_notexists = "Host {} does not exist.".format(name)
+    comment_host_deleted = f"Host {name} deleted."
+    comment_host_notdeleted = f"Unable to delete host: {name}. "
+    comment_host_notexists = f"Host {name} does not exist."
     changes_host_deleted = {
         name: {
-            "old": "Host {} exists.".format(name),
-            "new": "Host {} deleted.".format(name),
+            "old": f"Host {name} exists.",
+            "new": f"Host {name} deleted.",
         }
     }
     connection_args = {}
@@ -670,7 +676,7 @@ def assign_templates(host, templates, **kwargs):
         hostids=hostid,
         output='[{"hostid"}]',
         selectParentTemplates='["templateid"]',
-        **connection_args
+        **connection_args,
     )
     for template_id in host_templates[0]["parentTemplates"]:
         curr_template_ids.append(template_id["templateid"])
@@ -684,7 +690,7 @@ def assign_templates(host, templates, **kwargs):
             requested_template_ids.append(template_id)
         except TypeError:
             ret["result"] = False
-            ret["comment"] = "Unable to find template: {}.".format(template)
+            ret["comment"] = f"Unable to find template: {template}."
             return ret
 
     # remove any duplications

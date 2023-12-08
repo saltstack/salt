@@ -111,7 +111,7 @@ def test_deprecated_defaults_kwarg():
 
     assert str(w[-1].message) == (
         "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
-        "for removal in 3008 and no longer does anything for the function "
+        "for removal in 3008.0 (Argon) and no longer does anything for the function "
         "being namespaced."
     )
 
@@ -127,6 +127,6 @@ def test_deprecated_preserve_context_kwarg(preserve_context):
 
     assert str(w[-1].message) == (
         "Passing 'preserve_context' to 'namespaced_function' is deprecated, slated "
-        "for removal in 3008 and no longer does anything for the function "
+        "for removal in 3008.0 (Argon) and no longer does anything for the function "
         "being namespaced."
     )

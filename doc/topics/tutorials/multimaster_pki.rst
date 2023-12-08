@@ -192,7 +192,7 @@ in the order they are defined. To randomize that order, set
 
 .. code-block:: yaml
 
-    master_shuffle: True
+    random_master: True
 
 The master-list will then be shuffled before the first connection attempt.
 

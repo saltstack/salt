@@ -491,4 +491,3 @@ States
 * :mod:`states.zabbix_hostgroup <salt.states.zabbix_hostgroup>`
 * :mod:`states.zabbix_user <salt.states.zabbix_user>`
 * :mod:`states.zabbix_usergroup <salt.states.zabbix_usergroup>`
-

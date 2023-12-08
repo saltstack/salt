@@ -25,7 +25,7 @@ The default action is 'print=path'.
 
 file-glob:
     *                = match zero or more chars
-    ?                = match any char
+    ?                = match zero or single char
     [abc]            = match a, b, or c
     [!abc] or [^abc] = match anything except a, b, and c
     [x-y]            = match chars x through y

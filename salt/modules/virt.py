@@ -3498,6 +3498,7 @@ def update(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
     **kwargs
 ):
     """
@@ -3692,6 +3693,10 @@ def update(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3759,6 +3764,7 @@ def update(
             **kwargs
         )
     )
+    set_autostart(name, "on" if autostart else "off")
 
     if clock:
         offset = "utc" if clock.get("utc", True) else "localtime"
@@ -5563,8 +5569,8 @@ def set_autostart(vm_, state="on", **kwargs):
     system on reboot.
 
     :param vm_: domain name
-    :param state: 'on' to auto start the pool, anything else to mark the
-                  pool not to be started when the host boots
+    :param state: 'on' to auto start the VM, 'off' to mark the VM not to be
+                  started when the host boots
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0

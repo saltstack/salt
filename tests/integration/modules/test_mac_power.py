@@ -11,6 +11,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 class MacPowerModuleTest(ModuleCase):
     """
     Validate the mac_power module
@@ -229,7 +230,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
         Reset to original value
         """
         if self.RESTART_POWER is not None:
-            self.run_function("power.set_sleep_on_power_button", [self.SLEEP_ON_BUTTON])
+            self.run_function("power.set_sleep_on_power_button", [self.RESTART_POWER])
 
     def test_restart_power_failure(self):
         """

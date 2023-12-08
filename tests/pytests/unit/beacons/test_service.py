@@ -68,14 +68,15 @@ def test_service_running():
 
         assert ret == (True, "Valid beacon configuration")
 
-        ret = service_beacon.beacon(config)
-        assert ret == [
-            {
-                "service_name": "salt-master",
-                "tag": "salt-master",
-                "salt-master": {"running": True},
-            }
-        ]
+        with patch.dict(service_beacon.LAST_STATUS, {}):
+            ret = service_beacon.beacon(config)
+            assert ret == [
+                {
+                    "service_name": "salt-master",
+                    "tag": "salt-master",
+                    "salt-master": {"running": True},
+                }
+            ]
 
         # When onchangeonly is True and emitatstartup is False ,
         # we should not see a return when the beacon is run.
@@ -91,8 +92,13 @@ def test_service_running():
 
         assert ret == (True, "Valid beacon configuration")
 
-        ret = service_beacon.beacon(config)
-        assert ret == []
+        # The return is empty because the beacon did not run
+        # but the LAST_STATUS should contain the last status
+        # for the service.
+        with patch.dict(service_beacon.LAST_STATUS, {}):
+            ret = service_beacon.beacon(config)
+            assert "salt-master" in service_beacon.LAST_STATUS
+            assert ret == []
 
         # When onchangeonly is True and emitatstartup is
         # the default value True, we should see a return
@@ -103,14 +109,15 @@ def test_service_running():
 
         assert ret == (True, "Valid beacon configuration")
 
-        ret = service_beacon.beacon(config)
-        assert ret == [
-            {
-                "service_name": "salt-master",
-                "tag": "salt-master",
-                "salt-master": {"running": True},
-            }
-        ]
+        with patch.dict(service_beacon.LAST_STATUS, {}):
+            ret = service_beacon.beacon(config)
+            assert ret == [
+                {
+                    "service_name": "salt-master",
+                    "tag": "salt-master",
+                    "salt-master": {"running": True},
+                }
+            ]
 
         # LAST_STATUS has service name and status has not changed
         config = [{"services": {"salt-master": {"onchangeonly": True}}}]
@@ -145,6 +152,29 @@ def test_service_running():
                     "salt-master": {"running": True},
                 }
             ]
+
+        # When onchangeonly is True and emitatstartup is True,
+        # we should see a return when the beacon is run.
+        config = [
+            {"services": {"salt-master": {"emitatstartup": True, "onchangeonly": True}}}
+        ]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        with patch.dict(service_beacon.LAST_STATUS, {}):
+            ret = service_beacon.beacon(config)
+            assert ret == [
+                {
+                    "salt-master": {"running": True},
+                    "service_name": "salt-master",
+                    "tag": "salt-master",
+                }
+            ]
+
+            ret = service_beacon.beacon(config)
+            assert ret == []
 
 
 def test_service_not_running():

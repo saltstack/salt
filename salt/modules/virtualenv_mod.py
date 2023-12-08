@@ -347,9 +347,10 @@ def get_site_packages(venv):
     """
     bin_path = _verify_virtualenv(venv)
 
+    # note: platlib and purelib could differ
     ret = __salt__["cmd.exec_code_all"](
         bin_path,
-        "from distutils import sysconfig; print(sysconfig.get_python_lib())",
+        'import sysconfig; print(sysconfig.get_path("purelib"))',
     )
 
     if ret["retcode"] != 0:

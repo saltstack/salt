@@ -177,7 +177,7 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
     master_type: str
 
-If this option is ``str`` (default), multiple hot masters are configured.    
+If this option is ``str`` (default), multiple hot masters are configured.
 Minions can connect to multiple masters simultaneously (all master are "hot").
 
 .. code-block:: yaml
@@ -602,9 +602,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -1104,8 +1109,9 @@ adds 5 seconds every time grains are generated if an IP does not resolve. In Win
 grains are regenerated each time a new process is spawned. Therefore, the default for
 Windows is ``False``. In many cases this value does not make sense to include for proxy
 minions as it will be FQDN for the host running the proxy minion process, so the default
-for proxy minions is ``False```. All other OSes default to ``True``. This options was
-added `here <https://github.com/saltstack/salt/pull/55581>`_.
+for proxy minions is ``False```. On macOS, FQDN resolution can be very slow, therefore
+the default for macOS is ``False`` as well. All other OSes default to ``True``.
+This option was added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml
 
@@ -1191,8 +1197,8 @@ seconds each iteration.
 
 Default: ``False``
 
-If the master rejects the minion's public key, retry instead of exiting.
-Rejected keys will be handled the same as waiting on acceptance.
+If the master denies or rejects the minion's public key, retry instead of
+exiting.  These keys will be handled the same as waiting on acceptance.
 
 .. code-block:: yaml
 
@@ -1298,6 +1304,36 @@ restart.
 .. code-block:: yaml
 
     auth_safemode: False
+
+.. conf_minion:: request_channel_timeout
+
+``request_channel_timeout``
+---------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``30``
+
+The default timeout timeout for request channel requests. This setting can be used to tune minions to better handle long running pillar and file client requests.
+
+.. code-block:: yaml
+
+    request_channel_timeout: 30
+
+``request_channel_tries``
+-------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``3``
+
+The default number of times the minion will try request channel requests. This
+setting can be used to tune minions to better handle long running pillar and
+file client requests by retrying them after a timeout happens.
+
+.. code-block:: yaml
+
+    request_channel_tries: 3
 
 .. conf_minion:: ping_interval
 
@@ -1488,6 +1524,23 @@ process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_minion:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_minion:: tcp_pub_port
 
@@ -2012,7 +2065,6 @@ Valid options:
 Top File Settings
 =================
 
-These parameters only have an effect if running a masterless minion.
 
 .. conf_minion:: state_top
 
@@ -2252,6 +2304,31 @@ aggregate just those types.
     state_aggregate:
       - pkg
 
+.. conf_minion:: state_queue
+
+``state_queue``
+---------------
+
+Default: ``False``
+
+Instead of failing immediately when another state run is in progress, a value
+of ``True`` will queue the new state run to begin running once the other has
+finished. This option starts a new thread for each queued state run, so use
+this option sparingly.
+
+.. code-block:: yaml
+
+    state_queue: True
+
+Additionally, it can be set to an integer representing the maximum queue size
+which can be attained before the state runs will fail to be queued. This can
+prevent runaway conditions where new threads are started until system
+performance is hampered.
+
+.. code-block:: yaml
+
+    state_queue: 2
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2390,10 +2467,7 @@ enabled and can be disabled by changing this value to ``False``.
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
 
-Normally the minion is not isolated to any single environment on the master
-when running states, but the environment can be isolated on the minion side
-by statically setting it. Remember that the recommended way to manage
-environments is to isolate via the top file.
+The default fileserver environment to use when copying files and applying states.
 
 .. code-block:: yaml
 
@@ -2449,6 +2523,21 @@ default configuration set up at install time.
 .. code-block:: yaml
 
     snapper_states_config: root
+
+``global_state_conditions``
+---------------------------
+
+Default: ``None``
+
+If set, this parameter expects a dictionary of state module names as keys and a
+list of conditions which must be satisfied in order to run any functions in that
+state module.
+
+.. code-block:: yaml
+
+    global_state_conditions:
+      "*": ["G@global_noop:false"]
+      service: ["not G@virtual_subtype:chroot"]
 
 File Directory Settings
 =======================
@@ -3218,6 +3307,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_level_logfile
 
@@ -3234,6 +3329,12 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_datefmt
 

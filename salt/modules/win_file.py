@@ -14,9 +14,12 @@ import os
 import os.path
 import stat
 import sys
+import tempfile
 
+import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.file import (
     __clean_tmp,
@@ -106,6 +109,15 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
+HAS_WIN_DACL = False
+try:
+    if salt.utils.platform.is_windows():
+        import salt.utils.win_dacl
+
+        HAS_WIN_DACL = True
+except ImportError:
+    HAS_WIN_DACL = False
+
 if salt.utils.platform.is_windows():
     if HAS_WINDOWS_MODULES:
         # namespace functions from file.py
@@ -193,6 +205,8 @@ def __virtual__():
     """
     if not salt.utils.platform.is_windows() or not HAS_WINDOWS_MODULES:
         return False, "Module win_file: Missing Win32 modules"
+    if not HAS_WIN_DACL:
+        return False, "Module win_file: Unable to load salt.utils.win_dacl"
     return __virtualname__
 
 
@@ -258,7 +272,7 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     """
-    func_name = "{}.gid_to_group".format(__virtualname__)
+    func_name = f"{__virtualname__}.gid_to_group"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -293,7 +307,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     """
-    func_name = "{}.group_to_gid".format(__virtualname__)
+    func_name = f"{__virtualname__}.group_to_gid"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -304,7 +318,7 @@ def group_to_gid(group):
     if group is None:
         return ""
 
-    return __utils__["dacl.get_sid_string"](group)
+    return salt.utils.win_dacl.get_sid_string(group)
 
 
 def get_pgid(path, follow_symlinks=True):
@@ -335,7 +349,7 @@ def get_pgid(path, follow_symlinks=True):
         salt '*' file.get_pgid c:\\temp\\test.txt
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -345,8 +359,8 @@ def get_pgid(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    group_name = __utils__["dacl.get_primary_group"](path)
-    return __utils__["dacl.get_sid_string"](group_name)
+    group_name = salt.utils.win_dacl.get_primary_group(path)
+    return salt.utils.win_dacl.get_sid_string(group_name)
 
 
 def get_pgroup(path, follow_symlinks=True):
@@ -419,7 +433,7 @@ def get_gid(path, follow_symlinks=True):
 
         salt '*' file.get_gid c:\\temp\\test.txt
     """
-    func_name = "{}.get_gid".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_gid"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -466,7 +480,7 @@ def get_group(path, follow_symlinks=True):
 
         salt '*' file.get_group c:\\temp\\test.txt
     """
-    func_name = "{}.get_group".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_group"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -497,7 +511,7 @@ def uid_to_user(uid):
     if uid is None or uid == "":
         return ""
 
-    return __utils__["dacl.get_name"](uid)
+    return salt.utils.win_dacl.get_name(uid)
 
 
 def user_to_uid(user):
@@ -517,9 +531,9 @@ def user_to_uid(user):
         salt '*' file.user_to_uid myusername
     """
     if user is None:
-        user = __utils__["user.get_user"]()
+        user = salt.utils.user.get_user()
 
-    return __utils__["dacl.get_sid_string"](user)
+    return salt.utils.win_dacl.get_sid_string(user)
 
 
 def get_uid(path, follow_symlinks=True):
@@ -547,7 +561,7 @@ def get_uid(path, follow_symlinks=True):
         salt '*' file.get_uid c:\\temp\\test.txt follow_symlinks=False
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -557,8 +571,8 @@ def get_uid(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    owner_sid = __utils__["dacl.get_owner"](path)
-    return __utils__["dacl.get_sid_string"](owner_sid)
+    owner_sid = salt.utils.win_dacl.get_owner(path)
+    return salt.utils.win_dacl.get_sid_string(owner_sid)
 
 
 def get_user(path, follow_symlinks=True):
@@ -586,7 +600,7 @@ def get_user(path, follow_symlinks=True):
         salt '*' file.get_user c:\\temp\\test.txt follow_symlinks=False
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -596,7 +610,7 @@ def get_user(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    return __utils__["dacl.get_owner"](path)
+    return salt.utils.win_dacl.get_owner(path)
 
 
 def get_mode(path):
@@ -619,9 +633,9 @@ def get_mode(path):
         salt '*' file.get_mode /etc/passwd
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
-    func_name = "{}.get_mode".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_mode"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -670,7 +684,7 @@ def lchown(path, user, group=None, pgroup=None):
         salt '*' file.lchown c:\\temp\\test.txt myusername "pgroup='None'"
     """
     if group:
-        func_name = "{}.lchown".format(__virtualname__)
+        func_name = f"{__virtualname__}.lchown"
         if __opts__.get("fun", "") == func_name:
             log.info(
                 "The group parameter has no effect when using %s on "
@@ -719,7 +733,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     """
     # the group parameter is not used; only provided for API compatibility
     if group is not None:
-        func_name = "{}.chown".format(__virtualname__)
+        func_name = f"{__virtualname__}.chown"
         if __opts__.get("fun", "") == func_name:
             log.info(
                 "The group parameter has no effect when using %s on "
@@ -732,11 +746,11 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
         path = _resolve_symlink(path)
 
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
-    __utils__["dacl.set_owner"](path, user)
+    salt.utils.win_dacl.set_owner(path, user)
     if pgroup:
-        __utils__["dacl.set_primary_group"](path, pgroup)
+        salt.utils.win_dacl.set_primary_group(path, pgroup)
 
     return True
 
@@ -766,7 +780,7 @@ def chpgrp(path, group):
         salt '*' file.chpgrp c:\\temp\\test.txt Administrators
         salt '*' file.chpgrp c:\\temp\\test.txt "'None'"
     """
-    return __utils__["dacl.set_primary_group"](path, group)
+    return salt.utils.win_dacl.set_primary_group(path, group)
 
 
 def chgrp(path, group):
@@ -801,9 +815,9 @@ def chgrp(path, group):
 
     .. code-block:: bash
 
-        salt '*' file.chpgrp c:\\temp\\test.txt administrators
+        salt '*' file.chgrp c:\\temp\\test.txt administrators
     """
-    func_name = "{}.chgrp".format(__virtualname__)
+    func_name = f"{__virtualname__}.chgrp"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; see "
@@ -849,7 +863,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     # This is to mirror the behavior of file.py. `check_file_meta` expects an
     # empty dictionary when the file does not exist
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
@@ -870,7 +884,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     ret["mtime"] = pstat.st_mtime
     ret["ctime"] = pstat.st_ctime
     ret["size"] = pstat.st_size
-    ret["mode"] = __utils__["files.normalize_mode"](oct(stat.S_IMODE(pstat.st_mode)))
+    ret["mode"] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret["sum"] = get_sum(path, hash_type)
     ret["type"] = "file"
@@ -952,13 +966,13 @@ def _get_version_type(file_type, file_subtype):
 
     if ret_type == "Driver":
         if file_subtype in driver_subtypes:
-            ret_type = "{} Driver".format(driver_subtypes[file_subtype])
+            ret_type = f"{driver_subtypes[file_subtype]} Driver"
     if ret_type == "Font":
         if file_subtype in font_subtypes:
-            ret_type = "{} Font".format(font_subtypes[file_subtype])
+            ret_type = f"{font_subtypes[file_subtype]} Font"
     if ret_type == "Virtual Device":
         # The Virtual Device Identifier
-        ret_type = "Virtual Device: {}".format(file_subtype)
+        ret_type = f"Virtual Device: {file_subtype}"
     return ret_type
 
 
@@ -1027,9 +1041,9 @@ def version(path):
     """
     # Input validation
     if not os.path.exists(path):
-        raise CommandExecutionError("File not found: {}".format(path))
+        raise CommandExecutionError(f"File not found: {path}")
     if os.path.isdir(path):
-        raise CommandExecutionError("Not a file: {}".format(path))
+        raise CommandExecutionError(f"Not a file: {path}")
     return _get_version(path)
 
 
@@ -1067,9 +1081,9 @@ def version_details(path):
     """
     # Input validation
     if not os.path.exists(path):
-        raise CommandExecutionError("File not found: {}".format(path))
+        raise CommandExecutionError(f"File not found: {path}")
     if os.path.isdir(path):
-        raise CommandExecutionError("Not a file: {}".format(path))
+        raise CommandExecutionError(f"Not a file: {path}")
 
     ret = {}
     try:
@@ -1145,7 +1159,7 @@ def get_attributes(path):
         salt '*' file.get_attributes c:\\temp\\a.txt
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # set up dictionary for attribute values
     attributes = {}
@@ -1227,7 +1241,7 @@ def set_attributes(
         salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     if normal:
         if archive or hidden or notIndexed or readonly or system or temporary:
@@ -1296,7 +1310,7 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     """
-    func_name = "{}.set_mode".format(__virtualname__)
+    func_name = f"{__virtualname__}.set_mode"
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -1332,11 +1346,11 @@ def remove(path, force=False):
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute: {}".format(path))
+        raise SaltInvocationError(f"File path must be absolute: {path}")
 
     # Does the file/folder exists
     if not os.path.exists(path) and not is_link(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # Remove ReadOnly Attribute
     if force:
@@ -1353,7 +1367,7 @@ def remove(path, force=False):
             os.rmdir(path)
         else:
             for name in os.listdir(path):
-                item = "{}\\{}".format(path, name)
+                item = f"{path}\\{name}"
                 # If its a normal directory, recurse to remove it's contents
                 remove(item, force)
 
@@ -1363,12 +1377,12 @@ def remove(path, force=False):
         if force:
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(path, file_attributes)
-        raise CommandExecutionError("Could not remove '{}': {}".format(path, exc))
+        raise CommandExecutionError(f"Could not remove '{path}': {exc}")
 
     return True
 
 
-def symlink(src, link, force=False):
+def symlink(src, link, force=False, atomic=False, follow_symlinks=True):
     """
     Create a symbolic link to a file
 
@@ -1389,9 +1403,18 @@ def symlink(src, link, force=False):
             Overwrite an existing symlink with the same name
             .. versionadded:: 3005
 
+        atomic (bool):
+            Use atomic file operations to create the symlink
+            .. versionadded:: 3006.0
+
+        follow_symlinks (bool):
+            If set to ``False``, use ``os.path.lexists()`` for existence checks
+            instead of ``os.path.exists()``.
+            .. versionadded:: 3007.0
+
     Returns:
 
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
     CLI Example:
 
@@ -1406,6 +1429,14 @@ def symlink(src, link, force=False):
             "Symlinks are only supported on Windows Vista or later."
         )
 
+    if not os.path.isabs(link):
+        raise SaltInvocationError(f"Link path must be absolute: {link}")
+
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
+
     if os.path.islink(link):
         try:
             if os.path.normpath(salt.utils.path.readlink(link)) == os.path.normpath(
@@ -1416,18 +1447,13 @@ def symlink(src, link, force=False):
         except OSError:
             pass
 
-        if force:
-            os.unlink(link)
-        else:
-            msg = "Found existing symlink: {}".format(link)
+        if not force and not atomic:
+            msg = f"Found existing symlink: {link}"
             raise CommandExecutionError(msg)
 
-    if os.path.exists(link):
-        msg = "Existing path is not a symlink: {}".format(link)
+    if exists(link) and not force and not atomic:
+        msg = f"Existing path is not a symlink: {link}"
         raise CommandExecutionError(msg)
-
-    if not os.path.isabs(link):
-        raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
     # ensure paths are using the right slashes
     src = os.path.normpath(src)
@@ -1440,12 +1466,35 @@ def symlink(src, link, force=False):
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), desired_access)
     salt.platform.win.elevate_token(th)
 
+    if (os.path.islink(link) or exists(link)) and force and not atomic:
+        os.unlink(link)
+    elif atomic:
+        link_dir = os.path.dirname(link)
+        retry = 0
+        while retry < 5:
+            temp_link = tempfile.mktemp(dir=link_dir)
+            try:
+                win32file.CreateSymbolicLink(temp_link, src, int(is_dir))
+                break
+            except win32file.error:
+                retry += 1
+        try:
+            win32file.MoveFileEx(
+                temp_link,
+                link,
+                win32file.MOVEFILE_REPLACE_EXISTING | win32file.MOVEFILE_WRITE_THROUGH,
+            )
+            return True
+        except win32file.error:
+            os.remove(temp_link)
+            raise CommandExecutionError(f"Could not create '{link}'")
+
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
     except win32file.error as exc:
         raise CommandExecutionError(
-            "Could not create '{}' - [{}] {}".format(link, exc.winerror, exc.strerror)
+            f"Could not create '{link}' - [{exc.winerror}] {exc.strerror}"
         )
 
 
@@ -1477,7 +1526,7 @@ def is_link(path):
         )
 
     try:
-        return __utils__["path.islink"](path)
+        return salt.utils.path.islink(path)
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
@@ -1555,7 +1604,7 @@ def mkdir(
     # Make sure the drive is valid
     drive = os.path.splitdrive(path)[0]
     if not os.path.isdir(drive):
-        raise CommandExecutionError("Drive {} is not mapped".format(drive))
+        raise CommandExecutionError(f"Drive {drive} is not mapped")
 
     path = os.path.expanduser(path)
     path = os.path.expandvars(path)
@@ -1568,10 +1617,10 @@ def mkdir(
 
             # Set owner
             if owner:
-                __utils__["dacl.set_owner"](obj_name=path, principal=owner)
+                salt.utils.win_dacl.set_owner(obj_name=path, principal=owner)
 
             # Set permissions
-            __utils__["dacl.set_perms"](
+            salt.utils.win_dacl.set_perms(
                 obj_name=path,
                 obj_type="file",
                 grant_perms=grant_perms,
@@ -1672,12 +1721,12 @@ def makedirs_(
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        msg = "Directory '{}' already exists".format(dirname)
+        msg = f"Directory '{dirname}' already exists"
         log.debug(msg)
         return msg
 
     if os.path.exists(dirname):
-        msg = "The path '{}' already exists and is not a directory".format(dirname)
+        msg = f"The path '{dirname}' already exists and is not a directory"
         log.debug(msg)
         return msg
 
@@ -1886,11 +1935,11 @@ def check_perms(
         salt '*' file.check_perms C:\\Temp\\ {} Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {}".format(path))
+        raise CommandExecutionError(f"Path not found: {path}")
 
     path = os.path.expanduser(path)
 
-    return __utils__["dacl.check_perms"](
+    return salt.utils.win_dacl.check_perms(
         obj_name=path,
         obj_type="file",
         ret=ret,
@@ -1899,6 +1948,7 @@ def check_perms(
         deny_perms=deny_perms,
         inheritance=inheritance,
         reset=reset,
+        test_mode=__opts__["test"],
     )
 
 
@@ -1976,7 +2026,7 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         # Specify advanced attributes with a list
         salt '*' file.set_perms C:\\Temp\\ "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     """
-    return __utils__["dacl.set_perms"](
+    return salt.utils.win_dacl.set_perms(
         obj_name=path,
         obj_type="file",
         grant_perms=grant_perms,

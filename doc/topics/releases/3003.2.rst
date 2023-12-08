@@ -16,4 +16,3 @@ Fixed
 - Stop SSH from hanging if connection is lost. Also added args to customize grace period. (#60216)
 - Improve reliability of Terminal class (#60504)
 - Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
-

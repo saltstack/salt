@@ -4,7 +4,6 @@ Tests for stringutils utility file.
 
 import builtins
 import re
-import sys
 import textwrap
 
 import pytest
@@ -185,7 +184,7 @@ def test_is_binary():
     assert salt.utils.stringutils.is_binary(b"") is False
 
     nontext = 3 * "".join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)])
-    almost_bin_str = "{}{}".format(LOREM_IPSUM[:100], nontext[:42])
+    almost_bin_str = f"{LOREM_IPSUM[:100]}{nontext[:42]}"
 
     assert salt.utils.stringutils.is_binary(almost_bin_str) is False
     # Also test bytestring
@@ -278,16 +277,10 @@ def test_build_whitespace_split_regex():
     # With 3.7+,  re.escape only escapes special characters, no longer
     # escaping all characters other than ASCII letters, numbers and
     # underscores.  This includes commas.
-    if sys.version_info >= (3, 7):
-        expected_regex = (
-            "(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet,"
-            "(?:[\\s]+)?$"
-        )
-    else:
-        expected_regex = (
-            "(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,"
-            "(?:[\\s]+)?$"
-        )
+    expected_regex = (
+        "(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet,"
+        "(?:[\\s]+)?$"
+    )
     assert (
         salt.utils.stringutils.build_whitespace_split_regex(
             " ".join(LOREM_IPSUM.split()[:5])
@@ -748,24 +741,15 @@ def test_human_to_bytes(unit):
 
     for val in vals:
         # calculate KB, MB, GB, etc. as 1024 instead of 1000 (legacy use)
-        assert (
-            salt.utils.stringutils.human_to_bytes("{}{}".format(val, unit)) == val * iec
-        )
-        assert (
-            salt.utils.stringutils.human_to_bytes("{} {}".format(val, unit))
-            == val * iec
-        )
+        assert salt.utils.stringutils.human_to_bytes(f"{val}{unit}") == val * iec
+        assert salt.utils.stringutils.human_to_bytes(f"{val} {unit}") == val * iec
         # handle metric (KB, MB, GB, etc.) per standard
         assert (
-            salt.utils.stringutils.human_to_bytes(
-                "{}{}".format(val, unit), handle_metric=True
-            )
+            salt.utils.stringutils.human_to_bytes(f"{val}{unit}", handle_metric=True)
             == val * multiplier
         )
         assert (
-            salt.utils.stringutils.human_to_bytes(
-                "{} {}".format(val, unit), handle_metric=True
-            )
+            salt.utils.stringutils.human_to_bytes(f"{val} {unit}", handle_metric=True)
             == val * multiplier
         )
 

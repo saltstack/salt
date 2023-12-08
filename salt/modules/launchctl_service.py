@@ -23,7 +23,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -51,14 +51,14 @@ def __virtual__():
             'Required binary not found: "/bin/launchctl"',
         )
 
-    if _LooseVersion(__grains__["osrelease"]) >= _LooseVersion("10.11"):
+    if Version(__grains__["osrelease"]) >= Version("10.11"):
         return (
             False,
             "Failed to load the mac_service module:\n"
             "Not available on El Capitan, uses mac_service.py",
         )
 
-    if _LooseVersion(__grains__["osrelease"]) >= _LooseVersion("10.10"):
+    if Version(__grains__["osrelease"]) >= Version("10.10"):
         global BEFORE_YOSEMITE
         BEFORE_YOSEMITE = False
 

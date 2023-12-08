@@ -4,7 +4,6 @@ import os
 
 import pytest
 
-import salt.config
 import salt.loader
 import salt.modules.ansiblegate as ansiblegate
 import salt.utils.json
@@ -142,7 +141,7 @@ def test_ansible_playbooks_return_retcode():
         assert "retcode" in ret
 
 
-def test_ansible_targets():
+def test_ansible_targets(minion_opts):
     """
     Test ansible.targets execution module function.
     :return:
@@ -174,8 +173,7 @@ def test_ansible_targets():
     """
     ansible_inventory_mock = MagicMock(return_value=ansible_inventory_ret)
     with patch("salt.utils.path.which", MagicMock(return_value=True)):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        utils = salt.loader.utils(opts, whitelist=["ansible"])
+        utils = salt.loader.utils(minion_opts, whitelist=["ansible"])
         with patch("salt.modules.cmdmod.run", ansible_inventory_mock), patch.dict(
             ansiblegate.__utils__, utils
         ), patch("os.path.isfile", MagicMock(return_value=True)):

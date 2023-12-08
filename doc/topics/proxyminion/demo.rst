@@ -100,7 +100,7 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
 
 8. The REST service implements a degenerately simple pkg and service provider as
    well as a small set of grains.  To "install" a package, use a standard
-   ``pkg.install``.  If you pass '==' and a verrsion number after the package
+   ``pkg.install``.  If you pass '==' and a version number after the package
    name then the service will parse that and accept that as the package's
    version.
 
@@ -112,4 +112,3 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
 
 11. States can be written to target the proxy.  Feel free to experiment with
     them.
-

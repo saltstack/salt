@@ -27,6 +27,7 @@ from mock import (
     ANY,
     DEFAULT,
     FILTER_DIR,
+    AsyncMock,
     MagicMock,
     Mock,
     NonCallableMagicMock,
@@ -47,9 +48,6 @@ import salt.utils.stringutils
 __mock_version = tuple(
     int(part) for part in mock.__version__.split(".") if part.isdigit()
 )  # pylint: disable=no-member
-if sys.version_info < (3, 6) and __mock_version < (2,):
-    # We need mock >= 2.0.0 before Py3.6
-    raise ImportError("Please install mock>=2.0.0")
 
 
 class MockFH:
@@ -205,7 +203,7 @@ class MockFH:
                 )
             elif not self.binary_mode and content_type is not str:
                 raise TypeError(
-                    "write() argument must be str, not {}".format(content_type.__name__)
+                    f"write() argument must be str, not {content_type.__name__}"
                 )
 
     def _writelines(self, lines):
@@ -236,7 +234,7 @@ class MockCall:
                 ret = ret[:-2]
         else:
             for key, val in self.kwargs.items():
-                ret += "{}={}".format(salt.utils.stringutils.to_str(key), repr(val))
+                ret += f"{salt.utils.stringutils.to_str(key)}={repr(val)}"
         ret += ")"
         return ret
 

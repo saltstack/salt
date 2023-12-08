@@ -3,6 +3,16 @@ Salt states to create and manage VMware vSphere datacenters (datacenters).
 
 :codeauthor: `Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
 
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESX data center module. Because the Salt extensions are newer
+    and actively supported by VMware, they are more compatible with current
+    versions of ESXi and they work well with the latest features in the VMware
+    product line.
+
+
 Dependencies
 ============
 
@@ -50,6 +60,7 @@ State configuration:
 
 
 import logging
+from functools import wraps
 
 import salt.exceptions
 
@@ -62,10 +73,33 @@ def __virtual__():
     return "esxdatacenter"
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3008,
+            "The 'esxdatacenter' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     return True
 
 
+@_deprecation_message
 def datacenter_configured(name):
     """
     Makes sure a datacenter exists.
@@ -95,16 +129,16 @@ def datacenter_configured(name):
         )
         if not dcs:
             if __opts__["test"]:
-                comments.append("State will create datacenter '{}'.".format(dc_name))
+                comments.append(f"State will create datacenter '{dc_name}'.")
             else:
                 log.debug("Creating datacenter '%s'", dc_name)
                 __salt__["vsphere.create_datacenter"](dc_name, si)
-                comments.append("Created datacenter '{}'.".format(dc_name))
+                comments.append(f"Created datacenter '{dc_name}'.")
             log.info(comments[-1])
             ret["changes"].update({"new": {"name": dc_name}})
         else:
             comments.append(
-                "Datacenter '{}' already exists. Nothing to be done.".format(dc_name)
+                f"Datacenter '{dc_name}' already exists. Nothing to be done."
             )
             log.info(comments[-1])
         __salt__["vsphere.disconnect"](si)

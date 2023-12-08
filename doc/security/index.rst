@@ -4,7 +4,7 @@
 Security disclosure policy
 ==========================
 
-:email: security@saltstack.com
+:email: saltproject-security.pdl@broadcom.com
 :gpg key ID: 4EA0793D
 :gpg key fingerprint: ``8ABE 4EFC F0F4 B24B FF2A  AF90 D570 F2D3 4EA0 793D``
 
@@ -114,7 +114,7 @@ Security disclosure policy
     =i1Tf
     -----END PGP PUBLIC KEY BLOCK-----
 
-The SaltStack Security Team is available at security@saltstack.com for
+The SaltStack Security Team is available at saltproject-security.pdl@broadcom.com for
 security-related bug reports or questions.
 
 We request the disclosure of any security-related bugs or issues be reported
@@ -129,7 +129,7 @@ SaltStack takes security and the trust of our customers and users very
 seriously. Our disclosure policy is intended to resolve security issues as
 quickly and safely as is possible.
 
-1.  A security report sent to security@saltstack.com is assigned to a team
+1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned to a team
     member. This person is the primary contact for questions and will
     coordinate the fix, release, and announcement.
 
@@ -143,11 +143,16 @@ quickly and safely as is possible.
 4.  Packagers are notified via the `salt-packagers`_ mailing list that an issue
     was reported and resolved, and that an announcement is incoming.
 
-5.  A new release is created and pushed to all affected repositories. The
+5.  A pre-announcement is sent out to the `salt-announce`_ mailing list approximately
+    a week before the CVE release. This announcement does not include details
+    of the vulnerability. The pre-announcement will include the date the release
+    will occur and the vulnerability rating.
+
+6.  A new release is created and pushed to all affected repositories. The
     release documentation provides a full description of the issue, plus any
     upgrade instructions or other relevant details.
 
-6.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
+7.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 

@@ -51,7 +51,7 @@
 # Key cache. Increases master speed for large numbers of accepted
 # keys. Available options: 'sched'. (Updates on a fixed schedule.)
 # Note that enabling this feature means that minions will not be
-# available to target for up to the length of the maintanence loop
+# available to target for up to the length of the maintenance loop
 # which by default is 60s.
 #key_cache: ''
 
@@ -60,22 +60,30 @@
 #
 #cachedir: /var/cache/salt/master
 
-# Directory for custom modules. This directory can contain subdirectories for
-# each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", "engines", "utils", etc.
+# Directory where custom modules sync to. This directory can contain
+# subdirectories for each of Salt's module types such as "runners",
+# "output", "wheel", "modules", "states", "returners", "engines",
+# "utils", etc.
+#
+# Note, any directories or files not found in the `module_dirs`
+# location will be removed from the extension_modules path.
+
 #extension_modules: /var/cache/salt/master/extmods
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
 # "states", "returners", "engines", "utils", etc.
-# Like 'extension_modules' but can take an array of paths
 #module_dirs: []
 
 # Verify and set permissions on configuration directories at startup:
 #verify_env: True
 
-# Set the number of hours to keep old job information in the job cache:
+# Set the number of hours to keep old job information in the job cache.
+# This option is deprecated by the keep_jobs_seconds option.
 #keep_jobs: 24
+
+# Set the number of seconds to keep old job information in the job cache:
+#keep_jobs_seconds: 86400
 
 # The number of seconds to wait when the client is requesting information
 # about running jobs.
@@ -420,6 +428,11 @@
 # Set to True to enable keeping the calculated user's auth list in the token
 # file. This is disabled by default and the auth list is calculated or requested
 # from the eauth driver each time.
+#
+# Note: `keep_acl_in_token` will be forced to True when using external authentication
+# for REST API (`rest` is present under `external_auth`). This is because the REST API
+# does not store the password, and can therefore not retroactively fetch the ACL, so
+# the ACL must be stored in the token.
 #keep_acl_in_token: False
 
 # Auth subsystem module to use to get authorized access list for a user. By default it's
@@ -1012,6 +1025,7 @@
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
 # pillar is recompiled and stored.
+# The cache TTL does not prevent pillar cache from being refreshed before its TTL expires.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
@@ -1184,7 +1198,7 @@
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 #log_level: warning
 
@@ -1340,3 +1354,6 @@
 ############################################
 # Allow the raw_shell parameter to be used when calling Salt SSH client via API
 #netapi_allow_raw_shell: True
+
+# Set a list of clients to enable in in the API
+#netapi_enable_clients: []

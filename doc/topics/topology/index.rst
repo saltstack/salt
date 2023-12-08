@@ -23,5 +23,3 @@ your deployment as needed for redundancy, geographical distribution, and scale.
     ../tutorials/intro_scale
     ../tutorials/multimaster
     ../tutorials/multimaster_pki
-
-

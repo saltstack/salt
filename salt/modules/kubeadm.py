@@ -17,6 +17,12 @@ ADMIN_CFG = "/etc/kubernetes/admin.conf"
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "kubernetes",
+    "https://github.com/salt-extensions/saltext-kubernetes",
+)
+
 __virtualname__ = "kubeadm"
 
 # Define not exported variables from Salt, so this can be imported as
@@ -139,7 +145,7 @@ def version(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     cmd.extend(["--output", "json"])
 
@@ -226,9 +232,9 @@ def token_create(
     for parameter, value in parameters:
         if value:
             if parameter in ("groups", "usages"):
-                cmd.extend(["--{}".format(parameter), json.dumps(value)])
+                cmd.extend([f"--{parameter}", json.dumps(value)])
             else:
-                cmd.extend(["--{}".format(parameter), str(value)])
+                cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -264,7 +270,7 @@ def token_delete(token, kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return bool(_cmd(cmd))
 
@@ -295,7 +301,7 @@ def token_generate(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -325,7 +331,7 @@ def token_list(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     lines = _cmd(cmd).splitlines()
 
@@ -368,7 +374,7 @@ def alpha_certs_renew(rootfs=None):
     parameters = [("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -430,7 +436,7 @@ def alpha_kubeconfig_user(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -469,7 +475,7 @@ def alpha_kubelet_config_download(kubeconfig=None, kubelet_version=None, rootfs=
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -520,7 +526,7 @@ def alpha_kubelet_config_enable_dynamic(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -574,7 +580,7 @@ def alpha_selfhosting_pivot(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -627,7 +633,7 @@ def config_images_list(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd).splitlines()
 
@@ -685,7 +691,7 @@ def config_images_pull(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     prefix = "[config/images] Pulled "
     return [(line.replace(prefix, "")) for line in _cmd(cmd).splitlines()]
@@ -729,7 +735,7 @@ def config_migrate(old_config, new_config=None, kubeconfig=None, rootfs=None):
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -769,7 +775,7 @@ def config_print_init_defaults(component_configs=None, kubeconfig=None, rootfs=N
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -809,7 +815,7 @@ def config_print_join_defaults(component_configs=None, kubeconfig=None, rootfs=N
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -843,7 +849,7 @@ def config_upload_from_file(config, kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -940,7 +946,7 @@ def config_upload_from_flags(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -970,7 +976,7 @@ def config_view(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -981,9 +987,11 @@ def init(
     apiserver_cert_extra_sans=None,
     cert_dir=None,
     certificate_key=None,
+    control_plane_endpoint=None,
     config=None,
     cri_socket=None,
     experimental_upload_certs=False,
+    upload_certs=False,
     feature_gates=None,
     ignore_preflight_errors=None,
     image_repository=None,
@@ -1025,11 +1033,17 @@ def init(
     config
        Path to a kubeadm configuration file
 
+    control_plane_endpoint
+       Specify a stable IP address or DNS name for the control plane
+
     cri_socket
        Path to the CRI socket to connect
 
     experimental_upload_certs
-       Upload control-plane certificate to the kubeadm-certs Secret
+       Upload control-plane certificate to the kubeadm-certs Secret. ( kubeadm version =< 1.16 )
+
+    upload_certs
+       Upload control-plane certificate to the kubeadm-certs Secret. ( kubeadm version > 1.16 )
 
     feature_gates
        A set of key=value pairs that describe feature gates for
@@ -1093,6 +1107,8 @@ def init(
 
     if experimental_upload_certs:
         cmd.append("--experimental-upload-certs")
+    if upload_certs:
+        cmd.append("--upload-certs")
     if skip_certificate_key_print:
         cmd.append("--skip-certificate-key-print")
     if skip_token_print:
@@ -1105,6 +1121,7 @@ def init(
         ("cert-dir", cert_dir),
         ("certificate-key", certificate_key),
         ("config", config),
+        ("control-plane-endpoint", control_plane_endpoint),
         ("cri-socket", cri_socket),
         ("feature-gates", feature_gates),
         ("ignore-preflight-errors", ignore_preflight_errors),
@@ -1121,7 +1138,7 @@ def init(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -1174,6 +1191,7 @@ def join(
     discovery_token_ca_cert_hash=None,
     discovery_token_unsafe_skip_ca_verification=False,
     experimental_control_plane=False,
+    control_plane=False,
     ignore_preflight_errors=None,
     node_name=None,
     skip_phases=None,
@@ -1224,7 +1242,10 @@ def join(
        'discovery-token-ca-cert-hash' pinning
 
     experimental_control_plane
-       Create a new control plane instance on this node
+       Create a new control plane instance on this node (kubeadm version =< 1.16)
+
+    control_plane
+       Create a new control plane instance on this node (kubeadm version > 1.16)
 
     ignore_preflight_errors
        A list of checks whose errors will be shown as warnings
@@ -1261,6 +1282,8 @@ def join(
         cmd.append("--discovery-token-unsafe-skip-ca-verification")
     if experimental_control_plane:
         cmd.append("--experimental-control-plane")
+    if control_plane:
+        cmd.append("--control-plane")
 
     parameters = [
         ("apiserver-advertise-address", apiserver_advertise_address),
@@ -1280,7 +1303,7 @@ def join(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -1347,7 +1370,7 @@ def reset(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 

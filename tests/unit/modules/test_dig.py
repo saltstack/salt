@@ -1,12 +1,12 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.dig as dig
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 _SPF_VALUES = {
     "dig +short xmission.com TXT": {
@@ -42,7 +42,7 @@ def _spf_side_effect(key, python_shell=False):
     )
 
 
-@skipIf(dig.__virtual__() is False, "Dig must be installed")
+@pytest.mark.skipif(dig.__virtual__() is False, reason="Dig must be installed")
 class DigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dig: {}}

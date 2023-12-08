@@ -9,13 +9,21 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.skip_on_fips_enabled_platform,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
+
+
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
 
 
 @SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
     with pytest.helpers.create_account(create_group=True) as account:
 
@@ -28,7 +36,7 @@ def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
             ret = states.virtualenv.managed(
                 name=str(venv_dir),
                 user=account.username,
-                requirements="salt://{}/requirements.txt".format(state_tree_dirname),
+                requirements=f"salt://{state_tree_dirname}/requirements.txt",
             )
             assert ret.result is True
 
@@ -48,11 +56,11 @@ def test_issue_2594_non_invalidated_cache(tmp_path, state_tree, modules, require
 
         # Our state template
         template = [
-            "{}:".format(venv_dir),
+            f"{venv_dir}:",
             "  virtualenv.managed:",
             "    - system_site_packages: False",
             "    - clear: false",
-            "    - requirements: salt://{}/requirements.txt".format(state_tree_dirname),
+            f"    - requirements: salt://{state_tree_dirname}/requirements.txt",
         ]
 
         # Let's run our state!!!

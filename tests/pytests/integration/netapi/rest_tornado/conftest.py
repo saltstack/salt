@@ -7,6 +7,12 @@ from salt.netapi.rest_tornado import saltnado
 @pytest.fixture
 def client_config(client_config, netapi_port):
     client_config["rest_tornado"] = {"port": netapi_port}
+    client_config["netapi_enable_clients"] = [
+        "local",
+        "local_async",
+        "runner",
+        "runner_async",
+    ]
     return client_config
 
 

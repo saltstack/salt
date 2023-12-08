@@ -10,6 +10,7 @@ documented in the execution module docs.
 import base64
 import logging
 import os
+import string
 import tempfile
 import time
 
@@ -172,6 +173,16 @@ def get_vault_connection():
             )
             raise salt.exceptions.CommandExecutionError(errmsg)
 
+    config = __opts__["vault"].get("config_location")
+    if config:
+        if config not in ["local", "master"]:
+            log.error("config_location must be either local or master")
+            return False
+        if config == "local":
+            return _use_local_config()
+        elif config == "master":
+            return _get_token_and_url_from_master()
+
     if "vault" in __opts__ and __opts__.get("__role", "minion") == "master":
         if "id" in __grains__:
             log.debug("Contacting master for Vault connection details")
@@ -193,8 +204,12 @@ def get_vault_connection():
 
 def del_cache():
     """
-    Delete cache file
+    Delete cache
     """
+    log.debug("Deleting session cache")
+    if "vault_token" in __context__:
+        del __context__["vault_token"]
+
     log.debug("Deleting cache file")
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
 
@@ -545,3 +560,53 @@ def _get_secret_path_metadata(path):
         except Exception as err:  # pylint: disable=broad-except
             log.error("Failed to get secret metadata %s: %s", type(err).__name__, err)
     return ret
+
+
+def expand_pattern_lists(pattern, **mappings):
+    """
+    Expands the pattern for any list-valued mappings, such that for any list of
+    length N in the mappings present in the pattern, N copies of the pattern are
+    returned, each with an element of the list substituted.
+
+    pattern:
+        A pattern to expand, for example ``by-role/{grains[roles]}``
+
+    mappings:
+        A dictionary of variables that can be expanded into the pattern.
+
+    Example: Given the pattern `` by-role/{grains[roles]}`` and the below grains
+
+    .. code-block:: yaml
+
+        grains:
+            roles:
+                - web
+                - database
+
+    This function will expand into two patterns,
+    ``[by-role/web, by-role/database]``.
+
+    Note that this method does not expand any non-list patterns.
+    """
+    expanded_patterns = []
+    f = string.Formatter()
+
+    # This function uses a string.Formatter to get all the formatting tokens from
+    # the pattern, then recursively replaces tokens whose expanded value is a
+    # list. For a list with N items, it will create N new pattern strings and
+    # then continue with the next token. In practice this is expected to not be
+    # very expensive, since patterns will typically involve a handful of lists at
+    # most.
+
+    for (_, field_name, _, _) in f.parse(pattern):
+        if field_name is None:
+            continue
+        (value, _) = f.get_field(field_name, None, mappings)
+        if isinstance(value, list):
+            token = "{{{0}}}".format(field_name)
+            expanded = [pattern.replace(token, str(elem)) for elem in value]
+            for expanded_item in expanded:
+                result = expand_pattern_lists(expanded_item, **mappings)
+                expanded_patterns += result
+            return expanded_patterns
+    return [pattern]

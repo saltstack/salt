@@ -406,4 +406,3 @@ out the issue. But always change the root admin password in the first place.
 
 This is very helpful for any module that needs credentials to apply state
 changes: mysql, keystone, etc.
-

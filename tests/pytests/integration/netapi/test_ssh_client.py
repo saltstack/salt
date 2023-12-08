@@ -1,7 +1,7 @@
 import pytest
 
 import salt.netapi
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 from tests.support.helpers import SaveRequestsPostHandler, Webserver
 from tests.support.mock import patch
 
@@ -9,6 +9,12 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
 ]
+
+
+@pytest.fixture
+def client_config(client_config):
+    client_config["netapi_enable_clients"] = ["ssh"]
+    return client_config
 
 
 @pytest.fixture
@@ -77,6 +83,7 @@ def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key
 
 def test_ssh_unauthenticated(client):
     low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
+
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
 
@@ -115,6 +122,17 @@ def test_ssh_authenticated_raw_shell_disabled(client, tmp_path):
             client.run(low)
 
     assert badfile.exists() is False
+
+
+def test_ssh_disabled(client, auth_creds):
+    low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_enable_clients": []}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
 
 
 def test_shell_inject_ssh_priv(

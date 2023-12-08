@@ -1,12 +1,8 @@
-"""
-Integration tests for Vultr
-"""
-
-
 import time
 
+import pytest
+
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 
 class VultrTest(CloudTest):
@@ -81,7 +77,7 @@ class VultrTest(CloudTest):
     #        # Delete public key
     #        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
 
-    @skipIf(True, "Skipped temporarily")
+    @pytest.mark.skip(reason="Skipped temporarily")
     def test_instance(self):
         """
         Test creating an instance on Vultr

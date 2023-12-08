@@ -9,7 +9,6 @@ import pytest
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -32,9 +31,9 @@ except ImportError:
     HAS_SHADE = False
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_KEYSTONE,
-    "Please install keystoneclient and a keystone server before running"
+    reason="Please install keystoneclient and a keystone server before running"
     "openstack integration tests.",
 )
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
@@ -205,7 +204,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(driver.auth_token)
 
 
-@skipIf(not HAS_SHADE, "openstack driver requires `shade`")
+@pytest.mark.skipif(not HAS_SHADE, reason="openstack driver requires `shade`")
 class RackspaceTest(CloudTest):
     """
     Integration tests for the Rackspace cloud provider using the Openstack driver

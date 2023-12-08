@@ -1,7 +1,7 @@
 import pytest
+from tornado.httpclient import HTTPError
 
 import salt.utils.json
-from salt.ext.tornado.httpclient import HTTPError
 from salt.netapi.rest_tornado import saltnado
 
 
@@ -98,3 +98,16 @@ async def test_post_with_incorrect_client(http_client):
             body=salt.utils.json.dumps(low),
         )
     assert exc.value.code == 400
+
+
+@pytest.mark.slow_test
+async def test_mem_leak_in_event_listener(http_client, salt_minion, app):
+    for i in range(10):
+        await http_client.fetch(
+            "/minions/{}".format(salt_minion.id),
+            method="GET",
+            follow_redirects=False,
+        )
+    assert len(app.event_listener.tag_map) == 0
+    assert len(app.event_listener.timeout_map) == 0
+    assert len(app.event_listener.request_map) == 0

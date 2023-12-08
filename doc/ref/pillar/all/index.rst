@@ -10,7 +10,6 @@ pillar modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    azureblob
     cmd_json
     cmd_yaml
     cmd_yamlex

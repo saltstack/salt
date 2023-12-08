@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import pytest
 
@@ -31,10 +30,6 @@ def configure_loader_modules():
     }
 
 
-@pytest.mark.skipif(
-    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
-    reason="run on Python 3.6 or greater where OrderedDict is default",
-)
 def test_netdev():
     """
     Test status.netdev for AIX

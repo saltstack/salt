@@ -18,6 +18,9 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
         "pillar_cache": True,
+        "ext_pillar": [
+            {"extra_minion_data_in_pillar": "*"},
+        ],
     }
     factory = salt_factories.salt_master_daemon(
         "pillar-cache-functional-master", defaults=config_defaults
@@ -30,7 +33,8 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
 def pillar_salt_minion(pillar_salt_master):
     assert pillar_salt_master.is_running()
     factory = pillar_salt_master.salt_minion_daemon(
-        "pillar-cache-functional-minion-1", defaults={"open_mode": True}
+        "pillar-cache-functional-minion-1",
+        defaults={"open_mode": True, "hi": "there", "pass_to_ext_pillars": ["hi"]},
     )
     with factory.started():
         # Sync All

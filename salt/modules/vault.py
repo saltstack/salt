@@ -130,6 +130,12 @@ Functions to interact with Hashicorp Vault.
         values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
         ``grains[id]``, eg ``saltstack/minion/{minion}``.
 
+        .. versionadded:: 3006.0
+
+            Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``
+            Make sure to only reference pillars that are not sourced from Vault since the latter
+            ones might be unavailable during policy rendering.
+
         .. important::
 
             See :ref:`Is Targeting using Grain Data Secure?
@@ -160,9 +166,40 @@ Functions to interact with Hashicorp Vault.
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
 
+    policies_refresh_pillar
+        Whether to refresh the pillar data when rendering templated policies.
+        When unset (=null/None), will only refresh when the cached data
+        is unavailable, boolean values force one behavior always.
+
+        .. note::
+
+            Using cached pillar data only (policies_refresh_pillar=False)
+            might cause the policies to be out of sync. If there is no cached pillar
+            data available for the minion, pillar templates will fail to render at all.
+
+            If you use pillar values for templating policies and do not disable
+            refreshing pillar data, make sure the relevant values are not sourced
+            from Vault (ext_pillar, sdb) or from a pillar sls file that uses the vault
+            execution module. Although this will often work when cached pillar data is
+            available, if the master needs to compile the pillar data during policy rendering,
+            all Vault modules will be broken to prevent an infinite loop.
+
+    policies_cache_time
+        Policy computation can be heavy in case pillar data is used in templated policies and
+        it has not been cached. Therefore, a short-lived cache specifically for rendered policies
+        is used. This specifies the expiration timeout in seconds. Defaults to 60.
+
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
 
+    config_location
+        Where to get the connection details for calling vault. By default,
+        vault will try to determine if it needs to request the connection
+        details from the master or from the local config. This optional option
+        will force vault to use the connection details from the master or the
+        local config. Can only be either ``master`` or ``local``.
+
+          .. versionadded:: 3006.0
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
@@ -182,6 +219,12 @@ from salt.defaults import NOT_SET
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/saltstack/saltext-vault",
+)
 
 
 def read_secret(path, key=None, metadata=False, default=NOT_SET):
@@ -219,7 +262,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
         path = version2["data"]
     log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code != 200:
             response.raise_for_status()
@@ -240,7 +283,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to read secret! {}: {}".format(type(err).__name__, err)
+                f"Failed to read secret! {type(err).__name__}: {err}"
             )
         return default
 
@@ -262,7 +305,7 @@ def write_secret(path, **kwargs):
         path = version2["data"]
         data = {"data": data}
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code == 200:
             return response.json()["data"]
@@ -290,7 +333,7 @@ def write_raw(path, raw):
         path = version2["data"]
         raw = {"data": raw}
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=raw)
         if response.status_code == 200:
             return response.json()["data"]
@@ -317,7 +360,7 @@ def delete_secret(path):
     if version2["v2"]:
         path = version2["data"]
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("DELETE", url)
         if response.status_code != 204:
             response.raise_for_status()
@@ -349,7 +392,7 @@ def destroy_secret(path, *args):
         log.error("Destroy operation is only supported on KV version 2")
         return False
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code != 204:
             response.raise_for_status()
@@ -382,7 +425,7 @@ def list_secrets(path, default=NOT_SET):
     if version2["v2"]:
         path = version2["metadata"]
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("LIST", url)
         if response.status_code != 200:
             response.raise_for_status()
@@ -390,7 +433,7 @@ def list_secrets(path, default=NOT_SET):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to list secrets! {}: {}".format(type(err).__name__, err)
+                f"Failed to list secrets! {type(err).__name__}: {err}"
             )
         return default
 

@@ -1,11 +1,16 @@
 import urllib.parse
 
 import pytest
+from tornado.httpclient import HTTPError
 
 import salt.utils.json
 import salt.utils.yaml
-from salt.ext.tornado.httpclient import HTTPError
 from salt.netapi.rest_tornado import saltnado
+
+pytestmark = [
+    pytest.mark.destructive_test,
+    pytest.mark.skip_if_not_root,
+]
 
 
 @pytest.fixture

@@ -6,12 +6,17 @@
 import pytest
 
 import salt.states.iptables as iptables
+import salt.utils.state as state_utils
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {iptables: {}}
+    return {
+        iptables: {
+            "__utils__": {"state.gen_tag": state_utils.gen_tag},
+        }
+    }
 
 
 def test_chain_present():
@@ -606,6 +611,124 @@ def test_mod_aggregate():
     """
     Test to mod_aggregate function
     """
-    assert iptables.mod_aggregate({"fun": "salt"}, [], []) == {"fun": "salt"}
+    low = {
+        "state": "iptables",
+        "name": "accept_local_interface",
+        "__sls__": "iptables",
+        "__env__": "base",
+        "__id__": "append_accept_local_interface",
+        "table": "filter",
+        "chain": "INPUT",
+        "in-interface": "lo",
+        "jump": "ACCEPT",
+        "save": True,
+        "order": 10000,
+        "fun": "append",
+    }
 
-    assert iptables.mod_aggregate({"fun": "append"}, [], []) == {"fun": "append"}
+    chunks = [
+        {
+            "state": "iptables",
+            "name": "accept_local_interface",
+            "__sls__": "iptables",
+            "__env__": "base",
+            "__id__": "append_accept_local_interface",
+            "table": "filter",
+            "chain": "INPUT",
+            "in-interface": "lo",
+            "jump": "ACCEPT",
+            "save": True,
+            "order": 10000,
+            "fun": "append",
+        },
+        {
+            "state": "iptables",
+            "name": "append_accept_loopback_output",
+            "__sls__": "iptables",
+            "__env__": "base",
+            "__id__": "append_accept_loopback_output",
+            "table": "filter",
+            "chain": "OUTPUT",
+            "out-interface": "lo",
+            "jump": "ACCEPT",
+            "save": True,
+            "order": 10001,
+            "fun": "append",
+        },
+        {
+            "state": "iptables",
+            "name": "append_drop_non_loopback",
+            "__sls__": "iptables",
+            "__env__": "base",
+            "__id__": "append_drop_non_loopback",
+            "table": "filter",
+            "chain": "INPUT",
+            "source": "127.0.0.0/8",
+            "jump": "DROP",
+            "save": True,
+            "order": 10002,
+            "fun": "append",
+        },
+    ]
+
+    expected = {
+        "state": "iptables",
+        "name": "accept_local_interface",
+        "__sls__": "iptables",
+        "__env__": "base",
+        "__id__": "append_accept_local_interface",
+        "table": "filter",
+        "chain": "INPUT",
+        "in-interface": "lo",
+        "jump": "ACCEPT",
+        "save": True,
+        "order": 10000,
+        "fun": "append",
+        "rules": [
+            {
+                "state": "iptables",
+                "name": "accept_local_interface",
+                "__sls__": "iptables",
+                "__env__": "base",
+                "__id__": "append_accept_local_interface",
+                "table": "filter",
+                "chain": "INPUT",
+                "in-interface": "lo",
+                "jump": "ACCEPT",
+                "save": True,
+                "order": 10000,
+                "fun": "append",
+            },
+            {
+                "state": "iptables",
+                "name": "append_accept_loopback_output",
+                "__sls__": "iptables",
+                "__env__": "base",
+                "__id__": "append_accept_loopback_output",
+                "table": "filter",
+                "chain": "OUTPUT",
+                "out-interface": "lo",
+                "jump": "ACCEPT",
+                "save": True,
+                "order": 10001,
+                "fun": "append",
+            },
+            {
+                "state": "iptables",
+                "name": "append_drop_non_loopback",
+                "__sls__": "iptables",
+                "__env__": "base",
+                "__id__": "append_drop_non_loopback",
+                "table": "filter",
+                "chain": "INPUT",
+                "source": "127.0.0.0/8",
+                "jump": "DROP",
+                "save": True,
+                "order": 10002,
+                "fun": "append",
+            },
+        ],
+    }
+
+    res = iptables.mod_aggregate(low, chunks, {})
+    assert res == expected

@@ -220,22 +220,7 @@ def del_password(name):
 def set_password(name, password):
     """
     Set the password for a named user. The password must be a properly defined
-    hash. The password hash can be generated with this command:
-
-    ``python -c "import crypt; print crypt.crypt('password', ciphersalt)"``
-
-    .. note::
-        When constructing the ``ciphersalt`` string, you must escape any dollar
-        signs, to avoid them being interpolated by the shell.
-
-    ``'password'`` is, of course, the password for which you want to generate
-    a hash.
-
-    ``ciphersalt`` is a combination of a cipher identifier, an optional number
-    of rounds, and the cryptographic salt. The arrangement and format of these
-    fields depends on the cipher and which flavor of BSD you are using. For
-    more information on this, see the manpage for ``crpyt(3)``. On NetBSD,
-    additional information is available in ``passwd.conf(5)``.
+    hash. A password hash can be generated with :py:func:`gen_password`.
 
     It is important to make sure that a supported cipher is used.
 

@@ -1,21 +1,17 @@
 import pathlib
-import sys
 
 import attr
 import pytest
+import tornado.gen
+from tornado import locks
 
 import salt.channel.server
-import salt.ext.tornado.gen
 import salt.transport.ipc
 import salt.utils.platform
-from salt.ext.tornado import locks
 
 pytestmark = [
     # Windows does not support POSIX IPC
     pytest.mark.skip_on_windows,
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="The IOLoop blocks under Py3.5 on these tests"
-    ),
 ]
 
 
@@ -114,9 +110,9 @@ async def test_basic_send(channel):
     # XXX: IPCClient connect and connected methods need to be cleaned up as
     # this should not be needed.
     while not channel.subscriber._connecting_future.done():
-        await salt.ext.tornado.gen.sleep(0.01)
+        await tornado.gen.sleep(0.01)
     while not channel.subscriber.connected():
-        await salt.ext.tornado.gen.sleep(0.01)
+        await tornado.gen.sleep(0.01)
     assert channel.subscriber.connected()
     await channel.publish(msg)
     ret = await channel.read()

@@ -69,6 +69,7 @@ def domain_update_call(
     live=True,
     host_devices=None,
     test=False,
+    autostart=False,
 ):
     """
     Create a call object with the missing default parameters from virt.update()
@@ -96,4 +97,5 @@ def domain_update_call(
         clock=clock,
         stop_on_reboot=stop_on_reboot,
         host_devices=host_devices,
+        autostart=autostart,
     )

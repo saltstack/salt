@@ -5,6 +5,7 @@ Test autosigning minions based on grain values.
 import os
 import shutil
 import stat
+import subprocess
 
 import pytest
 
@@ -12,7 +13,9 @@ import salt.utils.files
 import salt.utils.stringutils
 from tests.support.runtests import RUNTIME_VARS
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture
@@ -118,3 +121,23 @@ def test_autosign_grains_fail(
     )  # get minion to try to authenticate itself again
     assert salt_minion.id not in salt_key_cli.run("-l", "acc")
     assert salt_minion.id in salt_key_cli.run("-l", "un")
+
+
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.slow_test
+def test_ufw_allow(salt_master, grains):
+    if grains["os_family"] != "Debian":
+        pytest.skip("Only runs on Debian family.")
+
+    expected_output = """Skipping adding existing rule
+Skipping adding existing rule (v6)
+    """
+
+    proc = subprocess.Popen(
+        "ufw allow salt\n", shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+    )
+    out, err = proc.communicate()
+    out_strg = out.decode()
+    err_strg = err.decode()
+    assert out_strg == expected_output
+    assert err_strg != "ERROR: Could not find a profile matching 'salt'"

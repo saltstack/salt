@@ -6,7 +6,7 @@
 A transactional system, like `MicroOS`_, can present some challenges
 when the user decided to manage it via Salt.
 
-MicroOS provide a read-only rootfs and a tool,
+MicroOS provides a read-only rootfs and a tool,
 ``transactional-update``, that takes care of the management of the
 system (updating, upgrading, installation or reboot, among others) in
 an atomic way.
@@ -128,7 +128,7 @@ transaction will remain, if not it will be discarded.
 
 For example::
 
-  transactional-update --continue --drop-if-no-change run zypper in apache2"
+  transactional-update --continue --drop-if-no-change run zypper in apache2
 
 If we are in the scenario described before, ``apache2`` is already
 present in T.3.  In this case a new transaction, T.4, will be created
@@ -240,11 +240,11 @@ restarting a service inside transaction is not allowed).
 Two step for service restart
 ............................
 
-In the ``apache2` example from the beginning we can observe the
+In the ``apache2`` example from the beginning we can observe the
 biggest drawback.  If the package ``apache2`` is missing, the new
 module will create a new transaction, will execute ``pkg.install``
 inside the transaction (creating the salt-thin, moving it inside and
-delegating the execution to `transactional-update` CLI as part of the
+delegating the execution to ``transactional-update`` CLI as part of the
 full state).  Inside the transaction we can do too the required
 changes in ``/etc`` for adding the new ``vhost``, and we can enable the
 service via systemctl inside the same transaction.
@@ -285,6 +285,8 @@ from salt.modules.state import _check_queue, _prior_running_states, _wait, runni
 
 __func_alias__ = {"apply_": "apply"}
 
+__virtualname__ = "transactional_update"
+
 log = logging.getLogger(__name__)
 
 
@@ -300,7 +302,7 @@ def __virtual__():
             _prior_running_states, globals()
         )
         running = salt.utils.functools.namespaced_function(running, globals())
-        return True
+        return __virtualname__
     else:
         return (False, "Module transactional_update requires a transactional system")
 
@@ -557,8 +559,8 @@ def kdump(self_update=False, snapshot=None):
 def run(command, self_update=False, snapshot=None):
     """Run a command in a new snapshot
 
-    Execute the command inside a new snapshot. By default this snaphot
-    will remain, but if --drop-if-no-chage is set, the new snapshot
+    Execute the command inside a new snapshot. By default this snapshot
+    will remain, but if --drop-if-no-change is set, the new snapshot
     will be dropped if there is no change in the file system.
 
     command
@@ -920,7 +922,7 @@ def call(function, *args, **kwargs):
 
     activate_transaction
         If at the end of the transaction there is a pending activation
-        (i.e there is a new snaphot in the system), a new reboot will
+        (i.e there is a new snapshot in the system), a new reboot will
         be scheduled (default False)
 
     CLI Example:
@@ -952,7 +954,7 @@ def call(function, *args, **kwargs):
                 function,
             ]
             + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+            + [f"{k}={v}" for (k, v) in safe_kwargs.items()]
         )
 
         try:
@@ -991,7 +993,7 @@ def apply_(mods=None, **kwargs):
 
     activate_transaction
         If at the end of the transaction there is a pending activation
-        (i.e there is a new snaphot in the system), a new reboot will
+        (i.e there is a new snapshot in the system), a new reboot will
         be scheduled (default False)
 
     CLI Example:
@@ -1030,15 +1032,15 @@ def sls(mods, activate_transaction=False, queue=False, **kwargs):
 
     activate_transaction
         If at the end of the transaction there is a pending activation
-        (i.e there is a new snaphot in the system), a new reboot will
-        be scheduled (default False)
+        (i.e there is a new snapshot in the system), a new reboot will
+        be scheduled (Default: False).
 
     queue
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
         This option starts a new thread for each queued state run, so use this
-        option sparingly. (Default: False)
+        option sparingly (Default: False).
 
     For a formal description of the possible parameters accepted in
     this function, check `state.sls` documentation.
@@ -1062,7 +1064,7 @@ def sls(mods, activate_transaction=False, queue=False, **kwargs):
         mods,
         activate_transaction=activate_transaction,
         concurrent=concurrent,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1075,15 +1077,15 @@ def highstate(activate_transaction=False, queue=False, **kwargs):
 
     activate_transaction
         If at the end of the transaction there is a pending activation
-        (i.e there is a new snaphot in the system), a new reboot will
-        be scheduled (default False)
+        (i.e there is a new snapshot in the system), a new reboot will
+        be scheduled (Default: False).
 
     queue
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
         This option starts a new thread for each queued state run, so use this
-        option sparingly. (Default: False)
+        option sparingly (Default: False).
 
     CLI Example:
 
@@ -1102,7 +1104,7 @@ def highstate(activate_transaction=False, queue=False, **kwargs):
         "state.highstate",
         activate_transaction=activate_transaction,
         concurrent=True,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1117,15 +1119,15 @@ def single(fun, name, activate_transaction=False, queue=False, **kwargs):
 
     activate_transaction
         If at the end of the transaction there is a pending activation
-        (i.e there is a new snaphot in the system), a new reboot will
-        be scheduled (default False)
+        (i.e there is a new snapshot in the system), a new reboot will
+        be scheduled (Default: False).
 
     queue
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
         This option starts a new thread for each queued state run, so use this
-        option sparingly. (Default: False)
+        option sparingly (Default: False).
 
     CLI Example:
 
@@ -1145,5 +1147,5 @@ def single(fun, name, activate_transaction=False, queue=False, **kwargs):
         name=name,
         activate_transaction=activate_transaction,
         concurrent=True,
-        **kwargs
+        **kwargs,
     )
