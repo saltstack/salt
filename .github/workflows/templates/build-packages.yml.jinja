@@ -20,6 +20,7 @@
     uses: ./.github/workflows/build-<{ pkg_type }>-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       source: "<{ backend }>"

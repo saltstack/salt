@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/tools.txt requirements/static/ci/tools.in
 #
-attrs==23.1.0
+attrs==20.3.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
@@ -14,7 +14,7 @@ botocore==1.29.152
     # via
     #   boto3
     #   s3transfer
-certifi==2023.07.22
+certifi==2023.7.22
     # via requests
 charset-normalizer==3.2.0
     # via requests
@@ -38,14 +38,12 @@ pygments==2.15.1
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.18.1
+python-tools-scripts==0.18.6
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.1
     # via -r requirements/static/ci/tools.in
 requests==2.31.0
-    # via
-    #   python-tools-scripts
-    #   virustotal3
+    # via python-tools-scripts
 rich==13.4.2
     # via python-tools-scripts
 s3transfer==0.6.1
@@ -58,5 +56,3 @@ urllib3==1.26.18
     # via
     #   botocore
     #   requests
-virustotal3==1.0.8
-    # via -r requirements/static/ci/tools.in

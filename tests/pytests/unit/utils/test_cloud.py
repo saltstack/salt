@@ -13,6 +13,13 @@ import tempfile
 
 import pytest
 
+try:
+    from smbprotocol.exceptions import CannotDelete
+
+    HAS_PSEXEC = True
+except ImportError:
+    HAS_PSEXEC = False
+
 import salt.utils.cloud as cloud
 from salt.exceptions import SaltCloudException
 from salt.utils.cloud import __ssh_gateway_arguments as ssh_gateway_arguments
@@ -208,7 +215,8 @@ def test_deploy_windows_custom_port():
         mock.assert_called_once_with("test", "Administrator", None, 1234)
 
 
-def test_run_psexec_command_cleanup_lingering_paexec():
+@pytest.mark.skipif(not HAS_PSEXEC, reason="Missing SMB Protocol Library")
+def test_run_psexec_command_cleanup_lingering_paexec(caplog):
     pytest.importorskip("pypsexec.client", reason="Requires PyPsExec")
     mock_psexec = patch("salt.utils.cloud.PsExecClient", autospec=True)
     mock_scmr = patch("salt.utils.cloud.ScmrService", autospec=True)
@@ -232,11 +240,32 @@ def test_run_psexec_command_cleanup_lingering_paexec():
         )
         mock_client.return_value.cleanup.assert_called_once()
 
+    # Testing handling an error when it can't delete the PAexec binary
+    with mock_scmr, mock_rm_svc, mock_psexec as mock_client:
+        mock_client.return_value.session = MagicMock(username="Gary")
+        mock_client.return_value.connection = MagicMock(server_name="Krabbs")
+        mock_client.return_value.run_executable.return_value = (
+            "Sandy",
+            "MermaidMan",
+            "BarnicleBoy",
+        )
+        mock_client.return_value.cleanup = MagicMock(side_effect=CannotDelete())
+
+        cloud.run_psexec_command(
+            "spongebob",
+            "squarepants",
+            "patrick",
+            "squidward",
+            "plankton",
+        )
+        assert "Exception cleaning up PAexec:" in caplog.text
+        mock_client.return_value.disconnect.assert_called_once()
+
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
 def test_deploy_windows_programdata():
     """
-    Test deploy_windows with a custom port
+    Test deploy_windows to ProgramData
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))

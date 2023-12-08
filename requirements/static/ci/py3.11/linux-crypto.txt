@@ -6,5 +6,5 @@
 #
 m2crypto==0.38.0
     # via -r requirements/static/ci/crypto.in
-pycryptodome==3.9.8
+pycryptodome==3.9.7
     # via -r requirements/static/ci/crypto.in
