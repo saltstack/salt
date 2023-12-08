@@ -12,6 +12,9 @@ def minion_opts(tmp_path):
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     opts["__role"] = "minion"
     opts["root_dir"] = str(root_dir)
+    opts["master_uri"] = "tcp://{ip}:{port}".format(
+        ip="127.0.0.1", port=opts["master_port"]
+    )
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
         dirpath = root_dir / name
         dirpath.mkdir(parents=True)
