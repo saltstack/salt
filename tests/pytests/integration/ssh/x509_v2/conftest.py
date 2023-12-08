@@ -1,7 +1,4 @@
-"""
-Tests for the x509_v2 module
-"""
-
+import json
 import logging
 import shutil
 
@@ -9,6 +6,23 @@ import pytest
 from saltfactories.utils import random_string
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _check_cryptography(salt_ssh_cli):
+    # Cannot use `pip.list` since it fails in the test suite as well
+    # with missing `pkg_resources`.
+    ret = salt_ssh_cli.run("--raw", "python3 -m pip list --format=json")
+    assert ret.returncode == 0
+    assert isinstance(ret.data, dict)
+    res = json.loads(ret.data["stdout"])
+    for pkg in res:
+        if pkg["name"] == "cryptography":
+            version = tuple(int(x) for x in pkg["version"].split("."))
+            break
+    else:
+        pytest.skip("The host Python does not have cryptography")
+    return version
 
 
 @pytest.fixture(scope="module")
