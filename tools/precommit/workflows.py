@@ -270,8 +270,6 @@ def generate_workflows(ctx: Context):
             arch = "arm64"
         test_salt_pkg_downloads_listing["macos"].append((slug, arch, "package"))
     for slug, display_name, arch in build_ci_deps_listing["macos"][-1:]:
-        if arch == "aarch64":
-            arch = "arm64"
         test_salt_pkg_downloads_listing["macos"].append((slug, arch, "onedir"))
     for slug, display_name, arch in build_ci_deps_listing["windows"][-1:]:
         for pkg_type in ("nsis", "msi", "onedir"):
