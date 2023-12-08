@@ -698,7 +698,8 @@ allowed-3rd-party-modules=msgpack,
                           ptscripts,
                           packaging,
                           looseversion,
-                          pytestskipmarkers
+                          pytestskipmarkers,
+                          cryptography
 
 [EXCEPTIONS]
 

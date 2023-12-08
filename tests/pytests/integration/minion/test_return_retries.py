@@ -5,20 +5,20 @@ from saltfactories.utils import random_string
 
 
 @pytest.fixture(scope="function")
-def salt_minion_retry(salt_master_factory, salt_minion_id):
+def salt_minion_retry(salt_master, salt_minion_id):
     # override the defaults for this test
     config_overrides = {
         "return_retry_timer_max": 0,
         "return_retry_timer": 5,
         "return_retry_tries": 30,
     }
-    factory = salt_master_factory.salt_minion_daemon(
+    factory = salt_master.salt_minion_daemon(
         random_string("retry-minion-"),
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
 
     with factory.started():
@@ -37,7 +37,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
         # verify we don't yet have the result and sleep
         assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=10).data == {}
 
-        # the 70s sleep (and 60s timer value) is to reduce flakiness due to slower test runs
+        # the 5s sleep (and 60s timeout value) is to reduce flakiness due to slower test runs
         # and should be addresses when number of tries is configurable through minion opts
         time.sleep(5)
 
@@ -62,7 +62,7 @@ def test_pillar_timeout(salt_master_factory):
             {"cmd_json": cmd},
         ],
         "auto_accept": True,
-        "worker_threads": 3,
+        "worker_threads": 2,
         "peer": True,
     }
     minion_overrides = {
@@ -77,7 +77,7 @@ def test_pillar_timeout(salt_master_factory):
         - name: example
         - changes: True
         - result: True
-        - comment: "Nothing has acutally been changed"
+        - comment: "Nothing has actually been changed"
     """
     master = salt_master_factory.salt_master_daemon(
         "pillar-timeout-master",

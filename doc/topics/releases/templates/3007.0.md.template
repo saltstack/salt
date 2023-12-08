@@ -6,8 +6,11 @@
 Add release specific details below
 -->
 
-## Python 3.11
-Salt's onedir packages now use Python 3.11
+## Salt's ``setup.py`` customizations
+> :warning: **Deprecation Notice**: <br>
+In Salt 3009, the ``setup.py`` file will be stripped of it's custom additions and migrated to a plain ``pyproject.toml`` python package
+or whatever is found best during the process of removing the customizations. <br>
+**If you're relying on these customizations please stop as your workflow will break in the future**.
 
 ## Python 3.7 Support Dropped
 Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2023.

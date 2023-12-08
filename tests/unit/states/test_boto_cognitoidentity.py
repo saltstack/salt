@@ -25,6 +25,10 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 # pylint: enable=import-error,no-name-in-module
 
@@ -236,7 +240,7 @@ class BotoCognitoIdentityTestCase(
             name="test pool present",
             IdentityPoolName=first_pool_name,
             AuthenticatedRole="my_auth_role",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on describe identity pool" in result.get("comment", {}))
@@ -254,12 +258,10 @@ class BotoCognitoIdentityTestCase(
             name="test pool present",
             IdentityPoolName=first_pool_name,
             AuthenticatedRole="my_auth_role",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
-        self.assertIn(
-            "{}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
-        )
+        self.assertIn(f"{[first_pool_ret, third_pool_ret]}", result.get("comment", ""))
 
     def test_present_when_failing_to_create_a_new_identity_pool(self):
         """
@@ -277,7 +279,7 @@ class BotoCognitoIdentityTestCase(
             name="test pool present",
             IdentityPoolName=default_pool_name,
             AuthenticatedRole="my_auth_role",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on create_identity_pool" in result.get("comment", ""))
@@ -300,7 +302,7 @@ class BotoCognitoIdentityTestCase(
             IdentityPoolName=second_pool_name,
             AuthenticatedRole="my_auth_role",
             AllowUnauthenticatedIdentities=True,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on update_identity_pool" in result.get("comment", ""))
@@ -335,7 +337,7 @@ class BotoCognitoIdentityTestCase(
             IdentityPoolName=second_pool_name,
             AuthenticatedRole="my_auth_role",
             AllowUnauthenticatedIdentities=True,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on get_identity_pool_roles" in result.get("comment", ""))
@@ -371,7 +373,7 @@ class BotoCognitoIdentityTestCase(
                 IdentityPoolName=second_pool_name,
                 AuthenticatedRole="my_auth_role",
                 AllowUnauthenticatedIdentities=True,
-                **conn_parameters
+                **conn_parameters,
             )
             self.assertEqual(result.get("result"), False)
             self.assertTrue(
@@ -413,7 +415,7 @@ class BotoCognitoIdentityTestCase(
                 AuthenticatedRole="my_auth_role",
                 AllowUnauthenticatedIdentities=True,
                 DeveloperProviderName=default_dev_provider,
-                **conn_parameters
+                **conn_parameters,
             )
             self.assertEqual(result.get("result"), True)
             expected_call_args = (
@@ -465,7 +467,7 @@ class BotoCognitoIdentityTestCase(
                 IdentityPoolName=second_pool_name,
                 AuthenticatedRole="my_auth_role",
                 AllowUnauthenticatedIdentities=True,
-                **conn_parameters
+                **conn_parameters,
             )
             self.assertEqual(result.get("result"), True)
             expected_call_args = (
@@ -498,7 +500,7 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName="no_such_pool_name",
             RemoveAllMatched=False,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), True)
         self.assertEqual(result["changes"], {})
@@ -517,12 +519,12 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName=first_pool_name,
             RemoveAllMatched=False,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertEqual(result["changes"], {})
         self.assertTrue(
-            "{}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
+            f"{[first_pool_ret, third_pool_ret]}" in result.get("comment", "")
         )
 
     def test_absent_when_failing_to_describe_identity_pools(self):
@@ -537,7 +539,7 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName=first_pool_name,
             RemoveAllMatched=False,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on describe identity pool" in result.get("comment", {}))
@@ -557,7 +559,7 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName=first_pool_name,
             RemoveAllMatched=True,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), False)
         self.assertEqual(result["changes"], {})
@@ -575,12 +577,12 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName=second_pool_name,
             RemoveAllMatched=False,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), True)
         expected_changes = {
-            "new": {"Identity Pool Id {}".format(second_pool_id): None},
-            "old": {"Identity Pool Id {}".format(second_pool_id): second_pool_name},
+            "new": {f"Identity Pool Id {second_pool_id}": None},
+            "old": {f"Identity Pool Id {second_pool_id}": second_pool_name},
         }
         self.assertEqual(result["changes"], expected_changes)
 
@@ -600,17 +602,17 @@ class BotoCognitoIdentityTestCase(
             name="test pool absent",
             IdentityPoolName=first_pool_name,
             RemoveAllMatched=True,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("result"), True)
         expected_changes = {
             "new": {
-                "Identity Pool Id {}".format(first_pool_id): None,
-                "Identity Pool Id {}".format(third_pool_id): None,
+                f"Identity Pool Id {first_pool_id}": None,
+                f"Identity Pool Id {third_pool_id}": None,
             },
             "old": {
-                "Identity Pool Id {}".format(first_pool_id): first_pool_name,
-                "Identity Pool Id {}".format(third_pool_id): third_pool_name,
+                f"Identity Pool Id {first_pool_id}": first_pool_name,
+                f"Identity Pool Id {third_pool_id}": third_pool_name,
             },
         }
         self.assertEqual(result["changes"], expected_changes)

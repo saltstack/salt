@@ -4,29 +4,28 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/darwin.txt requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-aiohttp==3.8.5
+aiohttp==3.9.0
     # via etcd3-py
 aiosignal==1.3.1
     # via aiohttp
-apache-libcloud==3.7.0 ; sys_platform != "win32"
+annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
-    #   -r requirements/static/ci/common.in
+    #   pydantic
+apache-libcloud==3.7.0 ; sys_platform != "win32"
+    # via -r requirements/static/ci/common.in
 asn1crypto==1.5.1
     # via
     #   certvalidator
     #   oscrypto
-async-timeout==4.0.2
-    # via aiohttp
 attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
+    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
-    #   pytest-subtests
     #   pytest-system-statistics
 autocommand==2.2.2
     # via
@@ -47,9 +46,9 @@ botocore==1.29.152
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.3.1
+cachetools==3.1.0
     # via google-auth
-cassandra-driver==3.28.0
+cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2023.07.22
     # via
@@ -59,7 +58,7 @@ certifi==2023.07.22
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1
+cffi==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/static/ci/common.in
@@ -70,9 +69,8 @@ cffi==1.15.1
 charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   aiohttp
     #   requests
-cheetah3==3.2.6.post1
+cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==10.0.0
     # via
@@ -81,7 +79,7 @@ cheroot==10.0.0
 cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
 click==8.1.3
     # via geomet
@@ -93,17 +91,16 @@ contextvars==2.4
     #   -r requirements/base.txt
 croniter==1.3.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==41.0.4
+cryptography==41.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/crypto.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
     #   vcert
-distlib==0.3.6
+distlib==0.3.7
     # via virtualenv
 distro==1.8.0
     # via
@@ -118,11 +115,11 @@ docker==6.1.3
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.12.4
+filelock==3.13.1
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.3.3
+frozenlist==1.3.0
     # via
     #   aiohttp
     #   aiosignal
@@ -132,17 +129,12 @@ future==0.18.3
     #   textfsm
 genshi==0.7.7
     # via -r requirements/static/ci/common.in
-geomet==0.2.1.post1
+geomet==0.1.2
     # via cassandra-driver
 gitdb==4.0.10
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   gitpython
+    # via gitpython
 gitpython==3.1.40
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
 hglib==2.6.2
@@ -150,7 +142,6 @@ hglib==2.6.2
 idna==3.4
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   etcd3-py
     #   requests
     #   yarl
@@ -158,7 +149,11 @@ immutables==0.15
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   contextvars
-inflect==6.0.4
+importlib-metadata==6.6.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   -r requirements/base.txt
+inflect==7.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   jaraco.text
@@ -212,11 +207,7 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
-looseversion==1.2.0
+looseversion==1.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
@@ -228,18 +219,18 @@ lxml==4.9.2
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.in
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.4.4
+mercurial==6.0.1
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==9.1.0
+more-itertools==8.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/pytest.txt
@@ -249,12 +240,12 @@ more-itertools==9.1.0
     #   jaraco.text
 moto==4.1.11
     # via -r requirements/static/ci/common.in
-msgpack==1.0.5
+msgpack==1.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
@@ -283,7 +274,7 @@ packaging==23.1
     #   -r requirements/base.txt
     #   docker
     #   pytest
-paramiko==3.2.0
+paramiko==3.3.1
     # via
     #   junos-eznc
     #   napalm
@@ -294,7 +285,7 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.11.1
     # via yamllint
-platformdirs==3.5.3
+platformdirs==4.0.0
     # via virtualenv
 pluggy==1.0.0
     # via pytest
@@ -302,19 +293,17 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   cherrypy
-psutil==5.9.5
+psutil==5.9.6
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.3.0
+pyasn1-modules==0.2.4
     # via google-auth
 pyasn1==0.4.8
     # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   pyasn1-modules
     #   rsa
 pycparser==2.21
@@ -325,12 +314,18 @@ pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/crypto.txt
-pydantic==1.10.8
+pydantic-core==2.14.5
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   pydantic
+pydantic==2.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   inflect
 pyeapi==1.0.0
     # via napalm
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
@@ -340,7 +335,7 @@ pynacl==1.5.0
 pyopenssl==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   etcd3-py
 pyparsing==3.0.9
     # via junos-eznc
@@ -359,22 +354,22 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc27
+pytest-salt-factories==1.0.0rc28
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.1
+pytest-skip-markers==1.5.0
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pytest-subtests==0.11.0
+pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.1.0
+pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.3.2
+pytest==7.2.0
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -388,7 +383,7 @@ pytest==7.3.2
 python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   botocore
     #   croniter
     #   kubernetes
@@ -396,11 +391,11 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.0
+python-gnupg==0.5.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
-pytz==2023.3
+    #   -r requirements/base.txt
+pytz==2023.3.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   tempora
@@ -419,7 +414,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.1.0
+pyzmq==25.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/zeromq.txt
@@ -437,7 +432,6 @@ requests==2.31.0
     #   napalm
     #   responses
     #   vcert
-    #   vultr
 responses==0.23.1
     # via moto
 rfc3987==1.3.8
@@ -456,7 +450,7 @@ semantic-version==2.10.0
 setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
 six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -477,9 +471,7 @@ six==1.16.0
     #   vcert
     #   websocket-client
 smmap==5.0.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   gitdb
+    # via gitdb
 sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -496,7 +488,7 @@ textfsm==1.1.3
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tornado==6.3.3
@@ -511,13 +503,15 @@ ttp==0.9.5
     # via
     #   napalm
     #   ttp-templates
-types-pyyaml==6.0.1
+types-pyyaml==6.0.12.12
     # via responses
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   inflect
     #   napalm
     #   pydantic
+    #   pydantic-core
     #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.18
@@ -530,16 +524,12 @@ urllib3==1.26.18
     #   python-etcd
     #   requests
     #   responses
-vcert==0.9.1 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.23.0
+virtualenv==20.24.7
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
@@ -566,6 +556,10 @@ zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   cherrypy
+zipp==3.16.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
