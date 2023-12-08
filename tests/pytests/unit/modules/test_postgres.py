@@ -2,6 +2,7 @@ import datetime
 import re
 
 import pytest
+from pytestskipmarkers.utils import platform
 
 import salt.modules.config as configmod
 import salt.modules.postgres as postgres
@@ -117,6 +118,8 @@ def idfn(val):
     ids=idfn,
 )
 def test_verify_password(role, password, verifier, method, result):
+    if platform.is_fips_enabled() and (method == "md5" or verifier == md5_pw):
+        pytest.skip("Test cannot run on a FIPS enabled platform")
     assert postgres._verify_password(role, password, verifier, method) == result
 
 
@@ -971,6 +974,7 @@ def test_user_update3():
         )
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_user_update_encrypted_passwd():
     with patch(
         "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1226,6 +1230,7 @@ def test_create_extension_newerthan():
                 assert not postgres.create_extension("foo", ext_version="a", schema="b")
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_encrypt_passwords():
     assert postgres._maybe_encrypt_password("foo", "bar", False) == "bar"
     assert (
