@@ -49,7 +49,6 @@ def configure_loader_modules():
                 "dacl.check_perms": win_dacl.check_perms,
             },
         },
-        win_dacl: {"__opts__": {"test": False}},
     }
 
 

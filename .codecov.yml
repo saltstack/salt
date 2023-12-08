@@ -58,37 +58,37 @@ flags:
   salt:
     paths:
       - salt/
-    carryforward: true        # https://docs.codecov.io/docs/carryforward-flags
+    carryforward: false       # https://docs.codecov.io/docs/carryforward-flags
   tests:
     paths:
       - tests/
-    carryforward: true
+    carryforward: false
   pkg:
     paths:
       - pkg/tests
-    carryforward: true
+    carryforward: false
   unit:
     paths:
       - tests/unit
       - tests/pytests/unit
-    carryforward: true
+    carryforward: false
   functional:
     paths:
       - tests/pytests/functional
-    carryforward: true
+    carryforward: false
   scenarios:
     paths:
       - tests/pytests/scenarios
-    carryforward: true
+    carryforward: false
   integration:
     paths:
       - tests/integration
       - tests/pytests/integration
-    carryforward: true
+    carryforward: false
 
 comment:
   layout: "reach, diff, flags, files"
-  behavior: default              # Comment posting behaviour
+  behavior: new                  # Comment posting behaviour
                                  #   default: update, if exists. Otherwise post new.
                                  #   once: update, if exists. Otherwise post new. Skip if deleted.
                                  #   new: delete old and post new.

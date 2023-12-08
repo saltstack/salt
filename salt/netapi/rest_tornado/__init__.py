@@ -3,6 +3,7 @@ import logging
 import os
 
 import salt.auth
+from salt.config import DEFAULT_HASH_TYPE
 from salt.utils.versions import Version
 
 __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or "rest_tornado"
@@ -59,7 +60,9 @@ def get_application(opts):
         from . import saltnado_websockets
 
         token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(
-            len(getattr(hashlib, opts.get("hash_type", "md5"))().hexdigest())
+            len(
+                getattr(hashlib, opts.get("hash_type", DEFAULT_HASH_TYPE))().hexdigest()
+            )
         )
         all_events_pattern = r"/all_events/{}".format(token_pattern)
         formatted_events_pattern = r"/formatted_events/{}".format(token_pattern)

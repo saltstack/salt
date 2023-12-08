@@ -46,9 +46,11 @@ jobs:
       matrix:
         arch:
           - x86_64
-    runs-on: macos-12
-    steps:
+          - aarch64
+    runs-on:
+      - ${{ matrix.arch == 'aarch64' && 'macos-13-xlarge' || 'macos-12' }}
 
+    steps:
       - name: "Throttle Builds"
         shell: bash
         run: |
@@ -65,13 +67,15 @@ jobs:
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}-build-salt-onedir-macos
 
       - name: Setup Salt Version
         id: setup-salt-version

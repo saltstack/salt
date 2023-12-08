@@ -20,12 +20,13 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
     pytest.mark.skip_on_windows(
         reason=(
             "Special steps are required for proper SSL validation because "
             "`easy_install` is too old(and deprecated)."
         )
-    )
+    ),
 ]
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (

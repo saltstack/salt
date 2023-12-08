@@ -26,12 +26,15 @@ jobs:
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
+    env:
+      PRE_COMMIT_COLOR: always
+
     steps:
 
       - name: Install System Deps
         run: |
           apt-get update
-          apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+          apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev rustc
 
       - name: Add Git Safe Directory
         run: |

@@ -84,7 +84,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -92,13 +92,13 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
       - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
@@ -106,6 +106,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-linux
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -316,7 +318,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Install System Dependencies
@@ -328,7 +330,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
@@ -341,10 +343,10 @@ jobs:
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
@@ -544,7 +546,7 @@ jobs:
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
       - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ matrix.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
@@ -555,6 +557,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-windows
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |

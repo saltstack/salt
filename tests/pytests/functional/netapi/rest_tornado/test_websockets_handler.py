@@ -6,6 +6,7 @@ import pytest
 import salt.netapi.rest_tornado as rest_tornado
 import salt.utils.json
 import salt.utils.yaml
+from salt.config import DEFAULT_HASH_TYPE
 from salt.ext.tornado.httpclient import HTTPError, HTTPRequest
 from salt.ext.tornado.websocket import websocket_connect
 
@@ -51,7 +52,9 @@ async def test_websocket_handler_bad_token(client_config, http_server):
     A bad token should returns a 401 during a websocket connect
     """
     token = "A" * len(
-        getattr(hashlib, client_config.get("hash_type", "md5"))().hexdigest()
+        getattr(
+            hashlib, client_config.get("hash_type", DEFAULT_HASH_TYPE)
+        )().hexdigest()
     )
 
     url = "ws://127.0.0.1:{}/all_events/{}".format(http_server.port, token)

@@ -41,7 +41,7 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
             ) as reqfp:
                 return_data = reqfp.read()
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_data).hexdigest()
+                checksum = hashlib.sha256(return_data).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304

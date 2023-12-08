@@ -3,7 +3,6 @@
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 --constraint=../pkg/py{py_version}/{platform}.txt
 
-azure==4.0.0; sys_platform != 'win32'
 apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.17.67
 boto>=2.46.0
@@ -15,7 +14,7 @@ clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 etcd3-py==0.1.6
-gitpython>=3.1.30
+gitpython>=3.1.37
 jmespath
 jsonschema
 junos-eznc; sys_platform != 'win32' and python_version <= '3.10'

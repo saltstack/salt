@@ -67,6 +67,9 @@ else:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
 # Define the pytest plugins we rely on
 pytest_plugins = ["helpers_namespace"]
 
@@ -813,6 +816,17 @@ def groups_collection_modifyitems(config, items):
         # Just one group, don't do any filtering
         return
 
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+
+    if config.getoption("--last-failed") or config.getoption("--failed-first"):
+        # This is a test failure rerun, applying test groups would break this
+        terminal_reporter.write(
+            "\nNot splitting collected tests into chunks since --lf/--last-failed or "
+            "-ff/--failed-first was passed on the CLI.\n",
+            yellow=True,
+        )
+        return
+
     total_items = len(items)
 
     # Devide into test groups
@@ -828,7 +842,6 @@ def groups_collection_modifyitems(config, items):
     if deselected:
         config.hook.pytest_deselected(items=deselected)
 
-    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
         f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
@@ -1044,7 +1057,10 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1157,7 +1173,10 @@ def salt_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1265,6 +1284,7 @@ def salt_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1296,6 +1316,7 @@ def salt_sub_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1424,13 +1445,15 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/libexec/openssh/sftp-server",
         # Arch Linux
         "/usr/lib/ssh/sftp-server",
+        # Photon OS 5
+        "/usr/libexec/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
         if os.path.exists(path):
             sftp_server_path = path
     if sftp_server_path is None:
-        log.warning(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
     else:
         sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(

@@ -25,6 +25,10 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 def _win_user_where(username, password, program):
     cmd = "cmd.exe /c where {}".format(program)

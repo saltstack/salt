@@ -190,7 +190,7 @@ def download_artifact(
     repository: str = "saltstack/salt",
 ):
     """
-    Download CI built packages artifacts.
+    Download CI artifacts.
     """
     if TYPE_CHECKING:
         assert artifact_name is not None
