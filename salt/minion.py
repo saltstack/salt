@@ -954,7 +954,19 @@ class SMinion(MinionBase):
             "use_master_when_local", False
         ):
             io_loop = tornado.ioloop.IOLoop.current()
-            io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
+
+            @tornado.gen.coroutine
+            def eval_master():
+                """
+                Wrap eval master in order to close the returned publish channel.
+                """
+                master, pub_channel = yield self.eval_master(self.opts, failed=True)
+                pub_channel.close()
+
+            io_loop.run_sync(
+                lambda: eval_master()  # pylint: disable=unnecessary-lambda
+            )
+
         self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion

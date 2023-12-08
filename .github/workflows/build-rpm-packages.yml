@@ -20,6 +20,10 @@ on:
         required: true
         type: string
         description: The backend to build the packages with
+      cache-prefix:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
 
 env:
   COLUMNS: 190
@@ -64,6 +68,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Setup Salt Version
         id: setup-salt-version

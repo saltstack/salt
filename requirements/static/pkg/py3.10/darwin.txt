@@ -8,7 +8,7 @@ autocommand==2.2.2
     # via jaraco.text
 certifi==2023.07.22
     # via requests
-cffi==1.15.1
+cffi==1.16.0
     # via cryptography
 charset-normalizer==3.2.0
     # via requests
@@ -18,7 +18,7 @@ cherrypy==18.8.0
     # via -r requirements/base.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.4
+cryptography==41.0.7
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -47,9 +47,9 @@ jinja2==3.1.2
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
-looseversion==1.2.0
+looseversion==1.3.0
     # via -r requirements/base.txt
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -59,13 +59,13 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.5
+msgpack==1.0.7
     # via -r requirements/base.txt
 packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.9.5
+psutil==5.9.6
     # via -r requirements/base.txt
 pycparser==2.21
     # via cffi
@@ -77,13 +77,13 @@ pyopenssl==23.2.0
     # via -r requirements/base.txt
 python-dateutil==2.8.2
     # via -r requirements/base.txt
-python-gnupg==0.5.0
+python-gnupg==0.5.1
     # via -r requirements/base.txt
-pytz==2023.3
+pytz==2023.3.post1
     # via tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.1.0
+pyzmq==25.1.1
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via -r requirements/base.txt

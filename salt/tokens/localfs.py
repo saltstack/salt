@@ -11,6 +11,7 @@ import salt.payload
 import salt.utils.files
 import salt.utils.path
 import salt.utils.verify
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -27,10 +28,10 @@ def mk_token(opts, tdata):
     :param tdata: Token data to be stored with 'token' attribute of this dict set to the token.
     :returns: tdata with token if successful. Empty dict if failed.
     """
-    hash_type = getattr(hashlib, opts.get("hash_type", "md5"))
+    hash_type = getattr(hashlib, opts.get("hash_type", DEFAULT_HASH_TYPE))
     tok = str(hash_type(os.urandom(512)).hexdigest())
     t_path = os.path.join(opts["token_dir"], tok)
-    temp_t_path = "{}.tmp".format(t_path)
+    temp_t_path = f"{t_path}.tmp"
     while os.path.isfile(t_path):
         tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(opts["token_dir"], tok)
