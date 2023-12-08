@@ -24,6 +24,10 @@ except ImportError:
 
 REQUIRED_BOTO3_VERSION = "1.2.1"
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 @pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto module must be installed.")
 @pytest.mark.skipif(
