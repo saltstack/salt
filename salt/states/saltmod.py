@@ -663,7 +663,7 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
 
     if __opts__.get("test"):
-        ret["comment"] = "Orchestration would wait for event '{}'".format(name)
+        ret["comment"] = f"Orchestration would wait for event '{name}'"
         ret["result"] = None
         return ret
 
@@ -793,7 +793,7 @@ def runner(name, **kwargs):
             "name": name,
             "result": None,
             "changes": {},
-            "comment": "Runner function '{}' would be executed.".format(name),
+            "comment": f"Runner function '{name}' would be executed.",
         }
         return ret
 
@@ -815,7 +815,7 @@ def runner(name, **kwargs):
     if features.get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The __orchestration__ return flag will be removed in Salt Argon. "
             "For more information see https://github.com/saltstack/salt/pull/59917.",
         )
@@ -918,7 +918,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             "result": False,
             "success": False,
             "changes": {},
-            "comment": "One of the runners raised an exception: {}".format(exc),
+            "comment": f"One of the runners raised an exception: {exc}",
         }
     # We bundle the results of the runners with the IDs of the runners so that
     # we can easily identify which output belongs to which runner. At the same
@@ -997,7 +997,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             comment = "All runner functions executed successfully."
         else:
             if len(failed_runners) == 1:
-                comment = "Runner {} failed.".format(failed_runners[0])
+                comment = f"Runner {failed_runners[0]} failed."
             else:
                 comment = "Runners {} failed.".format(", ".join(failed_runners))
         changes = {"ret": {runner_id: out for runner_id, out in outputs.items()}}
@@ -1041,9 +1041,9 @@ def wheel(name, **kwargs):
         jid = None
 
     if __opts__.get("test", False):
-        ret["result"] = (None,)
+        ret["result"] = None
         ret["changes"] = {}
-        ret["comment"] = "Wheel function '{}' would be executed.".format(name)
+        ret["comment"] = f"Wheel function '{name}' would be executed."
         return ret
 
     out = __salt__["saltutil.wheel"](
@@ -1064,7 +1064,7 @@ def wheel(name, **kwargs):
     if features.get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The __orchestration__ return flag will be removed in Salt Argon. "
             "For more information see https://github.com/saltstack/salt/pull/59917.",
         )

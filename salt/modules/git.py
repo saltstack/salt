@@ -61,7 +61,7 @@ def _config_getter(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Common code for config.get_* functions, builds and runs the git CLI command
@@ -224,7 +224,7 @@ def _git_run(
     redirect_stderr=False,
     saltenv="base",
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     simple, throw an exception with the error message on an error return code.
@@ -323,7 +323,7 @@ def _git_run(
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=redirect_stderr,
                     output_encoding=output_encoding,
-                    **kwargs
+                    **kwargs,
                 )
             finally:
                 if tmp_ssh_wrapper:
@@ -390,7 +390,7 @@ def _git_run(
             ignore_retcode=ignore_retcode,
             redirect_stderr=redirect_stderr,
             output_encoding=output_encoding,
-            **kwargs
+            **kwargs,
         )
 
         if result["retcode"] == 0:
@@ -403,7 +403,7 @@ def _git_run(
                 )
                 err = result["stdout" if redirect_stderr else "stderr"]
                 if err:
-                    msg += ": {}".format(salt.utils.url.redact_http_basic_auth(err))
+                    msg += f": {salt.utils.url.redact_http_basic_auth(err)}"
                 raise CommandExecutionError(msg)
             return result
 
@@ -564,7 +564,7 @@ def archive(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.0
@@ -1019,7 +1019,7 @@ def clone(
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
 
-        .. versionadded:: 20515.5.0
+        .. versionadded:: 2015.5.0
 
     https_pass
         Set HTTP Basic Auth password. Only accepted for HTTPS URLs.
@@ -1215,7 +1215,7 @@ def config_get(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Get the value of a key in the git configuration file
@@ -1293,7 +1293,7 @@ def config_get(
         password=password,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-        **kwargs
+        **kwargs,
     )
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1318,7 +1318,7 @@ def config_get_regexp(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     .. versionadded:: 2015.8.0
@@ -1395,7 +1395,7 @@ def config_get_regexp(
         password=password,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-        **kwargs
+        **kwargs,
     )
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1425,7 +1425,7 @@ def config_set(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.0
@@ -1574,7 +1574,7 @@ def config_set(
         cwd=cwd,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-        **{"all": True, "global": global_}
+        **{"all": True, "global": global_},
     )
 
 
@@ -1586,7 +1586,7 @@ def config_unset(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2015.8.0
@@ -1695,9 +1695,9 @@ def config_unset(
             )
             is None
         ):
-            raise CommandExecutionError("Key '{}' does not exist".format(key))
+            raise CommandExecutionError(f"Key '{key}' does not exist")
         else:
-            msg = "Multiple values exist for key '{}'".format(key)
+            msg = f"Multiple values exist for key '{key}'"
             if value_regex is not None:
                 msg += " and value_regex matches multiple values"
             raise CommandExecutionError(msg)
@@ -2355,9 +2355,9 @@ def init(
     if bare:
         command.append("--bare")
     if template is not None:
-        command.append("--template={}".format(template))
+        command.append(f"--template={template}")
     if separate_git_dir is not None:
-        command.append("--separate-git-dir={}".format(separate_git_dir))
+        command.append(f"--separate-git-dir={separate_git_dir}")
     if shared is not None:
         if isinstance(shared, int) and not isinstance(shared, bool):
             shared = "0" + str(shared)
@@ -2365,7 +2365,7 @@ def init(
             # Using lower here because booleans would be capitalized when
             # converted to a string.
             shared = str(shared).lower()
-        command.append("--shared={}".format(shared))
+        command.append(f"--shared={shared}")
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(
@@ -2814,7 +2814,7 @@ def list_worktrees(
             worktree_root = os.path.join(cwd, worktree_root)
         if not os.path.isdir(worktree_root):
             raise CommandExecutionError(
-                "Worktree admin directory {} not present".format(worktree_root)
+                f"Worktree admin directory {worktree_root} not present"
             )
 
         def _read_file(path):
@@ -3081,7 +3081,7 @@ def merge(
     identity=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Interface to `git-merge(1)`_
@@ -3205,7 +3205,7 @@ def merge_base(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2015.8.0
@@ -3487,7 +3487,7 @@ def merge_tree(
             base = merge_base(cwd, refs=[ref1, ref2], output_encoding=output_encoding)
         except (SaltInvocationError, CommandExecutionError):
             raise CommandExecutionError(
-                "Unable to determine merge base for {} and {}".format(ref1, ref2)
+                f"Unable to determine merge base for {ref1} and {ref2}"
             )
     command.extend([base, ref1, ref2])
     return _git_run(
@@ -3627,7 +3627,7 @@ def push(
     ignore_retcode=False,
     saltenv="base",
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Interface to `git-push(1)`_
@@ -3927,7 +3927,7 @@ def remote_get(
     )
     if remote not in all_remotes:
         raise CommandExecutionError(
-            "Remote '{}' not present in git checkout located at {}".format(remote, cwd)
+            f"Remote '{remote}' not present in git checkout located at {cwd}"
         )
     return all_remotes[remote]
 
@@ -3944,7 +3944,7 @@ def remote_refs(
     ignore_retcode=False,
     output_encoding=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2015.8.0
@@ -4850,7 +4850,7 @@ def submodule(
     ignore_retcode=False,
     saltenv="base",
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.0
@@ -5290,7 +5290,7 @@ def worktree_add(
     password=None,
     ignore_retcode=False,
     output_encoding=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2015.8.0
@@ -5602,5 +5602,5 @@ def worktree_rm(cwd, user=None, output_encoding=None):
     try:
         salt.utils.files.rm_rf(cwd)
     except Exception as exc:  # pylint: disable=broad-except
-        raise CommandExecutionError("Unable to remove {}: {}".format(cwd, exc))
+        raise CommandExecutionError(f"Unable to remove {cwd}: {exc}")
     return True

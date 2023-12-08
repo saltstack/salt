@@ -123,8 +123,8 @@ def test_present_invalid_gid_change():
     )
     dunder_salt = {
         "user.info": mock_info,
-        "file.group_to_gid": MagicMock(side_effect=["foo"]),
-        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+        "file.group_to_gid": MagicMock(return_value="foo"),
+        "file.gid_to_group": MagicMock(return_value=5000),
     }
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
         user.__salt__, dunder_salt
@@ -148,8 +148,8 @@ def test_present_invalid_uid_gid_change():
     )
     dunder_salt = {
         "user.info": mock_info,
-        "file.group_to_gid": MagicMock(side_effect=["foo"]),
-        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+        "file.group_to_gid": MagicMock(return_value="foo"),
+        "file.gid_to_group": MagicMock(return_value=5000),
     }
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
         user.__salt__, dunder_salt
@@ -179,7 +179,7 @@ def test_present_uid_gid_change():
     # get the before/after for the changes dict, and one last time to
     # confirm that no changes still need to be made.
     mock_info = MagicMock(side_effect=[before, before, after, after])
-    mock_group_to_gid = MagicMock(side_effect=[5000, 5001])
+    mock_group_to_gid = MagicMock(side_effect=[5000, 5000, 5001, 5001])
     mock_gid_to_group = MagicMock(
         side_effect=["othergroup", "foo", "othergroup", "othergroup"]
     )
@@ -189,6 +189,8 @@ def test_present_uid_gid_change():
         "user.chgid": Mock(),
         "file.group_to_gid": mock_group_to_gid,
         "file.gid_to_group": mock_gid_to_group,
+        "group.info": MagicMock(return_value=after),
+        "user.chgroups": MagicMock(return_value=True),
     }
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
         user.__salt__, dunder_salt
@@ -254,12 +256,11 @@ def test_changes():
         "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
     }
 
-    def mock_exists(*args):
-        return True
-
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
         user.__salt__, dunder_salt
-    ), patch.dict(user.__opts__, {"test": False}), patch("os.path.isdir", mock_exists):
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "os.path.isdir", MagicMock(return_value=True)
+    ):
         ret = user._changes("foo", maxdays=999999, inactdays=0, warndays=7)
         assert ret == {
             "maxdays": 999999,
@@ -459,3 +460,43 @@ def test_present_password_unlock():
         else:
             unlock_password.assert_called_once()
             unlock_account.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "current,wanted,remove,return_value,expected",
+    [
+        (["grp1"], ["grp1"], False, MagicMock(return_value={"gid": 100}), False),
+        (
+            ["grp1"],
+            ["grp1", "grp2"],
+            False,
+            MagicMock(side_effect=[{"gid": 100}, {"gid": 200}]),
+            True,
+        ),
+        (
+            ["grp1"],
+            ["grp1", "grp2"],
+            False,
+            MagicMock(side_effect=[{"gid": 100}, {"gid": 100}]),
+            False,
+        ),
+        (
+            ["grp1", "grp2"],
+            ["grp1"],
+            True,
+            MagicMock(side_effect=[{"gid": 100}, {"gid": 200}]),
+            True,
+        ),
+        (
+            ["grp1", "grp2"],
+            ["grp1"],
+            True,
+            MagicMock(side_effect=[{"gid": 100}, {"gid": 100}]),
+            False,
+        ),
+    ],
+)
+def test__group_changes(current, wanted, remove, return_value, expected):
+    with patch.dict(user.__salt__, {"group.info": return_value}):
+        ret = user._group_changes(current, wanted, remove)
+    assert ret == expected

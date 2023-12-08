@@ -215,7 +215,7 @@ def ensure_cert_kwargs_compat(kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
                 )
                 kwargs[name] = kwargs.pop(long_name)
@@ -224,7 +224,7 @@ def ensure_cert_kwargs_compat(kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
                 )
                 kwargs[extname] = kwargs.pop(long_name)
@@ -581,7 +581,7 @@ def merge_signing_policy(policy, kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
                 )
                 kwargs[name] = kwargs.pop(long_name)
@@ -591,7 +591,7 @@ def merge_signing_policy(policy, kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
                 )
                 kwargs[extname] = kwargs.pop(long_name)
@@ -1683,19 +1683,40 @@ def _deserialize_openssl_confstring(conf, multiple=False):
 
 
 def _parse_general_names(val):
-    def idna_encode(val, allow_leading_dot=False):
-        if HAS_IDNA:
-            # A leading dot is allowed in some values.
-            # idna complains about it not being a valid domain name
-            has_dot = False
-            if allow_leading_dot:
-                has_dot = val.startswith(".")
-                val = val.lstrip(".")
-            ret = idna.encode(val).decode()
+    def idna_encode(val, allow_leading_dot=False, allow_wildcard=False):
+        # A leading dot is allowed in some values (nameConstraints).
+        # idna complains about it not being a valid domain name
+        try:
+            has_dot = val.startswith(".")
+        except AttributeError:
+            raise SaltInvocationError(
+                f"Expected string value, got {type(val).__name__}: `{val}`"
+            )
+        if has_dot:
+            if not allow_leading_dot:
+                raise CommandExecutionError(
+                    "Leading dots are not allowed in this context"
+                )
+            val = val.lstrip(".")
+        has_wildcard = val.startswith("*.")
+        if has_wildcard:
+            if not allow_wildcard:
+                raise CommandExecutionError("Wildcards are not allowed in this context")
             if has_dot:
-                return f".{ret}"
-            return ret
+                raise CommandExecutionError(
+                    "Wildcards and leading dots cannot be present together"
+                )
+            val = val[2:]
+            if val.startswith("."):
+                raise CommandExecutionError("Empty label")
+        if HAS_IDNA:
+            try:
+                ret = idna.encode(val).decode()
+            except idna.IDNAError as err:
+                raise CommandExecutionError(str(err)) from err
         else:
+            if not val:
+                raise CommandExecutionError("Empty domain")
             try:
                 val.encode(encoding="ascii")
             except UnicodeEncodeError as err:
@@ -1703,6 +1724,20 @@ def _parse_general_names(val):
                     "Cannot encode non-ASCII strings to internationalized domain "
                     "name format, missing library: idna"
                 ) from err
+            for elem in val.split("."):
+                if not elem:
+                    raise CommandExecutionError("Empty Label")
+                invalid = re.search(r"[^A-Za-z\d\-\.]", elem)
+                if invalid is not None:
+                    raise CommandExecutionError(
+                        f"Codepoint U+00{hex(ord(invalid.group()))[2:]} at position {invalid.end()} of '{val}' not allowed"
+                    )
+            ret = val
+        if has_dot:
+            return f".{ret}"
+        if has_wildcard:
+            return f"*.{ret}"
+        return ret
 
     valid_types = {
         "email": cx509.general_name.RFC822Name,
@@ -1738,6 +1773,7 @@ def _parse_general_names(val):
                 domain = idna_encode(domain)
                 v = "@".join((user, domain))
             else:
+                # nameConstraints
                 v = idna_encode(splits[0], allow_leading_dot=True)
         elif typ == "uri":
             url = urlparse(v)
@@ -1747,7 +1783,7 @@ def _parse_general_names(val):
                     (url.scheme, domain, url.path, url.params, url.query, url.fragment)
                 )
         elif typ == "dns":
-            v = idna_encode(v, allow_leading_dot=True)
+            v = idna_encode(v, allow_leading_dot=True, allow_wildcard=True)
         elif typ == "othername":
             raise SaltInvocationError("otherName is currently not implemented")
         if typ in valid_types:

@@ -219,7 +219,7 @@ def cmd(command, *args, **kwargs):
         salt '*' nxos.cmd show_run
         salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     """
-    warn_until("Argon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
+    warn_until(3008, "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
 
     for k in list(kwargs):
         if k.startswith("__pub_"):
@@ -258,7 +258,7 @@ def get_roles(username, **kwargs):
     user = get_user(username)
     if not user:
         return []
-    command = "show user-account {}".format(username)
+    command = f"show user-account {username}"
     info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -278,7 +278,7 @@ def get_user(username, **kwargs):
 
         salt '*' nxos.get_user username=admin
     """
-    command = 'show run | include "^username {} password 5 "'.format(username)
+    command = f'show run | include "^username {username} password 5 "'
     info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -383,7 +383,7 @@ def show(commands, raw_text=True, **kwargs):
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     """
     warn_until(
-        "Argon",
+        3008,
         "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
     )
 
@@ -450,7 +450,7 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     """
-    warn_until("Argon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
+    warn_until(3008, "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
     return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
 
 
@@ -477,7 +477,7 @@ def add_config(lines, **kwargs):
         For more than one config added per command, lines should be a list.
     """
     warn_until(
-        "Argon",
+        3008,
         "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
     )
 
@@ -492,7 +492,7 @@ def config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Configures the Nexus switch with the specified commands.
@@ -562,7 +562,7 @@ def config(
     if config_file:
         file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError("Source file {} not found".format(config_file))
+            raise CommandExecutionError(f"Source file {config_file} not found")
     elif commands:
         if isinstance(commands, str):
             commands = [commands]
@@ -664,7 +664,7 @@ def remove_user(username, **kwargs):
 
         salt '*' nxos.remove_user username=daniel
     """
-    user_line = "no username {}".format(username)
+    user_line = f"no username {username}"
     kwargs = clean_kwargs(**kwargs)
     return config(user_line, **kwargs)
 
@@ -681,7 +681,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         salt '*' nxos.replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
     """
     if full_match is False:
-        matcher = re.compile("^.*{}.*$".format(re.escape(old_value)), re.MULTILINE)
+        matcher = re.compile(f"^.*{re.escape(old_value)}.*$", re.MULTILINE)
         repl = re.compile(re.escape(old_value))
     else:
         matcher = re.compile(old_value, re.MULTILINE)
@@ -719,7 +719,7 @@ def set_password(
     role=None,
     crypt_salt=None,
     algorithm="sha256",
-    **kwargs
+    **kwargs,
 ):
     """
     Set users password on switch.
@@ -767,9 +767,9 @@ def set_password(
         )
     else:
         hashed_pass = password
-    password_line = "username {} password 5 {}".format(username, hashed_pass)
+    password_line = f"username {username} password 5 {hashed_pass}"
     if role is not None:
-        password_line += " role {}".format(role)
+        password_line += f" role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(password_line, **kwargs)
 
@@ -793,7 +793,7 @@ def set_role(username, role, **kwargs):
 
         salt '*' nxos.set_role username=daniel role=vdc-admin.
     """
-    role_line = "username {} role {}".format(username, role)
+    role_line = f"username {username} role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
@@ -817,7 +817,7 @@ def unset_role(username, role, **kwargs):
 
         salt '*' nxos.unset_role username=daniel role=vdc-admin
     """
-    role_line = "no username {} role {}".format(username, role)
+    role_line = f"no username {username} role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 

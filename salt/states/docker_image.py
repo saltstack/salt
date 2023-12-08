@@ -48,6 +48,12 @@ log = logging.getLogger(__name__)
 __virtualname__ = "docker_image"
 __virtual_aliases__ = ("moby_image",)
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """
@@ -72,7 +78,7 @@ def present(
     saltenv="base",
     pillarenv=None,
     pillar=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -94,6 +100,9 @@ def present(
         myuser/myimage:
           docker_image.present:
             - tag: mytag
+
+    name
+        The name of the docker image.
 
     tag
         Tag name for the image. Required when using ``build``, ``load``, or
@@ -140,9 +149,13 @@ def present(
         .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
-    force : False
+    force
         Set this parameter to ``True`` to force Salt to pull/build/load the
         image even if it is already present.
+
+    insecure_registry
+        If ``True``, the Docker client will permit the use of insecure
+        (non-HTTPS) registries.
 
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
@@ -206,6 +219,10 @@ def present(
             ``pillar_roots`` or an external Pillar source.
 
         .. versionadded:: 2018.3.0
+
+    kwargs
+        Additional keyword arguments to pass to
+        :py:func:`docker.build <salt.modules.dockermod.build>`
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -230,7 +247,7 @@ def present(
         full_image = ":".join((name, tag))
     else:
         if tag:
-            name = "{}:{}".format(name, tag)
+            name = f"{name}:{tag}"
         full_image = name
 
     try:
@@ -248,7 +265,7 @@ def present(
         # Specified image is present
         if not force:
             ret["result"] = True
-            ret["comment"] = "Image {} already present".format(full_image)
+            ret["comment"] = f"Image {full_image} already present"
             return ret
 
     if build or sls:
@@ -261,7 +278,7 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if (image_info is not None and force) or image_info is None:
-            ret["comment"] = "Image {} will be {}".format(full_image, action)
+            ret["comment"] = f"Image {full_image} will be {action}"
             return ret
 
     if build:
@@ -325,7 +342,7 @@ def present(
                 name, insecure_registry=insecure_registry, client_timeout=client_timeout
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error pulling {}: {}".format(full_image, exc)
+            ret["comment"] = f"Encountered error pulling {full_image}: {exc}"
             return ret
         if (
             image_info is not None
@@ -359,7 +376,7 @@ def present(
                 name, action
             )
         else:
-            ret["comment"] = "Image '{}' was {}".format(full_image, action)
+            ret["comment"] = f"Image '{full_image}' was {action}"
     return ret
 
 
@@ -368,6 +385,9 @@ def absent(name=None, images=None, force=False):
     Ensure that an image is absent from the Minion. Image names can be
     specified either using ``repo:tag`` notation, or just the repo name (in
     which case a tag of ``latest`` is assumed).
+
+    name
+        The name of the docker image.
 
     images
         Run this state on more than one image at a time. The following two
@@ -395,7 +415,7 @@ def absent(name=None, images=None, force=False):
         all the deletions in a single run, rather than executing the state
         separately on each image (as it would in the first example).
 
-    force : False
+    force
         Salt will fail to remove any images currently in use by a container.
         Set this option to true to remove the image even if it is already
         present.
@@ -436,7 +456,7 @@ def absent(name=None, images=None, force=False):
     if not to_delete:
         ret["result"] = True
         if len(targets) == 1:
-            ret["comment"] = "Image {} is not present".format(name)
+            ret["comment"] = f"Image {name} is not present"
         else:
             ret["comment"] = "All specified images are not present"
         return ret
@@ -444,7 +464,7 @@ def absent(name=None, images=None, force=False):
     if __opts__["test"]:
         ret["result"] = None
         if len(to_delete) == 1:
-            ret["comment"] = "Image {} will be removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} will be removed"
         else:
             ret["comment"] = "The following images will be removed: {}".format(
                 ", ".join(to_delete)
@@ -470,7 +490,7 @@ def absent(name=None, images=None, force=False):
     else:
         ret["changes"] = result
         if len(to_delete) == 1:
-            ret["comment"] = "Image {} was removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} was removed"
         else:
             ret["comment"] = "The following images were removed: {}".format(
                 ", ".join(to_delete)
@@ -499,5 +519,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for {}".format(sfun),
+        "comment": f"watch requisite is not implemented for {sfun}",
     }

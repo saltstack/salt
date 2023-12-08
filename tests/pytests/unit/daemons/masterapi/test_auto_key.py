@@ -17,11 +17,11 @@ def gen_permissions(owner="", group="", others=""):
     """
     ret = 0
     for c in owner:
-        ret |= getattr(stat, "S_I{}USR".format(c.upper()), 0)
+        ret |= getattr(stat, f"S_I{c.upper()}USR", 0)
     for c in group:
-        ret |= getattr(stat, "S_I{}GRP".format(c.upper()), 0)
+        ret |= getattr(stat, f"S_I{c.upper()}GRP", 0)
     for c in others:
-        ret |= getattr(stat, "S_I{}OTH".format(c.upper()), 0)
+        ret |= getattr(stat, f"S_I{c.upper()}OTH", 0)
     return ret
 
 
@@ -256,16 +256,17 @@ def test_check_autosign_grains_no_autosign_grains_dir(auto_key):
     _test_check_autosign_grains(test_func, auto_key, autosign_grains_dir=None)
 
 
-def test_check_autosign_grains_accept(auto_key):
+@pytest.mark.parametrize("grain_value", ["test_value", 123, True])
+def test_check_autosign_grains_accept(grain_value, auto_key):
     """
     Asserts that autosigning from grains passes when a matching grain value is in an
     autosign_grain file.
     """
 
     def test_func(*args):
-        assert auto_key.check_autosign_grains({"test_grain": "test_value"}) is True
+        assert auto_key.check_autosign_grains({"test_grain": grain_value}) is True
 
-    file_content = "#test_ignore\ntest_value"
+    file_content = f"#test_ignore\n{grain_value}"
     _test_check_autosign_grains(test_func, auto_key, file_content=file_content)
 
 

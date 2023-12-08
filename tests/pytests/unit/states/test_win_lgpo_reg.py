@@ -217,6 +217,38 @@ def test_machine_value_present(empty_reg_pol_mach):
     assert result == expected
 
 
+def test_machine_value_present_similar_names(empty_reg_pol_mach):
+    """
+    Test value.present in Machine policy
+    """
+    lgpo_reg.value_present(
+        name="MyValueTwo",
+        key="SOFTWARE\\MyKey1",
+        v_data="1",
+        v_type="REG_DWORD",
+    )
+    lgpo_reg.value_present(
+        name="MyValue",
+        key="SOFTWARE\\MyKey1",
+        v_data="1",
+        v_type="REG_DWORD",
+    )
+    expected = {
+        "SOFTWARE\\MyKey1": {
+            "MyValue": {
+                "type": "REG_DWORD",
+                "data": 1,
+            },
+            "MyValueTwo": {
+                "type": "REG_DWORD",
+                "data": 1,
+            },
+        },
+    }
+    result = win_lgpo_reg.read_reg_pol(policy_class="Machine")
+    assert result == expected
+
+
 def test_machine_value_present_enforce(reg_pol_mach):
     """
     Issue #64222
@@ -611,6 +643,40 @@ def test_user_value_present(empty_reg_pol_user):
         "name": "MyValue",
         "result": True,
     }
+    assert result == expected
+
+
+def test_user_value_present_similar_names(empty_reg_pol_user):
+    """
+    Test value.present in User policy
+    """
+    lgpo_reg.value_present(
+        name="MyValueTwo",
+        key="SOFTWARE\\MyKey1",
+        v_data="1",
+        v_type="REG_DWORD",
+        policy_class="User",
+    )
+    lgpo_reg.value_present(
+        name="MyValue",
+        key="SOFTWARE\\MyKey1",
+        v_data="1",
+        v_type="REG_DWORD",
+        policy_class="User",
+    )
+    expected = {
+        "SOFTWARE\\MyKey1": {
+            "MyValue": {
+                "type": "REG_DWORD",
+                "data": 1,
+            },
+            "MyValueTwo": {
+                "type": "REG_DWORD",
+                "data": 1,
+            },
+        },
+    }
+    result = win_lgpo_reg.read_reg_pol(policy_class="User")
     assert result == expected
 
 

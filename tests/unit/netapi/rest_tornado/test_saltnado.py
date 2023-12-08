@@ -648,7 +648,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.dict(
             self.handler.application.opts,
@@ -699,7 +698,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.object(
             self.handler,
@@ -730,8 +728,8 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
                 {
                     "tag": "fnord",
                     "data": {
-                        "return": "return from fnord {}".format(i),
-                        "id": "fnord {}".format(i),
+                        "return": f"return from fnord {i}",
+                        "id": f"fnord {i}",
                     },
                 }
             )
@@ -761,7 +759,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.object(
             self.handler,
@@ -795,8 +792,8 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
                 {
                     "tag": "fnord",
                     "data": {
-                        "return": "return from fnord {}".format(i),
-                        "id": "fnord {}".format(i),
+                        "return": f"return from fnord {i}",
+                        "id": f"fnord {i}",
                     },
                 }
             )
@@ -821,7 +818,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.dict(
             self.handler.application.opts,
@@ -844,12 +840,12 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         completed_events = [tornado.gen.Future() for _ in range(10)]
         events_by_id = {}
         for i, event in enumerate(completed_events):
-            id_ = "fnord {}".format(i)
+            id_ = f"fnord {i}"
             events_by_id[id_] = event
             event.set_result(
                 {
                     "tag": "fnord",
-                    "data": {"return": "return from {}".format(id_), "id": id_},
+                    "data": {"return": f"return from {id_}", "id": id_},
                 }
             )
         expected_result = {
@@ -879,7 +875,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.dict(
             self.handler.application.opts,
@@ -905,12 +900,12 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         events_by_id = {}
         # Setup some real-enough looking return data
         for i, event in enumerate(completed_events):
-            id_ = "fnord {}".format(i)
+            id_ = f"fnord {i}"
             events_by_id[id_] = event
             event.set_result(
                 {
                     "tag": "fnord",
-                    "data": {"return": "return from {}".format(id_), "id": id_},
+                    "data": {"return": f"return from {id_}", "id": id_},
                 }
             )
         # Hard coded instead of dynamic to avoid potentially writing a test
@@ -972,7 +967,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
         with patch.object(
             self.handler.application.event_listener,
             "get_event",
-            autospec=True,
             side_effect=fancy_get_event,
         ), patch.object(
             self.handler,

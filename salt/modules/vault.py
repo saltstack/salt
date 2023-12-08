@@ -220,6 +220,12 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/saltstack/saltext-vault",
+)
+
 
 def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
@@ -256,7 +262,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
         path = version2["data"]
     log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code != 200:
             response.raise_for_status()
@@ -277,7 +283,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to read secret! {}: {}".format(type(err).__name__, err)
+                f"Failed to read secret! {type(err).__name__}: {err}"
             )
         return default
 
@@ -299,7 +305,7 @@ def write_secret(path, **kwargs):
         path = version2["data"]
         data = {"data": data}
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code == 200:
             return response.json()["data"]
@@ -327,7 +333,7 @@ def write_raw(path, raw):
         path = version2["data"]
         raw = {"data": raw}
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=raw)
         if response.status_code == 200:
             return response.json()["data"]
@@ -354,7 +360,7 @@ def delete_secret(path):
     if version2["v2"]:
         path = version2["data"]
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("DELETE", url)
         if response.status_code != 204:
             response.raise_for_status()
@@ -386,7 +392,7 @@ def destroy_secret(path, *args):
         log.error("Destroy operation is only supported on KV version 2")
         return False
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code != 204:
             response.raise_for_status()
@@ -419,7 +425,7 @@ def list_secrets(path, default=NOT_SET):
     if version2["v2"]:
         path = version2["metadata"]
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("LIST", url)
         if response.status_code != 200:
             response.raise_for_status()
@@ -427,7 +433,7 @@ def list_secrets(path, default=NOT_SET):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to list secrets! {}: {}".format(type(err).__name__, err)
+                f"Failed to list secrets! {type(err).__name__}: {err}"
             )
         return default
 

@@ -286,19 +286,13 @@ def adduser(name, username, root=None):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
     )
 
     if __grains__["kernel"] == "Linux":
-        if on_redhat_5:
-            cmd = [_which("gpasswd"), "-a", username, name]
-        elif on_suse_11:
+        if on_suse_11:
             cmd = [_which("usermod"), "-A", name, username]
         else:
             cmd = [_which("gpasswd"), "--add", username, name]
@@ -336,10 +330,6 @@ def deluser(name, username, root=None):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
@@ -349,9 +339,7 @@ def deluser(name, username, root=None):
     try:
         if username in grp_info["members"]:
             if __grains__["kernel"] == "Linux":
-                if on_redhat_5:
-                    cmd = [_which("gpasswd"), "-d", username, name]
-                elif on_suse_11:
+                if on_suse_11:
                     cmd = [_which("usermod"), "-R", name, username]
                 else:
                     cmd = [_which("gpasswd"), "--del", username, name]
@@ -400,19 +388,13 @@ def members(name, members_list, root=None):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
     )
 
     if __grains__["kernel"] == "Linux":
-        if on_redhat_5:
-            cmd = [_which("gpasswd"), "-M", members_list, name]
-        elif on_suse_11:
+        if on_suse_11:
             for old_member in __salt__["group.info"](name).get("members"):
                 __salt__["cmd.run"](
                     "{} -R {} {}".format(_which("groupmod"), old_member, name),

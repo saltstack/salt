@@ -25,6 +25,12 @@ from salt.exceptions import SaltRunnerError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/saltstack/saltext-vault",
+)
+
 
 def generate_token(
     minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
@@ -214,15 +220,15 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     """
     pki_dir = __opts__["pki_dir"]
     if impersonated_by_master:
-        public_key = "{}/master.pub".format(pki_dir)
+        public_key = f"{pki_dir}/master.pub"
     else:
-        public_key = "{}/minions/{}".format(pki_dir, minion_id)
+        public_key = f"{pki_dir}/minions/{minion_id}"
 
     log.trace("Validating signature for %s", minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
-            "Could not validate token request from {}".format(minion_id)
+            f"Could not validate token request from {minion_id}"
         )
     log.trace("Signature ok")
 
@@ -352,7 +358,7 @@ def _selftoken_expired():
         return False
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {}".format(str(e))
+            f"Error while looking up self token : {str(e)}"
         )
 
 
