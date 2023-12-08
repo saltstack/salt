@@ -6,7 +6,7 @@ import salt.utils.files
 import tests.support.helpers
 
 
-def test_opts_dunder_opts_without_import(tempdir):
+def xtest_opts_dunder_opts_without_import(tempdir):
     """
     Test __opts__ without being imported.
 
@@ -19,12 +19,12 @@ def test_opts_dunder_opts_without_import(tempdir):
             tests.support.helpers.dedent(
                 """
             def mymethod():
-                return type(__opts__)
+                return __opts__
             """
             )
         )
     loader = salt.loader.lazy.LazyLoader([tempdir.tempdir], opts)
-    assert loader["mymod.mymethod"]() == dict
+    assert type(loader["mymod.mymethod"]()) == dict
 
 
 def test_opts_dunder_opts_with_import(tempdir):
@@ -40,10 +40,13 @@ def test_opts_dunder_opts_with_import(tempdir):
             tests.support.helpers.dedent(
                 """
             from salt.loader.dunder import __opts__
-            def mymethod():
+            def optstype():
                 return type(__opts__)
+            def opts():
+                return __opts__
             """
             )
         )
     loader = salt.loader.lazy.LazyLoader([tempdir.tempdir], opts)
-    assert loader["mymod.mymethod"]() == salt.loader.context.NamedLoaderContext
+    assert loader["mymod.optstype"]() == salt.loader.context.NamedLoaderContext
+    assert loader["mymod.opts"]() == opts

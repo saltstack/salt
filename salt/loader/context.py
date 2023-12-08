@@ -68,9 +68,19 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         loader = self.loader()
         if loader is None:
             return self.default
-        if self.name == "__context__":
+        elif self.name == "__context__":
             return loader.pack[self.name]
-        if self.name == loader.pack_self:
+        elif self.name == "__opts__":
+            # XXX: This behaviour tires to mimick what the loader does when
+            # __opts__ was not imported from dunder. It would be nice to just
+            # pass the value of __opts__ here. However, un-winding this
+            # behavior will be tricky.
+            opts = {}
+            if self.default:
+                opts.update(copy.deepcopy(self.default))
+            opts.update(copy.deepcopy(loader.opts))
+            return opts
+        elif self.name == loader.pack_self:
             return loader
         try:
             return loader.pack[self.name]
