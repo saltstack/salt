@@ -4,6 +4,7 @@ Test utility methods that communicate with SMB shares.
 import contextlib
 import getpass
 import os
+import pathlib
 import shutil
 import signal
 import subprocess
@@ -89,8 +90,12 @@ def smb_dict(tmp_path):
             f"force user = {username}\n"
         )
 
-    _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
-    time.sleep(10)
+    ## _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
+    smbd_path = shutil.which("smbd")
+    pathlib.Path(smbd_path).exists()
+    _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
+    time.sleep(2)
+    pidfile = samba_dir / "smbd.pid"
     conn_dict = {
         "tmpdir": tmp_path,
         "samba_dir": samba_dir,
@@ -98,8 +103,9 @@ def smb_dict(tmp_path):
         "passwdb": passwdb,
         "username": username,
         "samba_conf": samba_conf,
+        "smbd_path": smbd_path,
+        "pidfile": pidfile,
     }
-    pidfile = samba_dir / "smbd.pid"
 
     assert pidfile.exists()
     with salt.utils.files.fopen(pidfile, "r") as fp:
