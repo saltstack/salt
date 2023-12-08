@@ -167,12 +167,16 @@ def test_sign_remote_certificate_disallowed_policy(x509_salt_ssh_cli, cert_args)
     reason="Parsing of RFC4514 strings requires cryptography >= 37",
 )
 def test_sign_remote_certificate_no_subject_override(
-    x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey
+    x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey, _check_cryptography
 ):
     """
     Ensure that kwargs from remote requests are overridden
     by signing policies as is done for regular ones
     """
+    if _check_cryptography < (37,):
+        pytest.skip(
+            "Parsing of RFC4514 strings requires cryptography >= 37 on the host Python"
+        )
     cert_args["subject"] = {"O": "from_call"}
     cert_args["signing_policy"] = "testsubjectstrpolicy"
     ret = x509_salt_ssh_cli.run("x509.create_certificate", **cert_args)
@@ -189,12 +193,16 @@ def test_sign_remote_certificate_no_subject_override(
     reason="Parsing of RFC4514 strings requires cryptography >= 37",
 )
 def test_sign_remote_certificate_no_name_attribute_override(
-    x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey
+    x509_salt_ssh_cli, cert_args, ca_key, rsa_privkey, _check_cryptography
 ):
     """
     Ensure that kwargs from remote requests are overridden
     by signing policies as is done for regular ones
     """
+    if _check_cryptography < (37,):
+        pytest.skip(
+            "Parsing of RFC4514 strings requires cryptography >= 37 on the host Python"
+        )
     cert_args["subject"] = "CN=from_call"
     cert_args["signing_policy"] = "testnosubjectpolicy"
     ret = x509_salt_ssh_cli.run("x509.create_certificate", **cert_args)
