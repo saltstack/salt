@@ -340,6 +340,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
         "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     test_user = False
     master_config = install_salt.config_path / "master"
@@ -400,7 +401,6 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
-        config_overrides["open_mode"] = True
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         if install_salt.classic:
             python_executable = install_salt.bin_dir / "python.exe"
@@ -474,6 +474,7 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "open_mode": True,
     }
     if platform.is_windows():
         config_overrides[

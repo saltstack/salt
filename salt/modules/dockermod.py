@@ -222,6 +222,7 @@ import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.loader.dunder import __file_client__
 from salt.state import HighState
 
 __docformat__ = "restructuredtext en"
@@ -323,6 +324,18 @@ def __virtual__():
             ),
         )
     return (False, "Could not import docker module, is docker-py installed?")
+
+
+def _file_client():
+    """
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
+    """
+    if __file_client__:
+        return __file_client__.value()
+    return salt.fileclient.get_file_client(__opts__)
 
 
 class DockerJSONDecoder(json.JSONDecoder):
@@ -6633,7 +6646,7 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=""
     # reuse it from salt.ssh, however this function should
     # be somewhere else
     refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
-    with salt.fileclient.get_file_client(__opts__) as fileclient:
+    with _file_client() as fileclient:
         return salt.client.ssh.state.prep_trans_tar(
             fileclient, chunks, refs, pillar, name
         )

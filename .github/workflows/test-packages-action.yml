@@ -95,6 +95,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
@@ -151,7 +153,7 @@ jobs:
           tree pkg/artifacts
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
@@ -162,6 +164,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |

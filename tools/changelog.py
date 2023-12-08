@@ -8,7 +8,6 @@ import datetime
 import logging
 import os
 import pathlib
-import re
 import sys
 import textwrap
 
@@ -16,19 +15,6 @@ from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
 from tools.utils import REPO_ROOT, Version
-
-CHANGELOG_LIKE_RE = re.compile(r"([\d]+)\.([a-z]+)$")
-CHANGELOG_TYPES = (
-    "removed",
-    "deprecated",
-    "changed",
-    "fixed",
-    "added",
-    "security",
-)
-CHANGELOG_ENTRY_RE = re.compile(
-    r"([\d]+|(CVE|cve)-[\d]{{4}}-[\d]+)\.({})(\.md)?$".format("|".join(CHANGELOG_TYPES))
-)
 
 log = logging.getLogger(__name__)
 
@@ -48,103 +34,6 @@ changelog = command_group(
         ],
     },
 )
-
-
-@changelog.command(
-    name="pre-commit-checks",
-    arguments={
-        "files": {
-            "nargs": "*",
-        }
-    },
-)
-def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
-    """
-    Run pre-commit checks on changelog snippets.
-    """
-    docs_path = REPO_ROOT / "doc"
-    tests_integration_files_path = REPO_ROOT / "tests" / "integration" / "files"
-    changelog_entries_path = REPO_ROOT / "changelog"
-    exitcode = 0
-    for entry in files:
-        path = pathlib.Path(entry).resolve()
-        # Is it under changelog/
-        try:
-            path.relative_to(changelog_entries_path)
-            if path.name in (".keep", ".template.jinja"):
-                # This is the file we use so git doesn't delete the changelog/ directory
-                continue
-            # Is it named properly
-            if not CHANGELOG_ENTRY_RE.match(path.name):
-                ctx.error(
-                    "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                        path.relative_to(REPO_ROOT),
-                        ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
-                    ),
-                )
-                exitcode = 1
-                continue
-            if path.suffix != ".md":
-                ctx.error(
-                    f"Please rename '{path.relative_to(REPO_ROOT)}' to "
-                    f"'{path.relative_to(REPO_ROOT)}.md'"
-                )
-                exitcode = 1
-                continue
-        except ValueError:
-            # No, carry on
-            pass
-        # Does it look like a changelog entry
-        if CHANGELOG_LIKE_RE.match(path.name) and not CHANGELOG_ENTRY_RE.match(
-            path.name
-        ):
-            try:
-                # Is this under doc/
-                path.relative_to(docs_path)
-                # Yes, carry on
-                continue
-            except ValueError:
-                # No, resume the check
-                pass
-            try:
-                # Is this under tests/integration/files
-                path.relative_to(tests_integration_files_path)
-                # Yes, carry on
-                continue
-            except ValueError:
-                # No, resume the check
-                pass
-            ctx.error(
-                "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                    path.relative_to(REPO_ROOT),
-                    ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
-                )
-            )
-            exitcode = 1
-            continue
-        # Is it a changelog entry
-        if not CHANGELOG_ENTRY_RE.match(path.name):
-            # No? Carry on
-            continue
-        # Is the changelog entry in the right path?
-        try:
-            path.relative_to(changelog_entries_path)
-        except ValueError:
-            exitcode = 1
-            ctx.error(
-                "The changelog entry '{}' should be placed under '{}/', not '{}'".format(
-                    path.name,
-                    changelog_entries_path.relative_to(REPO_ROOT),
-                    path.relative_to(REPO_ROOT).parent,
-                )
-            )
-        if path.suffix != ".md":
-            ctx.error(
-                f"Please rename '{path.relative_to(REPO_ROOT)}' to "
-                f"'{path.relative_to(REPO_ROOT)}.md'"
-            )
-            exitcode = 1
-    ctx.exit(exitcode)
 
 
 def _get_changelog_contents(ctx: Context, version: Version):
