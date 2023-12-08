@@ -823,8 +823,7 @@ class SaltPkgInstall:
                 plist_file.unlink()
 
             log.debug("Creating plist file for service: %s", service)
-            contents = textwrap.dedent(
-                f"""\
+            contents = f"""\
                 <?xml version="1.0" encoding="UTF-8"?>
                 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
                 <plist version="1.0">
@@ -836,9 +835,12 @@ class SaltPkgInstall:
                         <key>KeepAlive</key>
                         <true/>
                         <key>ProgramArguments</key>
-                        <array>
-                            <string>{self.run_root}</string>
-                            <string>{service}</string>
+                        <array>"""
+            for part in self.binary_paths[service]:
+                contents += (
+                    f"""\n                            <string>{part}</string>\n"""
+                )
+            contents += f"""\
                             <string>-c</string>
                             <string>{self.conf_dir}</string>
                         </array>
@@ -855,8 +857,7 @@ class SaltPkgInstall:
                     </dict>
                 </plist>
                 """
-            )
-            plist_file.write_text(contents, encoding="utf-8")
+            plist_file.write_text(textwrap.dedent(contents), encoding="utf-8")
             contents = plist_file.read_text()
             log.debug("Created '%s'. Contents:\n%s", plist_file, contents)
 
