@@ -70,7 +70,10 @@ jobs:
 
   generate-matrix:
     name: Generate Matrix
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
@@ -85,6 +88,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
@@ -150,7 +155,7 @@ jobs:
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
@@ -172,7 +177,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.test-chunk }} \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
@@ -186,7 +191,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.test-chunk }} \
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Fix file ownership
@@ -206,7 +211,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
             artifacts
             !artifacts/salt/*
@@ -232,7 +237,7 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: artifacts
 
       - name: Show Test Run Artifacts
@@ -254,6 +259,6 @@ jobs:
         # always run even if the previous steps fails
         if: always() && inputs.skip-junit-reports == false && steps.download-test-run-artifacts.outcome == 'success'
         with:
-          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.test-chunk }})
+          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.tests-chunk }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true

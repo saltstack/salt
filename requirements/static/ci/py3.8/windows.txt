@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.8.5
+aiohttp==3.9.0
     # via etcd3-py
 aiosignal==1.3.1
     # via aiohttp
@@ -46,7 +46,7 @@ certifi==2023.07.22
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   requests
-cffi==1.14.6
+cffi==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/static/ci/common.in
@@ -57,7 +57,6 @@ cffi==1.14.6
 charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
-    #   aiohttp
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
@@ -86,7 +85,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-cryptography==41.0.4
+cryptography==41.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -95,7 +94,7 @@ cryptography==41.0.4
     #   pyopenssl
     #   pyspnego
     #   requests-ntlm
-distlib==0.3.6
+distlib==0.3.7
     # via virtualenv
 distro==1.8.0
     # via
@@ -114,7 +113,7 @@ etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.1.1
     # via pytest
-filelock==3.12.4
+filelock==3.13.1
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
@@ -196,7 +195,7 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-looseversion==1.2.0
+looseversion==1.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -207,7 +206,7 @@ lxml==4.9.2 ; sys_platform == "win32"
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.in
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -226,7 +225,7 @@ more-itertools==9.1.0
     #   jaraco.text
 moto==4.1.11
     # via -r requirements/static/ci/common.in
-msgpack==1.0.5
+msgpack==1.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -247,7 +246,7 @@ patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==0.11.1
     # via yamllint
-platformdirs==3.5.3
+platformdirs==4.0.0
     # via virtualenv
 pluggy==1.0.0
     # via pytest
@@ -255,7 +254,7 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cherrypy
-psutil==5.8.0
+psutil==5.9.6
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -280,6 +279,8 @@ pydantic==1.10.8
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   inflect
+pyfakefs==5.3.1
+    # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.7 ; sys_platform == "win32"
@@ -310,7 +311,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc27
+pytest-salt-factories==1.0.0rc28
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -345,7 +346,7 @@ python-dateutil==2.8.2
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.0
+python-gnupg==0.5.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -353,7 +354,7 @@ pythonnet==3.0.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-pytz==2023.3
+pytz==2023.3.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   tempora
@@ -378,7 +379,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.0
+pyzmq==25.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/zeromq.txt
@@ -468,7 +469,7 @@ urllib3==1.26.18
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.23.0
+virtualenv==20.24.7
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories

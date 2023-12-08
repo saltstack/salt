@@ -666,6 +666,7 @@ def test_privkey_new_with_prereq(x509_salt_call_cli, tmp_path):
     assert not _belongs_to(cert_new, pk_cur)
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.usefixtures("privkey_new_pkcs12")
 @pytest.mark.skipif(
     CRYPTOGRAPHY_VERSION[0] < 36,
