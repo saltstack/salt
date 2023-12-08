@@ -67,6 +67,9 @@ else:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
 # Define the pytest plugins we rely on
 pytest_plugins = ["helpers_namespace"]
 
@@ -1049,7 +1052,10 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1162,7 +1168,10 @@ def salt_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "quiet",
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1270,6 +1279,7 @@ def salt_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1301,6 +1311,7 @@ def salt_sub_minion_factory(salt_master_factory):
         "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()

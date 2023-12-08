@@ -3,7 +3,7 @@ import pytest
 import salt.client.ssh.client
 import salt.utils.msgpack
 from salt.client import ssh
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True),
@@ -449,3 +449,60 @@ def test_key_deploy_no_permission_denied(tmp_path, opts):
     ret = client.key_deploy(host, ssh_ret)
     assert ret == ssh_ret
     assert mock_key_run.call_count == 0
+
+
+@pytest.mark.parametrize("retcode,expected", [("null", None), ('"foo"', "foo")])
+def test_handle_routine_remote_invalid_retcode(opts, target, retcode, expected, caplog):
+    """
+    Ensure that if a remote returns an invalid retcode as part of the return dict,
+    the final exit code is still an integer and set to 1 at least.
+    """
+    single_ret = (f'{{"local": {{"retcode": {retcode}, "return": "foo"}}}}', "", 0)
+    opts["tgt"] = "localhost"
+    single = MagicMock(spec=ssh.Single)
+    single.id = "localhost"
+    single.run.return_value = single_ret
+    que = Mock()
+
+    with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
+        "salt.client.ssh.Single", autospec=True, return_value=single
+    ):
+        client = ssh.SSH(opts)
+        client.handle_routine(que, opts, "localhost", target)
+    que.put.assert_called_once_with(
+        ({"id": "localhost", "ret": {"retcode": expected, "return": "foo"}}, 1)
+    )
+    assert f"Host 'localhost' reported an invalid retcode: '{expected}'" in caplog.text
+
+
+def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
+    """
+    Ensure that if Single.run() call returns an invalid retcode,
+    the final exit code is still an integer and set to 1 at least.
+    """
+    single_ret = ("", "Something went seriously wrong", None)
+    opts["tgt"] = "localhost"
+    single = MagicMock(spec=ssh.Single)
+    single.id = "localhost"
+    single.run.return_value = single_ret
+    que = Mock()
+
+    with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
+        "salt.client.ssh.Single", autospec=True, return_value=single
+    ):
+        client = ssh.SSH(opts)
+        client.handle_routine(que, opts, "localhost", target)
+    que.put.assert_called_once_with(
+        (
+            {
+                "id": "localhost",
+                "ret": {
+                    "stdout": "",
+                    "stderr": "Something went seriously wrong",
+                    "retcode": 1,
+                },
+            },
+            1,
+        )
+    )
+    assert "Got an invalid retcode for host 'localhost': 'None'" in caplog.text

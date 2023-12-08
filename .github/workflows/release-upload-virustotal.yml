@@ -43,6 +43,8 @@ jobs:
 
     - name: Setup Python Tools Scripts
       uses: ./.github/actions/setup-python-tools-scripts
+      with:
+        cache-prefix: virus-total
 
     - name: Upload to VirusTotal
       env:

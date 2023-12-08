@@ -19,17 +19,13 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def opts(tmp_path):
-    return {
-        "argv": [
-            "ssh.set_auth_key",
-            "root",
-            "hobn+amNAXSBTiOXEqlBjGB...rsa root@master",
-        ],
-        "__role": "master",
-        "cachedir": str(tmp_path),
-        "extension_modules": str(tmp_path / "extmods"),
-    }
+def opts(master_opts):
+    master_opts["argv"] = [
+        "ssh.set_auth_key",
+        "root",
+        "hobn+amNAXSBTiOXEqlBjGB...rsa root@master",
+    ]
+    return master_opts
 
 
 @pytest.fixture
@@ -411,6 +407,10 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog):
     with caplog.at_level(logging.TRACE):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
+
+    # Flush the logging handler just to be sure
+    caplog.handler.flush()
+
     assert "Copying the pre flight script" in caplog.text
     assert "Could not copy the pre flight script to target" in caplog.text
     assert ret == ret_send
@@ -502,6 +502,9 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog):
     with caplog.at_level(logging.TRACE):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
+
+    # Flush the logging handler just to be sure
+    caplog.handler.flush()
 
     assert "Executing the pre flight script on target" in caplog.text
     assert ret == ret_exec_cmd

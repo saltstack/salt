@@ -45,7 +45,7 @@ runs:
         python3 -m pip install relenv==${{ inputs.version }}
 
     - name: Cache Relenv Data Directory
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ github.workspace }}/.relenv
         key: ${{ inputs.cache-seed }}|relenv|${{ inputs.version }}|${{ inputs.python-version }}|${{ inputs.platform }}|${{ inputs.arch }}
