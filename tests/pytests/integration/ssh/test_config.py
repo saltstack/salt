@@ -16,7 +16,9 @@ def test_items(salt_ssh_cli):
 @pytest.mark.parametrize("omit", (False, True))
 def test_option_minion_opt(salt_ssh_cli, omit):
     # Minion opt
-    ret = salt_ssh_cli.run("config.option", "id", omit_opts=omit, omit_grains=True)
+    ret = salt_ssh_cli.run(
+        "config.option", "id", omit_opts=omit, omit_grains=True, omit_master=True
+    )
     assert ret.returncode == 0
     assert (ret.data != salt_ssh_cli.get_minion_tgt()) is omit
     assert (ret.data == "") is omit
