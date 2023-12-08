@@ -25,6 +25,17 @@ if sys.version_info < (3, 11):
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
+try:
+    import boto3
+except ImportError:
+    print(
+        "\nPlease run 'python -m pip install -r "
+        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+        file=sys.stderr,
+        flush=True,
+    )
+    raise
+
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -49,7 +60,7 @@ def print_gh_event(ctx: Context):
     try:
         gh_event = json.loads(open(gh_event_path).read())
     except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
 
     ctx.info("GH Event Payload:")
@@ -171,7 +182,7 @@ def runner_types(ctx: Context, event_name: str):
     try:
         gh_event = json.loads(open(gh_event_path).read())
     except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
 
     ctx.info("GH Event Payload:")
@@ -319,7 +330,7 @@ def define_jobs(
             gh_event = json.loads(open(gh_event_path).read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -466,7 +477,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             gh_event = json.loads(open(gh_event_path).read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -626,9 +637,18 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "workflow": {
             "help": "Which workflow is running",
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
-def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "ci"):
+def matrix(
+    ctx: Context,
+    distro_slug: str,
+    full: bool = False,
+    workflow: str = "ci",
+    fips: bool = False,
+):
     """
     Generate the test matrix.
     """
@@ -652,6 +672,9 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
         if transport == "tcp":
             if distro_slug not in (
                 "centosstream-9",
+                "centosstream-9-arm64",
+                "photonos-5",
+                "photonos-5-arm64",
                 "ubuntu-22.04",
                 "ubuntu-22.04-arm64",
             ):
@@ -675,8 +698,18 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
                             "test-group-count": splits,
                         }
                     )
+                    if fips is True and distro_slug.startswith(
+                        ("photonos-4", "photonos-5")
+                    ):
+                        # Repeat the last one, but with fips
+                        _matrix.append({"fips": "fips", **_matrix[-1]})
             else:
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
+                if fips is True and distro_slug.startswith(
+                    ("photonos-4", "photonos-5")
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -702,6 +735,9 @@ def matrix(ctx: Context, distro_slug: str, full: bool = False, workflow: str = "
             "nargs": "+",
             "required": True,
         },
+        "fips": {
+            "help": "Include FIPS entries in the matrix",
+        },
     },
 )
 def pkg_matrix(
@@ -709,6 +745,7 @@ def pkg_matrix(
     distro_slug: str,
     pkg_type: str,
     testing_releases: list[tools.utils.Version] = None,
+    fips: bool = False,
 ):
     """
     Generate the test matrix.
@@ -718,35 +755,6 @@ def pkg_matrix(
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     if TYPE_CHECKING:
         assert testing_releases
-    _matrix = []
-    sessions = [
-        "install",
-    ]
-    if (
-        distro_slug
-        not in [
-            "debian-11-arm64",
-            # TODO: remove debian 12 once debian 12 pkgs are released
-            "debian-12-arm64",
-            "debian-12",
-            "ubuntu-20.04-arm64",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # These OS's never had arm64 packages built for them
-        # with the tiamat onedir packages.
-        # we will need to ensure when we release 3006.0
-        # we allow for 3006.0 jobs to run, because then
-        # we will have arm64 onedir packages to upgrade from
-        sessions.append("upgrade")
-        sessions.append("downgrade")
 
     still_testing_3005 = False
     for release_version in testing_releases:
@@ -758,57 +766,111 @@ def pkg_matrix(
     if still_testing_3005 is False:
         ctx.error(
             f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error"
+            "and remove this error and the logic above the error. There may "
+            "be other places that need code removed as well."
         )
         ctx.exit(1)
 
-    # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
-    if (
-        distro_slug
-        not in [
-            "centosstream-9",
-            "debian-11-arm64",
-            "debian-12-arm64",
-            "debian-12",
-            "ubuntu-22.04",
-            "ubuntu-22.04-arm64",
-            "photonos-3",
-            "photonos-3-arm64",
-            "photonos-4",
-            "photonos-4-arm64",
-            "photonos-5",
-            "photonos-5-arm64",
-        ]
-        and pkg_type != "MSI"
-    ):
-        # Packages for these OSs where never built for classic previously
-        sessions.append("upgrade-classic")
-        sessions.append("downgrade-classic")
+    adjusted_versions = []
+    for ver in testing_releases:
+        if ver < tools.utils.Version("3006.0"):
+            adjusted_versions.append((ver, "classic"))
+            adjusted_versions.append((ver, "tiamat"))
+        else:
+            adjusted_versions.append((ver, "relenv"))
+    ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
-    for session in sessions:
-        versions: list[str | None] = [None]
-        if session in ("upgrade", "downgrade"):
-            versions = [str(version) for version in testing_releases]
-        elif session in ("upgrade-classic", "downgrade-classic"):
-            versions = [
-                str(version)
-                for version in testing_releases
-                if version < tools.utils.Version("3006.0")
-            ]
-        for version in versions:
-            if (
-                version
-                and distro_slug.startswith("photonos-5")
-                and version < tools.utils.Version("3007.0")
-            ):
-                # We never build packages for Photon OS 5 prior to 3007.0
-                continue
-            _matrix.append(
-                {
-                    "test-chunk": session,
-                    "version": version,
-                }
+    # Filter out the prefixes to look under
+    if "macos-" in distro_slug:
+        # We don't have golden images for macos, handle these separately
+        prefixes = {
+            "classic": "osx/",
+            "tiamat": "salt/py3/macos/minor/",
+            "relenv": "salt/py3/macos/minor/",
+        }
+    else:
+        parts = distro_slug.split("-")
+        name = parts[0]
+        version = parts[1]
+        if name in ("debian", "ubuntu"):
+            arch = "amd64"
+        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
+            arch = "x86_64"
+        if len(parts) > 2:
+            arch = parts[2]
+        if name == "amazonlinux":
+            name = "amazon"
+        if "centos" in name:
+            name = "redhat"
+        if "photon" in name:
+            name = "photon"
+        if name == "windows":
+            prefixes = {
+                "classic": "windows/",
+                "tiamat": "salt/py3/windows/minor",
+                "relenv": "salt/py3/windows/minor",
+            }
+        else:
+            prefixes = {
+                "classic": f"py3/{name}/{version}/{arch}/",
+                "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
+                "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
+            }
+
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    _matrix = [
+        {
+            "test-chunk": "install",
+            "version": None,
+        }
+    ]
+
+    for version, backend in adjusted_versions:
+        prefix = prefixes[backend]
+        # TODO: Remove this after 3009.0
+        if backend == "relenv" and version >= tools.utils.Version("3006.5"):
+            prefix.replace("/arm64/", "/aarch64/")
+        # Using a paginator allows us to list recursively and avoid the item limit
+        page_iterator = paginator.paginate(
+            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
+            Prefix=prefix,
+        )
+        # Uses a jmespath expression to test if the wanted version is in any of the filenames
+        key_filter = f"Contents[?contains(Key, '{version}')][]"
+        if pkg_type == "MSI":
+            # TODO: Add this back when we add MSI upgrade and downgrade tests
+            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            continue
+        elif pkg_type == "NSIS":
+            key_filter = (
+                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
+        objects = list(page_iterator.search(key_filter))
+        # Testing using `any` because sometimes the paginator returns `[None]`
+        if any(objects):
+            ctx.info(
+                f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
+            )
+            for session in ("upgrade", "downgrade"):
+                if backend == "classic":
+                    session += "-classic"
+                _matrix.append(
+                    {
+                        "test-chunk": session,
+                        "version": str(version),
+                    }
+                )
+                if (
+                    backend == "relenv"
+                    and fips is True
+                    and distro_slug.startswith(("photonos-4", "photonos-5"))
+                ):
+                    # Repeat the last one, but with fips
+                    _matrix.append({"fips": "fips", **_matrix[-1]})
+        else:
+            ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
+
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 
@@ -868,7 +930,7 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     try:
         gh_event = json.loads(open(gh_event_path).read())
     except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
 
     github_output = os.environ.get("GITHUB_OUTPUT")
@@ -930,12 +992,12 @@ def get_pr_test_labels(
             gh_event = json.loads(open(gh_event_path).read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
         if "pull_request" not in gh_event:
-            ctx.warning("The 'pull_request' key was not found on the event payload.")
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
             ctx.exit(1)
 
         pr = gh_event["pull_request"]["number"]
@@ -1105,7 +1167,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
             gh_event = json.loads(open(gh_event_path).read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -1156,7 +1218,10 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
         ctx.error("Could not find the path to the 'codecov' binary")
         ctx.exit(1)
 
-    codecov_args = [
+    if TYPE_CHECKING:
+        assert commit_sha is not None
+
+    codecov_args: list[str] = [
         codecov,
         "--nonZero",
         "--sha",
@@ -1172,7 +1237,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
 
     sleep_time = 15
@@ -1207,8 +1272,22 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 "--flags",
                 flags,
                 check=False,
+                capture=True,
             )
+            stdout = ret.stdout.strip().decode()
+            stderr = ret.stderr.strip().decode()
             if ret.returncode == 0:
+                ctx.console_stdout.print(stdout)
+                ctx.console.print(stderr)
+                break
+
+            if (
+                "Too many uploads to this commit" in stdout
+                or "Too many uploads to this commit" in stderr
+            ):
+                # Let's just stop trying
+                ctx.console_stdout.print(stdout)
+                ctx.console.print(stderr)
                 break
 
             if current_attempt >= max_attempts:

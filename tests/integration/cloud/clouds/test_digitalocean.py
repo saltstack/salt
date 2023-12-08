@@ -1,9 +1,10 @@
 """
 Integration tests for DigitalOcean APIv2
 """
-
 import base64
 import hashlib
+
+import pytest
 
 import salt.crypt
 import salt.utils.stringutils
@@ -26,23 +27,24 @@ class DigitalOceanTest(CloudTest):
         """
         Tests the return of running the --list-images command for digitalocean
         """
-        image_list = self.run_cloud("--list-images {}".format(self.PROVIDER))
+        image_list = self.run_cloud(f"--list-images {self.PROVIDER}")
         self.assertIn("ubuntu-18-04-x64", [i.strip() for i in image_list])
 
     def test_list_locations(self):
         """
         Tests the return of running the --list-locations command for digitalocean
         """
-        _list_locations = self.run_cloud("--list-locations {}".format(self.PROVIDER))
+        _list_locations = self.run_cloud(f"--list-locations {self.PROVIDER}")
         self.assertIn("San Francisco 2", [i.strip() for i in _list_locations])
 
     def test_list_sizes(self):
         """
         Tests the return of running the --list-sizes command for digitalocean
         """
-        _list_sizes = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
+        _list_sizes = self.run_cloud(f"--list-sizes {self.PROVIDER}")
         self.assertIn("16gb", [i.strip() for i in _list_sizes])
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_key_management(self):
         """
         Test key management
@@ -82,25 +84,23 @@ class DigitalOceanTest(CloudTest):
             self.assertIn(finger_print, [i.strip() for i in _key])
 
             # List all keys
-            list_keypairs = self.run_cloud("-f list_keypairs {}".format(self.PROVIDER))
+            list_keypairs = self.run_cloud(f"-f list_keypairs {self.PROVIDER}")
 
             self.assertIn(finger_print, [i.strip() for i in list_keypairs])
 
             # List key
             show_keypair = self.run_cloud(
-                "-f show_keypair {} keyname={}".format(self.PROVIDER, do_key_name)
+                f"-f show_keypair {self.PROVIDER} keyname={do_key_name}"
             )
             self.assertIn(finger_print, [i.strip() for i in show_keypair])
         except AssertionError:
             # Delete the public key if the above assertions fail
-            self.run_cloud("-f remove_key {} id={}".format(self.PROVIDER, finger_print))
+            self.run_cloud(f"-f remove_key {self.PROVIDER} id={finger_print}")
             raise
         finally:
             # Delete public key
             self.assertTrue(
-                self.run_cloud(
-                    "-f remove_key {} id={}".format(self.PROVIDER, finger_print)
-                )
+                self.run_cloud(f"-f remove_key {self.PROVIDER} id={finger_print}")
             )
 
     def test_instance(self):
@@ -109,7 +109,7 @@ class DigitalOceanTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_str = self.run_cloud(
-            "-p digitalocean-test {}".format(self.instance_name), timeout=TIMEOUT
+            f"-p digitalocean-test {self.instance_name}", timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_str)
 
