@@ -1,4 +1,7 @@
+import subprocess
+
 import pytest
+from pytestskipmarkers.utils import platform
 
 
 def test_salt_call_local(salt_call_cli):
@@ -28,6 +31,16 @@ def state_name(salt_master):
           - name: foo
     """
     with salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents):
+        if not platform.is_windows() and not platform.is_darwin():
+            subprocess.run(
+                [
+                    "chown",
+                    "-R",
+                    "salt:salt",
+                    str(salt_master.state_tree.base.write_path),
+                ],
+                check=False,
+            )
         yield name
 
 

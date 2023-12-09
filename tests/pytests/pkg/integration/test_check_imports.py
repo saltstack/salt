@@ -1,6 +1,8 @@
 import logging
+import subprocess
 
 import pytest
+from pytestskipmarkers.utils import platform
 from saltfactories.utils.functional import MultiStateResult
 
 pytestmark = [
@@ -73,6 +75,16 @@ def state_name(salt_master):
     with salt_master.state_tree.base.temp_file(
         f"{name}.sls", CHECK_IMPORTS_SLS_CONTENTS
     ):
+        if not platform.is_windows() and not platform.is_darwin():
+            subprocess.run(
+                [
+                    "chown",
+                    "-R",
+                    "salt:salt",
+                    str(salt_master.state_tree.base.write_path),
+                ],
+                check=False,
+            )
         yield name
 
 

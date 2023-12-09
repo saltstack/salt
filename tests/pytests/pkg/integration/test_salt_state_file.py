@@ -1,6 +1,7 @@
-import sys
+import subprocess
 
 import pytest
+from pytestskipmarkers.utils import platform
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -10,7 +11,7 @@ pytestmark = [
 @pytest.fixture
 def state_name(salt_master):
     name = "some-state"
-    if sys.platform.startswith("win"):
+    if platform.is_windows():
         sls_contents = """
     create_empty_file:
       file.managed:
@@ -31,6 +32,16 @@ def state_name(salt_master):
         - fullname: Salt Dude
     """
     with salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents):
+        if not platform.is_windows() and not platform.is_darwin():
+            subprocess.run(
+                [
+                    "chown",
+                    "-R",
+                    "salt:salt",
+                    str(salt_master.state_tree.base.write_path),
+                ],
+                check=False,
+            )
         yield name
 
 
