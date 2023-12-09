@@ -417,11 +417,13 @@ class TestVirtMigrateTest:
         assert domains == []
 
     def test_ssh_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
+        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain, grains
     ):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
+        if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 3:
+            pytest.skip("Skipping this test on PhotonOS 3")
         ret = salt_cli.run("virt.list_active_vms", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
 

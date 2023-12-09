@@ -556,6 +556,11 @@ class SSH(MultiprocessingStateMixin):
         )
         ret = {"id": single.id}
         stdout, stderr, retcode = single.run()
+        try:
+            retcode = int(retcode)
+        except (TypeError, ValueError):
+            log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+            retcode = 1
         # This job is done, yield
         try:
             data = salt.utils.json.find_json(stdout)
@@ -563,7 +568,14 @@ class SSH(MultiprocessingStateMixin):
                 ret["ret"] = data["local"]
                 try:
                     # Ensure a reported local retcode is kept
-                    retcode = data["local"]["retcode"]
+                    remote_retcode = data["local"]["retcode"]
+                    try:
+                        retcode = int(remote_retcode)
+                    except (TypeError, ValueError):
+                        log.warning(
+                            f"Host '{host}' reported an invalid retcode: '{remote_retcode}'"
+                        )
+                        retcode = max(retcode, 1)
                 except (KeyError, TypeError):
                     pass
             else:
@@ -816,6 +828,9 @@ class SSH(MultiprocessingStateMixin):
         final_exit = 0
         for ret, retcode in self.handle_ssh():
             host = next(iter(ret))
+            if not isinstance(retcode, int):
+                log.warning(f"Host '{host}' returned an invalid retcode: {retcode}")
+                retcode = 1
             final_exit = max(final_exit, retcode)
 
             self.cache_job(jid, host, ret[host], fun)
@@ -1196,9 +1211,11 @@ class Single:
                 for grain in self.target["grains"]:
                     opts_pkg["grains"][grain] = self.target["grains"][grain]
 
+            # Pillar compilation needs the master opts primarily,
+            # same as during regular operation.
             popts = {}
-            popts.update(opts_pkg["__master_opts__"])
             popts.update(opts_pkg)
+            popts.update(opts_pkg["__master_opts__"])
             pillar = salt.pillar.Pillar(
                 popts,
                 opts_pkg["grains"],
@@ -1659,7 +1676,7 @@ ARGS = {arguments}\n'''.format(
         return
 
 
-def lowstate_file_refs(chunks):
+def lowstate_file_refs(chunks):  # pragma: no cover
     """
     Create a list of file ref objects to reconcile
     """

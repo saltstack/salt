@@ -98,6 +98,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
 
       - name: Pretty Print The GH Actions Event
         run:
@@ -176,6 +178,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -220,6 +224,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Backup Previous Releases
         id: backup
@@ -251,6 +257,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Publish Release Repository
         env:
@@ -287,6 +295,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Setup GnuPG
         run: |
@@ -403,6 +413,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Restore Release Bucket
         run: |
@@ -427,6 +439,8 @@ permissions:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Setup GnuPG
         run: |

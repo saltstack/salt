@@ -5,6 +5,7 @@ import pytest
 
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -40,6 +41,18 @@ def test_get_policy_name():
     )
     expected = "Not configured"
     assert result == expected
+
+
+def test_get_adml_display_name_bad_name():
+    result = win_lgpo._getAdmlDisplayName("junk", "spongbob")
+    assert result is None
+
+
+def test_get_adml_display_name_no_results():
+    patch_xpath = patch.object(win_lgpo, "ADML_DISPLAY_NAME_XPATH", return_value=[])
+    with patch_xpath:
+        result = win_lgpo._getAdmlDisplayName("junk", "$(spongbob.squarepants)")
+    assert result is None
 
 
 def test_get_policy_id():
@@ -156,3 +169,78 @@ def test_get_policy_id_full_return_full_names_hierarchical():
         }
     }
     assert result == expected
+
+
+def test_transform_value_missing_type():
+    policy = {"Transform": {"some_type": "junk"}}
+    result = win_lgpo._transform_value(
+        value="spongebob",
+        policy=policy,
+        transform_type="different_type",
+    )
+    assert result == "spongebob"
+
+
+def test_transform_value_registry():
+    policy = {"Registry": {}}
+    result = win_lgpo._transform_value(
+        value="spongebob",
+        policy=policy,
+        transform_type="different_type",
+    )
+    assert result == "spongebob"
+
+
+def test_transform_value_registry_not_set():
+    policy = {"Registry": {}}
+    result = win_lgpo._transform_value(
+        value="(value not set)",
+        policy=policy,
+        transform_type="different_type",
+    )
+    assert result == "Not Defined"
+
+
+def test_validate_setting_not_in_list():
+    policy = {"Settings": ["junk"]}
+    result = win_lgpo._validateSetting(value="spongebob", policy=policy)
+    assert not result
+
+
+def test_validate_setting_in_list():
+    policy = {"Settings": ["spongebob"]}
+    result = win_lgpo._validateSetting(value="spongebob", policy=policy)
+    assert result
+
+
+def test_validate_setting_not_list_or_dict():
+    policy = {"Settings": "spongebob"}
+    result = win_lgpo._validateSetting(value="spongebob", policy=policy)
+    assert result
+
+
+def test_add_account_rights_error():
+    patch_w32sec = patch(
+        "win32security.LsaOpenPolicy", MagicMock(side_effect=Exception)
+    )
+    with patch_w32sec:
+        assert win_lgpo._addAccountRights("spongebob", "junk") is False
+
+
+def test_del_account_rights_error():
+    patch_w32sec = patch(
+        "win32security.LsaOpenPolicy", MagicMock(side_effect=Exception)
+    )
+    with patch_w32sec:
+        assert win_lgpo._delAccountRights("spongebob", "junk") is False
+
+
+def test_validate_setting_no_function():
+    policy = {
+        "Settings": {
+            "Function": "_in_range_inclusive",
+            "Args": {"min": 0, "max": 24},
+        },
+    }
+    result = win_lgpo._validateSetting(value="spongebob", policy=policy)
+    assert not result

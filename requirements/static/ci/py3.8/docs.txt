@@ -78,7 +78,7 @@ markdown-it-py==2.2.0
     # via
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   jinja2
@@ -111,7 +111,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.15.1
     # via sphinx
-pytz==2023.3
+pytz==2023.3.post1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   babel
