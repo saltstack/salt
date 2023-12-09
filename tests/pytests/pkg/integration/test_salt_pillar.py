@@ -1,4 +1,7 @@
+import subprocess
+
 import pytest
+from pytestskipmarkers.utils import platform
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -19,6 +22,16 @@ def pillar_name(salt_master):
     with salt_master.pillar_tree.base.temp_file(
         "top.sls", top_file_contents
     ), salt_master.pillar_tree.base.temp_file("test.sls", test_file_contents):
+        if not platform.is_windows() and not platform.is_darwin():
+            subprocess.run(
+                [
+                    "chown",
+                    "-R",
+                    "salt:salt",
+                    str(salt_master.pillar_tree.base.write_path),
+                ],
+                check=False,
+            )
         yield name
 
 
