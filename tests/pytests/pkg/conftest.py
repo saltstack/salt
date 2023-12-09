@@ -336,13 +336,14 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
             check=True,
         )
 
-        # The engines_dirs is created in .nox path. We need to set correct perms
-        # for the user running the Salt Master
-        check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
-        for path in check_paths:
-            if os.path.exists(path) is False:
-                continue
-            subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
+        if not platform.is_windows() and not platform.is_darwin():
+            # The engines_dirs is created in .nox path. We need to set correct perms
+            # for the user running the Salt Master
+            check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
+            for path in check_paths:
+                if os.path.exists(path) is False:
+                    continue
+                subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
 
     with factory.started(start_timeout=start_timeout):
         yield factory
