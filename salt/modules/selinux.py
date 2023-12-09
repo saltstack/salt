@@ -617,7 +617,7 @@ def _fcontext_add_or_delete_policy(
     if "add" == action:
         # need to use --modify if context for name file exists, otherwise ValueError
         filespec = re.escape(name)
-        cmd = f"semanage fcontext -l | egrep {filespec}"
+        cmd = f"semanage fcontext -l | egrep '{filespec}'"
         current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
         if current_entry_text != "":
             action = "modify"

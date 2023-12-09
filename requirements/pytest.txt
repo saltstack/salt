@@ -2,7 +2,7 @@ mock >= 3.0.0
 # PyTest
 docker
 pytest >= 7.2.0
-pytest-salt-factories >= 1.0.0rc27
+pytest-salt-factories >= 1.0.0rc28
 pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
 pytest-timeout
@@ -10,3 +10,4 @@ pytest-httpserver
 pytest-custom-exit-code >= 0.3
 flaky
 more-itertools
+pyfakefs

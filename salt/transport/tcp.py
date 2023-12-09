@@ -218,6 +218,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
     ]
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
         self.unpacker = salt.utils.msgpack.Unpacker()
@@ -259,15 +260,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
             self._stream.close()
         self._stream = None
         self._closed = True
-
-    # pylint: disable=W1701
-    def __del__(self):
-        if not self._closing:
-            warnings.warn(
-                "unclosed publish client {self!r}", ResourceWarning, source=self
-            )
-
-    # pylint: enable=W1701
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -327,6 +319,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
 
     async def _connect(self, timeout=None):
         if self._stream is None:
+            self._connect_called = True
             self._closing = False
             self._closed = False
             self._stream = await self.getstream(timeout=timeout)
@@ -1621,6 +1614,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
     ttype = "tcp"
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
 
@@ -1676,6 +1670,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
 
     async def connect(self):
         if self._stream is None:
+            self._connect_called = True
             self._stream = await self.getstream()
             if self._stream:
                 if not self._stream_return_running:
@@ -1807,4 +1802,8 @@ class TCPReqClient(salt.transport.base.RequestClient):
         return recv
 
     def close(self):
-        self._stream.close()
+        if self._closing:
+            return
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
