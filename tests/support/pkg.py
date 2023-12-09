@@ -868,7 +868,7 @@ class SaltPkgInstall:
         ret = self.proc.run("systemctl", "daemon-reload")
         self._check_retcode(ret)
         ret = self.proc.run("systemctl", "status", service)
-        if ret.returncode in (3, 4):
+        if ret.returncode == 4:
             log.warning(
                 "No systemd unit file was found for service %s. Creating one.", service
             )
@@ -892,7 +892,7 @@ class SaltPkgInstall:
                 binary = shutil.which(binary[0]) or binary[0]
             elif isinstance(binary, list):
                 binary = " ".join(binary)
-            unit_path = pathlib.Path("/etc", "systemd", "system", f"{service}.service")
+            unit_path = pathlib.Path(f"/etc/systemd/system/{service}.service")
             contents = contents.format(
                 service=service, tgt=binary, conf_dir=self.conf_dir
             )
