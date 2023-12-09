@@ -5,24 +5,37 @@
         include:
         <%- for distro, version, arch in (
                                             ("amazon", "2", "x86_64"),
+                                            ("amazon", "2", "arm64"),
                                             ("amazon", "2", "aarch64"),
+                                            ("amazon", "2023", "x86_64"),
+                                            ("amazon", "2023", "arm64"),
+                                            ("amazon", "2023", "aarch64"),
                                             ("redhat", "7", "x86_64"),
+                                            ("redhat", "7", "arm64"),
                                             ("redhat", "7", "aarch64"),
                                             ("redhat", "8", "x86_64"),
+                                            ("redhat", "8", "arm64"),
                                             ("redhat", "8", "aarch64"),
                                             ("redhat", "9", "x86_64"),
+                                            ("redhat", "9", "arm64"),
                                             ("redhat", "9", "aarch64"),
                                             ("fedora", "36", "x86_64"),
+                                            ("fedora", "36", "arm64"),
                                             ("fedora", "36", "aarch64"),
                                             ("fedora", "37", "x86_64"),
+                                            ("fedora", "37", "arm64"),
                                             ("fedora", "37", "aarch64"),
                                             ("fedora", "38", "x86_64"),
+                                            ("fedora", "38", "arm64"),
                                             ("fedora", "38", "aarch64"),
                                             ("photon", "3", "x86_64"),
+                                            ("photon", "3", "arm64"),
                                             ("photon", "3", "aarch64"),
                                             ("photon", "4", "x86_64"),
+                                            ("photon", "4", "arm64"),
                                             ("photon", "4", "aarch64"),
                                             ("photon", "5", "x86_64"),
+                                            ("photon", "5", "arm64"),
                                             ("photon", "5", "aarch64"),
                                         ) %>
           - pkg-type: rpm
@@ -41,6 +54,8 @@
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -51,7 +66,7 @@
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
