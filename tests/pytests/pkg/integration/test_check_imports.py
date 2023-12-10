@@ -18,7 +18,7 @@ import importlib
 
 def run():
     config = {}
-    for test_import in [
+    for module in [
         'templates', 'platform', 'cli', 'executors', 'config', 'wheel', 'netapi',
         'cache', 'proxy', 'transport', 'metaproxy', 'modules', 'tokens', 'matchers',
         'acl', 'auth', 'log', 'engines', 'client', 'returners', 'runners', 'tops',
@@ -26,44 +26,46 @@ def run():
         'beacons', 'pillar', 'spm', 'utils', 'sdb', 'fileserver', 'defaults',
         'ext', 'queues', 'grains', 'serializers'
     ]:
+        import_name = "salt.{}".format(module)
         try:
-            import_name = "salt.{}".format(test_import)
             importlib.import_module(import_name)
-            config['test_imports_succeeded'] = {
+            config[import_name] = {
                 'test.succeed_without_changes': [
                     {
-                        'name': import_name
-                    },
-                ],
+                        "name": import_name,
+                        'comment': "The '{}' import succeeded.".format(import_name)
+                    }
+                ]
             }
         except ModuleNotFoundError as err:
-            config['test_imports_failed'] = {
+            config[import_name] = {
                 'test.fail_without_changes': [
                     {
-                        'name': import_name,
-                        'comment': "The imports test failed. The error was: {}".format(err)
-                    },
-                ],
+                        "name": import_name,
+                        'comment': "The '{}' import failed. The error was: {}".format(import_name, err)
+                    }
+                ]
             }
 
-    for stdlib_import in ["telnetlib"]:
+    for import_name in ["telnetlib"]:
         try:
-            importlib.import_module(stdlib_import)
-            config['stdlib_imports_succeeded'] = {
+            importlib.import_module(import_name)
+            config[import_name] = {
                 'test.succeed_without_changes': [
                     {
-                        'name': stdlib_import
-                    },
-                ],
+                        "name": import_name,
+                        'comment': "The '{}' import succeeded.".format(import_name)
+                    }
+                ]
             }
         except ModuleNotFoundError as err:
-            config['stdlib_imports_failed'] = {
+            config[import_name] = {
                 'test.fail_without_changes': [
                     {
-                        'name': stdlib_import,
-                        'comment': "The stdlib imports test failed. The error was: {}".format(err)
-                    },
-                ],
+                        "name": import_name,
+                        'comment': "The '{}' import failed. The error was: {}".format(import_name, err)
+                    }
+                ]
             }
     return config
 """
