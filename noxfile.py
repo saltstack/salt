@@ -1816,6 +1816,14 @@ def ci_test_onedir_pkgs(session):
             )
         )
 
+    common_pytest_args = [
+        "--color=yes",
+        "--sys-stats",
+        "--run-destructive",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
+        "--pkg-system-service",
+    ]
+
     chunks = {
         "install": [
             "tests/pytests/pkg/",
@@ -1869,10 +1877,9 @@ def ci_test_onedir_pkgs(session):
     if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
 
-    cmd_args.append("--pkg-system-service")
-
     pytest_args = (
-        cmd_args[:]
+        common_pytest_args[:]
+        + cmd_args[:]
         + [
             f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
             f"--log-file=artifacts/logs/runtests-{chunk}.log",
@@ -1893,7 +1900,8 @@ def ci_test_onedir_pkgs(session):
         PRINT_SYSTEM_INFO = False
 
         pytest_args = (
-            cmd_args[:]
+            common_pytest_args[:]
+            + cmd_args[:]
             + [
                 f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
                 f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
@@ -1912,7 +1920,8 @@ def ci_test_onedir_pkgs(session):
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
-            cmd_args[:]
+            common_pytest_args[:]
+            + cmd_args[:]
             + [
                 "--no-install",
                 f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
@@ -1929,7 +1938,8 @@ def ci_test_onedir_pkgs(session):
         except CommandFailed:
             cmd_args = chunks["install"]
             pytest_args = (
-                cmd_args[:]
+                common_pytest_args[:]
+                + cmd_args[:]
                 + [
                     "--no-install",
                     f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
