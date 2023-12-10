@@ -342,7 +342,7 @@ class PublishClient(salt.transport.base.PublishClient):
         # raise Exception("Send not supported")
         # await self._socket.send(msg)
 
-    #async def on_recv_handler(self, callback):
+    # async def on_recv_handler(self, callback):
     #    while not self._socket:
     #        # Retry quickly, we may want to increase this if it's hogging cpu.
     #        await asyncio.sleep(0.003)
@@ -351,7 +351,7 @@ class PublishClient(salt.transport.base.PublishClient):
     #        if msg:
     #            await callback(msg)
 
-    #def on_recv(self, callback):
+    # def on_recv(self, callback):
     #    """
     #    Register a callback for received messages (that we didn't initiate)
     #    """

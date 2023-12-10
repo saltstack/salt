@@ -10,8 +10,6 @@ import time
 from pathlib import Path
 
 import pytest
-import tornado.gen
-import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
@@ -24,6 +22,7 @@ import salt.utils.process
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
 
 pytestmark = [
     pytest.mark.skip_on_spawning_platform(
@@ -54,8 +53,13 @@ def transport_ids(value):
     return f"transport({value})"
 
 
-#@pytest.fixture(params=["ws", "tcp", "zeromq"], ids=transport_ids)
-@pytest.fixture(params=["ws",], ids=transport_ids)
+# @pytest.fixture(params=["ws", "tcp", "zeromq"], ids=transport_ids)
+@pytest.fixture(
+    params=[
+        "ws",
+    ],
+    ids=transport_ids,
+)
 def transport(request):
     return request.param
 

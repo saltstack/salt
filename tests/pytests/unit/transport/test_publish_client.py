@@ -2,13 +2,13 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
-import aiohttp
 import asyncio
 import hashlib
 import logging
 import socket
 import time
 
+import aiohttp
 import pytest
 import tornado.ioloop
 
@@ -31,7 +31,14 @@ def transport_ids(value):
     return f"Transport({value})"
 
 
-@pytest.fixture(params=("zeromq", "tcp", "ws",), ids=transport_ids)
+@pytest.fixture(
+    params=(
+        "zeromq",
+        "tcp",
+        "ws",
+    ),
+    ids=transport_ids,
+)
 def transport(request):
     return request.param
 

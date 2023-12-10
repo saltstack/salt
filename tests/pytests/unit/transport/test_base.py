@@ -1,14 +1,12 @@
 """
 Unit tests for salt.transport.base.
 """
-import contextlib
 import ssl
 
 import pytest
 
 import salt.transport.base
-from tests.support.helpers import dedent
-from tests.support.mock import Mock, patch
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.core_test,
@@ -24,6 +22,7 @@ def test_unclosed_warning():
     assert transport._connect_called is True
     with pytest.warns(salt.transport.base.TransportWarning):
         del transport
+
 
 @patch("ssl.SSLContext")
 def test_ssl_context_legacy_opts(mock):

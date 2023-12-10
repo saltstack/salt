@@ -121,4 +121,4 @@ async def test_message_client_reconnect(config, client, server):
     client.close()
 
     # Provide time for the on_recv task to complete
-    await asyncio.sleep(.3)
+    await asyncio.sleep(0.3)
