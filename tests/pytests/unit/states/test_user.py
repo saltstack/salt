@@ -189,6 +189,8 @@ def test_present_uid_gid_change():
         "user.chgid": Mock(),
         "file.group_to_gid": mock_group_to_gid,
         "file.gid_to_group": mock_gid_to_group,
+        "group.info": MagicMock(return_value=after),
+        "user.chgroups": MagicMock(return_value=True),
     }
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
         user.__salt__, dunder_salt

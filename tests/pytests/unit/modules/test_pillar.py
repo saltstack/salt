@@ -163,3 +163,20 @@ def test_pillar_get_int_key():
         res = pillarmod.get(key=12345, default=default, merge=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
         assert {"l2": {"l3": "your_luggage_code"}} == default
+
+
+def test_pillar_keys():
+    """
+    Confirm that we can access pillar keys
+    """
+    with patch.dict(pillarmod.__pillar__, {"pkg": {"apache": "httpd"}}):
+        test_key = "pkg"
+        assert pillarmod.keys(test_key) == ["apache"]
+
+    with patch.dict(
+        pillarmod.__pillar__,
+        {"12345": {"xyz": "my_luggage_code"}, "7": {"11": {"12": "13"}}},
+    ):
+        test_key = "7:11"
+        res = pillarmod.keys(test_key)
+        assert res == ["12"]

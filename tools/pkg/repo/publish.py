@@ -10,35 +10,20 @@ import logging
 import os
 import pathlib
 import re
-import sys
 import tempfile
 import textwrap
 from typing import TYPE_CHECKING, Any
 
+import boto3
 import packaging.version
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
-from tools.utils import (
-    Version,
-    create_full_repo_path,
-    get_repo_json_file_contents,
-    get_salt_releases,
-    parse_versions,
-)
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
+import tools.utils.repo
+from tools.utils import Version, get_salt_releases, parse_versions
+from tools.utils.repo import create_full_repo_path, get_repo_json_file_contents
 
 log = logging.getLogger(__name__)
 
@@ -336,7 +321,7 @@ def release(ctx: Context, salt_version: str):
                         Bucket=bucket_name,
                         Key=path,
                         Fileobj=wfh,
-                        Callback=tools.utils.UpdateProgress(progress, task),
+                        Callback=tools.utils.repo.UpdateProgress(progress, task),
                     )
                 updated_contents = re.sub(
                     r"^(baseurl|gpgkey)=https://([^/]+)/(.*)$",
@@ -366,7 +351,7 @@ def release(ctx: Context, salt_version: str):
                         str(upload_path),
                         tools.utils.RELEASE_BUCKET_NAME,
                         str(relpath),
-                        Callback=tools.utils.UpdateProgress(progress, task),
+                        Callback=tools.utils.repo.UpdateProgress(progress, task),
                     )
 
 
@@ -438,7 +423,7 @@ def github(
                 Bucket=tools.utils.STAGING_BUCKET_NAME,
                 Key=str(entry_path),
                 Fileobj=wfh,
-                Callback=tools.utils.UpdateProgress(progress, task),
+                Callback=tools.utils.repo.UpdateProgress(progress, task),
             )
 
     for artifact in artifacts_path.iterdir():
@@ -471,7 +456,12 @@ def github(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
-    releases = get_salt_releases(ctx, repository)
+    try:
+        releases = get_salt_releases(ctx, repository)
+    except SystemExit:
+        ctx.warn(f"Failed to get salt releases from repository '{repository}'")
+        releases = get_salt_releases(ctx, "saltstack/salt")
+
     if Version(salt_version) >= releases[-1]:
         make_latest = True
     else:
@@ -618,7 +608,7 @@ def _publish_repo(
                     str(upload_path),
                     bucket_name,
                     str(relpath),
-                    Callback=tools.utils.UpdateProgress(progress, task),
+                    Callback=tools.utils.repo.UpdateProgress(progress, task),
                     ExtraArgs={
                         "Metadata": {
                             "x-amz-meta-salt-release-version": salt_version,

@@ -34,6 +34,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.utils.decorators import Depends
+from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 try:
     # Try the stdlib C extension first
@@ -144,12 +145,25 @@ class LoadedFunc:
 
     def __call__(self, *args, **kwargs):
         run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        # All modules we've imported should have __opts__ defined. There are
+        # cases in the test suite where mod ends up being something other than
+        # a module we've loaded.
+        set_test = False
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+                if "test" in self.loader.opts:
+                    mod.__opts__["test"] = self.loader.opts["test"]
+                    set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        return self.loader.run(run_func, *args, **kwargs)
+        ret = self.loader.run(run_func, *args, **kwargs)
+        if set_test:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
 
     def __repr__(self):
-        return "<{} name={!r}>".format(self.__class__.__name__, self.name)
+        return f"<{self.__class__.__name__} name={self.name!r}>"
 
 
 class LoadedMod:
@@ -172,10 +186,10 @@ class LoadedMod:
         Run the wrapped function in the loader's context.
         """
         try:
-            return self.loader["{}.{}".format(self.mod, name)]
+            return self.loader[f"{self.mod}.{name}"]
         except KeyError:
             raise AttributeError(
-                "No attribute by the name of {} was found on {}".format(name, self.mod)
+                f"No attribute by the name of {name} was found on {self.mod}"
             )
 
     def __repr__(self):
@@ -305,16 +319,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
-        self._lock = threading.RLock()
+        self._lock = self._get_lock()
+
         with self._lock:
             self._refresh_file_mapping()
 
         super().__init__()  # late init the lazy loader
         # create all of the import namespaces
-        _generate_module("{}.int".format(self.loaded_base_name))
-        _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
-        _generate_module("{}.ext".format(self.loaded_base_name))
-        _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
+        _generate_module(f"{self.loaded_base_name}.int")
+        _generate_module(f"{self.loaded_base_name}.int.{tag}")
+        _generate_module(f"{self.loaded_base_name}.ext")
+        _generate_module(f"{self.loaded_base_name}.ext.{tag}")
+
+    def _get_lock(self):
+        return threading.RLock()
 
     def clean_modules(self):
         """
@@ -372,19 +390,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         mod_name = function_name.split(".")[0]
         if mod_name in self.loaded_modules:
-            return "'{}' is not available.".format(function_name)
+            return f"'{function_name}' is not available."
         else:
             try:
                 reason = self.missing_modules[mod_name]
             except KeyError:
-                return "'{}' is not available.".format(function_name)
+                return f"'{function_name}' is not available."
             else:
                 if reason is not None:
                     return "'{}' __virtual__ returned False: {}".format(
                         mod_name, reason
                     )
                 else:
-                    return "'{}' __virtual__ returned False".format(mod_name)
+                    return f"'{mod_name}' __virtual__ returned False"
 
     def _refresh_file_mapping(self):
         """
@@ -497,7 +515,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         for suffix in self.suffix_order:
                             if "" == suffix:
                                 continue  # Next suffix (__init__ must have a suffix)
-                            init_file = "__init__{}".format(suffix)
+                            init_file = f"__init__{suffix}"
                             if init_file in subfiles:
                                 break
                         else:
@@ -733,14 +751,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     spec = file_finder.find_spec(mod_namespace)
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -754,14 +766,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     )
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = self.run(spec.loader.load_module)
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:
@@ -978,6 +984,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # functions defined(or namespaced) on the loaded module.
                 continue
 
+            # When the module is deprecated wrap functions in deprecation
+            # warning.
+            if hasattr(mod, "__deprecated__"):
+                func = extension_deprecation_message(*mod.__deprecated__)(func)
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):
@@ -990,7 +1001,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 try:
                     full_funcname = ".".join((tgt_mod, funcname))
                 except TypeError:
-                    full_funcname = "{}.{}".format(tgt_mod, funcname)
+                    full_funcname = f"{tgt_mod}.{funcname}"
                 # Save many references for lookups
                 # Careful not to overwrite existing (higher priority) functions
                 if full_funcname not in self._dict:
@@ -1017,7 +1028,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if not isinstance(key, str):
             raise KeyError("The key must be a string.")
         if "." not in key:
-            raise KeyError("The key '{}' should contain a '.'".format(key))
+            raise KeyError(f"The key '{key}' should contain a '.'")
         mod_name, _ = key.split(".", 1)
         with self._lock:
             # It is possible that the key is in the dictionary after

@@ -1,0 +1,10 @@
+case "$1" in
+  configure)
+    if [ ! -e "/var/log/salt/api" ]; then
+      touch /var/log/salt/api
+      chmod 640 /var/log/salt/api
+    fi
+    chown salt:salt /var/log/salt/api
+    if command -v systemctl; then systemctl enable salt-api; fi
+  ;;
+esac

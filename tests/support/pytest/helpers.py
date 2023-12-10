@@ -18,6 +18,7 @@ from contextlib import contextmanager
 
 import attr
 import pytest
+import requests
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
 
@@ -70,9 +71,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -118,9 +117,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -161,7 +158,7 @@ def salt_loader_module_functions(module):
             # Not a function? carry on
             continue
         funcname = func_alias.get(func.__name__) or func.__name__
-        funcs["{}.{}".format(virtualname, funcname)] = func
+        funcs[f"{virtualname}.{funcname}"] = func
     return funcs
 
 
@@ -178,7 +175,7 @@ def remove_stale_minion_key(master, minion_id):
 def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
     cachefile = os.path.join(
         proxy_minion.config["cachedir"],
-        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+        f"dummy-proxy-{minion_id or proxy_minion.id}.cache",
     )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
@@ -273,7 +270,7 @@ class TestAccount:
     @group_name.default
     def _default_group_name(self):
         if self.create_group:
-            return "group-{}".format(self.username)
+            return f"group-{self.username}"
         return None
 
     @_group.default
@@ -786,6 +783,18 @@ def change_cwd(path):
     finally:
         # Restore Old CWD
         os.chdir(old_cwd)
+
+
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    # NOTE the stream=True parameter below
+    with requests.get(url, allow_redirects=True, stream=True, auth=auth) as r:
+        r.raise_for_status()
+        with salt.utils.files.fopen(dest, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+    return dest
 
 
 # Only allow star importing the functions defined in this module

@@ -48,6 +48,7 @@ import logging
 import salt.utils.platform
 import salt.utils.win_pwsh
 import salt.utils.win_reg
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -261,10 +262,15 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
                 frameworks=frameworks,
                 bundles=True,
             )
-            if bundle and bundle["IsBundle"]:
-                log.debug(f'Found bundle: {bundle["PackageFullName"]}')
-                remove_name = bundle["PackageFullName"]
-
+            if isinstance(bundle, list):
+                # There may be multiple packages that match the query
+                # Let's remove each one individually
+                for item in bundle:
+                    remove_package(item)
+            else:
+                if bundle and bundle["IsBundle"]:
+                    log.debug(f'Found bundle: {bundle["PackageFullName"]}')
+                    remove_name = bundle["PackageFullName"]
         if deprovision_only:
             log.debug("Deprovisioning package: %s", remove_name)
             remove_cmd = (
@@ -273,7 +279,16 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
         else:
             log.debug("Removing package: %s", remove_name)
             remove_cmd = f"Remove-AppxPackage -AllUsers -Package {remove_name}"
-        salt.utils.win_pwsh.run_dict(remove_cmd)
+        try:
+            salt.utils.win_pwsh.run_dict(remove_cmd)
+        except CommandExecutionError as exc:
+            # Some packages may be in a partially updated state
+            # In that case, there will be 2 entries with the same name
+            # The old one will not have an installer and will throw an error
+            # We should be safe just logging the message
+            # This is really hard to replicate
+            log.debug(f"There was an error removing package: {remove_name}")
+            log.debug(exc)
 
     if isinstance(packages, list):
         log.debug("Removing %s packages", len(packages))

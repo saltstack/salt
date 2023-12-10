@@ -115,6 +115,7 @@ class DeferredStreamHandler(StreamHandler):
                 super().handle(record)
             finally:
                 self.__emitting = False
+        # This will raise a ValueError if the file handle has been closed.
         super().flush()
 
     def sync_with_handlers(self, handlers=()):

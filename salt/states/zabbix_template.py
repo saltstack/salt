@@ -13,6 +13,12 @@ from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 TEMPLATE_RELATIONS = ["groups", "hosts", "macros"]
 TEMPLATE_COMPONENT_ORDER = (
     "applications",

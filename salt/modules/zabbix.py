@@ -37,6 +37,12 @@ from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
 
 ZABBIX_TOP_LEVEL_OBJECTS = (

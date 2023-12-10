@@ -7,6 +7,37 @@ pytestmark = [
     pytest.mark.core_test,
 ]
 
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
+
 
 def test_requisites_mixed_require_prereq_use_1(state, state_tree):
     """
@@ -322,7 +353,6 @@ def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
-@pytest.mark.slow_test
 def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
     """
     test cmd.run using multiple unless options where the first cmd in the
@@ -370,21 +400,21 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
     _expected = {
-        "file_|-unless_false_onlyif_false_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_false_onlyif_false_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is false\nunless condition is false",
-            "name": "{}".format(test_txt_path),
+            "name": f"{test_txt_path}",
             "skip_watch": True,
             "changes": {},
             "result": True,
         },
-        "file_|-unless_false_onlyif_true_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_false_onlyif_true_|-{test_txt_path}_|-managed": {
             "comment": "Empty file",
             "name": str(test_txt_path),
             "start_time": "18:10:20.341753",
             "result": True,
-            "changes": {"new": "file {} created".format(test_txt_path)},
+            "changes": {"new": f"file {test_txt_path} created"},
         },
-        "file_|-unless_true_onlyif_false_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_true_onlyif_false_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is false\nunless condition is true",
             "name": str(test_txt_path),
             "start_time": "18:10:22.936446",
@@ -392,7 +422,7 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
             "changes": {},
             "result": True,
         },
-        "file_|-unless_true_onlyif_true_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_true_onlyif_true_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is true\nunless condition is true",
             "name": str(test_txt_path),
             "skip_watch": True,
@@ -402,3 +432,23 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
     }
     for slsid in _expected:
         assert ret[slsid].comment == _expected[slsid]["comment"]
+
+
+def test_requisites_mixed_illegal_req(state_tree):
+    """
+    Call sls file containing several requisites.
+    When one of the requisites is illegal.
+    """
+    sls_contents = """
+    A:
+      cmd.run:
+        - name: echo A
+    B:
+      cmd.run:
+        - name: echo B
+        - require:
+          - cmd: ["A"]
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state_mod.sls("requisite")
+        assert ret == ["Illegal requisite \"['A']\", please check your syntax.\n"]

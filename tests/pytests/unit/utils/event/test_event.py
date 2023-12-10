@@ -1,13 +1,11 @@
-import hashlib
 import os
 import stat
 import time
 from pathlib import Path
 
 import pytest
-import tornado.ioloop
 import tornado.iostream
-import zmq.eventloop.ioloop
+import zmq
 
 import salt.config
 import salt.utils.event
@@ -45,36 +43,6 @@ def _assert_got_event(evt, data, msg=None, expected_failure=False):
             assert data[key] == evt[key], assertMsg
         else:
             assert data[key] != evt[key]
-
-
-def test_master_event(sock_dir):
-    with salt.utils.event.MasterEvent(str(sock_dir), listen=False) as me:
-        assert me.puburi == str(sock_dir / "master_event_pub.ipc")
-        assert me.pulluri == str(sock_dir / "master_event_pull.ipc")
-
-
-def test_minion_event(sock_dir):
-    opts = dict(id="foo", sock_dir=str(sock_dir))
-    id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(opts["id"])).hexdigest()[
-        :10
-    ]
-    with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
-        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
-
-
-def test_minion_event_tcp_ipc_mode():
-    opts = dict(id="foo", ipc_mode="tcp")
-    with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == 4510
-        assert me.pulluri == 4511
-
-
-def test_minion_event_no_id(sock_dir):
-    with salt.utils.event.MinionEvent(dict(sock_dir=str(sock_dir)), listen=False) as me:
-        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
-        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
-        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
 
 
 @pytest.mark.slow_test

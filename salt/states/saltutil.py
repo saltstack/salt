@@ -29,18 +29,18 @@ def _sync_single(name, module, **kwargs):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "saltutil.sync_{} would have been run".format(module)
+        ret["comment"] = f"saltutil.sync_{module} would have been run"
         return ret
 
     try:
-        sync_status = __salt__["saltutil.sync_{}".format(module)](**kwargs)
+        sync_status = __salt__[f"saltutil.sync_{module}"](**kwargs)
         if sync_status:
             ret["changes"][module] = sync_status
-            ret["comment"] = "Updated {}.".format(module)
+            ret["comment"] = f"Updated {module}."
     except Exception as e:  # pylint: disable=broad-except
         log.error("Failed to run saltutil.sync_%s: %s", module, e)
         ret["result"] = False
-        ret["comment"] = "Failed to run sync_{}: {}".format(module, e)
+        ret["comment"] = f"Failed to run sync_{module}: {e}"
         return ret
 
     if not ret["changes"]:
@@ -76,7 +76,7 @@ def sync_all(name, **kwargs):
     except Exception as e:  # pylint: disable=broad-except
         log.error("Failed to run saltutil.sync_all: %s", e)
         ret["result"] = False
-        ret["comment"] = "Failed to run sync_all: {}".format(e)
+        ret["comment"] = f"Failed to run sync_all: {e}"
         return ret
 
     if not ret["changes"]:
@@ -309,6 +309,20 @@ def sync_states(name, **kwargs):
     return _sync_single(name, "states", **kwargs)
 
 
+def sync_tops(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_tops module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_tops:
+            - refresh: True
+    """
+    return _sync_single(name, "tops", **kwargs)
+
+
 def sync_thorium(name, **kwargs):
     """
     Performs the same task as saltutil.sync_thorium module
@@ -349,3 +363,19 @@ def sync_serializers(name, **kwargs):
             - refresh: True
     """
     return _sync_single(name, "serializers", **kwargs)
+
+
+def sync_wrapper(name, **kwargs):
+    """
+    .. versionadded:: 3007.0
+
+    Performs the same task as saltutil.sync_wrapper module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_wrapper:
+            - refresh: True
+    """
+    return _sync_single(name, "wrapper", **kwargs)

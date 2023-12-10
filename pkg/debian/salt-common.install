@@ -1,5 +1,4 @@
-conf/roster /etc/salt
-conf/cloud /etc/salt
+pkg/common/logrotate/salt-common /etc/logrotate.d
 pkg/common/fish-completions/salt-cp.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt-call.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt-syndic.fish /usr/share/fish/vendor_completions.d

@@ -17,16 +17,15 @@ build_python.ps1 -Version 3.10.9 -Architecture x86
 param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
-    [ValidateSet(
-        "3.11.3",
-        "3.10.11"
-    )]
     [Alias("v")]
-    [String] $Version = "3.10.11",
+    # The version of python to build/fetch. This is tied to the version of
+    # Relenv
+    [String] $Version,
 
     [Parameter(Mandatory=$false)]
     [Alias("r")]
-    [String] $RelenvVersion = "0.12.3",
+    # The version of Relenv to install
+    [String] $RelenvVersion,
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x64", "x86", "amd64")]
@@ -71,6 +70,31 @@ function Write-Result($result, $ForegroundColor="Green") {
         $position = 80 - $result.Length - [System.Console]::CursorLeft
         Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
     }}
+
+#-------------------------------------------------------------------------------
+# Verify Python and Relenv Versions
+#-------------------------------------------------------------------------------
+
+$yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
+$dict_versions = @{}
+$dict_versions["python_version"]=($yaml | Select-String -Pattern "python_version: (.*)").matches.groups[1].Value.Trim("""")
+$dict_versions["relenv_version"]=($yaml | Select-String -Pattern "relenv_version: (.*)").matches.groups[1].Value.Trim("""")
+
+if ( [String]::IsNullOrEmpty($Version) ) {
+    $Version = $dict_versions["python_version"]
+    if ( [String]::IsNullOrEmpty($Version) ) {
+        Write-Host "Failed to load Python Version"
+        exit 1
+    }
+}
+
+if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+    $RelenvVersion = $dict_versions["relenv_version"]
+    if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+        Write-Host "Failed to load Relenv Version"
+        exit 1
+    }
+}
 
 #-------------------------------------------------------------------------------
 # Start the Script
@@ -149,7 +173,6 @@ if ( $env:VIRTUAL_ENV ) {
 #-------------------------------------------------------------------------------
 $SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $BUILD_DIR    = "$SCRIPT_DIR\buildenv"
-$SCRIPTS_DIR  = "$BUILD_DIR\Scripts"
 $RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
 $SYS_PY_BIN   = (python -c "import sys; print(sys.executable)")
 $BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
@@ -242,16 +265,16 @@ $env:RELENV_FETCH_VERSION=$RelenvVersion
 #-------------------------------------------------------------------------------
 if ( $Build ) {
     Write-Host "Building Python with Relenv (long-running): " -NoNewLine
-    $output = relenv build --clean --arch $ARCH
+    $output = relenv build --clean --python $Version --arch $ARCH
 } else {
     Write-Host "Fetching Python with Relenv: " -NoNewLine
     relenv fetch --python $Version --arch $ARCH | Out-Null
-}
-if ( Test-Path -Path "$RELENV_DIR\build\$Version-$ARCH-win.tar.xz") {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
+    if ( Test-Path -Path "$RELENV_DIR\build\$Version-$ARCH-win.tar.xz") {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
 }
 
 #-------------------------------------------------------------------------------

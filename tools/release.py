@@ -8,26 +8,16 @@ import json
 import logging
 import os
 import pathlib
-import sys
 import tempfile
 import time
 
+import boto3
 import virustotal3.core
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.utils
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
+import tools.utils.repo
 
 log = logging.getLogger(__name__)
 
@@ -113,7 +103,7 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
                     str(fpath),
                     tools.utils.STAGING_BUCKET_NAME,
                     upload_path,
-                    Callback=tools.utils.UpdateProgress(progress, task),
+                    Callback=tools.utils.repo.UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
         pass
@@ -182,7 +172,7 @@ def download_onedir_artifact(
                     Bucket=tools.utils.STAGING_BUCKET_NAME,
                     Key=remote_path,
                     Fileobj=wfh,
-                    Callback=tools.utils.UpdateProgress(progress, task),
+                    Callback=tools.utils.repo.UpdateProgress(progress, task),
                 )
     except ClientError as exc:
         if "Error" not in exc.response:
