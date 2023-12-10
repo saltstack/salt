@@ -1,0 +1,62 @@
+.. _release-3001-1:
+
+=========================
+Salt 3001.1 Release Notes
+=========================
+
+Version 3001.1 is a bugfix release for :ref:`3001 <release-3001>`.
+
+
+Changed
+-------
+
+- Change the ``enable_fqdns_grains`` setting to default to ``False`` on Windows
+  to address some issues with slowness. (#56296, #57529)
+- Handle the UCRT libraries the same way they are handled in the Python 3
+  installer (#57594)
+- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be
+  resolved in lowered case. (#57612)
+
+
+Fixed
+-----
+
+- When running scheduled jobs from a proxy minion with multiprocessing turned off (default) a recursive error occurs as __pub_fun_args is repeated over and over again in the kwargs element in the data dictionary.  Now we make a copy of data['kwargs'] instead of using a reference. (#57941)
+- The `x509.certificate_managed` state no longer triggers a change because of sorting issues if the certificate being evaluated was previously generated under Python 2. (#56556)
+- Added support to lo ip alias in network.managed state by checking if lo inet data
+  from network.interfaces contains label with the name of managed interface.
+  Return status True if match found. (#56901)
+- Redact passwords in the return when setting credentials using
+  ``win_iis.container_setting`` (#57285)
+- Fixes issue with cmd.powershell. Some powershell commands do not return
+  anything in stdout. This causes the JSON parser to fail because an empty string
+  is not valid JSON. This changes an empty string to `{}` which is valid JSON and
+  will not cause the JSON loader to stacktrace. (#57493)
+- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17
+  seconds are wasted when the esxi grain loads vsphere before noting that
+  the OS is not a esxi host. (#57529)
+- Fixed permissions issue with certain pip/virtualenv states/modules when configured for non-root user. (#57550)
+- Allow running nox sessions either using our `nox-py2 fork <https://github.com/s0undt3ch/nox/tree/hotfix/py2-release>`_ or upstream `nox <https://github.com/theacodes/nox>`_. (#57583)
+- Fixes issue with lgpo.get when there are unicode characters in the hostname (#57591)
+- Fixes issue with virtual block devices, like loopbacks and LVMs, wrongly
+  populating the "disks" or "ssds" grains. (#57612)
+- Due to some optimization the `virtual` grain was never updated on illumos. Move the fallback in prtdiag output parsing outside the loop that now gets skipped due to the command exiting non-zero. (#57714)
+- Grains module delkey and delval methods now support the force option. This is
+  needed for deleting grains with complex (nested) values. (#57718)
+- Moving import salt.modules.vsphere into `__virtual__` so we have access to test proxytype in opts,
+  previously this was causing a traceback when run on proxy minion as `__opts__` does not exist
+  outside of any functions. Introducing a new utils function, is_proxytype, to check that the
+  device is a proxy minion and also that the proxy type matches. (#57743)
+- Fixed fail_with_changes in the test state to use the comment argument when passed. (#57766)
+- Adds a fix so salt can run on the latest macOS version Big Sur. (#57787)
+- Fixes UnpackValueError when using GPG cache by using atomic open. (#57798)
+- The ``gid_from_name`` argument was removed from the ``user.present`` state in
+  version 3001, with no deprecation path. It has been restored and put on a
+  proper deprecation path. (#57843)
+- Fixes dictionary being changed during iteration. (#57845)
+
+
+Added
+-----
+
+- Added docs demonstrating how to apply an MSI patch with winrepo (#32780)

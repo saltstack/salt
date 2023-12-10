@@ -1,0 +1,23 @@
+.. _release-3002-6:
+
+=========================
+Salt 3002.6 Release Notes
+=========================
+
+Version 3002.6 is a bug fix release for :ref:`3002 <release-3002>`.
+
+
+Changed
+-------
+
+- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
+
+
+Fixed
+-----
+
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)

@@ -49,7 +49,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       image: 14.04 x64
       size: 512MB
       location: New York 1
-      private_networking: True
+      vpc_name: Optional
       backups_enabled: True
       ipv6: True
       create_dns_record: True
@@ -230,4 +230,4 @@ Miscellaneous Information
 
 .. note::
 
-    Additional documentation is available from `DigitalOcean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.
+    Additional documentation is available from `DigitalOcean <https://www.digitalocean.com/community/tutorials/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.

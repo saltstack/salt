@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
 =========================================================================================
+
+.. versionadded:: 2016.11.0
 
 Proxy minion for managing network devices via NAPALM_ library.
 
@@ -132,32 +133,44 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded:: 2016.11.0
-'''
+.. note::
+    Beginning with release codename 2019.2.0, any NAPALM command executed when
+    running under a NAPALM Proxy Minion supports the ``force_reconnect``
+    magic argument.
 
-from __future__ import absolute_import, print_function, unicode_literals
+    Proxy Minions generally establish a connection with the remote network
+    device at the time of the Minion startup and that connection is going to be
+    used forever.
 
-# Import python lib
+    If one would need execute a command on the device but connecting using
+    different parameters (due to various causes, e.g., unable to authenticate
+    the user specified in the Pillar as the authentication system - say
+    TACACS+ is not available, or the DNS resolver is currently down and would
+    like to temporarily use the IP address instead, etc.), it implies updating
+    the Pillar data and restarting the Proxy Minion process restart.
+    In particular cases like that, you can pass the ``force_reconnect=True``
+    keyword argument, together with the alternative connection details, to
+    enforce the command to be executed over a separate connection.
+
+    For example, if the usual command is ``salt '*' net.arp``, you can use the
+    following to connect using a different username instead:
+    ``salt '*' net.arp username=my-alt-usr force_reconnect=True``.
+"""
+
 import logging
+
+import salt.utils.napalm
+
 log = logging.getLogger(__file__)
 
-# Import Salt modules
-from salt.ext import six
-import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ["napalm"]
 # proxy name
 
-# ----------------------------------------------------------------------------------------------------------------------
-# global variables
-# ----------------------------------------------------------------------------------------------------------------------
-
-NETWORK_DEVICE = {}
-DETAILS = {}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -165,7 +178,8 @@ DETAILS = {}
 
 
 def __virtual__():
-    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
+    return salt.utils.napalm.virtual(__opts__, "napalm", __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -177,28 +191,34 @@ def __virtual__():
 
 
 def init(opts):
-    '''
+    """
     Opens the connection with the network device.
-    '''
-    NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
-    DETAILS['initialized'] = True
+    """
+    napalm_device = salt.utils.napalm.get_device(opts)
+    __context__["napalm_device"] = {
+        "opts": opts,
+        "id": opts["id"],
+        "network_device": napalm_device,
+        "details": {"initialized": True},
+    }
     return True
 
 
 def alive(opts):
-    '''
+    """
     Return the connection status with the remote device.
 
     .. versionadded:: 2017.7.0
-    '''
+    """
     if salt.utils.napalm.not_always_alive(opts):
         return True  # don't force reconnection for not-always alive proxies
         # or regular minion
-    is_alive_ret = call('is_alive', **{})
-    if not is_alive_ret.get('result', False):
+    is_alive_ret = call("is_alive", **{})
+    if not is_alive_ret.get("result", False):
         log.debug(
-            '[%s] Unable to execute `is_alive`: %s',
-            opts.get('id'), is_alive_ret.get('comment')
+            "[%s] Unable to execute `is_alive`: %s",
+            opts.get("id"),
+            is_alive_ret.get("comment"),
         )
         # if `is_alive` is not implemented by the underneath driver,
         # will consider the connection to be still alive
@@ -206,74 +226,85 @@ def alive(opts):
         # NOTE: revisit this if IOS is still not stable
         #       and return False to force reconnection
         return True
-    flag = is_alive_ret.get('out', {}).get('is_alive', False)
-    log.debug('Is %s still alive? %s', opts.get('id'), 'Yes.' if flag else 'No.')
+    flag = is_alive_ret.get("out", {}).get("is_alive", False)
+    log.debug("Is %s still alive? %s", opts.get("id"), "Yes." if flag else "No.")
     return flag
 
 
 def ping():
-    '''
+    """
     Connection open successfully?
-    '''
-    return NETWORK_DEVICE.get('UP', False)
+    """
+    return (
+        __context__.get("napalm_device", {}).get("network_device", {}).get("UP", False)
+    )
 
 
 def initialized():
-    '''
+    """
     Connection finished initializing?
-    '''
-    return DETAILS.get('initialized', False)
+    """
+    return (
+        __context__.get("napalm_device", {})
+        .get("details", {})
+        .get("initialized", False)
+    )
 
 
 def get_device():
-    '''
+    """
     Returns the network device object.
-    '''
-    return NETWORK_DEVICE
+    """
+    return __context__.get("napalm_device", {}).get("network_device", {})
 
 
 def get_grains():
-    '''
+    """
     Retrieve facts from the network device.
-    '''
-    return call('get_facts', **{})
+    """
+    return call("get_facts", **{})
 
 
 def grains_refresh():
-    '''
+    """
     Refresh the grains.
-    '''
-    DETAILS['grains_cache'] = {}
+    """
+    __context__["napalm_device"]["details"]["grains_cache"] = {}
     return get_grains()
 
 
 def fns():
-    '''
+    """
     Method called by NAPALM grains module.
-    '''
-    return {
-        'details': 'Network device grains.'
-    }
+    """
+    return {"details": "Network device grains."}
 
 
 def shutdown(opts):
-    '''
+    """
     Closes connection with the device.
-    '''
+    """
     try:
-        if not NETWORK_DEVICE.get('UP', False):
-            raise Exception('not connected!')
-        NETWORK_DEVICE.get('DRIVER').close()
-    except Exception as error:
-        port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
+        if not __context__["napalm_device"]["network_device"].get("UP", False):
+            raise Exception("not connected!")
+        __context__["napalm_device"]["network_device"].get("DRIVER").close()
+    except Exception as error:  # pylint: disable=broad-except
+        port = (
+            __context__["napalm_device"]["network_device"]
+            .get("OPTIONAL_ARGS", {})
+            .get("port"),
+        )
         log.error(
-            'Cannot close connection with %s%s! Please check error: %s',
-            NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-            ':{0}'.format(port) if port else '',
-            error
+            "Cannot close connection with %s%s! Please check error: %s",
+            __context__["napalm_device"]["network_device"].get(
+                "HOSTNAME", "[unknown hostname]"
+            ),
+            ":{}".format(port) if port else "",
+            error,
         )
 
     return True
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Callable functions
@@ -281,7 +312,7 @@ def shutdown(opts):
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
 
@@ -312,12 +343,17 @@ def call(method, *args, **kwargs):
                                         'show chassis fan'
                                     ]
                                  })
-    '''
+    """
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
-    for karg, warg in six.iteritems(kwargs_copy):
+    for karg, warg in kwargs_copy.items():
         # will remove None values
         # thus the NAPALM methods will be called with their defaults
         if warg is None:
             kwargs.pop(karg)
-    return salt.utils.napalm.call(NETWORK_DEVICE, method, *args, **kwargs)
+    if "napalm_device" in __context__:
+        return salt.utils.napalm.call(
+            __context__["napalm_device"]["network_device"], method, *args, **kwargs
+        )
+    else:
+        return {"result": False, "comment": "Not initialised yet", "out": None}

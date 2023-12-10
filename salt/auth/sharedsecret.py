@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''Provide authentication using configured shared secret
+"""Provide authentication using configured shared secret
 
 .. code-block:: yaml
 
@@ -27,18 +26,16 @@ localhost to avoid someone eavesdropping on the shared secret.
 See the documentation for cherrypy to setup the headers in your
 frontal.
 
-.. versionadded:: Beryllium
-'''
+.. versionadded:: 2015.8.0
+"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
 
 
 def auth(username, password):
-    '''
+    """
     Shared secret authentication
-    '''
-    return password == __opts__.get('sharedsecret')
+    """
+    return password == __opts__.get("sharedsecret")

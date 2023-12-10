@@ -57,6 +57,10 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
+      # If 'role_arn' is specified the above credentials are used to
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
@@ -243,8 +247,8 @@ Once the profile is created, you can use the **PROFILE_NAME** to configure
 your cloud profiles.
 
 .. _`IAM Management Console`: https://console.aws.amazon.com/iam/home?#roles
-.. _`AWS CLI`: http://docs.aws.amazon.com/cli/latest/index.html
-.. _`instance profile`: http://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html
+.. _`AWS CLI`: https://docs.aws.amazon.com/cli/latest/index.html
+.. _`instance profile`: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html
 
 
 Cloud Profiles
@@ -296,7 +300,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
           SecurityGroupId:
             - sg-750af413
       del_root_vol_on_destroy: True
-      del_all_vol_on_destroy: True
+      del_all_vols_on_destroy: True
       volumes:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
@@ -453,7 +457,7 @@ EC2 instances can be added to an `AWS Placement Group`_ by specifying the
     my-ec2-config:
       placementgroup: my-aws-placement-group
 
-.. _`AWS Placement Group`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
+.. _`AWS Placement Group`: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
 
 Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
@@ -467,6 +471,19 @@ EC2 API or AWS Console.
     my-ec2-config:
       spot_config:
         spot_price: 0.10
+
+You can optionally specify tags to apply to the EC2 spot instance request.
+A spot instance request itself is an object in AWS. The following example
+will set two tags on the spot instance request.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+        tag:
+          tag0: value
+          tag1: value
 
 By default, the spot instance type is set to 'one-time', meaning it will
 be launched and, if it's ever terminated for whatever reason, it will not
@@ -536,6 +553,53 @@ its size to 100G by using the following configuration.
           Ebs.VolumeType: gp2
           Ebs.VolumeSize: 3001
 
+Tagging of block devices can be set on a per device basis. For example, you may
+have multiple devices defined in your block_device_mappings structure. You have the
+option to set tags on any of one device or all of them as shown in the following
+configuration.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      block_device_mappings:
+        - DeviceName: /dev/sda
+          Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          tag:
+            tag0: myserver
+            tag1: value
+        - DeviceName: /dev/sdb
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
+          tag:
+            tagX: value
+            tagY: value
+
+You can configure any AWS valid tag name as shown in the above example, including
+'Name'. If you do not configure the tag 'Name', it will be automatically created
+with a value set to the virtual machine name. If you configure the tag 'Name', the
+value you configure will be used rather than defaulting to the virtual machine
+name as shown in the following configuration.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      block_device_mappings:
+        - DeviceName: /dev/sda
+          Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          tag:
+            Name: myserver
+            tag0: value
+            tag1: value
+        - DeviceName: /dev/sdb
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
+          tag:
+            Name: customvalue
+            tagX: value
+            tagY: value
+
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
 existing volume use the ``volume_id`` parameter.
@@ -563,8 +627,8 @@ Tags can be set once an instance has been launched.
             tag0: value
             tag1: value
 
-.. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
-.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
+.. _`AWS documentation`: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
+.. _`AWS Spot Instances`: https://aws.amazon.com/ec2/spot/
 
 Setting up a Master inside EC2
 ------------------------------
@@ -702,7 +766,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `CentOS`__
 
-.. __: http://wiki.centos.org/Cloud/AWS
+.. __: https://wiki.centos.org/Cloud/AWS
 
 * `Ubuntu`__
 
@@ -714,11 +778,33 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `OmniOS`__
 
-.. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+.. __: https://omniosce.org/setup/aws.html
 
 * `All Images on Amazon`__
 
 .. __: https://aws.amazon.com/marketplace
+
+
+NOTE: If ``image`` of a profile does not start with ``ami-``, latest
+image with that name will be used. For example, to create a CentOS 7
+profile, instead of using the AMI like ``image: ami-1caef165``, we
+can use its name like ``image: 'CentOS Linux 7 x86_64 HVM EBS ENA 1803_01'``.
+We can also use a pattern like below to get the latest CentOS 7:
+
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      subnetid: subnet-XXXXXXXX
+      image: 'CentOS Linux 7 x86_64 HVM EBS *'
+      size: m1.medium
+      ssh_username: centos
+      securitygroupid:
+        - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
 
 
 show_image
@@ -863,7 +949,7 @@ Alternate Endpoint
 Normally, EC2 endpoints are build using the region and the service_url. The
 resulting endpoint would follow this pattern:
 
-.. code-block:: bash
+.. code-block:: text
 
     ec2.<region>.<service_url>
 

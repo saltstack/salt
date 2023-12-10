@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Support for Zabbix
 
 :optdepends:    - zabbix server
@@ -15,59 +14,124 @@ Support for Zabbix
 
 
     Connection arguments from the minion config file can be overridden on the CLI by using arguments with
-    _connection_ prefix.
+    ``_connection_`` prefix.
 
     .. code-block:: bash
 
         zabbix.apiinfo_version _connection_user=Admin _connection_password=zabbix _connection_url=http://host/zabbix/
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
-'''
-from __future__ import absolute_import, print_function, unicode_literals
-# Import python libs
-import logging
-import socket
+"""
 
-# Import salt libs
-from salt.ext import six
+import logging
+import os
+import socket
+import urllib.error
+
+import salt.utils.data
+import salt.utils.files
 import salt.utils.http
 import salt.utils.json
-import salt.utils.path
-from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
+from salt.exceptions import SaltException
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
 
+ZABBIX_TOP_LEVEL_OBJECTS = (
+    "hostgroup",
+    "template",
+    "host",
+    "maintenance",
+    "action",
+    "drule",
+    "service",
+    "proxy",
+    "screen",
+    "usergroup",
+    "mediatype",
+    "script",
+    "valuemap",
+)
+
+# Zabbix object and its ID name mapping
+ZABBIX_ID_MAPPER = {
+    "action": "actionid",
+    "alert": "alertid",
+    "application": "applicationid",
+    "dhost": "dhostid",
+    "dservice": "dserviceid",
+    "dcheck": "dcheckid",
+    "drule": "druleid",
+    "event": "eventid",
+    "graph": "graphid",
+    "graphitem": "gitemid",
+    "graphprototype": "graphid",
+    "history": "itemid",
+    "host": "hostid",
+    "hostgroup": "groupid",
+    "hostinterface": "interfaceid",
+    "hostprototype": "hostid",
+    "iconmap": "iconmapid",
+    "image": "imageid",
+    "item": "itemid",
+    "itemprototype": "itemid",
+    "service": "serviceid",
+    "discoveryrule": "itemid",
+    "maintenance": "maintenanceid",
+    "map": "sysmapid",
+    "usermedia": "mediaid",
+    "mediatype": "mediatypeid",
+    "proxy": "proxyid",
+    "screen": "screenid",
+    "screenitem": "screenitemid",
+    "script": "scriptid",
+    "template": "templateid",
+    "templatescreen": "screenid",
+    "templatescreenitem": "screenitemid",
+    "trend": "itemid",
+    "trigger": "triggerid",
+    "triggerprototype": "triggerid",
+    "user": "userid",
+    "usergroup": "usrgrpid",
+    "usermacro": "globalmacroid",
+    "valuemap": "valuemapid",
+    "httptest": "httptestid",
+}
+
 # Define the module's virtual name
-__virtualname__ = 'zabbix'
+__virtualname__ = "zabbix"
 
 
 def __virtual__():
-    '''
-    Only load the module if Zabbix server is installed
-    '''
-    if salt.utils.path.which('zabbix_server'):
-        return __virtualname__
-    return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
+    """
+    Only load the module if all modules are imported correctly.
+    """
+    return __virtualname__
 
 
 def _frontend_url():
-    '''
+    """
     Tries to guess the url of zabbix frontend.
 
     .. versionadded:: 2016.3.0
-    '''
+    """
     hostname = socket.gethostname()
-    frontend_url = 'http://' + hostname + '/zabbix/api_jsonrpc.php'
+    frontend_url = "http://" + hostname + "/zabbix/api_jsonrpc.php"
     try:
         try:
             response = salt.utils.http.query(frontend_url)
-            error = response['error']
-        except HTTPError as http_e:
-            error = six.text_type(http_e)
-        if error.find('412: Precondition Failed'):
+            error = response["error"]
+        except urllib.error.HTTPError as http_e:
+            error = str(http_e)
+        if error.find("412: Precondition Failed"):
             return frontend_url
         else:
             raise KeyError
@@ -76,7 +140,7 @@ def _frontend_url():
 
 
 def _query(method, params, url, auth=None):
-    '''
+    """
     JSON request to Zabbix API.
 
     .. versionadded:: 2016.3.0
@@ -86,34 +150,58 @@ def _query(method, params, url, auth=None):
     :param url: url of zabbix api
     :param auth: auth token for zabbix api (only for methods with required authentication)
 
-    :return: Response from API with desired data in JSON format.
-    '''
+    :return: Response from API with desired data in JSON format. In case of error returns more specific description.
 
-    unauthenticated_methods = ['user.login', 'apiinfo.version', ]
+    .. versionchanged:: 2017.7.0
+    """
 
-    header_dict = {'Content-type': 'application/json'}
-    data = {'jsonrpc': '2.0', 'id': 0, 'method': method, 'params': params}
+    unauthenticated_methods = [
+        "user.login",
+        "apiinfo.version",
+    ]
+
+    header_dict = {"Content-type": "application/json"}
+    data = {"jsonrpc": "2.0", "id": 0, "method": method, "params": params}
 
     if method not in unauthenticated_methods:
-        data['auth'] = auth
+        data["auth"] = auth
 
     data = salt.utils.json.dumps(data)
 
+    log.info("_QUERY input:\nurl: %s\ndata: %s", str(url), str(data))
+
     try:
-        result = salt.utils.http.query(url,
-                                       method='POST',
-                                       data=data,
-                                       header_dict=header_dict,
-                                       decode_type='json',
-                                       decode=True,)
-        ret = result.get('dict', {})
+        result = salt.utils.http.query(
+            url,
+            method="POST",
+            data=data,
+            header_dict=header_dict,
+            decode_type="json",
+            decode=True,
+            status=True,
+            headers=True,
+        )
+        log.info("_QUERY result: %s", str(result))
+        if "error" in result:
+            raise SaltException(
+                "Zabbix API: Status: {} ({})".format(result["status"], result["error"])
+            )
+        ret = result.get("dict", {})
+        if "error" in ret:
+            raise SaltException(
+                "Zabbix API: {} ({})".format(
+                    ret["error"]["message"], ret["error"]["data"]
+                )
+            )
         return ret
-    except (URLError, socket.gaierror):
-        return {}
+    except ValueError as err:
+        raise SaltException(f"URL or HTTP headers are probably not correct! ({err})")
+    except OSError as err:
+        raise SaltException(f"Check hostname in URL! ({err})")
 
 
 def _login(**kwargs):
-    '''
+    """
     Log in to the API and generate the authentication token.
 
     .. versionadded:: 2016.3.0
@@ -124,59 +212,61 @@ def _login(**kwargs):
 
     :return: On success connargs dictionary with auth token and frontend url, False on failure.
 
-    '''
+    """
     connargs = dict()
 
     def _connarg(name, key=None):
-        '''
+        """
         Add key to connargs, only if name exists in our kwargs or, as zabbix.<name> in __opts__ or __pillar__
 
         Evaluate in said order - kwargs, opts, then pillar. To avoid collision with other functions,
         kwargs-based connection arguments are prefixed with 'connection_' (i.e. '_connection_user', etc.).
 
         Inspired by mysql salt module.
-        '''
+        """
         if key is None:
             key = name
 
         if name in kwargs:
             connargs[key] = kwargs[name]
         else:
-            prefix = '_connection_'
+            prefix = "_connection_"
             if name.startswith(prefix):
                 try:
-                    name = name[len(prefix):]
+                    name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__['config.option']('zabbix.{0}'.format(name), None)
+            val = __salt__["config.get"](f"zabbix.{name}", None) or __salt__[
+                "config.get"
+            ](f"zabbix:{name}", None)
             if val is not None:
                 connargs[key] = val
 
-    _connarg('_connection_user', 'user')
-    _connarg('_connection_password', 'password')
-    _connarg('_connection_url', 'url')
+    _connarg("_connection_user", "user")
+    _connarg("_connection_password", "password")
+    _connarg("_connection_url", "url")
 
-    if 'url' not in connargs:
-        connargs['url'] = _frontend_url()
+    if "url" not in connargs:
+        connargs["url"] = _frontend_url()
 
     try:
-        if connargs['user'] and connargs['password'] and connargs['url']:
-            params = {'user': connargs['user'], 'password': connargs['password']}
-            method = 'user.login'
-            ret = _query(method, params, connargs['url'])
-            auth = ret['result']
-            connargs['auth'] = auth
-            connargs.pop('user', None)
-            connargs.pop('password', None)
+        if connargs["user"] and connargs["password"] and connargs["url"]:
+            params = {"user": connargs["user"], "password": connargs["password"]}
+            method = "user.login"
+            ret = _query(method, params, connargs["url"])
+            auth = ret["result"]
+            connargs["auth"] = auth
+            connargs.pop("user", None)
+            connargs.pop("password", None)
             return connargs
         else:
             raise KeyError
-    except KeyError:
-        return False
+    except KeyError as err:
+        raise SaltException(f"URL is probably not correct! ({err})")
 
 
 def _params_extend(params, _ignore_name=False, **kwargs):
-    '''
+    """
     Extends the params dictionary by values from keyword arguments.
 
     .. versionadded:: 2016.3.0
@@ -191,25 +281,234 @@ def _params_extend(params, _ignore_name=False, **kwargs):
 
     :return: Extended params dictionary with parameters.
 
-    '''
+    """
     # extend params value by optional zabbix API parameters
     for key in kwargs:
-        if not key.startswith('_'):
+        if not key.startswith("_"):
             params.setdefault(key, kwargs[key])
 
     # ignore name parameter passed from Salt state module, use firstname or visible_name instead
     if _ignore_name:
-        params.pop('name', None)
-        if 'firstname' in params:
-            params['name'] = params.pop('firstname')
-        elif 'visible_name' in params:
-            params['name'] = params.pop('visible_name')
+        params.pop("name", None)
+        if "firstname" in params:
+            params["name"] = params.pop("firstname")
+        elif "visible_name" in params:
+            params["name"] = params.pop("visible_name")
 
     return params
 
 
+def _map_to_list_of_dicts(source, key):
+    """
+    Maps list of values to list of dicts of values, eg:
+        [usrgrpid1, usrgrpid2, ...] => [{"usrgrpid": usrgrpid1}, {"usrgrpid": usrgrpid2}, ...]
+
+    :param source:  list of values
+    :param key: name of dict key
+    :return: List of dicts in format: [{key: elem}, ...]
+    """
+    output = []
+    for elem in source:
+        output.append({key: elem})
+    return output
+
+
+def get_zabbix_id_mapper():
+    """
+    .. versionadded:: 2017.7.0
+
+    Make ZABBIX_ID_MAPPER constant available to state modules.
+
+    :return: ZABBIX_ID_MAPPER
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.get_zabbix_id_mapper
+    """
+    return ZABBIX_ID_MAPPER
+
+
+def substitute_params(input_object, extend_params=None, filter_key="name", **kwargs):
+    """
+    .. versionadded:: 2017.7.0
+
+    Go through Zabbix object params specification and if needed get given object ID from Zabbix API and put it back
+    as a value. Definition of the object is done via dict with keys "query_object" and "query_name".
+
+    :param input_object: Zabbix object type specified in state file
+    :param extend_params: Specify query with params
+    :param filter_key: Custom filtering key (default: name)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Params structure with values converted to string for further comparison purposes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.substitute_params '{"query_object": "object_name", "query_name": "specific_object_name"}'
+    """
+    if extend_params is None:
+        extend_params = {}
+    if isinstance(input_object, list):
+        return [
+            substitute_params(oitem, extend_params, filter_key, **kwargs)
+            for oitem in input_object
+        ]
+    elif isinstance(input_object, dict):
+        if "query_object" in input_object:
+            query_params = {}
+            if input_object["query_object"] not in ZABBIX_TOP_LEVEL_OBJECTS:
+                query_params.update(extend_params)
+            try:
+                query_params.update(
+                    {"filter": {filter_key: input_object["query_name"]}}
+                )
+                return get_object_id_by_params(
+                    input_object["query_object"], query_params, **kwargs
+                )
+            except KeyError:
+                raise SaltException(
+                    "Qyerying object ID requested "
+                    "but object name not provided: {}".format(input_object)
+                )
+        else:
+            return {
+                key: substitute_params(val, extend_params, filter_key, **kwargs)
+                for key, val in input_object.items()
+            }
+    else:
+        # Zabbix response is always str, return everything in str as well
+        return str(input_object)
+
+
+# pylint: disable=too-many-return-statements,too-many-nested-blocks
+def compare_params(defined, existing, return_old_value=False):
+    """
+    .. versionadded:: 2017.7.0
+
+    Compares Zabbix object definition against existing Zabbix object.
+
+    :param defined: Zabbix object definition taken from sls file.
+    :param existing: Existing Zabbix object taken from result of an API call.
+    :param return_old_value: Default False. If True, returns dict("old"=old_val, "new"=new_val) for rollback purpose.
+    :return: Params that are different from existing object. Result extended by
+        object ID can be passed directly to Zabbix API update method.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.compare_params new_zabbix_object_dict existing_zabbix_onject_dict
+    """
+    # Comparison of data types
+    if not isinstance(defined, type(existing)):
+        raise SaltException(
+            "Zabbix object comparison failed (data type mismatch). Expecting {}, got"
+            ' {}. Existing value: "{}", defined value: "{}").'.format(
+                type(existing), type(defined), existing, defined
+            )
+        )
+
+    # Comparison of values
+    if not salt.utils.data.is_iter(defined):
+        if str(defined) != str(existing) and return_old_value:
+            return {"new": str(defined), "old": str(existing)}
+        elif str(defined) != str(existing) and not return_old_value:
+            return str(defined)
+
+    # Comparison of lists of values or lists of dicts
+    if isinstance(defined, list):
+        if len(defined) != len(existing):
+            log.info("Different list length!")
+            return {"new": defined, "old": existing} if return_old_value else defined
+        else:
+            difflist = []
+            for ditem in defined:
+                d_in_e = []
+                for eitem in existing:
+                    comp = compare_params(ditem, eitem, return_old_value)
+                    if return_old_value:
+                        d_in_e.append(comp["new"])
+                    else:
+                        d_in_e.append(comp)
+                if all(d_in_e):
+                    difflist.append(ditem)
+            # If there is any difference in a list then whole defined list must be returned and provided for update
+            if any(difflist) and return_old_value:
+                return {"new": defined, "old": existing}
+            elif any(difflist) and not return_old_value:
+                return defined
+
+    # Comparison of dicts
+    if isinstance(defined, dict):
+        try:
+            # defined must be a subset of existing to be compared
+            if set(defined) <= set(existing):
+                intersection = set(defined) & set(existing)
+                diffdict = {"new": {}, "old": {}} if return_old_value else {}
+                for i in intersection:
+                    comp = compare_params(defined[i], existing[i], return_old_value)
+                    if return_old_value:
+                        if comp or (not comp and isinstance(comp, list)):
+                            diffdict["new"].update({i: defined[i]})
+                            diffdict["old"].update({i: existing[i]})
+                    else:
+                        if comp or (not comp and isinstance(comp, list)):
+                            diffdict.update({i: defined[i]})
+                return diffdict
+
+            return {"new": defined, "old": existing} if return_old_value else defined
+
+        except TypeError:
+            raise SaltException(
+                "Zabbix object comparison failed (data type mismatch). Expecting {},"
+                ' got {}. Existing value: "{}", defined value: "{}").'.format(
+                    type(existing), type(defined), existing, defined
+                )
+            )
+
+
+def get_object_id_by_params(obj, params=None, **connection_args):
+    """
+    .. versionadded:: 2017.7.0
+
+    Get ID of single Zabbix object specified by its name.
+
+    :param obj: Zabbix object type
+    :param params: Parameters by which object is uniquely identified
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: object ID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.get_object_id_by_params object_type params=zabbix_api_query_parameters_dict
+    """
+    if params is None:
+        params = {}
+    res = run_query(obj + ".get", params, **connection_args)
+    if res and len(res) == 1:
+        return str(res[0][ZABBIX_ID_MAPPER[obj]])
+    else:
+        raise SaltException(
+            "Zabbix API: Object does not exist or bad Zabbix user permissions or other"
+            " unexpected result. Called method {} with params {}. Result: {}".format(
+                obj + ".get", params, res
+            )
+        )
+
+
 def apiinfo_version(**connection_args):
-    '''
+    """
     Retrieve the version of the Zabbix API.
 
     .. versionadded:: 2016.3.0
@@ -221,18 +520,19 @@ def apiinfo_version(**connection_args):
     :return: On success string with Zabbix API version, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.apiinfo_version
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'apiinfo.version'
+            method = "apiinfo.version"
             params = {}
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -240,7 +540,7 @@ def apiinfo_version(**connection_args):
 
 
 def user_create(alias, passwd, usrgrps, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Create new zabbix user
@@ -265,25 +565,32 @@ def user_create(alias, passwd, usrgrps, **connection_args):
     :return: On success string with id of the created user.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_create james password007 '[7, 12]' firstname='James Bond'
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if Version(zabbix_version) > Version("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
-            method = 'user.create'
-            params = {"alias": alias, "passwd": passwd, "usrgrps": []}
+            method = "user.create"
+            params = {username_field: alias, "passwd": passwd, "usrgrps": []}
             # User groups
             if not isinstance(usrgrps, list):
                 usrgrps = [usrgrps]
-            for usrgrp in usrgrps:
-                params['usrgrps'].append({"usrgrpid": usrgrp})
+            params["usrgrps"] = _map_to_list_of_dicts(usrgrps, "usrgrpid")
 
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['userids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["userids"]
         else:
             raise KeyError
     except KeyError:
@@ -291,7 +598,7 @@ def user_create(alias, passwd, usrgrps, **connection_args):
 
 
 def user_delete(users, **connection_args):
-    '''
+    """
     Delete zabbix users.
 
     .. versionadded:: 2016.3.0
@@ -304,22 +611,23 @@ def user_delete(users, **connection_args):
     :return: On success array with userids of deleted users.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_delete 15
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'user.delete'
+            method = "user.delete"
             if not isinstance(users, list):
                 params = [users]
             else:
                 params = users
 
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['userids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["userids"]
         else:
             raise KeyError
     except KeyError:
@@ -327,7 +635,7 @@ def user_delete(users, **connection_args):
 
 
 def user_exists(alias, **connection_args):
-    '''
+    """
     Checks if user with given alias exists.
 
     .. versionadded:: 2016.3.0
@@ -340,18 +648,27 @@ def user_exists(alias, **connection_args):
     :return: True if user exists, else False.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_exists james
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if Version(zabbix_version) > Version("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
-            method = 'user.get'
-            params = {"output": "extend", "filter": {"alias": alias}}
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return True if len(ret['result']) > 0 else False
+            method = "user.get"
+            # Zabbix 5.4 changed object fields
+            params = {"output": "extend", "filter": {username_field: alias}}
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return True if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -359,7 +676,7 @@ def user_exists(alias, **connection_args):
 
 
 def user_get(alias=None, userids=None, **connection_args):
-    '''
+    """
     Retrieve users according to the given parameters.
 
     .. versionadded:: 2016.3.0
@@ -373,25 +690,44 @@ def user_get(alias=None, userids=None, **connection_args):
     :return: Array with details of convenient users, False on failure of if no user found.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_get james
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if Version(zabbix_version) > Version("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
-            method = 'user.get'
-            params = {"output": "extend", "filter": {}}
+            method = "user.get"
+            params = {
+                "output": "extend",
+                "selectUsrgrps": "extend",
+                "selectMedias": "extend",
+                "selectMediatypes": "extend",
+                "filter": {},
+            }
             if not userids and not alias:
-                return {'result': False, 'comment': 'Please submit alias or userids parameter to retrieve users.'}
+                return {
+                    "result": False,
+                    "comment": (
+                        "Please submit alias or userids parameter to retrieve users."
+                    ),
+                }
             if alias:
-                params['filter'].setdefault('alias', alias)
+                params["filter"].setdefault(username_field, alias)
             if userids:
-                params.setdefault('userids', userids)
+                params.setdefault("userids", userids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -399,7 +735,7 @@ def user_get(alias=None, userids=None, **connection_args):
 
 
 def user_update(userid, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Update existing users
@@ -418,19 +754,47 @@ def user_update(userid, **connection_args):
     :return: Id of the updated user on success.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_update 16 visible_name='James Brown'
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    medias = connection_args.pop("medias", None)
+    if medias is None:
+        medias = connection_args.pop("user_medias", None)
+    else:
+        medias.extend(connection_args.pop("user_medias", []))
+
     try:
         if conn_args:
-            method = 'user.update'
-            params = {"userid": userid, }
+            method = "user.update"
+            params = {
+                "userid": userid,
+            }
+
+            if Version(zabbix_version) < Version("3.4") and medias is not None:
+                ret = {
+                    "result": False,
+                    "comment": "Setting medias available in Zabbix 3.4+",
+                }
+                return ret
+            elif Version(zabbix_version) > Version("5.0") and medias is not None:
+                params["medias"] = medias
+            elif medias is not None:
+                params["user_medias"] = medias
+
+            if "usrgrps" in connection_args:
+                params["usrgrps"] = _map_to_list_of_dicts(
+                    connection_args.pop("usrgrps"), "usrgrpid"
+                )
+
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['userids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["userids"]
         else:
             raise KeyError
     except KeyError:
@@ -438,7 +802,7 @@ def user_update(userid, **connection_args):
 
 
 def user_getmedia(userids=None, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Retrieve media according to the given parameters
@@ -458,31 +822,42 @@ def user_getmedia(userids=None, **connection_args):
     :return: List of retrieved media, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_getmedia
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    if Version(zabbix_version) > Version("3.4"):
+        users = user_get(userids=userids, **connection_args)
+        medias = []
+        for user in users:
+            medias.extend(user.get("medias", []))
+        return medias
+
     try:
         if conn_args:
-            method = 'usermedia.get'
+            method = "usermedia.get"
+            params = {}
             if userids:
-                params = {"userids": userids}
-            else:
-                params = {}
+                params["userids"] = userids
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
         return ret
 
 
-def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **connection_args):
-    '''
-    Add new media to multiple users.
+def user_addmedia(
+    userids, active, mediatypeid, period, sendto, severity, **connection_args
+):
+    """
+    Add new media to multiple users. Available only for Zabbix version 3.4 or older.
 
     .. versionadded:: 2016.3.0
 
@@ -499,29 +874,50 @@ def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **conn
     :return: IDs of the created media.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_addmedia 4 active=0 mediatypeid=1 period='1-7,00:00-24:00' sendto='support2@example.com'
         severity=63
 
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    method = "user.addmedia"
+
+    if Version(zabbix_version) > Version("3.4"):
+        ret = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+        return ret
+
     try:
         if conn_args:
-            method = 'user.addmedia'
+            method = "user.addmedia"
             params = {"users": []}
             # Users
             if not isinstance(userids, list):
                 userids = [userids]
             for user in userids:
-                params['users'].append({"userid": user})
+                params["users"].append({"userid": user})
             # Medias
-            params['medias'] = [{"active": active, "mediatypeid": mediatypeid, "period": period,
-                                 "sendto": sendto, "severity": severity}, ]
+            params["medias"] = [
+                {
+                    "active": active,
+                    "mediatypeid": mediatypeid,
+                    "period": period,
+                    "sendto": sendto,
+                    "severity": severity,
+                },
+            ]
 
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['mediaids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["mediaids"]
         else:
             raise KeyError
     except KeyError:
@@ -529,8 +925,8 @@ def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **conn
 
 
 def user_deletemedia(mediaids, **connection_args):
-    '''
-    Delete media by id.
+    """
+    Delete media by id. Available only for Zabbix version 3.4 or older.
 
     .. versionadded:: 2016.3.0
 
@@ -542,21 +938,33 @@ def user_deletemedia(mediaids, **connection_args):
     :return: IDs of the deleted media, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_deletemedia 27
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    method = "user.deletemedia"
+
+    if Version(zabbix_version) > Version("3.4"):
+        ret = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+        return ret
+
     try:
         if conn_args:
-            method = 'user.deletemedia'
-
             if not isinstance(mediaids, list):
                 mediaids = [mediaids]
             params = mediaids
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['mediaids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["mediaids"]
         else:
             raise KeyError
     except KeyError:
@@ -564,7 +972,7 @@ def user_deletemedia(mediaids, **connection_args):
 
 
 def user_list(**connection_args):
-    '''
+    """
     Retrieve all of the configured users.
 
     .. versionadded:: 2016.3.0
@@ -576,18 +984,19 @@ def user_list(**connection_args):
     :return: Array with user details.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_list
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'user.get'
+            method = "user.get"
             params = {"output": "extend"}
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -595,7 +1004,7 @@ def user_list(**connection_args):
 
 
 def usergroup_create(name, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Create new user group
@@ -614,19 +1023,20 @@ def usergroup_create(name, **connection_args):
     :return:  IDs of the created user groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_create GroupName
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usergroup.create'
+            method = "usergroup.create"
             params = {"name": name}
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['usrgrpids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["usrgrpids"]
         else:
             raise KeyError
     except KeyError:
@@ -634,7 +1044,7 @@ def usergroup_create(name, **connection_args):
 
 
 def usergroup_delete(usergroupids, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     :param usergroupids: IDs of the user groups to delete
@@ -646,20 +1056,21 @@ def usergroup_delete(usergroupids, **connection_args):
     :return: IDs of the deleted user groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_delete 28
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usergroup.delete'
+            method = "usergroup.delete"
             if not isinstance(usergroupids, list):
                 usergroupids = [usergroupids]
             params = usergroupids
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['usrgrpids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["usrgrpids"]
         else:
             raise KeyError
     except KeyError:
@@ -667,7 +1078,7 @@ def usergroup_delete(usergroupids, **connection_args):
 
 
 def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
-    '''
+    """
     Checks if at least one user group that matches the given filter criteria exists
 
     .. versionadded:: 2016.3.0
@@ -683,38 +1094,44 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     :return: True if at least one user group that matches the given filter criteria exists, else False.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_exists Guests
-    '''
+    """
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             # usergroup.exists deprecated
-            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+            if Version(zabbix_version) > Version("2.5"):
                 if not name:
-                    name = ''
+                    name = ""
                 ret = usergroup_get(name, None, **connection_args)
                 return bool(ret)
             # zabbix 2.4 and earlier
             else:
-                method = 'usergroup.exists'
+                method = "usergroup.exists"
                 params = {}
                 if not name and not node and not nodeids:
-                    return {'result': False, 'comment': 'Please submit name, node or nodeids parameter to check if '
-                                                        'at least one user group exists.'}
+                    return {
+                        "result": False,
+                        "comment": (
+                            "Please submit name, node or nodeids parameter to check if "
+                            "at least one user group exists."
+                        ),
+                    }
                 if name:
-                    params['name'] = name
+                    params["name"] = name
                 # deprecated in 2.4
-                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
+                if Version(zabbix_version) < Version("2.4"):
                     if node:
-                        params['node'] = node
+                        params["node"] = node
                     if nodeids:
-                        params['nodeids'] = nodeids
-                ret = _query(method, params, conn_args['url'], conn_args['auth'])
-                return ret['result']
+                        params["nodeids"] = nodeids
+                ret = _query(method, params, conn_args["url"], conn_args["auth"])
+                return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -722,7 +1139,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
 
 
 def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Retrieve user groups according to the given parameters
@@ -743,33 +1160,34 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
     :return: Array with convenient user groups details, False if no user group found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_get Guests
-    '''
+    """
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usergroup.get'
+            method = "usergroup.get"
             # Versions above 2.4 allow retrieving user group permissions
-            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+            if Version(zabbix_version) > Version("2.5"):
                 params = {"selectRights": "extend", "output": "extend", "filter": {}}
             else:
                 params = {"output": "extend", "filter": {}}
             if not name and not usrgrpids and not userids:
                 return False
             if name:
-                params['filter'].setdefault('name', name)
+                params["filter"].setdefault("name", name)
             if usrgrpids:
-                params.setdefault('usrgrpids', usrgrpids)
+                params.setdefault("usrgrpids", usrgrpids)
             if userids:
-                params.setdefault('userids', userids)
+                params.setdefault("userids", userids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
 
-            return False if len(ret['result']) < 1 else ret['result']
+            return False if not ret["result"] else ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -777,7 +1195,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
 
 
 def usergroup_update(usrgrpid, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Update existing user group
@@ -796,19 +1214,20 @@ def usergroup_update(usrgrpid, **connection_args):
     :return: IDs of the updated user group, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_update 8 name=guestsRenamed
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usergroup.update'
+            method = "usergroup.update"
             params = {"usrgrpid": usrgrpid}
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['usrgrpids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["usrgrpids"]
         else:
             raise KeyError
     except KeyError:
@@ -816,7 +1235,7 @@ def usergroup_update(usrgrpid, **connection_args):
 
 
 def usergroup_list(**connection_args):
-    '''
+    """
     Retrieve all enabled user groups.
 
     .. versionadded:: 2016.3.0
@@ -828,18 +1247,21 @@ def usergroup_list(**connection_args):
     :return: Array with enabled user groups details, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_list
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usergroup.get'
-            params = {"output": "extend", }
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            method = "usergroup.get"
+            params = {
+                "output": "extend",
+            }
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -847,7 +1269,7 @@ def usergroup_list(**connection_args):
 
 
 def host_create(host, groups, interfaces, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Create new host
@@ -876,28 +1298,25 @@ def host_create(host, groups, interfaces, **connection_args):
 
         salt '*' zabbix.host_create technicalname 4
         interfaces='{type: 1, main: 1, useip: 1, ip: "192.168.3.1", dns: "", port: 10050}'
-        visible_name='Host Visible Name'
-    '''
+        visible_name='Host Visible Name' inventory_mode=0 inventory='{"alias": "something"}'
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'host.create'
+            method = "host.create"
             params = {"host": host}
             # Groups
             if not isinstance(groups, list):
                 groups = [groups]
-            grps = []
-            for group in groups:
-                grps.append({"groupid": group})
-            params['groups'] = grps
+            params["groups"] = _map_to_list_of_dicts(groups, "groupid")
             # Interfaces
             if not isinstance(interfaces, list):
                 interfaces = [interfaces]
-            params['interfaces'] = interfaces
+            params["interfaces"] = interfaces
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostids"]
         else:
             raise KeyError
     except KeyError:
@@ -905,7 +1324,7 @@ def host_create(host, groups, interfaces, **connection_args):
 
 
 def host_delete(hostids, **connection_args):
-    '''
+    """
     Delete hosts.
 
     .. versionadded:: 2016.3.0
@@ -918,29 +1337,32 @@ def host_delete(hostids, **connection_args):
     :return: IDs of the deleted hosts.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_delete 10106
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'host.delete'
+            method = "host.delete"
             if not isinstance(hostids, list):
                 params = [hostids]
             else:
                 params = hostids
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostids"]
         else:
             raise KeyError
     except KeyError:
         return ret
 
 
-def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **connection_args):
-    '''
+def host_exists(
+    host=None, hostid=None, name=None, node=None, nodeids=None, **connection_args
+):
+    """
     Checks if at least one host that matches the given filter criteria exists.
 
     .. versionadded:: 2016.3.0
@@ -957,17 +1379,18 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
     :return: IDs of the deleted hosts, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_exists 'Zabbix server'
-    '''
+    """
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+            if Version(zabbix_version) > Version("2.5"):
                 if not host:
                     host = None
                 if not name:
@@ -978,26 +1401,31 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
                 return bool(ret)
             # zabbix 2.4 nad earlier
             else:
-                method = 'host.exists'
+                method = "host.exists"
                 params = {}
                 if hostid:
-                    params['hostid'] = hostid
+                    params["hostid"] = hostid
                 if host:
-                    params['host'] = host
+                    params["host"] = host
                 if name:
-                    params['name'] = name
+                    params["name"] = name
                 # deprecated in 2.4
-                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
+                if Version(zabbix_version) < Version("2.4"):
                     if node:
-                        params['node'] = node
+                        params["node"] = node
                     if nodeids:
-                        params['nodeids'] = nodeids
+                        params["nodeids"] = nodeids
                 if not hostid and not host and not name and not node and not nodeids:
-                    return {'result': False, 'comment': 'Please submit hostid, host, name, node or nodeids parameter to'
-                                                        'check if at least one host that matches the given filter '
-                                                        'criteria exists.'}
-                ret = _query(method, params, conn_args['url'], conn_args['auth'])
-                return ret['result']
+                    return {
+                        "result": False,
+                        "comment": (
+                            "Please submit hostid, host, name, node or nodeids"
+                            " parameter tocheck if at least one host that matches the"
+                            " given filter criteria exists."
+                        ),
+                    }
+                ret = _query(method, params, conn_args["url"], conn_args["auth"])
+                return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1005,7 +1433,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
 
 
 def host_get(host=None, name=None, hostids=None, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Retrieve hosts according to the given parameters
@@ -1027,27 +1455,28 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
     :return: Array with convenient hosts details, False if no host found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_get 'Zabbix server'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'host.get'
+            method = "host.get"
             params = {"output": "extend", "filter": {}}
             if not name and not hostids and not host:
                 return False
             if name:
-                params['filter'].setdefault('name', name)
+                params["filter"].setdefault("name", name)
             if hostids:
-                params.setdefault('hostids', hostids)
+                params.setdefault("hostids", hostids)
             if host:
-                params['filter'].setdefault('host', host)
+                params["filter"].setdefault("host", host)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1055,7 +1484,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
 
 
 def host_update(hostid, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Update existing hosts
@@ -1080,19 +1509,123 @@ def host_update(hostid, **connection_args):
     :return: ID of the updated host.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_update 10084 name='Zabbix server2'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'host.update'
+            method = "host.update"
             params = {"hostid": hostid}
+            if "groups" in connection_args:
+                params["groups"] = _map_to_list_of_dicts(
+                    connection_args.pop("groups"), "groupid"
+                )
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostids"]
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def host_inventory_get(hostids, **connection_args):
+    """
+    Retrieve host inventory according to the given parameters.
+    See: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
+
+    .. versionadded:: 2019.2.0
+
+    :param hostids: ID of the host to query
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with host inventory fields, populated or not, False if host inventory is disabled or on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.host_inventory_get 101054
+    """
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = "host.get"
+            params = {"selectInventory": "extend"}
+            if hostids:
+                params.setdefault("hostids", hostids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return (
+                ret["result"][0]["inventory"]
+                if ret["result"] and ret["result"][0]["inventory"]
+                else False
+            )
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def host_inventory_set(hostid, **connection_args):
+    """
+    Update host inventory items
+    NOTE: This function accepts all standard host: keyword argument names for inventory
+    see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
+
+    .. versionadded:: 2019.2.0
+
+    :param hostid: ID of the host to update
+    :param clear_old: Set to True in order to remove all existing inventory items before setting the specified items
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of the updated host, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.host_inventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
+    """
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params = {}
+            clear_old = False
+            method = "host.update"
+
+            if connection_args.get("clear_old"):
+                clear_old = True
+            connection_args.pop("clear_old", None)
+
+            inventory_mode = connection_args.pop("inventory_mode", "0")
+
+            inventory_params = dict(_params_extend(params, **connection_args))
+            for key in inventory_params:
+                params.pop(key, None)
+
+            if hostid:
+                params.setdefault("hostid", hostid)
+            if clear_old:
+                # Set inventory to disabled in order to clear existing data
+                params["inventory_mode"] = "-1"
+                ret = _query(method, params, conn_args["url"], conn_args["auth"])
+
+            # Set inventory mode to manual in order to submit inventory data
+            params["inventory_mode"] = inventory_mode
+            params["inventory"] = inventory_params
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1100,7 +1633,7 @@ def host_update(hostid, **connection_args):
 
 
 def host_list(**connection_args):
-    '''
+    """
     Retrieve all hosts.
 
     .. versionadded:: 2016.3.0
@@ -1112,18 +1645,21 @@ def host_list(**connection_args):
     :return: Array with details about hosts, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_list
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'host.get'
-            params = {"output": "extend", }
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            method = "host.get"
+            params = {
+                "output": "extend",
+            }
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1131,7 +1667,7 @@ def host_list(**connection_args):
 
 
 def hostgroup_create(name, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Create a host group
@@ -1150,19 +1686,20 @@ def hostgroup_create(name, **connection_args):
     :return: ID of the created host group.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_create MyNewGroup
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostgroup.create'
+            method = "hostgroup.create"
             params = {"name": name}
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['groupids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["groupids"]
         else:
             raise KeyError
     except KeyError:
@@ -1170,7 +1707,7 @@ def hostgroup_create(name, **connection_args):
 
 
 def hostgroup_delete(hostgroupids, **connection_args):
-    '''
+    """
     Delete the host group.
 
     .. versionadded:: 2016.3.0
@@ -1183,29 +1720,32 @@ def hostgroup_delete(hostgroupids, **connection_args):
     :return: ID of the deleted host groups, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_delete 23
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostgroup.delete'
+            method = "hostgroup.delete"
             if not isinstance(hostgroupids, list):
                 params = [hostgroupids]
             else:
                 params = hostgroupids
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['groupids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["groupids"]
         else:
             raise KeyError
     except KeyError:
         return ret
 
 
-def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connection_args):
-    '''
+def hostgroup_exists(
+    name=None, groupid=None, node=None, nodeids=None, **connection_args
+):
+    """
     Checks if at least one host group that matches the given filter criteria exists.
 
     .. versionadded:: 2016.3.0
@@ -1221,17 +1761,18 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
     :return: True if at least one host group exists, False if not or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_exists MyNewGroup
-    '''
+    """
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+            if Version(zabbix_version) > Version("2.5"):
                 if not groupid:
                     groupid = None
                 if not name:
@@ -1241,23 +1782,28 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
             # zabbix 2.4 nad earlier
             else:
                 params = {}
-                method = 'hostgroup.exists'
+                method = "hostgroup.exists"
                 if groupid:
-                    params['groupid'] = groupid
+                    params["groupid"] = groupid
                 if name:
-                    params['name'] = name
+                    params["name"] = name
                 # deprecated in 2.4
-                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
+                if Version(zabbix_version) < Version("2.4"):
                     if node:
-                        params['node'] = node
+                        params["node"] = node
                     if nodeids:
-                        params['nodeids'] = nodeids
+                        params["nodeids"] = nodeids
                 if not groupid and not name and not node and not nodeids:
-                    return {'result': False, 'comment': 'Please submit groupid, name, node or nodeids parameter to'
-                                                        'check if at least one host group that matches the given filter'
-                                                        ' criteria exists.'}
-                ret = _query(method, params, conn_args['url'], conn_args['auth'])
-                return ret['result']
+                    return {
+                        "result": False,
+                        "comment": (
+                            "Please submit groupid, name, node or nodeids parameter"
+                            " tocheck if at least one host group that matches the given"
+                            " filter criteria exists."
+                        ),
+                    }
+                ret = _query(method, params, conn_args["url"], conn_args["auth"])
+                return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1265,7 +1811,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
 
 
 def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Retrieve host groups according to the given parameters
@@ -1289,28 +1835,29 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
     :return: Array with host groups details, False if no convenient host group found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_get MyNewGroup
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostgroup.get'
+            method = "hostgroup.get"
             params = {"output": "extend"}
             if not groupids and not name and not hostids:
                 return False
             if name:
                 name_dict = {"name": name}
-                params.setdefault('filter', name_dict)
+                params.setdefault("filter", name_dict)
             if groupids:
-                params.setdefault('groupids', groupids)
+                params.setdefault("groupids", groupids)
             if hostids:
-                params.setdefault('hostids', hostids)
+                params.setdefault("hostids", hostids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1318,7 +1865,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
 
 
 def hostgroup_update(groupid, name=None, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Update existing hosts group
@@ -1338,21 +1885,22 @@ def hostgroup_update(groupid, name=None, **connection_args):
     :return: IDs of updated host groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_update 24 name='Renamed Name'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostgroup.update'
+            method = "hostgroup.update"
             params = {"groupid": groupid}
             if name:
-                params['name'] = name
+                params["name"] = name
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['groupids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["groupids"]
         else:
             raise KeyError
     except KeyError:
@@ -1360,7 +1908,7 @@ def hostgroup_update(groupid, name=None, **connection_args):
 
 
 def hostgroup_list(**connection_args):
-    '''
+    """
     Retrieve all host groups.
 
     .. versionadded:: 2016.3.0
@@ -1372,18 +1920,21 @@ def hostgroup_list(**connection_args):
     :return: Array with details about host groups, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_list
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostgroup.get'
-            params = {"output": "extend", }
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            method = "hostgroup.get"
+            params = {
+                "output": "extend",
+            }
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1391,7 +1942,7 @@ def hostgroup_list(**connection_args):
 
 
 def hostinterface_get(hostids, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Retrieve host groups according to the given parameters
@@ -1414,29 +1965,32 @@ def hostinterface_get(hostids, **connection_args):
     :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_get 101054
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostinterface.get'
+            method = "hostinterface.get"
             params = {"output": "extend"}
             if hostids:
-                params.setdefault('hostids', hostids)
+                params.setdefault("hostids", hostids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
         return ret
 
 
-def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None, **connection_args):
-    '''
+def hostinterface_create(
+    hostid, ip_, dns="", main=1, if_type=1, useip=1, port=None, **connection_args
+):
+    """
     .. versionadded:: 2016.3.0
 
     Create new host interface
@@ -1449,7 +2003,7 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
 
     :param hostid: ID of the host the interface belongs to
 
-    :param ip: IP address used by the interface
+    :param ip_: IP address used by the interface
 
     :param dns: DNS name used by the interface
 
@@ -1475,23 +2029,32 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
     :return: ID of the created host interface, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_create 10105 192.193.194.197
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
 
     if not port:
-        port = INTERFACE_DEFAULT_PORTS[type]
+        port = INTERFACE_DEFAULT_PORTS[if_type]
 
     try:
         if conn_args:
-            method = 'hostinterface.create'
-            params = {"hostid": hostid, "ip": ip, "dns": dns, "main": main, "port": port, "type": type, "useip": useip}
+            method = "hostinterface.create"
+            params = {
+                "hostid": hostid,
+                "ip": ip_,
+                "dns": dns,
+                "main": main,
+                "port": port,
+                "type": if_type,
+                "useip": useip,
+            }
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['interfaceids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["interfaceids"]
         else:
             raise KeyError
     except KeyError:
@@ -1499,7 +2062,7 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
 
 
 def hostinterface_delete(interfaceids, **connection_args):
-    '''
+    """
     Delete host interface
 
     .. versionadded:: 2016.3.0
@@ -1512,21 +2075,22 @@ def hostinterface_delete(interfaceids, **connection_args):
     :return: ID of deleted host interfaces, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_delete 50
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostinterface.delete'
+            method = "hostinterface.delete"
             if isinstance(interfaceids, list):
                 params = interfaceids
             else:
                 params = [interfaceids]
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['interfaceids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["interfaceids"]
         else:
             raise KeyError
     except KeyError:
@@ -1534,7 +2098,7 @@ def hostinterface_delete(interfaceids, **connection_args):
 
 
 def hostinterface_update(interfaceid, **connection_args):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Update host interface
@@ -1556,28 +2120,36 @@ def hostinterface_update(interfaceid, **connection_args):
     :return: ID of the updated host interface, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
-        salt '*' zabbix.hostinterface_update 6 ip=0.0.0.2
-    '''
+        salt '*' zabbix.hostinterface_update 6 ip_=0.0.0.2
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'hostinterface.update'
+            method = "hostinterface.update"
             params = {"interfaceid": interfaceid}
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['interfaceids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["interfaceids"]
         else:
             raise KeyError
     except KeyError:
         return ret
 
 
-def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
-                  globalmacroids=None, globalmacro=False, **connection_args):
-    '''
+def usermacro_get(
+    macro=None,
+    hostids=None,
+    templateids=None,
+    hostmacroids=None,
+    globalmacroids=None,
+    globalmacro=False,
+    **connection_args,
+):
+    """
     Retrieve user macros according to the given parameters.
 
     Args:
@@ -1598,37 +2170,38 @@ def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
         Array with usermacro details, False if no usermacro found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_get macro='{$SNMP_COMMUNITY}'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usermacro.get'
+            method = "usermacro.get"
             params = {"output": "extend", "filter": {}}
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
-                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + str(next(iter(macro))) + "}"
+                if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
-                params['filter'].setdefault('macro', macro)
+                params["filter"].setdefault("macro", macro)
             if hostids:
-                params.setdefault('hostids', hostids)
+                params.setdefault("hostids", hostids)
             elif templateids:
-                params.setdefault('templateids', hostids)
+                params.setdefault("templateids", hostids)
             if hostmacroids:
-                params.setdefault('hostmacroids', hostmacroids)
+                params.setdefault("hostmacroids", hostmacroids)
             elif globalmacroids:
                 globalmacro = True
-                params.setdefault('globalmacroids', globalmacroids)
+                params.setdefault("globalmacroids", globalmacroids)
             if globalmacro:
                 params = _params_extend(params, globalmacro=True)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1636,7 +2209,7 @@ def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
 
 
 def usermacro_create(macro, value, hostid, **connection_args):
-    '''
+    """
     Create new host usermacro.
 
     :param macro: name of the host usermacro
@@ -1653,25 +2226,25 @@ def usermacro_create(macro, value, hostid, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_create '{$SNMP_COMMUNITY}' 'public' 1
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
             params = {}
-            method = 'usermacro.create'
+            method = "usermacro.create"
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
-                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + str(next(iter(macro))) + "}"
+                if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
-                params['macro'] = macro
-            params['value'] = value
-            params['hostid'] = hostid
+                params["macro"] = macro
+            params["value"] = value
+            params["hostid"] = hostid
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostmacroids'][0]
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostmacroids"][0]
         else:
             raise KeyError
     except KeyError:
@@ -1679,7 +2252,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
 
 
 def usermacro_createglobal(macro, value, **connection_args):
-    '''
+    """
     Create new global usermacro.
 
     :param macro: name of the global usermacro
@@ -1695,24 +2268,24 @@ def usermacro_createglobal(macro, value, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_createglobal '{$SNMP_COMMUNITY}' 'public'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
             params = {}
-            method = 'usermacro.createglobal'
+            method = "usermacro.createglobal"
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
-                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + str(next(iter(macro))) + "}"
+                if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
-                params['macro'] = macro
-            params['value'] = value
+                params["macro"] = macro
+            params["value"] = value
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['globalmacroids'][0]
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["globalmacroids"][0]
         else:
             raise KeyError
     except KeyError:
@@ -1720,7 +2293,7 @@ def usermacro_createglobal(macro, value, **connection_args):
 
 
 def usermacro_delete(macroids, **connection_args):
-    '''
+    """
     Delete host usermacros.
 
     :param macroids: macroids of the host usermacros
@@ -1736,18 +2309,18 @@ def usermacro_delete(macroids, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_delete 21
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usermacro.delete'
+            method = "usermacro.delete"
             if isinstance(macroids, list):
                 params = macroids
             else:
                 params = [macroids]
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostmacroids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostmacroids"]
         else:
             raise KeyError
     except KeyError:
@@ -1755,7 +2328,7 @@ def usermacro_delete(macroids, **connection_args):
 
 
 def usermacro_deleteglobal(macroids, **connection_args):
-    '''
+    """
     Delete global usermacros.
 
     :param macroids: macroids of the global usermacros
@@ -1771,18 +2344,18 @@ def usermacro_deleteglobal(macroids, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_deleteglobal 21
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'usermacro.deleteglobal'
+            method = "usermacro.deleteglobal"
             if isinstance(macroids, list):
                 params = macroids
             else:
                 params = [macroids]
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['globalmacroids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["globalmacroids"]
         else:
             raise KeyError
     except KeyError:
@@ -1790,7 +2363,7 @@ def usermacro_deleteglobal(macroids, **connection_args):
 
 
 def usermacro_update(hostmacroid, value, **connection_args):
-    '''
+    """
     Update existing host usermacro.
 
     :param hostmacroid: id of the host usermacro
@@ -1806,18 +2379,18 @@ def usermacro_update(hostmacroid, value, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_update 1 'public'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
             params = {}
-            method = 'usermacro.update'
-            params['hostmacroid'] = hostmacroid
-            params['value'] = value
+            method = "usermacro.update"
+            params["hostmacroid"] = hostmacroid
+            params["value"] = value
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['hostmacroids'][0]
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["hostmacroids"][0]
         else:
             raise KeyError
     except KeyError:
@@ -1825,7 +2398,7 @@ def usermacro_update(hostmacroid, value, **connection_args):
 
 
 def usermacro_updateglobal(globalmacroid, value, **connection_args):
-    '''
+    """
     Update existing global usermacro.
 
     :param globalmacroid: id of the host usermacro
@@ -1841,18 +2414,18 @@ def usermacro_updateglobal(globalmacroid, value, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_updateglobal 1 'public'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
             params = {}
-            method = 'usermacro.updateglobal'
-            params['globalmacroid'] = globalmacroid
-            params['value'] = value
+            method = "usermacro.updateglobal"
+            params["globalmacroid"] = globalmacroid
+            params["value"] = value
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['globalmacroids'][0]
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["globalmacroids"][0]
         else:
             raise KeyError
     except KeyError:
@@ -1860,7 +2433,7 @@ def usermacro_updateglobal(globalmacroid, value, **connection_args):
 
 
 def mediatype_get(name=None, mediatypeids=None, **connection_args):
-    '''
+    """
     Retrieve mediatypes according to the given parameters.
 
     Args:
@@ -1872,7 +2445,7 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix version, see:
+                all optional mediatype.get parameters: keyword argument names depends on your zabbix version, see:
 
                 https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
 
@@ -1880,24 +2453,30 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         Array with mediatype details, False if no mediatype found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.mediatype_get name='Email'
         salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'mediatype.get'
+            method = "mediatype.get"
             params = {"output": "extend", "filter": {}}
             if name:
-                params['filter'].setdefault('description', name)
+                # since zabbix API 4.4, mediatype has new attribute: name
+                if Version(zabbix_version) >= Version("4.4"):
+                    params["filter"].setdefault("name", name)
+                else:
+                    params["filter"].setdefault("description", name)
             if mediatypeids:
-                params.setdefault('mediatypeids', mediatypeids)
+                params.setdefault("mediatypeids", mediatypeids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1905,7 +2484,7 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
 
 
 def mediatype_create(name, mediatype, **connection_args):
-    '''
+    """
     Create new mediatype
 
     .. note::
@@ -1935,17 +2514,24 @@ def mediatype_create(name, mediatype, **connection_args):
 
         salt '*' zabbix.mediatype_create 'Email' 0 smtp_email='noreply@example.com'
         smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
-    '''
+    """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'mediatype.create'
-            params = {"description": name}
-            params['type'] = mediatype
-            params = _params_extend(params, _ignore_name=True, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['mediatypeid']
+            method = "mediatype.create"
+            # since zabbix 4.4 api, mediatype has new attribute: name
+            if Version(zabbix_version) >= Version("4.4"):
+                params = {"name": name}
+                _ignore_name = False
+            else:
+                params = {"description": name}
+                _ignore_name = True
+            params["type"] = mediatype
+            params = _params_extend(params, _ignore_name, **connection_args)
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["mediatypeid"]
         else:
             raise KeyError
     except KeyError:
@@ -1953,7 +2539,7 @@ def mediatype_create(name, mediatype, **connection_args):
 
 
 def mediatype_delete(mediatypeids, **connection_args):
-    '''
+    """
     Delete mediatype
 
 
@@ -1965,21 +2551,22 @@ def mediatype_delete(mediatypeids, **connection_args):
     :return: ID of deleted mediatype, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.mediatype_delete 3
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'mediatype.delete'
+            method = "mediatype.delete"
             if isinstance(mediatypeids, list):
                 params = mediatypeids
             else:
                 params = [mediatypeids]
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['mediatypeids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["mediatypeids"]
         else:
             raise KeyError
     except KeyError:
@@ -1987,7 +2574,7 @@ def mediatype_delete(mediatypeids, **connection_args):
 
 
 def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args):
-    '''
+    """
     Update existing mediatype
 
     .. note::
@@ -2004,23 +2591,24 @@ def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args
     :return: IDs of the updated mediatypes, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_update 8 name="Email update"
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'mediatype.update'
+            method = "mediatype.update"
             params = {"mediatypeid": mediatypeid}
             if name:
-                params['description'] = name
+                params["description"] = name
             if mediatype:
-                params['type'] = mediatype
+                params["type"] = mediatype
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['mediatypeids']
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"]["mediatypeids"]
         else:
             raise KeyError
     except KeyError:
@@ -2028,7 +2616,7 @@ def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args
 
 
 def template_get(name=None, host=None, templateids=None, **connection_args):
-    '''
+    """
     Retrieve templates according to the given parameters.
 
     Args:
@@ -2041,7 +2629,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
+                all optional template.get parameters: keyword argument names depends on your zabbix version, see:
 
                 https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
 
@@ -2049,26 +2637,27 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         Array with convenient template details, False if no template found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.template_get name='Template OS Linux'
         salt '*' zabbix.template_get templateids="['10050', '10001']"
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            method = 'template.get'
+            method = "template.get"
             params = {"output": "extend", "filter": {}}
             if name:
-                params['filter'].setdefault('name', name)
+                params["filter"].setdefault("name", name)
             if host:
-                params['filter'].setdefault('host', host)
+                params["filter"].setdefault("host", host)
             if templateids:
-                params.setdefault('templateids', templateids)
+                params.setdefault("templateids", templateids)
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -2076,7 +2665,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
 
 
 def run_query(method, params, **connection_args):
-    '''
+    """
     Send Zabbix API call
 
     Args:
@@ -2088,7 +2677,7 @@ def run_query(method, params, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
+                all optional template.get parameters: keyword argument names depends on your zabbix version, see:
 
                 https://www.zabbix.com/documentation/2.4/manual/api/reference/
 
@@ -2096,18 +2685,141 @@ def run_query(method, params, **connection_args):
         Response from Zabbix API
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.run_query proxy.create '{"host": "zabbixproxy.domain.com", "status": "5"}'
-    '''
+    """
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
             params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result'] if len(ret['result']) > 0 else False
+            ret = _query(method, params, conn_args["url"], conn_args["auth"])
+            if isinstance(ret["result"], bool):
+                return ret["result"]
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
         return ret
+
+
+def configuration_import(config_file, rules=None, file_format="xml", **connection_args):
+    """
+    .. versionadded:: 2017.7.0
+
+    Imports Zabbix configuration specified in file to Zabbix server.
+
+    :param config_file: File with Zabbix config (local or remote)
+    :param rules: Optional - Rules that have to be different from default (defaults are the same as in Zabbix web UI.)
+    :param file_format: Config file format (default: xml)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.configuration_import salt://zabbix/config/zabbix_templates.xml \
+        "{'screens': {'createMissing': True, 'updateExisting': True}}"
+    """
+    zabbix_version = apiinfo_version(**connection_args)
+
+    if rules is None:
+        rules = {}
+    default_rules = {
+        "discoveryRules": {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        },
+        "graphs": {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        },
+        "groups": {"createMissing": True},
+        "hosts": {"createMissing": False, "updateExisting": False},
+        "images": {"createMissing": False, "updateExisting": False},
+        "items": {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        },
+        "maps": {"createMissing": False, "updateExisting": False},
+        "screens": {"createMissing": False, "updateExisting": False},
+        "templateLinkage": {"createMissing": True},
+        "templates": {"createMissing": True, "updateExisting": True},
+        "templateScreens": {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        },
+        "triggers": {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        },
+        "valueMaps": {"createMissing": True, "updateExisting": False},
+    }
+    if Version(zabbix_version) >= Version("3.2"):
+        # rules/httptests added
+        default_rules["httptests"] = {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        }
+    if Version(zabbix_version) >= Version("3.4"):
+        # rules/applications/upateExisting deprecated
+        default_rules["applications"] = {"createMissing": True, "deleteMissing": False}
+    else:
+        default_rules["applications"] = {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        }
+    new_rules = dict(default_rules)
+
+    if rules:
+        for rule in rules:
+            if rule in new_rules:
+                new_rules[rule].update(rules[rule])
+            else:
+                new_rules[rule] = rules[rule]
+    if "salt://" in config_file:
+        tmpfile = salt.utils.files.mkstemp()
+        cfile = __salt__["cp.get_file"](config_file, tmpfile)
+        if not cfile or os.path.getsize(cfile) == 0:
+            return {
+                "name": config_file,
+                "result": False,
+                "message": "Failed to fetch config file.",
+            }
+    else:
+        cfile = config_file
+        if not os.path.isfile(cfile):
+            return {
+                "name": config_file,
+                "result": False,
+                "message": "Invalid file path.",
+            }
+
+    with salt.utils.files.fopen(cfile, mode="r") as fp_:
+        xml = fp_.read()
+
+    if "salt://" in config_file:
+        salt.utils.files.safe_rm(cfile)
+
+    params = {"format": file_format, "rules": new_rules, "source": xml}
+    log.info("CONFIGURATION IMPORT: rules: %s", str(params["rules"]))
+    try:
+        run_query("configuration.import", params, **connection_args)
+        return {
+            "name": config_file,
+            "result": True,
+            "message": 'Zabbix API "configuration.import" method called successfully.',
+        }
+    except SaltException as exc:
+        return {"name": config_file, "result": False, "message": str(exc)}

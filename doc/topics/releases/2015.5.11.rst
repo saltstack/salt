@@ -14,7 +14,13 @@ Statistics
 - Total Issue References: **73**
 - Total PR References: **162**
 
-- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_, `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_, `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_, `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_, `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_, `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_, `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
+- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_,
+  `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_,
+  `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_,
+  `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_,
+  `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_,
+  `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_,
+  `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
 
 
 Changelog for v2015.5.10..v2015.5.11
@@ -259,7 +265,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * **PR** `#32421`_: (`terminalmage`_) Ignore Raspbian in service.py __virtual__
 
-* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addesses
+* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addresses
 
 * **ISSUE** `saltstack/salt#28262`_: (`palica`_) FreeBSD pkgng provider raising error for minion (refs: `#32376`_)
 
@@ -434,9 +440,9 @@ Changelog for v2015.5.10..v2015.5.11
 
   * d18b4be80b remove whitespace end of line 186:q
 
-  * d2b89c85ad fix formating
+  * d2b89c85ad fix formatting
 
-  * 103cee9e29 cleaned up formating
+  * 103cee9e29 cleaned up formatting
 
   * 7a4d7f0bff added whitespace
 
@@ -523,12 +529,12 @@ Changelog for v2015.5.10..v2015.5.11
 
   * 4af8c9dbfc Back port nullsoft build script from 2015.8
 
-* **PR** `#31912`_: (`jfindlay`_) log.mixins: remove extermporaneous .record
+* **PR** `#31912`_: (`jfindlay`_) log.mixins: remove extemporaneous .record
   @ *2016-03-16 01:56:46 UTC*
 
   * 43240dc566 Merge pull request `#31912`_ from jfindlay/log_mixin
 
-  * 9f9c694654 log.mixins: remove extermporaneous .record
+  * 9f9c694654 log.mixins: remove extemporaneous .record
 
 * **PR** `#31825`_: (`justinta`_) Updated .testing.pylintrc to match newer versions of pylint
   @ *2016-03-15 18:12:44 UTC*
@@ -723,7 +729,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * f49cc75049 Set correct type for master_tops config value
 
-* **ISSUE** `#31614`_: (`frizzby`_) salt.utils.http.query() implementation contradicts it's documentation. decode arg (refs: `#31622`_)
+* **ISSUE** `#31614`_: (`frizzby`_) salt.utils.http.query() implementation contradicts its documentation. decode arg (refs: `#31622`_)
 
 * **PR** `#31622`_: (`jfindlay`_) doc/topics/tutorials/http: update query decoding docs
   @ *2016-03-02 18:23:44 UTC*
@@ -1057,7 +1063,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * 8e56be7f4c Merge pull request `#30548`_ from jacobhammons/doc-fixes
 
-  * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltstack.com
+  * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltproject.io
 
 * **PR** `#30530`_: (`terminalmage`_) 2015.5 tweaks from `#30529`_
   @ *2016-01-22 16:26:21 UTC*

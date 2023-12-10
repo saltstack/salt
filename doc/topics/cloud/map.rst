@@ -88,9 +88,9 @@ Any top level data element from your profile may be overridden in the map file:
 
     fedora_small:
       - web1:
-        size: t2.micro
+          size: t2.micro
       - web2:
-        size: t2.nano
+          size: t2.nano
 
 As of Salt 2017.7.0, nested elements are merged, and can can be specified
 individually without having to repeat the complete definition for each top
@@ -146,6 +146,26 @@ A map file may also be used with the various query options:
     ``--destroy`` with a map, every node in the map file will be deleted!*
     Maps don't provide any useful information for destroying individual nodes,
     and should not be used to destroy a subset of a map.
+
+
+Requiring Other Instances
+=========================
+
+The ``requires`` directive can be used in map files to ensure that one instance
+is created and available before another is created.
+
+.. code-block:: yaml
+
+    fedora_high:
+      - db1:
+          size: m5.xlarge
+      - web1:
+          size: m5.large
+          requires:
+            - db1
+
+This requisite is passed to the instance definition dicitonary in a map file
+and accepts a list of instance names as defined in the map.
 
 
 Setting up New Salt Masters

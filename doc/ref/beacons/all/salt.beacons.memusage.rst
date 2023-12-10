@@ -1,5 +1,5 @@
-salt.beacons.memusage module
-============================
+salt.beacons.memusage
+=====================
 
 .. automodule:: salt.beacons.memusage
     :members:

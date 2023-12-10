@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **52**
 - Total PR References: **163**
 
-- Contributors: **43** (`Adaephon-GH`_, `Ch3LL`_, `DmitryKuzmenko`_, `Foxlik`_, `GideonRed-zz`_, `The-Loeki`_, `UtahDave`_, `alexbleotu`_, `anlutro`_, `bobrik`_, `cachedout`_, `cro`_, `dincamihai`_, `drawsmcgraw`_, `fboismenu`_, `galet`_, `garethgreenaway`_, `grep4linux`_, `gtmanfred`_, `jacobhammons`_, `jfindlay`_, `joe-niland`_, `lvg01`_, `mbom2004`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `narendraingale2`_, `nasenbaer13`_, `ni3mm4nd`_, `rallytime`_, `s0undt3ch`_, `sergeizv`_, `smarsching`_, `techhat`_, `terminalmage`_, `thatch45`_, `twangboy`_, `velom`_, `vutny`_, `yue9944882`_)
+- Contributors: **43** (`Adaephon-GH`_, `Ch3LL`_, `DmitryKuzmenko`_, `Foxlik`_, `GideonRed-zz`_,
+  `The-Loeki`_, `UtahDave`_, `alexbleotu`_, `anlutro`_, `bobrik`_, `cachedout`_, `cro`_,
+  `dincamihai`_, `drawsmcgraw`_, `fboismenu`_, `galet`_, `garethgreenaway`_, `grep4linux`_,
+  `gtmanfred`_, `jacobhammons`_, `jfindlay`_, `joe-niland`_, `lvg01`_, `mbom2004`_, `mcalmer`_,
+  `mchugh19`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `narendraingale2`_, `nasenbaer13`_,
+  `ni3mm4nd`_, `rallytime`_, `s0undt3ch`_, `sergeizv`_, `smarsching`_, `techhat`_, `terminalmage`_,
+  `thatch45`_, `twangboy`_, `velom`_, `vutny`_, `yue9944882`_)
 
 
 Security Fix
@@ -153,12 +159,12 @@ Changelog for v2016.3.5..v2016.3.6
 
   * af1545deed Use the first address if cannot connect to any
 
-* **PR** `#40059`_: (`terminalmage`_) Fix traceback when virtualenv.managed is invoked with nonexistant user
+* **PR** `#40059`_: (`terminalmage`_) Fix traceback when virtualenv.managed is invoked with nonexistent user
   @ *2017-03-16 20:46:43 UTC*
 
   * 116201f345 Merge pull request `#40059`_ from terminalmage/fix-virtualenv-traceback
 
-  * e3cfd29d6b Fix traceback when virtualenv.managed is invoked with nonexistant user
+  * e3cfd29d6b Fix traceback when virtualenv.managed is invoked with nonexistent user
 
 * **PR** `#40090`_: (`rallytime`_) Back-port `#40056`_ to 2016.3
   @ *2017-03-16 19:42:58 UTC*
@@ -188,9 +194,9 @@ Changelog for v2016.3.5..v2016.3.6
 
   * 8dcffc7751 Merge pull request `#40018`_ from meaksh/2016.3-handling-timeouts-for-manage.up-runner
 
-  * 9f5c3b7dcd Allows to set custom timeouts for 'manage.up' and 'manage.status'
+  * 9f5c3b7dcd Allows one to set custom timeouts for 'manage.up' and 'manage.status'
 
-  * 2102d9c75c Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+  * 2102d9c75c Allows one to set 'timeout' and 'gather_job_timeout' via kwargs
 
 * **PR** `#40038`_: (`velom`_) correctly parse "pkg_name===version" from pip freeze
   @ *2017-03-15 19:30:03 UTC*
@@ -233,12 +239,12 @@ Changelog for v2016.3.5..v2016.3.6
 
   * 5d84b40bfd Attempt to fix failing grains tests in 2016.3
 
-* **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+* **PR** `#39980`_: (`vutny`_) [2016.3] Allow using `bg` kwarg for `cmd.run` state function
   @ *2017-03-14 17:16:14 UTC*
 
   * 0c61d064ad Merge pull request `#39980`_ from vutny/cmd-run-state-bg
 
-  * a81dc9dfc1 [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+  * a81dc9dfc1 [2016.3] Allow using `bg` kwarg for `cmd.run` state function
 
 * **ISSUE** `#39942`_: (`Foxlik`_) Web Documentation not in sync with release 2016.11.3 (refs: `#39994`_)
 
@@ -738,7 +744,7 @@ Changelog for v2016.3.5..v2016.3.6
 
   * 52440416ca Merge pull request `#39221`_ from lvg01/fix-bug-39220
 
-  * e8a41d6341 Removes to early content stripping (stripping is allready done when needed with ident:true), fixes `#39220`_
+  * e8a41d6341 Removes to early content stripping (stripping is already done when needed with ident:true), fixes `#39220`_
 
   * a4b169e0bd Fixed wrong logic, fixes `#39220`_
 
@@ -883,7 +889,7 @@ Changelog for v2016.3.5..v2016.3.6
 
 * **ISSUE** `#39118`_: (`bobrik`_) Minion ipv6 option is not documented (refs: `#39289`_, `#39131`_)
 
-  * **PR** `#39131`_: (`bobrik`_) Clarify ipv6 option for minion and inteface for master, closes `#39118`_
+  * **PR** `#39131`_: (`bobrik`_) Clarify ipv6 option for minion and interface for master, closes `#39118`_
 
   * **PR** `#39116`_: (`terminalmage`_) Don't abort pillar.get with merge=True if default is None
 
@@ -1084,14 +1090,14 @@ Changelog for v2016.3.5..v2016.3.6
 
 * **ISSUE** `#36121`_: (`Ashald`_) TemplateNotFound/Unable to cache file (refs: `#38875`_)
 
-* **PR** `#38875`_: (`terminalmage`_) Reactor: fix traceback when salt:// path is nonexistant
+* **PR** `#38875`_: (`terminalmage`_) Reactor: fix traceback when salt:// path is nonexistent
   @ *2017-01-24 15:23:39 UTC*
 
   * b5df104fc2 Merge pull request `#38875`_ from terminalmage/issue36121
 
   * fbc4d2a2c4 reactor: ensure glob_ref is a string
 
-  * 2e443d79a3 cp.cache_file: add note re: return for nonexistant salt:// path
+  * 2e443d79a3 cp.cache_file: add note re: return for nonexistent salt:// path
 
 * **ISSUE** `#37413`_: (`Snarfingcode666`_) Salt-cloud vmware missing reboot command (refs: `#38887`_, `#38890`_)
 

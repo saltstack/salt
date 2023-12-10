@@ -1,0 +1,7 @@
+# FreeBSD static CI requirements
+
+--constraint=../pkg/py{py_version}/{platform}.txt
+
+yamllint
+mercurial
+hglib

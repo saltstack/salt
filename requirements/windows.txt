@@ -1,0 +1,5 @@
+# Windows source distribution requirements
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are windows specific, place "; sys_platform == 'win32'" in front of the requirement.
+
+-r zeromq.txt

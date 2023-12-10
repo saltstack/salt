@@ -1,5 +1,5 @@
-salt.modules.mattermost module
-==============================
+salt.modules.mattermost
+=======================
 
 .. automodule:: salt.modules.mattermost
     :members:

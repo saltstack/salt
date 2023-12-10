@@ -379,7 +379,7 @@ disregarded:
 With :ref:`GitFS <tutorial-gitfs>`, it can also be helpful to simply manage
 each environment's top file separately, and/or manually specify the environment
 when executing the highstate to avoid any complicated merging scenarios.
-:conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist` can
+:conf_master:`gitfs_saltenv_whitelist` and :conf_master:`gitfs_saltenv_blacklist` can
 also be used to hide unneeded branches and tags from GitFS to reduce the number
 of top files in play.
 

@@ -1,8 +1,10 @@
 .. _all-salt.cache:
 
 =============
-Cache Modules
+cache modules
 =============
+
+For understanding and usage of the cache modules see the :ref:`cache` topic.
 
 .. currentmodule:: salt.cache
 

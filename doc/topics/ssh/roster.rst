@@ -53,6 +53,7 @@ The information which can be stored in a roster ``target`` is the following:
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
                      # The priv can also be set to agent-forwarding to not specify
                      # a key, but use ssh agent forwarding
+        priv_passwd: # Passphrase for ssh private key
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection
         minion_opts: # Dictionary of minion opts
@@ -60,6 +61,44 @@ The information which can be stored in a roster ``target`` is the following:
                      # components. Defaults to /tmp/salt-<hash>.
         cmd_umask:   # umask to enforce for the salt-call command. Should be in
                      # octal (so for 0o077 in YAML you would do 0077, or 63)
+        ssh_pre_flight: # Path to a script that will run before all other salt-ssh
+                        # commands. Will only run the first time when the thin dir
+                        # does not exist, unless --pre-flight is passed to salt-ssh
+                        # command or ssh_run_pre_flight is set to true in the config
+                        # Added in 3001 Release.
+        ssh_pre_flight_args: # The list of arguments to pass to the script
+                             # running on the minion with ssh_pre_flight.
+                             # Can be specified as single string.
+        set_path:    # Set the path environment variable, to ensure the expected python
+                     # binary is in the salt-ssh path, when running the command.
+                     # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
+        ssh_options: # List of options (as 'option=argument') to pass to ssh.
+
+
+.. _ssh_pre_flight:
+
+ssh_pre_flight
+--------------
+
+A Salt-SSH roster option `ssh_pre_flight` was added in the 3001 release. This enables
+you to run a script before Salt-SSH tries to run any commands. You can set this option
+in the roster for a specific minion or use the `roster_defaults` to set it for all minions.
+This script will only run if the thin dir is not currently on the minion. This means it will
+only run on the first run of salt-ssh or if you have recently wiped out your thin dir. If
+you want to intentionally run the script again you have a couple of options:
+
+* Wipe out your thin dir by using the -w salt-ssh arg.
+* Set ssh_run_pre_flight to True in the config
+* Run salt-ssh with the --pre-flight arg.
+
+.. _ssh_pre_flight_args:
+
+ssh_pre_flight_args
+-------------------
+
+Additional arguments to the script running on the minion with `ssh_pre_flight` can be passed
+with specifying a list of arguments or a single string. In case of using single string
+distinct arguments will be passed to the script by splitting this string with the spaces.
 
 .. _roster_defaults:
 

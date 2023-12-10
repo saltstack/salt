@@ -1,8 +1,9 @@
 /build
 /src
+__pycache__/
 *.py[co]
 pkg/arch/*.tar.xz
-*.sw[pon]
+*.sw[a-p]
 doc/_build
 doc/doc-archive.tar.gz
 dist
@@ -14,6 +15,8 @@ MANIFEST
 *.DS_Store
 .pytest_cache
 Pipfile.lock
+.mypy_cache/*
+.tools-venvs/
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -21,6 +24,7 @@ Pipfile.lock
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
 /env/
+/.env/
 /bin/
 /etc/
 /include/
@@ -33,6 +37,7 @@ Pipfile.lock
 /tests/cachedir/
 /tests/unit/templates/roots/
 /var/
+/venv/
 
 # setuptools stuff
 *.egg-info
@@ -67,8 +72,8 @@ tags
 *.mo
 .doctrees
 
-# Allow a user to set their own _version.py for testing
-_version.py
+# Allow a user to set their own _version.txt for testing
+_version.txt
 
 # Ignore auto generated _syspaths.py file
 _syspaths.py
@@ -85,6 +90,10 @@ tests/unit/templates/roots
 
 # Pycharm
 .idea
+venv/
+
+# VS Code
+.vscode
 
 # Ignore the log directory created by tests
 /logs
@@ -100,9 +109,43 @@ tests/integration/cloud/providers/pki/minions
 # Ignore nox virtualenvs
 /.nox/
 
+# Ignore pyenv files
+.python-version
+
 # Kitchen tests files
 .kitchen.local.yml
+kitchen.local.yml
 .kitchen/
 .bundle/
 Gemfile.lock
 /artifacts/
+/pkg/artifacts/
+requirements/static/*/py*/*.log
+
+# Vim's default session file
+Session.vim
+
+# VM task state directory
+.vms-state/
+
+# Nox requirements archives
+nox.*.tar.bzip2
+nox.*.tar.xz
+
+# Debian packages
+/debian
+/pkg/debian/.debhelper
+/pkg/debian/*substvars
+/pkg/debian/*.debhelper*
+/pkg/debian/files
+/pkg/debian/salt-api
+/pkg/debian/salt-common
+/pkg/debian/salt-cloud
+/pkg/debian/salt-dbg
+/pkg/debian/salt-master
+/pkg/debian/salt-minion
+/pkg/debian/salt-ssh
+/pkg/debian/salt-syndic
+/pkg/debian/debhelper-build-stamp
+
+.tools-venvs

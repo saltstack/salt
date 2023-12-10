@@ -28,14 +28,11 @@ upon execution. Most often, it uses ``get_configured_provider()`` to determine
 if the necessary configuration has been set up. It may also check for necessary
 imports, to decide whether to load the module. In most cases, it will return a
 ``True`` or ``False`` value. If the name of the driver used does not match the
-filename, then that name should be returned instead of ``True``. An example of
-this may be seen in the Azure module:
-
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/msazure.py
+filename, then that name should be returned instead of ``True``.
 
 The get_configured_provider() Function
 --------------------------------------
-This function uses ``config.is_provider_configured()`` to determine wither
+This function uses ``config.is_provider_configured()`` to determine whether
 all required information for this driver has been configured. The last value
 in the list of required settings should be followed by a comma.
 
@@ -57,7 +54,7 @@ created by the cloud host, wait for it to become available, and then
 A good example to follow for writing a cloud driver module based on libcloud
 is the module provided for Linode:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/linode.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/linode.py
 
 The basic flow of a ``create()`` function is as follows:
 
@@ -145,7 +142,7 @@ library. The following two lines set up the imports:
 
 .. code-block:: python
 
-    from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+    from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
     import salt.utils.functools
 
 And then a series of declarations will make the necessary functions available
@@ -162,7 +159,9 @@ within the cloud module.
     destroy = salt.utils.functools.namespaced_function(destroy, globals())
     list_nodes = salt.utils.functools.namespaced_function(list_nodes, globals())
     list_nodes_full = salt.utils.functools.namespaced_function(list_nodes_full, globals())
-    list_nodes_select = salt.utils.functools.namespaced_function(list_nodes_select, globals())
+    list_nodes_select = salt.utils.functools.namespaced_function(
+        list_nodes_select, globals()
+    )
     show_instance = salt.utils.functools.namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
@@ -183,7 +182,7 @@ imports should be absent from the Salt Cloud module.
 
 A good example of a non-libcloud driver is the DigitalOcean driver:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digitalocean.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/digitalocean.py
 
 The ``create()`` Function
 -------------------------
@@ -238,8 +237,7 @@ The script() Function
 ---------------------
 This function builds the deploy script to be used on the remote machine.  It is
 likely to be moved into the ``salt.utils.cloud`` library in the near future, as
-it is very generic and can usually be copied wholesale from another module. An
-excellent example is in the Azure driver.
+it is very generic and can usually be copied wholesale from another module.
 
 The destroy() Function
 ----------------------
@@ -300,11 +298,11 @@ general, the following code can be used as-is:
 .. code-block:: python
 
     def list_nodes_select(call=None):
-        '''
+        """
         Return a list of the VMs that are on the provider, with select fields
-        '''
+        """
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full('function'), __opts__['query.selection'], call,
+            list_nodes_full("function"), __opts__["query.selection"], call
         )
 
 However, depending on the cloud provider, additional variables may be required.
@@ -315,16 +313,14 @@ appropriately:
 .. code-block:: python
 
     def list_nodes_select(conn=None, call=None):
-        '''
+        """
         Return a list of the VMs that are on the provider, with select fields
-        '''
+        """
         if not conn:
-            conn = get_conn()   # pylint: disable=E0602
+            conn = get_conn()  # pylint: disable=E0602
 
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full(conn, 'function'),
-            __opts__['query.selection'],
-            call,
+            list_nodes_full(conn, "function"), __opts__["query.selection"], call
         )
 
 This function is normally called with the ``-S`` option:
@@ -372,15 +368,15 @@ useful information to the user. A basic action looks like:
 .. code-block:: python
 
     def show_instance(name, call=None):
-    '''
-    Show the details from EC2 concerning an AMI
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
-        )
+        """
+        Show the details from EC2 concerning an AMI
+        """
+        if call != "action":
+            raise SaltCloudSystemExit(
+                "The show_instance action must be called with -a or --action."
+            )
 
-    return _get_node(name)
+        return _get_node(name)
 
 Please note that generic kwargs, if used, are passed through to actions as
 ``kwargs`` and not ``**kwargs``. An example of this is seen in the Functions
@@ -406,16 +402,15 @@ useful information to the user. A basic function looks like:
 .. code-block:: python
 
     def show_image(kwargs, call=None):
-        '''
+        """
         Show the details from EC2 concerning an AMI
-        '''
-        if call != 'function':
+        """
+        if call != "function":
             raise SaltCloudSystemExit(
-                'The show_image action must be called with -f or --function.'
+                "The show_image action must be called with -f or --function."
             )
 
-        params = {'ImageId.1': kwargs['image'],
-                  'Action': 'DescribeImages'}
+        params = {"ImageId.1": kwargs["image"], "Action": "DescribeImages"}
         result = query(params)
         log.info(result)
 

@@ -6,7 +6,7 @@ Getting Started With VMware
 
 .. versionadded:: 2015.5.4
 
-**Author**: Nitin Madhok <nmadhok@clemson.edu>
+**Author**: Nitin Madhok <nmadhok@g.clemson.edu>
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
@@ -17,7 +17,7 @@ Dependencies
 The vmware module for Salt Cloud requires the ``pyVmomi`` package, which is
 available at PyPI:
 
-https://pypi.python.org/pypi/pyvmomi
+https://pypi.org/project/pyvmomi/
 
 This package can be installed using `pip` or `easy_install`:
 
@@ -77,6 +77,15 @@ set up in the cloud configuration at
       url: 'vcenter02.domain.com'
       protocol: 'http'
       port: 80
+
+    vcenter03-do-not-verify:
+      driver: vmware
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
+      verify_ssl: False
 
     esx01:
       driver: vmware
@@ -171,8 +180,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             type: paravirtual
             bus_sharing: physical
         ide:
-          IDE 2
-          IDE 3
+          IDE 2: {}
+          IDE 3: {}
 
       domain: example.com
       dns_servers:
@@ -219,6 +228,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       plain_text: True
       win_installer: /root/Salt-Minion-2015.8.4-AMD64-Setup.exe
       win_user_fullname: Windows User
+      verify_ssl: False
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -363,8 +373,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
     ide
         Enter the IDE controller specification here. If the IDE controller doesn\'t exist,
-        a new IDE controller will be created. If the IDE controller already exists,
-        no further changes to it will me made.
+        a new IDE controller is created. If the IDE controller already exists,
+        no further changes to it are made. The IDE controller specification is
+        a dictionary.
+
+        .. code-block:: yaml
+
+          ide:
+            IDE 2: {}
 
 ``domain``
     Enter the global domain name to be used for DNS. If not specified and if the VM name
@@ -451,6 +467,24 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specifies whether the new virtual machine should be powered on or not. If
     ``template: True`` is set, this field is ignored. Default is ``power_on: True``.
 
+``cpu_hot_add``
+    Boolean value that enables hot-add support for adding CPU resources while
+    the guest is powered on.
+
+``cpu_hot_remove``
+    Boolean value that enables hot-remove support for removing CPU resources while
+    the guest is powered on.
+
+``mem_hot_add``
+    Boolean value that enables hot-add support for adding memory resources while
+    the guest is powered on.
+
+``nested_hv``
+    Boolean value that enables support for nested hardware-assisted virtualization.
+
+``vpmc``
+    Boolean value that enables virtual CPU performance counters.
+
 ``extra_config``
     Specifies the additional configuration information for the virtual machine. This
     describes a set of modifications to the additional options. If the key is already
@@ -508,7 +542,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:
 
-    http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    https://code.vmware.com/apis?pid=com.vmware.wssdk.apiref.doc&release=vsphere-60&topic=vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
 
     .. note::
 
@@ -548,6 +582,15 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
 ``win_installer``
     Specify windows minion client installer path
+
+``win_run_once``
+    Specify a list of commands to run on first login to a windows minion
+
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+
+``verify_ssl``
+    Verify the vmware ssl certificate. The default is True.
+
 
 Cloning a VM
 ============
@@ -601,6 +644,39 @@ Example to reconfigure the memory and number of vCPUs:
 
       memory: 16GB
       num_cpus: 8
+
+
+Instant Cloning a VM
+====================
+
+Instant Cloning a powered-ON VM is the easiest and the preferred way to work with VMs from controlled point in time using the VMware driver.
+
+.. note::
+
+    Instant Cloning operations are unsupported on standalone ESXi hosts, a vCenter server will be required.
+
+Example of a minimal profile when skipping optional parameters:
+
+.. code-block:: yaml
+
+    my-minimal-clone:
+      provider: vcenter01
+      clonefrom: 'test-vm'
+      instant_clone: true
+
+When Instant cloning a VM, all the profile configuration parameters are optional and the configuration gets inherited from the clone.
+
+Example to specify optional parameters :
+
+.. code-block:: yaml
+
+    my-minimal-clone:
+      provider: vcenter01
+      clonefrom: 'test-vm'
+      instant_clone: true
+      datastore: 'local-0 (1)'
+      datacenter: 'vAPISdkDatacenter'
+      resourcepool: 'RP1'
 
 
 Cloning a Template

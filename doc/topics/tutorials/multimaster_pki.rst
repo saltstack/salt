@@ -37,7 +37,7 @@ network or hardware failure?
 .. note::
     There is also a MultiMaster-Tutorial with a different approach and topology
     than this one, that might also suite your needs or might even be better suited
-    `Multi-Master Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster.html>`_
+    `Multi-Master Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster.html>`_
 
 
 It is also desirable, to add some sort of authenticity-check to the very first
@@ -192,7 +192,7 @@ in the order they are defined. To randomize that order, set
 
 .. code-block:: yaml
 
-    master_shuffle: True
+    random_master: True
 
 The master-list will then be shuffled before the first connection attempt.
 

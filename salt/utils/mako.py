@@ -1,23 +1,21 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Functions for working with Mako templates
-'''
-from __future__ import absolute_import, unicode_literals
+"""
 
 try:
-    from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error,3rd-party-module-not-gated
+    # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
+    from mako.lookup import TemplateCollection, TemplateLookup
+
+    # pylint: enable=import-error,3rd-party-module-not-gated,no-name-in-module
+
     HAS_MAKO = True
 except ImportError:
     HAS_MAKO = False
 
 if HAS_MAKO:
-    # Import Python libs
     import os
+    import urllib.parse
 
-    # Import third-party libs
-    from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
-
-    # Import salt libs
     import salt.fileclient
     import salt.utils.url
 
@@ -49,33 +47,30 @@ if HAS_MAKO:
 
         """
 
-        def __init__(self, opts, saltenv='base', pillar_rend=False):
+        def __init__(self, opts, saltenv="base", pillar_rend=False):
             self.opts = opts
             self.saltenv = saltenv
             self._file_client = None
             self.pillar_rend = pillar_rend
-            self.lookup = TemplateLookup(directories='/')
+            self.lookup = TemplateLookup(directories="/")
             self.cache = {}
 
         def file_client(self):
-            '''
+            """
             Setup and return file_client
-            '''
+            """
             if not self._file_client:
                 self._file_client = salt.fileclient.get_file_client(
-                    self.opts, self.pillar_rend)
+                    self.opts, self.pillar_rend
+                )
             return self._file_client
 
         def adjust_uri(self, uri, filename):
-            scheme = urlparse(uri).scheme
-            if scheme in ('salt', 'file'):
+            scheme = urllib.parse.urlparse(uri).scheme
+            if scheme in ("salt", "file"):
                 return uri
             elif scheme:
-                raise ValueError(
-                    'Unsupported URL scheme({0}) in {1}'.format(
-                        scheme, uri
-                    )
-                )
+                raise ValueError(f"Unsupported URL scheme({scheme}) in {uri}")
             return self.lookup.adjust_uri(uri, filename)
 
         def get_template(self, uri, relativeto=None):
@@ -85,21 +80,29 @@ if HAS_MAKO:
                 salt_uri = uri
             else:
                 proto = "salt://"
-                if self.opts['file_client'] == 'local':
-                    searchpath = self.opts['file_roots'][self.saltenv]
+                if self.opts["file_client"] == "local":
+                    searchpath = self.opts["file_roots"][self.saltenv]
                 else:
-                    searchpath = [os.path.join(self.opts['cachedir'],
-                                               'files',
-                                               self.saltenv)]
+                    searchpath = [
+                        os.path.join(self.opts["cachedir"], "files", self.saltenv)
+                    ]
                 salt_uri = uri if uri.startswith(proto) else salt.utils.url.create(uri)
                 self.cache_file(salt_uri)
 
             self.lookup = TemplateLookup(directories=searchpath)
-            return self.lookup.get_template(salt_uri[len(proto):])
+            return self.lookup.get_template(salt_uri[len(proto) :])
 
         def cache_file(self, fpath):
             if fpath not in self.cache:
-                self.cache[fpath] = self.file_client().get_file(fpath,
-                                                              '',
-                                                              True,
-                                                              self.saltenv)
+                self.cache[fpath] = self.file_client().get_file(
+                    fpath, "", True, self.saltenv
+                )
+
+        def destroy(self):
+            if self._file_client:
+                file_client = self._file_client
+                self._file_client = None
+                try:
+                    file_client.destroy()
+                except AttributeError:
+                    pass

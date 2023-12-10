@@ -1,0 +1,3 @@
+{%- macro opt_attribute(obj, name, conv=none) %}
+{%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
+{%- endmacro %}

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # The pam components have been modified to be salty and have been taken from
 # the pam module under this licence:
 # (c) 2007 Chris AtLee <chris@atlee.ca>
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license.php
-'''
+"""
 Authenticate against PAM
 
 Provides an authenticate function that will allow the caller to authenticate
@@ -25,31 +24,42 @@ authenticated against.  This defaults to `login`
 
     The Python interface to PAM does not support authenticating as ``root``.
 
-.. note:: Using PAM groups with SSSD groups on python2.
+.. note:: This module executes itself in a subprocess in order to user the system python
+    and pam libraries. We do this to avoid openssl version conflicts when
+    running under a salt onedir build.
+"""
 
-    To use sssd with the PAM eauth module and groups the `pysss` module is
-    needed.  On RedHat/CentOS this is `python-sss`.
-
-    This should not be needed with python >= 3.3, because the `os` modules has the
-    `getgrouplist` function.
-
-'''
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
-from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+from ctypes import (
+    CDLL,
+    CFUNCTYPE,
+    POINTER,
+    Structure,
+    c_char,
+    c_char_p,
+    c_int,
+    c_uint,
+    c_void_p,
+    cast,
+    pointer,
+    sizeof,
+)
 from ctypes.util import find_library
 
-# Import Salt libs
-import salt.utils.user
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+HAS_USER = True
+try:
+    import salt.utils.user
+except ImportError:
+    HAS_USER = False
 
-# Import 3rd-party libs
-from salt.ext import six
+log = logging.getLogger(__name__)
 
 try:
-    LIBC = CDLL(find_library('c'))
+    LIBC = CDLL(find_library("c"))
 
     CALLOC = LIBC.calloc
     CALLOC.restype = c_void_p
@@ -58,7 +68,8 @@ try:
     STRDUP = LIBC.strdup
     STRDUP.argstypes = [c_char_p]
     STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
-except AttributeError:
+except Exception:  # pylint: disable=broad-except
+    log.trace("Failed to load libc using ctypes", exc_info=True)
     HAS_LIBC = False
 else:
     HAS_LIBC = True
@@ -71,12 +82,11 @@ PAM_TEXT_INFO = 4
 
 
 class PamHandle(Structure):
-    '''
+    """
     Wrapper class for pam_handle_t
-    '''
-    _fields_ = [
-            ('handle', c_void_p)
-            ]
+    """
+
+    _fields_ = [("handle", c_void_p)]
 
     def __init__(self):
         Structure.__init__(self)
@@ -84,52 +94,51 @@ class PamHandle(Structure):
 
 
 class PamMessage(Structure):
-    '''
+    """
     Wrapper class for pam_message structure
-    '''
+    """
+
     _fields_ = [
-            ("msg_style", c_int),
-            ("msg", c_char_p),
-            ]
+        ("msg_style", c_int),
+        ("msg", c_char_p),
+    ]
 
     def __repr__(self):
-        return '<PamMessage {0} \'{1}\'>'.format(self.msg_style, self.msg)
+        return f"<PamMessage {self.msg_style} '{self.msg}'>"
 
 
 class PamResponse(Structure):
-    '''
+    """
     Wrapper class for pam_response structure
-    '''
+    """
+
     _fields_ = [
-            ('resp', c_char_p),
-            ('resp_retcode', c_int),
-            ]
+        ("resp", c_char_p),
+        ("resp_retcode", c_int),
+    ]
 
     def __repr__(self):
-        return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
+        return f"<PamResponse {self.resp_retcode} '{self.resp}'>"
 
 
-CONV_FUNC = CFUNCTYPE(c_int,
-        c_int, POINTER(POINTER(PamMessage)),
-               POINTER(POINTER(PamResponse)), c_void_p)
+CONV_FUNC = CFUNCTYPE(
+    c_int, c_int, POINTER(POINTER(PamMessage)), POINTER(POINTER(PamResponse)), c_void_p
+)
 
 
 class PamConv(Structure):
-    '''
+    """
     Wrapper class for pam_conv structure
-    '''
-    _fields_ = [
-            ('conv', CONV_FUNC),
-            ('appdata_ptr', c_void_p)
-            ]
+    """
+
+    _fields_ = [("conv", CONV_FUNC), ("appdata_ptr", c_void_p)]
 
 
 try:
-    LIBPAM = CDLL(find_library('pam'))
+    LIBPAM = CDLL(find_library("pam"))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
-    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-            POINTER(PamHandle)]
+    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv), POINTER(PamHandle)]
 
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
@@ -142,43 +151,42 @@ try:
     PAM_END = LIBPAM.pam_end
     PAM_END.restype = c_int
     PAM_END.argtypes = [PamHandle, c_int]
-except Exception:
+except Exception:  # pylint: disable=broad-except
+    log.trace("Failed to load pam using ctypes", exc_info=True)
     HAS_PAM = False
 else:
     HAS_PAM = True
 
 
 def __virtual__():
-    '''
+    """
     Only load on Linux systems
-    '''
+    """
     return HAS_LIBC and HAS_PAM
 
 
-def authenticate(username, password):
-    '''
+def _authenticate(username, password, service, encoding="utf-8"):
+    """
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
 
     ``username``: the username to authenticate
 
     ``password``: the password in plain text
-    '''
-    service = __opts__.get('auth.pam.service', 'login')
-
-    if isinstance(username, six.text_type):
-        username = username.encode(__salt_system_encoding__)
-    if isinstance(password, six.text_type):
-        password = password.encode(__salt_system_encoding__)
-    if isinstance(service, six.text_type):
-        service = service.encode(__salt_system_encoding__)
+    """
+    if isinstance(username, str):
+        username = username.encode(encoding)
+    if isinstance(password, str):
+        password = password.encode(encoding)
+    if isinstance(service, str):
+        service = service.encode(encoding)
 
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
-        '''
+        """
         Simple conversation function that responds to any
         prompt where the echo is off with the supplied password
-        '''
+        """
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
@@ -201,22 +209,64 @@ def authenticate(username, password):
 
     retval = PAM_AUTHENTICATE(handle, 0)
     if retval == 0:
-        PAM_ACCT_MGMT(handle, 0)
+        retval = PAM_ACCT_MGMT(handle, 0)
     PAM_END(handle, 0)
     return retval == 0
 
 
+def authenticate(username, password):
+    """
+    Returns True if the given username and password authenticate for the
+    given service.  Returns False otherwise
+
+    ``username``: the username to authenticate
+
+    ``password``: the password in plain text
+    """
+    env = os.environ.copy()
+    env["SALT_PAM_USERNAME"] = username
+    env["SALT_PAM_PASSWORD"] = password
+    env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
+    env["SALT_PAM_ENCODING"] = __salt_system_encoding__
+    pyexe = pathlib.Path(__opts__.get("auth.pam.python", "/usr/bin/python3")).resolve()
+    pyfile = pathlib.Path(__file__).resolve()
+    if not pyexe.exists():
+        log.error("Error 'auth.pam.python' config value does not exist: %s", pyexe)
+        return False
+    ret = subprocess.run(
+        [str(pyexe), str(pyfile)],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    if ret.returncode == 0:
+        return True
+    log.error("Pam auth failed for %s: %s %s", username, ret.stdout, ret.stderr)
+    return False
+
+
 def auth(username, password, **kwargs):
-    '''
+    """
     Authenticate via pam
-    '''
+    """
     return authenticate(username, password)
 
 
 def groups(username, *args, **kwargs):
-    '''
+    """
     Retrieve groups for a given user for this auth provider
 
     Uses system groups
-    '''
+    """
     return salt.utils.user.get_group_list(username)
+
+
+if __name__ == "__main__":
+    if _authenticate(
+        os.environ["SALT_PAM_USERNAME"],
+        os.environ["SALT_PAM_PASSWORD"],
+        os.environ["SALT_PAM_SERVICE"],
+        os.environ["SALT_PAM_ENCODING"],
+    ):
+        sys.exit(0)
+    sys.exit(1)

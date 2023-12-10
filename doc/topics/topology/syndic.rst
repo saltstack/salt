@@ -21,6 +21,7 @@ node and the local ``salt-master`` daemon.  This gives the Master node control
 over the Minion nodes attached to the ``salt-master`` daemon running on the
 Syndic node.
 
+
 Configuring the Syndic
 ======================
 
@@ -61,6 +62,10 @@ the Syndic just as with a Minion.
 The :conf_master:`order_masters` option configures the Master node to send
 extra information with its publications that is needed by Syndic nodes
 connected directly to it.
+
+.. warning::
+   The syndic process must be run as the same user as the syndic master.
+
 
 .. note::
 
@@ -175,7 +180,7 @@ lists of expected minions before giving up. This value defaults to ``5`` seconds
 The ``syndic_wait`` setting is necessary because the higher-level master does not
 have a way of knowing which minions are below the syndics. The higher-level master
 has its own list of expected minions and the masters below them have their own lists
-as well, so the Salt client does not how long to wait for all returns. The
+as well, so the Salt client does not know how long to wait for all returns. The
 ``syndic_wait`` option allows time for all minions to return to the Salt client.
 
 .. note::

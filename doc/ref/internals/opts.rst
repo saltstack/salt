@@ -25,7 +25,8 @@ for a minion instance:
 .. code-block:: python
 
     import salt.config
-    opts = salt.config.minion_config('/etc/salt/minion')
+
+    opts = salt.config.minion_config("/etc/salt/minion")
     print(opts)
 
 To generate and display `opts` for a master, the process is similar:
@@ -33,5 +34,6 @@ To generate and display `opts` for a master, the process is similar:
 .. code-block:: python
 
     import salt.config
-    opts = salt.config.master_config('/etc/salt/master')
+
+    opts = salt.config.master_config("/etc/salt/master")
     print(opts)

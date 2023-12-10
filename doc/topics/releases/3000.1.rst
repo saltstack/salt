@@ -1,0 +1,748 @@
+.. _release-3000-1:
+
+=========================
+Salt 3000.1 Release Notes
+=========================
+
+Version 3000.1 is a bugfix release for :ref:`3000 <release-3000>`.
+
+Statistics
+==========
+
+- Total Merges: **53**
+- Total Issue References: **15**
+- Total PR References: **54**
+
+- Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_,
+  `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_,
+  `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
+
+Changelog for v3000..v3000.1
+============================
+
+*Generated at: 2020-03-27 16:48:41 UTC*
+
+* **PR** `#56455`_: (`s0undt3ch`_) Fix gitpython windows requirement
+  @ *2020-03-27 16:31:57 UTC*
+
+  * c5a700e01e Merge pull request `#56455`_ from s0undt3ch/hotfix/gitpython
+
+  * d9791c393f Revert and fix windows requirements
+
+  * 4b573c1c94 Revert "Fix win deps"
+
+* **PR** `#56446`_: (`frogunder`_) 3000.1 releasenotes updates
+  @ *2020-03-24 20:28:23 UTC*
+
+  * 7ba36325d9 Merge pull request `#56446`_ from frogunder/releasenotes_3000.1_updates
+
+  * 6b47f474af 3000.1 releasenotes updates
+
+* **PR** `#56435`_: (`twangboy`_) Update mac build scripts
+  @ *2020-03-24 19:47:40 UTC*
+
+  * 4d2bc7004d Merge pull request `#56435`_ from twangboy/update_mac_build_scripts
+
+  * 5d244b0aa6 Merge branch 'master' into update_mac_build_scripts
+
+  * 8fdf52a243 Update gitpython to 2.1.15
+
+  * afcedc5232 Remove --ignore-installed
+
+  * e6cc2a6192 Separate pyobjc requirements
+
+  * 262ad2e98a Compile static requirements
+
+  * 224f72d0f2 Update noxfile and .precommit
+
+  * 68a36f2e37 Add req_ext.txt
+
+  * 5851a5c2cd Roll back changes, fix dependencies
+
+* **ISSUE** `#56433`_: (`Ch3LL`_) integration.states.test_pip_state.PipStateTest.test_pip_installed_specific_env failing on MAC (refs: `#56436`_)
+
+* **PR** `#56436`_: (`Ch3LL`_) Fix `#56433`_ - test_pip_installed_specific_env
+  @ *2020-03-24 19:47:20 UTC*
+
+  * 8a8ae8ebe4 Merge pull request `#56436`_ from Ch3LL/pip_custom_pypi
+
+  * 55655ff96c Merge branch 'master' into pip_custom_pypi
+
+* **PR** `#56423`_: (`Ch3LL`_) Update changelog with package fixes
+  @ *2020-03-24 16:42:17 UTC*
+
+  * 3a993d73a9 Merge pull request `#56423`_ from Ch3LL/changelog_again
+
+  * 963c16e1a7 update pr number for mac build changes in changelog
+
+  * 83e22b77c7 Update changelog with package fixes
+
+* **PR** `#56417`_: (`twangboy`_) Update mac build scripts
+  @ *2020-03-23 18:45:34 UTC*
+
+  * d2a5bd8add Merge pull request `#56417`_ from twangboy/update_mac_build_scripts
+
+  * 3bda8ddb82 Update noxfile and pre-commit
+
+  * de58c52d66 Merge branch 'update_mac_build_scripts' of https://github.com/twangboy/salt into update_mac_build_scripts
+
+    * e7f08d5349 Update static requirements
+
+    * a53977de5b Merge branch 'update_mac_build_scripts' of github.com:twangboy/salt into update_mac_build_scripts
+
+    * 04e5cde9dd `pkg/osx/req_ext.txt` no longer exists
+
+    * be4a272d07 Update static requirements
+
+  * 02dfe4119c Add pyobjc in its own requirements file
+
+  * 6b2ac2be64 Remove pyobjc, enforce pip install location
+
+  * 30ca5d04ec Remove cryptography, it gets installed by pyopenssl
+
+  * fda8abf4a8 Update static requirements
+
+  * 732ecc83c1 Update pre-commit config
+
+  * 1fa9864e3d Don't set a version for pyopenssl
+
+  * 461b198978 Update dependencies, remove req_ext.txt
+
+* **PR** `#56418`_: (`Ch3LL`_) Ensure version.py included before we install
+  @ *2020-03-23 18:27:46 UTC*
+
+  * 74575a6993 Merge pull request `#56418`_ from Ch3LL/egg_version
+
+  * 85d7c784ef Fix integration setup egg test
+
+  * a8a22a4040 Ensure version.py included before we install
+
+  * 86fe450c82 Fix `#56433`_ - test_pip_installed_specific_env
+
+* **PR** `#56403`_: (`frogunder`_) update 3000.1 releasenotes
+  @ *2020-03-17 23:50:21 UTC*
+
+  * 249367b462 Merge pull request `#56403`_ from frogunder/update_releasenotes_3000.1
+
+  * 9d972c96e8 update 3000.1 releasenotes
+
+* **PR** `#56398`_: (`Ch3LL`_) Add additional PRs to 3000.1 changelog
+  @ *2020-03-17 18:08:15 UTC*
+
+  * 0de5c1e136 Merge pull request `#56398`_ from Ch3LL/change_3000.1
+
+  * 79c337b3db Add additional PRs to 3000.1 changelog
+
+* **PR** `#56376`_: (`twangboy`_) Fix win deps
+  @ *2020-03-17 17:02:46 UTC*
+
+  * 5ac09decb9 Merge pull request `#56376`_ from twangboy/fix_win_deps
+
+  * 6c83beeb9e Fix win deps
+
+* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel
+  @ *2020-03-17 17:01:33 UTC*
+
+  * e72a8d2cbc Merge pull request `#56378`_ from Ch3LL/wheel_version
+
+  * 22cccd2107 Use virtualenv test helper that already exists and fix setup.py
+
+  * 293b1fddf2 cleanup code
+
+  * ddfb065bfb add bdist_wheel test
+
+  * fceff0287c ensure name is included in new version
+
+  * 0cbf6d3246 Ensure SaltStackVersion attributes in _version.py correct
+
+  * 39cdf5382d Include _version.py if building wheel
+
+* **PR** `#56387`_: (`bryceml`_) update gpg key expiration date
+  @ *2020-03-17 16:59:30 UTC*
+
+  * 6a9326fb70 Merge pull request `#56387`_ from bryceml/update_gpg_key
+
+  * b74b26ccf3 update gpg key expiration date
+
+* **PR** `#55822`_: (`cmcmarrow`_) fix_Indefinitely_code
+  @ *2020-03-16 17:34:11 UTC*
+
+  * fcee692c4a Merge pull request `#55822`_ from cmcmarrow/win_task_repeat
+
+  * e257fb2804 Merge branch 'master' into win_task_repeat
+
+  * 07cada0f8f Merge branch 'master' into win_task_repeat
+
+  * 4b80301338 Merge branch 'master' into win_task_repeat
+
+  * 9df94569c4 Merge branch 'master' into win_task_repeat
+
+  * 22a2d0b9ec Merge branch 'master' into win_task_repeat
+
+  * dee9c134e7 Merge branch 'master' into win_task_repeat
+
+  * beaf05d514 Update test_win_task.py
+
+  * 6e923f75fc Merge branch 'master' into win_task_repeat
+
+  * 5839da81ee add test
+
+  * 2aa6338ed0 fix Indefinitely code
+
+* **PR** `#56373`_: (`frogunder`_) update 3000.1 releasenotes
+  @ *2020-03-13 18:58:43 UTC*
+
+  * c11ef89200 Merge pull request `#56373`_ from frogunder/releasenotes_3000.1
+
+  * a5ca8b5277 Fix doc test errors
+
+  * 47e483187e update 3000.1 releasenotes
+
+* **PR** `#56365`_: (`Ch3LL`_) Update 3000.1 changelog
+  @ *2020-03-13 17:21:02 UTC*
+
+  * 62857a9f0e Merge pull request `#56365`_ from Ch3LL/changelog_3000.1
+
+  * 851d7d8fc7 Update 3000.1 changelog
+
+* **PR** `#56360`_: (`Ch3LL`_) Use virtualenv 20.0.10 for macosx tests
+  @ *2020-03-13 16:39:57 UTC*
+
+  * a660e96fb2 Merge pull request `#56360`_ from Ch3LL/mac_virtual
+
+  * abda125086 Update static requirements files
+
+  * dca3390c0c skip zcbuildout state test when virtualenv 20.0.0
+
+  * fdeae1f0e1 Use virtualenv 20.0.10 for macosx tests
+
+* **ISSUE** `#56324`_: (`kiemlicz`_) Cannot use Saltcheck module (refs: `#56327`_)
+
+* **PR** `#56327`_: (`mchugh19`_) keep cache_copied_files variable a list
+  @ *2020-03-13 16:39:32 UTC*
+
+  * d8fc07274c Merge pull request `#56327`_ from mchugh19/56324
+
+  * e1e2df2b1d Merge branch 'master' into 56324
+
+  * 6d7572706d use includes for saltcheck integration test
+
+  * 5b7073b01d keep cache_copied_files variable a list
+
+* **PR** `#56023`_: (`cmcmarrow`_) add fix for bin_env
+  @ *2020-03-13 16:39:09 UTC*
+
+  * 2d31d61ab9 Merge pull request `#56023`_ from cmcmarrow/binary_fix_pip_bin_env
+
+  * f780fd013e Merge branch 'master' into binary_fix_pip_bin_env
+
+  * d642c7c270 Merge branch 'master' into binary_fix_pip_bin_env
+
+  * 82b39d26f8 Merge branch 'binary_fix_pip_bin_env' of https://github.com/cmcmarrow/salt into binary_fix_pip_bin_env
+
+    * a5fa22528a Merge branch 'master' into binary_fix_pip_bin_env
+
+  * 10ca0fa5d6 fix space
+
+  * 22fff6c180 fix _pip_bin_env
+
+  * d5425e6630 Merge branch 'master' into binary_fix_pip_bin_env
+
+  * ceda3fde00 add full support for when missing kwargs or args
+
+  * cf4ab215b5 add fix for bin_env
+
+* **PR** `#56310`_: (`twangboy`_) Only process ADMX files when loading policies
+  @ *2020-03-11 23:47:50 UTC*
+
+  * 19bb6aae0c Merge pull request `#56310`_ from twangboy/fix_lgpo_admx
+
+  * 4bc5b05586 Fix some lint
+
+  * ce282f9754 Mark destructive test
+
+  * 8af09c31ca Add test case
+
+  * 547d35cf4c Only process ADMX files when loading policies
+
+* **PR** `#56272`_: (`twangboy`_) Properly resolve the policy name
+  @ *2020-03-11 22:11:02 UTC*
+
+  * 2d78931eaf Merge pull request `#56272`_ from twangboy/fix_lgpo_names
+
+  * 233ed12472 Add comments to helper function
+
+  * a7369e41d7 Remove redundent code... some more
+
+  * 1db3052b94 Consolidate duplicate code
+
+  * b25b56299d Fix failing PY2 tests
+
+  * 36a24ac28f Only load adml data once
+
+  * bc13be6850 Add some tests
+
+  * 2e9be6e461 Properly resolve the policy name
+
+* **PR** `#56358`_: (`s0undt3ch`_) Fix version instantiation when minor is an empty string
+  @ *2020-03-11 22:10:04 UTC*
+
+  * c6c6e2e3d9 Merge pull request `#56358`_ from s0undt3ch/hotfix/version-parsing
+
+  * cb22e78502 Fix version instantiation when minor is an empty string
+
+* **PR** `#56160`_: (`twangboy`_) Fix issue with existing reg_dword entries
+  @ *2020-03-11 22:09:21 UTC*
+
+  * b33047c574 Merge pull request `#56160`_ from twangboy/fix_reg_dword
+
+  * 80650c2a8c Make test more explicit
+
+  * 67dd1c18c7 Fix issue with existing reg_dword entries
+
+* **PR** `#56337`_: (`twangboy`_) Handle Adapter Type 53 and Undefined Types
+  @ *2020-03-11 22:08:19 UTC*
+
+  * 8f23706871 Merge pull request `#56337`_ from twangboy/fix_win_network_type
+
+  * 18a31a0b22 Merge branch 'master' into fix_win_network_type
+
+  * d92914ad91 Merge branch 'master' into fix_win_network_type
+
+  * 224629bdeb Handle Adapter Type 53 and Undefined Types
+
+* **PR** `#56060`_: (`twangboy`_) Fix regex string for \*\*Del and \*\*DelVals
+  @ *2020-03-11 22:05:43 UTC*
+
+  * e551ff6a31 Merge pull request `#56060`_ from twangboy/fix_lgpo_regex
+
+  * ca260ef582 Use byte-strings in the test
+
+  * 7c81874a5b Add some tests
+
+  * 944b022f33 Fix regex string for \*\*Del and \*\*DelVals
+
+* **ISSUE** `#56131`_: (`thusoy`_) Salt v3000 crashes with unless clause if pip is missing (refs: `#56215`_)
+
+* **PR** `#56215`_: (`dwoz`_) Fix for unless requisite when pip is not installed
+  @ *2020-03-11 22:04:30 UTC*
+
+  * c9bc9431c1 Merge pull request `#56215`_ from dwoz/issue-56131
+
+  * 5dd8f8eabe Fix linter
+
+  * 7492c2f7c7 Remove crufty prints from test
+
+  * 8ceaa6e6f3 Only remove pip relasted modules
+
+  * 69b21e5e68 Add regression test for issue 56131
+
+  * 9d23f55adc Fix for unless requisite when pip is not installed
+
+* **PR** `#56339`_: (`twangboy`_) Fix win_dns_client when used with scheduler
+  @ *2020-03-11 22:01:32 UTC*
+
+  * 74b67ea741 Merge pull request `#56339`_ from twangboy/fix_win_dns_client
+
+  * d6a4fbe85d Fix bad test (lint)
+
+  * 47bd67373f Add some tests
+
+  * 995975649a Add missing import, improve docs
+
+* **ISSUE** `#56288`_: (`lorengordon`_) win_lgpo: `lgpo.set` with secedit policy always generates `KeyError: u'lgpo.secedit_data'` (refs: `#56290`_)
+
+* **PR** `#56290`_: (`lorengordon`_) Ensures popping lgpo.secedit_data does not throw KeyError
+  @ *2020-03-11 17:27:04 UTC*
+
+  * 7701e8762d Merge pull request `#56290`_ from lorengordon/pop-secdata
+
+  * 62453bb6ce Merge branch 'master' into pop-secdata
+
+  * 95d5cea9ff Merge branch 'master' into pop-secdata
+
+  * 2979158a8b Tests the `if _secedits:` logic path in `lgpo.set_`
+
+  * d1f776178c Ensures popping lgpo.secedit_data does not throw KeyError
+
+* **ISSUE** `#56119`_: (`finalduty`_) Release notes for v3000 do not mention changes to `slspath` variable (refs: `#56341`_)
+
+* **PR** `#56341`_: (`dwoz`_) Revert "Don't remove one directory level from slspath"
+  @ *2020-03-11 17:03:33 UTC*
+
+  * 84c60708cd Merge pull request `#56341`_ from dwoz/issue-56119
+
+  * afe6e84c36 Clarify slspath documentation
+
+  * 6dfc098fd1 Add debug for test asserts
+
+  * 9fa9dab8b2 Fix linter warts
+
+  * fd702bdd44 Add regression test for `#56119`_
+
+  * 3d3b673cec Revert "Don't remove one directory level from slspath"
+
+* **PR** `#56185`_: (`terminalmage`_) Fix regression in service states with reload argument
+  @ *2020-03-11 16:45:58 UTC*
+
+  * 4f9813a49c Merge pull request `#56185`_ from terminalmage/issue56167
+
+  * 65b3f4c9a0 Merge branch 'master' into issue56167
+
+  * 7b41a00b4f Merge branch 'master' into issue56167
+
+  * 8f7034d946 Merge branch 'master' into issue56167
+
+  * e9fbb634e1 Skip on OSX for now
+
+  * 5996280241 Add __opts__ and __grains__ just in case
+
+  * af3e841d08 Fix failing test
+
+  * 586f21aedc Add functional test
+
+  * 1afb9c10f0 Fix regression in service states with reload argument
+
+* **PR** `#56068`_: (`s0undt3ch`_) Update the bootstrap script to latest version, v2020.02.24
+  @ *2020-03-11 16:44:23 UTC*
+
+  * 74f8b2a926 Merge pull request `#56068`_ from s0undt3ch/hotfix/update-bootstrap
+
+  * ce83b190ed Merge branch 'master' into hotfix/update-bootstrap
+
+  * ccd231d82d Merge branch 'master' into hotfix/update-bootstrap
+
+  * 88a52f88ff Update the bootstrap script to latest version, v2020.02.24
+
+  * 012fb5bc4b Update the bootstrap script to latest version, v2020.02.04
+
+* **PR** `#56321`_: (`oeuftete`_) Tidy up formatting in boto_secgroup docs
+  @ *2020-03-11 08:14:48 UTC*
+
+  * 154257e2e9 Merge pull request `#56321`_ from oeuftete/tidy-boto-secgroup-docs
+
+  * 616f11b33e Merge branch 'master' into tidy-boto-secgroup-docs
+
+  * 412bb4d62d Tidy up formatting in boto_secgroup docs
+
+* **PR** `#56336`_: (`Ch3LL`_) Fix test_issue_2594_non_invalidated_cache test (update zope.interface)
+  @ *2020-03-11 00:08:43 UTC*
+
+  * 11d33e3d90 Merge pull request `#56336`_ from Ch3LL/fix_56330
+
+  * bbf37e090b Fix test_issue_2594_non_invalidated_cache test (update zope.interface)
+
+* **PR** `#56346`_: (`frogunder`_) Update man pages to 3000.1
+  @ *2020-03-11 00:07:31 UTC*
+
+  * a640bd30fc Merge pull request `#56346`_ from frogunder/man_pages_3000_1
+
+  * 6d7c1b6482 Update man pages to 3000.1
+
+* **PR** `#56099`_: (`s0undt3ch`_) Fix Windows and macOS requirements handling in setup.py
+  @ *2020-03-11 00:04:37 UTC*
+
+  * 2f783d247e Merge pull request `#56099`_ from s0undt3ch/hotfix/requirements
+
+  * c19f4a3fae Merge branch 'master' into hotfix/requirements
+
+  * 1e7bc8fc8f Also take into account macOS requirements
+
+  * 7eef14952c Also include req_win.txt
+
+* **PR** `#56218`_: (`raddessi`_) Changed StrictVersion checking of setuptools to LooseVersion
+  @ *2020-03-10 23:59:54 UTC*
+
+  * 7c4d879073 Merge pull request `#56218`_ from raddessi/master.v3000-conda
+
+  * 44556f6d57 Merge branch 'master' into master.v3000-conda
+
+  * 566c03b786 Merge branch 'master' into master.v3000-conda
+
+  * 82773a9799 Removed now-unused StrictVersion import from setup.py
+
+  * 31bb0f7cd1 Changed StrictVersion checking of setuptools to LooseVersion
+
+* **PR** `#56128`_: (`waynew`_) Update CHANGELOG with release date and unreleased.
+  @ *2020-03-10 23:58:15 UTC*
+
+  * acbd3556e5 Merge pull request `#56128`_ from waynew/master
+
+  * e3216db3e5 Update CHANGELOG with release date and unreleased.
+
+* **PR** `#55937`_: (`twangboy`_) Update windows build scripts
+  @ *2020-03-10 23:55:55 UTC*
+
+  * 12140545ab Merge pull request `#55937`_ from twangboy/update_deps
+
+  * f00a504a48 Add back the pylauncher
+
+  * 30b9c32356 Revert changes to req and req_win
+
+  * 98dc0e970c Fix some warts in the build_env scripts
+
+  * 8404141f65 Update dependencies
+
+* **PR** `#55906`_: (`sjorge`_) smartos.vm_present could not handle nics with vrrp_vrid property
+  @ *2020-03-10 23:54:44 UTC*
+
+  * 485a47cdf1 Merge pull request `#55906`_ from sjorge/smartos_vrrp
+
+  * 5bd7dd009a Merge branch 'master' into smartos_vrrp
+
+  * f77719c179 smartos state should handle vrrp config
+
+* **ISSUE** `#55185`_: (`sjorge`_) salt.modules.pdbedit doesn't work on samba older than 4.8 (refs: `#55894`_)
+
+* **PR** `#55894`_: (`sjorge`_) `#55185`_ pdbedit module should check for version 4.8.x or newer
+  @ *2020-03-10 23:54:21 UTC*
+
+  * 1fa8555360 Merge pull request `#55894`_ from sjorge/pdbedit_55185
+
+  * 9dc7b71122 Merge branch 'master' into pdbedit_55185
+
+* **ISSUE** `#56195`_: (`lorengordon`_) Windows: Using inline powershell in args with `cmd.script` and `shell: powershell` (refs: `#56197`_)
+
+* **PR** `#56197`_: (`lorengordon`_) Allows use of inline powershell for cmd.script args
+  @ *2020-03-10 23:52:47 UTC*
+
+  * 3e57d58db2 Merge pull request `#56197`_ from lorengordon/file-or-no-file
+
+  * fcd1699f5e Allows use of inline powershell for cmd.script args
+
+  * be2e67c0a0 Tests that powershell processes inline powershell in args
+
+* **ISSUE** `#53152`_: (`jbeaird`_) daily highstate fails after 2019.2 upgrade (refs: `#56149`_)
+
+* **PR** `#56149`_: (`garethgreenaway`_) [master] Fix to scheduler for use of when and splay
+  @ *2020-03-10 23:52:16 UTC*
+
+  * 547c73e4cc Merge pull request `#56149`_ from garethgreenaway/53152_fix_schedule_when_splay
+
+  * 8f068f6f9b Fix for when using a combination of when and splay.  Previously comparing the wrong value when determining if the job should be run and next_fire_time updated.  This resulted in multiple job runs when `when` and `splay` were used together.  Code updated and test updated to ensure only one run at the specific time.  Skip eval tests is dateutil.parser is unavailable.
+
+* **PR** `#56345`_: (`s0undt3ch`_) Bump Windows Py3 builds timeout to 10 hours
+  @ *2020-03-10 20:43:41 UTC*
+
+  * 192ce76a95 Merge pull request `#56345`_ from s0undt3ch/hotfix/win-py3-timeouts
+
+  * 11bdc38ae3 Bump Windows 2019 Py3 builds timeout to 10 hours
+
+* **PR** `#55888`_: (`s0undt3ch`_) Disable codecov PR comments and status checks
+  @ *2020-03-10 15:45:52 UTC*
+
+  * a204906c80 Merge pull request `#55888`_ from s0undt3ch/hotfix/coverage-reporting
+
+  * 4b8dc8a586 Disable codecov PR comments and status checks
+
+  * cb0f4dff87 Apply the suggestion given by the codecov team
+
+* **ISSUE** `#56177`_: (`jodok`_) mysql states fail because conv is `` instead of None (refs: `#56174`_)
+
+* **ISSUE** `#56170`_: (`jeffdyke`_) mariadb socket access must be enabled before highstate - salt 3K still tries empty password (refs: `#56174`_)
+
+* **ISSUE** `#56124`_: (`ymasson`_) MySQL state and module broken after upgrade to 3000 (refs: `#56174`_)
+
+* **PR** `#56174`_: (`garethgreenaway`_) [master] MySQL module fixes
+  @ *2020-03-10 04:03:23 UTC*
+
+  * 3e913631bb Merge pull request `#56174`_ from garethgreenaway/56124_mysql_module_state_fixes
+
+  * fcc061368b Removing quotes from the plugin_status query.  Updating tests to reflect changes.
+
+  * 3dc66393b2 Adding better error reporting around plugins.  Updating tests.  Only attempt to delete a user if they exist.
+
+  * 1337da1e4e Ensure _mysql_user_exists is using auth_socket.  Updating mysql and mariadb chpass functions to ensure that the respective plugins are enabled before attempting to use them.
+
+  * 34995ba4e8 Reworking the unix_socket code to support the differences between MySQL and MariaDB.  Adding some functions to install, remove, and check the status of plugins which we can then use when adding users which will use the unix_socket & auth_socket plugins. Adding additional tests for these new functions as well as test to ensure the correct SQL is being generated when using passwordless and unix_socket options.
+
+  * 5bfd67c13e Minor tweak to mysql module.  Fixing failing tests.
+
+  * e871a3ffd1 Various fixes to the mysql module to break out the handling of user management into different functions based on MySQL variant.
+
+* **ISSUE** `#56063`_: (`terminalmage`_) [master] Traceback in esxi grain module on import (refs: `#56094`_)
+
+* **PR** `#56094`_: (`dwoz`_) Fix type error in TornadoImporter
+  @ *2020-03-10 01:39:08 UTC*
+
+  * 211c88bfbc Merge pull request `#56094`_ from dwoz/fix_56063
+
+  * 7b1632e8e3 Fix type error in TornadoImporter
+
+* **PR** `#56172`_: (`Ch3LL`_) Only change mine data if using new allow_tgt feature
+  @ *2020-03-10 01:34:27 UTC*
+
+  * fb5252fc53 Merge pull request `#56172`_ from Ch3LL/mine_g
+
+  * f4c9c2a5cf Fix docs
+
+  * 6c914caec8 Use different targeting for windows/linux
+
+  * f6348127dc Only change mine data if using new allow_tgt feature
+
+* **ISSUE** `#56121`_: (`githubcdr`_) salt-minion broken after upgrade to 3000 (refs: `#56143`_)
+
+* **ISSUE** `#51854`_: (`Oloremo`_) Fluorine: minion_pillar_cache: True leads to exception (refs: `#56143`_, `#52195`_)
+
+* **PR** `#56143`_: (`waynew`_) Use encoding when caching pillar data
+  @ *2020-03-10 01:33:37 UTC*
+
+  * **PR** `#52195`_: (`waynew`_) Use encoding when caching pillar data (refs: `#56143`_)
+
+  * 8a8e9c9c5f Merge pull request `#56143`_ from waynew/51854-minion-pillar-cache-exception
+
+  * 58cc9488aa Merge branch 'master' into 51854-minion-pillar-cache-exception
+
+* **PR** `#56082`_: (`Ch3LL`_) Fix saltversioninfo grain for new version
+  @ *2020-03-10 01:32:11 UTC*
+
+  * 9f27caa7d0 Merge pull request `#56082`_ from Ch3LL/ver_grains
+
+  * e6abd6d31b ensure full_info/noc_info work with new versioning
+
+  * bcc520ccc4 Add saltversioninfo grains test
+
+  * 510e149b87 Fix saltversioninfo grain for new version
+
+* **PR** `#56285`_: (`UtahDave`_) Add missing colon.
+  @ *2020-03-09 22:22:17 UTC*
+
+  * 602ff3b9f1 Merge pull request `#56285`_ from UtahDave/fix_f5_doc
+
+  * 1034013831 Add missing colon.
+
+* **PR** `#56333`_: (`Ch3LL`_) add pylint ignore in django returner
+  @ *2020-03-09 20:42:42 UTC*
+
+  * de5184a206 Merge pull request `#56333`_ from Ch3LL/lint_fix
+
+  * 6a213a429a add pylint ignore in django returner
+
+  * 759290a055 Use encoding when caching pillar data
+
+* **ISSUE** `#56080`_: (`sagetherage`_) Update release notes, pip download page and install docs on pycrpto (refs: `#56095`_)
+
+* **PR** `#56095`_: (`waynew`_) Provide security advisory for PyCrypto
+  @ *2020-02-10 18:42:00 UTC*
+
+  * 9adc2214c3 Merge pull request `#56095`_ from waynew/crypto-warning
+
+  * 484bc51f4b Add warnings to a couple of other places
+
+  * 2711c04ca9 Provide security advisory for PyCrypto
+
+* **PR** `#56092`_: (`twangboy`_) Add LGPO and Network PRs to changelogs
+  @ *2020-02-10 18:17:28 UTC*
+
+  * 1acd492bb9 Merge pull request `#56092`_ from twangboy/waynew-update-changelog
+
+  * 4e03620d4e Fix a docs issue
+
+  * e7b64277e1 Add LGPO and Network PRs to changelogs
+
+* **PR** `#56115`_: (`s0undt3ch`_) Add information about the pip install salt on windows issue.
+  @ *2020-02-10 17:33:44 UTC*
+
+  * 65d59b0ee9 Merge pull request `#56115`_ from s0undt3ch/hotfix/release-notes
+
+  * aeac9f36cd Add information about the pip install salt on windows issue.
+
+  * a5179434e7 Merge branch 'master' into pdbedit_55185
+
+  * 95d46d6cc8 `#55185`_ pdbedit module should check for version 4.8.x or newer
+
+.. _`#51854`: https://github.com/saltstack/salt/issues/51854
+.. _`#52195`: https://github.com/saltstack/salt/pull/52195
+.. _`#53152`: https://github.com/saltstack/salt/issues/53152
+.. _`#55185`: https://github.com/saltstack/salt/issues/55185
+.. _`#55822`: https://github.com/saltstack/salt/pull/55822
+.. _`#55888`: https://github.com/saltstack/salt/pull/55888
+.. _`#55894`: https://github.com/saltstack/salt/pull/55894
+.. _`#55906`: https://github.com/saltstack/salt/pull/55906
+.. _`#55937`: https://github.com/saltstack/salt/pull/55937
+.. _`#56023`: https://github.com/saltstack/salt/pull/56023
+.. _`#56060`: https://github.com/saltstack/salt/pull/56060
+.. _`#56063`: https://github.com/saltstack/salt/issues/56063
+.. _`#56068`: https://github.com/saltstack/salt/pull/56068
+.. _`#56080`: https://github.com/saltstack/salt/issues/56080
+.. _`#56082`: https://github.com/saltstack/salt/pull/56082
+.. _`#56092`: https://github.com/saltstack/salt/pull/56092
+.. _`#56094`: https://github.com/saltstack/salt/pull/56094
+.. _`#56095`: https://github.com/saltstack/salt/pull/56095
+.. _`#56099`: https://github.com/saltstack/salt/pull/56099
+.. _`#56115`: https://github.com/saltstack/salt/pull/56115
+.. _`#56119`: https://github.com/saltstack/salt/issues/56119
+.. _`#56121`: https://github.com/saltstack/salt/issues/56121
+.. _`#56124`: https://github.com/saltstack/salt/issues/56124
+.. _`#56128`: https://github.com/saltstack/salt/pull/56128
+.. _`#56131`: https://github.com/saltstack/salt/issues/56131
+.. _`#56143`: https://github.com/saltstack/salt/pull/56143
+.. _`#56149`: https://github.com/saltstack/salt/pull/56149
+.. _`#56160`: https://github.com/saltstack/salt/pull/56160
+.. _`#56170`: https://github.com/saltstack/salt/issues/56170
+.. _`#56172`: https://github.com/saltstack/salt/pull/56172
+.. _`#56174`: https://github.com/saltstack/salt/pull/56174
+.. _`#56177`: https://github.com/saltstack/salt/issues/56177
+.. _`#56185`: https://github.com/saltstack/salt/pull/56185
+.. _`#56195`: https://github.com/saltstack/salt/issues/56195
+.. _`#56197`: https://github.com/saltstack/salt/pull/56197
+.. _`#56215`: https://github.com/saltstack/salt/pull/56215
+.. _`#56218`: https://github.com/saltstack/salt/pull/56218
+.. _`#56272`: https://github.com/saltstack/salt/pull/56272
+.. _`#56285`: https://github.com/saltstack/salt/pull/56285
+.. _`#56288`: https://github.com/saltstack/salt/issues/56288
+.. _`#56290`: https://github.com/saltstack/salt/pull/56290
+.. _`#56310`: https://github.com/saltstack/salt/pull/56310
+.. _`#56321`: https://github.com/saltstack/salt/pull/56321
+.. _`#56324`: https://github.com/saltstack/salt/issues/56324
+.. _`#56327`: https://github.com/saltstack/salt/pull/56327
+.. _`#56333`: https://github.com/saltstack/salt/pull/56333
+.. _`#56336`: https://github.com/saltstack/salt/pull/56336
+.. _`#56337`: https://github.com/saltstack/salt/pull/56337
+.. _`#56339`: https://github.com/saltstack/salt/pull/56339
+.. _`#56341`: https://github.com/saltstack/salt/pull/56341
+.. _`#56345`: https://github.com/saltstack/salt/pull/56345
+.. _`#56346`: https://github.com/saltstack/salt/pull/56346
+.. _`#56358`: https://github.com/saltstack/salt/pull/56358
+.. _`#56360`: https://github.com/saltstack/salt/pull/56360
+.. _`#56365`: https://github.com/saltstack/salt/pull/56365
+.. _`#56373`: https://github.com/saltstack/salt/pull/56373
+.. _`#56376`: https://github.com/saltstack/salt/pull/56376
+.. _`#56378`: https://github.com/saltstack/salt/pull/56378
+.. _`#56387`: https://github.com/saltstack/salt/pull/56387
+.. _`#56398`: https://github.com/saltstack/salt/pull/56398
+.. _`#56403`: https://github.com/saltstack/salt/pull/56403
+.. _`#56417`: https://github.com/saltstack/salt/pull/56417
+.. _`#56418`: https://github.com/saltstack/salt/pull/56418
+.. _`#56423`: https://github.com/saltstack/salt/pull/56423
+.. _`#56433`: https://github.com/saltstack/salt/issues/56433
+.. _`#56435`: https://github.com/saltstack/salt/pull/56435
+.. _`#56436`: https://github.com/saltstack/salt/pull/56436
+.. _`#56446`: https://github.com/saltstack/salt/pull/56446
+.. _`#56455`: https://github.com/saltstack/salt/pull/56455
+.. _`Ch3LL`: https://github.com/Ch3LL
+.. _`Oloremo`: https://github.com/Oloremo
+.. _`UtahDave`: https://github.com/UtahDave
+.. _`bryceml`: https://github.com/bryceml
+.. _`cmcmarrow`: https://github.com/cmcmarrow
+.. _`dwoz`: https://github.com/dwoz
+.. _`finalduty`: https://github.com/finalduty
+.. _`frogunder`: https://github.com/frogunder
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`githubcdr`: https://github.com/githubcdr
+.. _`jbeaird`: https://github.com/jbeaird
+.. _`jeffdyke`: https://github.com/jeffdyke
+.. _`jodok`: https://github.com/jodok
+.. _`kiemlicz`: https://github.com/kiemlicz
+.. _`lorengordon`: https://github.com/lorengordon
+.. _`mchugh19`: https://github.com/mchugh19
+.. _`oeuftete`: https://github.com/oeuftete
+.. _`raddessi`: https://github.com/raddessi
+.. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`sagetherage`: https://github.com/sagetherage
+.. _`sjorge`: https://github.com/sjorge
+.. _`terminalmage`: https://github.com/terminalmage
+.. _`thusoy`: https://github.com/thusoy
+.. _`twangboy`: https://github.com/twangboy
+.. _`waynew`: https://github.com/waynew
+.. _`ymasson`: https://github.com/ymasson

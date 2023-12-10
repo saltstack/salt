@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -16,24 +15,24 @@
 
 
 class InspectorSnapshotException(Exception):
-    '''
+    """
     Snapshot exception.
-    '''
+    """
 
 
 class InspectorQueryException(Exception):
-    '''
+    """
     Exception that is only for the inspector query.
-    '''
+    """
 
 
 class SIException(Exception):
-    '''
+    """
     System information exception.
-    '''
+    """
 
 
 class InspectorKiwiProcessorException(Exception):
-    '''
+    """
     Kiwi builder/exporter exception.
-    '''
+    """

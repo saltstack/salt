@@ -30,8 +30,10 @@ the debugger should be started:
 
 .. code-block:: python
 
-    test = 'test123'
-    import IPython; IPython.embed_kernel()
+    test = "test123"
+    import IPython
+
+    IPython.embed_kernel()
 
 After running a Salt command that hits that line, the following will show up in
 the log file:
@@ -58,6 +60,45 @@ supports tab-completion.
     test123
 
 To exit IPython and continue running Salt, press ``Ctrl-d`` to logout.
+
+.. _loader:
+
+The Salt Loader
+===============
+
+Salt's loader system is responsible for reading `Special Module Contents`_ and
+providing the context for the special `Dunder Dictionaries`_. When modules
+developed for Salt's loader are imported directly, the dunder attributes won't
+be populated. You can use the `Loader Context`_ to work around this.
+
+Loader Context
+--------------
+
+Given the following.
+
+.. code-block:: python
+
+        # coolmod.py
+
+
+        def utils_func_getter(name):
+            return __utils__[name]
+
+You would not be able import ``coolmod`` and run ``utils_func_getter`` because
+``__utils__`` would not be defined. You must run ``coolmod.utils_func_getter``
+in the context of a loader.
+
+.. code-block:: python
+
+        import coolmod
+        import salt.loader
+
+        opts = {}
+        utils = salt.loader.utils(opts)
+        with salt.loader.context(utils):
+            func = coolmod.utils_func_getter("foo.bar")
+
+
 
 Special Module Contents
 =======================
@@ -114,6 +155,11 @@ The following dunder dictionaries are always defined, but may be empty
 __opts__
 --------
 
+.. versionchanged:: 3006.0
+
+    The ``__opts__`` dictionary can now be accessed via
+    :py:mod:`~salt.loader.context``.
+
 Defined in: All modules
 
 The ``__opts__`` dictionary contains all of the options passed in the
@@ -123,7 +169,13 @@ configuration file for the master or minion.
 
     In many places in salt, instead of pulling raw data from the __opts__
     dict, configuration data should be pulled from the salt `get` functions
-    such as config.get, aka - ``__salt__['config.get']('foo:bar')``
+    such as config.get
+
+    .. code-block:: python
+
+        __salt__["config.get"]("foo:bar")
+
+
     The `get` functions also allow for dict traversal via the *:* delimiter.
     Consider using get functions whenever using ``__opts__`` or ``__pillar__``
     and ``__grains__`` (when using grains for configuration data)
@@ -146,8 +198,8 @@ functions to be called as they have been set up by the salt loader.
 
 .. code-block:: python
 
-    __salt__['cmd.run']('fdisk -l')
-    __salt__['network.ip_addrs']()
+    __salt__["cmd.run"]("fdisk -l")
+    __salt__["network.ip_addrs"]()
 
 .. note::
 
@@ -170,11 +222,20 @@ While ``__grains__`` is defined for every module, it's only filled in for some.
 __pillar__
 -----------
 
-Filled in for: Execution, Returner, SSH Wrapper, State
+Filled in for: Execution, Renderer, Returner, SSH Wrapper, State
 
 The ``__pillar__`` dictionary contains the pillar for the respective minion.
 
 While ``__pillar__`` is defined for every module, it's only filled in for some.
+
+__ext_pillar__
+--------------
+
+Filled in for: Pillar
+
+The ``__ext_pillar__`` dictionary contains the external pillar modules.
+
+.. _dunder-context:
 
 __context__
 -----------
@@ -187,17 +248,10 @@ executions until the modules are refreshed; such as when
 :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>` or
 :py:func:`state.apply <salt.modules.state.apply_>` are executed.
 
-A great place to see how to use ``__context__`` is in the cp.py module in
-salt/modules/cp.py. The fileclient authenticates with the master when it is
-instantiated and then is used to copy files to the minion. Rather than create a
-new fileclient for each file that is to be copied down, one instance of the
-fileclient is instantiated in the ``__context__`` dictionary and is reused for
-each file. Here is an example from salt/modules/cp.py:
-
 .. code-block:: python
 
-    if not 'cp.fileclient' in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+    if not "cp.fileclient" in __context__:
+        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
 
 
 .. note:: Because __context__ may or may not have been destroyed, always be
@@ -206,19 +260,26 @@ each file. Here is an example from salt/modules/cp.py:
 
 __utils__
 ---------
-Defined in: Cloud, Engine, Execution, File Server, Pillar, Proxy, Runner, SDB.
+Defined in: Cloud, Engine, Execution, File Server, Grain, Pillar, Proxy, Roster, Runner, SDB, State
 
 __proxy__
 ---------
 Defined in: Beacon, Engine, Execution, Executor, Proxy, Renderer, Returner, State, Util
 
-__runners__
+__runner__
 -----------
 Defined in: Engine, Roster, Thorium
 
+.. note:: When used in engines, it should be called __runners__ (plural)
+
+__executors__
+-------------
+
+Defined in: Executor
+
 __ret__
 -------
-Defined in: Proxy, Search
+Defined in: Proxy
 
 __thorium__
 -----------
@@ -237,15 +298,11 @@ __sdb__
 Defined in: SDB
 
 
-Additional Globals
-==================
+__file_client__
+---------------
 
-Defined for: Runners, Execution Modules, Wheels
+.. versionchanged:: 3006.5
 
-* ``__jid__``: The job ID
-* ``__user__``: The user
-* ``__tag__``: The jid tag
-* ``__jid_event__``: A :py:class:`salt.utils.event.NamespacedEvent`.
-
-:py:class:`NamespacedEvent <salt.utils.event.NamespacedEvent>` defines a single
-method :py:meth:`fire_event <salt.utils.event.NamespacedEvent.fire_event>`, that takes data and tag. The :ref:`Runner docs <runners>` has examples.
+The ``__file_client__`` dunder was added to states and execution modules. This
+enables the use of a file client without haveing to instantiate one in
+the module.

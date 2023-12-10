@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Retrieve Pillar data by doing a MySQL query
 
 MariaDB provides Python support through the MySQL Python package.
@@ -44,56 +43,67 @@ Complete example
             depth: 5
             as_list: True
             with_lists: [1,3]
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import python libs
-from contextlib import contextmanager
 import logging
+from contextlib import contextmanager
 
-# Import Salt libs
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
+    # Trying to import MySQLdb
     import MySQLdb
-    HAS_MYSQL = True
+    import MySQLdb.converters
+    import MySQLdb.cursors
 except ImportError:
-    HAS_MYSQL = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.converters
+        import MySQLdb.cursors
+    except ImportError:
+        MySQLdb = None
 
 
 def __virtual__():
-    if not HAS_MYSQL:
-        return False
-    return True
+    """
+    Confirm that a python mysql client is installed.
+    """
+    return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
 class MySQLExtPillar(SqlBaseExtPillar):
-    '''
+    """
     This class receives and processes the database rows from MySQL.
-    '''
+    """
+
     @classmethod
     def _db_name(cls):
-        return 'MySQL'
+        return "MySQL"
 
     def _get_options(self):
-        '''
+        """
         Returns options used for the MySQL connection.
-        '''
-        defaults = {'host': 'localhost',
-                    'user': 'salt',
-                    'pass': 'salt',
-                    'db': 'salt',
-                    'port': 3306,
-                    'ssl': {}}
+        """
+        defaults = {
+            "host": "localhost",
+            "user": "salt",
+            "pass": "salt",
+            "db": "salt",
+            "port": 3306,
+            "ssl": {},
+        }
         _options = {}
-        _opts = __opts__.get('mysql', {})
+        _opts = __opts__.get("mysql", {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for MySQL %s', attr)
+                log.debug("Using default for MySQL %s", attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -101,36 +111,36 @@ class MySQLExtPillar(SqlBaseExtPillar):
 
     @contextmanager
     def _get_cursor(self):
-        '''
+        """
         Yield a MySQL cursor
-        '''
+        """
         _options = self._get_options()
-        conn = MySQLdb.connect(host=_options['host'],
-                               user=_options['user'],
-                               passwd=_options['pass'],
-                               db=_options['db'], port=_options['port'],
-                               ssl=_options['ssl'])
+        conn = MySQLdb.connect(
+            host=_options["host"],
+            user=_options["user"],
+            passwd=_options["pass"],
+            db=_options["db"],
+            port=_options["port"],
+            ssl=_options["ssl"],
+        )
         cursor = conn.cursor()
         try:
             yield cursor
         except MySQLdb.DatabaseError as err:
-            log.exception('Error in ext_pillar MySQL: %s', err.args)
+            log.exception("Error in ext_pillar MySQL: %s", err.args)
         finally:
             conn.close()
 
-    def extract_queries(self, args, kwargs):
-        '''
-            This function normalizes the config block into a set of queries we
-            can use.  The return is a list of consistently laid out dicts.
-        '''
-        return super(MySQLExtPillar, self).extract_queries(args, kwargs)
+    def extract_queries(self, args, kwargs):  # pylint: disable=useless-super-delegation
+        """
+        This function normalizes the config block into a set of queries we
+        can use.  The return is a list of consistently laid out dicts.
+        """
+        return super().extract_queries(args, kwargs)
 
 
-def ext_pillar(minion_id,
-               pillar,
-               *args,
-               **kwargs):
-    '''
+def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
     Execute queries against MySQL, merge and return as a dict
-    '''
+    """
     return MySQLExtPillar().fetch(minion_id, pillar, *args, **kwargs)

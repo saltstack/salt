@@ -11,7 +11,13 @@ Statistics
 - Total Issue References: **60**
 - Total PR References: **217**
 
-- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `Quarky9`_, `RichardW42`_, `UtahDave`_, `amaclean199`_, `arif-ali`_, `baniobloom`_, `bdrung`_, `benediktwerner`_, `bmiguel-teixeira`_, `cachedout`_, `dafenko`_, `damon-atkins`_, `dwoz`_, `ezh`_, `folti`_, `fpicot`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeroennijhof`_, `jfindlay`_, `jfoboss`_, `kstreee`_, `lomeroe`_, `mattp-`_, `meaksh`_, `mirceaulinic`_, `myinitialsarepm`_, `mzbroch`_, `nages13`_, `paclat`_, `pcjeff`_, `pruiz`_, `psyer`_, `rallytime`_, `s0undt3ch`_, `skizunov`_, `smitty42`_, `terminalmage`_, `twangboy`_, `vutny`_, `yagnik`_, `yannj-fr`_)
+- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `Quarky9`_, `RichardW42`_,
+  `UtahDave`_, `amaclean199`_, `arif-ali`_, `baniobloom`_, `bdrung`_, `benediktwerner`_,
+  `bmiguel-teixeira`_, `cachedout`_, `dafenko`_, `damon-atkins`_, `dwoz`_, `ezh`_, `folti`_,
+  `fpicot`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeroennijhof`_, `jfindlay`_,
+  `jfoboss`_, `kstreee`_, `lomeroe`_, `mattp-`_, `meaksh`_, `mirceaulinic`_, `myinitialsarepm`_,
+  `mzbroch`_, `nages13`_, `paclat`_, `pcjeff`_, `pruiz`_, `psyer`_, `rallytime`_, `s0undt3ch`_,
+  `skizunov`_, `smitty42`_, `terminalmage`_, `twangboy`_, `vutny`_, `yagnik`_, `yannj-fr`_)
 
 Tornado 5.0 Support for Python 2 Only
 -------------------------------------
@@ -276,14 +282,14 @@ Changelog for v2017.7.5..v2017.7.6
 
 * **ISSUE** `#45790`_: (`bdarnell`_) Test with Tornado 5.0b1 (refs: `#47106`_, `#47433`_)
 
-* **PR** `#47433`_: (`s0undt3ch`_) Add missing requirements files not commited in `#47106`_
+* **PR** `#47433`_: (`s0undt3ch`_) Add missing requirements files not committed in `#47106`_
   @ *2018-05-02 20:57:14 UTC*
 
   * **PR** `#47106`_: (`DmitryKuzmenko`_) Tornado50 compatibility fixes (refs: `#47433`_)
 
   * ed69821d19 Merge pull request `#47433`_ from s0undt3ch/2017.7
 
-  * 5abadf25d6 Add missing requirements files not commited in `#47106`_
+  * 5abadf25d6 Add missing requirements files not committed in `#47106`_
 
 * **ISSUE** `#47424`_: (`bcharron`_) "salt-cloud -m" fails with nova driver: "There was a query error: u'state'" (refs: `#47429`_)
 
@@ -422,7 +428,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * b6da600fff Initialize __context__ retcode for functions handled via schedule util module
 
-* **ISSUE** `#47264`_: (`jf`_) doc: https://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.grains.html#salt.modules.grains.delval s/of pass/or pass/ (refs: `#47371`_)
+* **ISSUE** `#47264`_: (`jf`_) doc: https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.grains.html#salt.modules.grains.delval s/of pass/or pass/ (refs: `#47371`_)
 
 * **PR** `#47371`_: (`rallytime`_) Fix "of pass" typo in grains.delval docs: change to "or pass"
   @ *2018-04-30 18:18:46 UTC*
@@ -489,7 +495,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * 65c3ba7ff1 Remove useless documentation
 
-  * 5d67cb27de Remove unncessary commented line
+  * 5d67cb27de Remove unnecessary commented line
 
 * **PR** `#47347`_: (`dwoz`_) Proper fix for mysql tests
   @ *2018-04-27 17:27:53 UTC*
@@ -557,7 +563,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * 85451f48d4 Fix python 3 support for inet_pton function
 
-* **PR** `#47339`_: (`dwoz`_) Use salt.utils.fopen for line ending consistancy
+* **PR** `#47339`_: (`dwoz`_) Use salt.utils.fopen for line ending consistency
   @ *2018-04-26 22:39:56 UTC*
 
   * e4779f3246 Merge pull request `#47339`_ from dwoz/ssh_key_test_fix
@@ -566,7 +572,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * b2ae5889b7 Close the temporary file handle
 
-  * 9f7f83a975 Use salt.utils.fopen for line ending consistancy
+  * 9f7f83a975 Use salt.utils.fopen for line ending consistency
 
 * **PR** `#47335`_: (`dwoz`_) Remove un-needed string-escape
   @ *2018-04-26 21:49:27 UTC*
@@ -712,7 +718,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * **PR** `#47207`_: (`benediktwerner`_) Fix pip_state with pip3 if no changes occourred (refs: `#47220`_)
 
-  * **PR** `#47102`_: (`gtmanfred`_) dont allow using no_use_wheel for pip 10.0.0 or newer (refs: `#47220`_)
+  * **PR** `#47102`_: (`gtmanfred`_) don't allow using no_use_wheel for pip 10.0.0 or newer (refs: `#47220`_)
 
   * 4e2e1f0719 Merge pull request `#47220`_ from benediktwerner/fix-pip-2017.7
 
@@ -894,7 +900,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * bd0c23396c fix pip.req import error in pip 10.0.0
 
-* **PR** `#47102`_: (`gtmanfred`_) dont allow using no_use_wheel for pip 10.0.0 or newer (refs: `#47220`_)
+* **PR** `#47102`_: (`gtmanfred`_) don't allow using no_use_wheel for pip 10.0.0 or newer (refs: `#47220`_)
   @ *2018-04-17 20:44:58 UTC*
 
   * eb5ac51a48 Merge pull request `#47102`_ from gtmanfred/2017.7
@@ -905,7 +911,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * 4c07a3d1e9 fix other tests
 
-  * b71e3d8a04 dont allow using no_use_wheel for pip 10.0.0 or newer
+  * b71e3d8a04 don't allow using no_use_wheel for pip 10.0.0 or newer
 
 * **PR** `#47037`_: (`twangboy`_) Fix build_env scripts
   @ *2018-04-17 18:54:17 UTC*
@@ -1253,7 +1259,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * 058bbed221 Merge pull request `#46799`_ from garethgreenaway/46762_prereq_shenanigans_tests
 
-  * 13875e78cf Fixing documention string for test.
+  * 13875e78cf Fixing documentation string for test.
 
   * 3d288c44d4 Fixing test documentation
 
@@ -1393,7 +1399,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * 2bee383e9d correct create list item value names if the valuePrefix attribute does not exist on the list item, the value is the value name, other wise, the valuename a number with the valuePrefix prepended to it
 
-* **ISSUE** `#46347`_: (`twangboy`_) Buid 449: unit.modules.test_inspect_collector (refs: `#46675`_)
+* **ISSUE** `#46347`_: (`twangboy`_) Build 449: unit.modules.test_inspect_collector (refs: `#46675`_)
 
 * **PR** `#46675`_: (`dwoz`_) Skip test when git symlinks are not configured
   @ *2018-04-03 12:19:19 UTC*
@@ -1564,11 +1570,11 @@ Changelog for v2017.7.5..v2017.7.6
 * **PR** `#46732`_: (`rallytime`_) Back-port `#46032`_ to 2017.7
   @ *2018-03-28 13:43:17 UTC*
 
-  * **PR** `#46032`_: (`DmitryKuzmenko`_) Workaroung python bug in traceback.format_exc() (refs: `#46732`_)
+  * **PR** `#46032`_: (`DmitryKuzmenko`_) Workaround python bug in traceback.format_exc() (refs: `#46732`_)
 
   * 1222bdbc00 Merge pull request `#46732`_ from rallytime/bp-46032
 
-  * bf0b962dc0 Workaroung python bug in traceback.format_exc()
+  * bf0b962dc0 Workaround python bug in traceback.format_exc()
 
 * **ISSUE** `#28142`_: (`zmalone`_) Deprecate or update the copr repo (refs: `#46749`_)
 
@@ -1823,7 +1829,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * f038e3c452 Merge pull request `#46571`_ from garethgreenaway/46552_onfail_and_require
 
-  * 152c43c843 Accounting for a case when multiple onfails are used along with requires.  Previously if you have multiple states using 'onfail' and two of those states using a 'require' against the first one state, the last two will run even if the 'onfail' isn't met because the 'require' is met because the first state returns true even though it didn't excute.  This change adds an additional hidden variable that is used when checking requisities to determine if the state actually ran.
+  * 152c43c843 Accounting for a case when multiple onfails are used along with requires.  Previously if you have multiple states using 'onfail' and two of those states using a 'require' against the first one state, the last two will run even if the 'onfail' isn't met because the 'require' is met because the first state returns true even though it didn't execute.  This change adds an additional hidden variable that is used when checking requisities to determine if the state actually ran.
 
 * **ISSUE** `#46512`_: (`blarghmatey`_) git.pull failing when run from the salt scheduler (refs: `#46520`_)
 
@@ -1911,11 +1917,11 @@ Changelog for v2017.7.5..v2017.7.6
 * **PR** `#46511`_: (`rallytime`_) Back-port `#45769`_ to 2017.7
   @ *2018-03-13 17:08:52 UTC*
 
-  * **PR** `#45769`_: (`Quarky9`_) Surpress boto WARNING during SQS msg decode in sqs_engine (refs: `#46511`_)
+  * **PR** `#45769`_: (`Quarky9`_) Suppress boto WARNING during SQS msg decode in sqs_engine (refs: `#46511`_)
 
   * 5cc11129f1 Merge pull request `#46511`_ from rallytime/bp-45769
 
-  * a8ffceda53 Surpress boto WARNING during decode, reference: https://github.com/boto/boto/issues/2965
+  * a8ffceda53 Suppress boto WARNING during decode, reference: https://github.com/boto/boto/issues/2965
 
 .. _`#20581`: https://github.com/saltstack/salt/issues/20581
 .. _`#20639`: https://github.com/saltstack/salt/issues/20639

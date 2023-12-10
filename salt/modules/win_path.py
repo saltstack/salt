@@ -1,27 +1,19 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Manage the Windows System PATH
 
 Note that not all Windows applications will rehash the PATH environment variable,
-Only the ones that listen to the WM_SETTINGCHANGE message
-http://support.microsoft.com/kb/104011
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+Only the ones that listen to the WM_SETTINGCHANGE message.
+"""
 
-# Import Python libs
 import logging
 import os
-import re
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_functions
 
-# Import 3rd-party libs
-from salt.ext.six.moves import map
 try:
     HAS_WIN32 = True
 except ImportError:
@@ -30,31 +22,31 @@ except ImportError:
 # Settings
 log = logging.getLogger(__name__)
 
-HIVE = 'HKEY_LOCAL_MACHINE'
-KEY = 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment'
-VNAME = 'PATH'
-VTYPE = 'REG_EXPAND_SZ'
-PATHSEP = str(os.pathsep)  # future lint: disable=blacklisted-function
+HIVE = "HKEY_LOCAL_MACHINE"
+KEY = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"
+VNAME = "PATH"
+VTYPE = "REG_EXPAND_SZ"
+PATHSEP = str(os.pathsep)
 
 
 def __virtual__():
-    '''
+    """
     Load only on Windows
-    '''
+    """
     if salt.utils.platform.is_windows() and HAS_WIN32:
-        return 'win_path'
+        return "win_path"
     return (False, "Module win_path: module only works on Windows systems")
 
 
 def _normalize_dir(string_):
-    '''
+    """
     Normalize the directory to make comparison possible
-    '''
-    return re.sub(r'\\$', '', salt.utils.stringutils.to_unicode(string_))
+    """
+    return os.path.normpath(salt.utils.stringutils.to_unicode(string_))
 
 
 def rehash():
-    '''
+    """
     Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
     variables for new processes.
 
@@ -70,12 +62,12 @@ def rehash():
     .. code-block:: bash
 
         salt '*' win_path.rehash
-    '''
-    return salt.utils.win_functions.broadcast_setting_change('Environment')
+    """
+    return salt.utils.win_functions.broadcast_setting_change("Environment")
 
 
 def get_path():
-    '''
+    """
     Returns a list of items in the SYSTEM path
 
     CLI Example:
@@ -83,20 +75,24 @@ def get_path():
     .. code-block:: bash
 
         salt '*' win_path.get_path
-    '''
+    """
     ret = salt.utils.stringutils.to_unicode(
-        __salt__['reg.read_value'](
-            'HKEY_LOCAL_MACHINE',
-            'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-            'PATH')['vdata']
-    ).split(';')
+        __utils__["reg.read_value"](
+            "HKEY_LOCAL_MACHINE",
+            "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
+            "PATH",
+        )["vdata"]
+    ).split(";")
 
+    # If the final element happens to be an empty value, normalize_dir treats this
+    # as a valid path and inserts a period (.) so clean the list before that happens
+    ret = ret[:-1] if ret[-1] == "" else ret
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
 
 
 def exists(path):
-    '''
+    """
     Check if the directory is configured in the SYSTEM path
     Case-insensitive and ignores trailing backslash
 
@@ -110,7 +106,7 @@ def exists(path):
         salt '*' win_path.exists 'c:\\python27'
         salt '*' win_path.exists 'c:\\python27\\'
         salt '*' win_path.exists 'C:\\pyThon27'
-    '''
+    """
     path = _normalize_dir(path)
     sysPath = get_path()
 
@@ -118,11 +114,11 @@ def exists(path):
 
 
 def _update_local_path(local_path):
-    os.environ[str('PATH')] = PATHSEP.join(local_path)  # future lint: disable=blacklisted-function
+    os.environ["PATH"] = PATHSEP.join(local_path)
 
 
 def add(path, index=None, **kwargs):
-    '''
+    """
     Add the directory to the SYSTEM path in the index location. Returns
     ``True`` if successful, otherwise ``False``.
 
@@ -146,21 +142,24 @@ def add(path, index=None, **kwargs):
 
         # Will add to the end of the path
         salt '*' win_path.add 'c:\\python27' index='-1'
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    rehash_ = kwargs.pop('rehash', True)
+    rehash_ = kwargs.pop("rehash", True)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
     path = _normalize_dir(path)
+    # Due to path normalization causing issues with empty strings,
+    # back out here as we don't allow Path entries to be empty
+    if path == ".":
+        return False
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 
     # The current path should not have any unicode in it, but don't take any
     # chances.
     local_path = [
-        salt.utils.stringutils.to_str(x)
-        for x in os.environ['PATH'].split(PATHSEP)
+        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(PATHSEP)
     ]
 
     if index is not None:
@@ -170,11 +169,11 @@ def add(path, index=None, **kwargs):
             index = None
 
     def _check_path(dirs, path, index):
-        '''
+        """
         Check the dir list for the specified path, at the specified index, and
         make changes to the list if needed. Return True if changes were made to
         the list, otherwise return False.
-        '''
+        """
         dirs_lc = [x.lower() for x in dirs]
         try:
             # Check index with case normalized
@@ -196,11 +195,11 @@ def add(path, index=None, **kwargs):
             if index >= num_dirs or index == -1:
                 # Set pos to 'END' so we know that we're moving the directory
                 # if it exists and isn't already at the end.
-                pos = 'END'
+                pos = "END"
             elif index <= -num_dirs:
                 # Negative index is too large, shift index to beginning of list
                 index = pos = 0
-            elif index <= 0:
+            elif index < 0:
                 # Negative indexes (other than -1 which is handled above) must
                 # be inserted at index + 1 for the item  to end up in the
                 # position you want, since list.insert() inserts before the
@@ -216,7 +215,7 @@ def add(path, index=None, **kwargs):
                 # ['one', 'two', 'three', 'four', 'five']
                 pos += 1
 
-        if pos == 'END':
+        if pos == "END":
             if cur_index is not None:
                 if cur_index == num_dirs - 1:
                     # Directory is already in the desired location, no changes
@@ -245,8 +244,9 @@ def add(path, index=None, **kwargs):
                 return True
         else:
             if cur_index is not None:
-                if (index < 0 and cur_index != (num_dirs + index)) \
-                        or (index >= 0 and cur_index != index):
+                if (index < 0 and cur_index != (num_dirs + index)) or (
+                    index >= 0 and cur_index != index
+                ):
                     # Directory is present, but not at the desired index.
                     # Remove it from the non-normalized path list and insert it
                     # at the correct postition.
@@ -261,7 +261,6 @@ def add(path, index=None, **kwargs):
                 # Insert the path at the desired index.
                 dirs.insert(pos, path)
                 return True
-        return False
 
     if _check_path(local_path, path_str, index):
         _update_local_path(local_path)
@@ -271,12 +270,8 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = __salt__['reg.set_value'](
-        HIVE,
-        KEY,
-        VNAME,
-        ';'.join(salt.utils.data.decode(system_path)),
-        VTYPE
+    result = __utils__["reg.set_value"](
+        HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 
     if result and rehash_:
@@ -287,7 +282,7 @@ def add(path, index=None, **kwargs):
 
 
 def remove(path, **kwargs):
-    r'''
+    r"""
     Remove the directory from the SYSTEM path
 
     Returns:
@@ -304,9 +299,9 @@ def remove(path, **kwargs):
 
         # Will remove C:\Python27 from the path
         salt '*' win_path.remove 'c:\\python27'
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    rehash_ = kwargs.pop('rehash', True)
+    rehash_ = kwargs.pop("rehash", True)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
@@ -317,16 +312,15 @@ def remove(path, **kwargs):
     # The current path should not have any unicode in it, but don't take any
     # chances.
     local_path = [
-        salt.utils.stringutils.to_str(x)
-        for x in os.environ['PATH'].split(PATHSEP)
+        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(PATHSEP)
     ]
 
     def _check_path(dirs, path):
-        '''
+        """
         Check the dir list for the specified path, and make changes to the list
         if needed. Return True if changes were made to the list, otherwise
         return False.
-        '''
+        """
         dirs_lc = [x.lower() for x in dirs]
         path_lc = path.lower()
         new_dirs = []
@@ -347,12 +341,8 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = __salt__['reg.set_value'](
-        HIVE,
-        KEY,
-        VNAME,
-        ';'.join(salt.utils.data.decode(system_path)),
-        VTYPE
+    result = __utils__["reg.set_value"](
+        HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 
     if result and rehash_:

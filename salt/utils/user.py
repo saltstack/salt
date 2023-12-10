@@ -1,49 +1,39 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Functions for querying and modifying a user account and the groups to which it
 belongs.
-'''
+"""
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import ctypes
 import getpass
 import logging
 import os
 import sys
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators.jinja import jinja_filter
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Conditional imports
 try:
     import pwd
+
     HAS_PWD = True
 except ImportError:
     HAS_PWD = False
 
 try:
     import grp
+
     HAS_GRP = True
 except ImportError:
     HAS_GRP = False
 
 try:
-    import pysss
-    HAS_PYSSS = True
-except ImportError:
-    HAS_PYSSS = False
-
-try:
     import salt.utils.win_functions
+
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
@@ -52,26 +42,27 @@ log = logging.getLogger(__name__)
 
 
 def get_user():
-    '''
+    """
     Get the current user
-    '''
+    """
     if HAS_PWD:
         ret = pwd.getpwuid(os.geteuid()).pw_name
     elif HAS_WIN_FUNCTIONS and salt.utils.win_functions.HAS_WIN32:
         ret = salt.utils.win_functions.get_current_user()
     else:
         raise CommandExecutionError(
-            'Required external library (pwd or win32api) not installed')
+            "Required external library (pwd or win32api) not installed"
+        )
     return salt.utils.stringutils.to_unicode(ret)
 
 
-@jinja_filter('get_uid')
+@jinja_filter("get_uid")
 def get_uid(user=None):
-    '''
+    """
     Get the uid for a given user name. If no user given, the current euid will
     be returned. If the user does not exist, None will be returned. On systems
     which do not support pwd or os.geteuid, None will be returned.
-    '''
+    """
     if not HAS_PWD:
         return None
     elif user is None:
@@ -87,13 +78,14 @@ def get_uid(user=None):
 
 
 def _win_user_token_is_admin(user_token):
-    '''
+    """
     Using the win32 api, determine if the user with token 'user_token' has
     administrator rights.
 
     See MSDN entry here:
         http://msdn.microsoft.com/en-us/library/aa376389(VS.85).aspx
-    '''
+    """
+
     class SID_IDENTIFIER_AUTHORITY(ctypes.Structure):
         _fields_ = [
             ("byte0", ctypes.c_byte),
@@ -103,27 +95,39 @@ def _win_user_token_is_admin(user_token):
             ("byte4", ctypes.c_byte),
             ("byte5", ctypes.c_byte),
         ]
+
     nt_authority = SID_IDENTIFIER_AUTHORITY()
     nt_authority.byte5 = 5
 
     SECURITY_BUILTIN_DOMAIN_RID = 0x20
     DOMAIN_ALIAS_RID_ADMINS = 0x220
     administrators_group = ctypes.c_void_p()
-    if ctypes.windll.advapi32.AllocateAndInitializeSid(
+    if (
+        ctypes.windll.advapi32.AllocateAndInitializeSid(
             ctypes.byref(nt_authority),
             2,
             SECURITY_BUILTIN_DOMAIN_RID,
             DOMAIN_ALIAS_RID_ADMINS,
-            0, 0, 0, 0, 0, 0,
-            ctypes.byref(administrators_group)) == 0:
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            ctypes.byref(administrators_group),
+        )
+        == 0
+    ):
         raise Exception("AllocateAndInitializeSid failed")
 
     try:
         is_admin = ctypes.wintypes.BOOL()
-        if ctypes.windll.advapi32.CheckTokenMembership(
-                user_token,
-                administrators_group,
-                ctypes.byref(is_admin)) == 0:
+        if (
+            ctypes.windll.advapi32.CheckTokenMembership(
+                user_token, administrators_group, ctypes.byref(is_admin)
+            )
+            == 0
+        ):
             raise Exception("CheckTokenMembership failed")
         return is_admin.value != 0
 
@@ -132,39 +136,49 @@ def _win_user_token_is_admin(user_token):
 
 
 def _win_current_user_is_admin():
-    '''
+    """
     ctypes.windll.shell32.IsUserAnAdmin() is intentionally avoided due to this
     function being deprecated.
-    '''
+    """
     return _win_user_token_is_admin(0)
 
 
 def get_specific_user():
-    '''
+    """
     Get a user name for publishing. If you find the user is "root" attempt to be
     more specific
-    '''
+    """
     user = get_user()
     if salt.utils.platform.is_windows():
         if _win_current_user_is_admin():
-            return 'sudo_{0}'.format(user)
+            return f"sudo_{user}"
     else:
-        env_vars = ('SUDO_USER',)
-        if user == 'root':
+        env_vars = ("SUDO_USER",)
+        if user == "root":
             for evar in env_vars:
                 if evar in os.environ:
-                    return 'sudo_{0}'.format(os.environ[evar])
+                    return f"sudo_{os.environ[evar]}"
     return user
 
 
-def chugid(runas):
-    '''
+def chugid(runas, group=None):
+    """
     Change the current process to belong to the specified user (and the groups
     to which it belongs)
-    '''
+    """
     uinfo = pwd.getpwnam(runas)
     supgroups = []
     supgroups_seen = set()
+
+    if group:
+        try:
+            target_pw_gid = grp.getgrnam(group).gr_gid
+        except KeyError as err:
+            raise CommandExecutionError(
+                f"Failed to fetch the GID for {group}. Error: {err}"
+            )
+    else:
+        target_pw_gid = uinfo.pw_gid
 
     # The line below used to exclude the current user's primary gid.
     # However, when root belongs to more than one group
@@ -176,22 +190,20 @@ def chugid(runas):
     # the supplemental groups for a running process.  On FreeBSD
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
-    if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in six.iteritems(group_list)
-                          if not k.startswith('_'))
+    if sys.platform == "darwin":
+        group_list = {k: v for k, v in group_list.items() if not k.startswith("_")}
     for group_name in group_list:
         gid = group_list[group_name]
-        if (gid not in supgroups_seen
-           and not supgroups_seen.add(gid)):
+        if gid not in supgroups_seen and not supgroups_seen.add(gid):
             supgroups.append(gid)
 
-    if os.getgid() != uinfo.pw_gid:
+    if os.getgid() != target_pw_gid:
         try:
-            os.setgid(uinfo.pw_gid)
+            os.setgid(target_pw_gid)
         except OSError as err:
             raise CommandExecutionError(
-                'Failed to change from gid {0} to {1}. Error: {2}'.format(
-                    os.getgid(), uinfo.pw_gid, err
+                "Failed to change from gid {} to {}. Error: {}".format(
+                    os.getgid(), target_pw_gid, err
                 )
             )
 
@@ -201,7 +213,7 @@ def chugid(runas):
             os.setgroups(supgroups)
         except OSError as err:
             raise CommandExecutionError(
-                'Failed to set supplemental groups to {0}. Error: {1}'.format(
+                "Failed to set supplemental groups to {}. Error: {}".format(
                     supgroups, err
                 )
             )
@@ -211,65 +223,95 @@ def chugid(runas):
             os.setuid(uinfo.pw_uid)
         except OSError as err:
             raise CommandExecutionError(
-                'Failed to change from uid {0} to {1}. Error: {2}'.format(
+                "Failed to change from uid {} to {}. Error: {}".format(
                     os.getuid(), uinfo.pw_uid, err
                 )
             )
 
 
-def chugid_and_umask(runas, umask):
-    '''
+def chugid_and_umask(runas, umask, group=None):
+    """
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
-    '''
-    if runas is not None and runas != getpass.getuser():
-        chugid(runas)
+    """
+    set_runas = False
+    set_grp = False
+
+    current_user = getpass.getuser()
+    current_grp = grp.getgrgid(pwd.getpwnam(getpass.getuser()).pw_gid).gr_name
+
+    if runas and runas != current_user:
+        set_runas = True
+        runas_user = runas
+    else:
+        runas_user = current_user
+
+    if group:
+        runas_grp = group
+        if group != current_grp:
+            set_grp = True
+    else:
+        if runas and runas != current_user:
+            runas_grp = grp.getgrgid(pwd.getpwnam(runas_user).pw_gid).gr_name
+            set_grp = True
+        else:
+            runas_grp = current_grp
+
+    if set_runas or set_grp:
+        chugid(runas_user, runas_grp)
     if umask is not None:
         os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def get_default_group(user):
-    '''
+    """
     Returns the specified user's default group. If the user doesn't exist, a
     KeyError will be raised.
-    '''
-    return grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name \
-        if HAS_GRP and HAS_PWD \
-        else None
+    """
+    return (
+        grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name if HAS_GRP and HAS_PWD else None
+    )
 
 
 def get_group_list(user, include_default=True):
-    '''
+    """
     Returns a list of all of the system group names of which the user
     is a member.
-    '''
+    """
     if HAS_GRP is False or HAS_PWD is False:
         return []
     group_names = None
     ugroups = set()
-    if hasattr(os, 'getgrouplist'):
-        # Try os.getgrouplist, available in python >= 3.3
-        log.trace('Trying os.getgrouplist for \'%s\'', user)
-        try:
-            group_names = [
-                grp.getgrgid(grpid).gr_name for grpid in
-                os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
-            ]
-        except Exception:
-            pass
-    elif HAS_PYSSS:
-        # Try pysss.getgrouplist
-        log.trace('Trying pysss.getgrouplist for \'%s\'', user)
-        try:
-            group_names = list(pysss.getgrouplist(user))
-        except Exception:
-            pass
+    # Try os.getgrouplist, available in python >= 3.3
+    log.trace("Trying os.getgrouplist for '%s'", user)
+    try:
+        user_group_list = sorted(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+        local_grall = _getgrall()
+        local_gids = sorted(lgrp.gr_gid for lgrp in local_grall)
+        max_idx = -1
+        local_max = local_gids[max_idx]
+        while local_max >= 65000:
+            max_idx -= 1
+            local_max = local_gids[max_idx]
+        user_group_list_local = [lgrp for lgrp in user_group_list if lgrp <= local_max]
+        user_group_list_remote = [rgrp for rgrp in user_group_list if rgrp > local_max]
+        local_group_names = [
+            _group.gr_name
+            for _group in local_grall
+            if _group.gr_gid in user_group_list_local
+        ]
+        remote_group_names = [
+            grp.getgrgid(group_id).gr_name for group_id in user_group_list_remote
+        ]
+        group_names = local_group_names + remote_group_names
+    except Exception:  # pylint: disable=broad-except
+        pass
 
     if group_names is None:
         # Fall back to generic code
         # Include the user's default group to match behavior of
-        # os.getgrouplist() and pysss.getgrouplist()
-        log.trace('Trying generic group list for \'%s\'', user)
+        # os.getgrouplist()
+        log.trace("Trying generic group list for '%s'", user)
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
             default_group = get_default_group(user)
@@ -293,46 +335,46 @@ def get_group_list(user, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user \'%s\': %s', user, sorted(ugroups))
+    log.trace("Group list for user '%s': %s", user, sorted(ugroups))
     return sorted(ugroups)
 
 
 def get_group_dict(user=None, include_default=True):
-    '''
+    """
     Returns a dict of all of the system groups as keys, and group ids
     as values, of which the user is a member.
     E.g.: {'staff': 501, 'sudo': 27}
-    '''
+    """
     if HAS_GRP is False or HAS_PWD is False:
         return {}
     group_dict = {}
     group_names = get_group_list(user, include_default=include_default)
     for group in group_names:
-        group_dict.update({group: grp.getgrnam(group).gr_gid})
+        try:
+            group_dict.update({group: grp.getgrnam(group).gr_gid})
+        except KeyError:
+            # In case if imporer duplicate group was returned by get_group_list
+            pass
     return group_dict
 
 
 def get_gid_list(user, include_default=True):
-    '''
+    """
     Returns a list of all of the system group IDs of which the user
     is a member.
-    '''
+    """
     if HAS_GRP is False or HAS_PWD is False:
         return []
-    gid_list = list(
-        six.itervalues(
-            get_group_dict(user, include_default=include_default)
-        )
-    )
+    gid_list = list(get_group_dict(user, include_default=include_default).values())
     return sorted(set(gid_list))
 
 
 def get_gid(group=None):
-    '''
+    """
     Get the gid for a given group name. If no group given, the current egid
     will be returned. If the group does not exist, None will be returned. On
     systems which do not support grp or os.getegid it will return None.
-    '''
+    """
     if not HAS_GRP:
         return None
     if group is None:
@@ -345,3 +387,24 @@ def get_gid(group=None):
             return grp.getgrnam(group).gr_gid
         except KeyError:
             return None
+
+
+def _getgrall(root=None):
+    """
+    Alternative implemetantion for getgrall, that uses only /etc/group
+    """
+    ret = []
+    root = "/" if not root else root
+    etc_group = os.path.join(root, "etc/group")
+    with salt.utils.files.fopen(etc_group) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(":")
+            # Generate a getgrall compatible output
+            comps[2] = int(comps[2])
+            if comps[3]:
+                comps[3] = [mem.strip() for mem in comps[3].split(",")]
+            else:
+                comps[3] = []
+            ret.append(grp.struct_group(comps))
+    return ret

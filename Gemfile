@@ -2,13 +2,13 @@
 
 source 'https://rubygems.org'
 
-gem 'test-kitchen', '~>1.23.3'
-gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox'
+gem 'test-kitchen', '>=2.11.1'
+gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
 gem 'kitchen-sync'
 gem 'git'
 
 group :docker do
-  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git'
+  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git', :branch => 'main'
 end
 
 group :windows do
@@ -18,7 +18,7 @@ group :windows do
 end
 
 group :ec2 do
-  gem 'kitchen-ec2'
+  gem 'kitchen-ec2', '>=3.8'
 end
 
 group :vagrant do

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Display values only, separated by newlines
 ==========================================
 
@@ -27,6 +26,10 @@ the various minions.
 Example 1
 ~~~~~~~~~
 
+.. code-block:: bash
+
+    salt '*' foo.bar --out=newline_values_only
+
 Input
 -----
 
@@ -40,7 +43,7 @@ Input
 Output
 ------
 
-.. code-block:: python
+.. code-block:: text
 
     127.0.0.1
     10.0.0.1
@@ -49,6 +52,10 @@ Output
 
 Example 2
 ~~~~~~~~~
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=newline_values_only
 
 Input
 -----
@@ -67,13 +74,7 @@ Output
 
     8
     10
-'''
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
-from salt.ext import six
+"""
 
 
 def _get_values(data):
@@ -85,7 +86,7 @@ def _get_values(data):
     # This would enable us to toggle
     # this functionality.
     values = []
-    for _, minion_values in six.iteritems(data):
+    for _, minion_values in data.items():
         if isinstance(minion_values, list):
             values.extend(minion_values)
         else:
@@ -94,15 +95,15 @@ def _get_values(data):
 
 
 def _one_level_values(data):
-    return '\n'.join(_string_list(_get_values(data)))
+    return "\n".join(_string_list(_get_values(data)))
 
 
 def _string_list(a_list):
-    return [six.text_type(item) for item in a_list]
+    return [str(item) for item in a_list]
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
-    '''
+    """
     Display modified ret data
-    '''
+    """
     return _one_level_values(data)

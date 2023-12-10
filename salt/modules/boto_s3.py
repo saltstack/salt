@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon S3 using boto3
 
 .. versionadded:: 2018.3.0
@@ -46,15 +45,13 @@ Connection module for Amazon S3 using boto3
             region: us-east-1
 
 :depends: boto3
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import Salt libs
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -63,9 +60,11 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=unused-import
     import boto3
+
     # pylint: enable=unused-import
     import botocore
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -73,18 +72,16 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
-    '''
-    return salt.utils.versions.check_boto_reqs(
-        boto3_ver='1.2.1'
-    )
+    """
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.1")
 
 
 def __init__(opts):  # pylint: disable=unused-argument
     if HAS_BOTO:
-        __utils__['boto3.assign_funcs'](__name__, 's3')
+        __utils__["boto3.assign_funcs"](__name__, "s3")
 
 
 def get_object_metadata(
@@ -95,7 +92,7 @@ def get_object_metadata(
     keyid=None,
     profile=None,
 ):
-    '''
+    """
     Get metadata about an S3 object.
     Returns None if the object does not exist.
 
@@ -111,25 +108,21 @@ def get_object_metadata(
                          key=key \\
                          keyid=keyid \\
                          profile=profile \\
-    '''
-    bucket, _, s3_key = name.partition('/')
+    """
+    bucket, _, s3_key = name.partition("/")
     if extra_args is None:
         extra_args = {}
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        metadata = conn.head_object(
-            Bucket=bucket,
-            Key=s3_key,
-            **extra_args
-        )
+        metadata = conn.head_object(Bucket=bucket, Key=s3_key, **extra_args)
     except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Message'] == 'Not Found':
-            return {'result': None}
-        return {'error': __utils__['boto3.get_error'](e)}
+        if e.response["Error"]["Message"] == "Not Found":
+            return {"result": None}
+        return {"error": __utils__["boto3.get_error"](e)}
 
-    return {'result': metadata}
+    return {"result": metadata}
 
 
 def upload_file(
@@ -141,7 +134,7 @@ def upload_file(
     keyid=None,
     profile=None,
 ):
-    '''
+    """
     Upload a local file as an S3 object.
 
     CLI Example:
@@ -155,15 +148,15 @@ def upload_file(
                          key=key \\
                          keyid=keyid \\
                          profile=profile \\
-    '''
-    bucket, _, s3_key = name.partition('/')
+    """
+    bucket, _, s3_key = name.partition("/")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         conn.upload_file(source, bucket, s3_key, ExtraArgs=extra_args)
     except boto3.exceptions.S3UploadFailedError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
-    log.info('S3 object uploaded to %s', name)
-    return {'result': True}
+    log.info("S3 object uploaded to %s", name)
+    return {"result": True}

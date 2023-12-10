@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -8,20 +7,21 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Test support helpers
-'''
-# pylint: disable=repr-flag-used-in-string,wrong-import-order
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+"""
+import asyncio
 import base64
+import builtins
 import errno
+import fnmatch
 import functools
 import inspect
+import io
+import json
 import logging
 import os
+import pathlib
 import random
 import shutil
-import signal
 import socket
 import string
 import subprocess
@@ -30,74 +30,67 @@ import tempfile
 import textwrap
 import threading
 import time
-import tornado.ioloop
-import tornado.web
 import types
 
-# Import 3rd-party libs
-import psutil  # pylint: disable=3rd-party-module-not-gated
-from salt.ext import six
-from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
-try:
-    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
-except ImportError:
-    def get_unused_localhost_port():
-        '''
-        Return a random unused port on localhost
-        '''
-        usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        usock.bind(('127.0.0.1', 0))
-        port = usock.getsockname()[1]
-        usock.close()
-        return port
+import attr
+import pytest
+import pytestskipmarkers.utils.platform
+import tornado.ioloop
+import tornado.web
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
 
-# Import Salt Tests Support libs
-from tests.support.unit import skip, _id
-from tests.support.mock import patch
-from tests.support.paths import FILES, TMP
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.pycrypto
 import salt.utils.stringutils
-
-if salt.utils.platform.is_windows():
-    import salt.utils.win_functions
-else:
-    import pwd
+import salt.utils.versions
+from tests.support.mock import patch
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
 
-HAS_SYMLINKS = None
+PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
+PRE_PYTEST_SKIP_REASON = (
+    "PRE PYTEST - This test was skipped before running under pytest"
+)
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
+)
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
 
+@functools.lru_cache(maxsize=1, typed=False)
 def no_symlinks():
-    '''
+    """
     Check if git is installed and has symlinks enabled in the configuration.
-    '''
-    global HAS_SYMLINKS
-    if HAS_SYMLINKS is not None:
-        return not HAS_SYMLINKS
-    output = ''
+    """
     try:
-        output = subprocess.Popen(
-            ['git', 'config', '--get', 'core.symlinks'],
-            cwd=TMP,
-            stdout=subprocess.PIPE).communicate()[0]
+        ret = subprocess.run(
+            ["git", "config", "--get", "core.symlinks"],
+            shell=False,
+            text=True,
+            cwd=RUNTIME_VARS.CODE_DIR,
+            stdout=subprocess.PIPE,
+            check=False,
+        )
+        if ret.returncode == 0 and ret.stdout.strip() == "true":
+            return False
+        return True
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    except subprocess.CalledProcessError:
-        # git returned non-zero status
-        pass
-    HAS_SYMLINKS = False
-    if output.strip() == 'true':
-        HAS_SYMLINKS = True
-    return not HAS_SYMLINKS
+    return True
 
 
 def destructiveTest(caller):
-    '''
+    """
     Mark a test case as a destructive test for example adding or removing users
     from your system.
 
@@ -108,30 +101,34 @@ def destructiveTest(caller):
             @destructiveTest
             def test_create_user(self):
                 pass
-    '''
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, 'setUp', None)
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.destructive_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__destructive_test__", True)
 
-        def setUp(self, *args, **kwargs):
-            if os.environ.get('DESTRUCTIVE_TESTS', 'False').lower() == 'false':
-                self.skipTest('Destructive tests are disabled')
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-        caller.setUp = setUp
-        return caller
+    if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
+        reason = "Destructive tests are disabled"
 
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get('DESTRUCTIVE_TESTS', 'False').lower() == 'false':
-            cls.skipTest('Destructive tests are disabled')
-        return caller(cls)
-    return wrap
+        if not isinstance(caller, type):
+
+            @functools.wraps(caller)
+            def skip_wrapper(*args, **kwargs):
+                raise SkipTest(reason)
+
+            caller = skip_wrapper
+
+        caller.__unittest_skip__ = True
+        caller.__unittest_skip_why__ = reason
+
+    return caller
 
 
 def expensiveTest(caller):
-    '''
+    """
     Mark a test case as an expensive test, for example, a test which can cost
     money(Salt's cloud provider tests).
 
@@ -142,30 +139,53 @@ def expensiveTest(caller):
             @expensiveTest
             def test_create_user(self):
                 pass
-    '''
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, 'setUp', None)
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead"
+        " use `@pytest.mark.expensive_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__expensive_test__", True)
 
-        def setUp(self, *args, **kwargs):
-            if os.environ.get('EXPENSIVE_TESTS', 'False').lower() == 'false':
-                self.skipTest('Expensive tests are disabled')
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-        caller.setUp = setUp
-        return caller
+    if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
+        reason = "Expensive tests are disabled"
 
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get('EXPENSIVE_TESTS', 'False').lower() == 'false':
-            cls.skipTest('Expensive tests are disabled')
-        return caller(cls)
-    return wrap
+        if not isinstance(caller, type):
+
+            @functools.wraps(caller)
+            def skip_wrapper(*args, **kwargs):
+                raise SkipTest(reason)
+
+            caller = skip_wrapper
+
+        caller.__unittest_skip__ = True
+        caller.__unittest_skip_why__ = reason
+
+    return caller
 
 
-def flaky(caller=None, condition=True):
-    '''
+def slowTest(caller):
+    """
+    Mark a test case as a slow test.
+    .. code-block:: python
+        class MyTestCase(TestCase):
+            @slowTest
+            def test_that_takes_much_time(self):
+                pass
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@slowTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.slow_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__slow_test__", True)
+    return caller
+
+
+def flaky(caller=None, condition=True, attempts=4):
+    """
     Mark a test as flaky. The test will attempt to run five times,
     looking for a successful run. After an immediate second try,
     it will use an exponential backoff starting with one second.
@@ -177,9 +197,16 @@ def flaky(caller=None, condition=True):
         @flaky
         def test_sometimes_works(self):
             pass
-    '''
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@flaky`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.flaky`. See https://pypi.org/project/flaky for information on "
+        "how to use it.",
+        stacklevel=3,
+    )
     if caller is None:
-        return functools.partial(flaky, condition=condition)
+        return functools.partial(flaky, condition=condition, attempts=attempts)
 
     if isinstance(condition, bool) and condition is False:
         # Don't even decorate
@@ -190,38 +217,62 @@ def flaky(caller=None, condition=True):
             return caller
 
     if inspect.isclass(caller):
-        attrs = [n for n in dir(caller) if n.startswith('test_')]
+        attrs = [n for n in dir(caller) if n.startswith("test_")]
         for attrname in attrs:
             try:
                 function = getattr(caller, attrname)
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
-                setattr(caller, attrname, flaky(caller=function, condition=condition))
-            except Exception as exc:
+                setattr(
+                    caller,
+                    attrname,
+                    flaky(caller=function, condition=condition, attempts=attempts),
+                )
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
 
     @functools.wraps(caller)
     def wrap(cls):
-        for attempt in range(0, 4):
+        for attempt in range(0, attempts):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, "setUp", None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
-            except Exception as exc:
-                if attempt >= 3:
-                    six.reraise(*sys.exc_info())
-                backoff_time = attempt ** 2
-                log.info(
-                    'Found Exception. Waiting %s seconds to retry.',
-                    backoff_time
-                )
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
+            except Exception as exc:  # pylint: disable=broad-except
+                exc_info = sys.exc_info()
+                if isinstance(exc, SkipTest):
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+                if not isinstance(exc, AssertionError) and log.isEnabledFor(
+                    logging.DEBUG
+                ):
+                    log.exception(exc, exc_info=exc_info)
+                if attempt >= attempts - 1:
+                    # We won't try to run tearDown once the attempts are exhausted
+                    # because the regular test runner will do that for us
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+                # Run through tearDown again
+                teardown = getattr(cls, "tearDown", None)
+                if callable(teardown):
+                    teardown()
+                backoff_time = attempt**2
+                log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls
+
     return wrap
 
 
 def requires_sshd_server(caller):
-    '''
+    """
     Mark a test as requiring the tests SSH daemon running.
 
     .. code-block:: python
@@ -231,42 +282,28 @@ def requires_sshd_server(caller):
             @requiresSshdServer
             def test_create_user(self):
                 pass
-    '''
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, 'setUp', None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get('SSH_DAEMON_RUNNING', 'False').lower() == 'false':
-                self.skipTest('SSH tests are disabled')
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get('SSH_DAEMON_RUNNING', 'False').lower() == 'false':
-            cls.skipTest('SSH tests are disabled')
-        return caller(cls)
-    return wrap
+    """
+    raise RuntimeError(
+        "Please replace @requires_sshd_server with @pytest.mark.requires_sshd_server"
+    )
 
 
-class RedirectStdStreams(object):
-    '''
+class RedirectStdStreams:
+    """
     Temporarily redirect system output to file like objects.
     Default is to redirect to `os.devnull`, which just mutes output, `stdout`
     and `stderr`.
-    '''
+    """
 
     def __init__(self, stdout=None, stderr=None):
-        # Late import
-        import salt.utils.files
         if stdout is None:
-            stdout = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            # pylint: disable=resource-leakage
+            stdout = salt.utils.files.fopen(os.devnull, "w")
+            # pylint: enable=resource-leakage
         if stderr is None:
-            stderr = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            # pylint: disable=resource-leakage
+            stderr = salt.utils.files.fopen(os.devnull, "w")
+            # pylint: enable=resource-leakage
 
         self.__stdout = stdout
         self.__stderr = stderr
@@ -309,27 +346,28 @@ class RedirectStdStreams(object):
         if self.__redirected:
             try:
                 self.__stdout.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             try:
                 self.__stderr.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
 
-class TestsLoggingHandler(object):
-    '''
+class TstSuiteLoggingHandler:
+    """
     Simple logging handler which can be used to test if certain logging
     messages get emitted or not:
 
     .. code-block:: python
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # (...)               Do what ever you wish here
             handler.messages    # here are the emitted log messages
 
-    '''
-    def __init__(self, level=0, format='%(levelname)s:%(message)s'):
+    """
+
+    def __init__(self, level=0, format="%(levelname)s:%(message)s"):
         self.level = level
         self.format = format
         self.activated = False
@@ -400,29 +438,8 @@ class TestsLoggingHandler(object):
             return self.handler.release()
 
 
-def relative_import(import_name, relative_from='../'):
-    '''
-    Update sys.path to include `relative_from` before importing `import_name`
-    '''
-    try:
-        return __import__(import_name)
-    except ImportError:
-        previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
-        sys.path.insert(
-            0, os.path.realpath(
-                os.path.join(
-                    os.path.abspath(
-                        os.path.dirname(previous_frame.filename)
-                    ),
-                    relative_from
-                )
-            )
-        )
-    return __import__(import_name)
-
-
-class ForceImportErrorOn(object):
-    '''
+class ForceImportErrorOn:
+    """
     This class is meant to be used in mock'ed test cases which require an
     ``ImportError`` to be raised.
 
@@ -463,7 +480,8 @@ class ForceImportErrorOn(object):
         'Forced ImportError raised for {0!r}'.format(name)
     ImportError: Forced ImportError raised for 'os.path'
     >>>
-    '''
+    """
+
     def __init__(self, *module_names):
         self.__module_names = {}
         for entry in module_names:
@@ -473,33 +491,31 @@ class ForceImportErrorOn(object):
             else:
                 self.__module_names[entry] = None
         self.__original_import = builtins.__import__
-        self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
+        self.patcher = patch.object(builtins, "__import__", self.__fake_import__)
 
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
-    def __fake_import__(self,
-                        name,
-                        globals_={} if six.PY2 else None,
-                        locals_={} if six.PY2 else None,
-                        fromlist=[] if six.PY2 else (),
-                        level=-1 if six.PY2 else 0):
+    def __fake_import__(
+        self, name, globals_=None, locals_=None, fromlist=None, level=None
+    ):
+        if level is None:
+            level = 0
+        if fromlist is None:
+            fromlist = []
+
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
-                raise ImportError(
-                    'Forced ImportError raised for {0!r}'.format(name)
-                )
+                raise ImportError(f"Forced ImportError raised for {name!r}")
 
             if importerror_fromlist.intersection(set(fromlist)):
                 raise ImportError(
-                    'Forced ImportError raised for {0!r}'.format(
-                        'from {0} import {1}'.format(
-                            name, ', '.join(fromlist)
-                        )
+                    "Forced ImportError raised for {!r}".format(
+                        "from {} import {}".format(name, ", ".join(fromlist))
                     )
                 )
         return self.__original_import(name, globals_, locals_, fromlist, level)
@@ -509,11 +525,11 @@ class ForceImportErrorOn(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
-class MockWraps(object):
-    '''
+class MockWraps:
+    """
     Helper class to be used with the mock library.
     To be used in the ``wraps`` keyword of ``Mock`` or ``MagicMock`` where you
     want to trigger a side effect for X times, and afterwards, call the
@@ -536,7 +552,8 @@ class MockWraps(object):
     original
     >>>
 
-    '''
+    """
+
     def __init__(self, original, expected_failures, side_effect):
         self.__original = original
         self.__expected_failures = expected_failures
@@ -555,13 +572,20 @@ class MockWraps(object):
 
 
 def requires_network(only_local_network=False):
-    '''
+    """
     Simple decorator which is supposed to skip a test case in case there's no
     network connection to the internet.
-    '''
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_network`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_network`.",
+        stacklevel=3,
+    )
+
     def decorator(func):
         @functools.wraps(func)
-        def wrapper(cls):
+        def wrapper(cls, *args, **kwargs):
             has_local_network = False
             # First lets try if we have a local network. Inspired in
             # verify_socket
@@ -569,29 +593,25 @@ def requires_network(only_local_network=False):
                 pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                pubsock.bind(('', 18000))
+                pubsock.bind(("", 18000))
                 pubsock.close()
                 retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                retsock.bind(('', 18001))
+                retsock.bind(("", 18001))
                 retsock.close()
                 has_local_network = True
-            except socket.error:
+            except OSError:
                 # I wonder if we just have IPV6 support?
                 try:
                     pubsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
                     retsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-                    pubsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    pubsock.bind(('', 18000))
+                    pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    pubsock.bind(("", 18000))
                     pubsock.close()
-                    retsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    retsock.bind(('', 18001))
+                    retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    retsock.bind(("", 18001))
                     retsock.close()
                     has_local_network = True
-                except socket.error:
+                except OSError:
                     # Let's continue
                     pass
 
@@ -599,35 +619,51 @@ def requires_network(only_local_network=False):
                 if has_local_network is False:
                     # Since we're only supposed to check local network, and no
                     # local network was detected, skip the test
-                    cls.skipTest('No local network was detected')
+                    cls.skipTest("No local network was detected")
                 return func(cls)
+
+            if os.environ.get("NO_INTERNET"):
+                cls.skipTest("Environment variable NO_INTERNET is set.")
 
             # We are using the google.com DNS records as numerical IPs to avoid
             # DNS lookups which could greatly slow down this check
-            for addr in ('173.194.41.198', '173.194.41.199', '173.194.41.200',
-                         '173.194.41.201', '173.194.41.206', '173.194.41.192',
-                         '173.194.41.193', '173.194.41.194', '173.194.41.195',
-                         '173.194.41.196', '173.194.41.197'):
+            for addr in (
+                "173.194.41.198",
+                "173.194.41.199",
+                "173.194.41.200",
+                "173.194.41.201",
+                "173.194.41.206",
+                "173.194.41.192",
+                "173.194.41.193",
+                "173.194.41.194",
+                "173.194.41.195",
+                "173.194.41.196",
+                "173.194.41.197",
+            ):
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
                     sock.settimeout(0.25)
                     sock.connect((addr, 80))
                     # We connected? Stop the loop
                     break
-                except socket.error:
+                except OSError:
                     # Let's check the next IP
                     continue
                 else:
-                    cls.skipTest('No internet network connection was detected')
+                    cls.skipTest("No internet network connection was detected")
                 finally:
                     sock.close()
-            return func(cls)
+            return func(cls, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
-def with_system_user(username, on_existing='delete', delete=True, password=None):
-    '''
+def with_system_user(
+    username, on_existing="delete", delete=True, password=None, groups=None
+):
+    """
     Create and optionally destroy a system user to be used within a test
     case. The system user is created using the ``user`` salt module.
 
@@ -640,66 +676,62 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
       * nothing: Do nothing, act as if the user was created.
       * delete: delete and re-create the existing user
       * skip: skip the test case
-    '''
-    if on_existing not in ('nothing', 'delete', 'skip'):
+    """
+    if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            'The value of \'on_existing\' can only be one of, '
-            '\'nothing\', \'delete\' and \'skip\''
+            "The value of 'on_existing' can only be one of, "
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
-        raise RuntimeError(
-            'The value of \'delete\' can only be \'True\' or \'False\''
-        )
+        raise RuntimeError("The value of 'delete' can only be 'True' or 'False'")
 
     def decorator(func):
-
         @functools.wraps(func)
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug('Creating system user {0!r}'.format(username))
-            kwargs = {'timeout': 60}
+            log.debug("Creating system user %r", username)
+            kwargs = {"timeout": 60, "groups": groups}
             if salt.utils.platform.is_windows():
-                kwargs.update({'password': password})
-            create_user = cls.run_function('user.add', [username], **kwargs)
+                kwargs.update({"password": password})
+            create_user = cls.run_function("user.add", [username], **kwargs)
             if not create_user:
-                log.debug('Failed to create system user')
+                log.debug("Failed to create system user")
                 # The user was not created
-                if on_existing == 'skip':
-                    cls.skipTest(
-                        'Failed to create system user {0!r}'.format(
-                            username
-                        )
-                    )
+                if on_existing == "skip":
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
-                if on_existing == 'delete':
-                    log.debug(
-                        'Deleting the system user {0!r}'.format(
-                            username
-                        )
-                    )
+                if on_existing == "delete":
+                    log.debug("Deleting the system user %r", username)
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True]
+                        "user.delete", [username, True, True]
                     )
                     if not delete_user:
                         cls.skipTest(
-                            'A user named {0!r} already existed on the '
-                            'system and re-creating it was not possible'
-                            .format(username)
+                            "A user named {!r} already existed on the "
+                            "system and re-creating it was not possible".format(
+                                username
+                            )
                         )
-                    log.debug(
-                        'Second time creating system user {0!r}'.format(
-                            username
-                        )
-                    )
-                    create_user = cls.run_function('user.add', [username])
+                    log.debug("Second time creating system user %r", username)
+                    create_user = cls.run_function("user.add", [username], **kwargs)
                     if not create_user:
                         cls.skipTest(
-                            'A user named {0!r} already existed, was deleted '
-                            'as requested, but re-creating it was not possible'
-                            .format(username)
+                            "A user named {!r} already existed, was deleted "
+                            "as requested, but re-creating it was not possible".format(
+                                username
+                            )
                         )
+            if not salt.utils.platform.is_windows() and password is not None:
+                if salt.utils.platform.is_darwin():
+                    hashed_password = password
+                else:
+                    hashed_password = salt.utils.pycrypto.gen_hash(password=password)
+                hashed_password = f"'{hashed_password}'"
+                add_pwd = cls.run_function(
+                    "shadow.set_password", [username, hashed_password]
+                )
 
             failure = None
             try:
@@ -707,10 +739,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
                     return func(cls, username)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        'Running {0!r} raised an exception: {1}'.format(
-                            func, exc
-                        ),
-                        exc_info=True
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -718,29 +747,33 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
             finally:
                 if delete:
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True], timeout=60
+                        "user.delete", [username, True, True], timeout=60
                     )
                     if not delete_user:
                         if failure is None:
                             log.warning(
-                                'Although the actual test-case did not fail, '
-                                'deleting the created system user {0!r} '
-                                'afterwards did.'.format(username)
+                                "Although the actual test-case did not fail, "
+                                "deleting the created system user %r "
+                                "afterwards did.",
+                                username,
                             )
                         else:
                             log.warning(
-                                'The test-case failed and also did the removal'
-                                ' of the system user {0!r}'.format(username)
+                                "The test-case failed and also did the removal"
+                                " of the system user %r",
+                                username,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
-                    six.reraise(failure[0], failure[1], failure[2])
+                    raise failure[1].with_traceback(failure[2])
+
         return wrap
+
     return decorator
 
 
-def with_system_group(group, on_existing='delete', delete=True):
-    '''
+def with_system_group(group, on_existing="delete", delete=True):
+    """
     Create and optionally destroy a system group to be used within a test
     case. The system user is crated using the ``group`` salt module.
 
@@ -753,56 +786,45 @@ def with_system_group(group, on_existing='delete', delete=True):
       * nothing: Do nothing, act as if the group was created
       * delete: delete and re-create the existing user
       * skip: skip the test case
-    '''
-    if on_existing not in ('nothing', 'delete', 'skip'):
+    """
+    if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            'The value of \'on_existing\' can only be one of, '
-            '\'nothing\', \'delete\' and \'skip\''
+            "The value of 'on_existing' can only be one of, "
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
-        raise RuntimeError(
-            'The value of \'delete\' can only be \'True\' or \'False\''
-        )
+        raise RuntimeError("The value of 'delete' can only be 'True' or 'False'")
 
     def decorator(func):
-
         @functools.wraps(func)
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug('Creating system group {0!r}'.format(group))
-            create_group = cls.run_function('group.add', [group])
+            log.debug("Creating system group %r", group)
+            create_group = cls.run_function("group.add", [group])
             if not create_group:
-                log.debug('Failed to create system group')
+                log.debug("Failed to create system group")
                 # The group was not created
-                if on_existing == 'skip':
-                    cls.skipTest(
-                        'Failed to create system group {0!r}'.format(group)
-                    )
+                if on_existing == "skip":
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
-                if on_existing == 'delete':
-                    log.debug(
-                        'Deleting the system group {0!r}'.format(group)
-                    )
-                    delete_group = cls.run_function('group.delete', [group])
+                if on_existing == "delete":
+                    log.debug("Deleting the system group %r", group)
+                    delete_group = cls.run_function("group.delete", [group])
                     if not delete_group:
                         cls.skipTest(
-                            'A group named {0!r} already existed on the '
-                            'system and re-creating it was not possible'
-                            .format(group)
+                            "A group named {!r} already existed on the "
+                            "system and re-creating it was not possible".format(group)
                         )
-                    log.debug(
-                        'Second time creating system group {0!r}'.format(
-                            group
-                        )
-                    )
-                    create_group = cls.run_function('group.add', [group])
+                    log.debug("Second time creating system group %r", group)
+                    create_group = cls.run_function("group.add", [group])
                     if not create_group:
                         cls.skipTest(
-                            'A group named {0!r} already existed, was deleted '
-                            'as requested, but re-creating it was not possible'
-                            .format(group)
+                            "A group named {!r} already existed, was deleted "
+                            "as requested, but re-creating it was not possible".format(
+                                group
+                            )
                         )
 
             failure = None
@@ -811,39 +833,39 @@ def with_system_group(group, on_existing='delete', delete=True):
                     return func(cls, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        'Running {0!r} raised an exception: {1}'.format(
-                            func, exc
-                        ),
-                        exc_info=True
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
                     failure = sys.exc_info()
             finally:
                 if delete:
-                    delete_group = cls.run_function('group.delete', [group])
+                    delete_group = cls.run_function("group.delete", [group])
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                'Although the actual test-case did not fail, '
-                                'deleting the created system group {0!r} '
-                                'afterwards did.'.format(group)
+                                "Although the actual test-case did not fail, "
+                                "deleting the created system group %r "
+                                "afterwards did.",
+                                group,
                             )
                         else:
                             log.warning(
-                                'The test-case failed and also did the removal'
-                                ' of the system group {0!r}'.format(group)
+                                "The test-case failed and also did the removal"
+                                " of the system group %r",
+                                group,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
-                    six.reraise(failure[0], failure[1], failure[2])
+                    raise failure[1].with_traceback(failure[2])
+
         return wrap
+
     return decorator
 
 
-def with_system_user_and_group(username, group,
-                               on_existing='delete', delete=True):
-    '''
+def with_system_user_and_group(username, group, on_existing="delete", delete=True):
+    """
     Create and optionally destroy a system user and group to be used within a
     test case. The system user is crated using the ``user`` salt module, and
     the system group is created with the ``group`` salt module.
@@ -859,95 +881,74 @@ def with_system_user_and_group(username, group,
       * nothing: Do nothing, act as if the user was created.
       * delete: delete and re-create the existing user
       * skip: skip the test case
-    '''
-    if on_existing not in ('nothing', 'delete', 'skip'):
+    """
+    if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            'The value of \'on_existing\' can only be one of, '
-            '\'nothing\', \'delete\' and \'skip\''
+            "The value of 'on_existing' can only be one of, "
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
-        raise RuntimeError(
-            'The value of \'delete\' can only be \'True\' or \'False\''
-        )
+        raise RuntimeError("The value of 'delete' can only be 'True' or 'False'")
 
     def decorator(func):
-
         @functools.wraps(func)
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug('Creating system user {0!r}'.format(username))
-            create_user = cls.run_function('user.add', [username])
-            log.debug('Creating system group {0!r}'.format(group))
-            create_group = cls.run_function('group.add', [group])
+            log.debug("Creating system user %r", username)
+            create_user = cls.run_function("user.add", [username])
+            log.debug("Creating system group %r", group)
+            create_group = cls.run_function("group.add", [group])
             if not create_user:
-                log.debug('Failed to create system user')
+                log.debug("Failed to create system user")
                 # The user was not created
-                if on_existing == 'skip':
-                    cls.skipTest(
-                        'Failed to create system user {0!r}'.format(
-                            username
-                        )
-                    )
+                if on_existing == "skip":
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
-                if on_existing == 'delete':
-                    log.debug(
-                        'Deleting the system user {0!r}'.format(
-                            username
-                        )
-                    )
+                if on_existing == "delete":
+                    log.debug("Deleting the system user %r", username)
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True]
+                        "user.delete", [username, True, True]
                     )
                     if not delete_user:
                         cls.skipTest(
-                            'A user named {0!r} already existed on the '
-                            'system and re-creating it was not possible'
-                            .format(username)
+                            "A user named {!r} already existed on the "
+                            "system and re-creating it was not possible".format(
+                                username
+                            )
                         )
-                    log.debug(
-                        'Second time creating system user {0!r}'.format(
-                            username
-                        )
-                    )
-                    create_user = cls.run_function('user.add', [username])
+                    log.debug("Second time creating system user %r", username)
+                    create_user = cls.run_function("user.add", [username])
                     if not create_user:
                         cls.skipTest(
-                            'A user named {0!r} already existed, was deleted '
-                            'as requested, but re-creating it was not possible'
-                            .format(username)
+                            "A user named {!r} already existed, was deleted "
+                            "as requested, but re-creating it was not possible".format(
+                                username
+                            )
                         )
             if not create_group:
-                log.debug('Failed to create system group')
+                log.debug("Failed to create system group")
                 # The group was not created
-                if on_existing == 'skip':
-                    cls.skipTest(
-                        'Failed to create system group {0!r}'.format(group)
-                    )
+                if on_existing == "skip":
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
-                if on_existing == 'delete':
-                    log.debug(
-                        'Deleting the system group {0!r}'.format(group)
-                    )
-                    delete_group = cls.run_function('group.delete', [group])
+                if on_existing == "delete":
+                    log.debug("Deleting the system group %r", group)
+                    delete_group = cls.run_function("group.delete", [group])
                     if not delete_group:
                         cls.skipTest(
-                            'A group named {0!r} already existed on the '
-                            'system and re-creating it was not possible'
-                            .format(group)
+                            "A group named {!r} already existed on the "
+                            "system and re-creating it was not possible".format(group)
                         )
-                    log.debug(
-                        'Second time creating system group {0!r}'.format(
-                            group
-                        )
-                    )
-                    create_group = cls.run_function('group.add', [group])
+                    log.debug("Second time creating system group %r", group)
+                    create_group = cls.run_function("group.add", [group])
                     if not create_group:
                         cls.skipTest(
-                            'A group named {0!r} already existed, was deleted '
-                            'as requested, but re-creating it was not possible'
-                            .format(group)
+                            "A group named {!r} already existed, was deleted "
+                            "as requested, but re-creating it was not possible".format(
+                                group
+                            )
                         )
 
             failure = None
@@ -956,10 +957,7 @@ def with_system_user_and_group(username, group,
                     return func(cls, username, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        'Running {0!r} raised an exception: {1}'.format(
-                            func, exc
-                        ),
-                        exc_info=True
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -967,53 +965,61 @@ def with_system_user_and_group(username, group,
             finally:
                 if delete:
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True]
+                        "user.delete", [username, True, True]
                     )
-                    delete_group = cls.run_function('group.delete', [group])
+                    delete_group = cls.run_function("group.delete", [group])
                     if not delete_user:
                         if failure is None:
                             log.warning(
-                                'Although the actual test-case did not fail, '
-                                'deleting the created system user {0!r} '
-                                'afterwards did.'.format(username)
+                                "Although the actual test-case did not fail, "
+                                "deleting the created system user %r "
+                                "afterwards did.",
+                                username,
                             )
                         else:
                             log.warning(
-                                'The test-case failed and also did the removal'
-                                ' of the system user {0!r}'.format(username)
+                                "The test-case failed and also did the removal"
+                                " of the system user %r",
+                                username,
                             )
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                'Although the actual test-case did not fail, '
-                                'deleting the created system group {0!r} '
-                                'afterwards did.'.format(group)
+                                "Although the actual test-case did not fail, "
+                                "deleting the created system group %r "
+                                "afterwards did.",
+                                group,
                             )
                         else:
                             log.warning(
-                                'The test-case failed and also did the removal'
-                                ' of the system group {0!r}'.format(group)
+                                "The test-case failed and also did the removal"
+                                " of the system group %r",
+                                group,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
-                    six.reraise(failure[0], failure[1], failure[2])
+                    raise failure[1].with_traceback(failure[2])
+
         return wrap
+
     return decorator
 
 
-class WithTempfile(object):
+class WithTempfile:
     def __init__(self, **kwargs):
-        self.create = kwargs.pop('create', True)
-        if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
-        if 'prefix' not in kwargs:
-            kwargs['prefix'] = '__salt.test.'
+        self.create = kwargs.pop("create", True)
+        if "dir" not in kwargs:
+            kwargs["dir"] = RUNTIME_VARS.TMP
+        if "prefix" not in kwargs:
+            kwargs["prefix"] = "__salt.test."
         self.kwargs = kwargs
 
     def __call__(self, func):
         self.func = func
         return functools.wraps(func)(
-            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+            # pylint: disable=unnecessary-lambda
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)
+            # pylint: enable=unnecessary-lambda
         )
 
     def wrap(self, testcase, *args, **kwargs):
@@ -1032,17 +1038,19 @@ class WithTempfile(object):
 with_tempfile = WithTempfile
 
 
-class WithTempdir(object):
+class WithTempdir:
     def __init__(self, **kwargs):
-        self.create = kwargs.pop('create', True)
-        if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+        self.create = kwargs.pop("create", True)
+        if "dir" not in kwargs:
+            kwargs["dir"] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
         self.func = func
         return functools.wraps(func)(
-            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+            # pylint: disable=unnecessary-lambda
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)
+            # pylint: enable=unnecessary-lambda
         )
 
     def wrap(self, testcase, *args, **kwargs):
@@ -1059,292 +1067,161 @@ with_tempdir = WithTempdir
 
 
 def requires_system_grains(func):
-    '''
+    """
     Function decorator which loads and passes the system's grains to the test
     case.
-    '''
+    """
+
     @functools.wraps(func)
-    def decorator(cls):
-        if not hasattr(cls, 'run_function'):
-            raise RuntimeError(
-                '{0} does not have the \'run_function\' method which is '
-                'necessary to collect the system grains'.format(
-                    cls.__class__.__name__
-                )
-            )
-        return func(cls, grains=cls.run_function('grains.items'))
+    def decorator(*args, **kwargs):
+        if not hasattr(requires_system_grains, "__grains__"):
+            # Late import
+            from tests.support.sminion import build_minion_opts
+
+            opts = build_minion_opts(minion_id="runtests-internal-sminion")
+            requires_system_grains.__grains__ = salt.loader.grains(opts)
+        kwargs["grains"] = requires_system_grains.__grains__
+        return func(*args, **kwargs)
+
     return decorator
+
+
+def _check_required_sminion_attributes(sminion_attr, *required_items):
+    """
+    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
+    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
+    :return The packages that are not available
+    """
+    # Late import
+    from tests.support.sminion import create_sminion
+
+    required_salt_items = set(required_items)
+    sminion = create_sminion(minion_id="runtests-internal-sminion")
+    available_items = list(getattr(sminion, sminion_attr))
+    not_available_items = set()
+
+    name = f"__not_available_{sminion_attr}s__"
+    if not hasattr(sminion, name):
+        setattr(sminion, name, set())
+
+    cached_not_available_items = getattr(sminion, name)
+
+    for not_available_item in cached_not_available_items:
+        if not_available_item in required_salt_items:
+            not_available_items.add(not_available_item)
+            required_salt_items.remove(not_available_item)
+
+    for required_item_name in required_salt_items:
+        search_name = required_item_name
+        if "." not in search_name:
+            search_name += ".*"
+        if not fnmatch.filter(available_items, search_name):
+            not_available_items.add(required_item_name)
+            cached_not_available_items.add(required_item_name)
+
+    return not_available_items
+
+
+def requires_salt_states(*names):
+    """
+    Makes sure the passed salt state is available. Skips the test if not
+
+    .. versionadded:: 3000
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_states`.",
+        stacklevel=3,
+    )
+    not_available = _check_required_sminion_attributes("states", *names)
+    if not_available:
+        return skip("Unavailable salt states: {}".format(*not_available))
+    return _id
 
 
 def requires_salt_modules(*names):
-    '''
+    """
     Makes sure the passed salt module is available. Skips the test if not
 
     .. versionadded:: 0.5.2
-    '''
-    def decorator(caller):
-
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, 'setUp', None)
-
-            def setUp(self, *args, **kwargs):
-                if old_setup is not None:
-                    old_setup(self, *args, **kwargs)
-
-                if not hasattr(self, 'run_function'):
-                    raise RuntimeError(
-                        '{0} does not have the \'run_function\' method which '
-                        'is necessary to collect the loaded modules'.format(
-                            self.__class__.__name__
-                        )
-                    )
-
-                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
-            caller.setUp = setUp
-            return caller
-
-        # We're simply decorating functions
-        @functools.wraps(caller)
-        def wrapper(cls):
-
-            if not hasattr(cls, 'run_function'):
-                raise RuntimeError(
-                    '{0} does not have the \'run_function\' method which is '
-                    'necessary to collect the loaded modules'.format(
-                        cls.__class__.__name__
-                    )
-                )
-
-            for name in names:
-                if name not in cls.run_function('sys.doc', [name]):
-                    cls.skipTest(
-                        'Salt module {0!r} is not available'.format(name)
-                    )
-                    break
-
-            return caller(cls)
-        return wrapper
-    return decorator
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_modules`.",
+        stacklevel=3,
+    )
+    not_available = _check_required_sminion_attributes("functions", *names)
+    if not_available:
+        return skip("Unavailable salt modules: {}".format(*not_available))
+    return _id
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date},"
+        " and instead use `@pytest.mark.skip_if_binaries_missing`.",
+        stacklevel=3,
+    )
     import salt.utils.path
+
     if len(binaries) == 1:
         if isinstance(binaries[0], (list, tuple, set, frozenset)):
             binaries = binaries[0]
-    check_all = kwargs.pop('check_all', False)
-    message = kwargs.pop('message', None)
+    check_all = kwargs.pop("check_all", False)
+    message = kwargs.pop("message", None)
     if kwargs:
         raise RuntimeError(
-            'The only supported keyword argument is \'check_all\' and '
-            '\'message\'. Invalid keyword arguments: {0}'.format(
-                ', '.join(kwargs.keys())
-            )
+            "The only supported keyword argument is 'check_all' and "
+            "'message'. Invalid keyword arguments: {}".format(", ".join(kwargs.keys()))
         )
     if check_all:
         for binary in binaries:
             if salt.utils.path.which(binary) is None:
                 return skip(
-                    '{0}The {1!r} binary was not found'.format(
-                        message and '{0}. '.format(message) or '',
-                        binary
+                    "{}The {!r} binary was not found".format(
+                        message and f"{message}. " or "", binary
                     )
                 )
     elif salt.utils.path.which_bin(binaries) is None:
         return skip(
-            '{0}None of the following binaries was found: {1}'.format(
-                message and '{0}. '.format(message) or '',
-                ', '.join(binaries)
+            "{}None of the following binaries was found: {}".format(
+                message and f"{message}. " or "", ", ".join(binaries)
             )
         )
     return _id
 
 
 def skip_if_not_root(func):
-    if not sys.platform.startswith('win'):
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.skip_if_not_root`.",
+        stacklevel=3,
+    )
+    setattr(func, "__skip_if_not_root__", True)
+
+    if not sys.platform.startswith("win"):
         if os.getuid() != 0:
             func.__unittest_skip__ = True
-            func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
+            func.__unittest_skip_why__ = (
+                "You must be logged in as root to run this test"
+            )
     else:
         current_user = salt.utils.win_functions.get_current_user()
-        if current_user != 'SYSTEM':
+        if current_user != "SYSTEM":
             if not salt.utils.win_functions.is_admin(current_user):
                 func.__unittest_skip__ = True
-                func.__unittest_skip_why__ = 'You must be logged in as an Administrator to run this test'
+                func.__unittest_skip_why__ = (
+                    "You must be logged in as an Administrator to run this test"
+                )
     return func
 
 
-if sys.platform.startswith('win'):
-    SIGTERM = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
-else:
-    SIGTERM = signal.SIGTERM
-
-
-def collect_child_processes(pid):
-    '''
-    Try to collect any started child processes of the provided pid
-    '''
-    # Let's get the child processes of the started subprocess
-    try:
-        parent = psutil.Process(pid)
-        if hasattr(parent, 'children'):
-            children = parent.children(recursive=True)
-        else:
-            children = []
-    except psutil.NoSuchProcess:
-        children = []
-    return children[::-1]  # return a reversed list of the children
-
-
-def _terminate_process_list(process_list, kill=False, slow_stop=False):
-    for process in process_list[:][::-1]:  # Iterate over a reversed copy of the list
-        if not psutil.pid_exists(process.pid):
-            process_list.remove(process)
-            continue
-        try:
-            if not kill and process.status() == psutil.STATUS_ZOMBIE:
-                # Zombie processes will exit once child processes also exit
-                continue
-            try:
-                cmdline = process.cmdline()
-            except psutil.AccessDenied:
-                # OSX is more restrictive about the above information
-                cmdline = None
-            if not cmdline:
-                try:
-                    cmdline = process.as_dict()
-                except Exception:
-                    cmdline = 'UNKNOWN PROCESS'
-            if kill:
-                log.info('Killing process(%s): %s', process.pid, cmdline)
-                process.kill()
-            else:
-                log.info('Terminating process(%s): %s', process.pid, cmdline)
-                try:
-                    if slow_stop:
-                        # Allow coverage data to be written down to disk
-                        process.send_signal(SIGTERM)
-                        try:
-                            process.wait(2)
-                        except psutil.TimeoutExpired:
-                            if psutil.pid_exists(process.pid):
-                                continue
-                    else:
-                        process.terminate()
-                except OSError as exc:
-                    if exc.errno not in (errno.ESRCH, errno.EACCES):
-                        raise
-            if not psutil.pid_exists(process.pid):
-                process_list.remove(process)
-        except psutil.NoSuchProcess:
-            process_list.remove(process)
-
-
-def terminate_process_list(process_list, kill=False, slow_stop=False):
-
-    def on_process_terminated(proc):
-        log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
-
-    # Try to terminate processes with the provided kill and slow_stop parameters
-    log.info('Terminating process list. 1st step. kill: %s, slow stop: %s', kill, slow_stop)
-
-    # Cache the cmdline since that will be inaccessible once the process is terminated
-    for proc in process_list:
-        try:
-            cmdline = proc.cmdline()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            # OSX is more restrictive about the above information
-            cmdline = None
-        if not cmdline:
-            try:
-                cmdline = proc
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                cmdline = '<could not be retrived; dead process: {0}>'.format(proc)
-        proc._cmdline = cmdline
-    _terminate_process_list(process_list, kill=kill, slow_stop=slow_stop)
-    psutil.wait_procs(process_list, timeout=15, callback=on_process_terminated)
-
-    if process_list:
-        # If there's still processes to be terminated, retry and kill them if slow_stop is False
-        log.info('Terminating process list. 2nd step. kill: %s, slow stop: %s', slow_stop is False, slow_stop)
-        _terminate_process_list(process_list, kill=slow_stop is False, slow_stop=slow_stop)
-        psutil.wait_procs(process_list, timeout=10, callback=on_process_terminated)
-
-    if process_list:
-        # If there's still processes to be terminated, just kill them, no slow stopping now
-        log.info('Terminating process list. 3rd step. kill: True, slow stop: False')
-        _terminate_process_list(process_list, kill=True, slow_stop=False)
-        psutil.wait_procs(process_list, timeout=5, callback=on_process_terminated)
-
-    if process_list:
-        # In there's still processes to be terminated, log a warning about it
-        log.warning('Some processes failed to properly terminate: %s', process_list)
-
-
-def terminate_process(pid=None, process=None, children=None, kill_children=False, slow_stop=False):
-    '''
-    Try to terminate/kill the started processe
-    '''
-    children = children or []
-    process_list = []
-
-    def on_process_terminated(proc):
-        if proc.returncode:
-            log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
-        else:
-            log.info('Process %s terminated', getattr(proc, '_cmdline', proc))
-
-    if pid and not process:
-        try:
-            process = psutil.Process(pid)
-            process_list.append(process)
-        except psutil.NoSuchProcess:
-            # Process is already gone
-            process = None
-
-    if kill_children:
-        if process:
-            if not children:
-                children = collect_child_processes(process.pid)
-            else:
-                # Let's collect children again since there might be new ones
-                children.extend(collect_child_processes(pid))
-        if children:
-            process_list.extend(children)
-
-    if process_list:
-        if process:
-            log.info('Stopping process %s and respective children: %s', process, children)
-        else:
-            log.info('Terminating process list: %s', process_list)
-        terminate_process_list(process_list, kill=slow_stop is False, slow_stop=slow_stop)
-        if process and psutil.pid_exists(process.pid):
-            log.warning('Process left behind which we were unable to kill: %s', process)
-
-
-def terminate_process_pid(pid, only_children=False):
-    children = []
-    process = None
-
-    # Let's begin the shutdown routines
-    try:
-        process = psutil.Process(pid)
-        children = collect_child_processes(pid)
-    except psutil.NoSuchProcess:
-        log.info('No process with the PID %s was found running', pid)
-
-    if only_children:
-        return terminate_process(children=children, kill_children=True, slow_stop=True)
-    return terminate_process(pid=pid, process=process, children=children, kill_children=True, slow_stop=True)
-
-
 def repeat(caller=None, condition=True, times=5):
-    '''
+    """
     Repeat a test X amount of times until the first failure.
 
     .. code-block:: python
@@ -1354,7 +1231,7 @@ def repeat(caller=None, condition=True, times=5):
         @repeat
         def test_sometimes_works(self):
             pass
-    '''
+    """
     if caller is None:
         return functools.partial(repeat, condition=condition, times=times)
 
@@ -1367,30 +1244,34 @@ def repeat(caller=None, condition=True, times=5):
             return caller
 
     if inspect.isclass(caller):
-        attrs = [n for n in dir(caller) if n.startswith('test_')]
+        attrs = [n for n in dir(caller) if n.startswith("test_")]
         for attrname in attrs:
             try:
                 function = getattr(caller, attrname)
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
-                setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
-            except Exception as exc:
+                setattr(
+                    caller,
+                    attrname,
+                    repeat(caller=function, condition=condition, times=times),
+                )
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
 
     @functools.wraps(caller)
     def wrap(cls):
-        result = None
-        for attempt in range(1, times+1):
-            log.info('%s test run %d of %s times', cls, attempt, times)
+        for attempt in range(1, times + 1):
+            log.info("%s test run %d of %s times", cls, attempt, times)
             caller(cls)
         return cls
+
     return wrap
 
 
 def http_basic_auth(login_cb=lambda username, password: False):
-    '''
+    """
     A crude decorator to force a handler to request HTTP Basic Authentication
 
     Example usage:
@@ -1400,25 +1281,24 @@ def http_basic_auth(login_cb=lambda username, password: False):
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
         class AuthenticatedHandler(tornado.web.RequestHandler):
             pass
-    '''
+    """
+
     def wrapper(handler_class):
         def wrap_execute(handler_execute):
             def check_auth(handler, kwargs):
 
-                auth = handler.request.headers.get('Authorization')
+                auth = handler.request.headers.get("Authorization")
 
-                if auth is None or not auth.startswith('Basic '):
+                if auth is None or not auth.startswith("Basic "):
                     # No username/password entered yet, we need to return a 401
                     # and set the WWW-Authenticate header to request login.
                     handler.set_status(401)
-                    handler.set_header(
-                        'WWW-Authenticate', 'Basic realm=Restricted')
+                    handler.set_header("WWW-Authenticate", "Basic realm=Restricted")
 
                 else:
                     # Strip the 'Basic ' from the beginning of the auth header
                     # leaving the base64-encoded secret
-                    username, password = \
-                        base64.b64decode(auth[6:]).split(':', 1)
+                    username, password = base64.b64decode(auth[6:]).split(":", 1)
 
                     if login_cb(username, password):
                         # Authentication successful
@@ -1438,11 +1318,12 @@ def http_basic_auth(login_cb=lambda username, password: False):
 
         handler_class._execute = wrap_execute(handler_class._execute)
         return handler_class
+
     return wrapper
 
 
 def generate_random_name(prefix, size=6):
-    '''
+    """
     Generates a random name by combining the provided prefix with a randomly generated
     ascii string.
 
@@ -1453,15 +1334,50 @@ def generate_random_name(prefix, size=6):
 
     size
         The number of characters to generate. Default: 6.
-    '''
-    return prefix + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
+    """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0},"
+        " lowercase=False)' as 'generate_random_name' will be removed after {{date}}".format(
+            prefix
+        ),
+        stacklevel=3,
     )
+    return random_string(prefix, size=size, lowercase=False)
 
 
-class Webserver(object):
-    '''
+def random_string(prefix, size=6, uppercase=True, lowercase=True, digits=True):
+    """
+    Generates a random string.
+
+    ..versionadded: 3001
+
+    Args:
+        prefix(str): The prefix for the random string
+        size(int): The size of the random string
+        uppercase(bool): If true, include uppercased ascii chars in choice sample
+        lowercase(bool): If true, include lowercased ascii chars in choice sample
+        digits(bool): If true, include digits in choice sample
+    Returns:
+        str: The random string
+    """
+    if not any([uppercase, lowercase, digits]):
+        raise RuntimeError(
+            "At least one of 'uppercase', 'lowercase' or 'digits' needs to be true"
+        )
+    choices = []
+    if uppercase:
+        choices.extend(string.ascii_uppercase)
+    if lowercase:
+        choices.extend(string.ascii_lowercase)
+    if digits:
+        choices.extend(string.digits)
+
+    return prefix + "".join(random.choice(choices) for _ in range(size))
+
+
+class Webserver:
+    """
     Starts a tornado webserver on 127.0.0.1 on a random available port
 
     USAGE:
@@ -1473,13 +1389,10 @@ class Webserver(object):
         webserver = Webserver('/path/to/web/root')
         webserver.start()
         webserver.stop()
-    '''
-    def __init__(self,
-                 root=None,
-                 port=None,
-                 wait=5,
-                 handler=None):
-        '''
+    """
+
+    def __init__(self, root=None, port=None, wait=5, handler=None, ssl_opts=None):
+        """
         root
             Root directory of webserver. If not passed, it will default to the
             location of the base environment of the integration suite's file
@@ -1497,33 +1410,36 @@ class Webserver(object):
             Can be used to use a subclass of tornado.web.StaticFileHandler,
             such as when enforcing authentication with the http_basic_auth
             decorator.
-        '''
-        if port is not None and not isinstance(port, six.integer_types):
-            raise ValueError('port must be an integer')
+        """
+        if port is not None and not isinstance(port, int):
+            raise ValueError("port must be an integer")
 
         if root is None:
-            root = os.path.join(FILES, 'file', 'base')
+            root = RUNTIME_VARS.BASE_FILES
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
-            raise ValueError('root must be a string')
+            raise ValueError("root must be a string")
 
         self.port = port
         self.wait = wait
-        self.handler = handler \
-            if handler is not None \
-            else tornado.web.StaticFileHandler
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
+        self.ssl_opts = ssl_opts
 
     def target(self):
-        '''
+        """
         Threading target which stands up the tornado application
-        '''
+        """
         self.ioloop = tornado.ioloop.IOLoop()
-        self.ioloop.make_current()
-        self.application = tornado.web.Application(
-            [(r'/(.*)', self.handler, {'path': self.root})])
-        self.application.listen(self.port)
+        asyncio.set_event_loop(self.ioloop.asyncio_loop)
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
+                [(r"/(.*)", self.handler, {"path": self.root})]
+            )
+        else:
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
+        self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
     @property
@@ -1531,36 +1447,44 @@ class Webserver(object):
         if self.port is None:
             return False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return sock.connect_ex(('127.0.0.1', self.port)) == 0
+        try:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        finally:
+            sock.close()
 
     def url(self, path):
-        '''
+        """
         Convenience function which, given a file path, will return a URL that
         points to that path. If the path is relative, it will just be appended
         to self.web_root.
-        '''
+        """
         if self.web_root is None:
-            raise RuntimeError('Webserver instance has not been started')
-        err_msg = 'invalid path, must be either a relative path or a path ' \
-                  'within {0}'.format(self.root)
+            raise RuntimeError("Webserver instance has not been started")
+        err_msg = (
+            "invalid path, must be either a relative path or a path within {}".format(
+                self.root
+            )
+        )
         try:
-            relpath = path \
-                if not os.path.isabs(path) \
-                else os.path.relpath(path, self.root)
-            if relpath.startswith('..' + os.sep):
+            relpath = (
+                path if not os.path.isabs(path) else os.path.relpath(path, self.root)
+            )
+            if relpath.startswith(".." + os.sep):
                 raise ValueError(err_msg)
-            return '/'.join((self.web_root, relpath))
+            return "/".join((self.web_root, relpath))
         except AttributeError:
             raise ValueError(err_msg)
 
     def start(self):
-        '''
+        """
         Starts the webserver
-        '''
+        """
         if self.port is None:
-            self.port = get_unused_localhost_port()
+            self.port = ports.get_unused_localhost_port()
 
-        self.web_root = 'http://127.0.0.1:{0}'.format(self.port)
+        self.web_root = "http{}://127.0.0.1:{}".format(
+            "s" if self.ssl_opts else "", self.port
+        )
 
         self.server_thread = threading.Thread(target=self.target)
         self.server_thread.daemon = True
@@ -1573,60 +1497,407 @@ class Webserver(object):
                 time.sleep(1)
         else:
             raise Exception(
-                'Failed to start tornado webserver on 127.0.0.1:{0} within '
-                '{1} seconds'.format(self.port, self.wait)
+                "Failed to start tornado webserver on 127.0.0.1:{} within "
+                "{} seconds".format(self.port, self.wait)
             )
 
     def stop(self):
-        '''
+        """
         Stops the webserver
-        '''
+        """
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
 
+    def __enter__(self):
+        self.start()
+        return self
 
-def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
-        timeout=None, on_terminate=None):
-    '''
-    Kill a process tree (including grandchildren) with signal "sig" and return
-    a (gone, still_alive) tuple.  "on_terminate", if specified, is a callabck
-    function which is called as soon as a child terminates.
-    '''
-    if pid == os.getpid():
-        raise RuntimeError("I refuse to kill myself")
-    try:
-        parent = psutil.Process(pid)
-    except psutil.NoSuchProcess:
-        log.debug("PID not found alive: %d", pid)
-        return ([], [])
-    children = parent.children(recursive=True)
-    if include_parent:
-        children.append(parent)
-    for p in children:
-        p.send_signal(sig)
-    gone, alive = psutil.wait_procs(children, timeout=timeout,
-                                    callback=on_terminate)
-    return (gone, alive)
+    def __exit__(self, *_):
+        self.stop()
 
 
-def this_user():
-    '''
-    Get the user associated with the current process.
-    '''
-    if salt.utils.platform.is_windows():
-        return salt.utils.win_functions.get_current_user(with_domain=False)
-    return pwd.getpwuid(os.getuid())[0]
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
+    """
+    Save all requests sent to the server.
+    """
+
+    received_requests = []
+
+    def post(self, *args):  # pylint: disable=arguments-differ
+        """
+        Handle the post
+        """
+        self.received_requests.append(self.request)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        """
+        Streaming not used for testing
+        """
+        raise NotImplementedError()
+
+
+class MirrorPostHandler(tornado.web.RequestHandler):
+    """
+    Mirror a POST body back to the client
+    """
+
+    def post(self, *args):  # pylint: disable=arguments-differ
+        """
+        Handle the post
+        """
+        body = self.request.body
+        log.debug("Incoming body: %s  Incoming args: %s", body, args)
+        self.write(body)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        """
+        Streaming not used for testing
+        """
+        raise NotImplementedError()
 
 
 def dedent(text, linesep=os.linesep):
-    '''
+    """
     A wrapper around textwrap.dedent that also sets line endings.
-    '''
+    """
     linesep = salt.utils.stringutils.to_unicode(linesep)
     unicode_text = textwrap.dedent(salt.utils.stringutils.to_unicode(text))
     clean_text = linesep.join(unicode_text.splitlines())
-    if unicode_text.endswith(u'\n'):
+    if unicode_text.endswith("\n"):
         clean_text += linesep
-    if not isinstance(text, six.text_type):
+    if not isinstance(text, str):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron:
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop("__cleanup__", ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+        os.environ.update(**self.kwargs)
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron
+
+
+def _cast_to_pathlib_path(value):
+    if isinstance(value, pathlib.Path):
+        return value
+    return pathlib.Path(str(value))
+
+
+@attr.s(frozen=True, slots=True)
+class VirtualEnv:
+    venv_dir = attr.ib(converter=_cast_to_pathlib_path)
+    env = attr.ib(default=None)
+    system_site_packages = attr.ib(default=False)
+    pip_requirement = attr.ib(repr=False)
+    setuptools_requirement = attr.ib(repr=False)
+    # TBD build_requirement = attr.ib(default="build!=0.6.*", repr=False)   # add build when implement pyproject.toml
+    environ = attr.ib(init=False, repr=False)
+    venv_python = attr.ib(init=False, repr=False)
+    venv_bin_dir = attr.ib(init=False, repr=False)
+
+    @pip_requirement.default
+    def _default_pip_requiremnt(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            return "pip>=22.3.1,<23.0"
+        return "pip>=20.2.4,<21.2"
+
+    @setuptools_requirement.default
+    def _default_setuptools_requirement(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            return "setuptools>=65.6.3,<66"
+        return "setuptools!=50.*,!=51.*,!=52.*,<59"
+
+    @venv_dir.default
+    def _default_venv_dir(self):
+        return pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+
+    @environ.default
+    def _default_environ(self):
+        environ = os.environ.copy()
+        if self.env:
+            environ.update(self.env)
+        return environ
+
+    @venv_python.default
+    def _default_venv_python(self):
+        # Once we drop Py3.5 we can stop casting to string
+        if salt.utils.platform.is_windows():
+            return str(self.venv_dir / "Scripts" / "python.exe")
+        return str(self.venv_dir / "bin" / "python")
+
+    @venv_bin_dir.default
+    def _default_venv_bin_dir(self):
+        return pathlib.Path(self.venv_python).parent
+
+    def __enter__(self):
+        if pytestskipmarkers.utils.platform.is_fips_enabled():
+            pytest.skip(
+                "Test cannot currently create virtual environments on a FIPS enabled platform"
+            )
+        try:
+            self._create_virtualenv()
+        except subprocess.CalledProcessError:
+            raise AssertionError("Failed to create virtualenv")
+        return self
+
+    def __exit__(self, *args):
+        shutil.rmtree(str(self.venv_dir), ignore_errors=True)
+
+    def install(self, *args, **kwargs):
+        return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
+
+    def uninstall(self, *args, **kwargs):
+        return self.run(
+            self.venv_python, "-m", "pip", "uninstall", "-y", *args, **kwargs
+        )
+
+    def run(self, *args, **kwargs):
+        check = kwargs.pop("check", True)
+        kwargs.setdefault("cwd", tempfile.gettempdir())
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+        kwargs.setdefault("universal_newlines", True)
+        env = kwargs.pop("env", None)
+        if env:
+            env = self.environ.copy().update(env)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
+        ret = ProcessResult(
+            returncode=proc.returncode,
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            cmdline=proc.args,
+        )
+        log.debug(ret)
+        if check is True:
+            try:
+                proc.check_returncode()
+            except subprocess.CalledProcessError:
+                raise ProcessFailed(
+                    "Command failed return code check", process_result=proc
+                )
+        return ret
+
+    @staticmethod
+    def get_real_python():
+        """
+        The reason why the virtualenv creation is proxied by this function is mostly
+        because under windows, we can't seem to properly create a virtualenv off of
+        another virtualenv(we can on linux) and also because, we really don't want to
+        test virtualenv creation off of another virtualenv, we want a virtualenv created
+        from the original python.
+        Also, on windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
+        """
+        try:
+            if salt.utils.platform.is_windows():
+                return os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+            else:
+                python_binary_names = [
+                    "python{}.{}".format(*sys.version_info),
+                    "python{}".format(*sys.version_info),
+                    "python",
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, "bin", binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    raise AssertionError(
+                        "Couldn't find a python binary name under '{}' matching: {}".format(
+                            os.path.join(sys.real_prefix, "bin"), python_binary_names
+                        )
+                    )
+                return python
+        except AttributeError:
+            return sys.executable
+
+    def run_code(self, code_string, python=None, **kwargs):
+        if code_string.startswith("\n"):
+            code_string = code_string[1:]
+        code_string = textwrap.dedent(code_string).rstrip()
+        log.debug(
+            "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
+        )
+        if python is None:
+            python = str(self.venv_python)
+        return self.run(python, "-c", code_string, **kwargs)
+
+    def get_installed_packages(self):
+        data = {}
+        ret = self.run(str(self.venv_python), "-m", "pip", "list", "--format", "json")
+        for pkginfo in json.loads(ret.stdout):
+            data[pkginfo["name"]] = pkginfo["version"]
+        return data
+
+    def _create_virtualenv(self):
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            f"--python={self.get_real_python()}",
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
+        self.install(
+            "-U",
+            self.pip_requirement,
+            self.setuptools_requirement,
+            # TBD self.build_requirement, # add build when implement pyproject.toml
+        )
+        log.debug("Created virtualenv in %s", self.venv_dir)
+
+
+@attr.s(frozen=True, slots=True)
+class SaltVirtualEnv(VirtualEnv):
+    """
+    This is a VirtualEnv implementation which has this salt checkout installed in it
+    using static requirements
+    """
+
+    def _create_virtualenv(self):
+        super()._create_virtualenv()
+        self.install(RUNTIME_VARS.CODE_DIR)
+
+    def install(self, *args, **kwargs):
+        env = self.environ.copy()
+        env.update(kwargs.pop("env", None) or {})
+        env["USE_STATIC_REQUIREMENTS"] = "1"
+        kwargs["env"] = env
+        return super().install(*args, **kwargs)
+
+
+@functools.lru_cache(maxsize=1)
+def get_virtualenv_binary_path():
+    # Under windows we can't seem to properly create a virtualenv off of another
+    # virtualenv, we can on linux but we will still point to the virtualenv binary
+    # outside the virtualenv running the test suite, if that's the case.
+    try:
+        real_prefix = sys.real_prefix
+        # The above attribute exists, this is a virtualenv
+        if salt.utils.platform.is_windows():
+            virtualenv_binary = os.path.join(real_prefix, "Scripts", "virtualenv.exe")
+        else:
+            # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
+            # from within the virtualenv, we don't want that
+            path = os.environ.get("PATH")
+            if path is not None:
+                path_items = path.split(os.pathsep)
+                for item in path_items[:]:
+                    if item.startswith(sys.base_prefix):
+                        path_items.remove(item)
+                os.environ["PATH"] = os.pathsep.join(path_items)
+            virtualenv_binary = salt.utils.path.which("virtualenv")
+            if path is not None:
+                # Restore previous environ PATH
+                os.environ["PATH"] = path
+            if not virtualenv_binary.startswith(real_prefix):
+                virtualenv_binary = None
+        if virtualenv_binary and not os.path.exists(virtualenv_binary):
+            # It doesn't exist?!
+            virtualenv_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        virtualenv_binary = None
+    return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()
+
+
+class Keys:
+    """
+    Temporary ssh key pair
+    """
+
+    def __init__(self, tmp_path_factory):
+        """
+        tmp_path_factory is the session scoped pytest fixture of the same name
+        """
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
+        self.priv_path = priv_path
+
+    def generate(self):
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
+
+    @property
+    def pub_path(self):
+        return self.priv_path.with_name(f"{self.priv_path.name}.pub")
+
+    @property
+    def pub(self):
+        return self.pub_path.read_text()
+
+    @property
+    def priv(self):
+        return self.priv_path.read_text()
+
+    def __enter__(self):
+        self.generate()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)

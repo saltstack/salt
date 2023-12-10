@@ -13,6 +13,7 @@ execution modules
         salt.modules.pkg
         salt.modules.service
         salt.modules.shadow
+        salt.modules.sysctl
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -23,6 +24,8 @@ execution modules
 
     acme
     aix_group
+    aix_shadow
+    aixpkg
     aliases
     alternatives
     ansiblegate
@@ -30,20 +33,25 @@ execution modules
     apcups
     apf
     apkpkg
+    aptly
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
     augeas_cfg
     aws_sqs
     bamboohr
+    baredoc
     bcache
     beacons
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -67,10 +75,12 @@ execution modules
     boto_lambda
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
+    boto_ssm
     boto_vpc
     bower
     bridge
@@ -78,14 +88,17 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
     chef
     chocolatey
     chronos
+    chroot
+    cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -96,6 +109,7 @@ execution modules
     cp
     cpan
     cron
+    cryptdev
     csf
     cyg
     daemontools
@@ -104,11 +118,12 @@ execution modules
     ddns
     deb_apache
     deb_postgres
-    debuild_pkgbuild
     debconfmod
     debian_ip
     debian_service
+    debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
@@ -128,7 +143,10 @@ execution modules
     elasticsearch
     environ
     eselect
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     etcd_mod
     ethtool
     event
@@ -142,16 +160,19 @@ execution modules
     freebsdpkg
     freebsdports
     freebsdservice
+    freezer
+    gcp_addon
     gem
     genesis
     gentoo_service
     gentoolkitmod
     git
     github
-    glance
     glanceng
+    glassfish
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -162,16 +183,18 @@ execution modules
     haproxyconn
     hashutil
     heat
+    helm
     hg
-    hipchat
+    highstate_doc
     hosts
     http
+    icinga2
+    idem
     ifttt
     ilo
-    icinga2
     incron
-    influxdbmod
     influxdb08mod
+    influxdbmod
     infoblox
     ini_manage
     inspectlib
@@ -184,6 +207,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -191,6 +215,8 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
+    jira_mod
     junos
     k8s
     kapacitor
@@ -201,7 +227,9 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
+    kubeadm
     kubernetesmod
     launchctl_service
     layman
@@ -214,6 +242,8 @@ execution modules
     linux_acl
     linux_ip
     linux_lvm
+    linux_service
+    linux_shadow
     linux_sysctl
     localemod
     locate
@@ -222,13 +252,12 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew_pkg
-    macdefaults
     mac_desktop
     mac_group
     mac_keychain
-    macpackage
     mac_pkgutil
     mac_portspkg
     mac_power
@@ -240,6 +269,8 @@ execution modules
     mac_timezone
     mac_user
     mac_xattr
+    macdefaults
+    macpackage
     makeconf
     mandrill
     marathon
@@ -263,14 +294,15 @@ execution modules
     nacl
     nagios
     nagios_rpc
-    namecheap_domains_dns
     namecheap_domains
+    namecheap_domains_dns
     namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm
-    napalm_netacl
     napalm_bgp
+    napalm_formula
+    napalm_mod
+    napalm_netacl
     napalm_network
     napalm_ntp
     napalm_probes
@@ -282,10 +314,12 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
     neutronng
+    nexus
     nfs3
     nftables
     nginx
@@ -295,6 +329,8 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
+    nxos_upgrade
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -313,11 +349,14 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted_partition
     pcs
     pdbedit
     pecl
+    peeringdb
+    pf
     philips_hue
     pillar
     pip
@@ -335,6 +374,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group
@@ -344,18 +384,19 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
     rbenv
     rdp
+    rebootmgr
     redismod
     reg
     rest_pkg
     rest_sample_utils
     rest_service
     restartcheck
+    restconf
     ret
     rh_ip
     rh_service
@@ -368,10 +409,12 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
@@ -379,10 +422,9 @@ execution modules
     sensehat
     sensors
     serverdensity_device
-    service
     servicenow
-    shadow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm
@@ -391,6 +433,7 @@ execution modules
     smbios
     smf_service
     smtp
+    snapper
     solaris_fmadm
     solaris_group
     solaris_shadow
@@ -406,12 +449,12 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
-    snapper
     state
     status
     statuspage
     supervisord
     suse_apache
+    suse_ip
     svn
     swarm
     swift
@@ -427,13 +470,14 @@ execution modules
     telemetry
     temp
     test
-    testinframod
     test_virtual
+    testinframod
     textfsm_mod
     timezone
     tls
     tomcat
     trafficserver
+    transactional_update
     travisci
     tuned
     twilio_notify
@@ -447,11 +491,15 @@ execution modules
     vault
     vbox_guest
     vboxmanage
+    vcenter
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     webutil
+    win_appx
+    win_auditpol
     win_autoruns
     win_certutil
     win_dacl
@@ -459,12 +507,14 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event
     win_file
     win_firewall
     win_groupadd
     win_iis
     win_ip
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_ntp
@@ -473,24 +523,29 @@ execution modules
     win_pki
     win_powercfg
     win_psget
-    winrepo
     win_servermanager
     win_service
     win_shadow
+    win_shortcut
     win_smtp_server
     win_snmp
     win_status
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
+    win_wusa
+    winrepo
+    wordpress
     x509
+    x509_v2
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout

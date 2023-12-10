@@ -22,14 +22,12 @@ configuring and managing multiple ``salt-proxy`` processes.
        - p8000
 
 This says that Salt's pillar should load some values for the proxy ``p8000``
-from the file /srv/pillar/p8000.sls (if you have not changed your default pillar_roots)
+from the file ``/srv/pillar/p8000.sls`` (if you have not changed your default pillar_roots)
 
-2. In the pillar root for your base environment, create this file:
+2. In the pillar root for your base environment, create the ``p8000.sls`` file with the
+   following contents:
 
 .. code-block:: yaml
-
-   p8000.sls
-   ---------
 
    proxy:
      # set proxytype for your proxymodule
@@ -71,4 +69,4 @@ re-start it.
 
     salt p8000 pkg.list_pkgs
 
-.. _Configure: https://docs.saltstack.com/en/latest/topics/beacons/#configuring-beacons
+.. _Configure: https://docs.saltproject.io/en/latest/topics/beacons/#configuring-beacons

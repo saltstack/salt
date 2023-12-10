@@ -63,7 +63,7 @@ Several functions have been added to the execution module to manage worktrees_
 (a feature new to Git 2.5.0). State support does not exist yet, but will follow
 soon.
 
-.. _worktrees: http://git-scm.com/docs/git-worktree
+.. _worktrees: https://git-scm.com/docs/git-worktree
 
 New Functions in Git Execution Module
 -------------------------------------

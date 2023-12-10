@@ -109,7 +109,7 @@ have been moved from ``/etc/salt/pki`` to ``/etc/salt/pki/{master,minion}``.
 
 The old setup will look like this:
 
-.. code-block:: raw
+.. code-block:: text
 
     /etc/salt/pki
     |-- master.pem
@@ -126,7 +126,7 @@ The old setup will look like this:
 With the accepted minion keys in ``/etc/salt/pki/minions``, the new setup
 places the accepted minion keys in ``/etc/salt/pki/master/minions``.
 
-.. code-block:: raw
+.. code-block:: text
 
     /etc/salt/pki
     |-- master

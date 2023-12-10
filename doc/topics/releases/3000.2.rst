@@ -1,0 +1,43 @@
+===========================
+Salt 3000.2 Release Notes
+===========================
+
+Version 3000.2 is a CVE-fix release for :ref:`3000 <release-3000>`.
+
+Security Fix
+============
+
+**CVE-2020-11651**
+
+An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
+The salt-master process ClearFuncs class does not properly validate
+method calls. This allows a remote user to access some methods without
+authentication. These methods can be used to retrieve user tokens from
+the salt master and/or run arbitrary commands on salt minions.
+
+
+**CVE-2020-11652**
+
+An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
+The salt-master process ClearFuncs class allows access to some methods
+that improperly sanitize paths. These methods allow arbitrary
+directory access to authenticated users.
+
+
+Known Issue
+===========
+
+Part of the fix for CVE-2020-11651 added better validation of the methods allowed to be called by remote clients.
+Both AESFuncs and ClearFuncs now have an explicit list of methods that can be called.
+The name of one of these whitlisted methods on AESFuncs had a typo.
+The _minion_runner method should be minion_runner (without the underscore prefix).
+This typo breaks the publish module’s runner method.
+Calling runners, for example:
+
+.. code-block:: bash
+
+    salt minion publish.runner manage.down
+
+Will not work, and you will receive and empty reply from the salt master.
+
+This will be addressed in the 3001 release of Salt set for mid-June 2020.

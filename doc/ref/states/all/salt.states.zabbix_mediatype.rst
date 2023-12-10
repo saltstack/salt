@@ -1,5 +1,5 @@
-salt.states.zabbix_mediatype module
-===================================
+salt.states.zabbix_mediatype
+============================
 
 .. automodule:: salt.states.zabbix_mediatype
     :members:

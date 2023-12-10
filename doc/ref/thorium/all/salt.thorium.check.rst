@@ -1,6 +1,5 @@
-salt.thorium.check module
-=========================
+salt.thorium.check
+==================
 
 .. automodule:: salt.thorium.check
     :members:
-

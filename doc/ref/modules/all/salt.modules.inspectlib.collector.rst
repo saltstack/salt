@@ -1,5 +1,5 @@
-salt.modules.inspectlib.collector module
-========================================
+salt.modules.inspectlib.collector
+=================================
 
 .. automodule:: salt.modules.inspectlib.collector
     :members:

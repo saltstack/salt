@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Retrieve Pillar data by doing a SQL query
 
 This module is not meant to be used directly as an ext_pillar.
@@ -137,6 +136,33 @@ These columns define list grouping
 The range for with_lists is 1 to number_of_fields, inclusive.
 Numbers outside this range are ignored.
 
+If you specify `as_json: True` in the mapping expression and query only for
+single value, returned data are considered in JSON format and will be merged
+directly.
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - sql_base:
+        - query: "SELECT json_pillar FROM pillars WHERE minion_id = %s"
+          as_json: True
+
+The processed JSON entries are recursively merged in a single dictionary.
+Additionnaly if `as_list` is set to `True` the lists will be merged in case of collision.
+
+For instance the following rows:
+
+    {"a": {"b": [1, 2]}, "c": 3}
+    {"a": {"b": [1, 3]}, "d": 4}
+
+will result in the following pillar with `as_list=False`
+
+    {"a": {"b": [1, 3], "c": 3, "d": 4}
+
+and in with `as_list=True`
+
+    {"a": {"b": [1, 2, 3], "c": 3, "d": 4}
+
 Finally, if you pass the queries in via a mapping, the key will be the
 first level name where as passing them in as a list will place them in the
 root.  This isolates the query results into their own subtrees.
@@ -147,6 +173,9 @@ could even do joins or subqueries in case your minion_id is stored elsewhere.
 It is capable of handling single rows or multiple rows per minion.
 
 Configuration of the connection depends on the adapter in use.
+
+.. versionadded:: 3005
+   The *as_json* parameter.
 
 More complete example for MySQL (to also show configuration)
 ============================================================
@@ -167,25 +196,20 @@ More complete example for MySQL (to also show configuration)
             depth: 5
             as_list: True
             with_lists: [1,3]
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
+
+import abc
+import logging
+
+from salt.utils.dictupdate import update
+from salt.utils.odict import OrderedDict
+
+log = logging.getLogger(__name__)
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
 
 # tests/unit/pillar/mysql_test.py may help understand this code.
-
-# Import python libs
-import logging
-import abc  # Added in python2.6 so always available
-
-# Import Salt libs
-from salt.utils.odict import OrderedDict
-from salt.ext.six.moves import range
-from salt.ext import six
-
-# Set up logging
-log = logging.getLogger(__name__)
 
 
 # This ext_pillar is abstract and cannot be used directory
@@ -193,11 +217,11 @@ def __virtual__():
     return False
 
 
-class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
-    '''
+class SqlBaseExtPillar(metaclass=abc.ABCMeta):
+    """
     This class receives and processes the database rows in a database
     agnostic way.
-    '''
+    """
 
     result = None
     focus = None
@@ -205,6 +229,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
     num_fields = 0
     depth = 0
     as_list = False
+    as_json = False
     with_lists = None
     ignore_null = False
 
@@ -214,24 +239,22 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
     @classmethod
     @abc.abstractmethod
     def _db_name(cls):
-        '''
+        """
         Return a friendly name for the database, e.g. 'MySQL' or 'SQLite'.
         Used in logging output.
-        '''
-        pass
+        """
 
     @abc.abstractmethod
     def _get_cursor(self):
-        '''
+        """
         Yield a PEP 249 compliant Cursor as a context manager.
-        '''
-        pass
+        """
 
     def extract_queries(self, args, kwargs):
-        '''
+        """
         This function normalizes the config block into a set of queries we
         can use.  The return is a list of consistently laid out dicts.
-        '''
+        """
         # Please note the function signature is NOT an error.  Neither args, nor
         # kwargs should have asterisks.  We are passing in a list and dict,
         # rather than receiving variable args.  Adding asterisks WILL BREAK the
@@ -250,43 +273,47 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         qbuffer.extend([[k, kwargs[k]] for k in klist])
 
         # Filter out values that don't have queries.
-        qbuffer = [x for x in qbuffer if (
-                (isinstance(x[1], six.string_types) and len(x[1]))
-                or
-                (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
-                or
-                (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
-            )]
+        qbuffer = [
+            x
+            for x in qbuffer
+            if (
+                (isinstance(x[1], str) and len(x[1]))
+                or (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
+                or (isinstance(x[1], dict) and "query" in x[1] and len(x[1]["query"]))
+            )
+        ]
 
         # Next, turn the whole buffer into full dicts.
         for qb in qbuffer:
-            defaults = {'query': '',
-                        'depth': 0,
-                        'as_list': False,
-                        'with_lists': None,
-                        'ignore_null': False
-                        }
-            if isinstance(qb[1], six.string_types):
-                defaults['query'] = qb[1]
+            defaults = {
+                "query": "",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            }
+            if isinstance(qb[1], str):
+                defaults["query"] = qb[1]
             elif isinstance(qb[1], (list, tuple)):
-                defaults['query'] = qb[1][0]
+                defaults["query"] = qb[1][0]
                 if len(qb[1]) > 1:
-                    defaults['depth'] = qb[1][1]
+                    defaults["depth"] = qb[1][1]
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults['with_lists'] and isinstance(defaults['with_lists'], six.string_types):
-                    defaults['with_lists'] = [
-                        int(i) for i in defaults['with_lists'].split(',')
+                if defaults["with_lists"] and isinstance(defaults["with_lists"], str):
+                    defaults["with_lists"] = [
+                        int(i) for i in defaults["with_lists"].split(",")
                     ]
             qb[1] = defaults
 
         return qbuffer
 
     def enter_root(self, root):
-        '''
+        """
         Set self.focus for kwarg queries
-        '''
+        """
         # There is no collision protection on root name isolation
         if root:
             self.result[root] = self.focus = {}
@@ -294,10 +321,10 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
             self.focus = self.result
 
     def process_fields(self, field_names, depth):
-        '''
+        """
         The primary purpose of this function is to store the sql field list
         and the depth to which we process.
-        '''
+        """
         # List of field names in correct order.
         self.field_names = field_names
         # number of fields.
@@ -309,19 +336,26 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
             self.depth = depth
 
     def process_results(self, rows):
-        '''
+        """
         This function takes a list of database results and iterates over,
         merging them into a dict form.
-        '''
+        """
         listify = OrderedDict()
         listify_dicts = OrderedDict()
         for ret in rows:
             # crd is the Current Return Data level, to make this non-recursive.
             crd = self.focus
+
+            # We have just one field without any key, assume returned row is already a dict
+            # aka JSON storage
+            if self.as_json and self.num_fields == 1:
+                crd = update(crd, ret[0], merge_lists=self.as_list)
+                continue
+
             # Walk and create dicts above the final layer
-            for i in range(0, self.depth-1):
+            for i in range(0, self.depth - 1):
                 # At the end we'll use listify to find values to make a list of
-                if i+1 in self.with_lists:
+                if i + 1 in self.with_lists:
                     if id(crd) not in listify:
                         listify[id(crd)] = []
                         listify_dicts[id(crd)] = crd
@@ -356,39 +390,38 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
 
             # If this test is true, the penultimate field is the key
             if self.depth == self.num_fields - 1:
-                nk = self.num_fields-2  # Aka, self.depth-1
+                nk = self.num_fields - 2  # Aka, self.depth-1
                 # Should we and will we have a list at the end?
-                if ((self.as_list and (ret[nk] in crd)) or
-                        (nk+1 in self.with_lists)):
+                if (self.as_list and (ret[nk] in crd)) or (nk + 1 in self.with_lists):
                     if ret[nk] in crd:
                         if not isinstance(crd[ret[nk]], list):
                             crd[ret[nk]] = [crd[ret[nk]]]
                         # if it's already a list, do nothing
                     else:
                         crd[ret[nk]] = []
-                    crd[ret[nk]].append(ret[self.num_fields-1])
+                    crd[ret[nk]].append(ret[self.num_fields - 1])
                 else:
-                    if not self.ignore_null or ret[self.num_fields-1] is not None:
-                        crd[ret[nk]] = ret[self.num_fields-1]
+                    if not self.ignore_null or ret[self.num_fields - 1] is not None:
+                        crd[ret[nk]] = ret[self.num_fields - 1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
                 # The spare results because of {c: d} vs {c: {"d": d, "e": e }}
                 # So, make that last dict
-                if ret[self.depth-1] not in crd:
-                    crd[ret[self.depth-1]] = {}
+                if ret[self.depth - 1] not in crd:
+                    crd[ret[self.depth - 1]] = {}
                 # This bit doesn't escape listify
                 if self.depth in self.with_lists:
                     if id(crd) not in listify:
                         listify[id(crd)] = []
                         listify_dicts[id(crd)] = crd
-                    if ret[self.depth-1] not in listify[id(crd)]:
-                        listify[id(crd)].append(ret[self.depth-1])
-                crd = crd[ret[self.depth-1]]
+                    if ret[self.depth - 1] not in listify[id(crd)]:
+                        listify[id(crd)].append(ret[self.depth - 1])
+                crd = crd[ret[self.depth - 1]]
                 # Now for the remaining keys, we put them into the dict
                 for i in range(self.depth, self.num_fields):
                     nk = self.field_names[i]
                     # Listify
-                    if i+1 in self.with_lists:
+                    if i + 1 in self.with_lists:
                         if id(crd) not in listify:
                             listify[id(crd)] = []
                             listify_dicts[id(crd)] = crd
@@ -415,16 +448,12 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 elif isinstance(d[k], list):
                     d[k] = [d[k]]
 
-    def fetch(self,
-              minion_id,
-              pillar,  # pylint: disable=W0613
-              *args,
-              **kwargs):
-        '''
+    def fetch(self, minion_id, pillar, *args, **kwargs):  # pylint: disable=W0613
+        """
         Execute queries, merge and return as a dict.
-        '''
+        """
         db_name = self._db_name()
-        log.info('Querying %s for information for %s', db_name, minion_id)
+        log.info("Querying %s for information for %s", db_name, minion_id)
         #
         #    log.debug('ext_pillar %s args: %s', db_name, args)
         #    log.debug('ext_pillar %s kwargs: %s', db_name, kwargs)
@@ -434,20 +463,23 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         with self._get_cursor() as cursor:
             for root, details in qbuffer:
                 # Run the query
-                cursor.execute(details['query'], (minion_id,))
+                cursor.execute(details["query"], (minion_id,))
 
                 # Extract the field names the db has returned and process them
-                self.process_fields([row[0] for row in cursor.description], details['depth'])
+                self.process_fields(
+                    [row[0] for row in cursor.description], details["depth"]
+                )
                 self.enter_root(root)
-                self.as_list = details['as_list']
-                if details['with_lists']:
-                    self.with_lists = details['with_lists']
+                self.as_list = details["as_list"]
+                self.as_json = details["as_json"]
+                if details["with_lists"]:
+                    self.with_lists = details["with_lists"]
                 else:
                     self.with_lists = []
-                self.ignore_null = details['ignore_null']
+                self.ignore_null = details["ignore_null"]
                 self.process_results(cursor.fetchall())
 
-                log.debug('ext_pillar %s: Return data: %s', db_name, self)
+                log.debug("ext_pillar %s: Return data: %s", db_name, self)
         return self.result
 
 

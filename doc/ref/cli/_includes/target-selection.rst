@@ -2,7 +2,7 @@ Target Selection
 ----------------
 
 The default matching that Salt utilizes is shell-style globbing around the
-minion id. See https://docs.python.org/2/library/fnmatch.html#module-fnmatch.
+minion id. See https://docs.python.org/3/library/fnmatch.html#module-fnmatch.
 
 .. option:: -E, --pcre
 

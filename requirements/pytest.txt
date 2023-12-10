@@ -1,8 +1,13 @@
+mock >= 3.0.0
 # PyTest
-pytest >= 4.0.1
-pytest-cov
-pytest-salt == 2018.12.8
-pytest-timeout >= 1.3.3
-pytest-tempdir >= 2018.8.11
-pytest-helpers-namespace >= 2017.11.11
-pytest-salt-runtests-bridge >= 2019.1.30
+docker
+pytest >= 7.2.0
+pytest-salt-factories >= 1.0.0rc28
+pytest-helpers-namespace >= 2019.1.8
+pytest-subtests
+pytest-timeout
+pytest-httpserver
+pytest-custom-exit-code >= 0.3
+flaky
+more-itertools
+pyfakefs

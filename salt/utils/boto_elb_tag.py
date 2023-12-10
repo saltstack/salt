@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2010 Mitch Garnaat http://garnaat.org/
 # Copyright (c) 2010, Eucalyptus Systems, Inc.
 #
@@ -21,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 
 def __virtual__():
     return True
@@ -30,11 +27,11 @@ def __virtual__():
 
 def get_tag_descriptions():
     class TagDescriptions(dict):
-        '''
+        """
         A TagDescriptions is used to collect the tags associated with ELB
         resources.
         See :class:`boto.ec2.elb.LoadBalancer` for more details.
-        '''
+        """
 
         def __init__(self, connection=None):
             dict.__init__(self)
@@ -43,26 +40,26 @@ def get_tag_descriptions():
             self._tags = None
 
         def startElement(self, name, attrs, connection):
-            if name == 'member':
+            if name == "member":
                 self.load_balancer_name = None
                 self.tags = None
-            if name == 'Tags':
+            if name == "Tags":
                 self._tags = TagSet()
                 return self._tags
             return None
 
         def endElement(self, name, value, connection):
-            if name == 'LoadBalancerName':
+            if name == "LoadBalancerName":
                 self._load_balancer_name = value
-            elif name == 'member':
+            elif name == "member":
                 self[self._load_balancer_name] = self._tags
 
     class TagSet(dict):
-        '''
+        """
         A TagSet is used to collect the tags associated with a particular
         ELB resource.  See :class:`boto.ec2.elb.LoadBalancer` for more
         details.
-        '''
+        """
 
         def __init__(self, connection=None):
             dict.__init__(self)
@@ -71,17 +68,17 @@ def get_tag_descriptions():
             self._current_value = None
 
         def startElement(self, name, attrs, connection):
-            if name == 'member':
+            if name == "member":
                 self._current_key = None
                 self._current_value = None
             return None
 
         def endElement(self, name, value, connection):
-            if name == 'Key':
+            if name == "Key":
                 self._current_key = value
-            elif name == 'Value':
+            elif name == "Value":
                 self._current_value = value
-            elif name == 'member':
+            elif name == "member":
                 self[self._current_key] = self._current_value
 
     return TagDescriptions

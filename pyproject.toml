@@ -1,0 +1,60 @@
+[tool.black]
+exclude= """
+/(
+    salt/ext
+  | tests/kitchen
+  | templates
+)/
+"""
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+ensure_newline_before_comments=true
+skip="salt/ext,tests/kitchen,templates"
+known_third_party = [
+  "pytest"
+]
+
+[tool.towncrier]
+    package = "salt"
+    filename = "CHANGELOG.md"
+    directory = "changelog/"
+    template = "changelog/.template.jinja"
+    start_string = "# Changelog\n"
+    underlines = ["", "", ""]
+    title_format = "## {version} ({project_date})"
+    issue_format = "[#{issue}](https://github.com/saltstack/salt/issues/{issue})"
+
+    [[tool.towncrier.type]]
+        directory = "removed"
+        name = "Removed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "deprecated"
+        name = "Deprecated"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "changed"
+        name = "Changed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "fixed"
+        name = "Fixed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "added"
+        name = "Added"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "security"
+        name = "Security"
+        showcontent = true

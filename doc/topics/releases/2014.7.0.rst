@@ -54,8 +54,6 @@ release.
 Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
-For information about how to use Salt with RAET please see the
-:ref:`tutorial <raet>`.
 
 Salt SSH Enhancements
 =====================
@@ -71,7 +69,7 @@ Install salt-ssh Using pip
 
 Salt-ssh is now pip-installable!
 
-https://pypi.python.org/pypi/salt-ssh/
+https://pypi.org/project/salt-ssh/
 
 Pip will bring in all of the required deps, and while some deps are compiled,
 they all include pure python implementations, meaning that any compile errors

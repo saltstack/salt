@@ -36,7 +36,7 @@ the following syntax is used:
 in the SLS file. If you need to guarantee order of execution, consider using
 requisites.
 
-.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+.. include:: ../../_incl/sls_filename_cant_contain_period.rst
 
 Relative Include
 ================
@@ -91,4 +91,3 @@ needs to be defined. An exclude statement that verifies that the running
     The current state processing flow checks for duplicate IDs before
     processing excludes. An error occurs if duplicate IDs are present even if
     one of the IDs is targeted by an ``exclude``.
-

@@ -12,6 +12,10 @@ The old `external_nodes` option has been removed. The master tops system
 provides a pluggable and extendable replacement for it, allowing for multiple
 different subsystems to provide top file data.
 
+.. versionchanged:: 3007.0
+
+    Masterless minions now support master top modules as well.
+
 Using the new `master_tops` option is simple:
 
 .. code-block:: yaml
@@ -61,8 +65,9 @@ bare-bones example:
 
     import logging
     import sys
+
     # Define the module's virtual name
-    __virtualname__ = 'customtop'
+    __virtualname__ = "customtop"
 
     log = logging.getLogger(__name__)
 
@@ -72,8 +77,8 @@ bare-bones example:
 
 
     def top(**kwargs):
-        log.debug('Calling top in customtop')
-        return {'base': ['test']}
+        log.debug("Calling top in customtop")
+        return {"base": ["test"]}
 
 `salt minion state.show_top` should then display something like:
 

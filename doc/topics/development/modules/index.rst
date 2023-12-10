@@ -55,6 +55,11 @@ prepended by underscore, such as:
 Modules must be synced before they can be used. This can happen a few ways,
 discussed below.
 
+
+.. note::
+    Using saltenvs besides ``base`` may not work in all contexts.
+
+
 Sync Via States
 ~~~~~~~~~~~~~~~
 
@@ -70,7 +75,7 @@ Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The saltutil module has a number of functions that can be used to sync all
-or specific dynamic modules. The ``saltutil.sync_*`` 
+or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`execution functions <salt.modules.saltutil>` and
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
@@ -100,16 +105,12 @@ This is done via setuptools entry points:
 
     setup(
         # ...
-        entry_points={
-            'salt.loader': [
-                'module_dirs=spirofs.loader:module',
-            ],
-        },
+        entry_points={"salt.loader": ["module_dirs=spirofs.loader:module"]},
         # ...
     )
 
 Note that these are not synced from the Salt Master to the Minions. They must be
-installed indepdendently on each Minion.
+installed independently on each Minion.
 
 Module Types
 ============
@@ -128,10 +129,12 @@ Cache        ``salt.cache`` (:ref:`index <all-salt.cache>`)                   ``
 Cloud        ``salt.cloud.clouds`` (:ref:`index <all-salt.clouds>`)           ``clouds``                ``cloud_dirs``
 Engine       ``salt.engines`` (:ref:`index <engines>`)                        ``engines``               ``engines_dirs``
 Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``modules``               ``module_dirs``
-Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
+Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors``             ``executor_dirs``
 File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
 Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
+Matcher      ``salt.matchers``                                                ``matchers``              ``matchers_dirs``
+Metaproxy    ``salt.metaproxy``                                               ``metaproxy`` [#no-fs]_   ``metaproxy_dirs``
 Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
 Outputter    ``salt.output`` (:ref:`index <all-salt.output>`)                 ``output``                ``outputter_dirs``
 Pillar       ``salt.pillar`` (:ref:`index <all-salt.pillars>`)                ``pillar``                ``pillar_dirs``
@@ -145,7 +148,7 @@ SDB          ``salt.sdb`` (:ref:`index <all-salt.sdb>`)                       ``
 Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
 SPM pkgdb    ``salt.spm.pkgdb``                                               ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
-SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper`` [#no-fs]_     ``wrapper_dirs``
+SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper``               ``wrapper_dirs``
 State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
 Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium``               ``thorium_dirs``
 Tokens       ``salt.tokens``                                                  ``tokens``                ``tokens_dirs``
@@ -156,7 +159,7 @@ Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``
 
 .. [#no-fs] These modules cannot be loaded from the Salt File Server.
 
-.. note:
+.. note::
     While it is possible to import modules directly with the import statement,
     it is strongly recommended that the appropriate
     :ref:`dunder dictionary <dunder-dictionaries>` is used to access them
@@ -178,7 +181,7 @@ Beacon
 
 * :ref:`Writing Beacons <writing-beacons>`
 
-Beacons are polled by the Salt event loop to monitor non-salt processes. See 
+Beacons are polled by the Salt event loop to monitor non-salt processes. See
 :ref:`Beacons <beacons>` for more information about the beacon system.
 
 Cache
@@ -257,6 +260,19 @@ Log Handler
 Log handlers allows the logs from salt (master or minion) to be sent to log
 aggregation systems.
 
+Matcher
+-------
+
+Matcher modules are used to define the :ref:`minion targeting expressions <targeting>`.
+For now, it is only possible to override the :ref:`existing matchers <matchers>`
+(the required CLI plumbing for custom matchers is not implemented yet).
+
+Metaproxy
+---------
+
+Metaproxy is an abstraction layer above the existing proxy minion. It enables
+adding different types of proxy minions that can still load existing proxymodules.
+
 Net API
 -------
 
@@ -324,7 +340,7 @@ SDB
 
 * :ref:`Writing SDB Modules <sdb-writing-modules>`
 
-SDB is a way to store data that's not associated with a minion. See 
+SDB is a way to store data that's not associated with a minion. See
 :ref:`Storing Data in Other Databases <sdb>`.
 
 Serializer
@@ -368,6 +384,12 @@ pkgfiles modules handle the actual installation.
 SSH Wrapper
 -----------
 
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    ssh_wrapper
+
 Replacement execution modules for :ref:`Salt SSH <salt-ssh>`.
 
 Thorium
@@ -381,7 +403,7 @@ Tokens
 Token stores for :ref:`External Authentication <acl-eauth>`. See the
 :py:mod:`salt.tokens` docstring for details.
 
-.. note:
+.. note::
     The runner to load tokens modules is
     :py:func:`saltutil.sync_eauth_tokens <salt.runners.saltutil.sync_eauth_tokens>`.
 
@@ -394,7 +416,7 @@ the state system.
 Util
 ----
 
-Just utility modules to use with other modules via ``__utils__`` (see 
+Just utility modules to use with other modules via ``__utils__`` (see
 :ref:`Dunder Dictionaries <dunder-dictionaries>`).
 
 Wheel

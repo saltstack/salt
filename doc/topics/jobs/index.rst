@@ -16,7 +16,7 @@ Salt Minions maintain a *proc* directory in the Salt ``cachedir``. The *proc*
 directory maintains files named after the executed job ID. These files contain
 the information about the current running jobs on the minion and allow for
 jobs to be looked up. This is located in the *proc* directory under the
-cachedir, with a default configuration it is under ``/var/cache/salt/proc``.
+cachedir, with a default configuration it is under ``/var/cache/salt/{master|minion}/proc``.
 
 Functions in the saltutil Module
 ================================
@@ -70,8 +70,8 @@ lookup_jid
 ----------
 
 When jobs are executed the return data is sent back to the master and cached.
-By default it is cached for 24 hours, but this can be configured via the
-``keep_jobs`` option in the master configuration.
+By default it is cached for 86400 seconds, but this can be configured via the
+``keep_jobs_seconds`` option in the master configuration.
 Using the lookup_jid runner will display the same return data that the initial
 job invocation with the salt command would display.
 

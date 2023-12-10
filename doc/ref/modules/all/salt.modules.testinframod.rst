@@ -1,5 +1,5 @@
-salt.modules.testinframod module
-================================
+salt.modules.testinframod
+=========================
 
 .. automodule:: salt.modules.testinframod
     :members:

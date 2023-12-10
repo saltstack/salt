@@ -94,7 +94,7 @@ Profile configuration example:
     vagrant-machine:
       host: my-vhost  # the Salt id of the virtual machine's host computer.
       provider: my-vagrant-config
-      cwd: /srv/machines  # the path to your Virtualbox file.
+      cwd: /srv/machines  # the path to your Vagrantfile.
       vagrant_runas: my-username  # the username who defined the Vagrantbox on the host
       # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
       # vagrant_provider: '' # option for "vagrant up" like: "--provider vmware_fusion"
@@ -243,7 +243,7 @@ Create and use your new Salt minion
 
 .. _this gist: https://github.com/jirsbek/SSH-keys-in-macOS-Sierra-keychain
 
-.. code-block:: bash
+.. code-block:: console
 
     ssh -A vagrant@< the bridged network address >
       # [ or, if you are at /home/my_username/ on my_laptop ]
@@ -251,7 +251,7 @@ Create and use your new Salt minion
 
 - then typing on your new node "v1" (a.k.a. quail1.bevy1.test)...
 
-.. code-block:: bash
+.. code-block:: console
 
     password: vagrant
       # [ stuff types out ... ]
@@ -266,4 +266,3 @@ Create and use your new Salt minion
     sudo apt install git
     git clone ssh://git@github.com/yourID/your_project
     # etc...
-

@@ -91,7 +91,7 @@ Nathaniel Whiteinge <seth@eseth.com>
 Nicolas Delaby <nicolas.delaby@ezeep.com>
 Nicole Thomas <nicole@saltstack.com>
 Nigel Owen <nigelowen2.gmail.com>
-Nitin Madhok <nmadhok@clemson.edu>
+Nitin Madhok <nmadhok@g.clemson.edu>
 Oleg Anashkin <oleg.anashkin@gmail.com>
 Pedro Algarvio <pedro@algarvio.me>
 Peter Baumgartner
@@ -115,9 +115,9 @@ Growing Community
 --------------------------------
 
 Salt is a rapidly growing project with a large community, to view all
-contributors please check ohloh, this file can sometimes be out of date:
+contributors please check Github, this file can sometimes be out of date:
 
-https://www.ohloh.net/p/salt/contributors
+https://github.com/saltstack/salt/graphs/contributors
 
 To see current statistics check out the GitHub Pulse page:
 

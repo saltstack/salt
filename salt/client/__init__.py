@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 The client module is used to create a client connection to the publisher
 The data structure needs to be:
     {'enc': 'clear',
@@ -7,7 +6,10 @@ The data structure needs to be:
               'arg':, ('arg1', 'arg2', ...),
               'tgt': '<glob or id>',
               'key': '<read in the key file>'}
-'''
+"""
+
+
+import logging
 
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
@@ -17,100 +19,120 @@ The data structure needs to be:
 # 2. What is the function being run?
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
-#
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 import os
-import time
 import random
-import logging
+import sys
+import time
 from datetime import datetime
 
-# Import salt libs
-import salt.config
+import tornado.gen
+
 import salt.cache
-import salt.payload
-import salt.transport
+import salt.channel.client
+import salt.config
+import salt.defaults.exitcodes
 import salt.loader
+import salt.payload
+import salt.syspaths as syspaths
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.versions
-import salt.utils.zeromq
-import salt.syspaths as syspaths
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
     EauthAuthenticationError,
     PublishError,
+    SaltClientError,
     SaltInvocationError,
     SaltReqTimeoutError,
-    SaltClientError
 )
 
-# Import third party libs
-from salt.ext import six
-# pylint: disable=import-error
-
-# Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
 try:
     import seco.range
+
     HAS_RANGE = True
 except ImportError:
     pass
-# pylint: enable=import-error
 
-# Import tornado
-import tornado.gen  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
 
 def get_local_client(
-        c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-        mopts=None,
-        skip_perm_errors=False,
-        io_loop=None,
-        auto_reconnect=False):
-    '''
+    c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+    mopts=None,
+    skip_perm_errors=False,
+    io_loop=None,
+    auto_reconnect=False,
+    listen=False,
+):
+    """
     .. versionadded:: 2014.7.0
 
     Read in the config and return the correct LocalClient object based on
     the configured transport
+
+    :param str c_path: Path of config file to use for opts.
+
+                       The default value is None.
+
+    :param bool mopts: When provided the local client will use this dictionary of
+                       options insead of loading a config file from the value
+                       of c_path.
+
+                       The default value is None.
+
+    :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                 The default value is False.
 
     :param IOLoop io_loop: io_loop used for events.
                            Pass in an io_loop if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
-    '''
+
+    :param bool keep_loop: Do not destroy the event loop when closing the event
+                           subsriber.
+
+    :param bool auto_reconnect: When True the event subscriber will reconnect
+                                automatically if a disconnect error is raised.
+
+    .. versionadded:: 3004
+    :param bool listen: Listen for events indefinitly. When option is set the
+                        LocalClient object will listen for events until it's
+                        destroy method is called.
+
+                        The default value is False.
+    """
     if mopts:
         opts = mopts
     else:
         # Late import to prevent circular import
         import salt.config
+
         opts = salt.config.client_config(c_path)
-    if opts['transport'] == 'raet':
-        import salt.client.raet
-        return salt.client.raet.LocalClient(mopts=opts)
+
     # TODO: AIO core is separate from transport
-    elif opts['transport'] in ('zeromq', 'tcp'):
-        return LocalClient(
-            mopts=opts,
-            skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop,
-            auto_reconnect=auto_reconnect)
+    return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect,
+        listen=listen,
+    )
 
 
-class LocalClient(object):
-    '''
+class LocalClient:
+    """
     The interface used by the :command:`salt` CLI tool on the Salt Master
 
     ``LocalClient`` is used to send a command to Salt minions to execute
@@ -136,152 +158,189 @@ class LocalClient(object):
 
         local = salt.client.LocalClient()
         local.cmd('*', 'test.fib', [10])
-    '''
-    def __init__(self,
-                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-                 mopts=None, skip_perm_errors=False,
-                 io_loop=None, keep_loop=False, auto_reconnect=False):
-        '''
+
+    """
+
+    def __init__(
+        self,
+        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        mopts=None,
+        skip_perm_errors=False,
+        io_loop=None,
+        keep_loop=False,
+        auto_reconnect=False,
+        listen=False,
+    ):
+        """
+        :param str c_path: Path of config file to use for opts.
+
+                           The default value is None.
+
+        :param bool mopts: When provided the local client will use this dictionary of
+                           options insead of loading a config file from the value
+                           of c_path.
+
+                           The default value is None.
+
+        :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                     The default value is False.
+
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
-                               set_event_handler() API. Otherwise,
-                               operation will be synchronous.
-        '''
+                               set_event_handler() API. Otherwise, operation
+                               will be synchronous.
+
+        :param bool keep_loop: Do not destroy the event loop when closing the event
+                               subsriber.
+
+        :param bool auto_reconnect: When True the event subscriber will reconnect
+                                    automatically if a disconnect error is raised.
+
+        .. versionadded:: 3004
+        :param bool listen: Listen for events indefinitly. When option is set the
+                            LocalClient object will listen for events until it's
+                            destroy method is called.
+
+                            The default value is False.
+        """
         if mopts:
             self.opts = mopts
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    '%s expects a file path not a directory path(%s) to '
-                    'its \'c_path\' keyword argument',
-                    self.__class__.__name__, c_path
+                    "%s expects a file path not a directory path(%s) to "
+                    "its 'c_path' keyword argument",
+                    self.__class__.__name__,
+                    c_path,
                 )
             self.opts = salt.config.client_config(c_path)
-        self.serial = salt.payload.Serial(self.opts)
         self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
+        self.listen = listen
         self.event = salt.utils.event.get_event(
-                'master',
-                self.opts['sock_dir'],
-                self.opts['transport'],
-                opts=self.opts,
-                listen=False,
-                io_loop=io_loop,
-                keep_loop=keep_loop)
+            "master",
+            self.opts["sock_dir"],
+            opts=self.opts,
+            listen=self.listen,
+            io_loop=io_loop,
+            keep_loop=keep_loop,
+        )
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
 
     def __read_master_key(self):
-        '''
+        """
         Read in the rotating master authentication key
-        '''
+        """
         key_user = self.salt_user
-        if key_user == 'root':
-            if self.opts.get('user', 'root') != 'root':
-                key_user = self.opts.get('user', 'root')
-        if key_user.startswith('sudo_'):
-            key_user = self.opts.get('user', 'root')
+        if key_user == "root":
+            if self.opts.get("user", "root") != "root":
+                key_user = self.opts.get("user", "root")
+        if key_user.startswith("sudo_"):
+            key_user = self.opts.get("user", "root")
         if salt.utils.platform.is_windows():
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
-            key_user = key_user.replace('\\', '_')
-        keyfile = os.path.join(self.opts['cachedir'],
-                               '.{0}_key'.format(key_user))
+            key_user = key_user.replace("\\", "_")
+        keyfile = os.path.join(self.opts["cachedir"], f".{key_user}_key")
         try:
             # Make sure all key parent directories are accessible
-            salt.utils.verify.check_path_traversal(self.opts['cachedir'],
-                                                   key_user,
-                                                   self.skip_perm_errors)
-            with salt.utils.files.fopen(keyfile, 'r') as key:
+            salt.utils.verify.check_path_traversal(
+                self.opts["cachedir"], key_user, self.skip_perm_errors
+            )
+            with salt.utils.files.fopen(keyfile, "r") as key:
                 return salt.utils.stringutils.to_unicode(key.read())
-        except (OSError, IOError, SaltClientError):
+        except (OSError, SaltClientError):
             # Fall back to eauth
-            return ''
+            return ""
 
     def _convert_range_to_list(self, tgt):
-        '''
+        """
         convert a seco.range range into a list target
-        '''
-        range_ = seco.range.Range(self.opts['range_server'])
+        """
+        range_ = seco.range.Range(self.opts["range_server"])
         try:
             return range_.expand(tgt)
         except seco.range.RangeException as err:
-            print('Range server exception: {0}'.format(err))
+            print(f"Range server exception: {err}")
             return []
 
     def _get_timeout(self, timeout):
-        '''
+        """
         Return the timeout to use
-        '''
+        """
         if timeout is None:
-            return self.opts['timeout']
+            return self.opts["timeout"]
         if isinstance(timeout, int):
             return timeout
-        if isinstance(timeout, six.string_types):
+        if isinstance(timeout, str):
             try:
                 return int(timeout)
             except ValueError:
-                return self.opts['timeout']
+                return self.opts["timeout"]
         # Looks like the timeout is invalid, use config
-        return self.opts['timeout']
+        return self.opts["timeout"]
 
     def gather_job_info(self, jid, tgt, tgt_type, listen=True, **kwargs):
-        '''
+        """
         Return the information about a given job
-        '''
-        log.debug('Checking whether jid %s is still running', jid)
-        timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
+        """
+        log.debug("Checking whether jid %s is still running", jid)
+        timeout = int(kwargs.get("gather_job_timeout", self.opts["gather_job_timeout"]))
 
-        pub_data = self.run_job(tgt,
-                                'saltutil.find_job',
-                                arg=[jid],
-                                tgt_type=tgt_type,
-                                timeout=timeout,
-                                listen=listen,
-                                **kwargs
-                               )
+        pub_data = self.run_job(
+            tgt,
+            "saltutil.find_job",
+            arg=[jid],
+            tgt_type=tgt_type,
+            timeout=timeout,
+            listen=listen,
+            **kwargs,
+        )
 
-        if 'jid' in pub_data:
-            self.event.subscribe(pub_data['jid'])
+        if "jid" in pub_data:
+            self.event.subscribe(pub_data["jid"])
 
         return pub_data
 
     def _check_pub_data(self, pub_data, listen=True):
-        '''
+        """
         Common checks on the pub_data data structure returned from running pub
-        '''
-        if pub_data == '':
+        """
+        if pub_data == "":
             # Failed to authenticate, this could be a bunch of things
             raise EauthAuthenticationError(
-                'Failed to authenticate! This is most likely because this '
-                'user is not permitted to execute commands, but there is a '
-                'small possibility that a disk error occurred (check '
-                'disk/inode usage).'
+                "Failed to authenticate! This is most likely because this "
+                "user is not permitted to execute commands, but there is a "
+                "small possibility that a disk error occurred (check "
+                "disk/inode usage)."
             )
 
         # Failed to connect to the master and send the pub
-        if 'error' in pub_data:
-            print(pub_data['error'])
-            log.debug('_check_pub_data() error: %s', pub_data['error'])
+        if "error" in pub_data:
+            print(pub_data["error"])
+            log.debug("_check_pub_data() error: %s", pub_data["error"])
             return {}
-        elif 'jid' not in pub_data:
+        elif "jid" not in pub_data:
             return {}
-        if pub_data['jid'] == '0':
-            print('Failed to connect to the Master, '
-                  'is the Salt Master running?')
+        if pub_data["jid"] == "0":
+            print("Failed to connect to the Master, is the Salt Master running?")
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
-        if not self.opts.get('order_masters'):
+        if not self.opts.get("order_masters"):
             # Check for no minions
-            if not pub_data['minions']:
-                print('No minions matched the target. '
-                      'No command was sent, no jid was assigned.')
+            if not pub_data["minions"]:
+                print(
+                    "No minions matched the target. "
+                    "No command was sent, no jid was assigned."
+                )
                 return {}
 
         # don't install event subscription listeners when the request is asynchronous
@@ -289,26 +348,27 @@ class LocalClient(object):
         if not listen:
             return pub_data
 
-        if self.opts.get('order_masters'):
-            self.event.subscribe('syndic/.*/{0}'.format(pub_data['jid']), 'regex')
+        if self.opts.get("order_masters"):
+            self.event.subscribe("syndic/.*/{}".format(pub_data["jid"]), "regex")
 
-        self.event.subscribe('salt/job/{0}'.format(pub_data['jid']))
+        self.event.subscribe("salt/job/{}".format(pub_data["jid"]))
 
         return pub_data
 
     def run_job(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            timeout=None,
-            jid='',
-            kwarg=None,
-            listen=False,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        timeout=None,
+        jid="",
+        kwarg=None,
+        listen=False,
+        **kwargs,
+    ):
+        """
         Asynchronously send a command to connected minions
 
         Prep the job directory and publish a command to any targeted minions.
@@ -321,16 +381,7 @@ class LocalClient(object):
 
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -343,41 +394,45 @@ class LocalClient(object):
                 jid=jid,
                 timeout=self._get_timeout(timeout),
                 listen=listen,
-                **kwargs)
+                **kwargs,
+            )
         except SaltClientError:
             # Re-raise error with specific message
             raise SaltClientError(
-                'The salt master could not be contacted. Is master running?'
+                "The salt master could not be contacted. Is master running?"
             )
         except AuthenticationError as err:
-            raise AuthenticationError(err)
+            raise
         except AuthorizationError as err:
-            raise AuthorizationError(err)
-        except Exception as general_exception:
+            raise
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
-        _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
-        return _res['minions']
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
+            tgt, tgt_type=expr_form
+        )
+        return _res["minions"]
 
     @tornado.gen.coroutine
     def run_job_async(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            timeout=None,
-            jid='',
-            kwarg=None,
-            listen=True,
-            io_loop=None,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        timeout=None,
+        jid="",
+        kwarg=None,
+        listen=True,
+        io_loop=None,
+        **kwargs,
+    ):
+        """
         Asynchronously send a command to connected minions
 
         Prep the job directory and publish a command to any targeted minions.
@@ -390,56 +445,41 @@ class LocalClient(object):
 
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
             pub_data = yield self.pub_async(
-                  tgt,
-                  fun,
-                  arg,
-                  tgt_type,
-                  ret,
-                  jid=jid,
-                  timeout=self._get_timeout(timeout),
-                  io_loop=io_loop,
-                  listen=listen,
-                  **kwargs)
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                jid=jid,
+                timeout=self._get_timeout(timeout),
+                io_loop=io_loop,
+                listen=listen,
+                **kwargs,
+            )
         except SaltClientError:
             # Re-raise error with specific message
             raise SaltClientError(
-                'The salt master could not be contacted. Is master running?'
+                "The salt master could not be contacted. Is master running?"
             )
         except AuthenticationError as err:
             raise AuthenticationError(err)
         except AuthorizationError as err:
             raise AuthorizationError(err)
-        except Exception as general_exception:
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
         raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            jid='',
-            kwarg=None,
-            **kwargs):
-        '''
+        self, tgt, fun, arg=(), tgt_type="glob", ret="", jid="", kwarg=None, **kwargs
+    ):
+        """
         Asynchronously send a command to connected minions
 
         The function signature is the same as :py:meth:`cmd` with the
@@ -451,104 +491,84 @@ class LocalClient(object):
 
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(tgt,
-                                fun,
-                                arg,
-                                tgt_type,
-                                ret,
-                                jid=jid,
-                                listen=False,
-                                **kwargs)
+        """
+        pub_data = self.run_job(
+            tgt, fun, arg, tgt_type, ret, jid=jid, kwarg=kwarg, listen=False, **kwargs
+        )
         try:
-            return pub_data['jid']
+            return pub_data["jid"]
         except KeyError:
             return 0
 
     def cmd_subset(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            kwarg=None,
-            sub=3,
-            cli=False,
-            progress=False,
-            full_return=False,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        kwarg=None,
+        subset=3,
+        cli=False,
+        progress=False,
+        full_return=False,
+        **kwargs,
+    ):
+        """
         Execute a command on a random subset of the targeted systems
 
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :param sub: The number of systems to execute on
+        :param subset: The number of systems to execute on
         :param cli: When this is set to True, a generator is returned,
                     otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
-            >>> SLC.cmd_subset('*', 'test.ping', sub=1)
+            >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
+        """
 
-        minion_ret = self.cmd(tgt,
-                              'sys.list_functions',
-                              tgt_type=tgt_type,
-                              **kwargs)
+        # Support legacy parameter name:
+        subset = kwargs.pop("sub", subset)
+
+        minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
         minions = list(minion_ret)
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
             if fun in minion_ret[minion]:
                 f_tgt.append(minion)
-            if len(f_tgt) >= sub:
+            if len(f_tgt) >= subset:
                 break
         func = self.cmd
         if cli:
             func = self.cmd_cli
         return func(
-                f_tgt,
-                fun,
-                arg,
-                tgt_type='list',
-                ret=ret,
-                kwarg=kwarg,
-                progress=progress,
-                full_return=full_return,
-                **kwargs)
+            f_tgt,
+            fun,
+            arg,
+            tgt_type="list",
+            ret=ret,
+            kwarg=kwarg,
+            progress=progress,
+            full_return=full_return,
+            **kwargs,
+        )
 
     def cmd_batch(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            kwarg=None,
-            batch='10%',
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        kwarg=None,
+        batch="10%",
+        **kwargs,
+    ):
+        """
         Iteratively execute a command on subsets of minions at a time
 
         The function signature is the same as :py:meth:`cmd` with the
@@ -566,68 +586,65 @@ class LocalClient(object):
             {'jerry': {...}}
             {'dave': {...}}
             {'stewart': {...}}
-        '''
-        if 'expr_form' in kwargs:
-            # We need to re-import salt.utils.versions here
-            # even though it has already been imported.
-            # when cmd_batch is called via the NetAPI
-            # the module is unavailable.
-            import salt.utils.versions
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
+        # We need to re-import salt.utils.args here
+        # even though it has already been imported.
+        # when cmd_batch is called via the NetAPI
+        # the module is unavailable.
+        # Late import - not used anywhere else in this file
         import salt.cli.batch
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts = {'tgt': tgt,
-                'fun': fun,
-                'arg': arg,
-                'tgt_type': tgt_type,
-                'ret': ret,
-                'batch': batch,
-                'failhard': kwargs.get('failhard', False),
-                'raw': kwargs.get('raw', False)}
+        import salt.utils.args
 
-        if 'timeout' in kwargs:
-            opts['timeout'] = kwargs['timeout']
-        if 'gather_job_timeout' in kwargs:
-            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
-        if 'batch_wait' in kwargs:
-            opts['batch_wait'] = int(kwargs['batch_wait'])
+        arg = salt.utils.args.condition_input(arg, kwarg)
+        opts = {
+            "tgt": tgt,
+            "fun": fun,
+            "arg": arg,
+            "tgt_type": tgt_type,
+            "ret": ret,
+            "batch": batch,
+            "failhard": kwargs.get("failhard", self.opts.get("failhard", False)),
+            "raw": kwargs.get("raw", False),
+        }
+
+        if "timeout" in kwargs:
+            opts["timeout"] = kwargs["timeout"]
+        if "gather_job_timeout" in kwargs:
+            opts["gather_job_timeout"] = kwargs["gather_job_timeout"]
+        if "batch_wait" in kwargs:
+            opts["batch_wait"] = int(kwargs["batch_wait"])
 
         eauth = {}
-        if 'eauth' in kwargs:
-            eauth['eauth'] = kwargs.pop('eauth')
-        if 'username' in kwargs:
-            eauth['username'] = kwargs.pop('username')
-        if 'password' in kwargs:
-            eauth['password'] = kwargs.pop('password')
-        if 'token' in kwargs:
-            eauth['token'] = kwargs.pop('token')
+        if "eauth" in kwargs:
+            eauth["eauth"] = kwargs.pop("eauth")
+        if "username" in kwargs:
+            eauth["username"] = kwargs.pop("username")
+        if "password" in kwargs:
+            eauth["password"] = kwargs.pop("password")
+        if "token" in kwargs:
+            eauth["token"] = kwargs.pop("token")
 
-        for key, val in six.iteritems(self.opts):
+        for key, val in self.opts.items():
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
-        for ret in batch.run():
+        for ret, _ in batch.run():
             yield ret
 
-    def cmd(self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            jid='',
-            full_return=False,
-            kwarg=None,
-            **kwargs):
-        '''
+    def cmd(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        tgt_type="glob",
+        ret="",
+        jid="",
+        full_return=False,
+        kwarg=None,
+        **kwargs,
+    ):
+        """
         Synchronously execute a command on targeted minions
 
         The cmd method will execute and wait for the timeout period for all
@@ -729,48 +746,41 @@ class LocalClient(object):
         :returns: A dictionary with the result of the execution, keyed by
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        """
         was_listening = self.event.cpub
 
         try:
-            pub_data = self.run_job(tgt,
-                                    fun,
-                                    arg,
-                                    tgt_type,
-                                    ret,
-                                    timeout,
-                                    jid,
-                                    listen=True,
-                                    **kwargs)
+            pub_data = self.run_job(
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                jid,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs,
+            )
 
             if not pub_data:
                 return pub_data
 
             ret = {}
             for fn_ret in self.get_cli_event_returns(
-                    pub_data['jid'],
-                    pub_data['minions'],
-                    self._get_timeout(timeout),
-                    tgt,
-                    tgt_type,
-                    **kwargs):
+                pub_data["jid"],
+                pub_data["minions"],
+                self._get_timeout(timeout),
+                tgt,
+                tgt_type,
+                **kwargs,
+            ):
 
                 if fn_ret:
-                    for mid, data in six.iteritems(fn_ret):
-                        ret[mid] = (data if full_return
-                                else data.get('ret', {}))
+                    for mid, data in fn_ret.items():
+                        ret[mid] = data if full_return else data.get("ret", {})
 
-            for failed in list(set(pub_data['minions']) - set(ret)):
+            for failed in list(set(pub_data["minions"]) - set(ret)):
                 ret[failed] = False
             return ret
         finally:
@@ -778,18 +788,19 @@ class LocalClient(object):
                 self.event.close_pub()
 
     def cmd_cli(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            verbose=False,
-            kwarg=None,
-            progress=False,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        tgt_type="glob",
+        ret="",
+        verbose=False,
+        kwarg=None,
+        progress=False,
+        **kwargs,
+    ):
+        """
         Used by the :command:`salt` CLI. This method returns minion returns as
         they come back and attempts to block until all minions return.
 
@@ -798,17 +809,7 @@ class LocalClient(object):
 
         :param verbose: Print extra information about the running command
         :returns: A generator
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        """
         was_listening = self.event.cpub
 
         try:
@@ -819,22 +820,24 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
-                **kwargs)
-
+                **kwargs,
+            )
             if not self.pub_data:
                 yield self.pub_data
             else:
                 try:
                     for fn_ret in self.get_cli_event_returns(
-                            self.pub_data['jid'],
-                            self.pub_data['minions'],
-                            self._get_timeout(timeout),
-                            tgt,
-                            tgt_type,
-                            verbose,
-                            progress,
-                            **kwargs):
+                        self.pub_data["jid"],
+                        self.pub_data["minions"],
+                        self._get_timeout(timeout),
+                        tgt,
+                        tgt_type,
+                        verbose,
+                        progress,
+                        **kwargs,
+                    ):
 
                         if not fn_ret:
                             continue
@@ -842,30 +845,31 @@ class LocalClient(object):
                         yield fn_ret
                 except KeyboardInterrupt:
                     raise SystemExit(
-                        '\n'
-                        'This job\'s jid is: {0}\n'
-                        'Exiting gracefully on Ctrl-c\n'
-                        'The minions may not have all finished running and any '
-                        'remaining minions will return upon completion. To look '
-                        'up the return data for this job later, run the following '
-                        'command:\n\n'
-                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid'])
+                        "\n"
+                        "This job's jid is: {0}\n"
+                        "Exiting gracefully on Ctrl-c\n"
+                        "The minions may not have all finished running and any "
+                        "remaining minions will return upon completion. To look "
+                        "up the return data for this job later, run the following "
+                        "command:\n\n"
+                        "salt-run jobs.lookup_jid {0}".format(self.pub_data["jid"])
                     )
         finally:
             if not was_listening:
                 self.event.close_pub()
 
     def cmd_iter(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            kwarg=None,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        tgt_type="glob",
+        ret="",
+        kwarg=None,
+        **kwargs,
+    ):
+        """
         Yields the individual minion returns as they come in
 
         The function signature is the same as :py:meth:`cmd` with the
@@ -885,17 +889,7 @@ class LocalClient(object):
             {'jerry': {'ret': True}}
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        """
         was_listening = self.event.cpub
 
         try:
@@ -906,41 +900,46 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
-                **kwargs)
+                **kwargs,
+            )
 
             if not pub_data:
                 yield pub_data
             else:
-                if kwargs.get('yield_pub_data'):
+                if kwargs.get("yield_pub_data"):
                     yield pub_data
-                for fn_ret in self.get_iter_returns(pub_data['jid'],
-                                                    pub_data['minions'],
-                                                    timeout=self._get_timeout(timeout),
-                                                    tgt=tgt,
-                                                    tgt_type=tgt_type,
-                                                    **kwargs):
+                for fn_ret in self.get_iter_returns(
+                    pub_data["jid"],
+                    pub_data["minions"],
+                    timeout=self._get_timeout(timeout),
+                    tgt=tgt,
+                    tgt_type=tgt_type,
+                    **kwargs,
+                ):
                     if not fn_ret:
                         continue
                     yield fn_ret
-                self._clean_up_subscriptions(pub_data['jid'])
+                self._clean_up_subscriptions(pub_data["jid"])
         finally:
             if not was_listening:
                 self.event.close_pub()
 
     def cmd_iter_no_block(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            kwarg=None,
-            show_jid=False,
-            verbose=False,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        tgt_type="glob",
+        ret="",
+        kwarg=None,
+        show_jid=False,
+        verbose=False,
+        **kwargs,
+    ):
+        """
         Yields the individual minion returns as they come in, or None
             when no returns are available.
 
@@ -961,17 +960,7 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             None
             {'stewart': {'ret': True}}
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        """
         was_listening = self.event.cpub
 
         try:
@@ -982,53 +971,48 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
-                **kwargs)
+                **kwargs,
+            )
 
             if not pub_data:
                 yield pub_data
             else:
-                for fn_ret in self.get_iter_returns(pub_data['jid'],
-                                                    pub_data['minions'],
-                                                    timeout=timeout,
-                                                    tgt=tgt,
-                                                    tgt_type=tgt_type,
-                                                    block=False,
-                                                    **kwargs):
+                for fn_ret in self.get_iter_returns(
+                    pub_data["jid"],
+                    pub_data["minions"],
+                    timeout=timeout,
+                    tgt=tgt,
+                    tgt_type=tgt_type,
+                    block=False,
+                    **kwargs,
+                ):
                     if fn_ret and any([show_jid, verbose]):
                         for minion in fn_ret:
-                            fn_ret[minion]['jid'] = pub_data['jid']
+                            fn_ret[minion]["jid"] = pub_data["jid"]
                     yield fn_ret
 
-                self._clean_up_subscriptions(pub_data['jid'])
+                self._clean_up_subscriptions(pub_data["jid"])
         finally:
             if not was_listening:
                 self.event.close_pub()
 
     def cmd_full_return(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            verbose=False,
-            kwarg=None,
-            **kwargs):
-        '''
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        tgt_type="glob",
+        ret="",
+        verbose=False,
+        kwarg=None,
+        **kwargs,
+    ):
+        """
         Execute a salt command and return
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        """
         was_listening = self.event.cpub
 
         try:
@@ -1039,54 +1023,45 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
-                **kwargs)
+                **kwargs,
+            )
 
             if not pub_data:
                 return pub_data
 
-            return (self.get_cli_static_event_returns(pub_data['jid'],
-                                                      pub_data['minions'],
-                                                      timeout,
-                                                      tgt,
-                                                      tgt_type,
-                                                      verbose))
+            return self.get_cli_static_event_returns(
+                pub_data["jid"], pub_data["minions"], timeout, tgt, tgt_type, verbose
+            )
         finally:
             if not was_listening:
                 self.event.close_pub()
 
     def get_cli_returns(
-            self,
-            jid,
-            minions,
-            timeout=None,
-            tgt='*',
-            tgt_type='glob',
-            verbose=False,
-            show_jid=False,
-            **kwargs):
-        '''
+        self,
+        jid,
+        minions,
+        timeout=None,
+        tgt="*",
+        tgt_type="glob",
+        verbose=False,
+        show_jid=False,
+        **kwargs,
+    ):
+        """
         Starts a watcher looking at the return data for a specified JID
 
         :returns: all of the information for the JID
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         if verbose:
-            msg = 'Executing job with jid {0}'.format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
-            print('-' * len(msg) + '\n')
+            print("-" * len(msg) + "\n")
         elif show_jid:
-            print('jid: {0}'.format(jid))
+            print(f"jid: {jid}")
         if timeout is None:
-            timeout = self.opts['timeout']
+            timeout = self.opts["timeout"]
         fret = {}
         # make sure the minions is a set (since we do set operations on it)
         minions = set(minions)
@@ -1103,7 +1078,7 @@ class LocalClient(object):
 
         # if you have all the returns, stop
         if len(found.intersection(minions)) >= len(minions):
-            raise StopIteration()
+            return
 
         # otherwise, get them from the event system
         for event in event_iter:
@@ -1112,14 +1087,11 @@ class LocalClient(object):
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 self._clean_up_subscriptions(jid)
-                raise StopIteration()
+                return
 
     # TODO: tests!!
-    def get_returns_no_block(
-            self,
-            tag,
-            match_type=None):
-        '''
+    def get_returns_no_block(self, tag, match_type=None):
+        """
         Raw function to just return events of jid excluding timeout logic
 
         Yield either the raw event data or None
@@ -1127,46 +1099,49 @@ class LocalClient(object):
         Pass a list of additional regular expressions as `tags_regex` to search
         the event bus for non-return data, such as minion lists returned from
         syndics.
-        '''
+        """
 
         while True:
-            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True,
-                                       no_block=True, auto_reconnect=self.auto_reconnect)
+            raw = self.event.get_event(
+                wait=0.01,
+                tag=tag,
+                match_type=match_type,
+                full=True,
+                no_block=True,
+                auto_reconnect=self.auto_reconnect,
+            )
             yield raw
 
+    def returns_for_job(self, jid):
+        return self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+
     def get_iter_returns(
-            self,
-            jid,
-            minions,
-            timeout=None,
-            tgt='*',
-            tgt_type='glob',
-            expect_minions=False,
-            block=True,
-            **kwargs):
-        '''
+        self,
+        jid,
+        minions,
+        timeout=None,
+        tgt="*",
+        tgt_type="glob",
+        expect_minions=False,
+        block=True,
+        **kwargs,
+    ):
+        """
         Watch the event system and return job data as it comes in
 
         :returns: all of the information for the JID
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         if not isinstance(minions, set):
-            if isinstance(minions, six.string_types):
-                minions = set([minions])
+            if isinstance(minions, str):
+                minions = {minions}
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))
 
         if timeout is None:
-            timeout = self.opts['timeout']
-        gather_job_timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
+            timeout = self.opts["timeout"]
+        gather_job_timeout = int(
+            kwargs.get("gather_job_timeout", self.opts["gather_job_timeout"])
+        )
         start = int(time.time())
 
         # timeouts per minion, id_ -> timeout time
@@ -1176,33 +1151,37 @@ class LocalClient(object):
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-                log.warning('jid does not exist')
+            if not self.returns_for_job(jid):
+                log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
-                raise StopIteration()
-        except Exception as exc:
-            log.warning('Returner unavailable: %s', exc, exc_info_on_loglevel=logging.DEBUG)
+                return
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "Returner unavailable: %s", exc, exc_info_on_loglevel=logging.DEBUG
+            )
         # Wait for the hosts to check in
         last_time = False
         # iterator for this job's return
-        if self.opts['order_masters']:
+        if self.opts["order_masters"]:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block('(salt/job|syndic/.*)/{0}'.format(jid), 'regex')
+            ret_iter = self.get_returns_no_block(f"(salt/job|syndic/.*)/{jid}", "regex")
         else:
-            ret_iter = self.get_returns_no_block('salt/job/{0}'.format(jid))
+            ret_iter = self.get_returns_no_block(f"salt/job/{jid}")
         # iterator for the info of this job
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
         open_jids = set()
         timeout_at = time.time() + timeout
-        gather_syndic_wait = time.time() + self.opts['syndic_wait']
+        gather_syndic_wait = time.time() + self.opts["syndic_wait"]
         # are there still minions running the job out there
         # start as True so that we ping at least once
         minions_running = True
         log.debug(
-            'get_iter_returns for jid %s sent to %s will timeout at %s',
-            jid, minions, datetime.fromtimestamp(timeout_at).time()
+            "get_iter_returns for jid %s sent to %s will timeout at %s",
+            jid,
+            minions,
+            datetime.fromtimestamp(timeout_at).time(),
         )
         while True:
             # Process events until timeout is reached or all minions have returned
@@ -1210,37 +1189,60 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-                if 'minions' in raw.get('data', {}):
-                    minions.update(raw['data']['minions'])
-                    if 'missing' in raw.get('data', {}):
-                        missing.update(raw['data']['missing'])
+                if "error" in raw.get("data", {}):
+                    yield {
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": "Authorization error occurred.",
+                        }
+                    }
+                if "minions" in raw.get("data", {}):
+                    minions.update(raw["data"]["minions"])
+                    if "missing" in raw.get("data", {}):
+                        missing.update(raw["data"]["missing"])
                     continue
-                if 'return' not in raw['data']:
+
+                # Anything below this point is expected to be a job return event.
+                if not raw["tag"].startswith(f"salt/job/{jid}/ret"):
+                    log.debug("Skipping non return event: %s", raw["tag"])
                     continue
-                if kwargs.get('raw', False):
-                    found.add(raw['data']['id'])
+                if "return" not in raw["data"]:
+                    log.warning("Malformed event return: %s", raw["tag"])
+                    continue
+                if kwargs.get("raw", False):
+                    found.add(raw["data"]["id"])
                     yield raw
                 else:
-                    found.add(raw['data']['id'])
-                    ret = {raw['data']['id']: {'ret': raw['data']['return']}}
-                    if 'out' in raw['data']:
-                        ret[raw['data']['id']]['out'] = raw['data']['out']
-                    if 'retcode' in raw['data']:
-                        ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
-                    if 'jid' in raw['data']:
-                        ret[raw['data']['id']]['jid'] = raw['data']['jid']
-                    if kwargs.get('_cmd_meta', False):
-                        ret[raw['data']['id']].update(raw['data'])
-                    log.debug('jid %s return from %s', jid, raw['data']['id'])
+                    found.add(raw["data"]["id"])
+                    ret = {raw["data"]["id"]: {"ret": raw["data"]["return"]}}
+                    if "out" in raw["data"]:
+                        ret[raw["data"]["id"]]["out"] = raw["data"]["out"]
+                    if "retcode" in raw["data"]:
+                        ret[raw["data"]["id"]]["retcode"] = raw["data"]["retcode"]
+                    if "jid" in raw["data"]:
+                        ret[raw["data"]["id"]]["jid"] = raw["data"]["jid"]
+                    if kwargs.get("_cmd_meta", False):
+                        ret[raw["data"]["id"]].update(raw["data"])
+                    log.debug("jid %s return from %s", jid, raw["data"]["id"])
                     yield ret
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
-            if len(found.intersection(minions)) >= len(minions) and not self.opts['order_masters']:
+            if (
+                len(found.intersection(minions)) >= len(minions)
+                and not self.opts["order_masters"]
+            ):
                 # All minions have returned, break out of the loop
-                log.debug('jid %s found all minions %s', jid, found)
+                log.debug("jid %s found all minions %s", jid, found)
                 break
-            elif len(found.intersection(minions)) >= len(minions) and self.opts['order_masters']:
-                if len(found) >= len(minions) and len(minions) > 0 and time.time() > gather_syndic_wait:
+            elif (
+                len(found.intersection(minions)) >= len(minions)
+                and self.opts["order_masters"]
+            ):
+                if (
+                    len(found) >= len(minions)
+                    and len(minions) > 0
+                    and time.time() > gather_syndic_wait
+                ):
                     # There were some minions to find and we found them
                     # However, this does not imply that *all* masters have yet responded with expected minion lists.
                     # Therefore, continue to wait up to the syndic_wait period (calculated in gather_syndic_wait) to see
@@ -1261,18 +1263,22 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
+                jinfo = self.gather_job_info(
+                    jid, list(minions - found), "list", **kwargs
+                )
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
-                if 'jid' not in jinfo:
+                if "jid" not in jinfo:
                     jinfo_iter = []
                 else:
-                    jinfo_iter = self.get_returns_no_block('salt/job/{0}'.format(jinfo['jid']))
+                    jinfo_iter = self.get_returns_no_block(
+                        "salt/job/{}".format(jinfo["jid"])
+                    )
                 timeout_at = time.time() + gather_job_timeout
                 # if you are a syndic, wait a little longer
-                if self.opts['order_masters']:
-                    timeout_at += self.opts.get('syndic_wait', 1)
+                if self.opts["order_masters"]:
+                    timeout_at += self.opts.get("syndic_wait", 1)
 
             # check for minions that are running the job still
             for raw in jinfo_iter:
@@ -1280,55 +1286,60 @@ class LocalClient(object):
                 if raw is None:
                     break
                 try:
-                    if raw['data']['retcode'] > 0:
-                        log.error('saltutil returning errors on minion %s', raw['data']['id'])
-                        minions.remove(raw['data']['id'])
+                    if raw["data"]["retcode"] > 0:
+                        log.error(
+                            "saltutil returning errors on minion %s", raw["data"]["id"]
+                        )
+                        minions.remove(raw["data"]["id"])
                         break
                 except KeyError as exc:
                     # This is a safe pass. We're just using the try/except to
                     # avoid having to deep-check for keys.
-                    missing_key = exc.__str__().strip('\'"')
-                    if missing_key == 'retcode':
-                        log.debug('retcode missing from client return')
+                    missing_key = exc.__str__().strip("'\"")
+                    if missing_key == "retcode":
+                        log.debug("retcode missing from client return")
                     else:
                         log.debug(
-                            'Passing on saltutil error. Key \'%s\' missing '
-                            'from client return. This may be an error in '
-                            'the client.', missing_key
+                            "Passing on saltutil error. Key '%s' missing "
+                            "from client return. This may be an error in "
+                            "the client.",
+                            missing_key,
                         )
                 # Keep track of the jid events to unsubscribe from later
-                open_jids.add(jinfo['jid'])
+                open_jids.add(jinfo["jid"])
 
                 # TODO: move to a library??
-                if 'minions' in raw.get('data', {}):
-                    minions.update(raw['data']['minions'])
+                if "minions" in raw.get("data", {}):
+                    minions.update(raw["data"]["minions"])
                     continue
-                if 'syndic' in raw.get('data', {}):
-                    minions.update(raw['syndic'])
+                if "syndic" in raw.get("data", {}):
+                    minions.update(raw["syndic"])
                     continue
-                if 'return' not in raw.get('data', {}):
+                if "return" not in raw.get("data", {}):
                     continue
 
                 # if the job isn't running there anymore... don't count
-                if raw['data']['return'] == {}:
+                if raw["data"]["return"] == {}:
                     continue
 
                 # if the minion throws an exception containing the word "return"
                 # the master will try to handle the string as a dict in the next
                 # step. Check if we have a string, log the issue and continue.
-                if isinstance(raw['data']['return'], six.string_types):
+                if isinstance(raw["data"]["return"], str):
                     log.error("unexpected return from minion: %s", raw)
                     continue
 
-                if 'return' in raw['data']['return'] and \
-                    raw['data']['return']['return'] == {}:
+                if (
+                    "return" in raw["data"]["return"]
+                    and raw["data"]["return"]["return"] == {}
+                ):
                     continue
 
                 # if we didn't originally target the minion, lets add it to the list
-                if raw['data']['id'] not in minions:
-                    minions.add(raw['data']['id'])
+                if raw["data"]["id"] not in minions:
+                    minions.add(raw["data"]["id"])
                 # update this minion's timeout, as long as the job is still running
-                minion_timeouts[raw['data']['id']] = time.time() + timeout
+                minion_timeouts[raw["data"]["id"]] = time.time() + timeout
                 # a minion returned, so we know its running somewhere
                 minions_running = True
 
@@ -1359,8 +1370,8 @@ class LocalClient(object):
                 self.event.unsubscribe(jid)
 
         if expect_minions:
-            for minion in list((minions - found)):
-                yield {minion: {'failed': True}}
+            for minion in list(minions - found):
+                yield {minion: {"failed": True}}
 
         # Filter out any minions marked as missing for which we received
         # returns (prevents false events sent due to higher-level masters not
@@ -1370,69 +1381,71 @@ class LocalClient(object):
         # Report on missing minions
         if missing:
             for minion in missing:
-                yield {minion: {'failed': True}}
+                yield {minion: {"failed": True}}
 
-    def get_returns(
-            self,
-            jid,
-            minions,
-            timeout=None):
-        '''
+    def get_returns(self, jid, minions, timeout=None):
+        """
         Get the returns for the command line interface via the event system
-        '''
+        """
         minions = set(minions)
         if timeout is None:
-            timeout = self.opts['timeout']
+            timeout = self.opts["timeout"]
         start = int(time.time())
         timeout_at = start + timeout
         log.debug(
-            'get_returns for jid %s sent to %s will timeout at %s',
-            jid, minions, datetime.fromtimestamp(timeout_at).time()
+            "get_returns for jid %s sent to %s will timeout at %s",
+            jid,
+            minions,
+            datetime.fromtimestamp(timeout_at).time(),
         )
 
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-                log.warning('jid does not exist')
+            if (
+                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+                == {}
+            ):
+                log.warning("jid does not exist")
                 return ret
-        except Exception as exc:
-            raise SaltClientError('Master job cache returner [{0}] failed to verify jid. '
-                                  'Exception details: {1}'.format(self.opts['master_job_cache'], exc))
+        except Exception as exc:  # pylint: disable=broad-except
+            raise SaltClientError(
+                "Master job cache returner [{}] failed to verify jid. "
+                "Exception details: {}".format(self.opts["master_job_cache"], exc)
+            )
 
         # Wait for the hosts to check in
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid, auto_reconnect=self.auto_reconnect)
-            if raw is not None and 'return' in raw:
-                found.add(raw['id'])
-                ret[raw['id']] = raw['return']
+            if raw is not None and "return" in raw:
+                found.add(raw["id"])
+                ret[raw["id"]] = raw["return"]
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
-                    log.debug('jid %s found all minions', jid)
+                    log.debug("jid %s found all minions", jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
-                log.debug('jid %s found all minions', jid)
+                log.debug("jid %s found all minions", jid)
                 break
             if int(time.time()) > timeout_at:
                 log.info(
-                    'jid %s minions %s did not return in time',
-                    jid, (minions - found)
+                    "jid %s minions %s did not return in time", jid, (minions - found)
                 )
                 break
             time.sleep(0.01)
         return ret
 
     def get_full_returns(self, jid, minions, timeout=None):
-        '''
+        """
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
-        '''
+        """
         # TODO: change this from ret to return... or the other way.
         #       Its inconsistent, we should pick one
 
@@ -1441,20 +1454,23 @@ class LocalClient(object):
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
         try:
-            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
-            raise SaltClientError('Returner {0} could not fetch jid data. '
-                                  'Exception details: {1}'.format(
-                                      self.opts['master_job_cache'],
-                                      exc))
+            data = self.returners["{}.get_jid".format(self.opts["master_job_cache"])](
+                jid
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            raise SaltClientError(
+                "Returner {} could not fetch jid data. Exception details: {}".format(
+                    self.opts["master_job_cache"], exc
+                )
+            )
         for minion in data:
             m_data = {}
-            if 'return' in data[minion]:
-                m_data['ret'] = data[minion].get('return')
+            if "return" in data[minion]:
+                m_data["ret"] = data[minion].get("return")
             else:
-                m_data['ret'] = data[minion].get('return')
-            if 'out' in data[minion]:
-                m_data['out'] = data[minion]['out']
+                m_data["ret"] = data[minion].get("return")
+            if "out" in data[minion]:
+                m_data["out"] = data[minion]["out"]
             if minion in ret:
                 ret[minion].update(m_data)
             else:
@@ -1470,7 +1486,7 @@ class LocalClient(object):
             if event_ret == {}:
                 time.sleep(0.02)
                 continue
-            for minion, m_data in six.iteritems(event_ret):
+            for minion, m_data in event_ret.items():
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:
@@ -1484,26 +1500,29 @@ class LocalClient(object):
         return ret
 
     def get_cache_returns(self, jid):
-        '''
+        """
         Execute a single pass to gather the contents of the job cache
-        '''
+        """
         ret = {}
 
         try:
-            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
-            raise SaltClientError('Could not examine master job cache. '
-                                  'Error occurred in {0} returner. '
-                                  'Exception details: {1}'.format(self.opts['master_job_cache'],
-                                                                  exc))
+            data = self.returners["{}.get_jid".format(self.opts["master_job_cache"])](
+                jid
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            raise SaltClientError(
+                "Could not examine master job cache. "
+                "Error occurred in {} returner. "
+                "Exception details: {}".format(self.opts["master_job_cache"], exc)
+            )
         for minion in data:
             m_data = {}
-            if 'return' in data[minion]:
-                m_data['ret'] = data[minion].get('return')
+            if "return" in data[minion]:
+                m_data["ret"] = data[minion].get("return")
             else:
-                m_data['ret'] = data[minion].get('return')
-            if 'out' in data[minion]:
-                m_data['out'] = data[minion]['out']
+                m_data["ret"] = data[minion].get("return")
+            if "out" in data[minion]:
+                m_data["out"] = data[minion]["out"]
             if minion in ret:
                 ret[minion].update(m_data)
             else:
@@ -1512,29 +1531,30 @@ class LocalClient(object):
         return ret
 
     def get_cli_static_event_returns(
-            self,
-            jid,
-            minions,
-            timeout=None,
-            tgt='*',
-            tgt_type='glob',
-            verbose=False,
-            show_timeout=False,
-            show_jid=False):
-        '''
+        self,
+        jid,
+        minions,
+        timeout=None,
+        tgt="*",
+        tgt_type="glob",
+        verbose=False,
+        show_timeout=False,
+        show_jid=False,
+    ):
+        """
         Get the returns for the command line interface via the event system
-        '''
-        log.trace('entered - function get_cli_static_event_returns()')
+        """
+        log.trace("entered - function get_cli_static_event_returns()")
         minions = set(minions)
         if verbose:
-            msg = 'Executing job with jid {0}'.format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
-            print('-' * len(msg) + '\n')
+            print("-" * len(msg) + "\n")
         elif show_jid:
-            print('jid: {0}'.format(jid))
+            print(f"jid: {jid}")
 
         if timeout is None:
-            timeout = self.opts['timeout']
+            timeout = self.opts["timeout"]
 
         start = int(time.time())
         timeout_at = start + timeout
@@ -1542,31 +1562,38 @@ class LocalClient(object):
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-                log.warning('jid does not exist')
+            if (
+                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+                == {}
+            ):
+                log.warning("jid does not exist")
                 return ret
-        except Exception as exc:
-            raise SaltClientError('Load could not be retrieved from '
-                                  'returner {0}. Exception details: {1}'.format(
-                                      self.opts['master_job_cache'],
-                                      exc))
+        except Exception as exc:  # pylint: disable=broad-except
+            raise SaltClientError(
+                "Load could not be retrieved from "
+                "returner {}. Exception details: {}".format(
+                    self.opts["master_job_cache"], exc
+                )
+            )
         # Wait for the hosts to check in
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            jid_tag = 'salt/job/{0}'.format(jid)
-            raw = self.event.get_event(wait, jid_tag, auto_reconnect=self.auto_reconnect)
-            if raw is not None and 'return' in raw:
-                if 'minions' in raw.get('data', {}):
-                    minions.update(raw['data']['minions'])
+            jid_tag = f"salt/job/{jid}"
+            raw = self.event.get_event(
+                wait, jid_tag, auto_reconnect=self.auto_reconnect
+            )
+            if raw is not None and "return" in raw:
+                if "minions" in raw.get("data", {}):
+                    minions.update(raw["data"]["minions"])
                     continue
-                found.add(raw['id'])
-                ret[raw['id']] = {'ret': raw['return']}
-                ret[raw['id']]['success'] = raw.get('success', False)
-                if 'out' in raw:
-                    ret[raw['id']]['out'] = raw['out']
+                found.add(raw["id"])
+                ret[raw["id"]] = {"ret": raw["return"]}
+                ret[raw["id"]]["success"] = raw.get("success", False)
+                if "out" in raw:
+                    ret[raw["id"]]["out"] = raw["out"]
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
@@ -1577,14 +1604,17 @@ class LocalClient(object):
                 break
             if int(time.time()) > timeout_at:
                 if verbose or show_timeout:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get("minion_data_cache", False) or tgt_type in (
+                        "glob",
+                        "pcre",
+                        "list",
+                    ):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
                                 ret[minion] = {
-                                    'out': 'no_return',
-                                    'ret': 'Minion did not return'
+                                    "out": "no_return",
+                                    "ret": "Minion did not return",
                                 }
                 break
             time.sleep(0.01)
@@ -1593,197 +1623,240 @@ class LocalClient(object):
         return ret
 
     def get_cli_event_returns(
-            self,
-            jid,
-            minions,
-            timeout=None,
-            tgt='*',
-            tgt_type='glob',
-            verbose=False,
-            progress=False,
-            show_timeout=False,
-            show_jid=False,
-            **kwargs):
-        '''
+        self,
+        jid,
+        minions,
+        timeout=None,
+        tgt="*",
+        tgt_type="glob",
+        verbose=False,
+        progress=False,
+        show_timeout=False,
+        show_jid=False,
+        **kwargs,
+    ):
+        """
         Get the returns for the command line interface via the event system
-        '''
-        log.trace('func get_cli_event_returns()')
-
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
+        """
+        log.trace("func get_cli_event_returns()")
 
         if verbose:
-            msg = 'Executing job with jid {0}'.format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
-            print('-' * len(msg) + '\n')
+            print("-" * len(msg) + "\n")
         elif show_jid:
-            print('jid: {0}'.format(jid))
+            print(f"jid: {jid}")
 
         # lazy load the connected minions
         connected_minions = None
         return_count = 0
 
-        for ret in self.get_iter_returns(jid,
-                                         minions,
-                                         timeout=timeout,
-                                         tgt=tgt,
-                                         tgt_type=tgt_type,
-                                         # (gtmanfred) expect_minions is popped here incase it is passed from a client
-                                         # call. If this is not popped, then it would be passed twice to
-                                         # get_iter_returns.
-                                         expect_minions=(kwargs.pop('expect_minions', False) or verbose or show_timeout),
-                                         **kwargs
-                                         ):
-            log.debug('return event: %s', ret)
+        for ret in self.get_iter_returns(
+            jid,
+            minions,
+            timeout=timeout,
+            tgt=tgt,
+            tgt_type=tgt_type,
+            # (gtmanfred) expect_minions is popped here in case it is passed from a client
+            # call. If this is not popped, then it would be passed twice to
+            # get_iter_returns.
+            expect_minions=(
+                kwargs.pop("expect_minions", False) or verbose or show_timeout
+            ),
+            **kwargs,
+        ):
+            log.debug("return event: %s", ret)
             return_count = return_count + 1
             if progress:
-                for id_, min_ret in six.iteritems(ret):
-                    if not min_ret.get('failed') is True:
-                        yield {'minion_count': len(minions), 'return_count': return_count}
+                for id_, min_ret in ret.items():
+                    if not min_ret.get("failed") is True:
+                        yield {
+                            "minion_count": len(minions),
+                            "return_count": return_count,
+                        }
             # replace the return structure for missing minions
-            for id_, min_ret in six.iteritems(ret):
-                if min_ret.get('failed') is True:
+            for id_, min_ret in ret.items():
+                if min_ret.get("failed") is True:
                     if connected_minions is None:
-                        connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    if self.opts['minion_data_cache'] \
-                            and salt.cache.factory(self.opts).contains('minions/{0}'.format(id_), 'data') \
-                            and connected_minions \
-                            and id_ not in connected_minions:
+                        connected_minions = salt.utils.minions.CkMinions(
+                            self.opts
+                        ).connected_ids()
+                    if (
+                        self.opts["minion_data_cache"]
+                        and salt.cache.factory(self.opts).contains(
+                            f"minions/{id_}", "data"
+                        )
+                        and connected_minions
+                        and id_ not in connected_minions
+                    ):
 
-                        yield {id_: {'out': 'no_return',
-                                     'ret': 'Minion did not return. [Not connected]'}}
+                        yield {
+                            id_: {
+                                "out": "no_return",
+                                "ret": "Minion did not return. [Not connected]",
+                                "retcode": salt.defaults.exitcodes.EX_GENERIC,
+                            }
+                        }
                     else:
                         # don't report syndics as unresponsive minions
-                        if not os.path.exists(os.path.join(self.opts['syndic_dir'], id_)):
-                            yield {id_: {'out': 'no_return',
-                                         'ret': 'Minion did not return. [No response]'}}
+                        if not os.path.exists(
+                            os.path.join(self.opts["syndic_dir"], id_)
+                        ):
+                            yield {
+                                id_: {
+                                    "out": "no_return",
+                                    "ret": (
+                                        "Minion did not return. [No response]\nThe"
+                                        " minions may not have all finished running and"
+                                        " any remaining minions will return upon"
+                                        " completion. To look up the return data for"
+                                        " this job later, run the following"
+                                        " command:\n\nsalt-run jobs.lookup_jid {}".format(
+                                            jid
+                                        )
+                                    ),
+                                    "retcode": salt.defaults.exitcodes.EX_GENERIC,
+                                }
+                            }
+                elif "error" in min_ret:
+                    raise AuthorizationError("Authorization error occurred")
                 else:
                     yield {id_: min_ret}
 
         self._clean_up_subscriptions(jid)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
-        '''
+        """
         Gather the return data from the event system, break hard when timeout
         is reached.
-        '''
-        log.trace('entered - function get_event_iter_returns()')
+        """
+        log.trace("entered - function get_event_iter_returns()")
         if timeout is None:
-            timeout = self.opts['timeout']
+            timeout = self.opts["timeout"]
 
         timeout_at = time.time() + timeout
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
+        if (
+            self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+            == {}
+        ):
+            log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
-            raise StopIteration()
+            return
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
             if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break
-            if 'minions' in raw.get('data', {}):
+            if "minions" in raw.get("data", {}):
                 continue
             try:
-                found.add(raw['id'])
-                ret = {raw['id']: {'ret': raw['return']}}
+                # There might be two jobs for the same minion, so we have to check for the jid
+                if jid == raw["jid"]:
+                    found.add(raw["id"])
+                    ret = {raw["id"]: {"ret": raw["return"]}}
+                else:
+                    continue
             except KeyError:
                 # Ignore other erroneous messages
                 continue
-            if 'out' in raw:
-                ret[raw['id']]['out'] = raw['out']
+            if "out" in raw:
+                ret[raw["id"]]["out"] = raw["out"]
             yield ret
             time.sleep(0.02)
 
-    def _prep_pub(self,
-                  tgt,
-                  fun,
-                  arg,
-                  tgt_type,
-                  ret,
-                  jid,
-                  timeout,
-                  **kwargs):
-        '''
+    def _resolve_nodegroup(self, ng):
+        """
+        Resolve a nodegroup into its configured components
+        """
+        if ng not in self.opts["nodegroups"]:
+            conf_file = self.opts.get("conf_file", "the master config file")
+            raise SaltInvocationError(f"Node group {ng} unavailable in {conf_file}")
+        return salt.utils.minions.nodegroup_comp(ng, self.opts["nodegroups"])
+
+    def _prep_pub(self, tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs):
+        """
         Set up the payload_kwargs to be sent down to the master
-        '''
-        if tgt_type == 'nodegroup':
-            if tgt not in self.opts['nodegroups']:
-                conf_file = self.opts.get(
-                    'conf_file', 'the master config file'
-                )
-                raise SaltInvocationError(
-                    'Node group {0} unavailable in {1}'.format(
-                        tgt, conf_file
-                    )
-                )
-            tgt = salt.utils.minions.nodegroup_comp(tgt,
-                                                    self.opts['nodegroups'])
-            tgt_type = 'compound'
+        """
+        if tgt_type == "nodegroup":
+            tgt = self._resolve_nodegroup(tgt)
+            tgt_type = "compound"
+
+        if tgt_type == "compound":
+            #  Resolve all nodegroups, so that the minions don't have to.
+            new_tgt = list()
+            log.debug("compound resolution: original tgt: %s", tgt)
+
+            if isinstance(tgt, str):
+                tgt = tgt.split()
+
+            for word in tgt:
+                if word.startswith("N@") and len(word) > 2:
+                    resolved = self._resolve_nodegroup(word[2:])
+                    new_tgt.extend(resolved)
+                else:
+                    new_tgt.append(word)
+
+            log.debug("compound resolution: new_tgt: %s", new_tgt)
+            tgt = " ".join(new_tgt)
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
-        if tgt_type == 'range' and HAS_RANGE:
+        if tgt_type == "range" and HAS_RANGE:
             tgt = self._convert_range_to_list(tgt)
-            tgt_type = 'list'
+            tgt_type = "list"
 
         # If an external job cache is specified add it to the ret list
-        if self.opts.get('ext_job_cache'):
+        if self.opts.get("ext_job_cache"):
             if ret:
-                ret += ',{0}'.format(self.opts['ext_job_cache'])
+                ret += ",{}".format(self.opts["ext_job_cache"])
             else:
-                ret = self.opts['ext_job_cache']
+                ret = self.opts["ext_job_cache"]
 
         # format the payload - make a function that does this in the payload
         #   module
 
         # Generate the standard keyword args to feed to format_payload
-        payload_kwargs = {'cmd': 'publish',
-                          'tgt': tgt,
-                          'fun': fun,
-                          'arg': arg,
-                          'key': self.key,
-                          'tgt_type': tgt_type,
-                          'ret': ret,
-                          'jid': jid}
+        payload_kwargs = {
+            "cmd": "publish",
+            "tgt": tgt,
+            "fun": fun,
+            "arg": arg,
+            "key": self.key,
+            "tgt_type": tgt_type,
+            "ret": ret,
+            "jid": jid,
+        }
 
         # if kwargs are passed, pack them.
         if kwargs:
-            payload_kwargs['kwargs'] = kwargs
+            payload_kwargs["kwargs"] = kwargs
 
-        # If we have a salt user, add it to the payload
-        if self.opts['syndic_master'] and 'user' in kwargs:
-            payload_kwargs['user'] = kwargs['user']
-        elif self.salt_user:
-            payload_kwargs['user'] = self.salt_user
+        payload_kwargs["user"] = self.salt_user
 
         # If we're a syndication master, pass the timeout
-        if self.opts['order_masters']:
-            payload_kwargs['to'] = timeout
+        if self.opts["order_masters"]:
+            payload_kwargs["to"] = timeout
 
         return payload_kwargs
 
-    def pub(self,
-            tgt,
-            fun,
-            arg=(),
-            tgt_type='glob',
-            ret='',
-            jid='',
-            timeout=5,
-            listen=False,
-            **kwargs):
-        '''
+    def pub(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        jid="",
+        timeout=5,
+        listen=False,
+        **kwargs,
+    ):
+        """
         Take the required arguments and publish the given command.
         Arguments:
             tgt:
@@ -1803,103 +1876,89 @@ class LocalClient(object):
                 id, this will inform the client where to get the job results
             minions:
                 A set, the targets that the tgt passed should match.
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         # Make sure the publisher is running by checking the unix socket
-        if (self.opts.get('ipc_mode', '') != 'tcp' and
-                not os.path.exists(os.path.join(self.opts['sock_dir'],
-                'publish_pull.ipc'))):
+        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
+            os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        ):
             log.error(
-                'Unable to connect to the salt master publisher at %s',
-                self.opts['sock_dir']
+                "Unable to connect to the salt master publisher at %s",
+                self.opts["sock_dir"],
             )
             raise SaltClientError
 
         payload_kwargs = self._prep_pub(
-                tgt,
-                fun,
-                arg,
-                tgt_type,
-                ret,
-                jid,
-                timeout,
-                **kwargs)
+            tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
+        )
 
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri)
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(self.opts["interface"]),
+            str(self.opts["ret_port"]),
+        )
 
-        try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if listen and not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
-            payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
-            raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async` in order to '
-                'bypass the congested event bus. With `--async`, the CLI tool '
-                'will print the job id (jid) and exit immediately without '
-                'listening for responses. You can then use '
-                '`salt-run jobs.lookup_jid` to look up the results of the job '
-                'in the job cache later.'
-            )
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="clear", master_uri=master_uri
+        ) as channel:
+            try:
+                # Ensure that the event subscriber is connected.
+                # If not, we won't get a response, so error out
+                if listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+                payload = channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError as err:
+                log.error(err)
+                raise SaltReqTimeoutError(
+                    "Salt request timed out. The master is not responding. You "
+                    "may need to run your command with `--async` in order to "
+                    "bypass the congested event bus. With `--async`, the CLI tool "
+                    "will print the job id (jid) and exit immediately without "
+                    "listening for responses. You can then use "
+                    "`salt-run jobs.lookup_jid` to look up the results of the job "
+                    "in the job cache later."
+                )
 
-        if not payload:
-            # The master key could have changed out from under us! Regen
-            # and try again if the key has changed
-            key = self.__read_master_key()
-            if key == self.key:
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    return payload
+                self.key = key
+                payload_kwargs["key"] = self.key
+                payload = channel.send(payload_kwargs)
+
+            error = payload.pop("error", None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get("name", "")
+                    err_msg = error.get("message", "")
+                    if err_name == "AuthenticationError":
+                        raise AuthenticationError(err_msg)
+                    elif err_name == "AuthorizationError":
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
                 return payload
-            self.key = key
-            payload_kwargs['key'] = self.key
-            payload = channel.send(payload_kwargs)
 
-        error = payload.pop('error', None)
-        if error is not None:
-            if isinstance(error, dict):
-                err_name = error.get('name', '')
-                err_msg = error.get('message', '')
-                if err_name == 'AuthenticationError':
-                    raise AuthenticationError(err_msg)
-                elif err_name == 'AuthorizationError':
-                    raise AuthorizationError(err_msg)
-
-            raise PublishError(error)
-
-        if not payload:
-            return payload
-
-        # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
-
-        return {'jid': payload['load']['jid'],
-                'minions': payload['load']['minions']}
+        return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
     @tornado.gen.coroutine
-    def pub_async(self,
-                  tgt,
-                  fun,
-                  arg=(),
-                  tgt_type='glob',
-                  ret='',
-                  jid='',
-                  timeout=5,
-                  io_loop=None,
-                  listen=True,
-                  **kwargs):
-        '''
+    def pub_async(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        jid="",
+        timeout=5,
+        io_loop=None,
+        listen=True,
+        **kwargs,
+    ):
+        """
         Take the required arguments and publish the given command.
         Arguments:
             tgt:
@@ -1919,156 +1978,156 @@ class LocalClient(object):
                 id, this will inform the client where to get the job results
             minions:
                 A set, the targets that the tgt passed should match.
-        '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
+        """
         # Make sure the publisher is running by checking the unix socket
-        if (self.opts.get('ipc_mode', '') != 'tcp' and
-                not os.path.exists(os.path.join(self.opts['sock_dir'],
-                'publish_pull.ipc'))):
+        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
+            os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        ):
             log.error(
-                'Unable to connect to the salt master publisher at %s',
-                self.opts['sock_dir']
+                "Unable to connect to the salt master publisher at %s",
+                self.opts["sock_dir"],
             )
             raise SaltClientError
 
         payload_kwargs = self._prep_pub(
-                tgt,
-                fun,
-                arg,
-                tgt_type,
-                ret,
-                jid,
-                timeout,
-                **kwargs)
+            tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
+        )
 
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                io_loop=io_loop,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
+        master_uri = (
+            "tcp://"
+            + salt.utils.network.ip_bracket(self.opts["interface"])
+            + ":"
+            + str(self.opts["ret_port"])
+        )
 
-        try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if listen and not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
-            payload = yield channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
-            raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async` in order to '
-                'bypass the congested event bus. With `--async`, the CLI tool '
-                'will print the job id (jid) and exit immediately without '
-                'listening for responses. You can then use '
-                '`salt-run jobs.lookup_jid` to look up the results of the job '
-                'in the job cache later.'
-            )
+        with salt.channel.client.AsyncReqChannel.factory(
+            self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
+        ) as channel:
+            try:
+                # Ensure that the event subscriber is connected.
+                # If not, we won't get a response, so error out
+                if listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+                payload = yield channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError:
+                raise SaltReqTimeoutError(
+                    "Salt request timed out. The master is not responding. You "
+                    "may need to run your command with `--async` in order to "
+                    "bypass the congested event bus. With `--async`, the CLI tool "
+                    "will print the job id (jid) and exit immediately without "
+                    "listening for responses. You can then use "
+                    "`salt-run jobs.lookup_jid` to look up the results of the job "
+                    "in the job cache later."
+                )
 
-        if not payload:
-            # The master key could have changed out from under us! Regen
-            # and try again if the key has changed
-            key = self.__read_master_key()
-            if key == self.key:
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    raise tornado.gen.Return(payload)
+                self.key = key
+                payload_kwargs["key"] = self.key
+                payload = yield channel.send(payload_kwargs)
+
+            error = payload.pop("error", None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get("name", "")
+                    err_msg = error.get("message", "")
+                    if err_name == "AuthenticationError":
+                        raise AuthenticationError(err_msg)
+                    elif err_name == "AuthorizationError":
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
                 raise tornado.gen.Return(payload)
-            self.key = key
-            payload_kwargs['key'] = self.key
-            payload = yield channel.send(payload_kwargs)
 
-        error = payload.pop('error', None)
-        if error is not None:
-            if isinstance(error, dict):
-                err_name = error.get('name', '')
-                err_msg = error.get('message', '')
-                if err_name == 'AuthenticationError':
-                    raise AuthenticationError(err_msg)
-                elif err_name == 'AuthorizationError':
-                    raise AuthorizationError(err_msg)
-
-            raise PublishError(error)
-
-        if not payload:
-            raise tornado.gen.Return(payload)
-
-        # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
-
-        raise tornado.gen.Return({'jid': payload['load']['jid'],
-                                  'minions': payload['load']['minions']})
+        raise tornado.gen.Return(
+            {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+        )
 
     # pylint: disable=W1701
     def __del__(self):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
-        if hasattr(self, 'event'):
-            # The call below will take care of calling 'self.event.destroy()'
-            del self.event
+        self.destroy()
+
     # pylint: enable=W1701
 
     def _clean_up_subscriptions(self, job_id):
-        if self.opts.get('order_masters'):
-            self.event.unsubscribe('syndic/.*/{0}'.format(job_id), 'regex')
-        self.event.unsubscribe('salt/job/{0}'.format(job_id))
+        if self.opts.get("order_masters"):
+            self.event.unsubscribe(f"syndic/.*/{job_id}", "regex")
+        self.event.unsubscribe(f"salt/job/{job_id}")
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FunctionWrapper(dict):
-    '''
+    """
     Create a function wrapper that looks like the functions dict on the minion
     but invoked commands on the minion via a LocalClient.
 
     This allows SLS files to be loaded with an object that calls down to the
     minion when the salt functions dict is referenced.
-    '''
+    """
+
     def __init__(self, opts, minion):
-        super(FunctionWrapper, self).__init__()
+        super().__init__()
         self.opts = opts
         self.minion = minion
-        self.local = LocalClient(self.opts['conf_file'])
+        self.local = LocalClient(self.opts["conf_file"])
         self.functions = self.__load_functions()
 
     def __missing__(self, key):
-        '''
+        """
         Since the function key is missing, wrap this call to a command to the
         minion of said key if it is available in the self.functions set
-        '''
+        """
         if key not in self.functions:
             raise KeyError
         return self.run_key(key)
 
     def __load_functions(self):
-        '''
+        """
         Find out what functions are available on the minion
-        '''
-        return set(self.local.cmd(self.minion,
-                                  'sys.list_functions').get(self.minion, []))
+        """
+        return set(
+            self.local.cmd(self.minion, "sys.list_functions").get(self.minion, [])
+        )
 
     def run_key(self, key):
-        '''
+        """
         Return a function that executes the arguments passed via the local
         client
-        '''
+        """
+
         def func(*args, **kwargs):
-            '''
+            """
             Run a remote call
-            '''
+            """
             args = list(args)
-            for _key, _val in kwargs:
-                args.append('{0}={1}'.format(_key, _val))
+            for _key, _val in kwargs.items():
+                args.append(f"{_key}={_val}")
             return self.local.cmd(self.minion, key, args)
+
         return func
 
 
-class Caller(object):
-    '''
+class Caller:
+    """
     ``Caller`` is the same interface used by the :command:`salt-call`
     command-line tool on the Salt Minion.
 
@@ -2104,11 +2163,12 @@ class Caller(object):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         __opts__['file_client'] = 'local'
         caller = salt.client.Caller(mopts=__opts__)
-    '''
-    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
-            mopts=None):
+    """
+
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, "minion"), mopts=None):
         # Late-import of the minion module to keep the CLI as light as possible
         import salt.minion
+
         if mopts:
             self.opts = mopts
         else:
@@ -2116,7 +2176,7 @@ class Caller(object):
         self.sminion = salt.minion.SMinion(self.opts)
 
     def cmd(self, fun, *args, **kwargs):
-        '''
+        """
         Call an execution module with the given arguments and keyword arguments
 
         .. versionchanged:: 2015.8.0
@@ -2130,16 +2190,92 @@ class Caller(object):
 
             caller.cmd('event.send', 'myco/myevent/something',
                 data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
-        '''
+        """
         return self.sminion.functions[fun](*args, **kwargs)
 
     def function(self, fun, *args, **kwargs):
-        '''
+        """
         Call a single salt function
-        '''
+        """
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
-            func,
-            salt.utils.args.parse_input(args),
-            kwargs)
+            func, salt.utils.args.parse_input(args), kwargs
+        )
         return func(*args, **kwargs)
+
+
+class ProxyCaller:
+    """
+    ``ProxyCaller`` is the same interface used by the :command:`salt-call`
+    with the args ``--proxyid <proxyid>`` command-line tool on the Salt Proxy
+    Minion.
+
+    Importing and using ``ProxyCaller`` must be done on the same machine as a
+    Salt Minion and it must be done using the same user that the Salt Minion is
+    running as.
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.client
+        caller = salt.client.ProxyCaller()
+        caller.cmd('test.ping')
+
+    Note, a running master or minion daemon is not required to use this class.
+    Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
+    ``'local'``. The same can be achieved at the Python level by including that
+    setting in a minion config file.
+
+    .. code-block:: python
+
+        import salt.client
+        import salt.config
+        __opts__ = salt.config.proxy_config('/etc/salt/proxy', minion_id='quirky_edison')
+        __opts__['file_client'] = 'local'
+        caller = salt.client.ProxyCaller(mopts=__opts__)
+
+    .. note::
+
+        To use this for calling proxies, the :py:func:`is_proxy functions
+        <salt.utils.platform.is_proxy>` requires that ``--proxyid`` be an
+        argument on the commandline for the script this is used in, or that the
+        string ``proxy`` is in the name of the script.
+    """
+
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, "proxy"), mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
+
+        self.opts = mopts or salt.config.proxy_config(c_path)
+        self.sminion = salt.minion.SProxyMinion(self.opts)
+
+    def cmd(self, fun, *args, **kwargs):
+        """
+        Call an execution module with the given arguments and keyword arguments
+
+        .. code-block:: python
+
+            caller.cmd('test.arg', 'Foo', 'Bar', baz='Baz')
+
+            caller.cmd('event.send', 'myco/myevent/something',
+                data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
+        """
+        func = self.sminion.functions[fun]
+        data = {"arg": args, "fun": fun}
+        data.update(kwargs)
+        executors = getattr(self.sminion, "module_executors", []) or self.opts.get(
+            "module_executors", ["direct_call"]
+        )
+        if isinstance(executors, str):
+            executors = [executors]
+        for name in executors:
+            fname = f"{name}.execute"
+            if fname not in self.sminion.executors:
+                raise SaltInvocationError(f"Executor '{name}' is not available")
+            return_data = self.sminion.executors[fname](
+                self.opts, data, func, args, kwargs
+            )
+            if return_data is not None:
+                break
+        return return_data

@@ -122,7 +122,7 @@ following command:
 The if the output of this command includes a line that looks like this, then
 the ``/tmp/`` directory is mounted as ``noexec``:
 
-.. code-block:: bash
+.. code-block:: console
 
     tmpfs on /tmp type tmpfs (rw,noexec)
 

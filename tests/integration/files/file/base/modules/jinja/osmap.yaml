@@ -1,0 +1,29 @@
+---
+# os_family: Debian
+Ubuntu:
+  pkg:
+    name: template-ubuntu
+  config: /etc/template.d/custom-ubuntu.conf
+
+Raspbian: {}
+
+# os_family: RedHat
+Fedora:
+  pkg:
+    name: template-fedora
+  service:
+    name: service-fedora
+
+CentOS: {}
+
+# os_family: Suse
+openSUSE: {}
+
+# os_family: Gentoo
+Funtoo: {}
+
+# os_family: Arch
+Manjaro: {}
+
+# os_family: Solaris
+SmartOS: {}

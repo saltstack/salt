@@ -48,6 +48,7 @@ resources to learn more about state and renderers.
 
        rename_moe:
          module.run:
+           - name: user.rename
            - m_name: moe
            - new_name: larry
            - onlyif: id moe
@@ -78,4 +79,3 @@ resources to learn more about state and renderers.
     ../tutorials/states_pt3
     ../tutorials/states_pt4
     ../../ref/states/index
-

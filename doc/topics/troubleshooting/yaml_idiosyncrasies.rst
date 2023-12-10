@@ -11,7 +11,7 @@ file that cause YAML issues. It is wise to be aware of these issues. While
 reports or running into them are generally rare they can still crop up at
 unexpected times.
 
-.. _`YAML`: http://yaml.org/spec/1.1/
+.. _`YAML`: https://yaml.org/spec/1.1/
 
 Spaces vs Tabs
 ==============
@@ -24,7 +24,7 @@ normal mode(you can hit `ESC` twice to be sure): ``/``, `Ctrl-v`, `Tab`, then
 hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 ``:set tabstop=2 expandtab`` and then ``:retab``.
 
-.. _`YAML uses spaces`: http://yaml.org/spec/1.1/#id871998
+.. _`YAML uses spaces`: https://yaml.org/spec/1.1/#id871998
 
 Indentation
 ===========
@@ -86,18 +86,22 @@ deeply-nested dict can be declared with curly braces:
 Here is a more concrete example of how YAML actually handles these
 indentations, using the Python interpreter on the command line:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('''mystate:
+    >>> yaml.safe_load(
+    ...     """mystate:
     ...   file.managed:
     ...     - context:
-    ...         some: var''')
+    ...         some: var"""
+    ... )
     {'mystate': {'file.managed': [{'context': {'some': 'var'}}]}}
-    >>> yaml.safe_load('''mystate:
+    >>> yaml.safe_load(
+    ...     """mystate:
     ...   file.managed:
     ...     - context:
-    ...       some: var''')
+    ...       some: var"""
+    ... )
     {'mystate': {'file.managed': [{'some': 'var', 'context': None}]}}
 
 Note that in the second example, ``some`` is added as another key in the same
@@ -105,6 +109,53 @@ dictionary, whereas in the first example, it's the start of a new dictionary.
 That's the distinction. ``context`` is a common example because it is a keyword
 arg for many functions, and should contain a dictionary.
 
+Multi-line Strings
+------------------
+
+Similarly, when a multi-line string is nested within a list item (such as when
+using the ``contents`` argument for a :py:func:`file.managed
+<salt.states.file.managed>` state), the indentation must be doubled. Take for
+example the following state:
+
+.. code-block:: yaml
+
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+          foo
+          bar
+          baz
+
+This is invalid YAML, and will result in a rather cryptic error when you try to
+run the state:
+
+.. code-block:: text
+
+    myminion:
+        Data failed to compile:
+    ----------
+        Rendering SLS 'base:test' failed: could not find expected ':'; line 5
+
+    ---
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+          foo
+          bar    <======================
+          baz
+
+    ---
+
+The correct indentation would be as follows:
+
+.. code-block:: yaml
+
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+            foo
+            bar
+            baz
 
 True/False, Yes/No, On/Off
 ==========================
@@ -181,7 +232,7 @@ them.
           day: 1 - Every Sunday
         {% endload %}
 
-.. __: http://stackoverflow.com/a/31007425
+.. __: https://stackoverflow.com/questions/23812676/pyyaml-parses-900-as-int/31007425#31007425
 
 YAML does not like "Double Short Decs"
 ======================================
@@ -289,14 +340,14 @@ Examples:
 
 List of usable `Unicode characters`_  will help you to identify correct numbers.
 
-.. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+.. _`Unicode characters`: https://en.wikipedia.org/wiki/List_of_Unicode_characters
 
 
 Python can also be used to discover the Unicode number for a character:
 
 .. code-block:: python
 
-    repr(u"Text with wrong characters i need to figure out")
+    repr("Text with wrong characters i need to figure out")
 
 This shell command can find wrong characters in your SLS files:
 
@@ -316,14 +367,14 @@ If a definition only includes numbers and underscores, it is parsed by YAML as
 an integer and all underscores are stripped.  To ensure the object becomes a
 string, it should be surrounded by quotes.  `More information here`_.
 
-.. _`More information here`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
+.. _`More information here`: https://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
 
 Here's an example:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('2013_05_10')
+    >>> yaml.safe_load("2013_05_10")
     20130510
     >>> yaml.safe_load('"2013_05_10"')
     '2013_05_10'
@@ -338,10 +389,10 @@ functionality.  If values such as these are needed in a salt YAML file
 (specifically a configuration file), they should be formatted with surrounding
 strings to force YAML to serialize them as strings:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('2014-01-20 14:23:23')
+    >>> yaml.safe_load("2014-01-20 14:23:23")
     datetime.datetime(2014, 1, 20, 14, 23, 23)
     >>> yaml.safe_load('"2014-01-20 14:23:23"')
     '2014-01-20 14:23:23'
@@ -353,10 +404,10 @@ is a real one).  Thus, for example, if a minion were to have an ID of
 date was out of range.  The workaround is the same, surround the offending
 string with quotes:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('4017-16-20')
+    >>> yaml.safe_load("4017-16-20")
     Traceback (most recent call last):
       File "<stdin>", line 1, in <module>
       File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 93, in safe_load
@@ -379,8 +430,9 @@ string with quotes:
 Keys Limited to 1024 Characters
 ===============================
 
-Simple keys are limited to a single line and cannot be longer that 1024 characters.
-This is a limitation from PyYaml, as seen in a comment in `PyYAML's code`_, and
-applies to anything parsed by YAML in Salt.
+Simple keys are limited by the `YAML Spec`_ to a single line, and cannot be
+longer that 1024 characters. PyYAML enforces these limitations (see here__),
+and therefore anything parsed as YAML in Salt is subject to them.
 
-.. _PyYAML's code: http://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91
+.. _`YAML Spec`: https://yaml.org/spec/1.2/spec.html#id2792424
+.. __: https://github.com/yaml/pyyaml/blob/eb459f8/lib/yaml/scanner.py#L279-L293

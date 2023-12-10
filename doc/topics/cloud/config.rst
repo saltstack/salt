@@ -57,7 +57,7 @@ settings can be placed in the provider, profile or map configuration files:
           - web
 
 
-When salt cloud creates a new minon, it can automatically add grain information
+When salt cloud creates a new minion, it can automatically add grain information
 to the minion configuration file identifying the sources originally used
 to define it.
 
@@ -173,8 +173,8 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars. This is only used when inside the cloud
-module. You can setup a variable called ``cloud`` that contains your profile and provider to pass
-that information to the cloud servers instead of having to copy the full configuration to every
+module. You can setup a variable called ``cloud`` that contains your profile, provider, and map to
+pass that information to the cloud servers instead of having to copy the full configuration to every
 minion. In your pillar file, you would use something like this:
 
 .. code-block:: yaml
@@ -197,6 +197,26 @@ minion. In your pillar file, you would use something like this:
           size: ds512M
           image: CentOS 7
           script_args: git develop
+
+      maps:
+        my-dev-map:
+          ubuntu-openstack:
+            - dev-test01
+            - dev-test02
+            - dev-test03
+            - dev-test04
+        my-prd-map:
+          ubuntu-openstack:
+            - prd-web01
+            - prd-web02
+                minion:
+                  id: custom-minion-id-app1-stack1-frontend
+                grains:
+                  roles:
+                    - webserver
+                  deployment: datacenter4-openstack
+            - prod-db01
+            - prod-db02
 
 
 Cloud Configurations
@@ -281,8 +301,8 @@ be set:
 .. code-block:: yaml
 
     my-linode-config:
-      apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-      password: F00barbaz
+      apikey: asldkgfaklsdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+      password: F00barbazlonglongp@ssword
       ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
       ssh_key_file: ~/.ssh/id_ed25519
       driver: linode
@@ -345,7 +365,7 @@ OpenStack
 ---------
 
 Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
-openstack-infra team.  
+openstack-infra team.
 
 This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
 `os-client-config <https://docs.openstack.org/os-client-config/latest/>`
@@ -480,7 +500,7 @@ The Saltify driver is a new, experimental driver designed to install Salt on a r
 machine, virtual or bare metal, using SSH. This driver is useful for provisioning
 machines which are already installed, but not Salted. For more information about using
 this driver and for configuration examples, please see the
-:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+:ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 
 .. _config_vagrant:
 
@@ -552,33 +572,43 @@ data:
 
 .. code-block:: python
 
-    [{'deploy': False,
-      'image': 'ami-08d97e61',
-      'profile': 'Fedora-17',
-      'provider': 'my-ec2-config',
-      'securitygroup': ['default'],
-      'size': 't1.micro',
-      'ssh_username': 'ec2_user'},
-     {'deploy': False,
-      'image': 'ami-09b61d60',
-      'profile': 'CentOS-5',
-      'provider': 'my-aws-config',
-      'securitygroup': ['default'],
-      'size': 't1.micro',
-      'ssh_username': 'ec2_user'},
-     {'deploy': False,
-      'image': 'ami-54cf5c3d',
-      'profile': 'Amazon-Linux-AMI-2012.09-64bit',
-      'provider': 'my-ec2-config',
-      'securitygroup': ['default'],
-      'size': 't1.micro',
-      'ssh_username': 'ec2_user'},
-     {'deploy': False,
-      'profile': 'development-instances',
-      'provider': 'my-ec2-config',
-      'securitygroup': ['default'],
-      'size': 't1.micro',
-      'ssh_username': 'ec2_user'}]
+    [
+        {
+            "deploy": False,
+            "image": "ami-08d97e61",
+            "profile": "Fedora-17",
+            "provider": "my-ec2-config",
+            "securitygroup": ["default"],
+            "size": "t1.micro",
+            "ssh_username": "ec2_user",
+        },
+        {
+            "deploy": False,
+            "image": "ami-09b61d60",
+            "profile": "CentOS-5",
+            "provider": "my-aws-config",
+            "securitygroup": ["default"],
+            "size": "t1.micro",
+            "ssh_username": "ec2_user",
+        },
+        {
+            "deploy": False,
+            "image": "ami-54cf5c3d",
+            "profile": "Amazon-Linux-AMI-2012.09-64bit",
+            "provider": "my-ec2-config",
+            "securitygroup": ["default"],
+            "size": "t1.micro",
+            "ssh_username": "ec2_user",
+        },
+        {
+            "deploy": False,
+            "profile": "development-instances",
+            "provider": "my-ec2-config",
+            "securitygroup": ["default"],
+            "size": "t1.micro",
+            "ssh_username": "ec2_user",
+        },
+    ]
 
 Pretty cool right?
 
@@ -622,33 +652,38 @@ data:
 
 .. code-block:: python
 
-    'providers': {
-        'my-develop-envs': [
-            {'availability_zone': 'ap-southeast-1b',
-             'id': 'HJGRYCILJLKJYG',
-             'key': 'kdjgfsgm;woormgl/aserigjksjdhasdfgn',
-             'keyname': 'test',
-             'location': 'ap-southeast-1',
-             'private_key': '/root/test.pem',
-             'driver': 'aws',
-             'securitygroup': 'quick-start'
-            },
-            {'location': 'Raleigh',
-             'password': 'mypass',
-             'driver': 'ibmsce',
-             'ssh_key_file': '/etc/salt/ibm/mykey.pem',
-             'ssh_key_name': 'mykey',
-             'user': 'myuser@mycorp.com'
-            }
-        ],
-        'my-productions-envs': [
-            {'availability_zone': 'us-east-1',
-             'location': 'us-east-1',
-             'password': 'mypass',
-             'driver': 'ibmsce',
-             'ssh_key_file': '/etc/salt/ibm/mykey.pem',
-             'ssh_key_name': 'mykey',
-             'user': 'my-production-user@mycorp.com'
-            }
-        ]
+    {
+        "providers": {
+            "my-develop-envs": [
+                {
+                    "availability_zone": "ap-southeast-1b",
+                    "id": "HJGRYCILJLKJYG",
+                    "key": "kdjgfsgm;woormgl/aserigjksjdhasdfgn",
+                    "keyname": "test",
+                    "location": "ap-southeast-1",
+                    "private_key": "/root/test.pem",
+                    "driver": "aws",
+                    "securitygroup": "quick-start",
+                },
+                {
+                    "location": "Raleigh",
+                    "password": "mypass",
+                    "driver": "ibmsce",
+                    "ssh_key_file": "/etc/salt/ibm/mykey.pem",
+                    "ssh_key_name": "mykey",
+                    "user": "myuser@mycorp.com",
+                },
+            ],
+            "my-productions-envs": [
+                {
+                    "availability_zone": "us-east-1",
+                    "location": "us-east-1",
+                    "password": "mypass",
+                    "driver": "ibmsce",
+                    "ssh_key_file": "/etc/salt/ibm/mykey.pem",
+                    "ssh_key_name": "mykey",
+                    "user": "my-production-user@mycorp.com",
+                }
+            ],
+        }
     }

@@ -1,6 +1,5 @@
-salt.thorium.reg module
-=======================
+salt.thorium.reg
+================
 
 .. automodule:: salt.thorium.reg
     :members:
-

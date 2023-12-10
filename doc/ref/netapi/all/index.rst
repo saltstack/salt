@@ -4,9 +4,12 @@
 netapi modules
 ==============
 
-.. toctree::
-    :maxdepth: 2
+.. currentmodule:: salt.netapi
 
-    salt.netapi.rest_cherrypy
-    salt.netapi.rest_tornado
-    salt.netapi.rest_wsgi
+.. autosummary::
+    :toctree:
+    :template: autosummary.rst.tmpl
+
+    rest_cherrypy
+    rest_tornado
+    rest_wsgi

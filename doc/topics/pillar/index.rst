@@ -88,6 +88,33 @@ by their ``os`` grain:
         - match: grain
         - servers
 
+Pillar definitions can also take a keyword argument ``ignore_missing``.
+When the value of ``ignore_missing`` is ``True``, all errors for missing
+pillar files are ignored. The default value for ``ignore_missing`` is
+``False``.
+
+Here is an example using the ``ignore_missing`` keyword parameter to ignore
+errors for missing pillar files:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - servers
+        - systems
+        - ignore_missing: True
+
+Assuming that the pillar ``servers`` exists in the fileserver backend
+and the pillar ``systems`` doesn't, all pillar data from ``servers``
+pillar is delivered to minions and no error for the missing pillar
+``systems`` is noted under the key ``_errors`` in the pillar data
+delivered to minions.
+
+Should the ``ignore_missing`` keyword parameter have the value ``False``,
+an error for the missing pillar ``systems`` would produce the value
+``Specified SLS 'servers' in environment 'base' is not available on the salt master``
+under the key ``_errors`` in the pillar data delivered to minions.
+
 ``/srv/pillar/packages.sls``
 
 .. code-block:: jinja
@@ -188,6 +215,31 @@ pillar applying to all environments. For example:
         - __env__ https://example.com/git-pillar.git
 
 .. versionadded:: 2017.7.5,2018.3.1
+
+Taking it one step further, ``__env__`` can also be used in the ``pillar_root``
+filesystem path. It will be replaced with the actual ``pillarenv`` and searched
+for Pillar data to provide to the minion. Note this substitution ONLY occurs for
+the ``__env__`` environment. For instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
+
+.. versionadded:: 3005
 
 
 Pillar Namespace Flattening
@@ -359,6 +411,22 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
+If you are using the Pillar Cache and have set :conf_master:`pillar_cache` to `True`,
+the pillar cache can be updated either when you run :py:func:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>`, or using the pillar runner function
+:py:func:`pillar.clear_pillar_cache <salt.runners.pillar.clear_pillar_cache>`:
+
+.. code-block:: bash
+
+    salt-run pillar.clear_pillar_cache 'minion'
+
+The pillar will not be updated when running :py:func:`pillar.items
+<salt.modules.pillar.items>` or a state for example. If you are
+using a Salt version before 3003, you would need to manually delete the cache
+file, located in Salt's master cache. For example, on linux the file would be
+in this directory: /var/cache/salt/master/pillar_cache/
+
+
 .. _pillar-environments:
 
 How Pillar Environments Are Handled
@@ -433,7 +501,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function
@@ -454,7 +522,7 @@ The :py:func:`pillar.get <salt.modules.pillar.get>` Function
 
 The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
 way as the ``get`` method in a python dict, but with an enhancement: nested
-dictonaries can be traversed using a colon as a delimiter.
+dictionaries can be traversed using a colon as a delimiter.
 
 If a structure like this is in pillar:
 
@@ -638,7 +706,7 @@ The following functions support passing pillar data on the CLI via the
 - :py:func:`state.highstate <salt.modules.state.highstate>`
 - :py:func:`state.sls <salt.modules.state.sls>`
 
-Triggerring decryption of this CLI pillar data can be done in one of two ways:
+Triggering decryption of this CLI pillar data can be done in one of two ways:
 
 1. Using the ``pillar_enc`` argument:
 
@@ -714,12 +782,40 @@ done:
   option in the `master config template`_ should be updated to show the correct
   new default value.
 
-.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/develop/salt/renderers/
-.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/develop/salt/config/__init__.py
-.. _`master config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/master.rst
-.. _`minion config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/minion.rst
-.. _`master config template`: https://github.com/saltstack/salt/tree/develop/conf/master
+.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/renderers/
+.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/config/__init__.py
+.. _`master config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/master.rst
+.. _`minion config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/minion.rst
+.. _`master config template`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/conf/master
 
+Binary Data in the Pillar
+=========================
+
+Salt has partial support for binary pillar data.
+
+.. note::
+
+   There are some situations (such as salt-ssh) where only text (ASCII or
+   Unicode) is allowed.
+
+The simplest way to embed binary data in your pillar is to make use of YAML's
+built-in binary data type, which requires base64 encoded data.
+
+.. code-block:: yaml
+
+    salt_pic: !!binary
+        iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAMAAAC67D+PAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAA
+
+Then you can use it as a ``contents_pillar`` in a state:
+
+.. code-block:: yaml
+
+    /tmp/salt.png:
+      file.managed:
+        - contents_pillar: salt_pic
+
+It is also possible to add ASCII-armored encrypted data to pillars, as
+mentioned in the Pillar Encryption section.
 
 Master Config in Pillar
 =======================

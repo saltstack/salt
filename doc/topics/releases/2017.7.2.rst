@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **73**
 - Total PR References: **236**
 
-- Contributors: **47** (`Ch3LL`_, `CorvinM`_, `DmitryKuzmenko`_, `Giandom`_, `Mapel88`_, `Mareo`_, `SuperPommeDeTerre`_, `The-Loeki`_, `abulford`_, `amendlik`_, `blarghmatey`_, `brejoc`_, `cachedout`_, `carsonoid`_, `cro`_, `damon-atkins`_, `darcoli`_, `dmurphy18`_, `frankiexyz`_, `garethgreenaway`_, `gtmanfred`_, `hibbert`_, `isbm`_, `ixs`_, `jettero`_, `jmarinaro`_, `justincbeard`_, `kkoppel`_, `llua`_, `lomeroe`_, `m03`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `seedickcode`_, `shengis`_, `skizunov`_, `terminalmage`_, `the-glu`_, `thusoy`_, `twangboy`_, `vitaliyf`_, `vutny`_, `whiteinge`_)
+- Contributors: **47** (`Ch3LL`_, `CorvinM`_, `DmitryKuzmenko`_, `Giandom`_, `Mapel88`_, `Mareo`_,
+  `SuperPommeDeTerre`_, `The-Loeki`_, `abulford`_, `amendlik`_, `blarghmatey`_, `brejoc`_,
+  `cachedout`_, `carsonoid`_, `cro`_, `damon-atkins`_, `darcoli`_, `dmurphy18`_, `frankiexyz`_,
+  `garethgreenaway`_, `gtmanfred`_, `hibbert`_, `isbm`_, `ixs`_, `jettero`_, `jmarinaro`_,
+  `justincbeard`_, `kkoppel`_, `llua`_, `lomeroe`_, `m03`_, `mcalmer`_, `mirceaulinic`_,
+  `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `seedickcode`_, `shengis`_,
+  `skizunov`_, `terminalmage`_, `the-glu`_, `thusoy`_, `twangboy`_, `vitaliyf`_, `vutny`_,
+  `whiteinge`_)
 
 
 Security Fix
@@ -717,7 +724,7 @@ Changelog for v2017.7.1..v2017.7.2
 
     * 822eabcc81 Catch exceptions raised when making changes to jenkins
 
-    * 91b583b493 Improve and correct execption raising
+    * 91b583b493 Improve and correct exception raising
 
     * f096917a0e Raise an exception if we fail to cache the config xml
 
@@ -940,7 +947,7 @@ Changelog for v2017.7.1..v2017.7.2
 
     * 1cc86592ed Update return data before calling returners
 
-* **ISSUE** `#42842`_: (`Giandom`_) retreive kwargs passed with slack engine (refs: `#42884`_)
+* **ISSUE** `#42842`_: (`Giandom`_) retrieve kwargs passed with slack engine (refs: `#42884`_)
 
 * **PR** `#42884`_: (`Giandom`_) Convert to dict type the pillar string value passed from slack
   @ *2017-08-16 22:30:43 UTC*
@@ -1229,12 +1236,12 @@ Changelog for v2017.7.1..v2017.7.2
 
 * **ISSUE** `saltstack/salt-jenkins#480`_: (`rallytime`_) [2017.7] PY3 Debian 8 has several vmware unit tests failing (refs: `#42857`_)
 
-* **PR** `#42857`_: (`gtmanfred`_) use older name if _create_unverified_context is unvailable
+* **PR** `#42857`_: (`gtmanfred`_) use older name if _create_unverified_context is unavailable
   @ *2017-08-11 13:37:59 UTC*
 
   * 3d05d89e09 Merge pull request `#42857`_ from gtmanfred/vmware
 
-  * c1f673eca4 use older name if _create_unverified_context is unvailable
+  * c1f673eca4 use older name if _create_unverified_context is unavailable
 
 * **PR** `#42866`_: (`twangboy`_) Change to GitPython version 2.1.1
   @ *2017-08-11 13:23:52 UTC*
@@ -1278,7 +1285,7 @@ Changelog for v2017.7.1..v2017.7.2
 
   * b3e2ae3c58 Merge pull request `#42805`_ from rallytime/bp-42552
 
-    * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl.html
+    * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl/acl.html
 
   * d2ee7934ed Merge pull request `#42804`_ from rallytime/bp-42784
 
@@ -1992,7 +1999,7 @@ Changelog for v2017.7.1..v2017.7.2
 
     * 0a72e56f6b Merge pull request `#42356`_ from meaksh/2016.11-AliasesLoader-wrapper-fix
 
-      * 915d94219e Allow to check whether a function is available on the AliasesLoader wrapper
+      * 915d94219e Allow checking whether a function is available on the AliasesLoader wrapper
 
     * 10eb7b7a79 Merge pull request `#42368`_ from twangboy/win_fix_build_2016.11
 
@@ -2041,7 +2048,7 @@ Changelog for v2017.7.1..v2017.7.2
 
   * 09521602c1 Merge pull request `#42436`_ from garethgreenaway/42374_manage_runner_minion_offline
 
-  * 0fd39498c0 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine it's version.
+  * 0fd39498c0 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine its version.
 
 * **ISSUE** `#42427`_: (`grichmond-salt`_) Issue Passing Variables created from load_json as Inline Pillar Between States (refs: `#42435`_)
 

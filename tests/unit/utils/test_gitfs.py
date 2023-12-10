@@ -1,92 +1,171 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 These only test the provider selection and verification logic, they do not init
 any remotes.
-'''
+"""
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+import tempfile
 
-# Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+import pytest
+import tornado.ioloop
 
-# Import salt libs
+import salt.fileserver.gitfs
+import salt.utils.files
 import salt.utils.gitfs
-from salt.exceptions import FileserverConfigError
+import salt.utils.path
+import salt.utils.platform
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.unit import TestCase
 
-# GLOBALS
-OPTS = {'cachedir': '/tmp/gitfs-test-cache'}
+
+def _clear_instance_map():
+    try:
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+    except KeyError:
+        pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGitFSProvider(TestCase):
+class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
+    def setUp(self):
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        tmp_name = self._tmp_dir.name
 
-    def test_provider_case_insensitive(self):
-        '''
-        Ensure that both lowercase and non-lowercase values are supported
-        '''
-        provider = 'GitPython'
-        for role_name, role_class in (
-                ('gitfs', salt.utils.gitfs.GitFS),
-                ('git_pillar', salt.utils.gitfs.GitPillar),
-                ('winrepo', salt.utils.gitfs.WinRepo)):
+        class MockedProvider(
+            salt.utils.gitfs.GitProvider
+        ):  # pylint: disable=abstract-method
+            def __init__(
+                self,
+                opts,
+                remote,
+                per_remote_defaults,
+                per_remote_only,
+                override_params,
+                cache_root,
+                role="gitfs",
+            ):
+                self.provider = "mocked"
+                self.fetched = False
+                super().__init__(
+                    opts,
+                    remote,
+                    per_remote_defaults,
+                    per_remote_only,
+                    override_params,
+                    cache_root,
+                    role,
+                )
 
-            key = '{0}_provider'.format(role_name)
-            with patch.object(role_class, 'verify_gitpython',
-                              MagicMock(return_value=True)):
-                with patch.object(role_class, 'verify_pygit2',
-                                  MagicMock(return_value=False)):
-                    args = [OPTS, {}]
-                    kwargs = {'init_remotes': False}
-                    if role_name == 'winrepo':
-                        kwargs['cache_root'] = '/tmp/winrepo-dir'
-                    with patch.dict(OPTS, {key: provider}):
-                        # Try to create an instance with uppercase letters in
-                        # provider name. If it fails then a
-                        # FileserverConfigError will be raised, so no assert is
-                        # necessary.
-                        role_class(*args, **kwargs)
-                    # Now try to instantiate an instance with all lowercase
-                    # letters. Again, no need for an assert here.
-                    role_class(*args, **kwargs)
+            def init_remote(self):
+                self.gitdir = salt.utils.path.join(tmp_name, ".git")
+                self.repo = True
+                new = False
+                return new
 
-    def test_valid_provider(self):
-        '''
-        Ensure that an invalid provider is not accepted, raising a
-        FileserverConfigError.
-        '''
-        def _get_mock(verify, provider):
-            '''
-            Return a MagicMock with the desired return value
-            '''
-            return MagicMock(return_value=verify.endswith(provider))
+            def envs(self):
+                return ["base"]
 
-        for role_name, role_class in (
-                ('gitfs', salt.utils.gitfs.GitFS),
-                ('git_pillar', salt.utils.gitfs.GitPillar),
-                ('winrepo', salt.utils.gitfs.WinRepo)):
-            key = '{0}_provider'.format(role_name)
-            for provider in salt.utils.gitfs.GIT_PROVIDERS:
-                verify = 'verify_gitpython'
-                mock1 = _get_mock(verify, provider)
-                with patch.object(role_class, verify, mock1):
-                    verify = 'verify_pygit2'
-                    mock2 = _get_mock(verify, provider)
-                    with patch.object(role_class, verify, mock2):
-                        args = [OPTS, {}]
-                        kwargs = {'init_remotes': False}
-                        if role_name == 'winrepo':
-                            kwargs['cache_root'] = '/tmp/winrepo-dir'
+            def fetch(self):
+                self.fetched = True
 
-                        with patch.dict(OPTS, {key: provider}):
-                            role_class(*args, **kwargs)
+        git_providers = {
+            "mocked": MockedProvider,
+        }
+        gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
+        self.opts = self.get_temp_config(
+            "master", gitfs_remotes=gitfs_remotes, verified_gitfs_provider="mocked"
+        )
+        self.main_class = salt.utils.gitfs.GitFS(
+            self.opts,
+            self.opts["gitfs_remotes"],
+            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
+            git_providers=git_providers,
+        )
 
-                        with patch.dict(OPTS, {key: 'foo'}):
-                            # Set the provider name to a known invalid provider
-                            # and make sure it raises an exception.
-                            self.assertRaises(
-                                FileserverConfigError,
-                                role_class,
-                                *args,
-                                **kwargs)
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        _clear_instance_map()
+
+    def tearDown(self):
+        # Providers are preserved with GitFS's instance_map
+        for remote in self.main_class.remotes:
+            remote.fetched = False
+        del self.main_class
+        self._tmp_dir.cleanup()
+
+    def test_update_all(self):
+        self.main_class.update()
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_name(self):
+        self.main_class.update("repo2")
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertFalse(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_id_and_name(self):
+        self.main_class.update([("file://repo1.git", None)])
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertFalse(self.main_class.remotes[1].fetched)
+
+    def test_get_cachedir_basename(self):
+        self.assertEqual(
+            self.main_class.remotes[0].get_cache_basename(),
+            "_",
+        )
+        self.assertEqual(
+            self.main_class.remotes[1].get_cache_basename(),
+            "_",
+        )
+
+    def test_git_provider_mp_lock(self):
+        """
+        Check that lock is released after provider.lock()
+        """
+        provider = self.main_class.remotes[0]
+        provider.lock()
+        # check that lock has been released
+        self.assertTrue(provider._master_lock.acquire(timeout=5))
+        provider._master_lock.release()
+
+    def test_git_provider_mp_clear_lock(self):
+        """
+        Check that lock is released after provider.clear_lock()
+        """
+        provider = self.main_class.remotes[0]
+        provider.clear_lock()
+        # check that lock has been released
+        self.assertTrue(provider._master_lock.acquire(timeout=5))
+        provider._master_lock.release()
+
+    @pytest.mark.slow_test
+    def test_git_provider_mp_lock_timeout(self):
+        """
+        Check that lock will time out if master lock is locked.
+        """
+        provider = self.main_class.remotes[0]
+        # Hijack the lock so git provider is fooled into thinking another instance is doing somthing.
+        self.assertTrue(provider._master_lock.acquire(timeout=5))
+        try:
+            # git provider should raise timeout error to avoid lock race conditions
+            self.assertRaises(TimeoutError, provider.lock)
+        finally:
+            provider._master_lock.release()
+
+    @pytest.mark.slow_test
+    def test_git_provider_mp_clear_lock_timeout(self):
+        """
+        Check that clear lock will time out if master lock is locked.
+        """
+        provider = self.main_class.remotes[0]
+        # Hijack the lock so git provider is fooled into thinking another instance is doing somthing.
+        self.assertTrue(provider._master_lock.acquire(timeout=5))
+        try:
+            # git provider should raise timeout error to avoid lock race conditions
+            self.assertRaises(TimeoutError, provider.clear_lock)
+        finally:
+            provider._master_lock.release()

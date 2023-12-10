@@ -1,0 +1,5 @@
+# Darwin source distribution requirements
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are macOS specific, place "; sys_platform == 'darwin'" in front of the requirement.
+
+-r zeromq.txt

@@ -1,0 +1,14 @@
+self-hosted-runner:
+  # Labels of self-hosted runner in array of string
+  labels:
+    - bastion
+    - x86_64
+    - arm64
+    - aarch64
+    - amd64
+    - repo-nightly
+    - repo-staging
+    - repo-release
+    - medium
+    - large
+    - macos-13-xlarge

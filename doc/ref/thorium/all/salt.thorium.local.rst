@@ -1,6 +1,5 @@
-salt.thorium.local module
-=========================
+salt.thorium.local
+==================
 
 .. automodule:: salt.thorium.local
     :members:
-

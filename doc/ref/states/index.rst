@@ -178,7 +178,7 @@ and the SLS files below it apply to all minions.
 
 The second expression is a regular expression that will match all minions
 with an ID matching ``saltmaster.*`` and specifies that for those minions, the
-salt.master state should be applied. 
+salt.master state should be applied.
 
 .. important::
     Since version 2014.7.0, the default matcher (when one is not explicitly
@@ -338,7 +338,7 @@ The output is:
     Total:     2
 
 
-.. _`pip`: https://pypi.python.org/pypi/pip
-.. _`pep8`: https://pypi.python.org/pypi/pep8
-.. _`setuptools`: https://pypi.python.org/pypi/setuptools
+.. _`pip`: https://pypi.org/project/pip/
+.. _`pep8`: https://pypi.org/project/pep8/
+.. _`setuptools`: https://pypi.org/project/setuptools/
 .. _`runners`: /ref/runners

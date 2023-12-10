@@ -301,7 +301,7 @@ reports of confusion among community members, since the targeting method is
 published to minions as ``tgt_type``, and appears as ``tgt_type`` in the job
 cache as well.
 
-While ``expr_form`` will continue to be supported until the **Fluorine**
+While ``expr_form`` will continue to be supported until the **2019.2.0**
 release cycle (two major releases after this one), those who are using the
 :ref:`LocalClient <local-client>` (either directly, or implictly via a
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
@@ -316,11 +316,11 @@ structure to include job meta data such as ``retcode``.
 
 This is useful at the Python API:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> client = salt.client.LocalClient()
-    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    >>> client.cmd("*", "cmd.run", ["return 1"], full_return=True)
     {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
 
 As well as from salt-api:
@@ -441,7 +441,7 @@ have been improved, enhanced and widenened in scope:
   the process. In 2017.7.0 we have introduced the functionality to re-establish
   the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
-  speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
+  specifying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
   in minutes.
 
 New modules:
@@ -563,10 +563,10 @@ of objects (users, databases, roles, etc.).
     <salt.states.docker_image.present>`, :py:func:`moby.inspect_container
     <salt.modules.dockermod.inspect_container>`, etc.)
 
-.. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
+.. _`Moby announcement`: https://www.docker.com/blog/introducing-the-moby-project/
 .. _DockerCon: http://2017.dockercon.com/
 
-The old syntax will continue to work until the **Fluorine** release of Salt.
+The old syntax will continue to work until the **2019.2.0** release of Salt.
 The old ``dockerng`` naming will also continue to work until that release, so
 no immediate changes need to be made to your SLS files (unless you were still
 using the old docker states that have been moved to salt-contrib_).
@@ -675,7 +675,7 @@ Additional Features
 
   .. code-block:: python
 
-      ret1 = __salt__['salt.execute']('*', 'mod.fun')
+      ret1 = __salt__["salt.execute"]("*", "mod.fun")
 
 New Modules
 ===========

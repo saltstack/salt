@@ -41,8 +41,12 @@ Beacons are typically enabled by placing a ``beacons:`` top level block in
     beacons:
       inotify:
         - files:
-            /etc/important_file: {}
-            /opt: {}
+            /etc/important_file:
+              mask:
+                - modify
+            /opt:
+              mask:
+                - modify
 
 The beacon system, like many others in Salt, can also be configured via the
 minion pillar, grains, or local config file.
@@ -52,6 +56,27 @@ minion pillar, grains, or local config file.
     Currently this excludes FreeBSD, macOS, and Windows.
 
 All beacon configuration is done using list based configuration.
+
+.. versionadded:: Neon
+
+Multiple copies of a particular Salt beacon can be configured by including the ``beacon_module`` parameter in the beacon configuration.
+
+.. code-block:: yaml
+
+    beacons:
+      watch_important_file:
+        - files:
+            /etc/important_file:
+              mask:
+                - modify
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file:
+              mask:
+                - modify
+        - beacon_module: inotify
+
 
 Beacon Monitoring Interval
 --------------------------
@@ -65,8 +90,12 @@ and 10-second intervals:
     beacons:
       inotify:
         - files:
-            /etc/important_file: {}
-            /opt: {}
+            /etc/important_file:
+              mask:
+                - modify
+            /opt:
+              mask:
+                - modify
         - interval: 5
         - disable_during_state_run: True
       load:
@@ -103,6 +132,8 @@ which point the normal beacon interval will resume.
       inotify:
         - files:
             /etc/important_file: {}
+              mask:
+                - modify
         - disable_during_state_run: True
 
 .. _beacon-example:
@@ -215,7 +246,7 @@ Add the following to ``/srv/reactor/revert.sls``:
 
     revert-file:
       local.state.apply:
-        - tgt: {{ data['data']['id'] }}
+        - tgt: {{ data['id'] }}
         - arg:
           - maintain_important_file
 
@@ -224,13 +255,7 @@ Add the following to ``/srv/reactor/revert.sls``:
     In addition to :ref:`setting <avoid-beacon-event-loops>`
     ``disable_during_state_run: True`` for an inotify beacon whose reaction is
     to modify the watched file, it is important to ensure the state applied is
-    also :term:`idempotent`.
-
-.. note::
-
-    The expression ``{{ data['data']['id'] }}`` :ref:`is correct
-    <beacons-and-reactors>` as it matches the event structure :ref:`shown above
-    <beacon-event-bus>`.
+    also :term:`idempotent <Idempotent>`.
 
 State SLS
 `````````
@@ -343,8 +368,7 @@ The return data structure would look something like this:
 
 .. code-block:: python
 
-    [{'changes': ['/foo/bar'], 'tag': 'foo'},
-     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+    [{"changes": ["/foo/bar"], "tag": "foo"}, {"changes": ["/foo/baz"], "tag": "bar"}]
 
 Calling Execution Modules
 -------------------------

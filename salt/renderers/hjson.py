@@ -1,34 +1,32 @@
-# -*- coding: utf-8 -*-
-'''
-Hjson Renderer for Salt
-http://laktak.github.io/hjson/
-'''
+"""
+hjson renderer for Salt
 
-from __future__ import absolute_import, print_function, unicode_literals
+See the hjson_ documentation for more information
 
-# Import 3rd party libs
+.. _hjson: http://laktak.github.io/hjson/
+"""
+
+
 try:
-    import hjson as hjson
+    import hjson
+
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
-# Import salt libs
-from salt.ext import six
 
-
-def render(hjson_data, saltenv='base', sls='', **kws):
-    '''
+def render(hjson_data, saltenv="base", sls="", **kws):
+    """
     Accepts HJSON as a string or as a file object and runs it through the HJSON
     parser.
 
     :rtype: A Python data structure
-    '''
-    if not isinstance(hjson_data, six.string_types):
+    """
+    if not isinstance(hjson_data, str):
         hjson_data = hjson_data.read()
 
-    if hjson_data.startswith('#!'):
-        hjson_data = hjson_data[(hjson_data.find('\n') + 1):]
+    if hjson_data.startswith("#!"):
+        hjson_data = hjson_data[(hjson_data.find("\n") + 1) :]
     if not hjson_data.strip():
         return {}
     return hjson.loads(hjson_data)

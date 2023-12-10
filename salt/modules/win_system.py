@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
-'''
-Module for managing windows systems.
+"""
+Module for managing Windows systems and getting Windows system information.
+Support for reboot, shutdown, join domain, rename
 
 :depends:
     - pywintypes
@@ -8,33 +8,30 @@ Module for managing windows systems.
     - win32con
     - win32net
     - wmi
+"""
 
-Support for reboot, shutdown, etc
-'''
-from __future__ import absolute_import, unicode_literals, print_function
-
-# Import Python libs
 import ctypes
 import logging
+import platform
 import time
 from datetime import datetime
 
-# Import salt libs
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.win_system
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd-party Libs
-from salt.ext import six
 try:
-    import wmi
-    import win32net
+    from ctypes import windll
+
+    import pywintypes
     import win32api
     import win32con
-    import pywintypes
-    from ctypes import windll
+    import win32net
+    import wmi
+
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -43,52 +40,40 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'system'
+__virtualname__ = "system"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows Systems with Win32 Modules
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'Module win_system: Requires Windows'
+        return False, "Module win_system: Requires Windows"
 
     if not HAS_WIN32NET_MODS:
-        return False, 'Module win_system: Missing win32 modules'
+        return False, "Module win_system: Missing win32 modules"
 
     return __virtualname__
 
 
 def _convert_minutes_seconds(timeout, in_seconds=False):
-    '''
+    """
     convert timeout to seconds
-    '''
-    return timeout if in_seconds else timeout*60
+    """
+    return timeout if in_seconds else timeout * 60
 
 
 def _convert_date_time_string(dt_string):
-    '''
+    """
     convert string to date time object
-    '''
-    dt_string = dt_string.split('.')[0]
-    dt_obj = datetime.strptime(dt_string, '%Y%m%d%H%M%S')
-    return dt_obj.strftime('%Y-%m-%d %H:%M:%S')
-
-
-def _to_unicode(instr):
-    '''
-    Converts from current users character encoding to unicode.
-    When instr has a value of None, the return value of the function
-    will also be None.
-    '''
-    if instr is None or isinstance(instr, six.text_type):
-        return instr
-    else:
-        return six.text_type(instr, 'utf8')
+    """
+    dt_string = dt_string.split(".")[0]
+    dt_obj = datetime.strptime(dt_string, "%Y%m%d%H%M%S")
+    return dt_obj.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def halt(timeout=5, in_seconds=False):
-    '''
+    """
     Halt a running system.
 
     Args:
@@ -109,12 +94,12 @@ def halt(timeout=5, in_seconds=False):
     .. code-block:: bash
 
         salt '*' system.halt 5 True
-    '''
+    """
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
 def init(runlevel):  # pylint: disable=unused-argument
-    '''
+    """
     Change the system runlevel on sysV compatible systems. Not applicable to
     Windows
 
@@ -123,7 +108,7 @@ def init(runlevel):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' system.init 3
-    '''
+    """
     # cmd = ['init', runlevel]
     # ret = __salt__['cmd.run'](cmd, python_shell=False)
     # return ret
@@ -131,11 +116,11 @@ def init(runlevel):  # pylint: disable=unused-argument
     # TODO: Create a mapping of runlevels to  # pylint: disable=fixme
     #       corresponding Windows actions
 
-    return 'Not implemented on Windows at this time.'
+    return "Not implemented on Windows at this time."
 
 
 def poweroff(timeout=5, in_seconds=False):
-    '''
+    """
     Power off a running system.
 
     Args:
@@ -157,13 +142,17 @@ def poweroff(timeout=5, in_seconds=False):
     .. code-block:: bash
 
         salt '*' system.poweroff 5
-    '''
+    """
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disable=redefined-outer-name
-           only_on_pending_reboot=False):
-    '''
+def reboot(
+    timeout=5,
+    in_seconds=False,
+    wait_for_reboot=False,  # pylint: disable=redefined-outer-name
+    only_on_pending_reboot=False,
+):
+    """
     Reboot a running system.
 
     Args:
@@ -213,9 +202,13 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
               - name: system.reboot
               - only_on_pending_reboot: True
               - order: last
-    '''
-    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds,
-                   only_on_pending_reboot=only_on_pending_reboot)
+    """
+    ret = shutdown(
+        timeout=timeout,
+        reboot=True,
+        in_seconds=in_seconds,
+        only_on_pending_reboot=only_on_pending_reboot,
+    )
 
     if wait_for_reboot:
         seconds = _convert_minutes_seconds(timeout, in_seconds)
@@ -224,9 +217,15 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
     return ret
 
 
-def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint: disable=redefined-outer-name
-             in_seconds=False, only_on_pending_reboot=False):
-    '''
+def shutdown(
+    message=None,
+    timeout=5,
+    force_close=True,
+    reboot=False,  # pylint: disable=redefined-outer-name
+    in_seconds=False,
+    only_on_pending_reboot=False,
+):
+    """
     Shutdown a running system.
 
     Args:
@@ -287,32 +286,30 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     .. code-block:: bash
 
         salt '*' system.shutdown "System will shutdown in 5 minutes"
-    '''
-    if six.PY2:
-        message = _to_unicode(message)
-
+    """
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, six.string_types):
-        message = message.decode('utf-8')
+    if message and not isinstance(message, str):
+        message = message.decode("utf-8")
     try:
-        win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
-                                        force_close, reboot)
+        win32api.InitiateSystemShutdown(
+            "127.0.0.1", message, timeout, force_close, reboot
+        )
         return True
     except pywintypes.error as exc:
         (number, context, message) = exc.args
-        log.error('Failed to shutdown the system')
-        log.error('nbr: %s', number)
-        log.error('ctx: %s', context)
-        log.error('msg: %s', message)
+        log.error("Failed to shutdown the system")
+        log.error("nbr: %s", number)
+        log.error("ctx: %s", context)
+        log.error("msg: %s", message)
         return False
 
 
 def shutdown_hard():
-    '''
+    """
     Shutdown a running system with no timeout or warning.
 
     Returns:
@@ -323,12 +320,12 @@ def shutdown_hard():
     .. code-block:: bash
 
         salt '*' system.shutdown_hard
-    '''
+    """
     return shutdown(timeout=0)
 
 
 def shutdown_abort():
-    '''
+    """
     Abort a shutdown. Only available while the dialog box is being
     displayed to the user. Once the shutdown has initiated, it cannot be
     aborted.
@@ -341,21 +338,21 @@ def shutdown_abort():
     .. code-block:: bash
 
         salt 'minion-id' system.shutdown_abort
-    '''
+    """
     try:
-        win32api.AbortSystemShutdown('127.0.0.1')
+        win32api.AbortSystemShutdown("127.0.0.1")
         return True
     except pywintypes.error as exc:
         (number, context, message) = exc.args
-        log.error('Failed to abort system shutdown')
-        log.error('nbr: %s', number)
-        log.error('ctx: %s', context)
-        log.error('msg: %s', message)
+        log.error("Failed to abort system shutdown")
+        log.error("nbr: %s", number)
+        log.error("ctx: %s", context)
+        log.error("msg: %s", message)
         return False
 
 
 def lock():
-    '''
+    """
     Lock the workstation.
 
     Returns:
@@ -366,12 +363,12 @@ def lock():
     .. code-block:: bash
 
         salt 'minion-id' system.lock
-    '''
+    """
     return windll.user32.LockWorkStation()
 
 
 def set_computer_name(name):
-    '''
+    """
     Set the Windows computer name
 
     Args:
@@ -389,23 +386,21 @@ def set_computer_name(name):
     .. code-block:: bash
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
-    '''
-    if six.PY2:
-        name = _to_unicode(name)
-
+    """
     if windll.kernel32.SetComputerNameExW(
-            win32con.ComputerNamePhysicalDnsHostname, name):
-        ret = {'Computer Name': {'Current': get_computer_name()}}
+        win32con.ComputerNamePhysicalDnsHostname, name
+    ):
+        ret = {"Computer Name": {"Current": get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
-            ret['Computer Name']['Pending'] = pending
+            ret["Computer Name"]["Pending"] = pending
         return ret
 
     return False
 
 
 def get_pending_computer_name():
-    '''
+    """
     Get a pending computer name. If the computer name has been changed, and the
     change is pending a system reboot, this function will return the pending
     computer name. Otherwise, ``None`` will be returned. If there was an error
@@ -422,19 +417,12 @@ def get_pending_computer_name():
     .. code-block:: bash
 
         salt 'minion-id' system.get_pending_computer_name
-    '''
-    current = get_computer_name()
-    pending = __salt__['reg.read_value'](
-                'HKLM',
-                r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
-                'NV Hostname')['vdata']
-    if pending:
-        return pending if pending != current else None
-    return False
+    """
+    return salt.utils.win_system.get_pending_computer_name()
 
 
 def get_computer_name():
-    '''
+    """
     Get the Windows computer name
 
     Returns:
@@ -445,13 +433,12 @@ def get_computer_name():
     .. code-block:: bash
 
         salt 'minion-id' system.get_computer_name
-    '''
-    name = win32api.GetComputerNameEx(win32con.ComputerNamePhysicalDnsHostname)
-    return name if name else False
+    """
+    return salt.utils.win_system.get_computer_name()
 
 
 def set_computer_desc(desc=None):
-    '''
+    """
     Set the Windows computer description
 
     Args:
@@ -467,10 +454,7 @@ def set_computer_desc(desc=None):
     .. code-block:: bash
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
-    '''
-    if six.PY2:
-        desc = _to_unicode(desc)
-
+    """
     # Make sure the system exists
     # Return an object containing current information array for the computer
     system_info = win32net.NetServerGetInfo(None, 101)
@@ -479,28 +463,37 @@ def set_computer_desc(desc=None):
     if desc is None:
         return False
 
-    system_info['comment'] = desc
+    system_info["comment"] = desc
 
     # Apply new settings
     try:
         win32net.NetServerSetInfo(None, 101, system_info)
     except win32net.error as exc:
         (number, context, message) = exc.args
-        log.error('Failed to update system')
-        log.error('nbr: %s', number)
-        log.error('ctx: %s', context)
-        log.error('msg: %s', message)
+        log.error("Failed to update system")
+        log.error("nbr: %s", number)
+        log.error("ctx: %s", context)
+        log.error("msg: %s", message)
         return False
 
-    return {'Computer Description': get_computer_desc()}
+    return {"Computer Description": get_computer_desc()}
 
 
-set_computer_description = salt.utils.functools.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+set_computer_description = salt.utils.functools.alias_function(
+    set_computer_desc, "set_computer_description"
+)
+# pylint: enable=invalid-name
 
 
 def get_system_info():
-    '''
+    """
     Get system information.
+
+    .. note::
+
+        Not all system info is available across all versions of Windows. If it
+        is not available on an older version, it will be skipped
 
     Returns:
         dict: Dictionary containing information about the system to include
@@ -511,49 +504,149 @@ def get_system_info():
     .. code-block:: bash
 
         salt 'minion-id' system.get_system_info
-    '''
-    os_type = {1: 'Work Station',
-               2: 'Domain Controller',
-               3: 'Server'}
+    """
+
+    def byte_calc(val):
+        val = float(val)
+        if val < 2**10:
+            return f"{val:.3f}B"
+        elif val < 2**20:
+            return f"{val / 2**10:.3f}KB"
+        elif val < 2**30:
+            return f"{val / 2**20:.3f}MB"
+        elif val < 2**40:
+            return f"{val / 2**30:.3f}GB"
+        else:
+            return f"{val / 2**40:.3f}TB"
+
+    # Lookup dicts for Win32_OperatingSystem
+    os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}
+    # lookup dicts for Win32_ComputerSystem
+    domain_role = {
+        0: "Standalone Workstation",
+        1: "Member Workstation",
+        2: "Standalone Server",
+        3: "Member Server",
+        4: "Backup Domain Controller",
+        5: "Primary Domain Controller",
+    }
+    warning_states = {
+        1: "Other",
+        2: "Unknown",
+        3: "Safe",
+        4: "Warning",
+        5: "Critical",
+        6: "Non-recoverable",
+    }
+    pc_system_types = {
+        0: "Unspecified",
+        1: "Desktop",
+        2: "Mobile",
+        3: "Workstation",
+        4: "Enterprise Server",
+        5: "SOHO Server",
+        6: "Appliance PC",
+        7: "Performance Server",
+        8: "Maximum",
+    }
+
+    # Connect to WMI
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    system = conn.Win32_OperatingSystem()[0]
-    ret = {'name': get_computer_name(),
-           'description': system.Description,
-           'install_date': system.InstallDate,
-           'last_boot': system.LastBootUpTime,
-           'os_manufacturer': system.Manufacturer,
-           'os_name': system.Caption,
-           'users': system.NumberOfUsers,
-           'organization': system.Organization,
-           'os_architecture': system.OSArchitecture,
-           'primary': system.Primary,
-           'os_type': os_type[system.ProductType],
-           'registered_user': system.RegisteredUser,
-           'system_directory': system.SystemDirectory,
-           'system_drive': system.SystemDrive,
-           'os_version': system.Version,
-           'windows_directory': system.WindowsDirectory}
-    system = conn.Win32_ComputerSystem()[0]
-    ret.update({'hardware_manufacturer': system.Manufacturer,
-                'hardware_model': system.Model,
-                'processors': system.NumberOfProcessors,
-                'processors_logical': system.NumberOfLogicalProcessors,
-                'system_type': system.SystemType})
-    system = conn.Win32_BIOS()[0]
-    ret.update({'hardware_serial': system.SerialNumber,
-                'bios_manufacturer': system.Manufacturer,
-                'bios_version': system.Version,
-                'bios_details': system.BIOSVersion,
-                'bios_caption': system.Caption,
-                'bios_description': system.Description})
-    ret['install_date'] = _convert_date_time_string(ret['install_date'])
-    ret['last_boot'] = _convert_date_time_string(ret['last_boot'])
+
+        system = conn.Win32_OperatingSystem()[0]
+        ret = {
+            "name": get_computer_name(),
+            "description": system.Description,
+            "install_date": system.InstallDate,
+            "last_boot": system.LastBootUpTime,
+            "os_manufacturer": system.Manufacturer,
+            "os_name": system.Caption,
+            "users": system.NumberOfUsers,
+            "organization": system.Organization,
+            "os_architecture": system.OSArchitecture,
+            "primary": system.Primary,
+            "os_type": os_type[system.ProductType],
+            "registered_user": system.RegisteredUser,
+            "system_directory": system.SystemDirectory,
+            "system_drive": system.SystemDrive,
+            "os_version": system.Version,
+            "windows_directory": system.WindowsDirectory,
+        }
+        # Must get chassis_sku_number this way for backwards compatibility
+        # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+        product = conn.Win32_ComputerSystemProduct()[0]
+        ret.update({"chassis_sku_number": product.SKUNumber})
+        system = conn.Win32_ComputerSystem()[0]
+        # Get pc_system_type depending on Windows version
+        if platform.release() in ["Vista", "7", "8"]:
+            # Types for Vista, 7, and 8
+            pc_system_type = pc_system_types[system.PCSystemType]
+        else:
+            # New types were added with 8.1 and newer
+            pc_system_types.update({8: "Slate", 9: "Maximum"})
+            pc_system_type = pc_system_types[system.PCSystemType]
+        ret.update(
+            {
+                "bootup_state": system.BootupState,
+                "caption": system.Caption,
+                "chassis_bootup_state": warning_states[system.ChassisBootupState],
+                "dns_hostname": system.DNSHostname,
+                "domain": system.Domain,
+                "domain_role": domain_role[system.DomainRole],
+                "hardware_manufacturer": system.Manufacturer,
+                "hardware_model": system.Model,
+                "network_server_mode_enabled": system.NetworkServerModeEnabled,
+                "part_of_domain": system.PartOfDomain,
+                "pc_system_type": pc_system_type,
+                "power_state": system.PowerState,
+                "status": system.Status,
+                "system_type": system.SystemType,
+                "total_physical_memory": byte_calc(system.TotalPhysicalMemory),
+                "total_physical_memory_raw": system.TotalPhysicalMemory,
+                "thermal_state": warning_states[system.ThermalState],
+                "workgroup": system.Workgroup,
+            }
+        )
+        # Get processor information
+        processors = conn.Win32_Processor()
+        ret["processors"] = 0
+        ret["processors_logical"] = 0
+        ret["processor_cores"] = 0
+        ret["processor_cores_enabled"] = 0
+        ret["processor_manufacturer"] = processors[0].Manufacturer
+        ret["processor_max_clock_speed"] = str(processors[0].MaxClockSpeed) + "MHz"
+        for processor in processors:
+            ret["processors"] += 1
+            ret["processors_logical"] += processor.NumberOfLogicalProcessors
+            ret["processor_cores"] += processor.NumberOfCores
+            # Older versions of Windows do not have the NumberOfEnabledCore
+            # property. In that case, we'll just skip it
+            try:
+                ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            except (AttributeError, TypeError):
+                pass
+        if ret["processor_cores_enabled"] == 0:
+            ret.pop("processor_cores_enabled", False)
+
+        bios = conn.Win32_BIOS()[0]
+        ret.update(
+            {
+                "hardware_serial": bios.SerialNumber,
+                "bios_manufacturer": bios.Manufacturer,
+                "bios_version": bios.Version,
+                "bios_details": bios.BIOSVersion,
+                "bios_caption": bios.Caption,
+                "bios_description": bios.Description,
+            }
+        )
+        ret["install_date"] = _convert_date_time_string(ret["install_date"])
+        ret["last_boot"] = _convert_date_time_string(ret["last_boot"])
     return ret
 
 
 def get_computer_desc():
-    '''
+    """
     Get the Windows computer description
 
     Returns:
@@ -565,16 +658,20 @@ def get_computer_desc():
     .. code-block:: bash
 
         salt 'minion-id' system.get_computer_desc
-    '''
-    desc = get_system_info()['description']
+    """
+    desc = get_system_info()["description"]
     return False if desc is None else desc
 
 
-get_computer_description = salt.utils.functools.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+get_computer_description = salt.utils.functools.alias_function(
+    get_computer_desc, "get_computer_description"
+)
+# pylint: enable=invalid-name
 
 
 def get_hostname():
-    '''
+    """
     Get the hostname of the windows minion
 
     .. versionadded:: 2016.3.0
@@ -587,14 +684,14 @@ def get_hostname():
     .. code-block:: bash
 
         salt 'minion-id' system.get_hostname
-    '''
-    cmd = 'hostname'
-    ret = __salt__['cmd.run'](cmd=cmd)
+    """
+    cmd = "hostname"
+    ret = __salt__["cmd.run"](cmd=cmd)
     return ret
 
 
 def set_hostname(hostname):
-    '''
+    """
     Set the hostname of the windows minion, requires a restart before this will
     be updated.
 
@@ -611,21 +708,22 @@ def set_hostname(hostname):
     .. code-block:: bash
 
         salt 'minion-id' system.set_hostname newhostname
-    '''
-    curr_hostname = get_hostname()
-    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
-    ret = __salt__['cmd.run'](cmd=cmd)
+    """
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+        return comp.Rename(Name=hostname)
 
-    return "successful" in ret
 
-
-def join_domain(domain,
-                username=None,
-                password=None,
-                account_ou=None,
-                account_exists=False,
-                restart=False):
-    '''
+def join_domain(
+    domain,
+    username=None,
+    password=None,
+    account_ou=None,
+    account_exists=False,
+    restart=False,
+):
+    """
     Join a computer to an Active Directory domain. Requires a reboot.
 
     Args:
@@ -657,7 +755,7 @@ def join_domain(domain,
             ``True`` will restart the computer after a successful join. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
@@ -670,48 +768,44 @@ def join_domain(domain,
                          username='joinuser' password='joinpassword' \\
                          account_ou='ou=clients,ou=org,dc=domain,dc=tld' \\
                          account_exists=False, restart=True
-    '''
-    if six.PY2:
-        domain = _to_unicode(domain)
-        username = _to_unicode(username)
-        password = _to_unicode(password)
-        account_ou = _to_unicode(account_ou)
-
+    """
     status = get_domain_workgroup()
-    if 'Domain' in status:
-        if status['Domain'] == domain:
-            return 'Already joined to {0}'.format(domain)
+    if "Domain" in status:
+        if status["Domain"] == domain:
+            return f"Already joined to {domain}"
 
-    if username and '\\' not in username and '@' not in username:
-        username = '{0}@{1}'.format(username, domain)
+    if username and "\\" not in username and "@" not in username:
+        username = f"{username}@{domain}"
 
     if username and password is None:
-        return 'Must specify a password if you pass a username'
+        return "Must specify a password if you pass a username"
 
     # remove any escape characters
-    if isinstance(account_ou, six.string_types):
-        account_ou = account_ou.split('\\')
-        account_ou = ''.join(account_ou)
+    if isinstance(account_ou, str):
+        account_ou = account_ou.split("\\")
+        account_ou = "".join(account_ou)
 
-    err = _join_domain(domain=domain, username=username, password=password,
-                       account_ou=account_ou, account_exists=account_exists)
+    err = _join_domain(
+        domain=domain,
+        username=username,
+        password=password,
+        account_ou=account_ou,
+        account_exists=account_exists,
+    )
 
     if not err:
-        ret = {'Domain': domain,
-               'Restart': False}
+        ret = {"Domain": domain, "Restart": False}
         if restart:
-            ret['Restart'] = reboot()
+            ret["Restart"] = reboot()
         return ret
 
     raise CommandExecutionError(win32api.FormatMessage(err).rstrip())
 
 
-def _join_domain(domain,
-                 username=None,
-                 password=None,
-                 account_ou=None,
-                 account_exists=False):
-    '''
+def _join_domain(
+    domain, username=None, password=None, account_ou=None, account_exists=False
+):
+    """
     Helper function to join the domain.
 
     Args:
@@ -735,14 +829,7 @@ def _join_domain(domain,
 
     Returns:
         int:
-
-    :param domain:
-    :param username:
-    :param password:
-    :param account_ou:
-    :param account_exists:
-    :return:
-    '''
+    """
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
     NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20  # pylint: disable=invalid-name
@@ -757,24 +844,30 @@ def _join_domain(domain,
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
 
-    # Return the results of the command as an error
-    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
-    # (0,) so return the first item
-    return comp.JoinDomainOrWorkgroup(
-        Name=domain, Password=password, UserName=username, AccountOU=account_ou,
-        FJoinOptions=join_options)[0]
+        # Return the results of the command as an error
+        # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+        # (0,) so return the first item
+        return comp.JoinDomainOrWorkgroup(
+            Name=domain,
+            Password=password,
+            UserName=username,
+            AccountOU=account_ou,
+            FJoinOptions=join_options,
+        )[0]
 
 
-def unjoin_domain(username=None,
-                  password=None,
-                  domain=None,
-                  workgroup='WORKGROUP',
-                  disable=False,
-                  restart=False):
+def unjoin_domain(
+    username=None,
+    password=None,
+    domain=None,
+    workgroup="WORKGROUP",
+    disable=False,
+    restart=False,
+):
     # pylint: disable=anomalous-backslash-in-string
-    '''
+    """
     Unjoin a computer from an Active Directory Domain. Requires a restart.
 
     Args:
@@ -796,7 +889,7 @@ def unjoin_domain(username=None,
         workgroup (str):
             The workgroup to join the computer to. Default is ``WORKGROUP``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
         disable (bool):
             ``True`` to disable the computer account in Active Directory.
@@ -806,7 +899,7 @@ def unjoin_domain(username=None,
             ``True`` will restart the computer after successful unjoin. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
@@ -820,26 +913,21 @@ def unjoin_domain(username=None,
         salt 'minion-id' system.unjoin_domain username='unjoinuser' \\
                          password='unjoinpassword' disable=True \\
                          restart=True
-    '''
+    """
     # pylint: enable=anomalous-backslash-in-string
-    if six.PY2:
-        username = _to_unicode(username)
-        password = _to_unicode(password)
-        domain = _to_unicode(domain)
-
     status = get_domain_workgroup()
-    if 'Workgroup' in status:
-        if status['Workgroup'] == workgroup:
-            return 'Already joined to {0}'.format(workgroup)
+    if "Workgroup" in status:
+        if status["Workgroup"] == workgroup:
+            return f"Already joined to {workgroup}"
 
-    if username and '\\' not in username and '@' not in username:
+    if username and "\\" not in username and "@" not in username:
         if domain:
-            username = '{0}@{1}'.format(username, domain)
+            username = f"{username}@{domain}"
         else:
-            return 'Must specify domain if not supplied in username'
+            return "Must specify domain if not supplied in username"
 
     if username and password is None:
-        return 'Must specify a password if you pass a username'
+        return "Must specify a password if you pass a username"
 
     NETSETUP_ACCT_DELETE = 0x4  # pylint: disable=invalid-name
 
@@ -849,34 +937,33 @@ def unjoin_domain(username=None,
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
-    err = comp.UnjoinDomainOrWorkgroup(Password=password,
-                                       UserName=username,
-                                       FUnjoinOptions=unjoin_options)
+        comp = conn.Win32_ComputerSystem()[0]
+        err = comp.UnjoinDomainOrWorkgroup(
+            Password=password, UserName=username, FUnjoinOptions=unjoin_options
+        )
 
-    # you have to do this because UnjoinDomainOrWorkgroup returns a
-    # strangely formatted value that looks like (0,)
-    if not err[0]:
-        err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+        # you have to do this because UnjoinDomainOrWorkgroup returns a
+        # strangely formatted value that looks like (0,)
         if not err[0]:
-            ret = {'Workgroup': workgroup,
-                   'Restart': False}
-            if restart:
-                ret['Restart'] = reboot()
+            err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+            if not err[0]:
+                ret = {"Workgroup": workgroup, "Restart": False}
+                if restart:
+                    ret["Restart"] = reboot()
 
-            return ret
+                return ret
+            else:
+                log.error(win32api.FormatMessage(err[0]).rstrip())
+                log.error("Failed to unjoin the computer from %s", workgroup)
+                return False
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error('Failed to join the computer to %s', workgroup)
+            log.error("Failed to unjoin computer from %s", status["Domain"])
             return False
-    else:
-        log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error('Failed to unjoin computer from %s', status['Domain'])
-        return False
 
 
 def get_domain_workgroup():
-    '''
+    """
     Get the domain or workgroup the computer belongs to.
 
     .. versionadded:: 2015.5.7
@@ -890,18 +977,45 @@ def get_domain_workgroup():
     .. code-block:: bash
 
         salt 'minion-id' system.get_domain_workgroup
-    '''
+    """
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    for computer in conn.Win32_ComputerSystem():
-        if computer.PartOfDomain:
-            return {'Domain': computer.Domain}
-        else:
-            return {'Workgroup': computer.Domain}
+        for computer in conn.Win32_ComputerSystem():
+            if computer.PartOfDomain:
+                return {"Domain": computer.Domain}
+            else:
+                return {"Workgroup": computer.Domain}
+
+
+def set_domain_workgroup(workgroup):
+    """
+    Set the domain or workgroup the computer belongs to.
+
+    .. versionadded:: 3001
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_domain_workgroup LOCAL
+    """
+    # Initialize COM
+    with salt.utils.winapi.Com():
+        # Grab the first Win32_ComputerSystem object from wmi
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+
+        # Now we can join the new workgroup
+        res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
+
+    return True if not res[0] else False
 
 
 def _try_parse_datetime(time_str, fmts):
-    '''
+    """
     A helper function that attempts to parse the input time_str as a date.
 
     Args:
@@ -912,7 +1026,7 @@ def _try_parse_datetime(time_str, fmts):
 
     Returns:
         datetime: Returns a datetime object if parsed properly, otherwise None
-    '''
+    """
     result = None
     for fmt in fmts:
         try:
@@ -924,7 +1038,7 @@ def _try_parse_datetime(time_str, fmts):
 
 
 def get_system_time():
-    '''
+    """
     Get the system time.
 
     Returns:
@@ -935,22 +1049,22 @@ def get_system_time():
     .. code-block:: bash
 
         salt 'minion-id' system.get_system_time
-    '''
+    """
     now = win32api.GetLocalTime()
-    meridian = 'AM'
+    meridian = "AM"
     hours = int(now[4])
     if hours == 12:
-        meridian = 'PM'
+        meridian = "PM"
     elif hours == 0:
         hours = 12
     elif hours > 12:
         hours = hours - 12
-        meridian = 'PM'
-    return '{0:02d}:{1:02d}:{2:02d} {3}'.format(hours, now[5], now[6], meridian)
+        meridian = "PM"
+    return f"{hours:02d}:{now[5]:02d}:{now[6]:02d} {meridian}"
 
 
 def set_system_time(newtime):
-    '''
+    """
     Set the system time.
 
     Args:
@@ -971,26 +1085,23 @@ def set_system_time(newtime):
     .. code-block:: bash
 
         salt 'minion-id' system.set_system_time 12:01
-    '''
+    """
     # Get date/time object from newtime
-    fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']
+    fmts = ["%I:%M:%S %p", "%I:%M %p", "%H:%M:%S", "%H:%M"]
     dt_obj = _try_parse_datetime(newtime, fmts)
     if dt_obj is None:
         return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(hours=dt_obj.hour,
-                                minutes=dt_obj.minute,
-                                seconds=dt_obj.second)
+    return set_system_date_time(
+        hours=dt_obj.hour, minutes=dt_obj.minute, seconds=dt_obj.second
+    )
 
 
-def set_system_date_time(years=None,
-                         months=None,
-                         days=None,
-                         hours=None,
-                         minutes=None,
-                         seconds=None):
-    '''
+def set_system_date_time(
+    years=None, months=None, days=None, hours=None, minutes=None, seconds=None
+):
+    """
     Set the system date and time. Each argument is an element of the date, but
     not required. If an element is not passed, the current system value for that
     element will be used. For example, if you don't pass the year, the current
@@ -1013,16 +1124,16 @@ def set_system_date_time(years=None,
     .. code-block:: bash
 
         salt '*' system.set_system_date_ time 2015 5 12 11 37 53
-    '''
+    """
     # Get the current date/time
     try:
         date_time = win32api.GetLocalTime()
     except win32api.error as exc:
         (number, context, message) = exc.args
-        log.error('Failed to get local time')
-        log.error('nbr: %s', number)
-        log.error('ctx: %s', context)
-        log.error('msg: %s', message)
+        log.error("Failed to get local time")
+        log.error("nbr: %s", number)
+        log.error("ctx: %s", context)
+        log.error("msg: %s", message)
         return False
 
     # Check for passed values. If not passed, use current values
@@ -1040,38 +1151,42 @@ def set_system_date_time(years=None,
         seconds = date_time[6]
 
     try:
+
         class SYSTEMTIME(ctypes.Structure):
             _fields_ = [
-                ('wYear', ctypes.c_int16),
-                ('wMonth', ctypes.c_int16),
-                ('wDayOfWeek', ctypes.c_int16),
-                ('wDay', ctypes.c_int16),
-                ('wHour', ctypes.c_int16),
-                ('wMinute', ctypes.c_int16),
-                ('wSecond', ctypes.c_int16),
-                ('wMilliseconds', ctypes.c_int16)]
+                ("wYear", ctypes.c_int16),
+                ("wMonth", ctypes.c_int16),
+                ("wDayOfWeek", ctypes.c_int16),
+                ("wDay", ctypes.c_int16),
+                ("wHour", ctypes.c_int16),
+                ("wMinute", ctypes.c_int16),
+                ("wSecond", ctypes.c_int16),
+                ("wMilliseconds", ctypes.c_int16),
+            ]
+
         system_time = SYSTEMTIME()
+        # pylint: disable=invalid-name
         system_time.wYear = int(years)
         system_time.wMonth = int(months)
         system_time.wDay = int(days)
         system_time.wHour = int(hours)
         system_time.wMinute = int(minutes)
         system_time.wSecond = int(seconds)
+        # pylint: enable=invalid-name
         system_time_ptr = ctypes.pointer(system_time)
         succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
-        if succeeded is not 0:
+        if succeeded != 0:
             return True
         else:
-            log.error('Failed to set local time')
-            raise CommandExecutionError(
-                win32api.FormatMessage(succeeded).rstrip())
+            log.error("Failed to set local time")
+            raise CommandExecutionError(win32api.FormatMessage(succeeded).rstrip())
     except OSError as err:
-        log.error('Failed to set local time')
+        log.error("Failed to set local time")
         raise CommandExecutionError(err)
 
 
 def get_system_date():
-    '''
+    """
     Get the Windows system date
 
     Returns:
@@ -1082,13 +1197,13 @@ def get_system_date():
     .. code-block:: bash
 
         salt '*' system.get_system_date
-    '''
+    """
     now = win32api.GetLocalTime()
-    return '{0:02d}/{1:02d}/{2:04d}'.format(now[1], now[3], now[0])
+    return f"{now[1]:02d}/{now[3]:02d}/{now[0]:04d}"
 
 
 def set_system_date(newdate):
-    '''
+    """
     Set the Windows system date. Use <mm-dd-yy> format for the date.
 
     Args:
@@ -1110,22 +1225,19 @@ def set_system_date(newdate):
     .. code-block:: bash
 
         salt '*' system.set_system_date '03-28-13'
-    '''
-    fmts = ['%Y-%m-%d', '%m-%d-%Y', '%m-%d-%y',
-            '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d']
+    """
+    fmts = ["%Y-%m-%d", "%m-%d-%Y", "%m-%d-%y", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d"]
     # Get date/time object from newdate
     dt_obj = _try_parse_datetime(newdate, fmts)
     if dt_obj is None:
         return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(years=dt_obj.year,
-                                months=dt_obj.month,
-                                days=dt_obj.day)
+    return set_system_date_time(years=dt_obj.year, months=dt_obj.month, days=dt_obj.day)
 
 
 def start_time_service():
-    '''
+    """
     Start the Windows time service
 
     Returns:
@@ -1136,12 +1248,12 @@ def start_time_service():
     .. code-block:: bash
 
         salt '*' system.start_time_service
-    '''
-    return __salt__['service.start']('w32time')
+    """
+    return __salt__["service.start"]("w32time")
 
 
 def stop_time_service():
-    '''
+    """
     Stop the Windows time service
 
     Returns:
@@ -1152,12 +1264,12 @@ def stop_time_service():
     .. code-block:: bash
 
         salt '*' system.stop_time_service
-    '''
-    return __salt__['service.stop']('w32time')
+    """
+    return __salt__["service.stop"]("w32time")
 
 
 def get_pending_component_servicing():
-    '''
+    """
     Determine whether there are pending Component Based Servicing tasks that
     require a reboot.
 
@@ -1172,21 +1284,12 @@ def get_pending_component_servicing():
     .. code-block:: bash
 
         salt '*' system.get_pending_component_servicing
-    '''
-    key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
-
-    # So long as the registry key exists, a reboot is pending.
-    if __utils__['reg.key_exists']('HKLM', key):
-        log.debug('Key exists: %s', key)
-        return True
-    else:
-        log.debug('Key does not exist: %s', key)
-
-    return False
+    """
+    return salt.utils.win_system.get_pending_component_servicing()
 
 
 def get_pending_domain_join():
-    '''
+    """
     Determine whether there is a pending domain join action that requires a
     reboot.
 
@@ -1201,30 +1304,12 @@ def get_pending_domain_join():
     .. code-block:: bash
 
         salt '*' system.get_pending_domain_join
-    '''
-    base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
-    avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
-    join_key = r'{0}\JoinDomain'.format(base_key)
-
-    # If either the avoid_key or join_key is present,
-    # then there is a reboot pending.
-    if __utils__['reg.key_exists']('HKLM', avoid_key):
-        log.debug('Key exists: %s', avoid_key)
-        return True
-    else:
-        log.debug('Key does not exist: %s', avoid_key)
-
-    if __utils__['reg.key_exists']('HKLM', join_key):
-        log.debug('Key exists: %s', join_key)
-        return True
-    else:
-        log.debug('Key does not exist: %s', join_key)
-
-    return False
+    """
+    return salt.utils.win_system.get_pending_domain_join()
 
 
 def get_pending_file_rename():
-    '''
+    """
     Determine whether there are pending file rename operations that require a
     reboot.
 
@@ -1239,28 +1324,12 @@ def get_pending_file_rename():
     .. code-block:: bash
 
         salt '*' system.get_pending_file_rename
-    '''
-    vnames = ('PendingFileRenameOperations', 'PendingFileRenameOperations2')
-    key = r'SYSTEM\CurrentControlSet\Control\Session Manager'
-
-    # If any of the value names exist and have value data set,
-    # then a reboot is pending.
-
-    for vname in vnames:
-        reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
-        if reg_ret['success']:
-            log.debug('Found key: %s', key)
-
-            if reg_ret['vdata'] and (reg_ret['vdata'] != '(value not set)'):
-                return True
-        else:
-            log.debug('Unable to access key: %s', key)
-    return False
+    """
+    return salt.utils.win_system.get_pending_file_rename()
 
 
 def get_pending_servermanager():
-    '''
+    """
     Determine whether there are pending Server Manager tasks that require a
     reboot.
 
@@ -1275,31 +1344,12 @@ def get_pending_servermanager():
     .. code-block:: bash
 
         salt '*' system.get_pending_servermanager
-    '''
-    vname = 'CurrentRebootAttempts'
-    key = r'SOFTWARE\Microsoft\ServerManager'
-
-    # There are situations where it's possible to have '(value not set)' as
-    # the value data, and since an actual reboot won't be pending in that
-    # instance, just catch instances where we try unsuccessfully to cast as int.
-
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
-
-        try:
-            if int(reg_ret['vdata']) > 0:
-                return True
-        except ValueError:
-            pass
-    else:
-        log.debug('Unable to access key: %s', key)
-    return False
+    """
+    return salt.utils.win_system.get_pending_servermanager()
 
 
 def get_pending_update():
-    '''
+    """
     Determine whether there are pending updates that require a reboot.
 
     .. versionadded:: 2016.11.0
@@ -1312,27 +1362,12 @@ def get_pending_update():
     .. code-block:: bash
 
         salt '*' system.get_pending_update
-    '''
-    key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
-
-    # So long as the registry key exists, a reboot is pending.
-    if __utils__['reg.key_exists']('HKLM', key):
-        log.debug('Key exists: %s', key)
-        return True
-    else:
-        log.debug('Key does not exist: %s', key)
-
-    return False
-
-
-MINION_VOLATILE_KEY = r'SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data'
-
-
-REBOOT_REQUIRED_NAME = 'Reboot required'
+    """
+    return salt.utils.win_system.get_pending_update()
 
 
 def set_reboot_required_witnessed():
-    r'''
+    r"""
     This function is used to remember that an event indicating that a reboot is
     required was witnessed. This function relies on the salt-minion's ability to
     create the following volatile registry key in the *HKLM* hive:
@@ -1357,17 +1392,12 @@ def set_reboot_required_witnessed():
     .. code-block:: bash
 
         salt '*' system.set_reboot_required_witnessed
-    '''
-    return __salt__['reg.set_value'](hive='HKLM',
-                                     key=MINION_VOLATILE_KEY,
-                                     volatile=True,
-                                     vname=REBOOT_REQUIRED_NAME,
-                                     vdata=1,
-                                     vtype='REG_DWORD')
+    """
+    return salt.utils.win_system.set_reboot_required_witnessed()
 
 
 def get_reboot_required_witnessed():
-    '''
+    """
     Determine if at any time during the current boot session the salt minion
     witnessed an event indicating that a reboot is required.
 
@@ -1387,15 +1417,12 @@ def get_reboot_required_witnessed():
 
         salt '*' system.get_reboot_required_witnessed
 
-    '''
-    value_dict = __salt__['reg.read_value'](hive='HKLM',
-                                            key=MINION_VOLATILE_KEY,
-                                            vname=REBOOT_REQUIRED_NAME)
-    return value_dict['vdata'] == 1
+    """
+    return salt.utils.win_system.get_reboot_required_witnessed()
 
 
 def get_pending_reboot():
-    '''
+    """
     Determine whether there is a reboot pending.
 
     .. versionadded:: 2016.11.0
@@ -1408,19 +1435,47 @@ def get_pending_reboot():
     .. code-block:: bash
 
         salt '*' system.get_pending_reboot
-    '''
+    """
+    return salt.utils.win_system.get_pending_reboot()
 
-    # Order the checks for reboot pending in most to least likely.
-    checks = (get_pending_update,
-              get_pending_file_rename,
-              get_pending_servermanager,
-              get_pending_component_servicing,
-              get_reboot_required_witnessed,
-              get_pending_computer_name,
-              get_pending_domain_join)
 
-    for check in checks:
-        if check():
-            return True
+def get_pending_reboot_details():
+    """
+    Determine which check is signalling that the system is pending a reboot.
+    Useful in determining why your system is signalling that it needs a reboot.
 
-    return False
+    .. versionadded:: 3001
+
+    Returns:
+        dict: A dictionary of the results of each system that would indicate a
+        pending reboot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_reboot_details
+    """
+    return salt.utils.win_system.get_pending_reboot_details()
+
+
+def get_pending_windows_update():
+    """
+    Check the Windows Update system for a pending reboot state.
+
+    This leverages the Windows Update System to determine if the system is
+    pending a reboot.
+
+    .. versionadded:: 3001
+
+    Returns:
+        bool: ``True`` if the Windows Update system reports a pending update,
+        otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_windows_update
+    """
+    return salt.utils.win_system.get_pending_windows_update()

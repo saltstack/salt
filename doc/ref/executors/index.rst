@@ -59,7 +59,8 @@ the ``execute`` function with the following signature:
 
 .. code-block:: python
 
-    def execute(opts, data, func, args, kwargs)
+    def execute(opts, data, func, args, kwargs):
+        ...
 
 Where the args are:
 
@@ -69,7 +70,7 @@ Where the args are:
   Dictionary containing the load data including ``executor_opts`` passed via
   cmdline/API.
 ``func``, ``args``, ``kwargs``:
-  Execution module function to be executed and it's arguments. For instance the
+  Execution module function to be executed and its arguments. For instance the
   simplest ``direct_call`` executor just runs it as ``func(*args, **kwargs)``.
 ``Returns``:
   ``None`` if the execution sequence must be continued with the next executor.
@@ -83,3 +84,7 @@ option set by commandline or API ``data.get('executor_opts',
 {}).get('splaytime')`` should be used. So if an option is safe and must be
 accessible by user executor should check it in both places, but if an option is
 unsafe it should be read from the only config ignoring the passed request data.
+
+There is also a function named ``all_missing_func`` which the name of the
+``func`` is passed, which can be used to verify if the command should still be
+run, even if it is not loaded in minion_mods.

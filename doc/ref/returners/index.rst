@@ -74,19 +74,17 @@ Other optional functions can be included to add support for
     import redis
     import salt.utils.json
 
+
     def returner(ret):
-        '''
+        """
         Return information to a redis server
-        '''
+        """
         # Get a redis connection
-        serv = redis.Redis(
-            host='redis-serv.example.com',
-            port=6379,
-            db='0')
-        serv.sadd("%(id)s:jobs" % ret, ret['jid'])
-        serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret['return']))
-        serv.sadd('jobs', ret['jid'])
-        serv.sadd(ret['jid'], ret['id'])
+        serv = redis.Redis(host="redis-serv.example.com", port=6379, db="0")
+        serv.sadd("%(id)s:jobs" % ret, ret["jid"])
+        serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret["return"]))
+        serv.sadd("jobs", ret["jid"])
+        serv.sadd(ret["jid"], ret["id"])
 
 The above example of a returner set to send the data to a Redis server
 serializes the data as JSON and sets it in redis.
@@ -97,11 +95,8 @@ Using Custom Returner Modules
 Place custom returners in a ``_returners/`` directory within the
 :conf_master:`file_roots` specified by the master config file.
 
-Custom returners are distributed when any of the following are called:
-
-- :mod:`state.apply <salt.modules.state.apply_>`
-- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
-- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+Like all custom modules, these must be synced to the relevant master or minion
+before they can be used. See :ref:`modular-systems` for details.
 
 Any custom returners which have been synced to a minion that are named the
 same as one of Salt's default set of returners will take the place of the
@@ -120,11 +115,13 @@ loaded as simply ``redis``:
 
     try:
         import redis
+
         HAS_REDIS = True
     except ImportError:
         HAS_REDIS = False
 
-    __virtualname__ = 'redis'
+    __virtualname__ = "redis"
+
 
     def __virtual__():
         if not HAS_REDIS:
@@ -147,16 +144,16 @@ must implement the following functions:
 ``prep_jid``
     Ensures that job ids (jid) don't collide, unless passed_jid is provided.
 
-    ``nochache`` is an optional boolean that indicates if return data
+    ``nocache`` is an optional boolean that indicates if return data
     should be cached. ``passed_jid`` is a caller provided jid which should be
     returned unconditionally.
 
 .. code-block:: python
 
     def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
-        '''
+        """
         Do any work necessary to prepare a JID, including sending a custom id
-        '''
+        """
         return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 ``save_load``
@@ -171,26 +168,27 @@ must implement the following functions:
 
     import salt.utils.json
 
+
     def save_load(jid, load, minions=None):
-        '''
+        """
         Save the load to the specified jid id
-        '''
-        query = '''INSERT INTO salt.jids (
+        """
+        query = """INSERT INTO salt.jids (
                      jid, load
                    ) VALUES (
                      '{0}', '{1}'
-                   );'''.format(jid, salt.utils.json.dumps(load))
+                   );""".format(
+            jid, salt.utils.json.dumps(load)
+        )
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
         try:
-            __salt__['cassandra_cql.cql_query'](query)
+            __salt__["cassandra_cql.cql_query"](query)
         except CommandExecutionError:
-            log.critical('Could not save load in jids table.')
+            log.critical("Could not save load in jids table.")
             raise
         except Exception as e:
-            log.critical(
-                'Unexpected error while inserting into jids: {0}'.format(e)
-            )
+            log.critical("Unexpected error while inserting into jids: {0}".format(e))
             raise
 
 
@@ -201,26 +199,30 @@ must implement the following functions:
 .. code-block:: python
 
     def get_load(jid):
-        '''
+        """
         Return the load data that marks a specified jid
-        '''
-        query = '''SELECT load FROM salt.jids WHERE jid = '{0}';'''.format(jid)
+        """
+        query = """SELECT load FROM salt.jids WHERE jid = '{0}';""".format(jid)
 
         ret = {}
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
         try:
-            data = __salt__['cassandra_cql.cql_query'](query)
+            data = __salt__["cassandra_cql.cql_query"](query)
             if data:
-                load = data[0].get('load')
+                load = data[0].get("load")
                 if load:
                     ret = json.loads(load)
         except CommandExecutionError:
-            log.critical('Could not get load from jids table.')
+            log.critical("Could not get load from jids table.")
             raise
         except Exception as e:
-            log.critical('''Unexpected error while getting load from
-             jids: {0}'''.format(str(e)))
+            log.critical(
+                """Unexpected error while getting load from
+             jids: {0}""".format(
+                    str(e)
+                )
+            )
             raise
 
         return ret
@@ -322,20 +324,21 @@ contains the jid and therefore is guaranteed to be unique.
 
     import salt.utils.json
 
-    def event_return(events):
-     '''
-     Return event to mysql server
 
-     Requires that configuration be enabled via 'event_return'
-     option in master config.
-     '''
-     with _get_serv(events, commit=True) as cur:
-         for event in events:
-             tag = event.get('tag', '')
-             data = event.get('data', '')
-             sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
-                      VALUES (%s, %s, %s)'''
-             cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
+    def event_return(events):
+        """
+        Return event to mysql server
+
+        Requires that configuration be enabled via 'event_return'
+        option in master config.
+        """
+        with _get_serv(events, commit=True) as cur:
+            for event in events:
+                tag = event.get("tag", "")
+                data = event.get("data", "")
+                sql = """INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+                      VALUES (%s, %s, %s)"""
+                cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__["id"]))
 
 
 Testing the Returner
@@ -383,4 +386,4 @@ Full List of Returners
 .. toctree::
     all/index
 
-.. _`redis`: https://github.com/saltstack/salt/tree/develop/salt/returners/redis_return.py
+.. _`redis`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/returners/redis_return.py

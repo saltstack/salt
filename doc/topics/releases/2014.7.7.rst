@@ -13,7 +13,11 @@ Statistics
 - Total Issue References: **20**
 - Total PR References: **60**
 
-- Contributors: **28** (`AkhterAli`_, `BretFisher`_, `MrCitron`_, `alekti`_, `basepi`_, `bersace`_, `cachedout`_, `corux`_, `cro`_, `davidjb`_, `dumol`_, `efficks`_, `garethgreenaway`_, `hvnsweeting`_, `jacksontj`_, `jacobhammons`_, `jaybocc2`_, `jfindlay`_, `jquast`_, `justinta`_, `msteed`_, `nmadhok`_, `notpeter`_, `puneetk`_, `rallytime`_, `techhat`_, `trevor-h`_, `twangboy`_)
+- Contributors: **28** (`AkhterAli`_, `BretFisher`_, `MrCitron`_, `alekti`_, `basepi`_, `bersace`_,
+  `cachedout`_, `corux`_, `cro`_, `davidjb`_, `dumol`_, `efficks`_, `garethgreenaway`_,
+  `hvnsweeting`_, `jacksontj`_, `jacobhammons`_, `jaybocc2`_, `jfindlay`_, `jquast`_, `justinta`_,
+  `msteed`_, `nmadhok`_, `notpeter`_, `puneetk`_, `rallytime`_, `techhat`_, `trevor-h`_,
+  `twangboy`_)
 
 
 Changelog for v2014.7.6..v2014.7.7

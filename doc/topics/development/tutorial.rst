@@ -48,21 +48,21 @@ completed, add SaltStack as a second remote and fetch any changes from
     $ git remote add upstream https://github.com/saltstack/salt.git
     $ git fetch upstream
 
-For this tutorial, we will be working off from the ``develop`` branch, which is
+For this tutorial, we will be working off from the ``|repo_primary_branch|`` branch, which is
 the default branch for the SaltStack GitHub project.  This branch needs to
-track ``upstream/develop`` so that we will get all upstream changes when they
+track ``upstream/|repo_primary_branch|`` so that we will get all upstream changes when they
 happen.
 
 .. code-block:: bash
 
-    $ git checkout develop
-    $ git branch --set-upstream-to upstream/develop
+    $ git checkout |repo_primary_branch|
+    $ git branch --set-upstream-to upstream/|repo_primary_branch|
 
 -----
 Fetch
 -----
 
-Fetch any ``upstream`` changes on the ``develop`` branch and sync them to your
+Fetch any ``upstream`` changes on the ``|repo_primary_branch|`` branch and sync them to your
 local copy of the branch with a single command:
 
 .. code-block:: bash
@@ -72,7 +72,7 @@ local copy of the branch with a single command:
 .. note::
 
     For an explanation on ``pull`` vs ``pull --rebase`` and other excellent
-    points, see `this article <http://mislav.net/2013/02/merge-vs-rebase/>`_ by
+    points, see `this article <https://mislav.net/2013/02/merge-vs-rebase/>`_ by
     Mislav Marohnić.
 
 ------
@@ -84,7 +84,7 @@ Now we are ready to get to work.  Consult the `sprint beginner bug list
 and select an execution module whose ``__virtual__`` function needs to be
 updated.  I'll select the ``alternatives`` module.
 
-Create a new branch off from ``develop``.  Be sure to name it something short
+Create a new branch off from ``|repo_primary_branch|``.  Be sure to name it something short
 and descriptive.
 
 .. code-block:: bash
@@ -146,7 +146,7 @@ Push
 Push your branch to your GitHub account.  You will likely need to enter your
 GitHub username and password.
 
-.. code-block:: bash
+.. code-block:: console
 
     $ git push origin virt_ret
     Username for 'https://github.com': <my_account>
@@ -155,11 +155,11 @@ GitHub username and password.
 .. note::
 
     If authentication over https does not work, you can alternatively setup
-    `ssh keys <https://help.github.com/articles/generating-ssh-keys/>`_.  Once
+    `ssh keys <https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`_.  Once
     you have done this, you may need add the keys to your git repository
     configuration
 
-    .. code-block:: bash
+    .. code-block:: console
 
         $ git config ssh.key ~/.ssh/<key_name>
 
@@ -173,7 +173,7 @@ In your browser, navigate to the `new pull request
 <https://github.com/saltstack/salt/compare>`_ page on the ``saltstack/salt``
 GitHub repository and click on ``compare across forks``.  Select
 ``<my_account>`` from the list of head forks and the branch you are wanting to
-merge into ``develop`` (``virt_ret`` in this case).
+merge into ``|repo_primary_branch|`` (``virt_ret`` in this case).
 
 When you have finished reviewing the changes, click ``Create pull request``.
 
@@ -194,7 +194,7 @@ request``.
 
     * I find it easiest to edit the following URL:
 
-      ``https://github.com/saltstack/salt/compare/develop...<my_account>:virt_ret``
+      ``https://github.com/saltstack/salt/compare/|repo_primary_branch|...<my_account>:virt_ret``
 
 ---------
 Resources
@@ -207,9 +207,9 @@ https://help.github.com/
 
 There are many topics covered by the Salt Developer documentation:
 
-https://docs.saltstack.com/en/latest/topics/development/index.html
+https://docs.saltproject.io/en/latest/topics/development/index.html
 
 The contributing documentation presents more details on specific contributing
 topics:
 
-https://docs.saltstack.com/en/latest/topics/development/contributing.html
+https://docs.saltproject.io/en/latest/topics/development/contributing.html

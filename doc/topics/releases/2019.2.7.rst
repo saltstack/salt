@@ -1,0 +1,15 @@
+.. _release-2019-2-7:
+
+===========================
+Salt 2019.2.7 Release Notes
+===========================
+
+Version 2019.2.7 is a CVE fix release for :ref:`2019.2.0 <release-2019-2-0>`.
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)

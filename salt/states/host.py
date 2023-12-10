@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Management of addresses and names in hosts file
 ===============================================
 
@@ -57,18 +56,30 @@ Or delete all existing names for an address:
         host.only:
           - hostnames: []
 
-'''
+You can also include comments:
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+.. code-block:: yaml
 
-# Import Salt libs
-from salt.ext import six
+    server1:
+      host.present:
+        - ip: 192.168.0.42
+        - names:
+          - server1
+          - florida
+        - comment: A very important comment
+
+"""
+
+
+import logging
+
 import salt.utils.validate.net
 
+log = logging.getLogger(__name__)
 
-def present(name, ip, clean=False):  # pylint: disable=C0103
-    '''
+
+def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
+    """
     Ensures that the named host is present with the given ip
 
     name
@@ -78,95 +89,122 @@ def present(name, ip, clean=False):  # pylint: disable=C0103
         The ip addr(s) to apply to the host. Can be a single IP or a list of IP
         addresses.
 
-    clean : False
+    comment
+        A comment to include for the host entry
+
+        .. versionadded:: 3001
+
+    clean
         Remove any entries which don't match those configured in the ``ip``
-        option.
+        option. Default is ``False``.
 
         .. versionadded:: 2018.3.4
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None if __opts__['test'] else True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if not isinstance(ip, list):
         ip = [ip]
 
-    all_hosts = __salt__['hosts.list_hosts']()
+    all_hosts = __salt__["hosts.list_hosts"]()
     comments = []
     to_add = set()
     to_remove = set()
+    update_comment = set()
 
     # First check for IPs not currently in the hosts file
     to_add.update([(addr, name) for addr in ip if addr not in all_hosts])
 
+    if comment:
+        update_comment.update([(addr, comment) for addr in ip if addr not in all_hosts])
+
     # Now sweep through the hosts file and look for entries matching either the
     # IP address(es) or hostname.
-    for addr, aliases in six.iteritems(all_hosts):
+    for addr, host_info in all_hosts.items():
         if addr not in ip:
-            if name in aliases:
+            if "aliases" in host_info and name in host_info["aliases"]:
                 # Found match for hostname, but the corresponding IP is not in
                 # our list, so we need to remove it.
                 if clean:
                     to_remove.add((addr, name))
                 else:
-                    ret.setdefault('warnings', []).append(
-                        'Host {0} present for IP address {1}. To get rid of '
-                        'this warning, either run this state with \'clean\' '
-                        'set to True to remove {0} from {1}, or add {1} to '
-                        'the \'ip\' argument.'.format(name, addr)
+                    ret.setdefault("warnings", []).append(
+                        "Host {0} present for IP address {1}. To get rid of "
+                        "this warning, either run this state with 'clean' "
+                        "set to True to remove {0} from {1}, or add {1} to "
+                        "the 'ip' argument.".format(name, addr)
                     )
         else:
-            if name in aliases:
-                # No changes needed for this IP address and hostname
-                comments.append(
-                    'Host {0} ({1}) already present'.format(name, addr)
-                )
+            if "aliases" in host_info and name in host_info["aliases"]:
+                if (
+                    comment
+                    and "comment" in host_info
+                    and host_info["comment"] != comment
+                ):
+                    update_comment.add((addr, comment))
+                elif comment and "comment" not in host_info:
+                    update_comment.add((addr, comment))
+                else:
+                    # No changes needed for this IP address and hostname
+                    comments.append("Host {} ({}) already present".format(name, addr))
             else:
                 # IP address listed in hosts file, but hostname is not present.
                 # We will need to add it.
                 if salt.utils.validate.net.ip_addr(addr):
                     to_add.add((addr, name))
+                    if comment:
+                        update_comment.add((addr, comment))
                 else:
-                    ret['result'] = False
-                    comments.append(
-                        'Invalid IP Address for {0} ({1})'.format(name, addr)
-                    )
+                    ret["result"] = False
+                    comments.append("Invalid IP Address for {} ({})".format(name, addr))
 
     for addr, name in to_add:
-        if __opts__['test']:
-            comments.append(
-                'Host {0} ({1}) would be added'.format(name, addr)
-            )
+        if __opts__["test"]:
+            ret["result"] = None
+            comments.append("Host {} ({}) would be added".format(name, addr))
         else:
-            if __salt__['hosts.add_host'](addr, name):
-                comments.append('Added host {0} ({1})'.format(name, addr))
+            if __salt__["hosts.add_host"](addr, name):
+                comments.append("Added host {} ({})".format(name, addr))
             else:
-                ret['result'] = False
-                comments.append('Failed to add host {0} ({1})'.format(name, addr))
+                ret["result"] = False
+                comments.append("Failed to add host {} ({})".format(name, addr))
                 continue
-        ret['changes'].setdefault('added', {}).setdefault(addr, []).append(name)
+        ret["changes"].setdefault("added", {}).setdefault(addr, []).append(name)
+
+    for addr, comment in update_comment:
+        if __opts__["test"]:
+            comments.append("Comment for {} ({}) would be added".format(addr, comment))
+        else:
+            if __salt__["hosts.set_comment"](addr, comment):
+                comments.append("Set comment for host {} ({})".format(addr, comment))
+            else:
+                ret["result"] = False
+                comments.append(
+                    "Failed to add comment for host {} ({})".format(addr, comment)
+                )
+                continue
+        ret["changes"].setdefault("comment_added", {}).setdefault(addr, []).append(
+            comment
+        )
 
     for addr, name in to_remove:
-        if __opts__['test']:
-            comments.append(
-                'Host {0} ({1}) would be removed'.format(name, addr)
-            )
+        if __opts__["test"]:
+            ret["result"] = None
+            comments.append("Host {} ({}) would be removed".format(name, addr))
         else:
-            if __salt__['hosts.rm_host'](addr, name):
-                comments.append('Removed host {0} ({1})'.format(name, addr))
+            if __salt__["hosts.rm_host"](addr, name):
+                comments.append("Removed host {} ({})".format(name, addr))
             else:
-                ret['result'] = False
-                comments.append('Failed to remove host {0} ({1})'.format(name, addr))
+                ret["result"] = False
+                comments.append("Failed to remove host {} ({})".format(name, addr))
                 continue
-        ret['changes'].setdefault('removed', {}).setdefault(addr, []).append(name)
+        ret["changes"].setdefault("removed", {}).setdefault(addr, []).append(name)
 
-    ret['comment'] = '\n'.join(comments)
+    ret["comment"] = "\n".join(comments)
     return ret
 
 
 def absent(name, ip):  # pylint: disable=C0103
-    '''
+    """
     Ensure that the named host is absent
 
     name
@@ -174,37 +212,34 @@ def absent(name, ip):  # pylint: disable=C0103
 
     ip
         The ip addr(s) of the host to remove
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if not isinstance(ip, list):
         ip = [ip]
 
     comments = []
     for _ip in ip:
-        if not __salt__['hosts.has_pair'](_ip, name):
-            ret['result'] = True
-            comments.append('Host {0} ({1}) already absent'.format(name, _ip))
+        if not __salt__["hosts.has_pair"](_ip, name):
+            ret["result"] = True
+            comments.append("Host {} ({}) already absent".format(name, _ip))
         else:
-            if __opts__['test']:
-                comments.append('Host {0} ({1}) needs to be removed'.format(name, _ip))
+            if __opts__["test"]:
+                comments.append("Host {} ({}) needs to be removed".format(name, _ip))
             else:
-                if __salt__['hosts.rm_host'](_ip, name):
-                    ret['changes'] = {'host': name}
-                    ret['result'] = True
-                    comments.append('Removed host {0} ({1})'.format(name, _ip))
+                if __salt__["hosts.rm_host"](_ip, name):
+                    ret["changes"] = {"host": name}
+                    ret["result"] = True
+                    comments.append("Removed host {} ({})".format(name, _ip))
                 else:
-                    ret['result'] = False
-                    comments.append('Failed to remove host')
-    ret['comment'] = '\n'.join(comments)
+                    ret["result"] = False
+                    comments.append("Failed to remove host")
+    ret["comment"] = "\n".join(comments)
     return ret
 
 
 def only(name, hostnames):
-    '''
+    """
     Ensure that only the given hostnames are associated with the
     given IP address.
 
@@ -219,36 +254,31 @@ def only(name, hostnames):
         hostname associated with the IP address is removed.  If no
         hostnames are specified, all hostnames associated with the
         given IP address are removed.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    if isinstance(hostnames, six.string_types):
+    if isinstance(hostnames, str):
         hostnames = [hostnames]
 
-    old = ' '.join(__salt__['hosts.get_alias'](name))
-    new = ' '.join((x.strip() for x in hostnames))
+    old = " ".join(__salt__["hosts.get_alias"](name))
+    new = " ".join(x.strip() for x in hostnames)
 
     if old == new:
-        ret['comment'] = 'IP address {0} already set to "{1}"'.format(
-            name, new)
-        ret['result'] = True
+        ret["comment"] = 'IP address {} already set to "{}"'.format(name, new)
+        ret["result"] = True
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Would change {0} from "{1}" to "{2}"'.format(
-            name, old, new)
+    if __opts__["test"]:
+        ret["comment"] = 'Would change {} from "{}" to "{}"'.format(name, old, new)
         return ret
 
-    ret['result'] = __salt__['hosts.set_host'](name, new)
-    if not ret['result']:
-        ret['comment'] = ('hosts.set_host failed to change {0}'
-            + ' from "{1}" to "{2}"').format(name, old, new)
+    ret["result"] = __salt__["hosts.set_host"](name, new)
+    if not ret["result"]:
+        ret["comment"] = 'hosts.set_host failed to change {} from "{}" to "{}"'.format(
+            name, old, new
+        )
         return ret
 
-    ret['comment'] = 'successfully changed {0} from "{1}" to "{2}"'.format(
-        name, old, new)
-    ret['changes'] = {name: {'old': old, 'new': new}}
+    ret["comment"] = 'successfully changed {} from "{}" to "{}"'.format(name, old, new)
+    ret["changes"] = {name: {"old": old, "new": new}}
     return ret

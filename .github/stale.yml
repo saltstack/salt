@@ -1,16 +1,23 @@
 # Probot Stale configuration file
 
 # Number of days of inactivity before an issue becomes stale
-# 860 is approximately 2 years and 4 months
-daysUntilStale: 860
+# 600 is approximately 1 year and 8 months
+daysUntilStale: 90
 
 # Number of days of inactivity before a stale issue is closed
-daysUntilClose: 7
+daysUntilClose: false
 
 # Issues with these labels will never be considered stale
-#exemptLabels:
-#  - pinned
-#  - security
+exemptLabels:
+  - Confirmed
+  - Release Blocker
+  - Critical
+  - P1
+  - P2
+  - Bug
+  - Feature
+  - Test Failure
+  -ZD
 
 # Label to use when marking an issue as stale
 staleLabel: stale
@@ -30,4 +37,3 @@ closeComment: false
 
 # Limit to only `issues` or `pulls`
 only: issues
-

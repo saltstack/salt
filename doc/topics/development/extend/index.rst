@@ -79,8 +79,8 @@ Example file in the template directory
 
 .. code-block:: python
 
-    print('Hello {{module_name}}')
-    __virtual__ = '{{__virtual_name__}}'
+    print("Hello {{module_name}}")
+    __virtual__ = "{{__virtual_name__}}"
 
 Default context properties
 **************************

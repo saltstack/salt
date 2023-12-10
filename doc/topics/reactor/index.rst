@@ -99,7 +99,7 @@ API and the runner system.  In this example, a command is published to the
           - mods: orchestrate.runit
     {% endif %}
 
-This example will execute the state.orchestrate runner and intiate an execution
+This example will execute the state.orchestrate runner and initiate an execution
 of the ``runit`` orchestrator located at ``/srv/salt/orchestrate/runit.sls``.
 
 Types of Reactions
@@ -212,6 +212,10 @@ in :ref:`local reactions <reactor-local>`, but as noted above this is not very
 user-friendly. Therefore, the new config schema is recommended if the master
 is running a supported release.
 
+.. note::
+  State ids of reactors for runners and wheels should all be unique. They can
+  overwrite each other when added to the async queue causing lost reactions.
+
 The below two examples are equivalent:
 
 +-------------------------------------------------+-------------------------------------------------+
@@ -247,6 +251,10 @@ master.
 Like :ref:`runner reactions <reactor-runner>`, the old config schema called for
 wheel reactions to have arguments passed directly under the name of the
 :ref:`wheel function <all-salt.wheel>` (or in ``arg`` or ``kwarg`` parameters).
+
+.. note::
+  State ids of reactors for runners and wheels should all be unique. They can
+  overwrite each other when added to the async queue causing lost reactions.
 
 The below two examples are equivalent:
 
@@ -629,7 +637,7 @@ will be automatically accepted and have :py:func:`state.apply
 <salt.modules.state.apply_>` executed. On top of this, we're going to add that
 a host coming up that was replaced (meaning a new key) will also be accepted.
 
-Our master configuration will be rather simple. All minions that attempte to
+Our master configuration will be rather simple. All minions that attempt to
 authenticate will match the :strong:`tag` of :strong:`salt/auth`. When it comes
 to the minion key being accepted, we get a more refined :strong:`tag` that
 includes the minion id, which we can use for matching.
@@ -706,8 +714,8 @@ Salt will sync all custom types (by running a :mod:`saltutil.sync_all
 <running-highstate>`. However, there is a chicken-and-egg issue where, on the
 initial :ref:`highstate <running-highstate>`, a minion will not yet have these
 custom types synced when the top file is first compiled. This can be worked
-around with a simple reactor which watches for ``minion_start`` events, which
-each minion fires when it first starts up and connects to the master.
+around with a simple reactor which watches for ``salt/minion/*/start`` events,
+which each minion fires when it first starts up and connects to the master.
 
 On the master, create **/srv/reactor/sync_grains.sls** with the following
 contents:
@@ -738,3 +746,28 @@ Also, if it is not desirable that *every* minion syncs on startup, the ``*``
 can be replaced with a different glob to narrow down the set of minions which
 will match that reactor (e.g. ``salt/minion/appsrv*/start``, which would only
 match minion IDs beginning with ``appsrv``).
+
+
+Reactor Tuning for Large-Scale Installations
+============================================
+
+The reactor uses a thread pool implementation that's contained inside
+``salt.utils.process.ThreadPool``. It uses Python's stdlib Queue to enqueue
+jobs which are picked up by standard Python threads. If the queue is full,
+``False`` is simply returned by the firing method on the thread pool.
+
+As such, there are a few things to say about the selection of proper values
+for the reactor.
+
+For situations where it is expected that many long-running jobs might be
+executed by the reactor, ``reactor_worker_hwm`` should be increased or even
+set to ``0`` to bound it only by available memory. If set to zero, a close eye
+should be kept on memory consumption.
+
+If many long-running jobs are expected and execution concurrency and
+performance are a concern, you may also increase the value for
+``reactor_worker_threads``. This will control the number of concurrent threads
+which are pulling jobs from the queue and executing them. Obviously, this
+bears a relationship to the speed at which the queue itself will fill up.
+The price to pay for this value is that each thread will contain a copy of
+Salt code needed to perform the requested action.

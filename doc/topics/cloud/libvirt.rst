@@ -6,7 +6,7 @@ Libvirt is a toolkit to interact with the virtualization capabilities of recent 
 of Linux (and other OSes). This driver Salt cloud provider is currently geared towards
 libvirt with qemu-kvm.
 
-http://www.libvirt.org/
+https://libvirt.org/
 
 Host Dependencies
 =================
@@ -71,20 +71,20 @@ The profile can be realized now with a salt command:
 
 .. code-block:: bash
 
-    # salt-cloud -p centos7 my-centos7-clone
+    salt-cloud -p centos7 my-centos7-clone
 
 This will create an instance named ``my-centos7-clone`` on the cloud host. Also
 the minion id will be set to ``my-centos7-clone``.
 
 If the command was executed on the salt-master, its Salt key will automatically
-be signed on the master.
+be accepted on the master.
 
 Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt my-centos7-clone test.version
+    salt my-centos7-clone test.version
 
 
 Required Settings
@@ -97,26 +97,76 @@ The following settings are always required for libvirt:
       provider: local-kvm
       # the domain to clone
       base_domain: base-centos7-64
-      # how to obtain the IP address of the cloned instance
-      # ip-learning or qemu-agent
-      ip_source: ip-learning
 
-The ``ip_source`` setting controls how the IP address of the cloned instance is determined.
-When using ``ip-learning`` the IP is requested from libvirt. This needs a recent libvirt
-version and may only work for NAT networks. Another option is to use ``qemu-agent`` this requires
-that the qemu-agent is installed and configured to run at startup in the base domain.
+
+SSH Key Authentication
+======================
+Instead of specifying a password, an authorized key can be used for the minion setup. Ensure that
+the ssh user of your base image has the public key you want to use in ~/.ssh/authorized_keys.  If
+you want to use a non-root user you will likely want to configure salt-cloud to use sudo.
+
+An example using root:
+
+.. code-block:: yaml
+
+    centos7:
+      provider: local-kvm
+      # the domain to clone
+      base_domain: base-centos7-64
+      ssh_username: root
+      private_key: /path/to/private/key
+
+An example using a non-root user:
+
+.. code-block:: yaml
+
+    centos7:
+      provider: local-kvm
+      # the domain to clone
+      base_domain: base-centos7-64
+      ssh_username: centos
+      private_key: /path/to/private/key
+      sudo: True
+      sudo_password: "--redacted--"
 
 Optional Settings
 =================
 
 .. code-block:: yaml
 
-    # Username and password
-    ssh_username: root
-    password: my-secret-password
+    centos7:
+      # ssh settings
+      # use forwarded agent instead of a local key
+      ssh_agent: True
+      ssh_port: 4910
 
-    # Cloning strategy: full or quick
-    clone_strategy: quick
+      # credentials
+      ssh_username: root
+      # password will be used for sudo if defined, use sudo_password if using ssh keys
+      password: my-secret-password
+      private_key: /path/to/private/key
+      sudo: True
+      sudo_password: "--redacted--"
+
+      # bootstrap options
+      deploy_command: sh /tmp/.saltcloud/deploy.sh
+      script_args: -F
+
+      # minion config
+      grains:
+        sushi: more tasty
+      # point at the another master at another port
+      minion:
+        master: 192.168.16.1
+        master_port: 5506
+
+      # libvirt settings
+      # clone_strategy: [ quick | full ] # default is full
+      clone_strategy: quick
+      # ip_source: [ ip-learning | qemu-agent ] # default is ip-learning
+      ip_source: qemu-agent
+      # validate_xml: [ false | true ] # default is true
+      validate_xml: false
 
 The ``clone_strategy`` controls how the clone is done. In case of ``full`` the disks
 are copied creating a standalone clone. If ``quick`` is used the disks of the base domain
@@ -126,3 +176,13 @@ the expense of slower write performance. The quick strategy has a number of requ
 * The disks must be of type qcow2
 * The base domain must be turned off
 * The base domain must not change after creating the clone
+
+The ``ip_source`` setting controls how the IP address of the cloned instance is determined.
+When using ``ip-learning`` the IP is requested from libvirt. This needs a recent libvirt
+version and may only work for NAT/routed networks where libvirt runs the dhcp server.
+Another option is to use ``qemu-agent`` this requires that the qemu-agent is installed and
+configured to run at startup in the base domain.
+
+The ``validate_xml`` setting is available to disable xml validation by libvirt when cloning.
+
+See also :mod:`salt.cloud.clouds.libvirt`

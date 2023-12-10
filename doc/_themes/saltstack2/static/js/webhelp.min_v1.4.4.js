@@ -125,7 +125,7 @@ $( document ).ready(function() {
             window.location.href = window.location.href.replace($currentVer.attr("href"), clickedVer);
         }
         else {
-            if ($currentVer.text().indexOf("Develop") == -1) {
+            if ($currentVer.text().indexOf(DOCUMENTATION_OPTIONS.REPO_PRIMARY_BRANCH_TAB_NAME) == -1) {
                 window.location.href = clickedVer + "topics/releases/" + $currentVer.text().trim() + ".html";
             }
             else window.location.href = clickedVer + "topics/releases/";
@@ -149,7 +149,7 @@ $( document ).ready(function() {
     $("#notifications").on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        $.get('//docs.saltstack.com/en/announcements.html?id=1', function (data) {
+        $.get('//docs.saltproject.io/en/announcements.html?id=1', function (data) {
             box = bootbox.dialog({
                 title: "Announcements",
                 message: data
@@ -274,4 +274,3 @@ function getMetaStatus() {
 
     $(document).ready($.proxy(anchorScrolls, 'init'));
 })(window.document, window.history, window.location);
-

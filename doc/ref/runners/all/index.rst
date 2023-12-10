@@ -15,6 +15,7 @@ runner modules
     bgp
     cache
     cloud
+    config
     ddns
     digicertapi
     doc
@@ -29,6 +30,7 @@ runner modules
     launchd
     lxc
     manage
+    match
     mattermost
     mine
     nacl

@@ -18,7 +18,7 @@ There is much argument over the actual definition of "open core".  From our stan
 
 1. It is a standalone product that anyone is free to use.
 2. It is developed in the open with contributions accepted from the community for the good of the project.
-3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
+3. There are no features of Salt itself that are restricted to separate proprietary products distributed by VMware, Inc.
 4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
 5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
 
@@ -158,7 +158,7 @@ Similarly, custom states are synced to Minions when :py:func:`saltutil.sync_stat
 They are both also synced when a :ref:`highstate <running-highstate>` is
 triggered.
 
-As of the Fluorine release, as well as 2017.7.7 and 2018.3.2 in their
+As of the 2019.2.0 release, as well as 2017.7.7 and 2018.3.2 in their
 respective release cycles, the ``sync`` argument to :py:func:`state.apply
 <salt.modules.state.apply_>`/:py:func:`state.sls <salt.modules.state.sls>` can
 be used to sync custom types when running individual SLS files.
@@ -394,6 +394,35 @@ Restart the Minion from the command line:
     salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat service.restart salt-minion'
     salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call service.restart salt-minion'
 
+Waiting for minions to come back online
+***************************************
+
+A common issue in performing automated restarts of a salt minion, for example during
+an orchestration run, is that it will break the orchestration since the next statement
+is likely to be attempted before the minion is back online. This can be remedied
+by inserting a blocking waiting state that only returns when the selected minions
+are back up (note: this will only work in orchestration states since `manage.up`
+needs to run on the master):
+
+.. code-block:: jinja
+
+    Wait for salt minion:
+      loop.until_no_eval:
+        - name: saltutil.runner
+        - expected:
+            - my_minion
+        - args:
+            - manage.up
+        - kwargs:
+            tgt: my_minion
+        - period: 3
+        - init_wait: 3
+
+This will, after an initial delay of 3 seconds, execute the `manage.up`-runner
+targeted specifically for `my_minion`. It will do this every `period` seconds
+until the `expected` data is returned. The default timeout is 60s but can be configured
+as well.
+
 Salting the Salt Master
 -----------------------
 
@@ -426,6 +455,8 @@ state could be done the same way as for the Salt minion described :ref:`above
 
 Is Targeting using Grain Data Secure?
 -------------------------------------
+
+.. include:: _incl/grains_passwords.rst
 
 Because grains can be set by users that have access to the minion configuration
 files on the local system, grains are considered less secure than other

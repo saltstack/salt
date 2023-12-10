@@ -238,7 +238,7 @@ presence of the instance will be managed statefully.
 
     my-instance-name:
       cloud.present:
-        - provider: my-ec2-config
+        - cloud_provider: my-ec2-config
         - image: ami-1624987f
         - size: 't1.micro'
         - ssh_username: ec2-user
@@ -309,7 +309,8 @@ the master or a minion), create a client object and issue a command against it:
 
     import salt.cloud
     import pprint
-    client = salt.cloud.CloudClient('/etc/salt/cloud')
+
+    client = salt.cloud.CloudClient("/etc/salt/cloud")
     nodes = client.query()
     pprint.pprint(nodes)
 

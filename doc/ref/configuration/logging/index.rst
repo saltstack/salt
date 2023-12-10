@@ -4,7 +4,7 @@
 Logging
 =======
 
-The salt project tries to get the logging to work for you and help us solve any
+The Salt Project tries to get the logging to work for you and help us solve any
 issues you might find along the way.
 
 If you want to get some more information on the nitty-gritty of salt's logging
@@ -34,7 +34,7 @@ available in salt are shown in the table below.
     Python dependencies used by salt may define and use additional logging
     levels.  For example, the Python 2 version of the ``multiprocessing``
     standard Python library `uses the levels
-    <https://docs.python.org/2/library/multiprocessing.html#logging>`_
+    <https://docs.python.org/3/library/multiprocessing.html#logging>`_
     ``subwarning``, 25 and ``subdebug``, 5.
 
 +----------+---------------+--------------------------------------------------------------------------+
@@ -60,6 +60,13 @@ available in salt are shown in the table below.
 +----------+---------------+--------------------------------------------------------------------------+
 | all      |             0 | Everything                                                               |
 +----------+---------------+--------------------------------------------------------------------------+
+
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 Available Configuration Settings
 ================================
@@ -183,10 +190,10 @@ custom LogRecord attributes to colorize console log output:
 
 .. code-block:: python
 
-    '%(colorlevel)s'   # log level name colorized by level
-    '%(colorname)s'    # colorized module name
-    '%(colorprocess)s' # colorized process number
-    '%(colormsg)s'     # log message colorized by level
+    "%(colorlevel)s"  # log level name colorized by level
+    "%(colorname)s"  # colorized module name
+    "%(colorprocess)s"  # colorized process number
+    "%(colormsg)s"  # log message colorized by level
 
 .. note::
     The ``%(colorlevel)s``, ``%(colorname)s``, and ``%(colorprocess)``
@@ -212,9 +219,9 @@ these custom LogRecord attributes that include padding and enclosing brackets
 
 .. code-block:: python
 
-    '%(bracketlevel)s'   # equivalent to [%(levelname)-8s]
-    '%(bracketname)s'    # equivalent to [%(name)-17s]
-    '%(bracketprocess)s' # equivalent to [%(process)5s]
+    "%(bracketlevel)s"  # equivalent to [%(levelname)-8s]
+    "%(bracketname)s"  # equivalent to [%(name)-17s]
+    "%(bracketprocess)s"  # equivalent to [%(process)5s]
 
 .. code-block:: yaml
 
@@ -237,6 +244,24 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
     'salt': 'warning'
     'salt.modules': 'debug'
     'salt.loader.saltmaster.ext.module.custom_module': 'all'
+
+.. conf_log:: log_fmt_jid
+
+You can determine what log call name to use here by adding ``%(module)s`` to the
+log format. Typically, it is the path of the file which generates the log
+without the trailing ``.py`` and with path separators replaced with ``.``
+
+
+``log_fmt_jid``
+-------------------
+
+Default: ``[JID: %(jid)s]``
+
+The format of the JID when added to logging messages.
+
+.. code-block:: yaml
+
+    log_fmt_jid: '[JID: %(jid)s]'
 
 External Logging Handlers
 -------------------------

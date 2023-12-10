@@ -82,20 +82,19 @@ advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 
 .. warning::
-    pygit2_ is actively developed and `frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
-    minor releases. It is not uncommon for pygit2_ upgrades to result in errors
-    in Salt. Please take care when upgrading pygit2_, and pay close attention
-    to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
+    pygit2_ is actively developed and `frequently makes non-backwards-compatible
+    API changes`_, even in minor releases.  It is not uncommon for pygit2_
+    upgrades to result in errors in Salt. Please take care when upgrading
+    pygit2_, and pay close attention to the changelog_, keeping an eye out for
+    API changes. Errors can be reported on the `SaltStack issue tracker`_.
 
-.. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
-.. _changelog: https://github.com/libgit2/pygit2#changelog
-.. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
+.. _frequently makes non-backwards-compatible API changes: https://www.pygit2.org/install.html#version-numbers
+.. _changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.rst
+.. _SaltStack issue tracker: https://github.com/saltstack/salt/issues
 .. _pygit2-install-instructions: http://www.pygit2.org/install.html
-.. _libgit2: https://libgit2.github.com/
-.. _libssh2: http://www.libssh2.org/
-.. _python-cffi: https://pypi.python.org/pypi/cffi
+.. _libgit2: https://libgit2.org/
+.. _libssh2: https://www.libssh2.org/
+.. _python-cffi: https://pypi.org/project/cffi
 .. _libffi: http://sourceware.org/libffi/
 
 
@@ -128,6 +127,23 @@ A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
 be required to allow http(s) repositories to continue to be fetched.
 
 
+Debian Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+The Debian repos currently have older versions of pygit2 (package
+``python3-pygit2``). These older versions may have issues using newer SSH keys
+(see [this issue](https://github.com/saltstack/salt/issues/61790)). Instead,
+``pygit2`` can be installed from Pypi, but you will need a version that
+matches the ``libgit2`` version from Debian. This is version 1.6.1.
+
+.. code-block:: bash
+
+    # apt-get install libgit2
+    # salt-pip install pygit2==1.6.1 --no-deps
+
+Note that the above instructions assume a onedir installation. The need for
+`--no-deps` is to prevent the CFFI package from mismatching with Salt.
+
 GitPython
 ---------
 
@@ -156,6 +172,12 @@ including by installing XCode_.
 .. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
+    GitPython advises against the use of its library for long-running processes
+    (such as a salt-master or salt-minion). Please see their warning on potential
+    leaks of system resources:
+    https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
+
+.. warning::
 
     Keep in mind that if GitPython has been previously installed on the master
     using pip (even if it was subsequently uninstalled), then it may still
@@ -180,7 +202,6 @@ including by installing XCode_.
         GitPython:
           pip.installed:
             - name: 'GitPython < 2.0.9'
-
 
 Simple Configuration
 ====================
@@ -481,7 +502,7 @@ be useful to fetch custom refs (such as those created for `GitHub pull
 requests`__). To change the refspecs GitFS fetches, use the
 :conf_master:`gitfs_refspecs` config option:
 
-.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+.. __: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/checking-out-pull-requests-locally
 
 .. code-block:: yaml
 
@@ -527,7 +548,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0
+.. versionadded:: 2018.3.0 for all_saltenvs, 3001 for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -538,6 +559,8 @@ allows a single branch/tag to appear in *all* GitFS saltenvs.
    configured using ``all_saltenvs`` will *not* show up in a fileserver
    environment defined via some other fileserver backend (e.g.
    :conf_master:`file_roots`).
+
+The ``fallback`` global or per-remote configuration can also be used.
 
 This is very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
@@ -554,6 +577,15 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+If you want to also test working branches of the formula repository, use
+``fallback``:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - fallback: anything
 
 .. _gitfs-update-intervals:
 
@@ -765,11 +797,6 @@ be used:
     qa
     dev
 
-``top.sls`` files from different branches will be merged into one at runtime.
-Since this can lead to overly complex configurations, the recommended setup is
-to have a separate repository, containing only the ``top.sls`` file with just
-one single ``master`` branch.
-
 To map a branch other than ``master`` as the ``base`` environment, use the
 :conf_master:`gitfs_base` parameter.
 
@@ -779,6 +806,112 @@ To map a branch other than ``master`` as the ``base`` environment, use the
 
 The base can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
+
+Use Case: Code Promotion (dev -> qa -> base)
+--------------------------------------------
+
+When running a :ref:`highstate <running-highstate>`, the ``top.sls`` files from
+all of the different branches and tags will be merged into one. This does not
+work well with the use case where changes are tested in development branches
+before being merged upstream towards production, because if the same SLS file
+from multiple environments is part of the :ref:`highstate <running-highstate>`,
+it can result in non-unique state IDs, which will cause an error in the state
+compiler and not allow the :ref:`highstate <running-highstate>` to proceed.
+
+To accomplish this use case, you should do three things:
+
+1. Use ``{{ saltenv }}`` in place of your environment in your **top.sls**. This
+   will let you use the same top file in all branches, because ``{{ saltenv
+   }}`` gets replaced with the effective saltenv of the environment being
+   processed.
+
+2. Set :conf_minion:`top_file_merging_strategy` to ``same`` in the minion
+   configuration. This will keep the ``base`` environment from looking at the
+   **top.sls** from the ``dev`` or ``qa`` branches, etc.
+
+3. Explicitly define your :conf_minion:`saltenv`. (More on this below.)
+
+
+Consider the following example top file and SLS file:
+
+**top.sls**
+
+.. code-block:: yaml
+
+    {{ saltenv }}:
+      '*':
+        - mystuff
+
+**mystuff.sls**
+
+.. code-block:: yaml
+
+    manage_mystuff:
+      pkg.installed:
+        - name: mystuff
+      file.managed:
+        - name: /etc/mystuff.conf
+        - source: salt://mystuff/files/mystuff.conf
+      service.running:
+        - name: mystuffd
+        - enable: True
+        - watch:
+          - file: /etc/mystuff.conf
+
+Imagine for a moment that you need to change your ``mystuff.conf``. So, you go
+to your ``dev`` branch, edit ``mystuff/files/mystuff.conf``, and commit and
+push.
+
+If you have only done the first two steps recommended above, and you run your
+:ref:`highstate <running-highstate>`, you will end up with conflicting IDs:
+
+.. code-block:: text
+
+    myminion:
+        Data failed to compile:
+    ----------
+        Detected conflicting IDs, SLS IDs need to be globally unique.
+        The conflicting ID is 'manage_mystuff' and is found in SLS 'base:mystuff' and SLS 'dev:mystuff'
+    ----------
+        Detected conflicting IDs, SLS IDs need to be globally unique.
+        The conflicting ID is 'manage_mystuff' and is found in SLS 'dev:mystuff' and SLS 'qa:mystuff'
+
+This is because, in the absence of an explicit :conf_minion:`saltenv`, all
+environments' top files are considered. Each environment looks at only its own
+**top.sls**, but because the **mystuff.sls** exists in each branch, they all
+get pulled into the highstate, resulting in these conflicting IDs. This is why
+explicitly setting your :conf_minion:`saltenv` is important for this use case.
+
+There are two ways of explicitly defining the :conf_minion:`saltenv`:
+
+1. Set the :conf_minion:`saltenv` in your minion configuration file. This
+   allows you to isolate which states are run to a specific branch/tag on a
+   given minion. This also works nicely if you have different salt deployments
+   for dev, qa, and prod. Boxes in dev can have :conf_minion:`saltenv` set to
+   ``dev``, boxes in ``qa`` can have the :conf_minion:`saltenv` set to ``qa``,
+   and boxes in prod can have the :conf_minion:`saltenv` set to ``base``.
+
+2. At runtime, you can set the ``saltenv`` like so:
+
+   .. code-block:: bash
+
+       salt myminion state.apply saltenv=dev
+
+   A couple notes about setting the saltenv at runtime:
+
+   - It will take precedence over the :conf_minion:`saltenv` setting from the
+     minion config file, and pairs nicely with cases where you do not have
+     separate salt deployments for dev/qa/prod. You can have a box with
+     :conf_minion:`saltenv` set to ``base``, which you can test your dev
+     changes on by running your ``state.apply`` with ``saltenv=dev``.
+
+   - If you don't set :conf_minion:`saltenv` in the minion config file, you
+     _must_ specify it at runtime to avoid conflicting IDs.
+
+
+If you branched ``qa`` off of ``master``, and ``dev`` off of ``qa``, you can
+merge changes from ``dev`` into ``qa``, and then merge ``qa`` into master to
+promote your changes to from dev to qa to prod.
 
 
 .. _gitfs-whitelist-blacklist:
@@ -923,7 +1056,7 @@ URL using the format ``https://<user>:<password>@<url>``, like so:
     gitfs_remotes:
       - https://git:mypassword@domain.tld/myrepo.git
 
-The other way would be to configure the authentication in ``~/.netrc``:
+The other way would be to configure the authentication in ``/var/lib/salt/.netrc``:
 
 .. code-block:: text
 
@@ -996,7 +1129,7 @@ host key in the ``~/.ssh/known_hosts`` file. If the master is also a minion,
 this can be done using the :mod:`ssh.set_known_host
 <salt.modules.ssh.set_known_host>` function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt mymaster ssh.set_known_host user=root hostname=github.com
     mymaster:
@@ -1040,7 +1173,7 @@ Verifying the Fingerprint
 To verify that the correct fingerprint was added, it is a good idea to look it
 up. One way to do this is to use ``nmap``:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ nmap -p 22 github.com --script ssh-hostkey
 
@@ -1122,7 +1255,7 @@ steps to this process:
    all users to fire the event.  Add the following policy to the sudoers file
    on the git server.
 
-   .. code-block:: bash
+   .. code-block:: console
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty
@@ -1139,7 +1272,7 @@ anything, so long as the usage is consistent.
 The ``root`` user name in the hook script and sudo policy should be changed to
 match the user under which the minion is running.
 
-.. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
+.. _`post-receive hook`: https://www.git-scm.com/book/en/v2/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
 .. _git-as-ext_pillar:
 

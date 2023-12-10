@@ -67,14 +67,12 @@ _su_cmd() {
 
 
 _get_pid() {
-    netstat -n $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
-        | sed -r -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;' \
-        | uniq
+    cat $PID_FILE 2>/dev/null
 }
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ]
+    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
 }
 
 
@@ -177,14 +175,14 @@ stop() {
         echo "Service $SERVICE:$MINION_USER:$MINION_ID is not running"
         return 0
     fi
-        
+
     echo -n "Stopping $SERVICE:$MINION_USER:$MINION_ID daemon: "
     local pid="$(_get_pid)"
 
     # pid below is intentionally not quoted in case there are *multiple*
     # minions running with the same configuration.
     _su_cmd "$MINION_USER" "kill -TERM $pid 2>/dev/null" || retval=$?
-    if [ 0 -eq "$retval" ]; then 
+    if [ 0 -eq "$retval" ]; then
         local endtime=$(($(date '+%s')+$SALTMINION_TIMEOUT))
         while _is_running; do
             if [ "$endtime" -lt "$(date '+%s')" ]; then
@@ -219,7 +217,7 @@ status() {
     local retval=0
     local pid="$(_get_pid)"
 
-    if [ -n "$pid" ]; then
+    if _is_running; then
         # Unquote $pid here to display multiple PIDs in one line
         echo "$SERVICE:$MINION_USER:$MINION_ID is running:" $pid
     else

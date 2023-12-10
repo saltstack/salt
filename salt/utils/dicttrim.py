@@ -1,36 +1,32 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
 import salt.payload
 
 
 def _trim_dict_in_dict(data, max_val_size, replace_with):
-    '''
+    """
     Takes a dictionary, max_val_size and replace_with
     and recursively loops through and replaces any values
     that are greater than max_val_size.
-    '''
+    """
     for key in data:
         if isinstance(data[key], dict):
-            _trim_dict_in_dict(data[key],
-                               max_val_size,
-                               replace_with)
+            _trim_dict_in_dict(data[key], max_val_size, replace_with)
         else:
             if sys.getsizeof(data[key]) > max_val_size:
                 data[key] = replace_with
 
 
 def trim_dict(
-        data,
-        max_dict_bytes,
-        percent=50.0,
-        stepper_size=10,
-        replace_with='VALUE_TRIMMED',
-        is_msgpacked=False,
-        use_bin_type=False):
-    '''
+    data,
+    max_dict_bytes,
+    percent=50.0,
+    stepper_size=10,
+    replace_with="VALUE_TRIMMED",
+    is_msgpacked=False,
+    use_bin_type=False,
+):
+    """
     Takes a dictionary and iterates over its keys, looking for
     large values and replacing them with a trimmed string.
 
@@ -46,7 +42,7 @@ def trim_dict(
     to accurately return the items referenced in the structure.
 
     Ex:
-    >>> salt.utils.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
+    >>> salt.utils.dicttrim.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
     {'a': 'b', 'c': 'VALUE_TRIMMED'}
 
     To improve performance, it is adviseable to pass in msgpacked
@@ -62,36 +58,33 @@ def trim_dict(
                          with "use_bin_type=True". This also means
                          that the msgpack data should be decoded with
                          "encoding='utf-8'".
-    '''
-    serializer = salt.payload.Serial({'serial': 'msgpack'})
+    """
     if is_msgpacked:
         dict_size = sys.getsizeof(data)
     else:
-        dict_size = sys.getsizeof(serializer.dumps(data))
+        dict_size = sys.getsizeof(salt.payload.dumps(data))
     if dict_size > max_dict_bytes:
         if is_msgpacked:
             if use_bin_type:
-                data = serializer.loads(data, encoding='utf-8')
+                data = salt.payload.loads(data, encoding="utf-8")
             else:
-                data = serializer.loads(data)
+                data = salt.payload.loads(data)
         while True:
             percent = float(percent)
             max_val_size = float(max_dict_bytes * (percent / 100))
             try:
                 for key in data:
                     if isinstance(data[key], dict):
-                        _trim_dict_in_dict(data[key],
-                                           max_val_size,
-                                           replace_with)
+                        _trim_dict_in_dict(data[key], max_val_size, replace_with)
                     else:
                         if sys.getsizeof(data[key]) > max_val_size:
                             data[key] = replace_with
                 percent = percent - stepper_size
                 max_val_size = float(max_dict_bytes * (percent / 100))
                 if use_bin_type:
-                    dump_data = serializer.dumps(data, use_bin_type=True)
+                    dump_data = salt.payload.dumps(data, use_bin_type=True)
                 else:
-                    dump_data = serializer.dumps(data)
+                    dump_data = salt.payload.dumps(data)
                 cur_dict_size = sys.getsizeof(dump_data)
                 if cur_dict_size < max_dict_bytes:
                     if is_msgpacked:  # Repack it
@@ -107,9 +100,9 @@ def trim_dict(
                 pass
         if is_msgpacked:
             if use_bin_type:
-                return serializer.dumps(data, use_bin_type=True)
+                return salt.payload.dumps(data, use_bin_type=True)
             else:
-                return serializer.dumps(data)
+                return salt.payload.dumps(data)
         else:
             return data
     else:
