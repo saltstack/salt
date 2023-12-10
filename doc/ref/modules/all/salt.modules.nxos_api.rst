@@ -1,6 +1,5 @@
-salt.modules.nxos_api module
-============================
+salt.modules.nxos_api
+=====================
 
 .. automodule:: salt.modules.nxos_api
     :members:
-

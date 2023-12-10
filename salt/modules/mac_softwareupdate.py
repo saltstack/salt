@@ -3,11 +3,8 @@ Support for the softwareupdate command on MacOS.
 """
 
 import os
-
-# Import python libs
 import re
 
-# import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.mac_utils

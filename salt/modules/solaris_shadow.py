@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the password database on Solaris systems
 
@@ -8,12 +7,9 @@ Manage the password database on Solaris systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
@@ -50,7 +46,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The solaris_shadow execution module failed to load: only available on Solaris systems.",
+        "The solaris_shadow execution module failed to load: only available on Solaris"
+        " systems.",
     )
 
 
@@ -126,7 +123,7 @@ def info(name):
     s_file = "/etc/shadow"
     if not os.path.isfile(s_file):
         return ret
-    with salt.utils.files.fopen(s_file, "rb") as ifile:
+    with salt.utils.files.fopen(s_file, "r") as ifile:
         for line in ifile:
             comps = line.strip().split(":")
             if comps[0] == name:
@@ -147,7 +144,7 @@ def info(name):
     #  5. Maximum age
     #  6. Warning period
 
-    output = __salt__["cmd.run_all"]("passwd -s {0}".format(name), python_shell=False)
+    output = __salt__["cmd.run_all"]("passwd -s {}".format(name), python_shell=False)
     if output["retcode"] != 0:
         return ret
 
@@ -186,7 +183,7 @@ def set_maxdays(name, maxdays):
     pre_info = info(name)
     if maxdays == pre_info["max"]:
         return True
-    cmd = "passwd -x {0} {1}".format(maxdays, name)
+    cmd = "passwd -x {} {}".format(maxdays, name)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["max"] != pre_info["max"]:
@@ -206,7 +203,7 @@ def set_mindays(name, mindays):
     pre_info = info(name)
     if mindays == pre_info["min"]:
         return True
-    cmd = "passwd -n {0} {1}".format(mindays, name)
+    cmd = "passwd -n {} {}".format(mindays, name)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["min"] != pre_info["min"]:
@@ -268,7 +265,7 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     """
-    cmd = "passwd -d {0}".format(name)
+    cmd = "passwd -d {}".format(name)
     __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="quiet")
     uinfo = info(name)
     return not uinfo["passwd"]
@@ -291,7 +288,7 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    with salt.utils.files.fopen(s_file, "rb") as ifile:
+    with salt.utils.files.fopen(s_file, "r") as ifile:
         for line in ifile:
             comps = line.strip().split(":")
             if comps[0] != name:
@@ -299,7 +296,7 @@ def set_password(name, password):
                 continue
             comps[1] = password
             line = ":".join(comps)
-            lines.append("{0}\n".format(line))
+            lines.append("{}\n".format(line))
     with salt.utils.files.fopen(s_file, "w+") as ofile:
         lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
         ofile.writelines(lines)
@@ -321,7 +318,7 @@ def set_warndays(name, warndays):
     pre_info = info(name)
     if warndays == pre_info["warn"]:
         return True
-    cmd = "passwd -w {0} {1}".format(warndays, name)
+    cmd = "passwd -w {} {}".format(warndays, name)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["warn"] != pre_info["warn"]:

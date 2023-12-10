@@ -80,12 +80,6 @@ salt-syndic
 
     salt-syndic
 
-salt-unity
-==========
-.. toctree::
-
-    salt-unity
-
 spm
 ===
 .. toctree::

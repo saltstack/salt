@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 powerpath support.
 
 Assumes RedHat
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import re
 
@@ -42,13 +39,15 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (
             False,
-            "The powerpath execution module cannot be loaded: unable to detect kernel grain.",
+            "The powerpath execution module cannot be loaded: unable to detect kernel"
+            " grain.",
         )
 
     if not has_powerpath():
         return (
             False,
-            "The powerpath execution module cannot be loaded: the emcpreg binary is not available.",
+            "The powerpath execution module cannot be loaded: the emcpreg binary is not"
+            " available.",
         )
 
     if kernel_grain == "Linux":
@@ -89,7 +88,7 @@ def add_license(key):
         result["output"] = "PowerPath is not installed"
         return result
 
-    cmd = "/sbin/emcpreg -add {0}".format(key)
+    cmd = "/sbin/emcpreg -add {}".format(key)
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     result["retcode"] = ret["retcode"]
@@ -113,7 +112,7 @@ def remove_license(key):
         result["output"] = "PowerPath is not installed"
         return result
 
-    cmd = "/sbin/emcpreg -remove {0}".format(key)
+    cmd = "/sbin/emcpreg -remove {}".format(key)
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     result["retcode"] = ret["retcode"]

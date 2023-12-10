@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTTP Logstash engine
 ==========================
@@ -29,30 +28,13 @@ them onto a logstash endpoint via HTTP requests.
                   - bgp.config
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python lib
 import fnmatch
 
 import salt.utils.event
-
-# Import salt libs
 import salt.utils.http
 import salt.utils.json
 
-# ----------------------------------------------------------------------------------------------------------------------
-# module properties
-# ----------------------------------------------------------------------------------------------------------------------
-
 _HEADERS = {"Content-Type": "application/json"}
-
-# ----------------------------------------------------------------------------------------------------------------------
-# module properties
-# ----------------------------------------------------------------------------------------------------------------------
-
-# ----------------------------------------------------------------------------------------------------------------------
-# helpers
-# ----------------------------------------------------------------------------------------------------------------------
 
 
 def _logstash(url, data):
@@ -69,11 +51,6 @@ def _logstash(url, data):
         opts=__opts__,
     )
     return result
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# main
-# ----------------------------------------------------------------------------------------------------------------------
 
 
 def start(url, funs=None, tags=None):
@@ -103,7 +80,6 @@ def start(url, funs=None, tags=None):
     with salt.utils.event.get_event(
         instance,
         sock_dir=__opts__["sock_dir"],
-        transport=__opts__["transport"],
         opts=__opts__,
     ) as event_bus:
         while True:

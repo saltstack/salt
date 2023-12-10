@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for AWS
 
@@ -8,33 +7,20 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-import binascii
+import copy
 import hashlib
 import hmac
 import logging
 import random
 import re
-
-# Import Python libs
-import sys
 import time
 from datetime import datetime
 
 import salt.config
-
-# Import Salt libs
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
-from salt.ext import six
 
-# pylint: disable=import-error,redefined-builtin,no-name-in-module
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlencode, urlparse
-
-# Import 3rd-party libs
 try:
     import requests
 
@@ -42,11 +28,32 @@ try:
 except ImportError:
     HAS_REQUESTS = False  # pylint: disable=W0612
 
+try:
+    import binascii
+
+    HAS_BINASCII = True  # pylint: disable=W0612
+except ImportError:
+    HAS_BINASCII = False  # pylint: disable=W0612
+
+try:
+    import urllib.parse
+
+    HAS_URLLIB = True  # pylint: disable=W0612
+except ImportError:
+    HAS_URLLIB = False  # pylint: disable=W0612
+
+try:
+    import xml.etree.ElementTree as ET
+
+    HAS_ETREE = True  # pylint: disable=W0612
+except ImportError:
+    HAS_ETREE = False  # pylint: disable=W0612
+
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 log = logging.getLogger(__name__)
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_AWS_API_VERSION = "2014-10-01"
+DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
     "RequestLimitExceeded",
     "InsufficientInstanceCapacity",
@@ -66,6 +73,7 @@ __Token__ = ""
 __Expiration__ = ""
 __Location__ = ""
 __AssumeCache__ = {}
+__IMDS_Token__ = None
 
 
 def sleep_exponential_backoff(attempts):
@@ -80,7 +88,45 @@ def sleep_exponential_backoff(attempts):
     A failure rate of >10% is observed when using the salt-api with an asynchronous client
     specified (runner_async).
     """
-    time.sleep(random.uniform(1, 2 ** attempts))
+    time.sleep(random.uniform(1, 2**attempts))
+
+
+def get_metadata(path, refresh_token_if_needed=True):
+    """
+    Get the instance metadata at the provided path
+    The path argument will be prepended by http://169.254.169.254/latest/
+    If using IMDSv2 with tokens required, the token will be fetched and used for subsequent requests
+    (unless refresh_token_if_needed is False, in which case this will fail if tokens are required
+    and no token was already cached)
+    """
+    global __IMDS_Token__
+
+    headers = {}
+    if __IMDS_Token__ is not None:
+        headers["X-aws-ec2-metadata-token"] = __IMDS_Token__
+
+    # Connections to instance meta-data must fail fast and never be proxied
+    result = requests.get(
+        f"http://169.254.169.254/latest/{path}",
+        proxies={"http": ""},
+        headers=headers,
+        timeout=AWS_METADATA_TIMEOUT,
+    )
+
+    if result.status_code == 401 and refresh_token_if_needed:
+        # Probably using IMDSv2 with tokens required, so fetch token and retry
+        token_result = requests.put(
+            "http://169.254.169.254/latest/api/token",
+            headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+            proxies={"http": ""},
+            timeout=AWS_METADATA_TIMEOUT,
+        )
+        __IMDS_Token__ = token_result.text
+        if token_result.ok:
+            return get_metadata(path, False)
+
+    result.raise_for_status()
+    return result
 
 
 def creds(provider):
@@ -99,43 +145,26 @@ def creds(provider):
     ## if needed
     if provider["id"] == IROLE_CODE or provider["key"] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if __Expiration__ != "":
-            timenow = datetime.utcnow()
-            timestamp = timenow.strftime("%Y-%m-%dT%H:%M:%SZ")
-            if timestamp < __Expiration__:
-                # Current timestamp less than expiration fo cached credentials
-                return __AccessKeyId__, __SecretAccessKey__, __Token__
-        # We don't have any cached credentials, or they are expired, get them
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ):
+            # We don't have any cached credentials, or they are expired, get them
+            try:
+                result = get_metadata("meta-data/iam/security-credentials/")
+                role = result.text
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        # Connections to instance meta-data must fail fast and never be proxied
-        try:
-            result = requests.get(
-                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-                proxies={"http": ""},
-                timeout=AWS_METADATA_TIMEOUT,
-            )
-            result.raise_for_status()
-            role = result.text
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
+            try:
+                result = get_metadata(f"meta-data/iam/security-credentials/{role}")
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        try:
-            result = requests.get(
-                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(
-                    role
-                ),
-                proxies={"http": ""},
-                timeout=AWS_METADATA_TIMEOUT,
-            )
-            result.raise_for_status()
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
-
-        data = result.json()
-        __AccessKeyId__ = data["AccessKeyId"]
-        __SecretAccessKey__ = data["SecretAccessKey"]
-        __Token__ = data["Token"]
-        __Expiration__ = data["Expiration"]
+            data = result.json()
+            __AccessKeyId__ = data["AccessKeyId"]
+            __SecretAccessKey__ = data["SecretAccessKey"]
+            __Token__ = data["Token"]
+            __Expiration__ = data["Expiration"]
 
         ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
@@ -169,14 +198,16 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     params_with_headers["AWSAccessKeyId"] = access_key_id
     params_with_headers["SignatureVersion"] = "2"
     params_with_headers["SignatureMethod"] = "HmacSHA256"
-    params_with_headers["Timestamp"] = "{0}".format(timestamp)
+    params_with_headers["Timestamp"] = f"{timestamp}"
     params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(list(map(params_with_headers.get, keys)))
-    querystring = urlencode(list(zip(keys, values)))
+    querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
-    canonical = "{0}\n{1}\n/\n{2}".format(
-        method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
+    canonical = "{}\n{}\n/\n{}".format(
+        method.encode("utf-8"),
+        endpoint.encode("utf-8"),
+        querystring.encode("utf-8"),
     )
 
     hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
@@ -196,9 +227,9 @@ def assumed_creds(prov_dict, role_arn, location=None):
     # current time in epoch seconds
     now = time.mktime(datetime.utcnow().timetuple())
 
-    for key, creds in __AssumeCache__.items():
+    for key, creds in copy.deepcopy(__AssumeCache__).items():
         if (creds["Expiration"] - now) <= 120:
-            __AssumeCache__.delete(key)
+            del __AssumeCache__[key]
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]
@@ -217,7 +248,10 @@ def assumed_creds(prov_dict, role_arn, location=None):
             "Action": "AssumeRole",
             "RoleSessionName": session_name,
             "RoleArn": role_arn,
-            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "Policy": (
+                '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1",'
+                ' "Effect":"Allow","Action":"*","Resource":"*"}]}'
+            ),
             "DurationSeconds": "3600",
         },
         aws_api_version=version,
@@ -284,7 +318,7 @@ def sig4(
         params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
-    querystring = urlencode(list(zip(keys, values))).replace("+", "%20")
+    querystring = urllib.parse.urlencode(list(zip(keys, values))).replace("+", "%20")
 
     amzdate = timenow.strftime("%Y%m%dT%H%M%SZ")
     datestamp = timenow.strftime("%Y%m%d")
@@ -306,11 +340,9 @@ def sig4(
     if token != "":
         new_headers["X-Amz-security-token"] = token
 
-    for header in sorted(new_headers.keys(), key=six.text_type.lower):
+    for header in sorted(new_headers.keys(), key=str.lower):
         lower_header = header.lower()
-        a_canonical_headers.append(
-            "{0}:{1}".format(lower_header, new_headers[header].strip())
-        )
+        a_canonical_headers.append(f"{lower_header}:{new_headers[header].strip()}")
         a_signed_headers.append(lower_header)
     canonical_headers = "\n".join(a_canonical_headers) + "\n"
     signed_headers = ";".join(a_signed_headers)
@@ -342,13 +374,17 @@ def sig4(
     ).hexdigest()
 
     # Add signing information to the request
-    authorization_header = (
-        "{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}"
-    ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
+    authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
+        algorithm,
+        access_key_id,
+        credential_scope,
+        signed_headers,
+        signature,
+    )
 
     new_headers["Authorization"] = authorization_header
 
-    requesturl = "{0}?{1}".format(requesturl, querystring)
+    requesturl = f"{requesturl}?{querystring}"
     return new_headers, requesturl
 
 
@@ -443,19 +479,17 @@ def query(
 
     if endpoint is None:
         if not requesturl:
-            endpoint = prov_dict.get(
-                "endpoint", "{0}.{1}.{2}".format(product, location, service_url)
-            )
+            endpoint = prov_dict.get("endpoint", f"{product}.{location}.{service_url}")
 
-            requesturl = "https://{0}/".format(endpoint)
+            requesturl = f"https://{endpoint}/"
         else:
-            endpoint = urlparse(requesturl).netloc
+            endpoint = urllib.parse.urlparse(requesturl).netloc
             if endpoint == "":
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
-                    "requesturl: {0}. Looking for something "
-                    "like https://some.aws.endpoint/?args"
-                ).format(requesturl)
+                    "requesturl: {}. Looking for something "
+                    "like https://some.aws.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl
@@ -466,7 +500,7 @@ def query(
 
     aws_api_version = prov_dict.get(
         "aws_api_version",
-        prov_dict.get("{0}_api_version".format(product), DEFAULT_AWS_API_VERSION),
+        prov_dict.get(f"{product}_api_version", DEFAULT_AWS_API_VERSION),
     )
 
     # Fallback to ec2's id & key if none is found, for this component
@@ -547,15 +581,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:
@@ -586,12 +615,7 @@ def get_region_from_metadata():
         return __Location__
 
     try:
-        # Connections to instance meta-data must fail fast and never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            proxies={"http": ""},
-            timeout=AWS_METADATA_TIMEOUT,
-        )
+        result = get_metadata("dynamic/instance-identity/document")
     except requests.exceptions.RequestException:
         log.warning("Failed to get AWS region from instance metadata.", exc_info=True)
         # Do not try again

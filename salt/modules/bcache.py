@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing BCache sets
 
@@ -12,20 +11,16 @@ https://www.kernel.org/doc/Documentation/bcache.txt
 
 This module needs the bcache userspace tools to function.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 import time
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +54,7 @@ def uuid(dev=None):
     Return the bcache UUID of a block device.
     If no device is given, the Cache UUID is returned.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -84,7 +79,7 @@ def attach_(dev=None):
     Attach a backing devices to a cache set
     If no dev is given, all backing devices will be attached.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -122,14 +117,14 @@ def attach_(dev=None):
         "attach",
         cache,
         "error",
-        "Error attaching {0} to bcache {1}".format(dev, cache),
+        "Error attaching {} to bcache {}".format(dev, cache),
     ):
         return False
 
     return _wait(
         lambda: uuid(dev) == cache,
         "error",
-        "{0} received attach to bcache {1}, but did not comply".format(dev, cache),
+        "{} received attach to bcache {}, but did not comply".format(dev, cache),
     )
 
 
@@ -141,7 +136,7 @@ def detach(dev=None):
     Detaching a backing device will flush its write cache.
     This should leave the underlying device in a consistent state, but might take a while.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -158,12 +153,12 @@ def detach(dev=None):
         return res if res else None
 
     log.debug("Detaching %s", dev)
-    if not _bcsys(dev, "detach", "goaway", "error", "Error detaching {0}".format(dev)):
+    if not _bcsys(dev, "detach", "goaway", "error", "Error detaching {}".format(dev)):
         return False
     return _wait(
         lambda: uuid(dev) is False,
         "error",
-        "{0} received detach, but did not comply".format(dev),
+        "{} received detach, but did not comply".format(dev),
         300,
     )
 
@@ -172,7 +167,7 @@ def start():
     """
     Trigger a start of the full bcache system through udev.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -199,7 +194,7 @@ def stop(dev=None):
         'Stop' on an individual backing device means hard-stop;
         no attempt at flushing will be done and the bcache device will seemingly 'disappear' from the device lists
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -208,12 +203,12 @@ def stop(dev=None):
     """
     if dev is not None:
         log.warning("Stopping %s, device will only reappear after reregistering!", dev)
-        if not _bcsys(dev, "stop", "goaway", "error", "Error stopping {0}".format(dev)):
+        if not _bcsys(dev, "stop", "goaway", "error", "Error stopping {}".format(dev)):
             return False
         return _wait(
             lambda: _sysfs_attr(_bcpath(dev)) is False,
             "error",
-            "Device {0} did not stop".format(dev),
+            "Device {} did not stop".format(dev),
             300,
         )
     else:
@@ -235,7 +230,7 @@ def back_make(dev, cache_mode="writeback", force=False, attach=True, bucket_size
     Create a backing device for attachment to a set.
     Because the block size must be the same, a cache set already needs to exist.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -270,25 +265,25 @@ def back_make(dev, cache_mode="writeback", force=False, attach=True, bucket_size
     if bucket_size is None:
         bucket_size = _size_map(_fssys("bucket_size"))
 
-    cmd = "make-bcache --block {0} --bucket {1} --{2} --bdev {3}".format(
+    cmd = "make-bcache --block {} --bucket {} --{} --bdev {}".format(
         block_size, bucket_size, cache_mode, dev
     )
     if force:
         cmd += " --wipe-bcache"
 
-    if not _run_all(cmd, "error", "Error creating backing device {0}: %s".format(dev)):
+    if not _run_all(cmd, "error", "Error creating backing device {}: %s".format(dev)):
         return False
     elif not _sysfs_attr(
         "fs/bcache/register",
         _devpath(dev),
         "error",
-        "Error registering backing device {0}".format(dev),
+        "Error registering backing device {}".format(dev),
     ):
         return False
     elif not _wait(
         lambda: _sysfs_attr(_bcpath(dev)) is not False,
         "error",
-        "Backing device {0} did not register".format(dev),
+        "Backing device {} did not register".format(dev),
     ):
         return False
     elif attach:
@@ -304,7 +299,7 @@ def cache_make(
     Create BCache cache on a block device.
     If blkdiscard is available the entire device will be properly cleared in advance.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -376,26 +371,24 @@ def cache_make(
         # if wipe was incomplete & part layout remains the same,
         # this is one condition set where udev would make it accidentally popup again
         if not _run_all(
-            cmd, "error", "Error creating bcache partitions on {0}: %s".format(dev)
+            cmd, "error", "Error creating bcache partitions on {}: %s".format(dev)
         ):
             return False
-        dev = "{0}2".format(dev)
+        dev = "{}2".format(dev)
 
     # ---------------- Finally, create a cache ----------------
-    cmd = "make-bcache --cache /dev/{0} --block {1} --wipe-bcache".format(
-        dev, block_size
-    )
+    cmd = "make-bcache --cache /dev/{} --block {} --wipe-bcache".format(dev, block_size)
 
     # Actually bucket_size should always have a value, but for testing 0 is possible as well
     if bucket_size:
-        cmd += " --bucket {0}".format(bucket_size)
+        cmd += " --bucket {}".format(bucket_size)
 
-    if not _run_all(cmd, "error", "Error creating cache {0}: %s".format(dev)):
+    if not _run_all(cmd, "error", "Error creating cache {}: %s".format(dev)):
         return False
     elif not _wait(
         lambda: uuid() is not False,
         "error",
-        "Cache {0} seemingly created OK, but FS did not activate".format(dev),
+        "Cache {} seemingly created OK, but FS did not activate".format(dev),
     ):
         return False
 
@@ -411,7 +404,7 @@ def config_(dev=None, **kwargs):
 
     If no device is given, operate on the cache set itself.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -428,9 +421,7 @@ def config_(dev=None, **kwargs):
         spath = _bcpath(dev)
 
     # filter out 'hidden' kwargs added by our favourite orchestration system
-    updates = dict(
-        [(key, val) for key, val in kwargs.items() if not key.startswith("__")]
-    )
+    updates = {key: val for key, val in kwargs.items() if not key.startswith("__")}
 
     if updates:
         endres = 0
@@ -439,7 +430,7 @@ def config_(dev=None, **kwargs):
                 [spath, key],
                 val,
                 "warn",
-                "Failed to update {0} with {1}".format(os.path.join(spath, key), val),
+                "Failed to update {} with {}".format(os.path.join(spath, key), val),
             )
         return endres > 0
     else:
@@ -459,7 +450,7 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
     """
     Show the full status of the BCache system and optionally all its involved devices
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -479,7 +470,7 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
                 continue
 
             for spath, sdirs, _ in salt.utils.path.os_walk(
-                "/sys/block/{0}".format(block), followlinks=False
+                "/sys/block/{}".format(block), followlinks=False
             ):
                 if "bcache" in sdirs:
                     bdevs.append(os.path.basename(spath))
@@ -508,7 +499,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     """
     Check the state of a single bcache device
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -523,7 +514,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     result = {}
 
     if not _sysfs_attr(
-        _bcpath(dev), None, "error", "{0} is not a bcache fo any kind".format(dev)
+        _bcpath(dev), None, "error", "{} is not a bcache fo any kind".format(dev)
     ):
         return False
     elif _bcsys(dev, "set"):
@@ -629,7 +620,7 @@ def super_(dev):
     """
     Read out BCache SuperBlock
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -641,9 +632,9 @@ def super_(dev):
     ret = {}
 
     res = _run_all(
-        "bcache-super-show {0}".format(dev),
+        "bcache-super-show {}".format(dev),
         "error",
-        "Error reading superblock on {0}: %s".format(dev),
+        "Error reading superblock on {}: %s".format(dev),
     )
     if not res:
         return False
@@ -653,13 +644,13 @@ def super_(dev):
         if not line:
             continue
 
-        key, val = [val.strip() for val in re.split(r"[\s]+", line, maxsplit=1)]
+        key, val = (val.strip() for val in re.split(r"[\s]+", line, maxsplit=1))
         if not (key and val):
             continue
 
         mval = None
         if " " in val:
-            rval, mval = [val.strip() for val in re.split(r"[\s]+", val, maxsplit=1)]
+            rval, mval = (val.strip() for val in re.split(r"[\s]+", val, maxsplit=1))
             mval = mval[1:-1]
         else:
             rval = val
@@ -774,7 +765,7 @@ def _sysfs_attr(name, value=None, log_lvl=None, log_msg=None):
     """
     Simple wrapper with logging around sysfs.attr
     """
-    if isinstance(name, six.string_types):
+    if isinstance(name, str):
         name = [name]
     res = __salt__["sysfs.attr"](os.path.join(*name), value)
     if not res and log_lvl is not None and log_msg is not None:
@@ -919,7 +910,7 @@ def _size_map(size):
             if re.search(r"[Kk]", size):
                 size = 1024 * float(re.sub(r"[Kk]", "", size))
             elif re.search(r"[Mm]", size):
-                size = 1024 ** 2 * float(re.sub(r"[Mm]", "", size))
+                size = 1024**2 * float(re.sub(r"[Mm]", "", size))
             size = int(size)
         return size
     except Exception:  # pylint: disable=broad-except
@@ -994,24 +985,25 @@ def _wipe(dev):
         wiper = "dd"
     elif not HAS_BLKDISCARD:
         log.warning(
-            "blkdiscard binary not available, properly wipe the dev manually for optimal results"
+            "blkdiscard binary not available, properly wipe the dev manually for"
+            " optimal results"
         )
         wiper = "dd"
     else:
         wiper = "blkdiscard"
 
-    wipe_failmsg = "Error wiping {0}: %s".format(dev)
+    wipe_failmsg = "Error wiping {}: %s".format(dev)
     if wiper == "dd":
         blocks = 4
-        cmd = "dd if=/dev/zero of=/dev/{0} bs=1M count={1}".format(dev, blocks)
+        cmd = "dd if=/dev/zero of=/dev/{} bs=1M count={}".format(dev, blocks)
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
         # Some stuff (<cough>GPT</cough>) writes stuff at the end of a dev as well
-        cmd += " seek={0}".format((size / 1024 ** 2) - blocks)
+        cmd += " seek={}".format((size / 1024**2) - blocks)
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
     elif wiper == "blkdiscard":
-        cmd = "blkdiscard /dev/{0}".format(dev)
+        cmd = "blkdiscard /dev/{}".format(dev)
         endres += _run_all(cmd, "warn", wipe_failmsg)
         # TODO: fix annoying bug failing blkdiscard by trying to discard 1 sector past blkdev
         endres = 1

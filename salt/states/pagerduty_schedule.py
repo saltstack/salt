@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage PagerDuty schedules.
 
@@ -34,9 +33,6 @@ Example:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 
 def __virtual__():
     """
@@ -69,7 +65,7 @@ def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):
                 api_key=api_key,
             )
             if u is None:
-                raise Exception("unknown user: {0}".format(user))
+                raise Exception("unknown user: {}".format(user))
             user["user"]["id"] = u["id"]
     r = __salt__["pagerduty_util.resource_present"](
         "schedules", ["name", "id"], _diff, profile, subdomain, api_key, **kwargs
@@ -103,7 +99,7 @@ def _diff(state_data, resource_object):
         if k == "schedule_layers":
             continue
         if v != resource_object["schedule"][k]:
-            objects_differ = "{0} {1} {2}".format(k, v, resource_object["schedule"][k])
+            objects_differ = "{} {} {}".format(k, v, resource_object["schedule"][k])
             break
 
     # check schedule_layers
@@ -117,7 +113,7 @@ def _diff(state_data, resource_object):
                     found = True
                     break
             if not found:
-                objects_differ = "layer {0} missing".format(layer["name"])
+                objects_differ = "layer {} missing".format(layer["name"])
                 break
             # set the id, so that we will update this layer instead of creating a new one
             layer["id"] = resource_layer["id"]
@@ -128,7 +124,7 @@ def _diff(state_data, resource_object):
                 if k == "start":
                     continue
                 if v != resource_layer[k]:
-                    objects_differ = "layer {0} key {1} {2} != {3}".format(
+                    objects_differ = "layer {} key {} {} != {}".format(
                         layer["name"], k, v, resource_layer[k]
                     )
                     break
@@ -136,7 +132,7 @@ def _diff(state_data, resource_object):
                 break
             # compare layer['users']
             if len(layer["users"]) != len(resource_layer["users"]):
-                objects_differ = "num users in layer {0} {1} != {2}".format(
+                objects_differ = "num users in layer {} {} != {}".format(
                     layer["name"], len(layer["users"]), len(resource_layer["users"])
                 )
                 break
@@ -150,12 +146,12 @@ def _diff(state_data, resource_object):
                         found = True
                         break
                 if not found:
-                    objects_differ = "layer {0} no one with member_order {1}".format(
+                    objects_differ = "layer {} no one with member_order {}".format(
                         layer["name"], user1["member_order"]
                     )
                     break
                 if user1["user"]["id"] != user2["user"]["id"]:
-                    objects_differ = "layer {0} user at member_order {1} {2} != {3}".format(
+                    objects_differ = "layer {} user at member_order {} {} != {}".format(
                         layer["name"],
                         user1["member_order"],
                         user1["user"]["id"],

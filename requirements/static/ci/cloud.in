@@ -1,5 +1,10 @@
-# This is a compilation of requirements installed on salt-jenkins git.salt state run
+# Cloud tests requirements
+--constraint=./py{py_version}/{platform}.txt
+
+apache-libcloud>=2.5.0
 netaddr
 profitbricks
 pypsexec
 pywinrm
+pyspnego
+smbprotocol

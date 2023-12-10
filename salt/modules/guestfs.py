@@ -1,21 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Interact with virtual machine images via libguestfs
 
 :depends:   - libguestfs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
-
-# Import Python libs
 import os
 import tempfile
 import time
 
-# Import Salt libs
 import salt.utils.path
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +52,7 @@ def mount(location, access="rw", root=None):
     while True:
         if os.listdir(root):
             # Stuff is in there, don't use it
-            hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+            hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
             rand = hash_type(os.urandom(32)).hexdigest()
             root = os.path.join(
                 tempfile.gettempdir(),
@@ -71,7 +67,7 @@ def mount(location, access="rw", root=None):
                     log.info("Path already existing: %s", root)
         else:
             break
-    cmd = "guestmount -i -a {0} --{1} {2}".format(location, access, root)
+    cmd = f"guestmount -i -a {location} --{access} {root}"
     __salt__["cmd.run"](cmd, python_shell=False)
     return root
 
@@ -86,7 +82,7 @@ def umount(name, disk=None):
 
         salt '*' guestfs.umount /mountpoint disk=/srv/images/fedora.qcow
     """
-    cmd = "guestunmount -q {0}".format(name)
+    cmd = f"guestunmount -q {name}"
     __salt__["cmd.run"](cmd)
 
     # Wait at most 5s that the disk is no longuer used
@@ -94,7 +90,7 @@ def umount(name, disk=None):
     while (
         disk is not None
         and loops < 5
-        and len(__salt__["cmd.run"]("lsof {0}".format(disk)).splitlines()) != 0
+        and len(__salt__["cmd.run"](f"lsof {disk}").splitlines()) != 0
     ):
         loops = loops + 1
         time.sleep(1)

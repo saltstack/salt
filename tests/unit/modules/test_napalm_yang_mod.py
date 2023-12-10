@@ -44,7 +44,9 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": "Configuration discarded.",
                 "already_configured": False,
                 "result": True,
-                "diff": '[edit interfaces xe-0/0/5]+   description "Adding a description";',
+                "diff": (
+                    '[edit interfaces xe-0/0/5]+   description "Adding a description";'
+                ),
             }
         )
         cls._test_diff = freeze({"diff1": "value"})

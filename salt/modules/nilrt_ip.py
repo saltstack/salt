@@ -3,6 +3,7 @@ The networking module for NI Linux Real-Time distro
 
 """
 
+import configparser
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ import time
 import salt.exceptions
 import salt.utils.files
 import salt.utils.validate.net
-from salt.ext.six.moves import configparser
 
 try:
     import pyconnman
@@ -98,12 +98,14 @@ def _get_technologies():
     tech = ""
     technologies = pyconnman.ConnManager().get_technologies()
     for path, params in technologies:
-        tech += "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
-            path,
-            params["Name"],
-            params["Type"],
-            params["Powered"] == 1,
-            params["Connected"] == 1,
+        tech += (
+            "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
+                path,
+                params["Name"],
+                params["Type"],
+                params["Powered"] == 1,
+                params["Connected"] == 1,
+            )
         )
     return tech
 

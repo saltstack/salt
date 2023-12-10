@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Generate Pillar data from Django models through the Django ORM
 
@@ -89,7 +88,6 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -97,7 +95,6 @@ import sys
 
 import salt.exceptions
 import salt.utils.stringutils
-from salt.ext import six
 
 HAS_VIRTUALENV = False
 
@@ -182,7 +179,7 @@ def ext_pillar(
             (key, _, value) = salt.utils.stringutils.to_str(line).partition("=")
             base_env[key] = value
 
-        command = ["bash", "-c", "source {0} && env".format(env_file)]
+        command = ["bash", "-c", "source {} && env".format(env_file)]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
@@ -202,14 +199,14 @@ def ext_pillar(
 
         django_pillar = {}
 
-        for proj_app, models in six.iteritems(django_app):
+        for proj_app, models in django_app.items():
             _, _, app = proj_app.rpartition(".")
             django_pillar[app] = {}
-            for model_name, model_meta in six.iteritems(models):
+            for model_name, model_meta in models.items():
                 model_orm = get_model(app, model_name)
                 if model_orm is None:
                     raise salt.exceptions.SaltException(
-                        "Django model '{0}' not found in app '{1}'.".format(
+                        "Django model '{}' not found in app '{}'.".format(
                             app, model_name
                         )
                     )
@@ -232,9 +229,7 @@ def ext_pillar(
                     # (since we're using it as the key in a dictionary)
                     if name_field not in model:
                         raise salt.exceptions.SaltException(
-                            "Name '{0}' not found in returned fields.".format(
-                                name_field
-                            )
+                            "Name '{}' not found in returned fields.".format(name_field)
                         )
 
                     if model[name_field] in pillar_for_model:

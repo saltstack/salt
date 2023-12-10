@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import hashlib
 import logging
 import os
@@ -12,18 +8,18 @@ import textwrap
 import time
 import uuid
 
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
-import salt.ext.six as six
+from pytestshellutils.utils import ports
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root, slowTest, with_tempfile
+from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -40,12 +36,10 @@ class CPModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(CPModuleTest, self).run_function(*args, **kwargs)
-        )
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file(self, tgt):
         """
         cp.get_file
@@ -56,7 +50,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_to_dir(self):
         """
         cp.get_file
@@ -69,10 +63,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @skipIf(
-        salt.utils.platform.is_windows() and six.PY3,
-        "This test hangs on Windows on Py3",
-    )
+    @pytest.mark.skip_on_windows(reason="This test hangs on Windows on Py3")
     def test_get_file_templated_paths(self, tgt):
         """
         cp.get_file
@@ -91,24 +82,24 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_gzipped(self, tgt):
         """
         cp.get_file
         """
         src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
         with salt.utils.files.fopen(src, "rb") as fp_:
-            hash_str = hashlib.md5(fp_.read()).hexdigest()
+            hash_str = hashlib.sha256(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
         with salt.utils.files.fopen(tgt, "rb") as scene:
             data = scene.read()
-        self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
+        self.assertEqual(hash_str, hashlib.sha256(data).hexdigest())
         data = salt.utils.stringutils.to_unicode(data)
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_makedirs(self):
         """
         cp.get_file
@@ -124,7 +115,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_template(self, tgt):
         """
         cp.get_template
@@ -137,7 +128,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("bacon", data)
         self.assertNotIn("spam", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_dir(self):
         """
         cp.get_dir
@@ -149,7 +140,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("empty", os.listdir(os.path.join(tgt, "grail")))
         self.assertIn("scene", os.listdir(os.path.join(tgt, "grail", "36")))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_dir_templated_paths(self):
         """
         cp.get_dir
@@ -167,7 +158,7 @@ class CPModuleTest(ModuleCase):
     # cp.get_url tests
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url(self, tgt):
         """
         cp.get_url with salt:// source given
@@ -178,7 +169,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_makedirs(self):
         """
         cp.get_url
@@ -193,7 +184,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_dest_empty(self):
         """
         cp.get_url with salt:// source given and destination omitted.
@@ -204,7 +195,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_no_dest(self):
         """
         cp.get_url with salt:// source given and destination set as None
@@ -213,7 +204,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_url", ["salt://grail/scene33", tgt])
         self.assertIn("KNIGHT:  They're nervous, sire.", ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_nonexistent_source(self):
         """
         cp.get_url with nonexistent salt:// source given
@@ -222,7 +213,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_url", ["salt://grail/nonexistent_scene", tgt])
         self.assertEqual(ret, False)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_to_dir(self):
         """
         cp.get_url with salt:// source
@@ -234,44 +225,37 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_https(self, tgt):
         """
         cp.get_url with https:// source given
         """
-        self.run_function("cp.get_url", ["https://repo.saltstack.com/index.html", tgt])
+        self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_https_dest_empty(self):
         """
         cp.get_url with https:// source given and destination omitted.
         """
-        ret = self.run_function("cp.get_url", ["https://repo.saltstack.com/index.html"])
+        ret = self.run_function(
+            "cp.get_url", ["https://repo.saltproject.io/index.html"]
+        )
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_https_no_dest(self):
         """
         cp.get_url with https:// source given and destination set as None
@@ -282,19 +266,19 @@ class CPModuleTest(ModuleCase):
         tgt = None
         while time.time() - start <= timeout:
             ret = self.run_function(
-                "cp.get_url", ["https://repo.saltstack.com/index.html", tgt]
+                "cp.get_url", ["https://repo.saltproject.io/index.html", tgt]
             )
             if ret.find("HTTP 599") == -1:
                 break
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
-            raise Exception("https://repo.saltstack.com/index.html returned 599 error")
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+            raise Exception("https://repo.saltproject.io/index.html returned 599 error")
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_file(self):
         """
         cp.get_url with file:// source given
@@ -307,7 +291,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_file_no_dest(self):
         """
         cp.get_url with file:// source given and destination set as None
@@ -319,7 +303,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", ret)
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_url_ftp(self, tgt):
         """
         cp.get_url with https:// source given
@@ -327,17 +311,17 @@ class CPModuleTest(ModuleCase):
         self.run_function(
             "cp.get_url",
             [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
+                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT",
                 tgt,
             ],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Base system", data)
+        self.assertIn("The official FreeBSD", data)
 
     # cp.get_file_str tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_str_salt(self):
         """
         cp.get_file_str with salt:// source given
@@ -346,7 +330,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertIn("KNIGHT:  They're nervous, sire.", ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_str_nonexistent_source(self):
         """
         cp.get_file_str with nonexistent salt:// source given
@@ -355,22 +339,19 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertEqual(ret, False)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_str_https(self):
         """
         cp.get_file_str with https:// source given
         """
-        src = "https://repo.saltstack.com/index.html"
+        src = "https://repo.saltproject.io/index.html"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_str_local(self):
         """
         cp.get_file_str with file:// source given
@@ -382,7 +363,7 @@ class CPModuleTest(ModuleCase):
 
     # caching tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cache_file(self):
         """
         cp.cache_file
@@ -393,7 +374,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cache_files(self):
         """
         cp.cache_files
@@ -408,16 +389,19 @@ class CPModuleTest(ModuleCase):
             self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_cache_master(self, tgt):
         """
         cp.cache_master
         """
-        ret = self.run_function("cp.cache_master", [tgt],)
+        ret = self.run_function(
+            "cp.cache_master",
+            [tgt],
+        )
         for path in ret:
             self.assertTrue(os.path.exists(path))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cache_local_file(self):
         """
         cp.cache_local_file
@@ -429,15 +413,15 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, "r") as cp_:
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
-    @skip_if_not_root
-    @slowTest
+    @pytest.mark.skip_if_binaries_missing("nginx")
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):
         """
         cp.cache_file
         """
-        nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{0}/".format(nginx_port)
+        nginx_port = ports.get_unused_localhost_port()
+        url_prefix = f"http://localhost:{nginx_port}/"
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -460,7 +444,7 @@ class CPModuleTest(ModuleCase):
             fp_.write(
                 textwrap.dedent(
                     salt.utils.stringutils.to_str(
-                        """\
+                        f"""\
                 user root;
                 worker_processes 1;
                 error_log {nginx_conf_dir}/server_error.log;
@@ -490,9 +474,7 @@ class CPModuleTest(ModuleCase):
                             return 302 /actual_file;
                         }}
                     }}
-                }}""".format(
-                            **locals()
-                        )
+                }}"""
                     )
                 )
             )
@@ -512,16 +494,37 @@ class CPModuleTest(ModuleCase):
                 cached_contents = salt.utils.stringutils.to_unicode(fp_.read())
                 self.assertEqual(cached_contents, file_contents)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_states(self):
         """
         cp.list_states
         """
-        ret = self.run_function("cp.list_states",)
-        self.assertIn("core", ret)
-        self.assertIn("top", ret)
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
 
-    @slowTest
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
+            ret = self.run_function(
+                "cp.list_states",
+            )
+            self.assertIn("core", ret)
+            self.assertIn("top", ret)
+
+    @pytest.mark.slow_test
     def test_list_minion(self):
         """
         cp.list_minion
@@ -538,7 +541,7 @@ class CPModuleTest(ModuleCase):
                 break
         self.assertTrue(found)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_is_cached(self):
         """
         cp.is_cached
@@ -549,7 +552,7 @@ class CPModuleTest(ModuleCase):
         ret2 = self.run_function("cp.is_cached", ["salt://fasldkgj/poicxzbn"])
         self.assertFalse(ret2)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_hash_file(self):
         """
         cp.hash_file
@@ -561,7 +564,7 @@ class CPModuleTest(ModuleCase):
             self.assertEqual(sha256_hash["hsum"], hashlib.sha256(data).hexdigest())
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_from_env_predefined(self, tgt):
         """
         cp.get_file
@@ -577,7 +580,7 @@ class CPModuleTest(ModuleCase):
             os.unlink(tgt)
 
     @with_tempfile()
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_file_from_env_in_url(self, tgt):
         tgt = os.path.join(RUNTIME_VARS.TMP, "cheese")
         try:
@@ -589,7 +592,7 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
         open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
@@ -611,6 +614,6 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt_cache_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_envs(self):
         self.assertEqual(sorted(self.run_function("cp.envs")), sorted(["base", "prod"]))

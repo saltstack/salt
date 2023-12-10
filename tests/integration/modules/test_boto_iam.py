@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Validate the boto_iam module
 """
+import pytest
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
-# Import 3rd-party libs
 try:
     import boto
 
@@ -19,9 +13,9 @@ except ImportError:
     NO_BOTO_MODULE = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_BOTO_MODULE,
-    "Please install the boto library before running boto integration tests.",
+    reason="Please install the boto library before running boto integration tests.",
 )
 class BotoIAMTest(ModuleCase):
     def setUp(self):
@@ -29,7 +23,8 @@ class BotoIAMTest(ModuleCase):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
 
     def test_get_account_id(self):

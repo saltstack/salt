@@ -11,6 +11,9 @@ where you get data from, and what kinds of access (internal and external) you
 require.
 
 .. important::
+   The guidance here should be taken in combination with :ref:`best-practices`.
+
+.. important::
 
     Refer to the :ref:`saltstack_security_announcements` documentation in order to stay updated
     and secure.
@@ -46,6 +49,10 @@ General hardening tips
 
 Salt hardening tips
 ===================
+
+.. include:: ../_incl/grains_passwords.rst
+
+.. include:: ../_incl/jinja_security.rst
 
 - Subscribe to `salt-users`_ or `salt-announce`_ so you know when new Salt
   releases are available.
@@ -83,5 +90,73 @@ Salt hardening tips
   messages are logged at the ``error`` log level and start with ``Requested
   method not exposed``.
 
+.. _rotating-salt-keys:
+
+Rotating keys
+=============
+
+There are several reasons to rotate keys. One example is exposure or a
+compromised key. An easy way to rotate a key is to remove the existing keys and
+let the ``salt-master`` or ``salt-minion`` process generate new keys on
+restart.
+
+Rotate a minion key
+-------------------
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   salt-call saltutil.regen_keys
+   systemctl stop salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -d <minion-id>
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl start salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -a <minion-id>
+
+Rotate a master key
+-------------------
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   systemctl stop salt-master
+   rm <pki_dir>/master.{pem,pub}
+   systemctl start salt-master
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl stop salt-minion
+   rm <pki_dir>/minion_master.pub
+   systemctl start salt-minion
+
+
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce
+
+
+Hardening of syndic setups
+==========================
+
+Syndics must be run as the same user as their syndic master process. The master
+of master's will include publisher ACL information in jobs sent to downstream
+masters via syndics. This means that any minions connected directly to a master
+of masters will also receive ACL information in jobs being published. For the
+most secure setup, only connect syndics directly to master of masters.

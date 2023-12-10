@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Modules used to control the master itself
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.client.mixins
 import salt.config
 import salt.loader
-import salt.transport.client
 import salt.utils.error
-import salt.utils.zeromq
+import salt.utils.network
 
 
 class WheelClient(
-    salt.client.mixins.SyncClientMixin, salt.client.mixins.AsyncClientMixin, object
+    salt.client.mixins.SyncClientMixin, salt.client.mixins.AsyncClientMixin
 ):
     """
     An interface to Salt's wheel modules
@@ -41,9 +39,8 @@ class WheelClient(
     client = "wheel"
     tag_prefix = "wheel"
 
-    def __init__(self, opts=None):
-        self.opts = opts
-        self.context = {}
+    def __init__(self, opts, context=None):
+        super().__init__(opts, context=context)
         self.functions = salt.loader.wheels(opts, context=self.context)
 
     # TODO: remove/deprecate
@@ -69,10 +66,13 @@ class WheelClient(
         interface = self.opts["interface"]
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
+        if interface == "::":
+            interface = "::1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface), str(self.opts["ret_port"]),
+            salt.utils.network.ip_bracket(interface),
+            str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)
@@ -123,8 +123,8 @@ class WheelClient(
             })
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         """
-        fun = low.pop("fun")
-        return self.asynchronous(fun, low)
+        fun = low.get("fun")
+        return self.asynchronous(fun, low, local=False)
 
     def cmd(
         self,
@@ -143,9 +143,7 @@ class WheelClient(
             >>> wheel.cmd('key.finger', ['jerry'])
             {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         """
-        return super(WheelClient, self).cmd(
-            fun, arg, pub_data, kwarg, print_event, full_return
-        )
+        return super().cmd(fun, arg, pub_data, kwarg, print_event, full_return)
 
 
 Wheel = WheelClient  # for backward-compat

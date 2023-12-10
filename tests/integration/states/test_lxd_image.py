@@ -1,15 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the lxd states
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
-# Import Lxd Test Case
-import tests.integration.states.test_lxd
+import salt.modules.lxd
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class LxdImageTestCase(tests.integration.states.test_lxd.LxdTestCase):
+@pytest.mark.skipif(salt.modules.lxd.HAS_PYLXD is False, reason="pylxd not installed")
+@pytest.mark.skip_if_binaries_missing("lxd", reason="LXD not installed")
+@pytest.mark.skip_if_binaries_missing("lxc", reason="LXC not installed")
+class LxdImageTestCase(ModuleCase, SaltReturnAssertsMixin):
     def test_02__pull_image(self):
         ret = self.run_state(
             "lxd_image.present",
@@ -26,7 +28,10 @@ class LxdImageTestCase(tests.integration.states.test_lxd.LxdTestCase):
         assert ret[name]["changes"]["aliases"] == ['Added alias "images:centos/7"']
 
     def test_03__delete_image(self):
-        ret = self.run_state("lxd_image.absent", name="images:centos/7",)
+        ret = self.run_state(
+            "lxd_image.absent",
+            name="images:centos/7",
+        )
         name = "lxd_image_|-images:centos/7_|-images:centos/7_|-absent"
         self.assertSaltTrueReturn(ret)
         assert name in ret

@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import errno
 import os
 import random
@@ -15,9 +10,7 @@ import sys
 import tempfile
 import time
 
-# Import salt libs
 import salt.utils.win_dacl
-from salt.ext import six
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == "nt":  # pragma: no cover
@@ -32,10 +25,10 @@ if os.name == "nt":  # pragma: no cover
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):  # pylint: disable=E0102
-            if not isinstance(src, six.text_type):
-                src = six.text_type(src, sys.getfilesystemencoding())
-            if not isinstance(dst, six.text_type):
-                dst = six.text_type(dst, sys.getfilesystemencoding())
+            if not isinstance(src, str):
+                src = str(src, sys.getfilesystemencoding())
+            if not isinstance(dst, str):
+                dst = str(dst, sys.getfilesystemencoding())
             if _rename_atomic(src, dst):
                 return True
             retry = 0
@@ -97,7 +90,7 @@ if os.name == "nt":  # pragma: no cover
         except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
-            old = "{0}-{1:08x}".format(dst, random.randint(0, sys.maxint))
+            old = "{}-{:08x}".format(dst, random.randint(0, sys.maxint))
             os.rename(dst, old)
             os.rename(src, dst)
             try:
@@ -105,13 +98,12 @@ if os.name == "nt":  # pragma: no cover
             except Exception:  # pylint: disable=broad-except
                 pass
 
-
 else:
     atomic_rename = os.rename  # pylint: disable=C0103
     CAN_RENAME_OPEN_FILE = True
 
 
-class _AtomicWFile(object):
+class _AtomicWFile:
     """
     Helper class for :func:`atomic_open`.
     """
@@ -153,7 +145,7 @@ class _AtomicWFile(object):
                 pass
 
     def __repr__(self):
-        return "<{0} {1}{2}, mode {3}>".format(
+        return "<{} {}{}, mode {}>".format(
             self.__class__.__name__,
             self._fh.closed and "closed " or "",
             self._filename,
@@ -174,7 +166,7 @@ def atomic_open(filename, mode="w"):
         "dir": os.path.dirname(filename),
         "delete": False,
     }
-    if six.PY3 and "b" not in mode:
+    if "b" not in mode:
         kwargs["newline"] = ""
     ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Work with virtual machines managed by Vagrant.
 
@@ -28,15 +27,9 @@ requirements:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -69,7 +62,7 @@ def _build_sdb_uri(key):
     Salt node id's are used as the key for vm_ dicts.
 
     """
-    return "{}{}".format(VAGRANT_SDB_URL, key)
+    return f"{VAGRANT_SDB_URL}{key}"
 
 
 def _build_machine_uri(machine, cwd):
@@ -80,12 +73,12 @@ def _build_machine_uri(machine, cwd):
     never collide with a Salt node id -- which is important since we
     will be storing both in the same table.
     """
-    key = "{}?{}".format(machine, os.path.abspath(cwd))
+    key = f"{machine}?{os.path.abspath(cwd)}"
     return _build_sdb_uri(key)
 
 
 def _update_vm_info(name, vm_):
-    """ store the vm_ information keyed by name """
+    """store the vm_ information keyed by name"""
     __utils__["sdb.sdb_set"](_build_sdb_uri(name), vm_, __opts__)
 
     # store machine-to-name mapping, too
@@ -109,9 +102,7 @@ def get_vm_info(name):
             "Probable sdb driver not found. Check your configuration."
         )
     if vm_ is None or "machine" not in vm_:
-        raise SaltInvocationError(
-            "No Vagrant machine defined for Salt_id {}".format(name)
-        )
+        raise SaltInvocationError(f"No Vagrant machine defined for Salt_id {name}")
     return vm_
 
 
@@ -168,7 +159,7 @@ def _vagrant_ssh_config(vm_):
     """
     machine = vm_["machine"]
     log.info("requesting vagrant ssh-config for VM %s", machine or "(default)")
-    cmd = "vagrant ssh-config {}".format(machine)
+    cmd = f"vagrant ssh-config {machine}"
     reply = __salt__["cmd.shell"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), ignore_retcode=True
     )
@@ -256,7 +247,6 @@ def list_inactive_vms(cwd=None):
     Return a list of machine names for inactive virtual machine on the host,
     which are defined in the Vagrantfile at the indicated path.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -313,12 +303,12 @@ def vm_state(name="", cwd=None):
     else:
         if not cwd:
             raise SaltInvocationError(
-                "Path to Vagranfile must be defined, but cwd={}".format(cwd)
+                f"Path to Vagranfile must be defined, but cwd={cwd}"
             )
         machine = ""
 
     info = []
-    cmd = "vagrant status {}".format(machine)
+    cmd = f"vagrant status {machine}"
     reply = __salt__["cmd.shell"](cmd, cwd)
     log.info("--->\n%s", reply)
     for line in reply.split("\n"):  # build a list of the text reply
@@ -412,13 +402,11 @@ def _start(
     try:
         machine = vm_["machine"]
     except KeyError:
-        raise SaltInvocationError(
-            "No Vagrant machine defined for Salt_id {}".format(name)
-        )
+        raise SaltInvocationError(f"No Vagrant machine defined for Salt_id {name}")
 
     vagrant_provider = vm_.get("vagrant_provider", "")
-    provider_ = "--provider={}".format(vagrant_provider) if vagrant_provider else ""
-    cmd = "vagrant up {} {}".format(machine, provider_)
+    provider_ = f"--provider={vagrant_provider}" if vagrant_provider else ""
+    cmd = f"vagrant up {machine} {provider_}"
     ret = __salt__["cmd.run_all"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), output_loglevel="info"
     )
@@ -432,7 +420,7 @@ def _start(
                 break
 
     if ret["retcode"] == 0:
-        return 'Started "{}" using Vagrant machine "{}".'.format(name, machine)
+        return f'Started "{name}" using Vagrant machine "{machine}".'
     return False
 
 
@@ -466,7 +454,7 @@ def stop(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant halt {}".format(machine)
+    cmd = f"vagrant halt {machine}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -484,7 +472,7 @@ def pause(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant suspend {}".format(machine)
+    cmd = f"vagrant suspend {machine}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -506,7 +494,7 @@ def reboot(name, provision=False):
     machine = vm_["machine"]
     prov = "--provision" if provision else ""
 
-    cmd = "vagrant reload {} {}".format(machine, prov)
+    cmd = f"vagrant reload {machine} {prov}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -526,14 +514,14 @@ def destroy(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant destroy -f {}".format(machine)
+    cmd = f"vagrant destroy -f {machine}"
 
     ret = __salt__["cmd.run_all"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), output_loglevel="info"
     )
     if ret["retcode"] == 0:
         _erase_vm_info(name)
-        return "Destroyed VM {0}".format(name)
+        return f"Destroyed VM {name}"
     return False
 
 
@@ -574,8 +562,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
     The IP address of the bridged adapter will typically be assigned by DHCP and unknown to you,
     but you should be able to determine what IP network the address will be chosen from.
     If you enter a CIDR network mask, Salt will attempt to find the VM's address for you.
-    The host machine will send an "ifconfig" command to the VM (using ssh to `ssh_host`:`ssh_port`)
-    and return the IP address of the first interface it can find which matches your mask.
+    The host machine will send an "ip link show" or "ifconfig" command to the VM
+    (using ssh to `ssh_host`:`ssh_port`) and return the IP address of the first interface it
+    can find which matches your mask.
     """
     vm_ = get_vm_info(name)
 
@@ -591,8 +580,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
 
     except KeyError:
         raise CommandExecutionError(
-            "Insufficient SSH information to contact VM {}. "
-            "Is it running?".format(vm_.get("machine", "(default)"))
+            "Insufficient SSH information to contact VM {}. Is it running?".format(
+                vm_.get("machine", "(default)")
+            )
         )
 
     if network_mask:
@@ -602,23 +592,32 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
             "-oStrictHostKeyChecking={StrictHostKeyChecking} "
             "-oUserKnownHostsFile={UserKnownHostsFile} "
             "-oControlPath=none "
-            "{User}@{HostName} ifconfig".format(**ssh_config)
+            "{User}@{HostName} ip link show".format(**ssh_config)
         )
 
-        log.info("Trying ssh -p {Port} {User}@{HostName} ifconfig".format(**ssh_config))
+        log.info(
+            "Trying ssh -p %(Port)s %(User)s@%(HostName)s ip link show", ssh_config
+        )
         reply = __salt__["cmd.shell"](command)
         log.info("--->\n%s", reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
+        found_address = None
         for line in reply.split("\n"):
             try:  # try to find a bridged network address
                 # the lines we are looking for appear like:
+                # ip addr show
+                #    inet 192.168.0.107/24 brd 192.168.0.255 scope global dynamic noprefixroute enx3c18a040229d
+                #    inet 10.16.119.90/32 scope global gpd0
+                #    inet 127.0.0.1/8 scope host lo
+                #    inet 192.168.0.116/24 brd 192.168.0.255 scope global dynamic noprefixroute enp0s3
+                #    inet6 fe80::df56:869b:f0d5:f77c/64 scope link noprefixroute
+                # ifconfig
                 #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
                 # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
                 tokens = line.replace(
                     "addr:", "", 1
                 ).split()  # remove "addr:" if it exists, then split
-                found_address = None
                 if "inet" in tokens:
                     nxt = tokens.index("inet") + 1
                     found_address = ipaddress.ip_address(tokens[nxt])
@@ -626,7 +625,7 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
                     nxt = tokens.index("inet6") + 1
                     found_address = ipaddress.ip_address(tokens[nxt].split("/")[0])
                 if found_address in target_network_range:
-                    ans["ip_address"] = six.text_type(found_address)
+                    ans["ip_address"] = str(found_address)
                     break  # we have located a good matching address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
@@ -634,16 +633,60 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
         log.info(
             "Network IP address in %s detected as: %s",
             target_network_range,
-            ans.get("ip_address", "(not found)"),
+            ans.get("ip_address", "(not found using ip addr show)"),
         )
+
+        if found_address is None:
+            # attempt to get ip address using ifconfig
+            command = (
+                "ssh -i {IdentityFile} -p {Port} "
+                "-oStrictHostKeyChecking={StrictHostKeyChecking} "
+                "-oUserKnownHostsFile={UserKnownHostsFile} "
+                "-oControlPath=none "
+                "{User}@{HostName} ifconfig".format(**ssh_config)
+            )
+
+            log.info(
+                "Trying ssh -p %(Port)s %(User)s@%(HostName)s ifconfig", ssh_config
+            )
+            reply = __salt__["cmd.shell"](command)
+            log.info("ifconfig returned:\n%s", reply)
+            target_network_range = ipaddress.ip_network(network_mask, strict=False)
+
+            for line in reply.split("\n"):
+                try:  # try to find a bridged network address
+                    # the lines we are looking for appear like:
+                    #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
+                    # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
+                    tokens = line.replace(
+                        "addr:", "", 1
+                    ).split()  # remove "addr:" if it exists, then split
+                    found_address = None
+                    if "inet" in tokens:
+                        nxt = tokens.index("inet") + 1
+                        found_address = ipaddress.ip_address(tokens[nxt])
+                    elif "inet6" in tokens:
+                        nxt = tokens.index("inet6") + 1
+                        found_address = ipaddress.ip_address(tokens[nxt].split("/")[0])
+                    if found_address in target_network_range:
+                        ans["ip_address"] = str(found_address)
+                        break  # we have located a good matching address
+                except (IndexError, AttributeError, TypeError):
+                    pass  # all syntax and type errors loop here
+                    # falling out if the loop leaves us remembering the last candidate
+            log.info(
+                "Network IP address in %s detected as: %s",
+                target_network_range,
+                ans.get("ip_address", "(not found using ifconfig)"),
+            )
 
     if get_private_key:
         # retrieve the Vagrant private key from the host
         try:
             with salt.utils.files.fopen(ssh_config["IdentityFile"]) as pks:
                 ans["private_key"] = salt.utils.stringutils.to_unicode(pks.read())
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise CommandExecutionError(
-                "Error processing Vagrant private key file: {}".format(e)
+                f"Error processing Vagrant private key file: {e}"
             )
     return ans

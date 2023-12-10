@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt interface to LDAP commands
 
@@ -40,18 +39,13 @@ Salt interface to LDAP commands
     badness may ensue - you have been warned.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
-# Import Salt libs
 import salt.utils.data
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
-# Import third party libs
 try:
     import ldap
     import ldap.modlist  # pylint: disable=no-name-in-module
@@ -89,7 +83,7 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        value = __salt__["config.option"]("ldap.{0}".format(key))
+        value = __salt__["config.option"]("ldap.{}".format(key))
     return salt.utils.data.decode(value, to_str=True)
 
 
@@ -159,7 +153,7 @@ def search(
     _ldap = _connect(**kwargs)
     start = time.time()
     log.debug(
-        "Running LDAP search with filter:%s, dn:%s, scope:%s, " "attrs:%s",
+        "Running LDAP search with filter:%s, dn:%s, scope:%s, attrs:%s",
         filter,
         dn,
         scope,
@@ -168,19 +162,19 @@ def search(
     results = _ldap.search_s(dn, int(scope), filter, attrs)
     elapsed = time.time() - start
     if elapsed < 0.200:
-        elapsed_h = six.text_type(round(elapsed * 1000, 1)) + "ms"
+        elapsed_h = str(round(elapsed * 1000, 1)) + "ms"
     else:
-        elapsed_h = six.text_type(round(elapsed, 2)) + "s"
+        elapsed_h = str(round(elapsed, 2)) + "s"
 
     ret = {
         "results": results,
         "count": len(results),
-        "time": {"human": elapsed_h, "raw": six.text_type(round(elapsed, 5))},
+        "time": {"human": elapsed_h, "raw": str(round(elapsed, 5))},
     }
     return ret
 
 
-class _LDAPConnection(object):
+class _LDAPConnection:
     """
     Setup an LDAP connection.
     """
@@ -197,13 +191,13 @@ class _LDAPConnection(object):
         self.bindpw = bindpw
 
         if self.uri == "":
-            self.uri = "ldap://{0}:{1}".format(self.server, self.port)
+            self.uri = "ldap://{}:{}".format(self.server, self.port)
 
         try:
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
-            self.ldap = ldap.initialize("{0}".format(self.uri))
+            self.ldap = ldap.initialize("{}".format(self.uri))
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
 
@@ -214,7 +208,7 @@ class _LDAPConnection(object):
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Failed to bind to LDAP server {0} as {1}: {2}".format(
+                "Failed to bind to LDAP server {} as {}: {}".format(
                     self.uri, self.binddn, ldap_error
                 )
             )

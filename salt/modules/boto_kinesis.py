@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Kinesis
 
@@ -45,20 +44,13 @@ Connection module for Amazon Kinesis
 # keep lint from choking on _get_conn
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
-import sys
 import time
 
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import third party libs
 # pylint: disable=unused-import
 try:
     import boto3
@@ -91,7 +83,9 @@ def _get_basic_stream(stream_name, conn):
     Stream info from AWS, via describe_stream
     Only returns the first "page" of shards (up to 100); use _get_full_stream() for all shards.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis._get_basic_stream my_stream existing_conn
     """
@@ -102,7 +96,9 @@ def _get_full_stream(stream_name, region=None, key=None, keyid=None, profile=Non
     """
     Get complete stream info from AWS, via describe_stream, including all shards.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis._get_full_stream my_stream region=us-east-1
     """
@@ -136,7 +132,9 @@ def get_stream_when_active(
     Continues to retry when stream is updating or creating.
     If the stream is deleted during retries, the loop will catch the error and break.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.get_stream_when_active my_stream region=us-east-1
     """
@@ -166,7 +164,9 @@ def exists(stream_name, region=None, key=None, keyid=None, profile=None):
     """
     Check if the stream exists. Returns False and the error if it does not.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.exists my_stream region=us-east-1
     """
@@ -189,7 +189,9 @@ def create_stream(
     """
     Create a stream with name stream_name and initial number of shards num_shards.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.create_stream my_stream N region=us-east-1
     """
@@ -206,7 +208,9 @@ def delete_stream(stream_name, region=None, key=None, keyid=None, profile=None):
     """
     Delete the stream with name stream_name. This cannot be undone! All data will be lost!!
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.delete_stream my_stream region=us-east-1
     """
@@ -223,7 +227,9 @@ def increase_stream_retention_period(
     """
     Increase stream retention period to retention_hours
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.increase_stream_retention_period my_stream N region=us-east-1
     """
@@ -245,7 +251,9 @@ def decrease_stream_retention_period(
     """
     Decrease stream retention period to retention_hours
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.decrease_stream_retention_period my_stream N region=us-east-1
     """
@@ -267,7 +275,9 @@ def enable_enhanced_monitoring(
     """
     Enable enhanced monitoring for the specified shard-level metrics on stream stream_name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.enable_enhanced_monitoring my_stream ["metrics", "to", "enable"] region=us-east-1
     """
@@ -290,7 +300,9 @@ def disable_enhanced_monitoring(
     """
     Disable enhanced monitoring for the specified shard-level metrics on stream stream_name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.disable_enhanced_monitoring my_stream ["metrics", "to", "disable"] region=us-east-1
     """
@@ -313,7 +325,9 @@ def get_info_for_reshard(stream_details):
     Modifies stream_details to add a sorted list of OpenShards.
     Returns (min_hash_key, max_hash_key, stream_details)
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.get_info_for_reshard existing_stream_details
     """
@@ -349,16 +363,15 @@ def long_int(hash_key):
     It's necessary to convert to int/long for comparison operations.
     This helper method handles python 2/3 incompatibility
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.long_int some_MD5_hash_as_string
 
     :return: long object if python 2.X, int object if python 3.X
     """
-    if sys.version_info < (3,):
-        return long(hash_key)  # pylint: disable=incompatible-py3-code
-    else:
-        return int(hash_key)
+    return int(hash_key)
 
 
 def reshard(
@@ -377,7 +390,9 @@ def reshard(
 
     For safety, user must past in force=True; otherwise, the function will dry run.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.reshard my_stream N True region=us-east-1
 
@@ -460,7 +475,7 @@ def reshard(
                     StreamName=stream_name,
                     ShardToSplit=shard_id,
                     NewStartingHashKey=str(expected_ending_hash_key + 1),
-                )  # future lint: disable=blacklisted-function
+                )
             else:
                 log.debug(
                     "%s should end at %s, actual %s would split",
@@ -476,7 +491,7 @@ def reshard(
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r["error"] = "failed to find next shard after {0}".format(shard_id)
+                r["error"] = "failed to find next shard after {}".format(shard_id)
                 return r
             if force:
                 log.debug(
@@ -513,7 +528,7 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
     """
     Return a list of all streams visible to the current account
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -543,7 +558,9 @@ def _get_next_open_shard(stream_details, shard_id):
     """
     Return the next open shard after shard_id
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis._get_next_open_shard existing_stream_details shard_id
     """
@@ -576,7 +593,9 @@ def _execute_with_retries(conn, function, **kwargs):
         The result dict with the HTTP response and JSON data if applicable
         as 'result', or an error as 'error'
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis._execute_with_retries existing_conn function_name function_kwargs
 
@@ -607,7 +626,7 @@ def _execute_with_retries(conn, function, **kwargs):
                 r["result"] = None
                 return r
 
-    r["error"] = "Tried to execute function {0} {1} times, but was unable".format(
+    r["error"] = "Tried to execute function {} {} times, but was unable".format(
         function, max_attempts
     )
     log.error(r["error"])
@@ -618,8 +637,10 @@ def _jittered_backoff(attempt, max_retry_delay):
     """
     Basic exponential backoff
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis._jittered_backoff current_attempt_number max_delay_in_seconds
     """
-    return min(random.random() * (2 ** attempt), max_retry_delay)
+    return min(random.random() * (2**attempt), max_retry_delay)

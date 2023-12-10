@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vistara Runner
 
@@ -20,15 +19,12 @@ For example ``/etc/salt/master.d/_vistara.conf``:
 
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.output
 
-# See https://docs.saltstack.com/en/latest/topics/tutorials/http.html
+# See https://docs.saltproject.io/en/latest/topics/tutorials/http.html
 import salt.utils.http
 
 log = logging.getLogger(__name__)
@@ -48,19 +44,15 @@ def __virtual__():
         if not client_id or not client_key or not client_secret:
             return (
                 False,
-                (
-                    "vistara client_id or client_key or client_secret "
-                    "has not been specified in the Salt master config."
-                ),
+                "vistara client_id or client_key or client_secret "
+                "has not been specified in the Salt master config.",
             )
         return True
 
     return (
         False,
-        (
-            "vistara config has not been specificed in the Salt master "
-            "config. See documentation for this runner."
-        ),
+        "vistara config has not been specificed in the Salt master "
+        "config. See documentation for this runner.",
     )
 
 
@@ -102,7 +94,7 @@ def delete_device(name, safety_on=True):
     if not access_token:
         return "Vistara access token not available"
 
-    query_string = "dnsName:{0}".format(name)
+    query_string = "dnsName:{}".format(name)
 
     devices = _search_devices(query_string, config["client_id"], access_token)
 
@@ -113,7 +105,7 @@ def delete_device(name, safety_on=True):
 
     if safety_on and device_count != 1:
         return (
-            "Expected to delete 1 device and found {0}. "
+            "Expected to delete 1 device and found {}. "
             "Set safety_on=False to override.".format(device_count)
         )
 
@@ -131,7 +123,7 @@ def delete_device(name, safety_on=True):
 
 def _search_devices(query_string, client_id, access_token):
 
-    authstring = "Bearer {0}".format(access_token)
+    authstring = "Bearer {}".format(access_token)
 
     headers = {
         "Authorization": authstring,
@@ -142,7 +134,7 @@ def _search_devices(query_string, client_id, access_token):
     params = {"queryString": query_string}
 
     method = "GET"
-    url = "https://api.vistara.io/api/v2/tenants/{0}/devices/search".format(client_id)
+    url = "https://api.vistara.io/api/v2/tenants/{}/devices/search".format(client_id)
 
     resp = salt.utils.http.query(
         url=url, method=method, header_dict=headers, params=params, opts=__opts__
@@ -160,7 +152,7 @@ def _search_devices(query_string, client_id, access_token):
 
 def _delete_resource(device_id, client_id, access_token):
 
-    authstring = "Bearer {0}".format(access_token)
+    authstring = "Bearer {}".format(access_token)
 
     headers = {
         "Authorization": authstring,
@@ -169,7 +161,7 @@ def _delete_resource(device_id, client_id, access_token):
     }
 
     method = "DELETE"
-    url = "https://api.vistara.io/api/v2/tenants/{0}/rtype/DEVICE/resource/{1}".format(
+    url = "https://api.vistara.io/api/v2/tenants/{}/rtype/DEVICE/resource/{}".format(
         client_id, device_id
     )
 

@@ -5,6 +5,19 @@ Manage X509 Certificates
 
 :depends: M2Crypto
 
+.. deprecated:: 3006.0
+
+.. warning::
+    This module has been deprecated and will be removed
+    in Salt 3009 (Potassium). Please migrate to the replacement
+    modules. For breaking changes between both versions,
+    you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
+
+    They will become the default ``x509`` modules in Salt 3008 (Argon).
+    You can explicitly switch to the new modules before that release
+    by setting ``features: {x509_v2: true}`` in your minion configuration.
+
+
 This module can enable managing a complete PKI infrastructure including creating private keys, CAs,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
@@ -46,15 +59,16 @@ the mine where it can be easily retrieved by other minions.
 
 .. code-block:: yaml
 
-    salt-minion:
-      service.running:
-        - enable: True
-        - watch:
-          - file: /etc/salt/minion.d/x509.conf
-
     /etc/salt/minion.d/x509.conf:
       file.managed:
         - source: salt://x509.conf
+
+    restart-salt-minion:
+      cmd.run:
+        - name: 'salt-call service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - file: /etc/salt/minion.d/x509.conf
 
     /etc/pki:
       file.directory
@@ -62,9 +76,8 @@ the mine where it can be easily retrieved by other minions.
     /etc/pki/issued_certs:
       file.directory
 
-    /etc/pki/ca.crt:
+    /etc/pki/ca.key:
       x509.private_key_managed:
-        - name: /etc/pki/ca.key
         - bits: 4096
         - backup: True
 
@@ -178,6 +191,7 @@ import re
 
 import salt.exceptions
 import salt.utils.versions
+from salt.features import features
 
 try:
     from M2Crypto.RSA import RSAError
@@ -191,7 +205,14 @@ def __virtual__():
     """
     only load this module if the corresponding execution module is loaded
     """
+    if features.get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
+        salt.utils.versions.warn_until(
+            3009,
+            "The x509 modules are deprecated. Please migrate to the replacement "
+            "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
+        )
         return "x509"
     else:
         return (False, "Could not load x509 state: m2crypto unavailable")
@@ -266,7 +287,7 @@ def private_key_managed(
     new=False,
     overwrite=False,
     verbose=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Manage a private key's existence.
@@ -322,7 +343,7 @@ def private_key_managed(
         name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite
     ):
         file_args["contents"] = __salt__["x509.get_pem_entry"](
-            name, pem_type="RSA PRIVATE KEY"
+            name, pem_type="(?:RSA )?PRIVATE KEY"
         )
     else:
         new_key = True
@@ -370,7 +391,7 @@ def csr_managed(name, **kwargs):
     try:
         old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
-        old = "{} is not a valid csr.".format(name)
+        old = f"{name} is not a valid csr."
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args["contents"] = __salt__["x509.create_csr"](text=True, **kwargs)
@@ -400,12 +421,13 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
     ignored_keys = [
         "Not Before",
         "Not After",
-        "MD5 Finger Print",
         "SHA1 Finger Print",
         "SHA-256 Finger Print",
         # The integrity of the issuer is checked elsewhere
         "Issuer Public Key",
     ]
+    if __opts__["fips_mode"] is False:
+        ignored_keys.append("MD5 Finger Print")
     for key in ignored_keys:
         cert_info.pop(key, None)
         required_cert_info.pop(key, None)
@@ -496,7 +518,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
     If False, also provide a message explaining why.
     """
     if not os.path.isfile(name):
-        return False, "{} does not exist".format(name), {}
+        return False, f"{name} does not exist", {}
 
     try:
         cert_info = __salt__["x509.read_certificate"](certificate=name)
@@ -541,15 +563,14 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if days_remaining != 0 and actual_days_remaining < days_remaining:
             return (
                 False,
-                "Certificate needs renewal: {} days remaining but it needs to be at least {}".format(
-                    actual_days_remaining, days_remaining
-                ),
+                "Certificate needs renewal: {} days remaining but it needs to be at"
+                " least {}".format(actual_days_remaining, days_remaining),
                 cert_info,
             )
 
         return True, "", cert_info
     except salt.exceptions.SaltInvocationError as e:
-        return False, "{} is not a valid certificate: {}".format(name, str(e)), {}
+        return False, f"{name} is not a valid certificate: {str(e)}", {}
 
 
 def _certificate_file_managed(ret, file_args):
@@ -571,9 +592,7 @@ def _certificate_file_managed(ret, file_args):
     return ret
 
 
-def certificate_managed(
-    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
-):
+def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
     """
     Manage a Certificate
 
@@ -590,10 +609,6 @@ def certificate_managed(
     append_certs:
         A list of certificates to be appended to the managed file.
         They must be valid PEM files, otherwise an error will be thrown.
-
-    managed_private_key:
-        Has no effect since v2016.11 and will be removed in Salt Aluminium.
-        Use a separate x509.private_key_managed call instead.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
@@ -661,13 +676,6 @@ def certificate_managed(
             "public_key, signing_private_key, or csr must be specified."
         )
 
-    if managed_private_key:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "Passing 'managed_private_key' to x509.certificate_managed has no effect and "
-            "will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
-        )
-
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     is_valid, invalid_reason, current_cert_info = _certificate_is_valid(
@@ -691,7 +699,7 @@ def certificate_managed(
         ret = _certificate_file_managed(ret, file_args)
 
         ret["result"] = None
-        ret["comment"] = "Certificate {} will be created".format(name)
+        ret["comment"] = f"Certificate {name} will be created"
         ret["changes"]["Status"] = {
             "Old": invalid_reason,
             "New": "Certificate will be valid and up to date",
@@ -704,10 +712,9 @@ def certificate_managed(
         __salt__["x509.read_certificate"](contents)
     except salt.exceptions.SaltInvocationError as e:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error occurred creating the certificate {}. The result returned from x509.create_certificate is not a valid PEM file:\n{}".format(
-            name, str(e)
+        ret["comment"] = (
+            "An error occurred creating the certificate {}. The result returned from"
+            " x509.create_certificate is not a valid PEM file:\n{}".format(name, str(e))
         )
         return ret
 
@@ -721,10 +728,11 @@ def certificate_managed(
             contents += append_file_contents
         except salt.exceptions.SaltInvocationError as e:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "{} is not a valid certificate file, cannot append it to the certificate {}.\nThe error returned by the x509 module was:\n{}".format(
-                append_file, name, str(e)
+            ret["comment"] = (
+                "{} is not a valid certificate file, cannot append it to the"
+                " certificate {}.\nThe error returned by the x509 module was:\n{}".format(
+                    append_file, name, str(e)
+                )
             )
             return ret
 
@@ -756,7 +764,7 @@ def crl_managed(
     digest="",
     days_remaining=30,
     include_expired=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Manage a Certificate Revocation List
@@ -838,9 +846,9 @@ def crl_managed(
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
         except salt.exceptions.SaltInvocationError:
-            current = "{} is not a valid CRL.".format(name)
+            current = f"{name} is not a valid CRL."
     else:
-        current = "{} does not exist.".format(name)
+        current = f"{name} does not exist."
 
     new_crl = __salt__["x509.create_crl"](
         text=True,

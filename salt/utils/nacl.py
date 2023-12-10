@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Common code shared between the nacl module and runner.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
-import logging
 import os
 
 import salt.syspaths
@@ -18,24 +13,21 @@ import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
 
-# Import Salt libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
-
 REQ_ERROR = None
 try:
-    import libnacl.secret
-    import libnacl.sealed
+    import nacl.public
+    import nacl.secret
 except (ImportError, OSError) as e:
     REQ_ERROR = (
-        "libnacl import error, perhaps missing python libnacl package or should update."
+        "PyNaCl import error, perhaps missing python PyNaCl package or should update."
     )
 
 __virtualname__ = "nacl"
 
 
 def __virtual__():
+    if __opts__["fips_mode"] is True:
+        return False, "nacl utils not available in FIPS mode"
     return check_requirements()
 
 
@@ -66,7 +58,7 @@ def _get_config(**kwargs):
         "pk_file": pk_file,
     }
 
-    config_key = "{0}.config".format(__virtualname__)
+    config_key = f"{__virtualname__}.config"
     try:
         config.update(__salt__["config.get"](config_key, {}))
     except (NameError, KeyError) as e:
@@ -91,7 +83,7 @@ def _get_sk(**kwargs):
         try:
             with salt.utils.files.fopen(sk_file, "rb") as keyf:
                 key = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
-        except (IOError, OSError):
+        except OSError:
             raise Exception("no key or sk_file found")
     return base64.b64decode(key)
 
@@ -109,15 +101,15 @@ def _get_pk(**kwargs):
         try:
             with salt.utils.files.fopen(pk_file, "rb") as keyf:
                 pubkey = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
-        except (IOError, OSError):
+        except OSError:
             raise Exception("no pubkey or pk_file found")
-    pubkey = six.text_type(pubkey)
+    pubkey = str(pubkey)
     return base64.b64decode(pubkey)
 
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCl to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 
@@ -147,17 +139,20 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         sk_file = kwargs["keyfile"]
 
     if sk_file is None:
-        kp = libnacl.public.SecretKey()
-        return {"sk": base64.b64encode(kp.sk), "pk": base64.b64encode(kp.pk)}
+        kp = nacl.public.PrivateKey.generate()
+        return {
+            "sk": base64.b64encode(kp.encode()),
+            "pk": base64.b64encode(kp.public_key.encode()),
+        }
 
     if pk_file is None:
-        pk_file = "{0}.pub".format(sk_file)
+        pk_file = f"{sk_file}.pub"
 
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
-            kp = libnacl.public.SecretKey()
+            kp = nacl.public.PrivateKey.generate()
             with salt.utils.files.fopen(sk_file, "wb") as keyf:
-                keyf.write(base64.b64encode(kp.sk))
+                keyf.write(base64.b64encode(kp.encode()))
             if salt.utils.platform.is_windows():
                 cur_user = salt.utils.win_functions.get_current_user()
                 salt.utils.win_dacl.set_owner(sk_file, cur_user)
@@ -172,31 +167,29 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
             else:
                 # chmod 0600 file
                 os.chmod(sk_file, 1536)
-            return "saved sk_file: {0}".format(sk_file)
+            return f"saved sk_file: {sk_file}"
         else:
-            raise Exception("sk_file:{0} already exist.".format(sk_file))
+            raise Exception(f"sk_file:{sk_file} already exist.")
 
     if sk_file is None and pk_file:
         raise Exception("sk_file: Must be set inorder to generate a public key.")
 
     if os.path.isfile(sk_file) and os.path.isfile(pk_file):
-        raise Exception(
-            "sk_file:{0} and pk_file:{1} already exist.".format(sk_file, pk_file)
-        )
+        raise Exception(f"sk_file:{sk_file} and pk_file:{pk_file} already exist.")
 
     if os.path.isfile(sk_file) and not os.path.isfile(pk_file):
         # generate pk using the sk
         with salt.utils.files.fopen(sk_file, "rb") as keyf:
             sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
             sk = base64.b64decode(sk)
-        kp = libnacl.public.SecretKey(sk)
+        kp = nacl.public.PublicKey(sk)
         with salt.utils.files.fopen(pk_file, "wb") as keyf:
-            keyf.write(base64.b64encode(kp.pk))
-        return "saved pk_file: {0}".format(pk_file)
+            keyf.write(base64.b64encode(kp.encode()))
+        return f"saved pk_file: {pk_file}"
 
-    kp = libnacl.public.SecretKey()
+    kp = nacl.public.PublicKey.generate()
     with salt.utils.files.fopen(sk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.sk))
+        keyf.write(base64.b64encode(kp.encode()))
     if salt.utils.platform.is_windows():
         cur_user = salt.utils.win_functions.get_current_user()
         salt.utils.win_dacl.set_owner(sk_file, cur_user)
@@ -207,8 +200,8 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         # chmod 0600 file
         os.chmod(sk_file, 1536)
     with salt.utils.files.fopen(pk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.pk))
-    return "saved sk_file:{0}  pk_file: {1}".format(sk_file, pk_file)
+        keyf.write(base64.b64encode(kp.encode()))
+    return f"saved sk_file:{sk_file}  pk_file: {pk_file}"
 
 
 def enc(data, **kwargs):
@@ -275,10 +268,10 @@ def enc_file(name, out=None, **kwargs):
     d = enc(data, **kwargs)
     if out:
         if os.path.isfile(out):
-            raise Exception("file:{0} already exist.".format(out))
+            raise Exception(f"file:{out} already exist.")
         with salt.utils.files.fopen(out, "wb") as f:
             f.write(salt.utils.stringutils.to_bytes(d))
-        return "Wrote: {0}".format(out)
+        return f"Wrote: {out}"
     return d
 
 
@@ -317,6 +310,7 @@ def dec(data, **kwargs):
     box_type = _get_config(**kwargs)["box_type"]
     if box_type == "secretbox":
         return secretbox_decrypt(data, **kwargs)
+
     return sealedbox_decrypt(data, **kwargs)
 
 
@@ -346,10 +340,10 @@ def dec_file(name, out=None, **kwargs):
     d = dec(data, **kwargs)
     if out:
         if os.path.isfile(out):
-            raise Exception("file:{0} already exist.".format(out))
+            raise Exception(f"file:{out} already exist.")
         with salt.utils.files.fopen(out, "wb") as f:
             f.write(salt.utils.stringutils.to_bytes(d))
-        return "Wrote: {0}".format(out)
+        return f"Wrote: {out}"
     return d
 
 
@@ -370,7 +364,8 @@ def sealedbox_encrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     pk = _get_pk(**kwargs)
-    b = libnacl.sealed.SealedBox(pk)
+    keypair = nacl.public.PublicKey(pk)
+    b = nacl.public.SealedBox(keypair)
     return base64.b64encode(b.encrypt(data))
 
 
@@ -393,8 +388,8 @@ def sealedbox_decrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    keypair = libnacl.public.SecretKey(sk)
-    b = libnacl.sealed.SealedBox(keypair)
+    keypair = nacl.public.PrivateKey(sk)
+    b = nacl.public.SealedBox(keypair)
     return b.decrypt(base64.b64decode(data))
 
 
@@ -415,7 +410,7 @@ def secretbox_encrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    b = libnacl.secret.SecretBox(sk)
+    b = nacl.secret.SecretBox(sk)
     return base64.b64encode(b.encrypt(data))
 
 
@@ -439,6 +434,5 @@ def secretbox_decrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     key = _get_sk(**kwargs)
-    b = libnacl.secret.SecretBox(key=key)
-
+    b = nacl.secret.SecretBox(key=key)
     return b.decrypt(base64.b64decode(data))

@@ -136,7 +136,9 @@ def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an RDS exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.exists myrds region=us-east-1
     """
@@ -155,7 +157,9 @@ def option_group_exists(
     """
     Check to see if an RDS option group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.option_group_exists myoptiongr region=us-east-1
     """
@@ -174,7 +178,9 @@ def parameter_group_exists(
     """
     Check to see if an RDS parameter group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.parameter_group_exists myparametergroup \
                 region=us-east-1
@@ -198,7 +204,9 @@ def subnet_group_exists(
     """
     Check to see if an RDS subnet group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.subnet_group_exists my-param-group \
                 region=us-east-1
@@ -281,7 +289,7 @@ def create(
         raise SaltInvocationError("master_user_password is required")
     if availability_zone and multi_az:
         raise SaltInvocationError(
-            "availability_zone and multi_az are mutually" " exclusive arguments."
+            "availability_zone and multi_az are mutually exclusive arguments."
         )
     if wait_status:
         wait_stati = ["available", "modifying", "backing-up"]
@@ -347,14 +355,17 @@ def create(
                 # Whoops, something is horribly wrong...
                 return {
                     "created": False,
-                    "error": "RDS instance {} should have been created but"
-                    " now I can't find it.".format(name),
+                    "error": (
+                        "RDS instance {} should have been created but"
+                        " now I can't find it.".format(name)
+                    ),
                 }
             if stat == wait_status:
                 return {
                     "created": True,
-                    "message": "RDS instance {} created (current status "
-                    "{})".format(name, stat),
+                    "message": "RDS instance {} created (current status {})".format(
+                        name, stat
+                    ),
                 }
             time.sleep(10)
             log.info("Instance status after 10 seconds is: %s", stat)
@@ -412,9 +423,7 @@ def create_read_replica(
         kwargs = {}
         for key in ("OptionGroupName", "MonitoringRoleArn"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         for key in ("MonitoringInterval", "Iops", "Port"):
             if locals()[key] is not None:
@@ -593,7 +602,9 @@ def update_parameter_group(
     """
     Update an RDS parameter group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.update_parameter_group my-param-group \
                 parameters='{"back_log":1, "binlog_cache_size":4096}' \
@@ -617,9 +628,7 @@ def update_parameter_group(
         if type(value) is bool:
             item.update({"ParameterValue": "on" if value else "off"})
         else:
-            item.update(
-                {"ParameterValue": str(value)}
-            )  # future lint: disable=blacklisted-function
+            item.update({"ParameterValue": str(value)})
         param_list.append(item)
 
     if not param_list:
@@ -642,7 +651,9 @@ def describe(name, tags=None, region=None, key=None, keyid=None, profile=None):
     """
     Return RDS instance details.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe myrds
 
@@ -722,7 +733,9 @@ def describe_db_instances(
     current scope.  Arbitrary subelements or subsections of the returned dataset
     can be selected by passing in a valid JMSEPath filter as well.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe_db_instances jmespath='DBInstances[*].DBInstanceIdentifier'
 
@@ -757,7 +770,9 @@ def describe_db_subnet_groups(
     current scope.  Arbitrary subelements or subsections of the returned dataset
     can be selected by passing in a valid JMSEPath filter as well.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe_db_subnet_groups
 
@@ -776,7 +791,9 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None, profile=Non
     """
     Return the endpoint of an RDS instance.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.get_endpoint myrds
 
@@ -814,7 +831,9 @@ def delete(
     """
     Delete an RDS instance.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete myrds skip_final_snapshot=True \
                 region=us-east-1
@@ -841,7 +860,7 @@ def delete(
         if locals()["final_db_snapshot_identifier"] is not None:
             kwargs["FinalDBSnapshotIdentifier"] = str(
                 locals()["final_db_snapshot_identifier"]
-            )  # future lint: disable=blacklisted-function
+            )
 
         res = conn.delete_db_instance(DBInstanceIdentifier=name, **kwargs)
 
@@ -874,7 +893,7 @@ def delete(
                     "seconds".format(name, timeout)
                 )
             log.info(
-                "Waiting up to %s seconds for RDS instance %s to be " "deleted.",
+                "Waiting up to %s seconds for RDS instance %s to be deleted.",
                 timeout,
                 name,
             )
@@ -887,7 +906,9 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
     """
     Delete an RDS option group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_option_group my-opt-group \
                 region=us-east-1
@@ -916,7 +937,9 @@ def delete_parameter_group(name, region=None, key=None, keyid=None, profile=None
     """
     Delete an RDS parameter group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_parameter_group my-param-group \
                 region=us-east-1
@@ -939,7 +962,9 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
     """
     Delete an RDS subnet group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_subnet_group my-subnet-group \
                 region=us-east-1
@@ -989,9 +1014,7 @@ def describe_parameter_group(
         kwargs = {}
         for key in ("Marker", "Filters"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])
@@ -1050,9 +1073,7 @@ def describe_parameters(
         kwargs.update({"DBParameterGroupName": name})
         for key in ("Marker", "Source"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])

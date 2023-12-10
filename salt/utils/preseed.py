@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for managing Debian preseed
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shlex
 

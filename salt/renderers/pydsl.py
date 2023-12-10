@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A Python-based DSL
 
@@ -230,7 +229,7 @@ is enabled by setting the ``ordered`` option on ``__pydsl__``.
     __pydsl__.set(ordered=True)
 
     for i in range(10):
-        i = six.text_type(i)
+        i = str(i)
         state(i).cmd.run('echo '+i, cwd='/')
     state('1').cmd.run('echo one')
     state('2').cmd.run(name='echo two')
@@ -334,14 +333,11 @@ For example:
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import types
 
 import salt.utils.pydsl as pydsl
 import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
-from salt.ext.six import exec_
 from salt.utils.pydsl import PyDslError
 
 __all__ = ["render"]
@@ -355,7 +351,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, *
     #       is compiled to.
 
     # __name__ can't be assigned a unicode
-    mod.__name__ = str(sls)  # future lint: disable=blacklisted-function
+    mod.__name__ = str(sls)
 
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
@@ -377,7 +373,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, *
     )
 
     dsl_sls.get_render_stack().append(dsl_sls)
-    exec_(template.read(), mod.__dict__)
+    exec(template.read(), mod.__dict__)
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate

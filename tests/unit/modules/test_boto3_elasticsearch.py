@@ -1,28 +1,20 @@
-# -*- coding: utf-8 -*-
 """
     Tests for salt.modules.boto3_elasticsearch
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import random
 import string
 import textwrap
 
-# Import Salt libs
+import pytest
+
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
-from salt.ext.six.moves import range
-from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-# Import 3rd-party libs
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -36,6 +28,10 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 REQUIRED_BOTO3_VERSION = "1.2.1"
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 def __virtual__():
     """
@@ -44,12 +40,11 @@ def __virtual__():
     """
     if not HAS_BOTO3:
         return False
-    if LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION):
+    if Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION):
         return (
             False,
-            (
-                "The boto3 module must be greater or equal to version {}"
-                "".format(REQUIRED_BOTO3_VERSION)
+            "The boto3 module must be greater or equal to version {}".format(
+                REQUIRED_BOTO3_VERSION
             ),
         )
     return True
@@ -126,10 +121,10 @@ DOMAIN_RET = {
 }
 
 
-@skipIf(HAS_BOTO3 is False, "The boto module must be installed.")
-@skipIf(
-    LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION),
-    "The boto3 module must be greater or equal to version {}".format(
+@pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
+    Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION),
+    reason="The boto3 module must be greater or equal to version {}".format(
         REQUIRED_BOTO3_VERSION
     ),
 )
@@ -150,7 +145,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
         return {boto3_elasticsearch: {"__utils__": utils}}
 
     def setUp(self):
-        super(Boto3ElasticsearchTestCase, self).setUp()
+        super().setUp()
         boto3_elasticsearch.__init__(self.opts)
         del self.opts
 
@@ -380,6 +375,20 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 boto3_elasticsearch.add_tags(
                     "testdomain", tags={"foo": "bar", "baz": "qux"}, **CONN_PARAMETERS
                 ),
+                {"result": True},
+            )
+
+    def test_add_tags_default(self):
+        """
+        Test that when tags are not provided, no error is raised.
+        """
+        with patch.object(
+            self.conn,
+            "describe_elasticsearch_domain",
+            return_value={"DomainStatus": DOMAIN_RET},
+        ):
+            self.assertEqual(
+                boto3_elasticsearch.add_tags("testdomain", **CONN_PARAMETERS),
                 {"result": True},
             )
 
@@ -755,8 +764,10 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "describe_reserved_elasticsearch_instance_offerings"
             ),
         ):
-            result = boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
-                reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
+                    reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(
@@ -1128,10 +1139,12 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "purchase_reserved_elasticsearch_instance_offering"
             ),
         ):
-            result = boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
-                reserved_elasticsearch_instance_offering_id="foo",
-                reservation_name="bar",
-                **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
+                    reserved_elasticsearch_instance_offering_id="foo",
+                    reservation_name="bar",
+                    **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(

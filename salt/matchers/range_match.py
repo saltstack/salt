@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 This is the default range matcher.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -17,7 +15,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt, opts=None):
+def match(tgt, opts=None, minion_id=None):
     """
     Matches based on range cluster
     """

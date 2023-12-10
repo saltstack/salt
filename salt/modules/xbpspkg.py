@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Package support for XBPS package manager (used by VoidLinux)
 
 .. versionadded:: 2016.11.0
 """
 
-# TODO: what about the initial acceptance of repo's fingerprint when adding a
-# new repo?
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+# TODO: what about the initial acceptance of repo's fingerprint when adding a new repo?
 
 import glob
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators as decorators
 import salt.utils.files
@@ -198,7 +192,7 @@ def latest_version(*names, **kwargs):
 
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     # Refresh repo index before checking for latest version available
@@ -309,7 +303,6 @@ def upgrade(refresh=True, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -323,7 +316,7 @@ def upgrade(refresh=True, **kwargs):
 
     old = list_pkgs()
 
-    cmd = ["xbps-install", "-{0}yu".format("S" if refresh else "")]
+    cmd = ["xbps-install", "-{}yu".format("S" if refresh else "")]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
@@ -396,7 +389,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkg_type != "repository":
@@ -408,7 +401,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     if refresh:
         cmd.append("-S")  # update repo db
     if fromrepo:
-        cmd.append("--repository={0}".format(fromrepo))
+        cmd.append("--repository={}".format(fromrepo))
     cmd.append("-y")  # assume yes when asked
     cmd.extend(pkg_params)
 
@@ -493,7 +486,7 @@ def list_repos(**kwargs):
             nb, url, rsa = line.strip().split(" ", 2)
         except ValueError:
             log.error(
-                "Problem parsing xbps-query: " 'Unexpected formatting in line: "%s"',
+                'Problem parsing xbps-query: Unexpected formatting in line: "%s"',
                 line,
             )
         repo["nbpkg"] = int(nb) if nb.isdigit() else 0
@@ -555,7 +548,7 @@ def _locate_repo_files(repo, rewrite=False):
                 else:
                     write_buff.append(line)
         if rewrite and filename in ret_val:
-            if len(write_buff) > 0:
+            if write_buff:
                 with salt.utils.files.fopen(filename, "w") as rewrite_file:
                     rewrite_file.writelines(write_buff)
             else:  # Prune empty files
@@ -582,13 +575,13 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
         salt '*' pkg.add_repo <repo url> [conffile=/path/to/xbps/repo.conf]
     """
 
-    if len(_locate_repo_files(repo)) == 0:
+    if not _locate_repo_files(repo):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
                 conf_file.write(
-                    salt.utils.stringutils.to_str("repository={0}\n".format(repo))
+                    salt.utils.stringutils.to_str("repository={}\n".format(repo))
                 )
-        except IOError:
+        except OSError:
             return False
 
     return True
@@ -610,7 +603,7 @@ def del_repo(repo, **kwargs):
 
     try:
         _locate_repo_files(repo, rewrite=True)
-    except IOError:
+    except OSError:
         return False
     else:
         return True

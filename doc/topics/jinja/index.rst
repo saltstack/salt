@@ -8,6 +8,8 @@ Understanding Jinja
 
 .. _Jinja: https://jinja.palletsprojects.com/en/2.11.x/templates/
 
+.. include:: ../../_incl/jinja_security.rst
+
 Jinja in States
 ===============
 
@@ -275,6 +277,43 @@ Similar to the ``yaml_dquote`` filter but with single quotes.  Note
 that YAML only allows special escapes inside double quotes so
 ``yaml_squote`` is not nearly as useful (viz. you likely want to
 use ``yaml_encode`` or ``yaml_dquote``).
+
+
+.. jinja_ref:: dict_to_sls_yaml_params
+
+``dict_to_sls_yaml_params``
+---------------------------
+
+.. versionadded:: 3005
+
+Renders a formatted multi-line YAML string from a Python dictionary. Each
+key/value pair in the dictionary will be added as a single-key dictionary
+to a list that will then be sent to the YAML formatter.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set thing_params = {
+        "name": "thing",
+        "changes": True,
+        "warnings": "OMG! Stuff is happening!"
+       }
+    %}
+
+    thing:
+      test.configurable_test_state:
+        {{ thing_params | dict_to_sls_yaml_params | indent }}
+
+Returns:
+
+.. code-block:: yaml
+
+    thing:
+      test.configurable_test_state:
+        - name: thing
+        - changes: true
+        - warnings: OMG! Stuff is happening!
 
 
 .. jinja_ref:: to_bool
@@ -649,6 +688,161 @@ Returns:
   1, 4
 
 
+.. jinja_ref:: flatten
+
+``flatten``
+-----------
+
+.. versionadded:: 3005
+
+Flatten a list.
+
+.. code-block:: jinja
+
+    {{ [3, [4, 2] ] | flatten }}
+    # => [3, 4, 2]
+
+Flatten only the first level of a list:
+
+.. code-block:: jinja
+
+    {{ [3, [4, [2]] ] | flatten(levels=1) }}
+    # => [3, 4, [2]]
+
+Preserve nulls in a list, by default ``flatten`` removes them.
+
+.. code-block:: jinja
+
+    {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
+    # => [3, None, 4, [2]]
+
+
+.. jinja_ref:: combinations
+
+``combinations``
+----------------
+
+.. versionadded:: 3005
+
+Invokes the ``combinations`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | combinations(2) %}{{ one~two }} {% endfor %}
+    # => AB AC AD BC BD CD
+
+
+.. jinja_ref:: combinations_with_replacement
+
+``combinations_with_replacement``
+---------------------------------
+
+.. versionadded:: 3005
+
+Invokes the ``combinations_with_replacement`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABC" | combinations_with_replacement(2) %}{{ one~two }} {% endfor %}
+    # => AA AB AC BB BC CC
+
+
+.. jinja_ref:: compress
+
+``compress``
+------------
+
+.. versionadded:: 3005
+
+Invokes the ``compress`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for val in "ABCDEF" | compress([1,0,1,0,1,1]) %}{{ val }} {% endfor %}
+    # => A C E F
+
+
+.. jinja_ref:: permutations
+
+``permutations``
+----------------
+
+.. versionadded:: 3005
+
+Invokes the ``permutations`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | permutations(2) %}{{ one~two }} {% endfor %}
+    # => AB AC AD BA BC BD CA CB CD DA DB DC
+
+
+.. jinja_ref:: product
+
+``product``
+-----------
+
+.. versionadded:: 3005
+
+Invokes the ``product`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | product("xy") %}{{ one~two }} {% endfor %}
+    # => Ax Ay Bx By Cx Cy Dx Dy
+
+
+.. jinja_ref:: zip
+
+``zip``
+-------
+
+.. versionadded:: 3005
+
+Invokes the native Python ``zip`` function.
+
+The ``zip`` function returns a zip object, which is an iterator of tuples where
+the first item in each passed iterator is paired together, and then the second
+item in each passed iterator are paired together etc.
+
+If the passed iterators have different lengths, the iterator with the least
+items decides the length of the new iterator.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | zip("xy") %}{{ one~two }} {% endfor %}
+    # => Ax By
+
+
+.. jinja_ref:: zip_longest
+
+``zip_longest``
+---------------
+
+.. versionadded:: 3005
+
+Invokes the ``zip_longest`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.zip_longest
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | zip_longest("xy", fillvalue="-") %}{{ one~two }} {% endfor %}
+    # => Ax By C- D-
+
+
 .. jinja_ref:: method_call
 
 ``method_call``
@@ -950,7 +1144,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: json_decode_list
@@ -964,7 +1158,7 @@ Example:
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_list`` will be supported until the Aluminium
+    when it was added. ``json_decode_list`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -997,7 +1191,7 @@ Returns:
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_dict`` will be supported until the Aluminium
+    when it was added. ``json_decode_dict`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -1067,6 +1261,54 @@ Returns:
 
   43ec517d68b6edd3015b3edc9a11367b
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
+
+
+.. jinja_ref:: random_sample
+
+``random_sample``
+-----------------
+
+.. versionadded:: 3005
+
+Returns a given sample size from a list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_sample(2) }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "one"]
+
+
+.. jinja_ref:: random_shuffle
+
+``random_shuffle``
+------------------
+
+.. versionadded:: 3005
+
+Returns a shuffled copy of an input list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_shuffle }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "three", "one", "two"]
 
 
 .. jinja_ref:: set_dict_key_value
@@ -1440,6 +1682,57 @@ Returns:
 .. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
+
+.. jinja_ref:: to_entries
+
+``to_entries``
+--------------
+
+.. versionadded:: 3007.0
+
+A port of the ``to_entries`` function from ``jq``. This function converts between an object and an array of key-value
+pairs. If ``to_entries`` is passed an object, then for each ``k: v`` entry in the input, the output array includes
+``{"key": k, "value": v}``. The ``from_entries`` function performs the opposite conversion. ``from_entries`` accepts
+"key", "Key", "name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {"a": 1, "b": 2} | to_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  [{"key":"a", "value":1}, {"key":"b", "value":2}]
+
+
+.. jinja_ref:: from_entries
+
+``from_entries``
+----------------
+
+.. versionadded:: 3007.0
+
+A port of the ``from_entries`` function from ``jq``. This function converts between an array of key-value pairs and an
+object. If ``from_entries`` is passed an object, then the input is expected to be an array of dictionaries in the format
+of ``{"key": k, "value": v}``. The output will be be key-value pairs ``k: v``. ``from_entries`` accepts "key", "Key",
+"name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ [{"key":"a", "value":1}, {"key":"b", "value":2}] | from_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  {"a": 1, "b": 2}
+
+
 .. jinja_ref:: to_snake_case
 
 ``to_snake_case``
@@ -1481,6 +1774,33 @@ Returns:
 
   Example 1: snakeCaseForTheWin
   Example 2: SnakeCaseForTheWin
+
+
+.. jinja_ref:: human_to_bytes
+
+``human_to_bytes``
+------------------
+
+.. versionadded:: 3005
+
+Given a human-readable byte string (e.g. 2G, 30MB, 64KiB), return the number of bytes.
+Will return 0 if the argument has unexpected form.
+
+.. code-block:: jinja
+
+  Example 1: {{ "32GB" | human_to_bytes }}
+
+  Example 2: {{ "32GB" | human_to_bytes(handle_metric=True) }}
+
+  Example 3: {{ "32" | human_to_bytes(default_unit="GiB") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: 34359738368
+  Example 2: 32000000000
+  Example 3: 34359738368
 
 Networking Filters
 ------------------
@@ -1620,6 +1940,28 @@ Returns:
   ["fe80::"]
 
 
+.. jinja_ref:: ipwrap
+
+``ipwrap``
+----------
+
+.. versionadded:: 3006.0
+
+From a string, list, or tuple, returns any IPv6 addresses wrapped in square brackets([])
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.0.2.1', 'foo', 'bar', 'fe80::', '2001:db8::1/64'] | ipwrap }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``
@@ -1719,7 +2061,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
@@ -2030,6 +2372,41 @@ will be rendered as:
 
   unique = ['foo', 'bar']
 
+Global Functions
+================
+
+Salt Project extends `builtin global functions`_ with these custom global functions:
+
+.. jinja_ref:: ifelse
+
+``ifelse``
+----------
+
+Evaluate each pair of arguments up to the last one as a (matcher, value)
+tuple, returning ``value`` if matched.  If none match, returns the last
+argument.
+
+The ``ifelse`` function is like a multi-level if-else statement. It was
+inspired by CFEngine's ``ifelse`` function which in turn was inspired by
+Oracle's ``DECODE`` function. It must have an odd number of arguments (from
+1 to N). The last argument is the default value, like the ``else`` clause in
+standard programming languages. Every pair of arguments before the last one
+are evaluated as a pair. If the first one evaluates true then the second one
+is returned, as if you had used the first one in a compound match
+expression. Boolean values can also be used as the first item in a pair, as it
+will be translated to a match that will always match ("*") or never match
+("SALT_IFELSE_MATCH_NOTHING") a target system.
+
+This is essentially another way to express the ``match.filter_by`` functionality
+in way that's familiar to CFEngine or Oracle users. Consider using
+``match.filter_by`` unless this function fits your workflow.
+
+.. code-block:: jinja
+
+    {{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'defaultval', minion_id='bar03') }}
+
+.. _`builtin global functions`: https://jinja.palletsprojects.com/en/2.11.x/templates/#builtin-globals
+
 Jinja in Files
 ==============
 
@@ -2062,8 +2439,8 @@ external template file.
 
 .. note::
 
-    Macros and variables can be shared across templates. They should not be
-    starting with one or more underscores, and should be managed by one of the
+    Macros and variables can be shared across templates. They should not start
+    with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
 
@@ -2263,7 +2640,7 @@ variable type. Here is the python documentation for `string methods`_.
 
   {% set strings = grains.id.split('-') %}{{ strings[0] }}
 
-.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
+.. _`string methods`: https://docs.python.org/3/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

@@ -30,10 +30,10 @@ import logging
 import sys
 from functools import partial
 
+import salt.loader.context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.loader import minion_mods
 
 # pylint: disable=import-error
@@ -54,6 +54,8 @@ log = logging.getLogger(__name__)
 
 __salt__ = None
 __virtualname__ = "boto"
+__salt_loader__ = salt.loader.context.LoaderContext()
+__context__ = __salt_loader__.named_context("__context__", {})
 
 
 def __virtual__():
@@ -169,10 +171,8 @@ def get_connection(
         conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
     """
 
-    # future lint: disable=blacklisted-function
     module = str(module or service)
     module, submodule = ("boto." + module).rsplit(".", 1)
-    # future lint: enable=blacklisted-function
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 
@@ -187,7 +187,7 @@ def get_connection(
             region, aws_access_key_id=keyid, aws_secret_access_key=key
         )
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "

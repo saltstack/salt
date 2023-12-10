@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 A simple test engine, not intended for real use but as an example
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.event
 import salt.utils.json
 
@@ -23,7 +18,6 @@ def event_bus_context(opts):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=opts["transport"],
             opts=opts,
             sock_dir=opts["sock_dir"],
             listen=True,

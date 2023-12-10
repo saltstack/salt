@@ -55,9 +55,8 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 
-log = logging.getLogger(__name__)  # pylint: disable=W1699
+log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=unused-import
@@ -259,7 +258,7 @@ def get_hosted_zones_by_domain(Name, region=None, key=None, keyid=None, profile=
     zones = [
         z
         for z in _collect_results(conn.list_hosted_zones, "HostedZones", {})
-        if z["Name"] == aws_encode(Name)
+        if z["Name"] == _aws_encode(Name)
     ]
     ret = []
     for z in zones:
@@ -370,7 +369,9 @@ def create_hosted_zone(
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.create_hosted_zone example.org.
     """
@@ -378,7 +379,7 @@ def create_hosted_zone(
         raise SaltInvocationError(
             "Domain must be fully-qualified, complete with trailing period."
         )
-    Name = aws_encode(Name)
+    Name = _aws_encode(Name)
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     deets = find_hosted_zone(
         Name=Name,
@@ -404,7 +405,7 @@ def create_hosted_zone(
     if PrivateZone:
         if not _exactly_one((VPCName, VPCId)):
             raise SaltInvocationError(
-                "Either VPCName or VPCId is required when creating a " "private zone."
+                "Either VPCName or VPCId is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=VPCId,
@@ -484,7 +485,9 @@ def update_hosted_zone_comment(
     PrivateZone
         Boolean - Set to True if changing a private hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.update_hosted_zone_comment Name=example.org. \
                 Comment="This is an example comment for an example zone"
@@ -573,7 +576,9 @@ def associate_vpc_with_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.associate_vpc_with_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -697,7 +702,9 @@ def disassociate_vpc_from_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.disassociate_vpc_from_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -802,7 +809,9 @@ def delete_hosted_zone(Id, region=None, key=None, keyid=None, profile=None):
     """
     Delete a Route53 hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone Z1234567890
     """
@@ -821,7 +830,9 @@ def delete_hosted_zone_by_domain(
     """
     Delete a Route53 hosted zone by domain name, and PrivateZone status if provided.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone_by_domain example.org.
     """
@@ -845,7 +856,7 @@ def delete_hosted_zone_by_domain(
     )
 
 
-def aws_encode(x):
+def _aws_encode(x):
     """
     An implementation of the encoding required to support AWS's domain name
     rules defined here__:
@@ -867,7 +878,7 @@ def aws_encode(x):
     ret = None
     try:
         x.encode("ascii")
-        ret = re.sub(r"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
+        ret = re.sub(rb"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
     except UnicodeEncodeError:
         ret = x.encode("idna")
     except Exception as e:  # pylint: disable=broad-except
@@ -876,7 +887,7 @@ def aws_encode(x):
         )
         raise CommandExecutionError(e)
     log.debug("AWS-encoded result for %s: %s", x, ret)
-    return ret
+    return ret.decode("utf-8")
 
 
 def _aws_encode_changebatch(o):
@@ -885,7 +896,7 @@ def _aws_encode_changebatch(o):
     """
     change_idx = 0
     while change_idx < len(o["Changes"]):
-        o["Changes"][change_idx]["ResourceRecordSet"]["Name"] = aws_encode(
+        o["Changes"][change_idx]["ResourceRecordSet"]["Name"] = _aws_encode(
             o["Changes"][change_idx]["ResourceRecordSet"]["Name"]
         )
         if "ResourceRecords" in o["Changes"][change_idx]["ResourceRecordSet"]:
@@ -895,7 +906,7 @@ def _aws_encode_changebatch(o):
             ):
                 o["Changes"][change_idx]["ResourceRecordSet"]["ResourceRecords"][
                     rr_idx
-                ]["Value"] = aws_encode(
+                ]["Value"] = _aws_encode(
                     o["Changes"][change_idx]["ResourceRecordSet"]["ResourceRecords"][
                         rr_idx
                     ]["Value"]
@@ -904,7 +915,7 @@ def _aws_encode_changebatch(o):
         if "AliasTarget" in o["Changes"][change_idx]["ResourceRecordSet"]:
             o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"][
                 "DNSName"
-            ] = aws_encode(
+            ] = _aws_encode(
                 o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"]["DNSName"]
             )
         change_idx += 1
@@ -934,7 +945,11 @@ def _aws_decode(x):
     """
     if "\\" in x:
         return x.decode("unicode_escape")
-    return x.decode("idna")
+
+    if type(x) == bytes:
+        return x.decode("idna")
+
+    return x
 
 
 def _hexReplace(x):
@@ -976,13 +991,15 @@ def get_resource_records(
     False), CommandExecutionError can be raised in the case of both public and private zones
     matching the domain. XXX FIXME DOCU
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.get_records test.example.org example.org A
     """
     if not _exactly_one((HostedZoneId, Name)):
         raise SaltInvocationError(
-            "Exactly one of either HostedZoneId or Name must " "be provided."
+            "Exactly one of either HostedZoneId or Name must be provided."
         )
     if Name:
         args = {
@@ -1010,7 +1027,7 @@ def get_resource_records(
             return ret
         args = {"HostedZoneId": HostedZoneId}
         args.update(
-            {"StartRecordName": aws_encode(next_rr_name)}
+            {"StartRecordName": _aws_encode(next_rr_name)}
         ) if next_rr_name else None
         # Grrr, can't specify type unless name is set...  We'll do this via filtering later instead
         args.update(

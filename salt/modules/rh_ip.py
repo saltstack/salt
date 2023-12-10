@@ -1,25 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for RHEL/Fedora based distros
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 
-# Import third party libs
 import jinja2
 import jinja2.exceptions
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -88,7 +82,8 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.",
+        "The rh_ip execution module cannot be loaded: this module is only available on"
+        " RHEL/Fedora based distributions.",
     )
 
 
@@ -97,7 +92,7 @@ def _error_msg_iface(iface, option, expected):
     Build an appropriate error message from a given option and
     a list of expected values.
     """
-    if isinstance(expected, six.string_types):
+    if isinstance(expected, str):
         expected = (expected,)
     msg = "Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]"
     return msg.format(iface, option, "|".join(str(e) for e in expected))
@@ -123,7 +118,7 @@ def _error_msg_network(option, expected):
     Build an appropriate error message from a given option and
     a list of expected values.
     """
-    if isinstance(expected, six.string_types):
+    if isinstance(expected, str):
         expected = (expected,)
     msg = "Invalid network setting -- Setting: {0}, Expected: [{1}]"
     return msg.format(option, "|".join(str(e) for e in expected))
@@ -139,7 +134,7 @@ def _parse_rh_config(path):
     if rh_config:
         for line in rh_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith("!") or line.startswith("#"):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -176,7 +171,7 @@ def _parse_ethtool_opts(opts, iface):
 
     if "speed" in opts:
         valid = ["10", "100", "1000", "10000"]
-        if six.text_type(opts["speed"]) in valid:
+        if str(opts["speed"]) in valid:
             config.update({"speed": opts["speed"]})
         else:
             _raise_error_iface(iface, opts["speed"], valid)
@@ -201,10 +196,25 @@ def _parse_ethtool_opts(opts, iface):
             "0x2000000",
             "0x4000000",
         ]
-        if six.text_type(opts["advertise"]) in valid:
+        if str(opts["advertise"]) in valid:
             config.update({"advertise": opts["advertise"]})
         else:
             _raise_error_iface(iface, "advertise", valid)
+
+    if "channels" in opts:
+        channels_cmd = "-L {}".format(iface.strip())
+        channels_params = []
+        for option in ("rx", "tx", "other", "combined"):
+            if option in opts["channels"]:
+                valid = range(1, __grains__["num_cpus"] + 1)
+                if opts["channels"][option] in valid:
+                    channels_params.append(
+                        "{} {}".format(option, opts["channels"][option])
+                    )
+                else:
+                    _raise_error_iface(iface, opts["channels"][option], valid)
+        if channels_params:
+            config.update({channels_cmd: " ".join(channels_params)})
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for option in ("rx", "tx", "sg", "tso", "ufo", "gso", "gro", "lro"):
@@ -240,7 +250,7 @@ def _parse_settings_bond(opts, iface):
         return _parse_settings_bond_3(opts, iface)
     elif opts["mode"] in ("802.3ad", "4"):
         log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface)
     elif opts["mode"] in ("balance-tlb", "5"):
@@ -296,7 +306,7 @@ def _parse_settings_miimon(opts, iface):
                     _raise_error_iface(
                         iface,
                         binding,
-                        "0 or a multiple of miimon ({0})".format(ret["miimon"]),
+                        "0 or a multiple of miimon ({})".format(ret["miimon"]),
                     )
 
         if "use_carrier" in opts:
@@ -459,7 +469,19 @@ def _parse_settings_bond_4(opts, iface):
             bond.update({binding: _BOND_DEFAULTS[binding]})
 
     if "hashing-algorithm" in opts:
-        valid = ("layer2", "layer2+3", "layer3+4")
+        if __grains__["os_family"] == "RedHat":
+            # allowing for Amazon 2 based of RHEL/Centos 7
+            if __grains__["osmajorrelease"] < 8:
+                valid = ("layer2", "layer2+3", "layer3+4", "encap2+3", "encap3+4")
+            else:
+                valid = (
+                    "layer2",
+                    "layer2+3",
+                    "layer3+4",
+                    "encap2+3",
+                    "encap3+4",
+                    "vlan+srcmac",
+                )
         if opts["hashing-algorithm"] in valid:
             bond.update({"xmit_hash_policy": opts["hashing-algorithm"]})
         else:
@@ -528,7 +550,7 @@ def _parse_settings_vlan(opts, iface):
             _raise_error_iface(iface, "vlan_id", "Positive integer")
 
     if "phys_dev" in opts:
-        if len(opts["phys_dev"]) > 0:
+        if opts["phys_dev"]:
             vlan.update({"phys_dev": opts["phys_dev"]})
         else:
             _raise_error_iface(iface, "phys_dev", "Non-empty string")
@@ -568,7 +590,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
             result["ethtool"] = " ".join(
-                ["{0} {1}".format(x, y) for x, y in ethtool.items()]
+                ["{} {}".format(x, y) for x, y in ethtool.items()]
             )
 
     if iface_type == "slave":
@@ -593,7 +615,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             result["bonding"] = " ".join(
-                ["{0}={1}".format(x, y) for x, y in bonding.items()]
+                ["{}={}".format(x, y) for x, y in bonding.items()]
             )
             result["devtype"] = "Bond"
 
@@ -703,7 +725,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["ipaddrs"] = []
         for opt in opts["ipaddrs"]:
             if salt.utils.validate.net.ipv4_addr(opt):
-                ip, prefix = [i.strip() for i in opt.split("/")]
+                ip, prefix = (i.strip() for i in opt.split("/"))
                 result["ipaddrs"].append({"ipaddr": ip, "prefix": prefix})
             else:
                 msg = "ipv4 CIDR is invalid"
@@ -821,7 +843,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    opts = {k.lower(): v for (k, v) in opts.items()}
     result = {}
     if "routes" not in opts:
         _raise_error_routes(iface, "routes", "List of routes")
@@ -838,8 +860,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
-    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
+    opts = {k.lower(): v for (k, v) in opts.items()}
+    current = {k.lower(): v for (k, v) in current.items()}
 
     # Check for supported parameters
     retain_settings = opts.get("retain_settings", False)
@@ -1059,7 +1081,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     ):
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = JINJA.get_template("rh{0}_eth.jinja".format(rh_major))
+            template = JINJA.get_template("rh{}_eth.jinja".format(rh_major))
         except jinja2.exceptions.TemplateNotFound:
             log.error("Could not load template rh%s_eth.jinja", rh_major)
             return ""
@@ -1069,7 +1091,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}")
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
 
     return _read_file(path)
 
@@ -1122,8 +1144,8 @@ def build_routes(iface, **settings):
     _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, "route-{0}")
     _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, "route6-{0}")
 
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{0}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
 
     routes = _read_file(path)
     routes.extend(_read_file(path6))
@@ -1142,7 +1164,7 @@ def down(iface, iface_type):
     """
     # Slave devices are controlled by the master.
     if iface_type.lower() not in ("slave", "teamport"):
-        return __salt__["cmd.run"]("ifdown {0}".format(iface))
+        return __salt__["cmd.run"]("ifdown {}".format(iface))
     return None
 
 
@@ -1156,7 +1178,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
     return _read_file(path)
 
 
@@ -1172,7 +1194,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
     """
     # Slave devices are controlled by the master.
     if iface_type.lower() not in ("slave", "teamport"):
-        return __salt__["cmd.run"]("ifup {0}".format(iface))
+        return __salt__["cmd.run"]("ifup {}".format(iface))
     return None
 
 
@@ -1186,8 +1208,8 @@ def get_routes(iface):
 
         salt '*' ip.get_routes eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{0}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
     routes = _read_file(path)
     routes.extend(_read_file(path6))
     return routes
@@ -1241,7 +1263,10 @@ def apply_network_settings(**settings):
         )
         res = True
     else:
-        res = __salt__["service.restart"]("network")
+        if __grains__["osmajorrelease"] >= 8:
+            res = __salt__["service.restart"]("NetworkManager")
+        else:
+            res = __salt__["service.restart"]("network")
 
     return hostname_res and res
 

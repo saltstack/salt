@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Salt proxy state
 
@@ -11,7 +10,7 @@
 
     Run the state as below
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:
@@ -23,7 +22,6 @@
     and start the salt-proxy process (default true),
     if it isn't already running.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -45,7 +43,7 @@ def configure_proxy(name, proxyname="p8000", start=True):
 
     Example:
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:
@@ -54,5 +52,5 @@ def configure_proxy(name, proxyname="p8000", start=True):
 
     """
     ret = __salt__["salt_proxy.configure_proxy"](proxyname, start=start)
-    ret.update({"name": name, "comment": "{0} config messages".format(name)})
+    ret.update({"name": name, "comment": "{} config messages".format(name)})
     return ret

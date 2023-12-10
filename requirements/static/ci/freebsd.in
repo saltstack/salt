@@ -1,41 +1,7 @@
 # FreeBSD static CI requirements
-apache-libcloud==2.0.0
-boto3
-boto>=2.46.0
-certifi
-cffi
-cherrypy==17.3.0
-croniter>=0.3.0,!=0.3.22
-dnspython
-docker
-GitPython
-hgtools
-jmespath
-jsonschema
-junos-eznc
-jxmlease
-kazoo
-keyring==5.7.1
-kubernetes<4.0
-libnacl>=1.7.1
-mock>=3.0.5
-moto
-napalm; python_version >= '3.6'
-paramiko>=2.1.6
-pygit2==1.1.1
-pyinotify
-python-etcd>0.4.2
-pyvmomi
-requests
-rfc3987
-setuptools-scm
-strict_rfc3339
-toml
-vcert~=0.7.0
-virtualenv
-watchdog
 
-# Available template libraries that can be used
-Genshi
-Cheetah3==3.1.0
-Mako
+--constraint=../pkg/py{py_version}/{platform}.txt
+
+yamllint
+mercurial
+hglib

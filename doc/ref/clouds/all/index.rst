@@ -11,7 +11,6 @@ cloud modules
     :template: autosummary.rst.tmpl
 
     aliyun
-    azurearm
     clc
     cloudstack
     digitalocean
@@ -19,11 +18,11 @@ cloud modules
     ec2
     gce
     gogrid
+    hetzner
     joyent
     libvirt
     linode
     lxc
-    msazure
     oneandone
     opennebula
     openstack

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The ssh client wrapper system contains the routines that are used to alter
 how executions are run in the salt-ssh system, this allows for state routines
@@ -6,23 +5,16 @@ to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function
 
 import copy
 
 import salt.client.ssh
-
-# Import salt libs
 import salt.loader
 import salt.utils.data
 import salt.utils.json
 
-# Import 3rd-party libs
-from salt.ext import six
 
-
-class FunctionWrapper(object):
+class FunctionWrapper:
     """
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
@@ -41,7 +33,7 @@ class FunctionWrapper(object):
         minion_opts=None,
         **kwargs
     ):
-        super(FunctionWrapper, self).__init__()
+        super().__init__()
         self.cmd_prefix = cmd_prefix
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
@@ -95,7 +87,7 @@ class FunctionWrapper(object):
             # We're in an inner FunctionWrapper as created by the code block
             # above. Reconstruct the original cmd in the form 'cmd.run' and
             # then evaluate as normal
-            cmd = "{0}.{1}".format(self.cmd_prefix, cmd)
+            cmd = "{}.{}".format(self.cmd_prefix, cmd)
 
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
@@ -111,10 +103,10 @@ class FunctionWrapper(object):
             argv.extend([salt.utils.json.dumps(arg) for arg in args])
             argv.extend(
                 [
-                    "{0}={1}".format(
+                    "{}={}".format(
                         salt.utils.stringutils.to_str(key), salt.utils.json.dumps(val)
                     )
-                    for key, val in six.iteritems(kwargs)
+                    for key, val in kwargs.items()
                 ]
             )
             single = salt.client.ssh.Single(
@@ -159,14 +151,14 @@ class FunctionWrapper(object):
             # containing only 'cmd' module calls, in that case. We don't
             # support assigning directly to prefixes in this way
             raise KeyError(
-                "Cannot assign to module key {0} in the " "FunctionWrapper".format(cmd)
+                "Cannot assign to module key {} in the FunctionWrapper".format(cmd)
             )
 
         if self.cmd_prefix:
             # We're in an inner FunctionWrapper as created by the first code
             # block in __getitem__. Reconstruct the original cmd in the form
             # 'cmd.run' and then evaluate as normal
-            cmd = "{0}.{1}".format(self.cmd_prefix, cmd)
+            cmd = "{}.{}".format(self.cmd_prefix, cmd)
 
         if cmd in self.wfuncs:
             self.wfuncs[cmd] = value

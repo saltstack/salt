@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wheel system wrapper for the Salt key system to be used in interactions with
 the Salt Master programmatically.
@@ -27,17 +26,16 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
 import os
 
 import salt.crypt
+import salt.key
 import salt.utils.crypt
 import salt.utils.files
 import salt.utils.platform
-from salt.key import get_key
 from salt.utils.sanitizers import clean
 
 __func_alias__ = {
@@ -63,8 +61,8 @@ def list_(match):
         >>> wheel.cmd('key.list', ['accepted'])
         {'minions': ['minion1', 'minion2', 'minion3']}
     """
-    skey = get_key(__opts__)
-    return skey.list_status(match)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.list_status(match)
 
 
 def list_all():
@@ -80,16 +78,16 @@ def list_all():
         'minions_denied': [], 'minions_pre': [],
         'minions': ['minion1', 'minion2', 'minion3']}
     """
-    skey = get_key(__opts__)
-    return skey.all_keys()
+    with salt.key.get_key(__opts__) as skey:
+        return skey.all_keys()
 
 
 def name_match(match):
     """
     List all the keys based on a glob match
     """
-    skey = get_key(__opts__)
-    return skey.name_match(match)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.name_match(match)
 
 
 def accept(match, include_rejected=False, include_denied=False):
@@ -112,10 +110,10 @@ def accept(match, include_rejected=False, include_denied=False):
         >>> wheel.cmd('key.accept', ['minion1'])
         {'minions': ['minion1']}
     """
-    skey = get_key(__opts__)
-    return skey.accept(
-        match, include_rejected=include_rejected, include_denied=include_denied
-    )
+    with salt.key.get_key(__opts__) as skey:
+        return skey.accept(
+            match, include_rejected=include_rejected, include_denied=include_denied
+        )
 
 
 def accept_dict(match, include_rejected=False, include_denied=False):
@@ -152,12 +150,12 @@ def accept_dict(match, include_rejected=False, include_denied=False):
         })
         {'minions': ['jerry', 'stuart', 'bob']}
     """
-    skey = get_key(__opts__)
-    return skey.accept(
-        match_dict=match,
-        include_rejected=include_rejected,
-        include_denied=include_denied,
-    )
+    with salt.key.get_key(__opts__) as skey:
+        return skey.accept(
+            match_dict=match,
+            include_rejected=include_rejected,
+            include_denied=include_denied,
+        )
 
 
 def delete(match):
@@ -172,8 +170,8 @@ def delete(match):
         >>> wheel.cmd_async({'fun': 'key.delete', 'match': 'minion1'})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
-    skey = get_key(__opts__)
-    return skey.delete_key(match)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.delete_key(match)
 
 
 def delete_dict(match):
@@ -195,8 +193,8 @@ def delete_dict(match):
         }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
-    skey = get_key(__opts__)
-    return skey.delete_key(match_dict=match)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.delete_key(match_dict=match)
 
 
 def reject(match, include_accepted=False, include_denied=False):
@@ -219,10 +217,10 @@ def reject(match, include_accepted=False, include_denied=False):
         >>> wheel.cmd_async({'fun': 'key.reject', 'match': 'minion1'})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
-    skey = get_key(__opts__)
-    return skey.reject(
-        match, include_accepted=include_accepted, include_denied=include_denied
-    )
+    with salt.key.get_key(__opts__) as skey:
+        return skey.reject(
+            match, include_accepted=include_accepted, include_denied=include_denied
+        )
 
 
 def reject_dict(match, include_accepted=False, include_denied=False):
@@ -256,12 +254,12 @@ def reject_dict(match, include_accepted=False, include_denied=False):
         }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
-    skey = get_key(__opts__)
-    return skey.reject(
-        match_dict=match,
-        include_accepted=include_accepted,
-        include_denied=include_denied,
-    )
+    with salt.key.get_key(__opts__) as skey:
+        return skey.reject(
+            match_dict=match,
+            include_accepted=include_accepted,
+            include_denied=include_denied,
+        )
 
 
 def key_str(match):
@@ -278,8 +276,8 @@ def key_str(match):
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
     """
-    skey = get_key(__opts__)
-    return skey.key_str(match)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.key_str(match)
 
 
 def master_key_str():
@@ -319,8 +317,8 @@ def finger(match, hash_type=None):
     if hash_type is None:
         hash_type = __opts__["hash_type"]
 
-    skey = get_key(__opts__)
-    return skey.finger(match, hash_type)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.finger(match, hash_type)
 
 
 def finger_master(hash_type=None):
@@ -379,7 +377,7 @@ def gen(id_=None, keysize=2048):
         id_ = clean.filename(id_)
     ret = {"priv": "", "pub": ""}
     priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
-    pub = "{0}.pub".format(priv[: priv.rindex(".")])
+    pub = "{}.pub".format(priv[: priv.rindex(".")])
     with salt.utils.files.fopen(priv) as fp_:
         ret["priv"] = salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(pub) as fp_:
@@ -449,13 +447,13 @@ def gen_keys(keydir=None, keyname=None, keysize=None, user=None):
     """
     Generate minion RSA public keypair
     """
-    skey = get_key(__opts__)
-    return skey.gen_keys(keydir, keyname, keysize, user)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.gen_keys(keydir, keyname, keysize, user)
 
 
 def gen_signature(priv, pub, signature_path, auto_create=False, keysize=None):
     """
     Generate master public-key-signature
     """
-    skey = get_key(__opts__)
-    return skey.gen_keys_signature(priv, pub, signature_path, auto_create, keysize)
+    with salt.key.get_key(__opts__) as skey:
+        return skey.gen_keys_signature(priv, pub, signature_path, auto_create, keysize)

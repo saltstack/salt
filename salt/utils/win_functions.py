@@ -1,26 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Various functions to be used by windows during start up and to monkey patch
-missing functions in other modules
+missing functions in other modules.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import platform
 import re
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
 
-# Import 3rd Party Libs
 try:
     import psutil
     import pywintypes
     import win32api
     import win32net
     import win32security
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
+    from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
 
     HAS_WIN32 = True
 except ImportError:
@@ -89,14 +84,28 @@ def get_user_groups(name, sid=False):
     else:
         try:
             groups = win32net.NetUserGetLocalGroups(None, name)
-        except win32net.error as exc:
+        except (win32net.error, pywintypes.error) as exc:
             # ERROR_ACCESS_DENIED, NERR_DCNotFound, RPC_S_SERVER_UNAVAILABLE
-            if exc.winerror in (5, 1722, 2453):
+            if exc.winerror in (5, 1722, 2453, 1927, 1355):
                 # Try without LG_INCLUDE_INDIRECT flag, because the user might
                 # not have permissions for it or something is wrong with DC
                 groups = win32net.NetUserGetLocalGroups(None, name, 0)
             else:
-                raise
+                # If this fails, try once more but instead with global groups.
+                try:
+                    groups = win32net.NetUserGetGroups(None, name)
+                except win32net.error as exc:
+                    if exc.winerror in (5, 1722, 2453, 1927, 1355):
+                        # Try without LG_INCLUDE_INDIRECT flag, because the user might
+                        # not have permissions for it or something is wrong with DC
+                        groups = win32net.NetUserGetLocalGroups(None, name, 0)
+                except pywintypes.error:
+                    if exc.winerror in (5, 1722, 2453, 1927, 1355):
+                        # Try with LG_INCLUDE_INDIRECT flag, because the user might
+                        # not have permissions for it or something is wrong with DC
+                        groups = win32net.NetUserGetLocalGroups(None, name, 1)
+                    else:
+                        raise
 
     if not sid:
         return groups
@@ -126,7 +135,7 @@ def get_sid_from_name(name):
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
-        raise CommandExecutionError("User {0} not found: {1}".format(name, exc))
+        raise CommandExecutionError("User {} not found: {}".format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -157,7 +166,7 @@ def get_current_user(with_domain=True):
         elif not with_domain:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        raise CommandExecutionError("Failed to get current user: {0}".format(exc))
+        raise CommandExecutionError("Failed to get current user: {}".format(exc))
 
     if not user_name:
         return False
@@ -184,6 +193,9 @@ def get_sam_name(username):
 
 
 def enable_ctrl_logoff_handler():
+    """
+    Set the control handler on the console
+    """
     if HAS_WIN32:
         ctrl_logoff_event = 5
         win32api.SetConsoleCtrlHandler(
@@ -241,7 +253,7 @@ def escape_for_cmd_exe(arg):
     meta_re = re.compile(
         "(" + "|".join(re.escape(char) for char in list(meta_chars)) + ")"
     )
-    meta_map = {char: "^{0}".format(char) for char in meta_chars}
+    meta_map = {char: "^{}".format(char) for char in meta_chars}
 
     def escape_meta_chars(m):
         char = m.group(1)
@@ -287,7 +299,7 @@ def broadcast_setting_change(message="Environment"):
 
     CLI Example:
 
-    ... code-block:: python
+    .. code-block:: python
 
         import salt.utils.win_functions
         salt.utils.win_functions.broadcast_setting_change('Environment')

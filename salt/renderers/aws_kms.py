@@ -66,10 +66,11 @@ import base64
 import logging
 
 import salt.utils.stringio
+from salt.exceptions import SaltConfigurationError
 
 try:
-    import botocore.exceptions
     import boto3
+    import botocore.exceptions
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
 except ImportError:
@@ -114,7 +115,7 @@ def _cfg_data_key():
     data_key = _cfg("data_key", "")
     if data_key:
         return data_key
-    raise salt.exceptions.SaltConfigurationError("aws_kms:data_key is not set")
+    raise SaltConfigurationError("aws_kms:data_key is not set")
 
 
 def _session():
@@ -137,18 +138,16 @@ def _session():
     try:
         return boto3.Session(profile_name=profile_name)
     except botocore.exceptions.ProfileNotFound as orig_exc:
-        err_msg = 'Boto3 could not find the "{}" profile configured in Salt.'.format(
-            profile_name or "default"
-        )
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        raise config_error from orig_exc
+        raise SaltConfigurationError(
+            'Boto3 could not find the "{}" profile configured in Salt.'.format(
+                profile_name or "default"
+            )
+        ) from orig_exc
     except botocore.exceptions.NoRegionError as orig_exc:
-        err_msg = (
+        raise SaltConfigurationError(
             "Boto3 was unable to determine the AWS "
-            "endpoint region using the {} profile."
-        ).format(profile_name or "default")
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        raise config_error from orig_exc
+            "endpoint region using the {} profile.".format(profile_name or "default")
+        ) from orig_exc
 
 
 def _kms():
@@ -171,9 +170,9 @@ def _api_decrypt():
         error_code = orig_exc.response.get("Error", {}).get("Code", "")
         if error_code != "InvalidCiphertextException":
             raise
-        err_msg = "aws_kms:data_key is not a valid KMS data key"
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        raise config_error from orig_exc
+        raise SaltConfigurationError(
+            "aws_kms:data_key is not a valid KMS data key"
+        ) from orig_exc
 
 
 def _plaintext_data_key():

@@ -17,9 +17,17 @@ import salt.utils.vt
 
 log = logging.getLogger(__name__)
 
-SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:", re.M)
+SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\s*$", re.M)
 KEY_VALID_RE = re.compile(r".*\(yes\/no\).*")
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.M)
+
+# sudo prompt is used to recognize sudo prompting for a password and should
+# therefore be fairly recognizable and unique
+SUDO_PROMPT = "[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23]passwd:"
+SUDO_PROMPT_RE = re.compile(
+    r"\[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23\]passwd:",
+    re.M,
+)
 
 # Keep these in sync with ./__init__.py
 RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
@@ -121,26 +129,26 @@ class Shell:
             options.append("PasswordAuthentication=no")
         if self.opts.get("_ssh_version", (0,)) > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={}".format(self.timeout))
+        options.append(f"ConnectTimeout={self.timeout}")
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
             options.extend(["StrictHostKeyChecking=no", "UserKnownHostsFile=/dev/null"])
         known_hosts = self.opts.get("known_hosts_file")
         if known_hosts and os.path.isfile(known_hosts):
-            options.append("UserKnownHostsFile={}".format(known_hosts))
+            options.append(f"UserKnownHostsFile={known_hosts}")
         if self.port:
-            options.append("Port={}".format(self.port))
+            options.append(f"Port={self.port}")
         if self.priv and self.priv != "agent-forwarding":
-            options.append("IdentityFile={}".format(self.priv))
+            options.append(f"IdentityFile={self.priv}")
         if self.user:
-            options.append("User={}".format(self.user))
+            options.append(f"User={self.user}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {} ".format(option))
+            ret.append(f"-o {option} ")
         return "".join(ret)
 
     def _passwd_opts(self):
@@ -156,7 +164,7 @@ class Shell:
         ]
         if self.opts["_ssh_version"] > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={}".format(self.timeout))
+        options.append(f"ConnectTimeout={self.timeout}")
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
@@ -175,19 +183,19 @@ class Shell:
                 ]
             )
         if self.port:
-            options.append("Port={}".format(self.port))
+            options.append(f"Port={self.port}")
         if self.user:
-            options.append("User={}".format(self.user))
+            options.append(f"User={self.user}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {} ".format(option))
+            ret.append(f"-o {option} ")
         return "".join(ret)
 
     def _ssh_opts(self):
-        return " ".join(["-o {}".format(opt) for opt in self.ssh_options])
+        return " ".join([f"-o {opt}" for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         """
@@ -198,7 +206,7 @@ class Shell:
             # passwords containing '$'
             return "{} {} '{} -p {} {} {}@{}'".format(
                 "ssh-copy-id",
-                "-i {}.pub".format(self.priv),
+                f"-i {self.priv}.pub",
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -217,7 +225,7 @@ class Shell:
             # passwords containing '$'
             return "{} {} {} -p {} {} {}@{}".format(
                 "ssh-copy-id",
-                "-i {}.pub".format(self.priv),
+                f"-i {self.priv}.pub",
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -253,10 +261,7 @@ class Shell:
         if ssh != "scp" and self.remote_port_forwards:
             command.append(
                 " ".join(
-                    [
-                        "-R {}".format(item)
-                        for item in self.remote_port_forwards.split(",")
-                    ]
+                    [f"-R {item}" for item in self.remote_port_forwards.split(",")]
                 )
             )
         if self.ssh_options:
@@ -272,7 +277,9 @@ class Shell:
         """
         try:
             proc = salt.utils.nb_popen.NonBlockingPopen(
-                self._split_cmd(cmd), stderr=subprocess.PIPE, stdout=subprocess.PIPE,
+                self._split_cmd(cmd),
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
             )
             while True:
                 time.sleep(0.1)
@@ -296,7 +303,7 @@ class Shell:
         rcode = None
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing non-blocking command: {}".format(cmd)
+        logmsg = f"Executing non-blocking command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -315,7 +322,7 @@ class Shell:
         """
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing command: {}".format(cmd)
+        logmsg = f"Executing command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         if 'decode("base64")' in logmsg or "base64.b64decode(" in logmsg:
@@ -332,17 +339,17 @@ class Shell:
         scp a file or files to a remote system
         """
         if makedirs:
-            self.exec_cmd("mkdir -p {}".format(os.path.dirname(remote)))
+            self.exec_cmd(f"mkdir -p {os.path.dirname(remote)}")
 
         # scp needs [<ipv6}
         host = self.host
         if ":" in host:
-            host = "[{}]".format(host)
+            host = f"[{host}]"
 
-        cmd = "{} {}:{}".format(local, host, remote)
+        cmd = f"{local} {host}:{remote}"
         cmd = self._cmd_str(cmd, ssh="scp")
 
-        logmsg = "Executing command: {}".format(cmd)
+        logmsg = f"Executing command: {cmd}"
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -361,7 +368,7 @@ class Shell:
             cmd_lst = shlex.split(cmd)
         else:
             cmd_lst = shlex.split(ssh_part)
-            cmd_lst.append("/bin/sh {}".format(cmd_part))
+            cmd_lst.append(f"/bin/sh {cmd_part}")
         return cmd_lst
 
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
@@ -372,12 +379,16 @@ class Shell:
         if not cmd:
             return "", "No command or passphrase", 245
 
+        log_sanitize = None
+        if self.passwd:
+            log_sanitize = self.passwd
         term = salt.utils.vt.Terminal(
             self._split_cmd(cmd),
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
             log_stderr_level="trace",
+            log_sanitize=log_sanitize,
             stream_stdout=False,
             stream_stderr=False,
         )
@@ -391,11 +402,15 @@ class Shell:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
+                    if self.passwd:
+                        stdout = stdout.replace(self.passwd, ("*" * 6))
                     ret_stdout += stdout
                     buff = old_stdout + stdout
                 else:
                     buff = stdout
                 if stderr:
+                    if self.passwd:
+                        stderr = stderr.replace(self.passwd, ("*" * 6))
                     ret_stderr += stderr
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
@@ -428,9 +443,15 @@ class Shell:
                         ret_stdout = (
                             "The host key needs to be accepted, to "
                             "auto accept run salt-ssh with the -i "
-                            "flag:\n{}"
-                        ).format(stdout)
+                            "flag:\n{}".format(stdout)
+                        )
                         return ret_stdout, "", 254
+                elif buff and SUDO_PROMPT_RE.search(buff):
+                    if not self.passwd:
+                        return "", "Sudo password is required but not provided", 254
+                    else:
+                        term.sendline(self.passwd)
+                        continue
                 elif buff and buff.endswith("_||ext_mods||_"):
                     mods_raw = (
                         salt.utils.json.dumps(self.mods, separators=(",", ":"))
@@ -440,6 +461,19 @@ class Shell:
                 if stdout:
                     old_stdout = stdout
                 time.sleep(0.01)
-            return ret_stdout, ret_stderr, term.exitstatus
         finally:
             term.close(terminate=True, kill=True)
+        # Ensure term.close is called before querying the exitstatus, otherwise
+        # it might still be None.
+        ret_status = term.exitstatus
+        if ret_status is None:
+            if term.signalstatus is not None:
+                # The process died because of an unhandled signal, report
+                # a non-zero exitcode bash-style.
+                ret_status = 128 + term.signalstatus
+            else:
+                log.warning(
+                    "VT reported both exitstatus and signalstatus as None. "
+                    "This is likely a bug."
+                )
+        return ret_stdout, ret_stderr, ret_status

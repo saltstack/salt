@@ -228,8 +228,8 @@ This allows you to use any number of potential fallback passwords.
     This scenario is especially true, and even slower, when the proxy
     minion first starts. If the correct password is not the first password
     on the list, it may take up to a minute for ``test.version`` to respond
-    with salt's version installed (Example: ``2018.3.4``. Once the initial 
-    authorization is complete, the responses for commands will be a little 
+    with salt's version installed (Example: ``2018.3.4``. Once the initial
+    authorization is complete, the responses for commands will be a little
     faster.
 
     To avoid these longer waiting periods, SaltStack recommends moving the
@@ -525,4 +525,3 @@ Relevant Salt Files and Resources
 - :ref:`Salt Proxy Minion Docs <proxy-minion>`
 - :ref:`Salt Proxy Minion End-to-End Example <proxy-minion-end-to-end-example>`
 - :mod:`vSphere Execution Module <salt.modules.vsphere>`
-

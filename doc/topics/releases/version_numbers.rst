@@ -45,6 +45,15 @@ Assigned codenames:
 - Sodium: ``3001``
 - Magnesium: ``3002``
 - Aluminium: ``3003``
+- Silicon: ``3004``
+- Phosphorus: ``3005``
+- Sulfur: ``3006``
+- Chlorine:  ``3007``
+- Argon: ``3008``
+- Potassium: ``3009``
+
+The complete list of upcoming codenames is available in the
+`source code <https://github.com/saltstack/salt/blob/76e50885b07621e9e4c16bc3f1ebc16c93983b90/salt/version.py#L65-L182>`_.
 
 Example
 -------
@@ -76,9 +85,6 @@ Example arguments for ``git checkout``:
   +------------+----------------------------------------------------------------------------+
   | v3000.1    | Tag signaling the commit for a 3000.1 patch fix.                           |
   +------------+----------------------------------------------------------------------------+
-
-Further reading on `release branch and develop branch
-<https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch>`_.
 
 Influence of the ``git checkout`` argument on ``git describe``:
 

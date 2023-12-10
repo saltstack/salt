@@ -9,14 +9,15 @@ import shutil
 import tempfile
 import textwrap
 
+import pytest
+import tornado
+import tornado.testing
+from saltfactories.utils import random_string
+
 import salt.config
-import salt.ext.tornado
-import salt.ext.tornado.testing
 import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
-from saltfactories.utils import random_string
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -25,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 class ProxyMinionTestCase(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_master_init_metaproxy_called(self):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
@@ -37,7 +38,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(
@@ -47,11 +48,11 @@ class ProxyMinionTestCase(TestCase):
         ):
             try:
                 ret = proxy_minion._post_master_init("dummy_master")
-                self.assert_called_once(salt.minion._metaproxy_call)
+                salt.minion._metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_metaproxy_called(self):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
@@ -64,7 +65,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(
@@ -75,11 +76,11 @@ class ProxyMinionTestCase(TestCase):
             try:
                 ret = proxy_minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-                self.assert_called_once(salt.minion._metaproxy_call)
+                salt.minion._metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_payload_metaproxy_called(self):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.
@@ -92,7 +93,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(
@@ -103,7 +104,7 @@ class ProxyMinionTestCase(TestCase):
             try:
                 ret = proxy_minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-                self.assert_called_once(mock_metaproxy_call)
+                mock_metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 
@@ -156,7 +157,9 @@ class ProxyMinionTestCase(TestCase):
                 )
             )
         opts = salt.config.proxy_config(
-            str(conf_file), minion_id=proxyid, cache_minion_id=False,
+            str(conf_file),
+            minion_id=proxyid,
+            cache_minion_id=False,
         )
         self.assertIn("schedule", opts)
         self.assertIn("test_job", opts["schedule"])

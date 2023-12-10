@@ -6,12 +6,12 @@ import pprint
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest, with_tempfile
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("salt_sub_minion")
-@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
+@pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
@@ -112,7 +112,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         return hash.hexdigest()
 
     @with_tempfile(suffix=".pem", create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_49027(self, pemfile):
         ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
@@ -124,7 +124,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
             "state.apply",
@@ -137,7 +137,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cert_signing(self):
         ret = self.run_function(
             "state.apply", ["x509.cert_signing"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
@@ -150,7 +150,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[key]["changes"]
         assert "New" in ret[key]["changes"]["Certificate"]
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cert_signing_based_on_csr(self):
         ret = self.run_function(
             "state.apply",
@@ -165,7 +165,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[key]["changes"]
         assert "New" in ret[key]["changes"]["Certificate"]
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_proper_cert_comparison(self):
         # In this SLS we define two certs which have identical content.
         # The first one is expected to be created.
@@ -184,14 +184,16 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[first_key]["changes"]
         assert "New" in ret[first_key]["changes"]["Certificate"]
         # check whether the second defined cert is considered to match the first one
-        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
-            RUNTIME_VARS.TMP
+        second_key = (
+            "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+                RUNTIME_VARS.TMP
+            )
         )
         assert second_key in ret
         assert "changes" in ret[second_key]
         assert ret[second_key]["changes"] == {}
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_crl_managed(self):
         ret = self.run_function(
             "state.apply", ["x509.crl_managed"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
@@ -215,7 +217,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             "{}/pki/ca.crl does not exist.".format(RUNTIME_VARS.TMP),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_crl_managed_replacing_existing_crl(self):
         os.mkdir(os.path.join(RUNTIME_VARS.TMP, "pki"))
         with salt.utils.files.fopen(
@@ -485,7 +487,8 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             },
         )
         self.assertEqual(
-            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            "Certificate needs renewal: 29 days remaining but it needs to be at"
+            " least 90",
             second_run[key]["changes"]["Status"]["Old"],
         )
         expiry = datetime.datetime.strptime(

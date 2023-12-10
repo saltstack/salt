@@ -1,34 +1,30 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
 
 # pylint: enable=import-error,no-name-in-module,unused-import
 log = logging.getLogger(__name__)
@@ -81,8 +77,12 @@ if _has_required_boto():
         ScheduleExpression=rule_sched,
         State="ENABLED",
     )
-    create_rule_ret = dict(Name=rule_name,)
-    target_ret = dict(Id="target1",)
+    create_rule_ret = dict(
+        Name=rule_name,
+    )
+    target_ret = dict(
+        Id="target1",
+    )
 
 
 class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
@@ -96,7 +96,7 @@ class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_cloudwatch_event: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoCloudWatchEventTestCaseBase, self).setUp()
+        super().setUp()
         boto_cloudwatch_event.__init__(self.opts)
         del self.opts
 
@@ -119,11 +119,11 @@ class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoCloudWatchEventTestCaseMixin(object):
+class BotoCloudWatchEventTestCaseMixin:
     pass
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
 class BotoCloudWatchEventTestCase(
     BotoCloudWatchEventTestCaseBase, BotoCloudWatchEventTestCaseMixin
 ):

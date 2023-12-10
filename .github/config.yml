@@ -12,17 +12,17 @@ newIssueWelcomeComment: >
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
-    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
-    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
-    - [IRC on Freenode](https://webchat.freenode.net/#salt)
-    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
-    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+    - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
+    - [Join our Community Slack](https://via.vmw.com/salt-slack)
+    - [IRC on LiberaChat](https://web.libera.chat/#salt)
+    - [Salt Project YouTube channel](https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg)
+    - [Salt Project Twitch channel](https://www.twitch.tv/saltprojectoss)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com. We’re glad
+  If you have additional questions, email us at saltproject@vmware.com. We’re glad
   you’ve joined our community and look forward to doing awesome things with
   you!
 
@@ -38,17 +38,17 @@ newPRWelcomeComment: >
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
-    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
-    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
-    - [IRC on Freenode](https://webchat.freenode.net/#salt)
-    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
-    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+    - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
+    - [Join our Community Slack](https://via.vmw.com/salt-slack)
+    - [IRC on LiberaChat](https://web.libera.chat/#salt)
+    - [Salt Project YouTube channel](https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg)
+    - [Salt Project Twitch channel](https://www.twitch.tv/saltprojectoss)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com. We’re glad
+  If you have additional questions, email us at saltproject@vmware.com. We’re glad
   you’ve joined our community and look forward to doing awesome things with
   you!
 

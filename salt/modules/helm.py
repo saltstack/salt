@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface with Helm
 
@@ -33,16 +32,12 @@ Detailed Function Documentation
 -------------------------------
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import re
 
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
 from salt.serializers import json
 
 log = logging.getLogger(__name__)

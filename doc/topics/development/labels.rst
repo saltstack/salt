@@ -175,16 +175,6 @@ are common enough that labels have been created for them.  If an issue has not
 been moved beyond the ``Blocked`` milestone, it is very likely that it will
 only have a status label.
 
-- ``Bugfix - back-port`` The pull request needs to be back-ported to an older
-  release branch.  This is done by :ref:`recreating the pull request
-  <backporting-pull-requests>` against that branch.  Once the back-port is
-  completed, this label is replaced with a ``Bugfix - [Done] back-ported``
-  label.  Normally, new features should go into the develop and bug fixes into
-  the oldest supported release branch, see :ref:`here <which-salt-branch>`.
-
-- ``Bugfix - [Done] back-ported`` - The pull request has been back-ported to an
-  older branch.
-
 - ``Cannot Reproduce`` - The issue is a bug and has been reviewed by a
   SaltStack engineer, but it cannot be replicated with the provided information
   and context.  Those involved with the bug will need to work through
@@ -221,69 +211,22 @@ only have a status label.
   If it is a pull request, the results of the discussion may require additional
   changes and thus, a ``Pending Changes`` label.
 
-- ``Won't Fix for Now`` - The issue is legitimate, but it is not something the
-  SaltStack team is currently able or willing to fix or implement.  Issues
-  having this label may be revisited in the future.
-
-Type of Change
-~~~~~~~~~~~~~~
-
-Every pull request should receive a change label.  These labels measure the
-quantity of change as well as the significance of the change.  The amount of
-change and the importance of the code area changed are considered, but often
-the depth of secondary code review required and the potential repercussions of
-the change may also advise the label choice.
-
-Core code areas include: state compiler, crypto engine, master and minion and
-syndic daemons, transport, pillar rendering, loader, transport layer, event
-system, salt.utils, client, cli, logging, netapi, runner engine, templating
-engine, top file compilation, file client, file server, mine, salt-ssh, test
-runner, etc.
-
-Non-core code usually constitutes the specific set of plugins for each of the
-several plugin layers of Salt: execution modules, states, runners, returners,
-clouds, etc.
-
-- ``Minor Change``
-
-  * Less than 64 lines changed, or
-
-  * Less than 8 core lines changed
-
-- ``Medium Change``
-
-  * Less than 256 lines changed, or
-
-  * Less than 64 core lines changed
-
-- ``Master Change``
-
-  * More than 256 lines changed, or
-
-  * More than 64 core lines changed
-
-- ``Expert Change``
-
-  * Needs specialized, in-depth review
+- ``won't-fix`` - The issue is legitimate, but it is not something the
+  Salt core team is currently able or willing to fix or implement.  Issues
+  having this label may be revisited in the future, or solved by a Salt
+  community member.
 
 Test Status
 -----------
 
 These labels relate to the status of the automated tests that run on pull
-requests.  If the tests on a pull request fail and are not overridden by one of
-these labels, the pull request submitter needs to update the code and/or tests
-so that the tests pass and the pull request can be merged.
+requests.
 
-- ``Lint`` - The pull request has passed all tests except for the code lint
-  checker.
+- ``has-failing-test`` - The PR currently has one or more failing tests that
+  prevent the PR from being merged.
 
-- ``Tests Passed`` - The pull request has passed all tests even though some
-  test results are negative.  Sometimes the automated testing infrastructure
-  will encounter internal errors unrelated to the code change in the pull
-  request that cause test runs to fail.  These errors can be caused by cloud
-  host and network issues and also Jenkins issues like erroneously accumulating
-  workspace artifacts, resource exhaustion, and bugs that arise from long
-  running Jenkins processes.
+- ``Needs Testcase`` - The PR has code changes, but lack any automated tests.
+  These PRs need automated tests written before they may be merged.
 
 Other
 -----
@@ -296,11 +239,6 @@ important enough to be tracked and sorted with labels.
 
 - ``Help Wanted`` - The issue appears to have a simple solution.  Issues having
   this label should be a good starting place for new contributors to Salt.
-
-- ``Needs Testcase`` - The issue or pull request relates to a feature that
-  needs test coverage.  The pull request containing the tests should reference
-  the issue or pull request having this label, whereupon the label should be
-  removed.
 
 - ``Regression`` - The issue is a bug that breaks functionality known to work
   in previous releases.

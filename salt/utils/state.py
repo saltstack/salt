@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for state functions
 
 .. versionadded:: 2018.3.0
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
 import salt.state
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
 
 _empty = object()
 
@@ -35,12 +29,12 @@ def search_onfail_requisites(sid, highstate):
         st = salt.state.split_low_tag(sid)
     else:
         st = {"__id__": sid}
-    for fstate, fchunks in six.iteritems(highstate):
+    for fstate, fchunks in highstate.items():
         if fstate == st["__id__"]:
             continue
         else:
-            for mod_, fchunk in six.iteritems(fchunks):
-                if not isinstance(mod_, six.string_types) or mod_.startswith("__"):
+            for mod_, fchunk in fchunks.items():
+                if not isinstance(mod_, str) or mod_.startswith("__"):
                     continue
                 else:
                     if not isinstance(fchunk, list):
@@ -61,11 +55,11 @@ def search_onfail_requisites(sid, highstate):
                         for fdata in fchunk:
                             if not isinstance(fdata, dict):
                                 continue
-                            for knob, fvalue in six.iteritems(fdata):
+                            for knob, fvalue in fdata.items():
                                 if knob != "onfail":
                                     continue
                                 for freqs in fvalue:
-                                    for fmod, fid in six.iteritems(freqs):
+                                    for fmod, fid in freqs.items():
                                         if not (
                                             fid == st["__id__"]
                                             and fmod == st.get("state", fmod)
@@ -95,7 +89,7 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
         if onfails:
             for handler in onfails:
                 fstate, mod_, fchunk = handler
-                for rstateid, rstate in six.iteritems(running):
+                for rstateid, rstate in running.items():
                     if "_|-" in rstateid:
                         st = salt.state.split_low_tag(rstateid)
                     # in case of simple state, try to guess
@@ -130,7 +124,7 @@ def check_result(running, recurse=False, highstate=None):
         return False
 
     ret = True
-    for state_id, state_result in six.iteritems(running):
+    for state_id, state_result in running.items():
         expected_type = dict
         # The __extend__ state is a list
         if "__extend__" == state_id:
@@ -176,6 +170,7 @@ def merge_subreturn(original_return, sub_return, subkey=None):
     Code Example:
 
     .. code-block:: python
+
         def state_func(name, config, alarm=None):
             ret = {'name': name, 'comment': '', 'changes': {}}
             if alarm:
@@ -222,8 +217,8 @@ def get_sls_opts(opts, **kwargs):
     if "saltenv" in kwargs:
         saltenv = kwargs["saltenv"]
         if saltenv is not None:
-            if not isinstance(saltenv, six.string_types):
-                saltenv = six.text_type(saltenv)
+            if not isinstance(saltenv, str):
+                saltenv = str(saltenv)
             if opts["lock_saltenv"] and saltenv != opts["saltenv"]:
                 raise CommandExecutionError(
                     "lock_saltenv is enabled, saltenv cannot be changed"
@@ -232,8 +227,8 @@ def get_sls_opts(opts, **kwargs):
 
     if "pillarenv" in kwargs or opts.get("pillarenv_from_saltenv", False):
         pillarenv = kwargs.get("pillarenv") or kwargs.get("saltenv")
-        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts["pillarenv"] = six.text_type(pillarenv)
+        if pillarenv is not None and not isinstance(pillarenv, str):
+            opts["pillarenv"] = str(pillarenv)
         else:
             opts["pillarenv"] = pillarenv
 

@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.influxdb08mod as influx08
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 DB_LIST = ["A", "B", "C"]
 USER_LIST = [{"name": "A"}, {"name": "B"}]
 
 
-class MockInfluxDBClient(object):
+class MockInfluxDBClient:
     def get_list_database(self):
         return DB_LIST
 
@@ -306,7 +300,10 @@ class InfluxTestCase(TestCase):
             client.create_retention_policy = MagicMock()
             self.assertTrue(
                 influx08.retention_policy_add(
-                    database="db", name="name", duration="30d", replication=1,
+                    database="db",
+                    name="name",
+                    duration="30d",
+                    replication=1,
                 )
             )
             client.create_retention_policy.assert_called_once_with(
@@ -319,7 +316,10 @@ class InfluxTestCase(TestCase):
             client.alter_retention_policy = MagicMock()
             self.assertTrue(
                 influx08.retention_policy_alter(
-                    database="db", name="name", duration="30d", replication=1,
+                    database="db",
+                    name="name",
+                    duration="30d",
+                    replication=1,
                 )
             )
             client.alter_retention_policy.assert_called_once_with(

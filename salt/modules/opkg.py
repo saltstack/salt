@@ -7,7 +7,7 @@ Support for Opkg
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 .. note::
 
@@ -20,8 +20,9 @@ import copy
 import errno
 import logging
 import os
+import pathlib
 import re
-from pathlib import Path
+import shlex
 
 import salt.utils.args
 import salt.utils.data
@@ -32,8 +33,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
+from salt.utils.versions import Version
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
@@ -113,8 +113,8 @@ def _update_nilrt_restart_state():
 
         for fexpert in os.listdir(nisysapi_conf_d_path):
             _fingerprint_file(
-                filename=Path(nisysapi_conf_d_path, fexpert),
-                fingerprint_dir=Path(NILRT_RESTARTCHECK_STATE_PATH),
+                filename=pathlib.Path(nisysapi_conf_d_path, fexpert),
+                fingerprint_dir=pathlib.Path(NILRT_RESTARTCHECK_STATE_PATH),
             )
 
 
@@ -210,7 +210,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     ret = {}
@@ -505,7 +505,7 @@ def install(
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == "file":
         if reinstall:
@@ -753,7 +753,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -911,14 +910,14 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             else:
                 result = _set_state(target, "ok")
                 ret[target].update(changes=result[target], result=True)
-                ret[target][
-                    "comment"
-                ] = "Package {} is no longer being " "held.".format(target)
+                ret[target]["comment"] = "Package {} is no longer being held.".format(
+                    target
+                )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {} is already set not to be " "held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 
@@ -973,6 +972,18 @@ def _set_state(pkg, state):
     return ret
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed in a dict::
@@ -994,12 +1005,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+        return _list_pkgs_from_context(versions_as_list)
 
     cmd = ["opkg", "list-installed"]
     ret = {}
@@ -1131,7 +1137,7 @@ def info_installed(*names, **kwargs):
             install_date_time_t, md5sum, packager, provides, recommends,
             replaces, size, source, suggests, url, version
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1224,24 +1230,23 @@ def version_cmp(
         ["opkg", "--version"], output_loglevel="trace", python_shell=False
     )
     opkg_version = output.split(" ")[2].strip()
-    if salt.utils.versions.LooseVersion(
-        opkg_version
-    ) >= salt.utils.versions.LooseVersion("0.3.4"):
+    if Version(opkg_version) >= Version("0.3.4"):
         cmd_compare = ["opkg", "compare-versions"]
     elif salt.utils.path.which("opkg-compare-versions"):
         cmd_compare = ["opkg-compare-versions"]
     else:
         log.warning(
-            "Unable to find a compare-versions utility installed. Either upgrade opkg to "
-            "version > 0.3.4 (preferred) or install the older opkg-compare-versions script."
+            "Unable to find a compare-versions utility installed. Either upgrade opkg"
+            " to version > 0.3.4 (preferred) or install the older opkg-compare-versions"
+            " script."
         )
         return None
 
     for oper, ret in (("<<", -1), ("=", 0), (">>", 1)):
         cmd = cmd_compare[:]
-        cmd.append(_cmd_quote(pkg1))
+        cmd.append(shlex.quote(pkg1))
         cmd.append(oper)
-        cmd.append(_cmd_quote(pkg2))
+        cmd.append(shlex.quote(pkg2))
         retcode = __salt__["cmd.retcode"](
             cmd, output_loglevel="trace", ignore_retcode=True, python_shell=False
         )
@@ -1619,6 +1624,8 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename

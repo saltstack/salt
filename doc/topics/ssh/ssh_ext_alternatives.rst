@@ -8,7 +8,7 @@ In the 2019.2.0 release the ``ssh_ext_alternatives`` feature was added.
 This allows salt-ssh to work across different supported python versions. You will
 need to ensure you have the following:
 
-  - Salt is installed, with all required dependnecies for the Python version.
+  - Salt is installed, with all required dependencies for the Python version.
   - Everything needs to be importable from the respective Python environment.
 
 To enable using this feature you will need to edit the master configuration similar
@@ -56,7 +56,7 @@ does not require you to define them under ``dependencies``.
                py_bin: /usr/bin/python2.7 # Python binary path used to auto detect dependencies
 
 If ``py_bin`` is not set alongside ``auto_detect``, it will attempt to auto detect
-the dependnecies using the major version set in ``py-version``. For example if you
+the dependencies using the major version set in ``py-version``. For example if you
 have ``[2, 7]`` set as your ``py-version``, it will attempt to use the binary ``python2``.
 
 You can also use ``auto_detect`` and ``dependencies`` together.
@@ -72,7 +72,7 @@ You can also use ``auto_detect`` and ``dependencies`` together.
                dependencies:           # List of dependencies and their installation paths
                  jinja2: /opt/jinja2
 
-If a dependency is defined in the ``dependecies`` list ``ssh_ext_alternatives`` will use
+If a dependency is defined in the ``dependencies`` list ``ssh_ext_alternatives`` will use
 this dependency, instead of the path that ``auto_detect`` finds. For example, if you define
 ``/opt/jinja2`` under your ``dependencies`` for jinja2, it will not try to autodetect the
 file path to the jinja2 module, and will favor ``/opt/jinja2``.

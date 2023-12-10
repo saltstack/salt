@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 virst compatibility module for managing VMs on SmartOS
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -26,9 +22,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{0} module can only be loaded on SmartOS compute nodes".format(
-            __virtualname__
-        ),
+        "{} module can only be loaded on SmartOS compute nodes".format(__virtualname__),
     )
 
 
@@ -194,7 +188,7 @@ def vm_virt_type(domain):
     ret = __salt__["vmadm.lookup"](
         search="uuid={uuid}".format(uuid=domain), order="type"
     )
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError("We can't determine the type of this VM")
 
     return ret[0]["type"]
@@ -241,7 +235,7 @@ def get_macs(domain):
     ret = __salt__["vmadm.lookup"](
         search="uuid={uuid}".format(uuid=domain), order="nics"
     )
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError("We can't find the MAC address of this VM")
     else:
         for nic in ret[0]["nics"]:

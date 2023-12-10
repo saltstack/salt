@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to import docker-compose via saltstack
 
@@ -104,7 +103,6 @@ Detailed Function Documentation
 -------------------------------
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -114,7 +112,6 @@ from operator import attrgetter
 
 import salt.utils.files
 import salt.utils.stringutils
-from salt.ext import six
 from salt.serializers import json
 from salt.utils import yaml
 
@@ -143,12 +140,18 @@ debug = False
 __virtualname__ = "dockercompose"
 DEFAULT_DC_FILENAMES = ("docker-compose.yml", "docker-compose.yaml")
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if HAS_DOCKERCOMPOSE:
-        match = re.match(VERSION_RE, six.text_type(compose.__version__))
+        match = re.match(VERSION_RE, str(compose.__version__))
         if match:
-            version = tuple([int(x) for x in match.group(1).split(".")])
+            version = tuple(int(x) for x in match.group(1).split("."))
             if version >= MIN_DOCKERCOMPOSE:
                 return __virtualname__
     return (
@@ -204,7 +207,7 @@ def __read_docker_compose_file(file_path):
     """
     if not os.path.isfile(file_path):
         return __standardize_result(
-            False, "Path {} is not present".format(file_path), None, None
+            False, f"Path {file_path} is not present", None, None
         )
     try:
         with salt.utils.files.fopen(file_path, "r") as fl:
@@ -212,13 +215,9 @@ def __read_docker_compose_file(file_path):
             result = {file_name: ""}
             for line in fl:
                 result[file_name] += salt.utils.stringutils.to_unicode(line)
-    except EnvironmentError:
-        return __standardize_result(
-            False, "Could not read {0}".format(file_path), None, None
-        )
-    return __standardize_result(
-        True, "Reading content of {0}".format(file_path), result, None
-    )
+    except OSError:
+        return __standardize_result(False, f"Could not read {file_path}", None, None)
+    return __standardize_result(True, f"Reading content of {file_path}", result, None)
 
 
 def __load_docker_compose(path):
@@ -230,30 +229,26 @@ def __load_docker_compose(path):
     """
     file_path = __get_docker_file_path(path)
     if file_path is None:
-        msg = "Could not find docker-compose file at {0}".format(path)
+        msg = f"Could not find docker-compose file at {path}"
         return None, __standardize_result(False, msg, None, None)
     if not os.path.isfile(file_path):
         return (
             None,
-            __standardize_result(
-                False, "Path {} is not present".format(file_path), None, None
-            ),
+            __standardize_result(False, f"Path {file_path} is not present", None, None),
         )
     try:
         with salt.utils.files.fopen(file_path, "r") as fl:
             loaded = yaml.load(fl)
-    except EnvironmentError:
+    except OSError:
         return (
             None,
-            __standardize_result(
-                False, "Could not read {0}".format(file_path), None, None
-            ),
+            __standardize_result(False, f"Could not read {file_path}", None, None),
         )
     except yaml.YAMLError as yerr:
-        msg = "Could not parse {0} {1}".format(file_path, yerr)
+        msg = f"Could not parse {file_path} {yerr}"
         return None, __standardize_result(False, msg, None, None)
     if not loaded:
-        msg = "Got empty compose file at {0}".format(file_path)
+        msg = f"Got empty compose file at {file_path}"
         return None, __standardize_result(False, msg, None, None)
     if "services" not in loaded:
         loaded["services"] = {}
@@ -273,7 +268,7 @@ def __dump_docker_compose(path, content, already_existed):
         dumped = yaml.safe_dump(content, indent=2, default_flow_style=False)
         return __write_docker_compose(path, dumped, already_existed)
     except TypeError as t_err:
-        msg = "Could not dump {0} {1}".format(content, t_err)
+        msg = f"Could not dump {content} {t_err}"
         return __standardize_result(False, msg, None, None)
 
 
@@ -300,10 +295,8 @@ def __write_docker_compose(path, docker_compose, already_existed):
     try:
         with salt.utils.files.fopen(file_path, "w") as fl:
             fl.write(salt.utils.stringutils.to_str(docker_compose))
-    except EnvironmentError:
-        return __standardize_result(
-            False, "Could not write {0}".format(file_path), None, None
-        )
+    except OSError:
+        return __standardize_result(False, f"Could not write {file_path}", None, None)
     project = __load_project_from_file_path(file_path)
     if isinstance(project, dict):
         if not already_existed:
@@ -321,7 +314,7 @@ def __load_project(path):
     """
     file_path = __get_docker_file_path(path)
     if file_path is None:
-        msg = "Could not find docker-compose file at {0}".format(path)
+        msg = f"Could not find docker-compose file at {path}"
         return __standardize_result(False, msg, None, None)
     return __load_project_from_file_path(file_path)
 
@@ -363,13 +356,13 @@ def __load_compose_definitions(path, definition):
         try:
             loaded_definition = json.deserialize(definition)
         except json.DeserializationError as jerr:
-            msg = "Could not parse {0} {1}".format(definition, jerr)
+            msg = f"Could not parse {definition} {jerr}"
             return None, None, __standardize_result(False, msg, None, None)
     else:
         try:
             loaded_definition = yaml.load(definition)
         except yaml.YAMLError as yerr:
-            msg = "Could not parse {0} {1}".format(definition, yerr)
+            msg = f"Could not parse {definition} {yerr}"
             return None, None, __standardize_result(False, msg, None, None)
     return compose_result, loaded_definition, None
 
@@ -402,8 +395,8 @@ def __handle_except(inst):
     """
     return __standardize_result(
         False,
-        "Docker-compose command {0} failed".format(inspect.stack()[1][3]),
-        "{0}".format(inst),
+        f"Docker-compose command {inspect.stack()[1][3]} failed",
+        f"{inst}",
         None,
     )
 
@@ -448,9 +441,7 @@ def get(path):
     """
     file_path = __get_docker_file_path(path)
     if file_path is None:
-        return __standardize_result(
-            False, "Path {} is not present".format(path), None, None
-        )
+        return __standardize_result(False, f"Path {path} is not present", None, None)
     salt_result = __read_docker_compose_file(file_path)
     if not salt_result["status"]:
         return salt_result
@@ -485,7 +476,8 @@ def create(path, docker_compose):
     else:
         return __standardize_result(
             False,
-            "Creating a docker-compose project failed, you must send a valid docker-compose file",
+            "Creating a docker-compose project failed, you must send a valid"
+            " docker-compose file",
             None,
             None,
         )
@@ -881,7 +873,7 @@ def ps(path):
         for container in containers:
             command = container.human_readable_command
             if len(command) > 30:
-                command = "{0} ...".format(command[:26])
+                command = f"{command[:26]} ..."
             result[container.name] = {
                 "id": container.id,
                 "name": container.name,
@@ -961,13 +953,13 @@ def service_create(path, service_name, definition):
         return err
     services = compose_result["compose_content"]["services"]
     if service_name in services:
-        msg = "Service {0} already exists".format(service_name)
+        msg = f"Service {service_name} already exists"
         return __standardize_result(False, msg, None, None)
     services[service_name] = loaded_definition
     return __dump_compose_file(
         path,
         compose_result,
-        "Service {0} created".format(service_name),
+        f"Service {service_name} created",
         already_existed=True,
     )
 
@@ -998,13 +990,13 @@ def service_upsert(path, service_name, definition):
         return err
     services = compose_result["compose_content"]["services"]
     if service_name in services:
-        msg = "Service {0} already exists".format(service_name)
+        msg = f"Service {service_name} already exists"
         return __standardize_result(False, msg, None, None)
     services[service_name] = loaded_definition
     return __dump_compose_file(
         path,
         compose_result,
-        "Service definition for {0} is set".format(service_name),
+        f"Service definition for {service_name} is set",
         already_existed=True,
     )
 
@@ -1032,13 +1024,13 @@ def service_remove(path, service_name):
     services = compose_result["compose_content"]["services"]
     if service_name not in services:
         return __standardize_result(
-            False, "Service {0} did not exists".format(service_name), None, None
+            False, f"Service {service_name} did not exists", None, None
         )
     del services[service_name]
     return __dump_compose_file(
         path,
         compose_result,
-        "Service {0} is removed from {1}".format(service_name, path),
+        f"Service {service_name} is removed from {path}",
         already_existed=True,
     )
 
@@ -1068,20 +1060,20 @@ def service_set_tag(path, service_name, tag):
     services = compose_result["compose_content"]["services"]
     if service_name not in services:
         return __standardize_result(
-            False, "Service {0} did not exists".format(service_name), None, None
+            False, f"Service {service_name} did not exists", None, None
         )
     if "image" not in services[service_name]:
         return __standardize_result(
             False,
-            'Service {0} did not contain the variable "image"'.format(service_name),
+            f'Service {service_name} did not contain the variable "image"',
             None,
             None,
         )
     image = services[service_name]["image"].split(":")[0]
-    services[service_name]["image"] = "{0}:{1}".format(image, tag)
+    services[service_name]["image"] = f"{image}:{tag}"
     return __dump_compose_file(
         path,
         compose_result,
-        'Service {0} is set to tag "{1}"'.format(service_name, tag),
+        f'Service {service_name} is set to tag "{tag}"',
         already_existed=True,
     )

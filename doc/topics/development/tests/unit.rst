@@ -98,14 +98,19 @@ Mocking Loader Modules
 
 Salt loader modules use a series of globally available dunder variables,
 ``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these
-modules a helper class was created, ``LoaderModuleMock`` which can be found in
-``tests/support/pytest/loader.py``. The reason for the existence of this class
-is because historically one would add these dunder variables directly on the
-imported module. This, however, introduces unexpected behavior when running the
-full test suite since those attributes would not be removed once we were done
-testing the module and would therefore leak to other modules being tested with
-unpredictable results. This is the kind of work that should be deferred to
-mock, and that's exactly what this class provides.
+modules `pytest-salt-factories`_ has a plugin which will prepare the module globals
+by patching and mocking the dunders prior to running each test, as long as the test module
+defines a fixture named ``configure_loader_modules``. Check out the code for the
+`pytest-salt-factories plugin` to know how it's internals work.
+
+The reason for the existence of this plugin is because historically one would add these dunder
+variables directly on the imported module. This, however, introduces unexpected behavior when
+running the full test suite since those attributes would not be removed once we were done testing
+the module and would therefore leak to other modules being tested with unpredictable results. This
+is the kind of work that should be deferred to mock, and that's exactly what this plugin provides.
+
+.. _`pytest-salt-factories`: https://github.com/saltstack/pytest-salt-factories
+.. _`pytest-salt-factories plugin`: https://github.com/saltstack/pytest-salt-factories/blob/master/saltfactories/plugins/loader.py
 
 As an example, if one needs to specify some options which should be available
 to the module being tested one should do:
@@ -116,28 +121,27 @@ to the module being tested one should do:
    import salt.modules.somemodule as somemodule
 
 
-   @pytest.fixture(autouse=True)
-   def setup_loader():
-       setup_loader_modules = {somemodule: {"__opts__": {"test": True}}}
-       with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-           yield loader_mock
+   @pytest.fixture
+   def configure_loader_modules():
+       """
+       This fixture should return a dictionary which is what's going to be used to
+       patch and mock Salt's loader
+       """
+       return {somemodule: {"__opts__": {"test": True}}}
 
 
-Consider this more extensive example from
-``tests/pytests/unit/beacons/test_sensehat.py``:
+Consider this more extensive example from ``tests/pytests/unit/beacons/test_sensehat.py``:
 
 .. code-block:: python
-
-   from __future__ import absolute_import
 
    import pytest
    import salt.beacons.sensehat as sensehat
    from tests.support.mock import MagicMock
 
 
-   @pytest.fixture(autouse=True)
-   def setup_loader():
-       setup_loader_modules = {
+   @pytest.fixture
+   def configure_loader_modules():
+       return {
            sensehat: {
                "__salt__": {
                    "sensehat.get_humidity": MagicMock(return_value=80),
@@ -146,8 +150,6 @@ Consider this more extensive example from
                },
            }
        }
-       with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-           yield loader_mock
 
 
    def test_non_list_config():
@@ -631,7 +633,7 @@ Evaluating Truth
 ================
 
 A longer discussion on the types of assertions one can make can be found by
-reading `PyTests's documentation on assertions`__.
+reading `PyTest's documentation on assertions`__.
 
 .. __: https://docs.pytest.org/en/latest/assert.html
 
@@ -679,14 +681,14 @@ additional imports for MagicMock:
 
 .. code-block:: python
 
-    # Import Salt execution module to test
     from salt.modules import db
-
-    # Import Mock libraries
     from tests.support.mock import MagicMock, patch, call
 
-    # Create test case
+
     def test_create_user():
+        """
+        Test creating a user
+        """
         # First, we replace 'execute_query' with our own mock function
         with patch.object(db, "execute_query", MagicMock()) as db_exq:
 
@@ -721,6 +723,19 @@ function into ``__salt__`` that's actually a MagicMock instance.
 
 .. code-block:: python
 
+    import pytest
+    import salt.modules.my_module as my_module
+
+
+    @pytest.fixture
+    def configure_loader_modules():
+        """
+        This fixture should return a dictionary which is what's going to be used to
+        patch and mock Salt's loader
+        """
+        return {my_module: {}}
+
+
     def show_patch(self):
         with patch.dict(my_module.__salt__, {"function.to_replace": MagicMock()}):
             # From this scope, carry on with testing, with a modified __salt__!
@@ -738,36 +753,26 @@ execution module. Given a module called ``fib.py`` that has a function called
 sequential Fibonacci numbers of that length.
 
 A unit test to test this function might be commonly placed in a file called
-``tests/unit/modules/test_fib.py``. The convention is to place unit tests for
-Salt execution modules in ``test/unit/modules/`` and to name the tests module
+``tests/pytests/unit/modules/test_fib.py``. The convention is to place unit tests for
+Salt execution modules in ``test/pytests/unit/modules/`` and to name the tests module
 prefixed with ``test_*.py``.
 
 Tests are grouped around test cases, which are logically grouped sets of tests
-against a piece of functionality in the tested software. Test cases are created
-as Python classes in the unit test module. To return to our example, here's how
+against a piece of functionality in the tested software. To return to our example, here's how
 we might write the skeleton for testing ``fib.py``:
 
 .. code-block:: python
 
-    # Import Salt Testing libs
-    from tests.support.unit import TestCase
-
-    # Import Salt execution module to test
     import salt.modules.fib as fib
 
-    # Create test case class and inherit from Salt's customized TestCase
-    class FibTestCase(TestCase):
-        """
-        This class contains a set of functions that test salt.modules.fib.
-        """
 
-        def test_fib(self):
-            """
-            To create a unit test, we should prefix the name with `test_' so
-            that it's recognized by the test runner.
-            """
-            fib_five = (0, 1, 1, 2, 3)
-            self.assertEqual(fib.calculate(5), fib_five)
+    def test_fib():
+        """
+        To create a unit test, we should prefix the name with `test_' so
+        that it's recognized by the test runner.
+        """
+        fib_five = (0, 1, 1, 2, 3)
+        assert fib.calculate(5) == fib_five
 
 At this point, the test can now be run, either individually or as a part of a
 full run of the test runner. To ease development, a single test can be
@@ -775,21 +780,17 @@ executed:
 
 .. code-block:: bash
 
-    tests/runtests.py -v -n unit.modules.test_fib
+    nox -e 'test-3(coverage=False)' -- -v tests/pytests/unit/modules/test_fib.py
 
 This will report the status of the test: success, failure, or error.  The
 ``-v`` flag increases output verbosity.
 
-.. code-block:: bash
-
-    tests/runtests.py -n unit.modules.test_fib -v
-
 To review the results of a particular run, take a note of the log location
-given in the output for each test:
+given in the output for each test run:
 
 .. code-block:: text
 
-    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
+   ...etc... --log-file=artifacts/logs/runtests-20210106103414.685791.log ...etc...
 
 
 .. _complete-unit-example:
@@ -811,8 +812,8 @@ Consider the following function from salt/modules/linux_sysctl.py.
 
             salt '*' sysctl.get net.ipv4.ip_forward
         """
-        cmd = "sysctl -n {0}".format(name)
-        out = __salt__["cmd.run"](cmd)
+        cmd = "sysctl -n {}".format(name)
+        out = __salt__["cmd.run"](cmd, python_shell=False)
         return out
 
 This function is very simple, comprising only four source lines of code and
@@ -827,27 +828,24 @@ will also redefine the ``__salt__`` dictionary such that it only contains
 
 .. code-block:: python
 
-    # Import Salt Libs
+    import pytest
     import salt.modules.linux_sysictl as linux_sysctl
-
-    # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase
     from tests.support.mock import MagicMock, patch
 
 
-    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
-        """
-        TestCase for salt.modules.linux_sysctl module
-        """
+    @pytest.fixture
+    def configure_loader_modules():
+        return {linux_sysctl: {}}
 
-        def test_get(self):
-            """
-            Tests the return of get function
-            """
-            mock_cmd = MagicMock(return_value=1)
-            with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
-                self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward"), 1)
+
+    def test_get():
+        """
+        Tests the return of get function
+        """
+        mock_cmd = MagicMock(return_value=1)
+        with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
+            assert linux_sysctl.get("net.ipv4.ip_forward") == 1
+
 
 Since ``get()`` has only one raise or return statement and that statement is a
 success condition, the test function is simply named ``test_get()``.  As
@@ -882,30 +880,34 @@ salt/modules/linux_sysctl.py source file.
             salt '*' sysctl.assign net.ipv4.ip_forward 1
         """
         value = str(value)
-        sysctl_file = "/proc/sys/{0}".format(name.replace(".", "/"))
+
+        tran_tab = name.translate("".maketrans("./", "/."))
+
+        sysctl_file = "/proc/sys/{}".format(tran_tab)
         if not os.path.exists(sysctl_file):
-            raise CommandExecutionError("sysctl {0} does not exist".format(name))
+            raise CommandExecutionError("sysctl {} does not exist".format(name))
 
         ret = {}
-        cmd = 'sysctl -w {0}="{1}"'.format(name, value)
-        data = __salt__["cmd.run_all"](cmd)
+        cmd = 'sysctl -w {}="{}"'.format(name, value)
+        data = __salt__["cmd.run_all"](cmd, python_shell=False)
         out = data["stdout"]
         err = data["stderr"]
 
         # Example:
         #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
         #    net.ipv4.tcp_rmem = 4096 87380 16777216
-        regex = re.compile(r"^{0}\s+=\s+{1}$".format(re.escape(name), re.escape(value)))
+        regex = re.compile(r"^{}\s+=\s+{}$".format(re.escape(name), re.escape(value)))
 
         if not regex.match(out) or "Invalid argument" in str(err):
             if data["retcode"] != 0 and err:
                 error = err
             else:
                 error = out
-            raise CommandExecutionError("sysctl -w failed: {0}".format(error))
+            raise CommandExecutionError("sysctl -w failed: {}".format(error))
         new_name, new_value = out.split(" = ", 1)
         ret[new_name] = new_value
         return ret
+
 
 This function contains two raise statements and one return statement, so we
 know that we will need (at least) three tests.  It has two function arguments
@@ -921,26 +923,22 @@ with.
 
 .. code-block:: python
 
-    # Import Salt Libs
+    import pytest
     import salt.modules.linux_sysctl as linux_sysctl
     from salt.exceptions import CommandExecutionError
-
-    # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase
     from tests.support.mock import MagicMock, patch
 
 
-    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
-        """
-        TestCase for salt.modules.linux_sysctl module
-        """
+    @pytest.fixture
+    def configure_loader_modules():
+        return {linux_sysctl: {}}
 
-        @patch("os.path.exists", MagicMock(return_value=False))
-        def test_assign_proc_sys_failed(self):
-            """
-            Tests if /proc/sys/<kernel-subsystem> exists or not
-            """
+
+    def test_assign_proc_sys_failed():
+        """
+        Tests if /proc/sys/<kernel-subsystem> exists or not
+        """
+        with patch("os.path.exists", MagicMock(return_value=False)):
             cmd = {
                 "pid": 1337,
                 "retcode": 0,
@@ -949,15 +947,15 @@ with.
             }
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-                self.assertRaises(
-                    CommandExecutionError, linux_sysctl.assign, "net.ipv4.ip_forward", 1
-                )
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.assign("net.ipv4.ip_forward", 1)
 
-        @patch("os.path.exists", MagicMock(return_value=True))
-        def test_assign_cmd_failed(self):
-            """
-            Tests if the assignment was successful or not
-            """
+
+    def test_assign_cmd_failed():
+        """
+        Tests if the assignment was successful or not
+        """
+        with patch("os.path.exists", MagicMock(return_value=True)):
             cmd = {
                 "pid": 1337,
                 "retcode": 0,
@@ -966,18 +964,15 @@ with.
             }
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-                self.assertRaises(
-                    CommandExecutionError,
-                    linux_sysctl.assign,
-                    "net.ipv4.ip_forward",
-                    "backward",
-                )
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.assign("net.ipv4.ip_forward", "backward")
 
-        @patch("os.path.exists", MagicMock(return_value=True))
-        def test_assign_success(self):
-            """
-            Tests the return of successful assign function
-            """
+
+    def test_assign_success():
+        """
+        Tests the return of successful assign function
+        """
+        with patch("os.path.exists", MagicMock(return_value=True)):
             cmd = {
                 "pid": 1337,
                 "retcode": 0,
@@ -987,4 +982,4 @@ with.
             ret = {"net.ipv4.ip_forward": "1"}
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-                self.assertEqual(linux_sysctl.assign("net.ipv4.ip_forward", 1), ret)
+                assert linux_sysctl.assign("net.ipv4.ip_forward", 1) == ret

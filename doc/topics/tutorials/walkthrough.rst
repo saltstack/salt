@@ -5,15 +5,14 @@ Salt in 10 Minutes
 ==================
 
 .. note::
-    Welcome to SaltStack! I am excited that you are interested in Salt and
+    Welcome to Salt Project! I am excited that you are interested in Salt and
     starting down the path to better infrastructure management. I developed
     (and am continuing to develop) Salt with the goal of making the best
     software available to manage computers of almost any kind. I hope you enjoy
     working with Salt and that the software can solve your real world needs!
 
     - Thomas S Hatch
-    - Salt creator and Chief Developer
-    - CTO of SaltStack, Inc.
+    - Salt Project creator and Chief Developer of Salt Project
 
 
 Getting Started
@@ -36,8 +35,8 @@ Installing Salt
 ---------------
 
 SaltStack has been made to be very easy to install and get started. The
-:ref:`installation documents <installation>` contain instructions
-for all supported platforms.
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+provides instructions for all supported platforms.
 
 Starting Salt
 -------------
@@ -258,8 +257,8 @@ module.
 
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.version <salt.modules.test.version>` in parallel
-and return the result. Using :py:func:`test.version <salt.modules.test.version>` 
-is a good way of confirming that a minion is connected, and reaffirm to the user 
+and return the result. Using :py:func:`test.version <salt.modules.test.version>`
+is a good way of confirming that a minion is connected, and reaffirm to the user
 the salt version(s) they have installed on the minions.
 
 .. note::

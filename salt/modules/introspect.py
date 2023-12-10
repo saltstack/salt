@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Functions to perform introspection on a minion, and return data in a format
 usable by Salt States
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def running_service_owners(
@@ -23,6 +16,8 @@ def running_service_owners(
     overridden by passing in a new list to ``exclude``.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion introspect.running_service_owners
     """
@@ -61,7 +56,7 @@ def running_service_owners(
         for service in execs:
             if path == execs[service]:
                 pkg = __salt__["pkg.owner"](path)
-                ret[service] = next(six.itervalues(pkg))
+                ret[service] = next(iter(pkg.values()))
 
     return ret
 
@@ -71,6 +66,8 @@ def enabled_service_owners():
     Return which packages own each of the services that are currently enabled.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion introspect.enabled_service_owners
     """
@@ -99,7 +96,7 @@ def enabled_service_owners():
             continue
         start_cmd = data["ExecStart"]["path"]
         pkg = __salt__["pkg.owner"](start_cmd)
-        ret[service] = next(six.itervalues(pkg))
+        ret[service] = next(iter(pkg.values()))
 
     return ret
 
@@ -112,6 +109,8 @@ def service_highstate(requires=True):
     package dependencies, set ``requires`` to False.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion introspect.service_highstate
         salt myminion introspect.service_highstate requires=False
@@ -134,7 +133,7 @@ def service_highstate(requires=True):
         if requires:
             exists = False
             for item in ret[service]["service"]:
-                if isinstance(item, dict) and next(six.iterkeys(item)) == "require":
+                if isinstance(item, dict) and next(iter(item.keys())) == "require":
                     exists = True
             if not exists:
                 ret[service]["service"].append({"require": {"pkg": enabled[service]}})

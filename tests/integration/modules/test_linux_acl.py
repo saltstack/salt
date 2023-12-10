@@ -1,26 +1,21 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
-
-# Acl package should be installed to test linux_acl module
-@skip_if_binaries_missing(["getfacl"])
 # Doesn't work. Why?
 # @requires_salt_modules('acl')
 # @requires_salt_modules('linux_acl')
-@pytest.mark.windows_whitelisted
+# Acl package should be installed to test linux_acl module
+
+
+@pytest.mark.skip_if_binaries_missing("getfacl")
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the linux_acl module
@@ -43,7 +38,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         os.symlink("/nonexistentpath", self.mybadsymlink)
-        super(LinuxAclModuleTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         if os.path.isfile(self.myfile):
@@ -53,13 +48,13 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
-        super(LinuxAclModuleTest, self).tearDown()
+        super().tearDown()
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_version(self):
         self.assertRegex(self.run_function("acl.version"), r"\d+\.\d+\.\d+")
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function("acl.getfacl", arg=[self.myfile])
         user = salt.utils.user.get_user()

@@ -12,7 +12,16 @@ Statistics
 - Total Issue References: **68**
 - Total PR References: **202**
 
-- Contributors: **61** (`AFriemann`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_, `UtahDave`_, `abulford`_, `amalleo25`_, `amendlik`_, `aneeshusa`_, `aogier`_, `arount`_, `arthurlogilab`_, `astronouth7303`_, `binocvlar`_, `blarghmatey`_, `cachedout`_, `clem-compilatio`_, `corywright`_, `cri-epita`_, `damon-atkins`_, `davidjb`_, `dglloyd`_, `dmurphy18`_, `ferringb`_, `garethgreenaway`_, `gdubroeucq`_, `gilbsgilbs`_, `goten4`_, `gtmanfred`_, `isbm`_, `jagguli`_, `kevinanderson1`_, `kojiromike`_, `kstreee`_, `leeclemens`_, `lomeroe`_, `lorengordon`_, `lubyou`_, `mcarlton00`_, `meaksh`_, `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `remijouannet`_, `renner`_, `root360-AndreasUlm`_, `s-sebastian`_, `sarcasticadmin`_, `sbojarski`_, `shengis`_, `tdutrion`_, `terminalmage`_, `toanju`_, `twangboy`_, `ushmodin`_, `viktorkrivak`_, `vutny`_, `whiteinge`_, `xiaoanyunfei`_)
+- Contributors: **61** (`AFriemann`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_,
+  `UtahDave`_, `abulford`_, `amalleo25`_, `amendlik`_, `aneeshusa`_, `aogier`_, `arount`_,
+  `arthurlogilab`_, `astronouth7303`_, `binocvlar`_, `blarghmatey`_, `cachedout`_,
+  `clem-compilatio`_, `corywright`_, `cri-epita`_, `damon-atkins`_, `davidjb`_, `dglloyd`_,
+  `dmurphy18`_, `ferringb`_, `garethgreenaway`_, `gdubroeucq`_, `gilbsgilbs`_, `goten4`_,
+  `gtmanfred`_, `isbm`_, `jagguli`_, `kevinanderson1`_, `kojiromike`_, `kstreee`_, `leeclemens`_,
+  `lomeroe`_, `lorengordon`_, `lubyou`_, `mcarlton00`_, `meaksh`_, `morganwillcock`_, `nhavens`_,
+  `pabloh007`_, `rallytime`_, `remijouannet`_, `renner`_, `root360-AndreasUlm`_, `s-sebastian`_,
+  `sarcasticadmin`_, `sbojarski`_, `shengis`_, `tdutrion`_, `terminalmage`_, `toanju`_,
+  `twangboy`_, `ushmodin`_, `viktorkrivak`_, `vutny`_, `whiteinge`_, `xiaoanyunfei`_)
 
 
 Security Fix
@@ -88,7 +97,7 @@ Changelog for v2016.11.7..v2016.11.8
 
   * c15bcbe1cc Merge remote-tracking branch 'upstream/2016.11' into fix-apache-config-multi-entity
 
-  * 4164047951 Fix apache.config with multiple statement At this moment when you post more than one statement in config only last is used. Also file is rewrited multiple times until last statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with    Proxy Something and ignore Listen 8080, This patch fix this issue.
+  * 4164047951 Fix apache.config with multiple statement At this moment when you post more than one statement in config only last is used. Also file is rewrote multiple times until last statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with    Proxy Something and ignore Listen 8080, This patch fix this issue.
 
 * **ISSUE** `#42279`_: (`dafyddj`_) win_lgpo matches multiple policies due to startswith() (refs: `#43154`_, `#43116`_)
 
@@ -963,12 +972,12 @@ Changelog for v2016.11.7..v2016.11.8
 
   * 8c048403d7 Detect Server OS with a desktop release name
 
-* **PR** `#42356`_: (`meaksh`_) Allow to check whether a function is available on the AliasesLoader wrapper
+* **PR** `#42356`_: (`meaksh`_) Allow checking whether a function is available on the AliasesLoader wrapper
   @ *2017-07-19 16:56:41 UTC*
 
   * 0a72e56f6b Merge pull request `#42356`_ from meaksh/2016.11-AliasesLoader-wrapper-fix
 
-  * 915d94219e Allow to check whether a function is available on the AliasesLoader wrapper
+  * 915d94219e Allow checking whether a function is available on the AliasesLoader wrapper
 
 * **PR** `#42368`_: (`twangboy`_) Remove build and dist directories before install (2016.11)
   @ *2017-07-19 16:47:28 UTC*
@@ -1569,7 +1578,7 @@ Changelog for v2016.11.7..v2016.11.8
 
   * 7f6961378e test and lint fixes
 
-  * 8ee48432f4 Suppress output of crypt context and be more specifc with whitespace vs. serial
+  * 8ee48432f4 Suppress output of crypt context and be more specific with whitespace vs. serial
 
   * 61f817d172 Match serials based on output position (fix for non-English languages)
 

@@ -1,44 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Install pkg, dmg and .app applications on macOS minions.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shlex
 
-# Import Salt libs
 import salt.utils.platform
 
-try:
-    import pipes
-
-    HAS_DEPS = True
-except ImportError:
-    HAS_DEPS = False
-
-
 log = logging.getLogger(__name__)
+
 __virtualname__ = "macpackage"
-
-
-if hasattr(shlex, "quote"):
-    _quote = shlex.quote
-elif HAS_DEPS and hasattr(pipes, "quote"):
-    _quote = pipes.quote
-else:
-    _quote = None
 
 
 def __virtual__():
     """
     Only work on Mac OS
     """
-    if salt.utils.platform.is_darwin() and _quote is not None:
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return (False, "Only available on Mac OS systems with pipes")
 
@@ -65,11 +45,11 @@ def install(pkg, target="LocalSystem", store=False, allow_untrusted=False):
     """
     if "*." not in pkg:
         # If we use wildcards, we cannot use quotes
-        pkg = _quote(pkg)
+        pkg = shlex.quote(pkg)
 
-    target = _quote(target)
+    target = shlex.quote(target)
 
-    cmd = "installer -pkg {0} -target {1}".format(pkg, target)
+    cmd = f"installer -pkg {pkg} -target {target}"
     if store:
         cmd += " -store"
     if allow_untrusted:
@@ -114,7 +94,7 @@ def install_app(app, target="/Applications/"):
     if not app[-1] == "/":
         app += "/"
 
-    cmd = 'rsync -a --delete "{0}" "{1}"'.format(app, target)
+    cmd = f'rsync -a --delete "{app}" "{target}"'
     return __salt__["cmd.run"](cmd)
 
 
@@ -159,9 +139,7 @@ def mount(dmg):
 
     temp_dir = __salt__["temp.dir"](prefix="dmg-")
 
-    cmd = 'hdiutil attach -readonly -nobrowse -mountpoint {0} "{1}"'.format(
-        temp_dir, dmg
-    )
+    cmd = f'hdiutil attach -readonly -nobrowse -mountpoint {temp_dir} "{dmg}"'
 
     return __salt__["cmd.run"](cmd), temp_dir
 
@@ -183,7 +161,7 @@ def unmount(mountpoint):
         salt '*' macpackage.unmount /dev/disk2
     """
 
-    cmd = 'hdiutil detach "{0}"'.format(mountpoint)
+    cmd = f'hdiutil detach "{mountpoint}"'
 
     return __salt__["cmd.run"](cmd)
 
@@ -223,7 +201,7 @@ def get_pkg_id(pkg):
 
         salt '*' macpackage.get_pkg_id /tmp/test.pkg
     """
-    pkg = _quote(pkg)
+    pkg = shlex.quote(pkg)
     package_ids = []
 
     # Create temp directory
@@ -231,13 +209,13 @@ def get_pkg_id(pkg):
 
     try:
         # List all of the PackageInfo files
-        cmd = "xar -t -f {0} | grep PackageInfo".format(pkg)
+        cmd = f"xar -t -f {pkg} | grep PackageInfo"
         out = __salt__["cmd.run"](cmd, python_shell=True, output_loglevel="quiet")
         files = out.split("\n")
 
         if "Error opening" not in out:
             # Extract the PackageInfo files
-            cmd = "xar -x -f {0} {1}".format(pkg, " ".join(files))
+            cmd = "xar -x -f {} {}".format(pkg, " ".join(files))
             __salt__["cmd.run"](cmd, cwd=temp_dir, output_loglevel="quiet")
 
             # Find our identifiers
@@ -271,12 +249,12 @@ def get_mpkg_ids(mpkg):
 
         salt '*' macpackage.get_mpkg_ids /dev/disk2
     """
-    mpkg = _quote(mpkg)
+    mpkg = shlex.quote(mpkg)
     package_infos = []
     base_path = os.path.dirname(mpkg)
 
     # List all of the .pkg files
-    cmd = "find {0} -name *.pkg".format(base_path)
+    cmd = f"find {base_path} -name *.pkg"
     out = __salt__["cmd.run"](cmd, python_shell=True)
 
     pkg_files = out.split("\n")
@@ -288,8 +266,8 @@ def get_mpkg_ids(mpkg):
 
 def _get_pkg_id_from_pkginfo(pkginfo):
     # Find our identifiers
-    pkginfo = _quote(pkginfo)
-    cmd = "cat {0} | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'".format(
+    pkginfo = shlex.quote(pkginfo)
+    cmd = "cat {} | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'".format(
         pkginfo
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
@@ -301,8 +279,8 @@ def _get_pkg_id_from_pkginfo(pkginfo):
 
 
 def _get_pkg_id_dir(path):
-    path = _quote(os.path.join(path, "Contents/Info.plist"))
-    cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {0}'.format(path)
+    path = shlex.quote(os.path.join(path, "Contents/Info.plist"))
+    cmd = f'/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {path}'
 
     # We can only use wildcards in python_shell which is
     # sent by the macpackage state

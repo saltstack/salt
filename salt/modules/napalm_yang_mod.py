@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM YANG
 ===========
@@ -7,16 +6,13 @@ NAPALM YANG basic operations.
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import logging
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
-# Import third party libs
 try:
     import napalm_yang
 

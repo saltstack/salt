@@ -14,7 +14,14 @@ Statistics
 - Total Issue References: **71**
 - Total PR References: **178**
 
-- Contributors: **53** (`Arabus`_, `JensRantil`_, `PierreR`_, `SaltyCharles`_, `TheBigBear`_, `abh`_, `aboe76`_, `anlutro`_, `arthurlogilab`_, `aspyatkin`_, `basepi`_, `benhosmer`_, `bersace`_, `cachedout`_, `carlpett`_, `damonzheng`_, `derphilipp`_, `dmyerscough`_, `dsumsky`_, `efficks`_, `eguven`_, `garethgreenaway`_, `hexedpackets`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `joejulian`_, `johanek`_, `julianbrost`_, `kev009`_, `lorengordon`_, `madprog`_, `marccardinal`_, `netroby`_, `nmadhok`_, `plastikos`_, `rallytime`_, `serge-p`_, `spudfkc`_, `stanislavb`_, `styro`_, `systembell`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_, `tjstansell`_, `twangboy`_, `vakulich`_, `vtek21`_, `whiteinge`_, `zmalone`_, `zyio`_)
+- Contributors: **53** (`Arabus`_, `JensRantil`_, `PierreR`_, `SaltyCharles`_, `TheBigBear`_,
+  `abh`_, `aboe76`_, `anlutro`_, `arthurlogilab`_, `aspyatkin`_, `basepi`_, `benhosmer`_,
+  `bersace`_, `cachedout`_, `carlpett`_, `damonzheng`_, `derphilipp`_, `dmyerscough`_, `dsumsky`_,
+  `efficks`_, `eguven`_, `garethgreenaway`_, `hexedpackets`_, `jacksontj`_, `jacobhammons`_,
+  `jfindlay`_, `joejulian`_, `johanek`_, `julianbrost`_, `kev009`_, `lorengordon`_, `madprog`_,
+  `marccardinal`_, `netroby`_, `nmadhok`_, `plastikos`_, `rallytime`_, `serge-p`_, `spudfkc`_,
+  `stanislavb`_, `styro`_, `systembell`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_,
+  `tjstansell`_, `twangboy`_, `vakulich`_, `vtek21`_, `whiteinge`_, `zmalone`_, `zyio`_)
 
 
 Security Fixes
@@ -105,12 +112,12 @@ Changelog for v2015.5.5..v2015.5.6
 
 * **ISSUE** `#27447`_: (`junster1`_) Fix mysql table size for salt_events (refs: `#27472`_)
 
-* **PR** `#27472`_: (`cachedout`_) Change recommeded schema for data field in mysql event table
+* **PR** `#27472`_: (`cachedout`_) Change recommended schema for data field in mysql event table
   @ *2015-09-29 15:49:37 UTC*
 
   * 68d784c3dd Merge pull request `#27472`_ from cachedout/fix_27447
 
-  * 5e745ad6da Change recommeded schema for data field in mysql event table
+  * 5e745ad6da Change recommended schema for data field in mysql event table
 
 * **PR** `#27468`_: (`cachedout`_) Fix 27351
   @ *2015-09-29 15:35:29 UTC*
@@ -185,7 +192,7 @@ Changelog for v2015.5.5..v2015.5.6
 
   * ed6207a438 Merge pull request `#27419`_ from rallytime/fix-9856
 
-  * 551396564a Ammend error log to include multiple tips for troubleshooting.
+  * 551396564a Amend error log to include multiple tips for troubleshooting.
 
 * **ISSUE** `#16753`_: (`johtso`_) Duplicate selector in top file gives unhelpful traceback (refs: `#27426`_)
 
@@ -205,7 +212,7 @@ Changelog for v2015.5.5..v2015.5.6
 
   * 39a4ae5a6c Remove hdd: 19 refs from SL docs - no longer available from SoftLayer.
 
-  * de2f9234d3 Use correct default for bandwith
+  * de2f9234d3 Use correct default for bandwidth
 
   * 42d8127f79 Don't set the optional_products default to a boolean, and then try to loop.
 

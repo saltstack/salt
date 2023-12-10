@@ -1,5 +1,5 @@
-salt.states.junos module
-========================
+salt.states.junos
+=================
 
 .. automodule:: salt.states.junos
     :members:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
@@ -7,20 +6,14 @@ See http://code.google.com/p/psutil.
             - python-utmp package (optional)
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import re
 import time
 
-# Import salt libs
 import salt.utils.data
-
-# Import third party libs
 import salt.utils.decorators.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -51,9 +44,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0".format(
-            psutil.version_info
-        ),
+        "The ps execution module cannot be loaded: the psutil python module version {}"
+        " is less than 0.3.0".format(psutil.version_info),
     )
 
 
@@ -157,7 +149,7 @@ def top(num_processes=5, interval=3):
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in six.iteritems(start_usage):
+    for process, start in start_usage.items():
         try:
             user, system = process.cpu_times()[:2]
         except psutil.NoSuchProcess:
@@ -177,9 +169,9 @@ def top(num_processes=5, interval=3):
             "mem": {},
         }
         try:
-            for key, value in six.iteritems(process.cpu_times()._asdict()):
+            for key, value in process.cpu_times()._asdict().items():
                 info["cpu"][key] = value
-            for key, value in six.iteritems(process.memory_info()._asdict()):
+            for key, value in process.memory_info()._asdict().items():
                 info["mem"][key] = value
         except psutil.NoSuchProcess:
             # Process ended since psutil.pids() was run earlier in this
@@ -226,7 +218,7 @@ def proc_info(pid, attrs=None):
     attrs
         Optional list of desired process attributes.  The list of possible
         attributes can be found here:
-        http://pythonhosted.org/psutil/#psutil.Process
+        https://psutil.readthedocs.io/en/latest/#processes
     """
     try:
         proc = psutil.Process(pid)
@@ -598,7 +590,7 @@ def boot_time(time_format=None):
         try:
             return b_time.strftime(time_format)
         except TypeError as exc:
-            raise SaltInvocationError("Invalid format string: {0}".format(exc))
+            raise SaltInvocationError("Invalid format string: {}".format(exc))
     return b_time
 
 
@@ -696,7 +688,7 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     lsof_infos = __salt__["cmd.run"]("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
@@ -714,7 +706,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     netstat_infos = __salt__["cmd.run"]("netstat -nap")
     found_infos = []
     ret = []
@@ -739,7 +731,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     ss_infos = __salt__["cmd.run"]("ss -neap")
     found_infos = []
     ret = []
@@ -762,7 +754,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__["cmd.run"]("ps aux")
@@ -776,7 +768,60 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = six.text_type(nb_lines) + " occurence(s)."
+    pid_count = str(nb_lines) + " occurrence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
+    return ret
+
+
+def status(status):
+    """
+    .. versionadded:: 3006.0
+
+    Returns a list of processes according to their state.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.status STATUS
+
+    where ``STATUS`` is one of
+
+    * running
+    * sleeping
+    * disk_sleep
+    * stopped
+    * tracing_stop
+    * zombie
+    * dead
+    * wake_kill
+    * waking
+    * parked (Linux)
+    * idle (Linux, macOS, FreeBSD)
+    * locked (FreeBSD)
+    * waiting (FreeBSD)
+    * suspended (NetBSD)
+
+    See https://psutil.readthedocs.io/en/latest/index.html\
+?highlight=status#process-status-constants
+
+    """
+    ret = []
+    if not status:
+        raise SaltInvocationError("Filter is required for ps.status")
+    else:
+        try:
+            list_of_processes = psutil.process_iter(["pid", "name", "status"])
+            ret = [
+                proc.as_dict(("pid", "name"))
+                for proc in list_of_processes
+                # It's possible in the future we may want to filter by `in`
+                # instead - which will allow the user to request a number of
+                # statuses. But for now this is how it was originally written.
+                if proc.info["status"] == status
+            ]
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            # AccessDenied may be returned from old versions of psutil on Windows systems
+            raise CommandExecutionError("Psutil did not return a list of processes")
     return ret

@@ -1,5 +1,5 @@
-salt.engines.junos_syslog module
-================================
+salt.engines.junos_syslog
+=========================
 
 .. automodule:: salt.engines.junos_syslog
     :members:

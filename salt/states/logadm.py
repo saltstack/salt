@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of logs using Solaris logadm.
 
@@ -7,7 +6,7 @@ Management of logs using Solaris logadm.
 :depends:       salt.modulus.logadm
 :platform:      Oracle Solaris, Sun Solaris, illumos
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 
@@ -16,12 +15,8 @@ Management of logs using Solaris logadm.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 
@@ -39,7 +34,7 @@ def __virtual__():
         return True
     return (
         False,
-        "{0} state module can only if the logadm execution module is present".format(
+        "{} state module can only if the logadm execution module is present".format(
             __virtualname__
         ),
     )
@@ -157,15 +152,12 @@ def remove(name, log_file=None):
         res = __salt__["logadm.remove"](name if name else log_file)
         ret["result"] = "Error" not in res
         if ret["result"]:
-            ret["comment"] = "Configuration for {} removed.".format(log_file)
+            ret["comment"] = f"Configuration for {log_file} removed."
             ret["changes"][log_file] = None
         else:
             ret["comment"] = res["Error"]
     else:
         ret["result"] = True
-        ret["comment"] = "No configuration for {} present.".format(log_file)
+        ret["comment"] = f"No configuration for {log_file} present."
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

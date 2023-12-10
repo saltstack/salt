@@ -14,16 +14,48 @@ import salt.client.ssh.client
 import salt.config
 import salt.daemons.masterapi
 import salt.exceptions
-import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
 import salt.utils.minions
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def sorted_permissions(perms):
+    """
+    Return a sorted list of the passed in permissions, de-duplicating in the process
+    """
+    _str_perms = []
+    _non_str_perms = []
+    for entry in perms:
+        if isinstance(entry, str):
+            if entry in _str_perms:
+                continue
+            _str_perms.append(entry)
+            continue
+        if entry in _non_str_perms:
+            continue
+        _non_str_perms.append(entry)
+    return sorted(_str_perms) + sorted(_non_str_perms, key=repr)
+
+
+def sum_permissions(token, eauth):
+    """
+    Returns the sum of '*', user-specific and group specific permissions
+    """
+    perms = eauth.get(token["name"], [])
+    perms.extend(eauth.get("*", []))
+
+    if "groups" in token and token["groups"]:
+        user_groups = set(token["groups"])
+        eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
+
+        for group in user_groups & eauth_groups:
+            perms.extend(eauth["{}%".format(group)])
+    return perms
 
 
 class NetapiClient:
@@ -125,6 +157,13 @@ class NetapiClient:
                 "Invalid client specified: '{}'".format(low.get("client"))
             )
 
+        if low.get("client") not in self.opts.get("netapi_enable_clients"):
+            raise salt.exceptions.SaltInvocationError(
+                "Client disabled: '{}'. Add to 'netapi_enable_clients' master config option to enable.".format(
+                    low.get("client")
+                )
+            )
+
         if not ("token" in low or "eauth" in low):
             raise salt.exceptions.EauthAuthenticationError(
                 "No authentication credentials given"
@@ -150,8 +189,8 @@ class NetapiClient:
 
         :return: job ID
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.run_job(*args, **kwargs)
 
     def local(self, *args, **kwargs):
         """
@@ -167,8 +206,8 @@ class NetapiClient:
 
         :return: Returns the result from the execution module
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd(*args, **kwargs)
 
     def local_subset(self, *args, **kwargs):
         """
@@ -178,8 +217,8 @@ class NetapiClient:
 
         Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_subset(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd_subset(*args, **kwargs)
 
     def local_batch(self, *args, **kwargs):
         """
@@ -192,8 +231,8 @@ class NetapiClient:
         :return: Returns the result from the exeuction module for each batch of
             returns
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_batch(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd_batch(*args, **kwargs)
 
     def ssh(self, *args, **kwargs):
         """
@@ -203,10 +242,10 @@ class NetapiClient:
 
         :return: Returns the result from the salt-ssh command
         """
-        ssh_client = salt.client.ssh.client.SSHClient(
+        with salt.client.ssh.client.SSHClient(
             mopts=self.opts, disable_custom_roster=True
-        )
-        return ssh_client.cmd_sync(kwargs)
+        ) as client:
+            return client.cmd_sync(kwargs)
 
     def runner(self, fun, timeout=None, full_return=False, **kwargs):
         """
@@ -271,8 +310,6 @@ class NetapiClient:
 
 CLIENTS = [
     name
-    for name, _ in inspect.getmembers(
-        NetapiClient, predicate=inspect.ismethod if six.PY2 else None
-    )
+    for name, _ in inspect.getmembers(NetapiClient, predicate=None)
     if not (name == "run" or name.startswith("_"))
 ]

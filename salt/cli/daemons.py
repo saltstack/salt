@@ -1,31 +1,22 @@
-# coding: utf-8 -*-
 """
 Make me some salt!
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 import warnings
 
-# Import salt libs
-# We import log ASAP because we NEED to make sure that any logger instance salt
-# instantiates is using salt.log.setup.SaltLoggingClass
-import salt.log.setup
 import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
-
-# the try block below bypasses an issue at build time so that modules don't
-# cause the build to fail
 from salt.utils import migrations
+from salt.utils.platform import is_junos
 from salt.utils.process import HAS_PSUTIL
-from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
-    "",  # No deprecation message matchHAS_PSUTIL
+    "",  # No deprecation message match
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
     append=True,
@@ -42,27 +33,28 @@ warnings.filterwarnings(
 # Filter the backports package UserWarning about being re-imported
 warnings.filterwarnings(
     "ignore",
-    "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
+    "^Module backports was already imported from (.*), but (.*) is being added to"
+    " sys.path$",
     UserWarning,
     append=True,
 )
 
 
+# the try block below bypasses an issue at build time so that modules don't
+# cause the build to fail
 try:
-    from salt.utils.zeromq import ip_bracket
     import salt.utils.parsers
+    from salt.utils.network import ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as exc:
     if exc.args[0] != "No module named _msgpack":
         raise
 
 
-# Let's instantiate log using salt.log.setup.logging.getLogger() so pylint
-# leaves us alone and stops complaining about an un-used import
-log = salt.log.setup.logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
-class DaemonsMixin(object):  # pylint: disable=no-init
+class DaemonsMixin:  # pylint: disable=no-init
     """
     Uses the same functions for all daemons
     """
@@ -128,14 +120,56 @@ class Master(
     Creates a master server
     """
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         if hasattr(self.master, "process_manager"):
             # escalate signal to the process manager processes
-            self.master.process_manager.stop_restarting()
-            self.master.process_manager.send_signal_to_processes(signum)
-            # kill any remaining processes
-            self.master.process_manager.kill_children()
-        super(Master, self)._handle_signals(signum, sigframe)
+            self.master.process_manager._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)
+
+    def verify_environment(self):
+        if not self.config["verify_env"]:
+            return
+        v_dirs = [
+            self.config["pki_dir"],
+            os.path.join(self.config["pki_dir"], "minions"),
+            os.path.join(self.config["pki_dir"], "minions_pre"),
+            os.path.join(self.config["pki_dir"], "minions_denied"),
+            os.path.join(self.config["pki_dir"], "minions_autosign"),
+            os.path.join(self.config["pki_dir"], "minions_rejected"),
+            self.config["cachedir"],
+            os.path.join(self.config["cachedir"], "jobs"),
+            os.path.join(self.config["cachedir"], "proc"),
+            self.config["sock_dir"],
+            self.config["token_dir"],
+            self.config["syndic_dir"],
+            self.config["sqlite_queue_dir"],
+        ]
+        pki_dir = self.config["pki_dir"]
+        if (
+            self.config["cluster_id"]
+            and self.config["cluster_pki_dir"]
+            and self.config["cluster_pki_dir"] != self.config["pki_dir"]
+        ):
+            v_dirs.extend(
+                [
+                    self.config["cluster_pki_dir"],
+                    os.path.join(self.config["cluster_pki_dir"], "peers"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_pre"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_denied"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_autosign"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_rejected"),
+                ]
+            )
+            pki_dir = [self.config["pki_dir"], self.config["cluster_pki_dir"]]
+
+        verify_env(
+            v_dirs,
+            self.config["user"],
+            permissive=self.config["permissive_pki_access"],
+            root_dir=self.config["root_dir"],
+            pki_dir=pki_dir,
+        )
 
     def prepare(self):
         """
@@ -145,40 +179,13 @@ class Master(
 
             super(YourSubClass, self).prepare()
         """
-        super(Master, self).prepare()
+        super().prepare()
 
         try:
-            if self.config["verify_env"]:
-                v_dirs = [
-                    self.config["pki_dir"],
-                    os.path.join(self.config["pki_dir"], "minions"),
-                    os.path.join(self.config["pki_dir"], "minions_pre"),
-                    os.path.join(self.config["pki_dir"], "minions_denied"),
-                    os.path.join(self.config["pki_dir"], "minions_autosign"),
-                    os.path.join(self.config["pki_dir"], "minions_rejected"),
-                    self.config["cachedir"],
-                    os.path.join(self.config["cachedir"], "jobs"),
-                    os.path.join(self.config["cachedir"], "proc"),
-                    self.config["sock_dir"],
-                    self.config["token_dir"],
-                    self.config["syndic_dir"],
-                    self.config["sqlite_queue_dir"],
-                ]
-                verify_env(
-                    v_dirs,
-                    self.config["user"],
-                    permissive=self.config["permissive_pki_access"],
-                    root_dir=self.config["root_dir"],
-                    pki_dir=self.config["pki_dir"],
-                )
-                # Clear out syndics from cachedir
-                for syndic_file in os.listdir(self.config["syndic_dir"]):
-                    os.remove(os.path.join(self.config["syndic_dir"], syndic_file))
+            self.verify_environment()
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         self.action_log_info("Setting up")
 
         # TODO: AIO core is separate from transport
@@ -210,7 +217,7 @@ class Master(
 
         NOTE: Run any required code before calling `super()`.
         """
-        super(Master, self).start()
+        super().start()
         if check_user(self.config["user"]):
             self.action_log_info("Starting up")
             self.verify_hash_type()
@@ -226,7 +233,7 @@ class Master(
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
-        super(Master, self).shutdown(exitcode, exitmsg)
+        super().shutdown(exitcode, exitmsg)
 
 
 class Minion(
@@ -240,7 +247,7 @@ class Minion(
         # escalate signal to the process manager processes
         if hasattr(self.minion, "stop"):
             self.minion.stop(signum)
-        super(Minion, self)._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
     def prepare(self):
@@ -251,7 +258,7 @@ class Minion(
 
             super(YourSubClass, self).prepare()
         """
-        super(Minion, self).prepare()
+        super().prepare()
 
         try:
             if self.config["verify_env"]:
@@ -291,8 +298,6 @@ class Minion(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         log.info('Setting up the Salt Minion "%s"', self.config["id"])
         migrations.migrate_paths(self.config)
 
@@ -305,8 +310,7 @@ class Minion(
 
         transport = self.config.get("transport").lower()
 
-        # TODO: AIO core is separate from transport
-        if transport in ("zeromq", "tcp", "detect"):
+        try:
             # Late import so logging works correctly
             import salt.minion
 
@@ -319,11 +323,9 @@ class Minion(
             if self.config.get("master_type") == "func":
                 salt.minion.eval_master_func(self.config)
             self.minion = salt.minion.MinionManager(self.config)
-        else:
+        except Exception:  # pylint: disable=broad-except
             log.error(
-                "The transport '%s' is not supported. Please use one of "
-                "the following: tcp, zeromq, or detect.",
-                transport,
+                "An error occured while setting up the minion manager", exc_info=True
             )
             self.shutdown(1)
 
@@ -337,7 +339,7 @@ class Minion(
 
         NOTE: Run any required code before calling `super()`.
         """
-        super(Minion, self).start()
+        super().start()
         while True:
             try:
                 self._real_start()
@@ -403,10 +405,10 @@ class Minion(
         self.action_log_info("Shutting down")
         if hasattr(self, "minion") and hasattr(self.minion, "destroy"):
             self.minion.destroy()
-        super(Minion, self).shutdown(
+        super().shutdown(
             exitcode,
             (
-                "The Salt {0} is shutdown. {1}".format(
+                "The Salt {} is shutdown. {}".format(
                     self.__class__.__name__, (exitmsg or "")
                 ).strip()
             ),
@@ -425,7 +427,7 @@ class ProxyMinion(
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
         self.minion.stop(signum)
-        super(ProxyMinion, self)._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
     def prepare(self):
@@ -436,10 +438,12 @@ class ProxyMinion(
 
             super(YourSubClass, self).prepare()
         """
-        super(ProxyMinion, self).prepare()
+        super().prepare()
 
-        if not self.values.proxyid:
-            self.error("salt-proxy requires --proxyid")
+        ## allow for native minion
+        if not is_junos():
+            if not self.values.proxyid:
+                self.error("salt-proxy requires --proxyid")
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.
@@ -485,9 +489,7 @@ class ProxyMinion(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
-        self.action_log_info('Setting up "{0}"'.format(self.config["id"]))
+        self.action_log_info('Setting up "{}"'.format(self.config["id"]))
 
         migrations.migrate_paths(self.config)
 
@@ -520,7 +522,7 @@ class ProxyMinion(
 
         NOTE: Run any required code before calling `super()`.
         """
-        super(ProxyMinion, self).start()
+        super().start()
         try:
             if check_user(self.config["user"]):
                 self.action_log_info("The Proxy Minion is starting up")
@@ -548,10 +550,10 @@ class ProxyMinion(
             proxy_fn = self.minion.opts["proxymodule"].loaded_base_name + ".shutdown"
             self.minion.opts["proxymodule"][proxy_fn](self.minion.opts)
         self.action_log_info("Shutting down")
-        super(ProxyMinion, self).shutdown(
+        super().shutdown(
             exitcode,
             (
-                "The Salt {0} is shutdown. {1}".format(
+                "The Salt {} is shutdown. {}".format(
                     self.__class__.__name__, (exitmsg or "")
                 ).strip()
             ),
@@ -575,13 +577,12 @@ class Syndic(
 
             super(YourSubClass, self).prepare()
         """
-        super(Syndic, self).prepare()
+        super().prepare()
         try:
             if self.config["verify_env"]:
                 verify_env(
                     [
                         self.config["pki_dir"],
-                        self.config["cachedir"],
                         self.config["sock_dir"],
                         self.config["extension_modules"],
                     ],
@@ -593,9 +594,7 @@ class Syndic(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
-        self.action_log_info('Setting up "{0}"'.format(self.config["id"]))
+        self.action_log_info('Setting up "{}"'.format(self.config["id"]))
 
         # Late import so logging works correctly
         import salt.minion
@@ -614,7 +613,7 @@ class Syndic(
 
         NOTE: Run any required code before calling `super()`.
         """
-        super(Syndic, self).start()
+        super().start()
         if check_user(self.config["user"]):
             self.action_log_info("Starting up")
             self.verify_hash_type()
@@ -632,10 +631,10 @@ class Syndic(
         :param exitmsg
         """
         self.action_log_info("Shutting down")
-        super(Syndic, self).shutdown(
+        super().shutdown(
             exitcode,
             (
-                "The Salt {0} is shutdown. {1}".format(
+                "The Salt {} is shutdown. {}".format(
                     self.__class__.__name__, (exitmsg or "")
                 ).strip()
             ),

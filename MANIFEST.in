@@ -1,11 +1,12 @@
 include AUTHORS
 include CODE_OF_CONDUCT.md
 include CONTRIBUTING.rst
-include HACKING.rst
 include LICENSE
 include NOTICE
 include README.rst
 include SUPPORT.rst
+include run.py
+include pyproject.toml
 include tests/*.py
 recursive-include tests *
 recursive-include requirements *.txt
@@ -18,5 +19,7 @@ recursive-include conf *
 recursive-include pkg *
 recursive-include salt *.jinja
 recursive-include templates *
+include salt/_version.txt
 include salt/templates/git/*
 include salt/templates/lxc/*
+include salt/utils/pyinstaller/rthooks.dat

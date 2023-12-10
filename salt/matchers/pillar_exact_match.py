@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 This is the default pillar exact matcher.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
 
-def match(tgt, delimiter=":", opts=None):
+def match(tgt, delimiter=":", opts=None, minion_id=None):
     """
     Reads in the pillar match, no globbing, no PCRE
     """
@@ -19,9 +17,7 @@ def match(tgt, delimiter=":", opts=None):
         opts = __opts__
     log.debug("pillar target: %s", tgt)
     if delimiter not in tgt:
-        log.error(
-            "Got insufficient arguments for pillar match " "statement from master"
-        )
+        log.error("Got insufficient arguments for pillar match statement from master")
         return False
 
     if "pillar" in opts:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Network Users
 =============
@@ -18,19 +17,11 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
+import copy
 import logging
 
-# Python std lib
-from copy import deepcopy
-
-# import NAPALM utils
 import salt.utils.json
 import salt.utils.napalm
-
-# salt lib
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +71,7 @@ def _expand_users(device_users, common_users):
 
     """Creates a longer list of accepted users on the device."""
 
-    expected_users = deepcopy(common_users)
+    expected_users = copy.deepcopy(common_users)
     expected_users.update(device_users)
 
     return expected_users
@@ -93,7 +84,7 @@ def _check_users(users):
     messg = ""
     valid = True
 
-    for user, user_details in six.iteritems(users):
+    for user, user_details in users.items():
         if not user_details:
             valid = False
             messg += "Please provide details for username {user}.\n".format(user=user)
@@ -103,8 +94,9 @@ def _check_users(users):
             or 0 <= user_details.get("level") <= 15
         ):
             # warn!
-            messg += "Level must be a integer between 0 and 15 for username {user}. Will assume 0.\n".format(
-                user=user
+            messg += (
+                "Level must be a integer between 0 and 15 for username {user}. Will"
+                " assume 0.\n".format(user=user)
             )
 
     return valid, messg
@@ -123,8 +115,8 @@ def _compute_diff(configured, expected):
     remove_usernames = configured_users - expected_users
     common_usernames = expected_users & configured_users
 
-    add = dict((username, expected.get(username)) for username in add_usernames)
-    remove = dict((username, configured.get(username)) for username in remove_usernames)
+    add = {username: expected.get(username) for username in add_usernames}
+    remove = {username: configured.get(username) for username in remove_usernames}
     update = {}
 
     for username in common_usernames:
@@ -133,7 +125,7 @@ def _compute_diff(configured, expected):
         if user_configuration == user_expected:
             continue
         update[username] = {}
-        for field, field_value in six.iteritems(user_expected):
+        for field, field_value in user_expected.items():
             if user_configuration.get(field) != field_value:
                 update[username][field] = field_value
 
@@ -210,6 +202,8 @@ def managed(name, users=None, defaults=None):
                                 edb+BAc3aww0naeWpogjSt+We7y2N
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt 'edge01.kix01' state.sls router.users
 

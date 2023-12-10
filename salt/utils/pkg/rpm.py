@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Common functions for working with RPM packages
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import collections
 import datetime
 import logging
@@ -14,9 +9,6 @@ import subprocess
 
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +30,16 @@ ARCHES_ALPHA = (
     "alphaev68",
     "alphaev7",
 )
-ARCHES_ARM = ("armv5tel", "armv5tejl", "armv6l", "armv7l")
+ARCHES_ARM_32 = (
+    "armv5tel",
+    "armv5tejl",
+    "armv6l",
+    "armv6hl",
+    "armv7l",
+    "armv7hl",
+    "armv7hnl",
+)
+ARCHES_ARM_64 = ("aarch64",)
 ARCHES_SH = ("sh3", "sh4", "sh4a")
 
 ARCHES = (
@@ -47,7 +48,8 @@ ARCHES = (
     + ARCHES_PPC
     + ARCHES_S390
     + ARCHES_ALPHA
-    + ARCHES_ARM
+    + ARCHES_ARM_32
+    + ARCHES_ARM_64
     + ARCHES_SH
 )
 
@@ -61,8 +63,7 @@ def get_osarch():
     """
     if salt.utils.path.which("rpm"):
         ret = subprocess.Popen(
-            'rpm --eval "%{_host_cpu}"',
-            shell=True,
+            ["rpm", "--eval", "%{_host_cpu}"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -75,11 +76,13 @@ def get_osarch():
 
 def check_32(arch, osarch=None):
     """
-    Returns True if both the OS arch and the passed arch are 32-bit
+    Returns True if both the OS arch and the passed arch are x86 or ARM 32-bit
     """
     if osarch is None:
         osarch = get_osarch()
-    return all(x in ARCHES_32 for x in (osarch, arch))
+    return all(x in ARCHES_32 for x in (osarch, arch)) or all(
+        x in ARCHES_ARM_32 for x in (osarch, arch)
+    )
 
 
 def pkginfo(name, version, arch, repoid, install_date=None, install_date_time_t=None):
@@ -102,7 +105,7 @@ def resolve_name(name, arch, osarch=None):
         osarch = get_osarch()
 
     if not check_32(arch, osarch) and arch not in (osarch, "noarch"):
-        name += ".{0}".format(arch)
+        name += ".{}".format(arch)
     return name
 
 
@@ -120,7 +123,7 @@ def parse_pkginfo(line, osarch=None):
 
     name = resolve_name(name, arch, osarch)
     if release:
-        version += "-{0}".format(release)
+        version += "-{}".format(release)
     if epoch not in ("(none)", "0"):
         version = ":".join((epoch, version))
 
@@ -146,10 +149,10 @@ def combine_comments(comments):
         comments = [comments]
     ret = []
     for comment in comments:
-        if not isinstance(comment, six.string_types):
+        if not isinstance(comment, str):
             comment = str(comment)
         # Normalize for any spaces (or lack thereof) after the #
-        ret.append("# {0}\n".format(comment.lstrip("#").lstrip()))
+        ret.append("# {}\n".format(comment.lstrip("#").lstrip()))
     return "".join(ret)
 
 
@@ -171,7 +174,7 @@ def version_to_evr(verstring):
     idx_e = verstring.find(":")
     if idx_e != -1:
         try:
-            epoch = six.text_type(int(verstring[:idx_e]))
+            epoch = str(int(verstring[:idx_e]))
         except ValueError:
             # look, garbage in the epoch field, how fun, kill it
             epoch = "0"  # this is our fallback, deal

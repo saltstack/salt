@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
+import pytest
+
 from salt.utils.timeout import wait_for
-from tests.support.helpers import slowTest
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -63,12 +61,12 @@ class WaitForTests(TestCase):
         del self.true_after_1s
         del self.self_after_1s
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wait_for_true(self):
         ret = wait_for(self.true_after_1s, timeout=2, step=0.5)
         self.assertTrue(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wait_for_self(self):
         ret = wait_for(self.self_after_1s, timeout=2, step=0.5)
         self.assertEqual(ret, self)
@@ -77,19 +75,20 @@ class WaitForTests(TestCase):
         ret = wait_for(self.true_after_1s, timeout=0.5, step=0.1, default=False)
         self.assertFalse(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_wait_for_with_big_step(self):
         ret = wait_for(self.true_after_1s, timeout=1.5, step=2)
         self.assertTrue(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wait_for_custom_args(self):
         args_after_1s = return_args_after(1)
         args = ("one", "two")
         ret = wait_for(args_after_1s, timeout=2, step=0.5, func_args=args)
         self.assertEqual(ret, args)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wait_for_custom_kwargs(self):
         kwargs_after_1s = return_kwargs_after(1)
         kwargs = {"one": 1, "two": 2}

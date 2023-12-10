@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm install utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
-import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
 from tests.support.case import SPMCase
-from tests.support.helpers import Webserver, destructiveTest, slowTest
+from tests.support.helpers import Webserver
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class SPMInstallTest(SPMCase):
     """
@@ -31,6 +28,7 @@ class SPMInstallTest(SPMCase):
             self.webserver = Webserver()
             self.webserver.root = self.spm_build_dir
             self.webserver.start()
+            self.addCleanup(self.webserver.stop)
             self.repo_dir = self.config["spm_repos_config"] + ".d"
             self.repo = os.path.join(self.repo_dir, "spm.repo")
             url = {"my_repo": {"url": self.webserver.url("")[:-1]}}
@@ -60,7 +58,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_local_dir(self):
         """
         test spm install from local directory
@@ -74,7 +72,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_from_repo(self):
         """
         test spm install from repo
@@ -85,8 +83,3 @@ class SPMInstallTest(SPMCase):
         sls = os.path.join(self.config["formula_path"], "apache", "apache.sls")
 
         self.assertTrue(os.path.exists(sls))
-
-    def tearDown(self):
-        if "http" in self.id():
-            self.webserver.stop()
-        shutil.rmtree(self._tmp_spm)

@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import random
 import string
 
-# Import Salt libs
-import salt.loader
-import salt.modules.boto_apigateway as boto_apigateway
-from salt.ext.six.moves import range, zip
-from salt.utils.versions import LooseVersion
+import pytest
 
-# Import Salt Testing libs
+import salt.loader
+import salt.loader.context
+import salt.modules.boto_apigateway as boto_apigateway
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
@@ -29,6 +22,10 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
 
 
 # pylint: enable=import-error,no-name-in-module
@@ -145,7 +142,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -157,7 +154,7 @@ def _has_required_botocore():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
+    elif Version(botocore.__version__) < Version(required_botocore_version):
         return False
     else:
         return True
@@ -168,10 +165,10 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        utils = salt.loader.utils(
+        self.utils = salt.loader.utils(
             opts, whitelist=["boto3", "args", "systemd", "path", "platform"]
         )
-        return {boto_apigateway: {"__opts__": opts, "__utils__": utils}}
+        return {boto_apigateway: {"__opts__": opts, "__utils__": self.utils}}
 
     def setUp(self):
         TestCase.setUp(self)
@@ -196,9 +193,10 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
         self.addCleanup(delattr, self, "conn")
+        self.addCleanup(delattr, self, "utils")
 
 
-class BotoApiGatewayTestCaseMixin(object):
+class BotoApiGatewayTestCaseMixin:
     def _diff_list_dicts(self, listdict1, listdict2, sortkey):
         """
         Compares the two list of dictionaries to ensure they have same content.  Returns True
@@ -215,17 +213,18 @@ class BotoApiGatewayTestCaseMixin(object):
         return False
 
 
-# @skipIf(True, 'Skip these tests while investigating failures')
-@skipIf(HAS_BOTO is False, "The boto3 module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto3 module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_botocore() is False,
-    "The botocore module must be greater than"
-    " or equal to version {0}".format(required_botocore_version),
+    reason="The botocore module must be greater than or equal to version {}".format(
+        required_botocore_version
+    ),
 )
 class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseMixin):
     """
@@ -286,7 +285,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -310,7 +312,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -347,7 +351,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -371,7 +378,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -424,7 +433,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -442,7 +454,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -485,7 +499,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(create_api_result.get("created"))
         self.assertTrue(api)
         self.assertEqual(api["id"], assigned_api_id)
-        self.assertEqual(api["createdDate"], "{0}".format(created_date))
+        self.assertEqual(api["createdDate"], f"{created_date}")
         self.assertEqual(api["name"], "unit-testing123")
         self.assertEqual(api["description"], "unit-testing1234")
 
@@ -516,7 +530,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -540,7 +557,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -707,7 +726,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             "test-salt-key", "test-lambda-api-key", **conn_parameters
         )
         api_key = create_api_key_result.get("apiKey")
-        now_str = "{0}".format(now)
+        now_str = f"{now}"
 
         self.assertTrue(create_api_key_result.get("created"))
         self.assertEqual(api_key.get("lastUpdatedDate"), now_str)
@@ -719,21 +738,21 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         """
         tests that we properly handle errors when create an api key fails.
         """
+        with salt.loader.context.loader_context(self.utils):
+            self.conn.create_api_key.side_effect = ClientError(
+                error_content, "create_api_key"
+            )
+            create_api_key_result = boto_apigateway.create_api_key(
+                "test-salt-key", "unit-testing1234"
+            )
+            api_key = create_api_key_result.get("apiKey")
 
-        self.conn.create_api_key.side_effect = ClientError(
-            error_content, "create_api_key"
-        )
-        create_api_key_result = boto_apigateway.create_api_key(
-            "test-salt-key", "unit-testing1234"
-        )
-        api_key = create_api_key_result.get("apiKey")
-
-        self.assertFalse(api_key)
-        self.assertIs(create_api_key_result.get("created"), False)
-        self.assertEqual(
-            create_api_key_result.get("error").get("message"),
-            error_message.format("create_api_key"),
-        )
+            self.assertFalse(api_key)
+            self.assertIs(create_api_key_result.get("created"), False)
+            self.assertEqual(
+                create_api_key_result.get("error").get("message"),
+                error_message.format("create_api_key"),
+            )
 
     def test_that_when_deleting_an_api_key_that_exists_the_delete_api_key_method_returns_true(
         self,
@@ -778,7 +797,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.update_api_key_description(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             description="test-lambda-api-key",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("updated"))
 
@@ -794,7 +813,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.update_api_key_description(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             description="test-lambda-api-key",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("updated"))
 
@@ -865,7 +884,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.associate_api_key_stagekeys(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             stagekeyslist=["123yd1l123/test"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("associated"))
 
@@ -881,7 +900,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.associate_api_key_stagekeys(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             stagekeyslist=["123yd1l123/test"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("associated"))
 
@@ -895,7 +914,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.disassociate_api_key_stagekeys(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             stagekeyslist=["123yd1l123/test"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("disassociated"))
 
@@ -911,7 +930,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.disassociate_api_key_stagekeys(
             apiKey="88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2",
             stagekeyslist=["123yd1l123/test"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("disassociated"))
 
@@ -1016,7 +1035,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             deploymentId="n05smo",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("set"))
 
@@ -1031,7 +1050,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             deploymentId="n05smo",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("set"))
 
@@ -1057,7 +1076,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4", stageName="test", **conn_parameters
         )
         deployment = result.get("deployment")
-        now_str = "{0}".format(now)
+        now_str = f"{now}"
 
         self.assertTrue(result.get("created"))
         self.assertEqual(deployment.get("createdDate"), now_str)
@@ -1239,7 +1258,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             variables=dict(key1="val2"),
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(result.get("stage").get("variables").get("key1"), "val2")
 
@@ -1254,7 +1273,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="no_such_stage",
             variables=dict(key1="val1", key2="val2"),
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"), error_message.format("get_stage")
@@ -1285,7 +1304,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             variables=dict(key1="val2"),
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"), error_message.format("update_stage")
@@ -1317,10 +1336,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             deploymentId="n05smo",
-            **conn_parameters
+            **conn_parameters,
         )
         stage = result.get("stage")
-        now_str = "{0}".format(now)
+        now_str = f"{now}"
         self.assertIs(result.get("created"), True)
         self.assertEqual(stage.get("createdDate"), now_str)
         self.assertEqual(stage.get("lastUpdatedDate"), now_str)
@@ -1337,7 +1356,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             stageName="test",
             deploymentId="n05smo",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertIs(result.get("created"), False)
         self.assertEqual(
@@ -1424,7 +1443,12 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "User",
                     "description": "User Model",
                     "id": "iltqcc",
-                    "schema": '{"properties":{"username":{"type":"string","description":"A unique username for the user"},"password":{"type":"string","description":"A password for the new user"}},"definitions":{}}',
+                    "schema": (
+                        '{"properties":{"username":{"type":"string","description":"A'
+                        " unique username for the"
+                        ' user"},"password":{"type":"string","description":"A password'
+                        ' for the new user"}},"definitions":{}}'
+                    ),
                 },
             ],
             "ResponseMetadata": {
@@ -1508,7 +1532,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             modelName="Error",
             schema=api_model_error_schema,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("updated"))
 
@@ -1523,7 +1547,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             modelName="no_such_model",
             schema=api_model_error_schema,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("updated"))
 
@@ -1539,7 +1563,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             modelName="Error",
             modelDescription="Error Model",
             schema=api_model_error_schema,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("created"))
 
@@ -1555,7 +1579,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             modelName="Error",
             modelDescription="Error Model",
             schema=api_model_error_schema,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("created"))
 
@@ -1779,7 +1803,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("method"))
 
@@ -1795,7 +1819,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="PUT",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"), error_message.format("get_method")
@@ -1812,7 +1836,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/does/not/exist",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("error"))
 
@@ -1835,7 +1859,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="GET",
             authorizationType="NONE",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("created"))
 
@@ -1851,7 +1875,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api5",
             httpMethod="GET",
             authorizationType="NONE",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("created"))
 
@@ -1868,7 +1892,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="GET",
             authorizationType="NONE",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("created"))
 
@@ -1889,7 +1913,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("deleted"))
 
@@ -1907,7 +1931,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="GET",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("deleted"))
 
@@ -1922,7 +1946,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users5",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("deleted"))
 
@@ -1945,7 +1969,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode=200,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("response"))
 
@@ -1964,7 +1988,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode=250,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"),
@@ -1983,7 +2007,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api5/users",
             httpMethod="POST",
             statusCode=200,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("error"))
 
@@ -2006,7 +2030,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode="201",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("created"))
 
@@ -2022,7 +2046,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api5",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("created"))
 
@@ -2041,7 +2065,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("created"))
 
@@ -2063,7 +2087,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("deleted"))
 
@@ -2082,7 +2106,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="GET",
             statusCode="201",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("deleted"))
 
@@ -2098,7 +2122,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users5",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertFalse(result.get("deleted"))
 
@@ -2125,7 +2149,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("integration"))
 
@@ -2143,7 +2167,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api/users",
             httpMethod="GET",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"), error_message.format("get_integration")
@@ -2160,7 +2184,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4",
             resourcePath="/api5/users",
             httpMethod="POST",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("error"))
 
@@ -2184,7 +2208,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("response"))
 
@@ -2203,7 +2227,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api/users",
             httpMethod="POST",
             statusCode="201",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error").get("message"),
@@ -2222,7 +2246,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             resourcePath="/api5/users",
             httpMethod="POST",
             statusCode="200",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result.get("error"))
 
@@ -2303,7 +2327,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                 description=None,
                 throttle=throttle,
                 quota=quota,
-                **conn_parameters
+                **conn_parameters,
             )
             self.assertNotEqual(None, res.get("error"))
             res = boto_apigateway.update_usage_plan(
@@ -2317,7 +2341,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                 description=None,
                 throttle=None,
                 quota=quota,
-                **conn_parameters
+                **conn_parameters,
             )
             self.assertNotEqual(None, res.get("error"))
             res = boto_apigateway.update_usage_plan(

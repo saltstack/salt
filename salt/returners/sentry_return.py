@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt returner that reports execution results back to sentry. The returner will
 inspect the payload to identify errors and flag them as such.
@@ -41,14 +40,10 @@ tags, allowing tagging of events in the sentry ui.
 
 To report only errors to sentry, set report_errors_only: true.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.jid
-from salt.ext import six
 
 try:
     from raven import Client
@@ -68,8 +63,7 @@ def __virtual__():
     if not has_raven:
         return (
             False,
-            "Could not import sentry returner; "
-            "raven python client is not installed.",
+            "Could not import sentry returner; raven python client is not installed.",
         )
     return __virtualname__
 
@@ -93,7 +87,7 @@ def _ret_is_not_error(result):
         is_staterun = all("-" in key for key in result_dict.keys())
         if is_staterun:
             failed_states = {}
-            for state_id, state_result in six.iteritems(result_dict):
+            for state_id, state_result in result_dict.items():
                 if not state_result["result"]:
                     failed_states[state_id] = state_result
 
@@ -111,20 +105,16 @@ def _ret_is_not_error(result):
 def _get_message(ret):
     if not ret.get("fun_args"):
         return "salt func: {}".format(ret["fun"])
-    arg_string = " ".join(
-        [arg for arg in ret["fun_args"] if isinstance(arg, six.string_types)]
-    )
+    arg_string = " ".join([arg for arg in ret["fun_args"] if isinstance(arg, str)])
     kwarg_string = ""
     if isinstance(ret["fun_args"], list) and len(ret["fun_args"]) > 0:
         kwargs = ret["fun_args"][-1]
         if isinstance(kwargs, dict):
             kwarg_string = " ".join(
                 sorted(
-                    [
-                        "{}={}".format(k, v)
-                        for k, v in kwargs.items()
-                        if not k.startswith("_")
-                    ]
+                    "{}={}".format(k, v)
+                    for k, v in kwargs.items()
+                    if not k.startswith("_")
                 )
             )
     return "salt func: {fun} {argstr} {kwargstr}".format(

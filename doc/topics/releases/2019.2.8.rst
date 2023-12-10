@@ -1,0 +1,12 @@
+.. _release-2019-2-8:
+
+===========================
+Salt 2019.2.8 Release Notes
+===========================
+
+Version 2019.2.8 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)

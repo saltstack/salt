@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Keyring Database Module
 
@@ -44,9 +43,7 @@ https://pypi.python.org/pypi/keyring
 
 .. versionadded:: 2014.1.4
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# import python libs
 import logging
 
 try:

@@ -83,6 +83,7 @@ import logging
 import os
 import pickle
 import time
+import urllib.parse
 
 import salt.fileserver as fs
 import salt.modules
@@ -90,13 +91,6 @@ import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
 import salt.utils.versions
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import filter
-from salt.ext.six.moves.urllib.parse import quote as _quote
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -240,7 +234,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(cached_file_path, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
-        if data and six.PY3 and not salt.utils.files.is_binary(cached_file_path):
+        if data and not salt.utils.files.is_binary(cached_file_path):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -494,7 +488,7 @@ def _refresh_buckets_cache_file(cache_file):
                             continue
                         else:
                             log.warning(
-                                "S3 Error! Do you have any files " "in your S3 bucket?"
+                                "S3 Error! Do you have any files in your S3 bucket?"
                             )
                             return {}
 
@@ -538,7 +532,7 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     else:
                         log.warning(
-                            "S3 Error! Do you have any files " "in your S3 bucket?"
+                            "S3 Error! Do you have any files in your S3 bucket?"
                         )
                         return {}
 
@@ -600,7 +594,7 @@ def _read_buckets_cache_file(cache_file):
             KeyError,
             ValueError,
         ) as exc:
-            log.debug("Exception reading buckets cache file: '{}'".format(exc))
+            log.debug("Exception reading buckets cache file: '%s'", exc)
             data = None
 
     return data
@@ -747,7 +741,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         service_url=service_url,
                         verify_ssl=verify_ssl,
                         location=location,
-                        path=_quote(path),
+                        path=urllib.parse.quote(path),
                         local_file=cached_file_path,
                         full_headers=True,
                         path_style=path_style,
@@ -785,7 +779,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         service_url=service_url,
         verify_ssl=verify_ssl,
         location=location,
-        path=_quote(path),
+        path=urllib.parse.quote(path),
         local_file=cached_file_path,
         path_style=path_style,
         https_enable=https_enable,

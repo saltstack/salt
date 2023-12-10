@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 DRBD administration module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -57,8 +53,7 @@ def _analyse_status_type(line):
 
     ret = switch.get(spaces, "UNKNOWN")
 
-    # isinstance(ret, str) only works when run directly, calling need unicode(six)
-    if isinstance(ret, six.text_type):
+    if isinstance(ret, str):
         return ret
 
     for x in ret:

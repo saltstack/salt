@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage entries in an LDAP database
 ==================================
@@ -9,17 +8,13 @@ The ``states.ldap`` state module allows you to manage LDAP entries and
 their attributes.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import inspect
 import logging
 
-# Import Salt libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 from salt.utils.oset import OrderedSet
+from salt.utils.stringutils import to_bytes
 
 log = logging.getLogger(__name__)
 
@@ -275,7 +270,7 @@ def managed(name, entries, connect_spec=None):
             n = new.get(dn, {})
             for x in o, n:
                 to_delete = set()
-                for attr, vals in six.iteritems(x):
+                for attr, vals in x.items():
                     if not vals:
                         # clean out empty attribute lists
                         to_delete.add(attr)
@@ -347,10 +342,7 @@ def managed(name, entries, connect_spec=None):
             if errs:
                 ret["result"] = False
                 ret["comment"] = "failed to " + ", ".join(
-                    (
-                        op + " entry " + dn + "(" + six.text_type(err) + ")"
-                        for op, dn, err in errs
-                    )
+                    (op + " entry " + dn + "(" + str(err) + ")" for op, dn, err in errs)
                 )
 
     # set ret['changes'].  filter out any unchanged attributes, and
@@ -365,13 +357,11 @@ def managed(name, entries, connect_spec=None):
             if not x:
                 changes[xn] = None
                 continue
-            changes[xn] = dict(
-                (
-                    (attr, sorted(vals))
-                    for attr, vals in six.iteritems(x)
-                    if o.get(attr, ()) != n.get(attr, ())
-                )
-            )
+            changes[xn] = {
+                attr: sorted(vals)
+                for attr, vals in x.items()
+                if o.get(attr, ()) != n.get(attr, ())
+            }
 
     return ret
 
@@ -423,7 +413,7 @@ def _process_entries(l, entries):
     new = OrderedDict()
 
     for entries_dict in entries:
-        for dn, directives_seq in six.iteritems(entries_dict):
+        for dn, directives_seq in entries_dict.items():
             # get the old entry's state.  first check to see if we've
             # previously processed the entry.
             olde = new.get(dn, None)
@@ -432,13 +422,11 @@ def _process_entries(l, entries):
                 results = __salt__["ldap3.search"](l, dn, "base")
                 if len(results) == 1:
                     attrs = results[dn]
-                    olde = dict(
-                        (
-                            (attr, OrderedSet(attrs[attr]))
-                            for attr in attrs
-                            if len(attrs[attr])
-                        )
-                    )
+                    olde = {
+                        attr: OrderedSet(attrs[attr])
+                        for attr in attrs
+                        if len(attrs[attr])
+                    }
                 else:
                     # nothing, so it must be a brand new entry
                     assert len(results) == 0
@@ -478,18 +466,18 @@ def _update_entry(entry, status, directives):
     :param directives:
         A dict mapping directive types to directive-specific state
     """
-    for directive, state in six.iteritems(directives):
+    for directive, state in directives.items():
         if directive == "delete_others":
             status["delete_others"] = state
             continue
-        for attr, vals in six.iteritems(state):
+        for attr, vals in state.items():
             status["mentioned_attributes"].add(attr)
             vals = _toset(vals)
             if directive == "default":
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":
-                vals.update(entry.get(attr, ()))
+                vals.update(entry.get(attr, OrderedSet()))
                 if vals:
                     entry[attr] = vals
             elif directive == "delete":
@@ -530,11 +518,18 @@ def _toset(thing):
     """
     if thing is None:
         return OrderedSet()
-    if isinstance(thing, six.string_types):
-        return OrderedSet((thing,))
-    # convert numbers to strings so that equality checks work
+    if isinstance(thing, str):
+        return OrderedSet((to_bytes(thing),))
+    if isinstance(thing, int):
+        return OrderedSet((to_bytes(str(thing)),))
+    # convert numbers to strings and then bytes
+    # so that equality checks work
     # (LDAP stores numbers as strings)
     try:
-        return OrderedSet((six.text_type(x) for x in thing))
+        return OrderedSet(
+            to_bytes(str(x)) if isinstance(x, int) else to_bytes(x) for x in thing
+        )
     except TypeError:
-        return OrderedSet((six.text_type(thing),))
+        return OrderedSet(
+            str(thing),
+        )

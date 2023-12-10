@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 An engine that reads messages from Slack and can act on them
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 :depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
 
@@ -146,9 +145,6 @@ must be quoted, or else PyYAML will fail to load the configuration.
 
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import ast
 import datetime
 import itertools
@@ -157,7 +153,6 @@ import re
 import time
 import traceback
 
-# Import salt libs
 import salt.client
 import salt.loader
 import salt.minion
@@ -169,9 +164,6 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
-from salt.ext import six
-
-log = logging.getLogger(__name__)
 
 try:
     import slackclient
@@ -180,6 +172,7 @@ try:
 except ImportError:
     HAS_SLACKCLIENT = False
 
+log = logging.getLogger(__name__)
 
 __virtualname__ = "slack"
 
@@ -190,7 +183,7 @@ def __virtual__():
     return __virtualname__
 
 
-class SlackClient(object):
+class SlackClient:
     def __init__(self, token):
         self.master_minion = salt.minion.MasterMinion(__opts__)
 
@@ -291,7 +284,8 @@ class SlackClient(object):
                 ret_groups[name]["targets"].update(config.get("targets", {}))
             except (IndexError, AttributeError):
                 log.warning(
-                    "Couldn't use group %s. Check that targets is a dictionary and not a list",
+                    "Couldn't use group %s. Check that targets is a dictionary and not"
+                    " a list",
                     name,
                 )
 
@@ -523,9 +517,7 @@ class SlackClient(object):
                     )
                     user_id = m_data["message"]["user"]
                 elif "comment" in m_data and "user" in m_data["comment"]:
-                    log.debug(
-                        "Comment was added, " "so we look for user in " "the comment."
-                    )
+                    log.debug("Comment was added, so we look for user in the comment.")
                     user_id = m_data["comment"]["user"]
             else:
                 user_id = m_data.get("user")
@@ -588,13 +580,13 @@ class SlackClient(object):
                     loaded_groups = self.get_config_groups(groups, groups_pillar_name)
                     if not data.get("user_name"):
                         log.error(
-                            "The user %s can not be looked up via slack. What has happened here?",
+                            "The user %s can not be looked up via slack. What has"
+                            " happened here?",
                             m_data.get("user"),
                         )
                         channel.send_message(
-                            "The user {} can not be looked up via slack.  Not running {}".format(
-                                data["user_id"], msg_text
-                            )
+                            "The user {} can not be looked up via slack.  Not"
+                            " running {}".format(data["user_id"], msg_text)
                         )
                         yield {"message_data": m_data}
                         continue
@@ -614,7 +606,7 @@ class SlackClient(object):
                         continue
                     else:
                         channel.send_message(
-                            "{0} is not allowed to use command {1}.".format(
+                            "{} is not allowed to use command {}.".format(
                                 data["user_name"], cmdline
                             )
                         )
@@ -703,7 +695,7 @@ class SlackClient(object):
             except (StopIteration, AttributeError):
                 outputter = None
             return salt.output.string_format(
-                {x: y["return"] for x, y in six.iteritems(data)},
+                {x: y["return"] for x, y in data.items()},
                 out=outputter,
                 opts=__opts__,
             )
@@ -755,7 +747,7 @@ class SlackClient(object):
         results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
-            if self.master_minion.returners["{}.get_jid".format(source)](jid):
+            if self.master_minion.returners[f"{source}.get_jid"](jid):
                 job_result = runner.cmd("jobs.list_job", [jid])
                 jid_result = job_result.get("Result", {})
                 jid_function = job_result.get("Function", {})
@@ -803,9 +795,7 @@ class SlackClient(object):
                 if fire_all:
                     log.debug("Firing message to the bus with tag: %s", tag)
                     log.debug("%s %s", tag, msg)
-                    self.fire(
-                        "{0}/{1}".format(tag, msg["message_data"].get("type")), msg
-                    )
+                    self.fire("{}/{}".format(tag, msg["message_data"].get("type")), msg)
                 if control and (len(msg) > 1) and msg.get("cmdline"):
                     channel = self.sc.server.channels.find(msg["channel"])
                     jid = self.run_command_async(msg)
@@ -837,16 +827,18 @@ class SlackClient(object):
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job["channel"])
                     return_text = self.format_return_text(result, function)
-                    return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
-                        this_job["user_name"],
-                        this_job["cmdline"],
-                        jid,
-                        this_job["target"],
+                    return_prefix = (
+                        "@{}'s job `{}` (id: {}) (target: {}) returned".format(
+                            this_job["user_name"],
+                            this_job["cmdline"],
+                            jid,
+                            this_job["target"],
+                        )
                     )
                     channel.send_message(return_prefix)
                     ts = time.time()
                     st = datetime.datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S%f")
-                    filename = "salt-results-{0}.yaml".format(st)
+                    filename = f"salt-results-{st}.yaml"
                     r = self.sc.api_call(
                         "files.upload",
                         channels=channel.id,
@@ -858,7 +850,7 @@ class SlackClient(object):
                     resp = salt.utils.yaml.safe_load(salt.utils.json.dumps(r))
                     if "ok" in resp and resp["ok"] is False:
                         this_job["channel"].send_message(
-                            "Error: {0}".format(resp["error"])
+                            "Error: {}".format(resp["error"])
                         )
                     del outstanding[jid]
 
@@ -900,24 +892,24 @@ class SlackClient(object):
             log.debug("Command %s will run via runner_functions", cmd)
             # pylint is tripping
             # pylint: disable=missing-whitespace-after-comma
-            job_id_dict = runner.asynchronous(cmd, {"args": args, "kwargs": kwargs})
+            job_id_dict = runner.asynchronous(cmd, {"arg": args, "kwarg": kwargs})
             job_id = job_id_dict["jid"]
 
         # Default to trying to run as a client module.
         else:
-            local = salt.client.LocalClient()
             log.debug(
                 "Command %s will run via local.cmd_async, targeting %s", cmd, target
             )
             log.debug("Running %s, %s, %s, %s, %s", target, cmd, args, kwargs, tgt_type)
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
-            job_id = local.cmd_async(
-                six.text_type(target),
-                cmd,
-                arg=args,
-                kwarg=kwargs,
-                tgt_type=six.text_type(tgt_type),
-            )
+            with salt.client.LocalClient() as local:
+                job_id = local.cmd_async(
+                    str(target),
+                    cmd,
+                    arg=args,
+                    kwarg=kwargs,
+                    tgt_type=str(tgt_type),
+                )
             log.info("ret from local.cmd_async is %s", job_id)
         return job_id
 
@@ -935,6 +927,14 @@ def start(
     Listen to slack events and forward them to salt, new version
     """
 
+    salt.utils.versions.warn_until(
+        3008,
+        "This 'slack' engine will be deprecated and "
+        "will be replace by the slack_bolt engine. This new "
+        "engine will use the new Bolt library from Slack and requires "
+        "a Slack app and a Slack bot account.",
+    )
+
     if (not token) or (not token.startswith("xoxb")):
         time.sleep(2)  # don't respawn too quickly
         log.error("Slack bot token not found, bailing...")
@@ -947,4 +947,4 @@ def start(
         )
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:  # pylint: disable=broad-except
-        raise Exception("{}".format(traceback.format_exc()))
+        raise Exception(f"{traceback.format_exc()}")

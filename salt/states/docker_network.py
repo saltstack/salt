@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Docker networks
 
@@ -30,28 +29,27 @@ Management of Docker networks
 These states were moved from the :mod:`docker <salt.states.docker>` state
 module (formerly called **dockerng**) in the 2017.7.0 release.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.utils.dockermod.translate.network
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Enable proper logging
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "docker_network"
 __virtual_aliases__ = ("moby_network",)
+
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
 
 
 def __virtual__():
@@ -73,7 +71,7 @@ def _normalize_pools(existing, desired):
     for pool in desired["Config"]:
         subnet = ipaddress.ip_network(pool.get("Subnet"))
         if pools["desired"][subnet.version] is not None:
-            raise ValueError("Only one IPv{0} pool is permitted".format(subnet.version))
+            raise ValueError(f"Only one IPv{subnet.version} pool is permitted")
         else:
             pools["desired"][subnet.version] = pool
 
@@ -99,7 +97,7 @@ def present(
     validate_ip_addrs=True,
     containers=None,
     reconnect=True,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -561,14 +559,14 @@ def present(
 
     if missing_containers:
         ret.setdefault("warnings", []).append(
-            "The following containers do not exist: {0}.".format(
+            "The following containers do not exist: {}.".format(
                 ", ".join(missing_containers)
             )
         )
 
     if stopped_containers:
         ret.setdefault("warnings", []).append(
-            "The following containers are not running: {0}.".format(
+            "The following containers are not running: {}.".format(
                 ", ".join(stopped_containers)
             )
         )
@@ -583,7 +581,7 @@ def present(
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
-            **__utils__["args.clean_kwargs"](**kwargs)
+            **__utils__["args.clean_kwargs"](**kwargs),
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["comment"] = exc.__str__()
@@ -627,10 +625,9 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret["comment"] = (
-            "Network '{0}' already exists, and is configured "
-            "as specified".format(name)
-        )
+        ret[
+            "comment"
+        ] = f"Network '{name}' already exists, and is configured as specified"
         log.trace("Details of docker network '%s': %s", name, network)
 
         temp_net_name = "".join(
@@ -653,14 +650,24 @@ def present(
             # wouldng't know if the IPv4 subnet in the existing network was
             # explicitly configured or was automatically assigned by Docker.
             enable_ipv6 = kwargs.pop("enable_ipv6", None)
+            kwargs_tmp = kwargs
+            driver = kwargs.get(
+                "driver",
+            )
+            driver_opts = kwargs.get("options", {})
+            bridge_name = driver_opts.get("com.docker.network.bridge.name", None)
+
+            if driver == "bridge" and bridge_name is not None:
+                tmp_name = str(bridge_name) + "comp"
+                kwargs_tmp["options"]["com.docker.network.bridge.name"] = tmp_name[-14:]
             __salt__["docker.create_network"](
                 temp_net_name,
                 skip_translate=True,  # No need to translate (already did)
                 enable_ipv6=False,
-                **kwargs
+                **kwargs_tmp,
             )
         except CommandExecutionError as exc:
-            ret["comment"] = "Failed to create temp network for comparison: {0}".format(
+            ret["comment"] = "Failed to create temp network for comparison: {}".format(
                 exc.__str__()
             )
             return ret
@@ -673,7 +680,7 @@ def present(
             try:
                 temp_net_info = __salt__["docker.inspect_network"](temp_net_name)
             except CommandExecutionError as exc:
-                ret["comment"] = "Failed to inspect temp network: {0}".format(
+                ret["comment"] = "Failed to inspect temp network: {}".format(
                     exc.__str__()
                 )
                 return ret
@@ -775,7 +782,7 @@ def present(
                 __salt__["docker.remove_network"](temp_net_name)
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
-                    "Failed to remove temp network '{0}': {1}.".format(
+                    "Failed to remove temp network '{}': {}.".format(
                         temp_net_name, exc.__str__()
                     )
                 )
@@ -799,17 +806,17 @@ def present(
             __salt__["docker.create_network"](
                 name,
                 skip_translate=True,  # No need to translate (already did)
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Failed to create network '{0}': {1}".format(
+            ret["comment"] = "Failed to create network '{}': {}".format(
                 name, exc.__str__()
             )
             return ret
         else:
             action = "recreated" if network is not None else "created"
             ret["changes"][action] = True
-            ret["comment"] = "Network '{0}' {1}".format(
+            ret["comment"] = "Network '{}' {}".format(
                 name,
                 "created" if network is None else "was replaced with updated config",
             )
@@ -834,7 +841,7 @@ def present(
 
     errors = []
     if to_connect:
-        for cid, connect_info in six.iteritems(to_connect):
+        for cid, connect_info in to_connect.items():
             connect_kwargs = {}
             if cid in disconnected_containers:
                 for key_name, arg_name in (
@@ -890,7 +897,7 @@ def present(
     # a list of containers was passed in the "containers" argument, and there
     # were containers connected to the network prior to its replacement which
     # were not part of that list.
-    for cid, c_info in six.iteritems(disconnected_containers):
+    for cid, c_info in disconnected_containers.items():
         if cid not in to_connect:
             ret["changes"].setdefault("disconnected", []).append(c_info["Name"])
 
@@ -926,12 +933,12 @@ def absent(name):
 
     if network is None:
         ret["result"] = True
-        ret["comment"] = "Network '{0}' already absent".format(name)
+        ret["comment"] = f"Network '{name}' already absent"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Network '{0}' will be removed".format(name)
+        ret["comment"] = f"Network '{name}' will be removed"
         return ret
 
     return _remove_network(network)
@@ -956,7 +963,7 @@ def _remove_network(network):
         try:
             __salt__["docker.disconnect_container_from_network"](cid, network["Name"])
         except CommandExecutionError as exc:
-            errors = "Failed to disconnect container '{0}' : {1}".format(cname, exc)
+            errors = f"Failed to disconnect container '{cname}' : {exc}"
         else:
             ret["changes"].setdefault("disconnected", []).append(cname)
 
@@ -967,10 +974,10 @@ def _remove_network(network):
     try:
         __salt__["docker.remove_network"](network["Name"])
     except CommandExecutionError as exc:
-        ret["comment"] = "Failed to remove network: {0}".format(exc)
+        ret["comment"] = f"Failed to remove network: {exc}"
     else:
         ret["changes"]["removed"] = True
         ret["result"] = True
-        ret["comment"] = "Removed network '{0}'".format(network["Name"])
+        ret["comment"] = "Removed network '{}'".format(network["Name"])
 
     return ret

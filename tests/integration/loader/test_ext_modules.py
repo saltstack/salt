@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,14 +8,13 @@
     Test Salt's loader regarding external overrides
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time
 
 import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -25,7 +23,7 @@ class LoaderOverridesTest(ModuleCase):
     def setUp(self):
         self.run_function("saltutil.sync_modules")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `override_test.py` file is present in the _modules directory before

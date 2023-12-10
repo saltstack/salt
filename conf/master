@@ -51,7 +51,7 @@
 # Key cache. Increases master speed for large numbers of accepted
 # keys. Available options: 'sched'. (Updates on a fixed schedule.)
 # Note that enabling this feature means that minions will not be
-# available to target for up to the length of the maintanence loop
+# available to target for up to the length of the maintenance loop
 # which by default is 60s.
 #key_cache: ''
 
@@ -60,22 +60,30 @@
 #
 #cachedir: /var/cache/salt/master
 
-# Directory for custom modules. This directory can contain subdirectories for
-# each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", "engines", "utils", etc.
+# Directory where custom modules sync to. This directory can contain
+# subdirectories for each of Salt's module types such as "runners",
+# "output", "wheel", "modules", "states", "returners", "engines",
+# "utils", etc.
+#
+# Note, any directories or files not found in the `module_dirs`
+# location will be removed from the extension_modules path.
+
 #extension_modules: /var/cache/salt/master/extmods
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
 # "states", "returners", "engines", "utils", etc.
-# Like 'extension_modules' but can take an array of paths
 #module_dirs: []
 
 # Verify and set permissions on configuration directories at startup:
 #verify_env: True
 
-# Set the number of hours to keep old job information in the job cache:
+# Set the number of hours to keep old job information in the job cache.
+# This option is deprecated by the keep_jobs_seconds option.
 #keep_jobs: 24
+
+# Set the number of seconds to keep old job information in the job cache:
+#keep_jobs_seconds: 86400
 
 # The number of seconds to wait when the client is requesting information
 # about running jobs.
@@ -306,7 +314,7 @@
 ##########################################
 # Enable passphrase protection of Master private key.  Although a string value
 # is acceptable; passwords should be stored in an external vaulting mechanism
-# and retrieved via sdb. See https://docs.saltstack.com/en/latest/topics/sdb/.
+# and retrieved via sdb. See https://docs.saltproject.io/en/latest/topics/sdb/.
 # Passphrase protection is off by default but an example of an sdb profile and
 # query is as follows.
 # masterkeyring:
@@ -420,6 +428,11 @@
 # Set to True to enable keeping the calculated user's auth list in the token
 # file. This is disabled by default and the auth list is calculated or requested
 # from the eauth driver each time.
+#
+# Note: `keep_acl_in_token` will be forced to True when using external authentication
+# for REST API (`rest` is present under `external_auth`). This is because the REST API
+# does not store the password, and can therefore not retroactively fetch the ACL, so
+# the ACL must be stored in the token.
 #keep_acl_in_token: False
 
 # Auth subsystem module to use to get authorized access list for a user. By default it's
@@ -635,6 +648,18 @@
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
+# The state_output_profile setting changes whether profile information
+# will be shown for each state run.
+#state_output_profile: True
+
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
+
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -758,13 +783,6 @@
 # files on the Master will not be returned to the Minion.
 #fileserver_ignoresymlinks: True
 #
-# By default, the Salt fileserver recurses fully into all defined environments
-# to attempt to find files. To limit this behavior so that the fileserver only
-# traverses directories with SLS files and special Salt directories like _modules,
-# enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is impacted. Default is False.
-# fileserver_limit_traversal: False
-#
 # The fileserver can fire events off every time the fileserver is updated,
 # these are disabled by default, but can be easily turned on by setting this
 # flag to True
@@ -871,6 +889,10 @@
 # List of renderers which are permitted to be used for pillar decryption.
 #decrypt_pillar_renderers:
 #  - gpg
+
+# If this is `True` and the ciphertext could not be decrypted, then an error is
+# raised.
+#gpg_decrypt_must_succeed: False
 
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from
@@ -997,12 +1019,13 @@
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltproject.io/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
 # pillar is recompiled and stored.
+# The cache TTL does not prevent pillar cache from being refreshed before its TTL expires.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
@@ -1045,7 +1068,7 @@
 
 ######        Reactor Settings        #####
 ###########################################
-# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+# Define a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
 #reactor: []
 
 #Set the TTL for the cache of the reactor configuration.
@@ -1175,7 +1198,7 @@
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 #log_level: warning
 
@@ -1331,3 +1354,6 @@
 ############################################
 # Allow the raw_shell parameter to be used when calling Salt SSH client via API
 #netapi_allow_raw_shell: True
+
+# Set a list of clients to enable in in the API
+#netapi_enable_clients: []

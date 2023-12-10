@@ -63,10 +63,12 @@ def present(name, character_set=None, collate=None, **connection_args):
         if character_set and character_set != existing_charset:
             alter_charset = True
             log.debug(
-                "character set differes from %s : %s", character_set, existing_charset,
+                "character set differes from %s : %s",
+                character_set,
+                existing_charset,
             )
 
-            comment = ("Database character set {} != {} needs to be updated").format(
+            comment = "Database character set {} != {} needs to be updated".format(
                 character_set, existing_charset
             )
             if __opts__.get("test", False):
@@ -79,10 +81,12 @@ def present(name, character_set=None, collate=None, **connection_args):
         if collate and collate != existing_collate:
             alter_collate = True
             log.debug(
-                "collate set differs from %s : %s", collate, existing_collate,
+                "collate set differs from %s : %s",
+                collate,
+                existing_collate,
             )
 
-            comment = ("Database collate {} != {} needs to be updated").format(
+            comment = "Database collate {} != {} needs to be updated".format(
                 collate, existing_collate
             )
             if __opts__.get("test", False):
@@ -132,7 +136,7 @@ def present(name, character_set=None, collate=None, **connection_args):
 
     if __opts__.get("test", False):
         ret["result"] = None
-        ret["comment"] = ("Database {} is not present and needs to be created").format(
+        ret["comment"] = "Database {} is not present and needs to be created".format(
             name
         )
         return ret
@@ -177,9 +181,7 @@ def absent(name, **connection_args):
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = "Unable to remove database {} " "({})".format(
-                    name, err
-                )
+                ret["comment"] = "Unable to remove database {} ({})".format(name, err)
                 ret["result"] = False
                 return ret
     else:
@@ -190,7 +192,5 @@ def absent(name, **connection_args):
             return ret
 
     # fallback
-    ret["comment"] = ("Database {} is not present, so it cannot be removed").format(
-        name
-    )
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
     return ret

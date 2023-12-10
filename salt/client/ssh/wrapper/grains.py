@@ -1,27 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Return/control aspects of the grains data
 """
 
-from __future__ import absolute_import, print_function
 
-import copy
 import math
 
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import SaltException
-from salt.ext import six
-
-try:
-    # Python 3
-    from collections.abc import Mapping
-except ImportError:
-    # We still allow Py2 import because this could be executed in a machine with Py2.
-    from collections import Mapping  # pylint: disable=no-name-in-module
-
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -33,7 +20,7 @@ def _serial_sanitizer(instr):
     """
     length = len(instr)
     index = int(math.floor(length * 0.75))
-    return "{0}{1}".format(instr[:index], "X" * (length - index))
+    return "{}{}".format(instr[:index], "X" * (length - index))
 
 
 _FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
@@ -76,10 +63,12 @@ def get(key, default="", delimiter=DEFAULT_TARGET_DELIM, ordered=True):
         salt '*' grains.get pkg:apache
     """
     if ordered is True:
-        grains = __grains__
+        grains = __grains__.value()
     else:
-        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
-    return salt.utils.data.traverse_dict_and_list(__grains__, key, default, delimiter)
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__.value()))
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__.value(), key, default, delimiter
+    )
 
 
 def has_value(key):
@@ -124,13 +113,13 @@ def items(sanitize=False):
         salt '*' grains.items sanitize=True
     """
     if salt.utils.data.is_true(sanitize):
-        out = dict(__grains__)
-        for key, func in six.iteritems(_SANITIZERS):
+        out = dict(__grains__.value())
+        for key, func in _SANITIZERS.items():
             if key in out:
                 out[key] = func(out[key])
         return out
     else:
-        return __grains__
+        return __grains__.value()
 
 
 def item(*args, **kwargs):
@@ -157,7 +146,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.data.is_true(kwargs.get("sanitize")):
-        for arg, func in six.iteritems(_SANITIZERS):
+        for arg, func in _SANITIZERS.items():
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -192,7 +181,7 @@ def filter_by(lookup_dict, grain="os_family", merge=None, default="default", bas
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-        }), default='Debian' %}
+        }, default='Debian') %}
 
         myapache:
           pkg.installed:
@@ -224,26 +213,47 @@ def filter_by(lookup_dict, grain="os_family", merge=None, default="default", bas
         values relevant to systems matching that grain. For example, a key
         could be the grain for an OS and the value could the name of a package
         on that particular OS.
+
+        .. versionchanged:: 2016.11.0
+
+            The dictionary key could be a globbing pattern. The function will
+            return the corresponding ``lookup_dict`` value where grain value
+            matches the pattern. For example:
+
+            .. code-block:: bash
+
+                # this will render 'got some salt' if Minion ID begins from 'salt'
+                salt '*' grains.filter_by '{salt*: got some salt, default: salt is not here}' id
+
     :param grain: The name of a grain to match with the current system's
         grains. For example, the value of the "os_family" grain for the current
         system could be used to pull values from the ``lookup_dict``
         dictionary.
-    :param merge: A dictionary to merge with the ``lookup_dict`` before doing
-        the lookup. This allows Pillar to override the values in the
+
+        .. versionchanged:: 2016.11.0
+
+            The grain value could be a list. The function will return the
+            ``lookup_dict`` value for a first found item in the list matching
+            one of the ``lookup_dict`` keys.
+
+    :param merge: A dictionary to merge with the results of the grain selection
+        from ``lookup_dict``. This allows Pillar to override the values in the
         ``lookup_dict``. This could be useful, for example, to override the
         values for non-standard package names such as when using a different
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
-    :param default: default lookup_dict's key used if the grain does not exists
-         or if the grain value has no match on lookup_dict.
 
-         .. versionadded:: 2014.1.0
+    :param default: default lookup_dict's key used if the grain does not exists
+        or if the grain value has no match on lookup_dict. If unspecified
+        the value is "default".
+
+        .. versionadded:: 2014.1.0
 
     :param base: A lookup_dict key to use for a base dictionary. The
         grain-selected ``lookup_dict`` is merged over this and then finally
         the ``merge`` dictionary is merged. This allows common values for
         each case to be collected in the base and overridden by the grain
-        selection dictionary and the merge dictionary. Default is None.
+        selection dictionary and the merge dictionary. Default is unset.
 
         .. versionadded:: 2015.8.11,2016.3.2
 
@@ -253,31 +263,16 @@ def filter_by(lookup_dict, grain="os_family", merge=None, default="default", bas
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
         # this one will render {D: {E: I, G: H}, J: K}
-        salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
+        salt '*' grains.filter_by '{A: B, C: {D: {E: F, G: H}}}' 'xxx' '{D: {E: I}, J: K}' 'C'
+        # next one renders {A: {B: G}, D: J}
+        salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
+        # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     """
-    ret = lookup_dict.get(
-        __grains__.get(grain, default), lookup_dict.get(default, None)
+    return salt.utils.data.filter_by(
+        lookup_dict=lookup_dict,
+        lookup=grain,
+        traverse=__grains__.value(),
+        merge=merge,
+        default=default,
+        base=base,
     )
-
-    if base and base in lookup_dict:
-        base_values = lookup_dict[base]
-        if ret is None:
-            ret = base_values
-
-        elif isinstance(base_values, Mapping):
-            if not isinstance(ret, Mapping):
-                raise SaltException(
-                    "filter_by default and look-up values must both be dictionaries."
-                )
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
-
-    if merge:
-        if not isinstance(merge, Mapping):
-            raise SaltException("filter_by merge argument must be a dictionary.")
-        else:
-            if ret is None:
-                ret = merge
-            else:
-                salt.utils.dictupdate.update(ret, merge)
-
-    return ret

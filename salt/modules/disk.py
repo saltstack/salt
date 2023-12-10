@@ -253,7 +253,7 @@ def percent(args=None):
             ret = {}
     if args and args not in ret:
         log.error(
-            "Problem parsing disk usage information: Partition '%s' " "does not exist!",
+            "Problem parsing disk usage information: Partition '%s' does not exist!",
             args,
         )
         ret = {}
@@ -302,7 +302,7 @@ def blkid(device=None, token=None):
         comps = line.split()
         device = comps[0][:-1]
         info = {}
-        device_attributes = re.split(('"*"'), line.partition(" ")[2])
+        device_attributes = re.split('"*"', line.partition(" ")[2])
         for key, value in zip(*[iter(device_attributes)] * 2):
             key = key.strip("=").strip(" ")
             info[key] = value.strip('"')
@@ -380,13 +380,14 @@ def dump(device, args=None):
     Return all contents of dumpe2fs for a specified device
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.dump /dev/sda1
     """
     cmd = (
-        "blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff "
-        "--getmaxsect --getsize --getsize64 --getra --getfra {}".format(device)
+        "blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff"
+        " --getmaxsect --getsize --getsize64 --getra --getfra {}".format(device)
     )
     ret = {}
     opts = [c[2:] for c in cmd.split() if c.startswith("--")]
@@ -413,6 +414,7 @@ def resize2fs(device):
     Resizes the filesystem.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.resize2fs /dev/sda1
@@ -579,6 +581,7 @@ def hdparms(disks, args=None):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.hdparms /dev/sda
@@ -918,7 +921,7 @@ def _iostat_aix(interval, count, disks):
     """
     AIX support to gather and return (averaged) IO stats.
     """
-    log.debug("DGM disk iostat entry")
+    log.debug("AIX disk iostat entry")
 
     if disks is None:
         iostat_cmd = "iostat -dD {} {} ".format(interval, count)
@@ -1012,3 +1015,22 @@ def _iostat_aix(interval, count, disks):
                 iostats[disk][disk_mode] = _iostats_dict(fields, stats)
 
     return iostats
+
+
+def get_fstype_from_path(path):
+    """
+    Return the filesystem type of the underlying device for a specified path.
+
+    .. versionadded:: 3006.0
+
+    path
+        The path for the function to evaluate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' disk.get_fstype_from_path /root
+    """
+    dev = __salt__["mount.get_device_from_path"](path)
+    return fstype(dev)

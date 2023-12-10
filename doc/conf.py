@@ -3,216 +3,18 @@
 Sphinx documentation for Salt
 """
 import os
+import pathlib
 import re
+import shutil
 import sys
+import textwrap
 import time
 import types
 
 from sphinx.directives.other import TocTree
+from sphinx.util import logging
 
-
-class Mock:
-    """
-    Mock out specified imports.
-
-    This allows autodoc to do its thing without having oodles of req'd
-    installed libs. This doesn't work with ``import *`` imports.
-
-    This Mock class can be configured to return a specific values at specific names, if required.
-
-    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-    """
-
-    def __init__(
-        self, mapping=None, *args, **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        Mapping allows autodoc to bypass the Mock object, but actually assign
-        a specific value, expected by a specific attribute returned.
-        """
-        self.__mapping = mapping or {}
-
-    __all__ = []
-
-    def __call__(self, *args, **kwargs):
-        # If mocked function is used as a decorator, expose decorated function.
-        # if args and callable(args[-1]):
-        #     functools.update_wrapper(ret, args[0])
-        return Mock(mapping=self.__mapping)
-
-    def __getattr__(self, name):
-        if name in self.__mapping:
-            data = self.__mapping.get(name)
-        elif name in ("__file__", "__path__"):
-            data = "/dev/null"
-        elif name in ("__mro_entries__", "__qualname__"):
-            raise AttributeError("'Mock' object has no attribute '%s'" % (name))
-        else:
-            data = Mock(mapping=self.__mapping)
-        return data
-
-    def __iter__(self):
-        return self
-
-    @staticmethod
-    def __next__():
-        raise StopIteration
-
-    # For Python 2
-    next = __next__
-
-
-def mock_decorator_with_params(*oargs, **okwargs):  # pylint: disable=unused-argument
-    """
-    Optionally mock a decorator that takes parameters
-
-    E.g.:
-
-    @blah(stuff=True)
-    def things():
-        pass
-    """
-
-    def inner(fn, *iargs, **ikwargs):  # pylint: disable=unused-argument
-        if hasattr(fn, "__call__"):
-            return fn
-        return Mock()
-
-    return inner
-
-
-MOCK_MODULES = [
-    # Python stdlib
-    "user",
-    # salt core
-    "Crypto",
-    "Crypto.Signature",
-    "Crypto.Cipher",
-    "Crypto.Hash",
-    "Crypto.PublicKey",
-    "Crypto.Random",
-    "Crypto.Signature",
-    "Crypto.Signature.PKCS1_v1_5",
-    "distro",
-    "M2Crypto",
-    "msgpack",
-    "yaml",
-    "yaml.constructor",
-    "yaml.nodes",
-    "yaml.parser",
-    "yaml.scanner",
-    "zmq",
-    "zmq.eventloop",
-    "zmq.eventloop.ioloop",
-    # third-party libs for cloud modules
-    "libcloud",
-    "libcloud.compute",
-    "libcloud.compute.base",
-    "libcloud.compute.deployment",
-    "libcloud.compute.providers",
-    "libcloud.compute.types",
-    "libcloud.loadbalancer",
-    "libcloud.loadbalancer.types",
-    "libcloud.loadbalancer.providers",
-    "libcloud.common",
-    "libcloud.common.google",
-    # third-party libs for netapi modules
-    "cherrypy",
-    "cherrypy.lib",
-    "cherrypy.process",
-    "cherrypy.wsgiserver",
-    "cherrypy.wsgiserver.ssl_builtin",
-    "tornado",
-    "tornado.concurrent",
-    "tornado.escape",
-    "tornado.gen",
-    "tornado.httpclient",
-    "tornado.httpserver",
-    "tornado.httputil",
-    "tornado.ioloop",
-    "tornado.iostream",
-    "tornado.netutil",
-    "tornado.simple_httpclient",
-    "tornado.stack_context",
-    "tornado.web",
-    "tornado.websocket",
-    "tornado.locks",
-    "ws4py",
-    "ws4py.server",
-    "ws4py.server.cherrypyserver",
-    "ws4py.websocket",
-    # modules, renderers, states, returners, et al
-    "ClusterShell",
-    "ClusterShell.NodeSet",
-    "MySQLdb",
-    "MySQLdb.cursors",
-    "OpenSSL",
-    "avahi",
-    "boto.regioninfo",
-    "dbus",
-    "django",
-    "dns",
-    "dns.resolver",
-    "dson",
-    "hjson",
-    "jnpr",
-    "jnpr.junos",
-    "jnpr.junos.utils",
-    "jnpr.junos.utils.config",
-    "jnpr.junos.utils.sw",
-    "keyring",
-    "kubernetes",
-    "kubernetes.config",
-    "libvirt",
-    "lxml",
-    "lxml.etree",
-    "msgpack",
-    "nagios_json",
-    "napalm",
-    "netaddr",
-    "netaddr.IPAddress",
-    "netaddr.core",
-    "netaddr.core.AddrFormatError",
-    "ntsecuritycon",
-    "psutil",
-    "pycassa",
-    "pyconnman",
-    "pyiface",
-    "pymongo",
-    "pyroute2",
-    "pyroute2.ipdb",
-    "rabbitmq_server",
-    "redis",
-    "rpm",
-    "rpmUtils",
-    "rpmUtils.arch",
-    "salt.ext.six.moves.winreg",
-    "twisted",
-    "twisted.internet",
-    "twisted.internet.protocol",
-    "twisted.internet.protocol.DatagramProtocol",
-    "win32security",
-    "yum",
-    "zfs",
-]
-
-MOCK_MODULES_MAPPING = {
-    "cherrypy": {"config": mock_decorator_with_params},
-    "ntsecuritycon": {"STANDARD_RIGHTS_REQUIRED": 0, "SYNCHRONIZE": 0,},
-    "psutil": {"total": 0},  # Otherwise it will crash Sphinx
-}
-
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock(mapping=MOCK_MODULES_MAPPING.get(mod_name))
-
-# Define a fake version attribute for the following libs.
-sys.modules["libcloud"].__version__ = "0.0.0"
-sys.modules["msgpack"].version = (1, 0, 0)
-sys.modules["psutil"].version_info = (3, 0, 0)
-sys.modules["pymongo"].version = "0.0.0"
-sys.modules["tornado"].version_info = (0, 0, 0)
-sys.modules["boto.regioninfo"]._load_json_file = {"endpoints": None}
-
+log = logging.getLogger(__name__)
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
@@ -228,7 +30,8 @@ addtl_paths = (
 )
 
 for addtl_path in addtl_paths:
-    sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, addtl_path)))
+    path = os.path.abspath(os.path.join(docs_basepath, addtl_path))
+    sys.path.insert(0, path)
 
 # We're now able to import salt
 import salt.version  # isort:skip
@@ -236,7 +39,18 @@ import salt.version  # isort:skip
 formulas_dir = os.path.join(os.pardir, docs_basepath, "formulas")
 
 # ----- Intersphinx Settings ------------------------------------------------>
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": (
+        "https://docs.python.org/3",
+        (
+            "/usr/share/doc/python{}.{}/html/objects.inv".format(
+                sys.version_info[0], sys.version_info[1]
+            ),
+            "/usr/share/doc/python/html/objects.inv",
+            None,
+        ),
+    )
+}
 # <---- Intersphinx Settings -------------------------------------------------
 
 # -- General Configuration -----------------------------------------------------
@@ -245,31 +59,33 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 on_saltstack = "SALT_ON_SALTSTACK" in os.environ
 
 project = "Salt"
-repo_primary_branch = (
-    "master"  # This is the default branch on GitHub for the Salt project
-)
-version = salt.version.__version__
-latest_release = os.environ.get(
-    "LATEST_RELEASE", "latest_release"
-)  # latest release (2019.2.3)
+# This is the default branch on GitHub for the Salt project
+repo_primary_branch = "master"
+if "LATEST_RELEASE" not in os.environ:
+    salt_version = salt.version.__saltstack_version__
+else:
+    salt_version = salt.version.SaltStackVersion.parse(os.environ["LATEST_RELEASE"])
+
+major_version = str(salt_version.major)
+latest_release = ".".join([str(x) for x in salt_version.info])
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
-)  # latest release from previous branch (2018.3.5)
+)  # latest release from previous branch (3002.5)
 previous_release_dir = os.environ.get(
     "PREVIOUS_RELEASE_DIR", "previous_release_dir"
-)  # path on web server for previous branch (2018.3)
+)  # path on web server for previous branch (3002.5)
 next_release = ""  # next release
 next_release_dir = ""  # path on web server for next release branch
+
+# Sphinx variable
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-version
+version = latest_release
 
 today = ""
 copyright = ""
 if on_saltstack:
-    today = (
-        "Generated on "
-        + time.strftime("%B %d, %Y")
-        + " at "
-        + time.strftime("%X %Z")
-        + "."
+    today = "Generated on {} at {}.".format(
+        time.strftime("%B %d, %Y"), time.strftime("%X %Z")
     )
     copyright = time.strftime("%Y")
 
@@ -290,7 +106,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3003"):
+    if release.startswith("3006"):
+        search_cx = "2e4374de8af93a7b1"  # 3006
+    elif release.startswith("3005"):
+        search_cx = "57b1006b37edd9e79"  # 3005
+    elif release.startswith("3004"):
+        search_cx = "23cd7068705804111"  # 3004
+    elif release.startswith("3003"):
         search_cx = "a70a1a73eef62aecd"  # 3003
     elif release.startswith("3002"):
         search_cx = "5026f4f2af0bdbe2d"  # 3002
@@ -315,6 +137,7 @@ else:  # latest or something else
 needs_sphinx = "1.3"
 
 spelling_lang = "en_US"
+spelling_show_suggestions = True
 language = "en"
 locale_dirs = [
     "_locale",
@@ -330,25 +153,22 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
-    "httpdomain",
-    "youtube",
-    "saltrepo"
+    "sphinxcontrib.httpdomain",
+    "saltrepo",
+    "myst_parser",
+    "sphinxcontrib.spelling",
     #'saltautodoc', # Must be AFTER autodoc
-    #'shorturls',
 ]
-
-try:
-    import sphinxcontrib.spelling  # false positive, pylint: disable=unused-import
-except ImportError:
-    pass
-else:
-    extensions += ["sphinxcontrib.spelling"]
 
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
 autosummary_generate_overwrite = False
+
+# In case building docs throws import errors, please add the top level package name below
+autodoc_mock_imports = []
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
@@ -360,21 +180,21 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
+.. _`salt-slack`: https://via.vmw.com/salt-slack
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
      <p>Python3 AMD64: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 .. |osxdownloadpy3| raw:: html
 
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
+     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(
     release=stripped_release
@@ -384,13 +204,14 @@ rst_prolog = """\
 extlinks = {
     "blob": (
         "https://github.com/saltstack/salt/blob/%s/%%s" % repo_primary_branch,
-        None,
+        "%s",
     ),
-    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue #"),
-    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR #"),
-    "formula_url": ("https://github.com/saltstack-formulas/%s", ""),
+    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue %s"),
+    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR %s"),
+    "formula_url": ("https://github.com/saltstack-formulas/%s", "url %s"),
 }
 
+myst_gfm_only = True
 
 # ----- Localization -------------------------------------------------------->
 locale_dirs = ["locale/"]
@@ -468,7 +289,7 @@ html_show_copyright = True
 ### Latex options
 
 latex_documents = [
-    ("contents", "Salt.tex", "Salt Documentation", "SaltStack, Inc.", "manual"),
+    ("contents", "Salt.tex", "Salt Documentation", "VMware, Inc.", "manual"),
 ]
 
 latex_logo = "_static/salt-logo.png"
@@ -506,19 +327,34 @@ linkcheck_ignore = [
     r"https://salt-cloud.readthedocs.io",
     r"https://salt.readthedocs.io",
     r"http://www.pip-installer.org/",
-    r"http://www.windowsazure.com/",
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",
-    r"http://bootstrap.saltstack.org",
-    r"https://bootstrap.saltstack.com",
+    r"https://bootstrap.saltproject.io",
     r"https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh",
     r"media.readthedocs.org/dash/salt/latest/salt.xml",
     r"https://portal.aws.amazon.com/gp/aws/securityCredentials",
-    r"https://help.github.com/articles/fork-a-repo",
     r"dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml",
+    r"(?i)dns:.*",
+    r"TCP:4506",
+    r"https?://",
+    r"https://cloud.github.com/downloads/saltstack/.*",
+    r"https://INFOBLOX/.*",
+    r"https://SOMESERVERIP:.*",
+    r"https://community.saltstack.com/.*",
+    # GitHub Users
+    r"https://github.com/[^/]$",
+    # GitHub Salt Forks
+    r"https://github.com/[^/]/salt$",
+    r"tag:key=value",
+    r"jdbc:mysql:.*",
+    r"http:post",
 ]
-
+linkcheck_exclude_documents = [
+    r"topics/releases/(2015|2016)\..*\.rst",
+    r"topics/releases/saltapi/0\.8\.0.*",
+]
+linkcheck_timeout = 10
 linkcheck_anchors = False
 
 ### Manpage options
@@ -542,19 +378,18 @@ man_pages = [
     ("ref/cli/salt-ssh", "salt-ssh", "salt-ssh Documentation", authors, 1),
     ("ref/cli/salt-cloud", "salt-cloud", "Salt Cloud Command", authors, 1),
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
-    ("ref/cli/salt-unity", "salt-unity", "salt-unity Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
 
 
 ### epub options
 epub_title = "Salt Documentation"
-epub_author = "SaltStack, Inc."
+epub_author = "VMware, Inc."
 epub_publisher = epub_author
 epub_copyright = copyright
 
 epub_scheme = "URL"
-epub_identifier = "http://saltstack.com/"
+epub_identifier = "http://saltproject.io/"
 
 epub_tocdup = False
 # epub_tocdepth = 3
@@ -585,6 +420,67 @@ class ReleasesTree(TocTree):
         return rst
 
 
+def copy_release_templates_pre(app):
+    app._copied_release_files = []
+    docs_path = pathlib.Path(docs_basepath)
+    release_files_dir = docs_path / "topics" / "releases"
+    release_template_files_dir = release_files_dir / "templates"
+    for fpath in release_template_files_dir.iterdir():
+        dest = release_files_dir / fpath.name.replace(".template", "")
+        if dest.exists():
+            continue
+        log.info(
+            "Copying '%s' -> '%s' just for this build ...",
+            fpath.relative_to(docs_path),
+            dest.relative_to(docs_path),
+        )
+        app._copied_release_files.append(dest)
+        shutil.copyfile(fpath, dest)
+
+
+def copy_release_templates_post(app, exception):
+    docs_path = pathlib.Path(docs_basepath)
+    for fpath in app._copied_release_files:
+        log.info(
+            "The release file '%s' was copied for the build, but its not in "
+            "version control system. Deleting.",
+            fpath.relative_to(docs_path),
+        )
+        fpath.unlink()
+
+
+def extract_module_deprecations(app, what, name, obj, options, lines):
+    """
+    Add a warning to the modules being deprecated into extensions.
+    """
+    # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#event-autodoc-process-docstring
+    if what != "module":
+        # We're only interested in module deprecations
+        return
+
+    try:
+        deprecated_info = obj.__deprecated__
+    except AttributeError:
+        # The module is not deprecated
+        return
+
+    _version, _extension, _url = deprecated_info
+    msg = textwrap.dedent(
+        f"""
+        .. warning::
+
+            This module will be removed from Salt in version {_version} in favor of
+            the `{_extension} Salt Extension <{_url}>`_.
+
+        """
+    )
+    # Modify the docstring lines in-place
+    lines[:] = msg.splitlines() + lines
+
+
 def setup(app):
     app.add_directive("releasestree", ReleasesTree)
     app.connect("autodoc-skip-member", skip_mod_init_member)
+    app.connect("builder-inited", copy_release_templates_pre)
+    app.connect("build-finished", copy_release_templates_post)
+    app.connect("autodoc-process-docstring", extract_module_deprecations)

@@ -1,21 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 An execution module which can manipulate an f5 bigip via iControl REST
     :maturity:      develop
     :platform:      f5_bigip_11.6
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.exceptions
 import salt.utils.json
 
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import third party libs
 try:
     import requests
     import requests.exceptions
@@ -52,7 +43,7 @@ def _build_session(username, password, trans_label=None):
 
     bigip = requests.session()
     bigip.auth = (username, password)
-    bigip.verify = False
+    bigip.verify = True
     bigip.headers.update({"Content-Type": "application/json"})
 
     if trans_label:
@@ -91,8 +82,10 @@ def _load_connection_error(hostname, error):
 
     ret = {
         "code": None,
-        "content": "Error: Unable to connect to the bigip device: {host}\n{error}".format(
-            host=hostname, error=error
+        "content": (
+            "Error: Unable to connect to the bigip device: {host}\n{error}".format(
+                host=hostname, error=error
+            )
         ),
     }
 
@@ -109,7 +102,7 @@ def _loop_payload(params):
     payload = {}
 
     # set the payload
-    for param, value in six.iteritems(params):
+    for param, value in params.items():
         if value is not None:
             payload[param] = value
 
@@ -153,7 +146,7 @@ def _determine_toggles(payload, toggles):
     Figure out what it likes to hear without confusing the user.
     """
 
-    for toggle, definition in six.iteritems(toggles):
+    for toggle, definition in toggles.items():
         # did the user specify anything?
         if definition["value"] is not None:
             # test for yes_no toggle
@@ -253,7 +246,9 @@ def start_transaction(hostname, username, password, label):
         The name / alias for this transaction.  The actual transaction
         id will be stored within a grain called ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.start_transaction bigip admin admin my_transaction
 
@@ -282,8 +277,9 @@ def start_transaction(hostname, username, password, label):
 
         __salt__["grains.setval"]("bigip_f5_trans", {label: trans_id})
 
-        return "Transaction: {trans_id} - has successfully been stored in the grain: bigip_f5_trans:{label}".format(
-            trans_id=trans_id, label=label
+        return (
+            "Transaction: {trans_id} - has successfully been stored in the grain:"
+            " bigip_f5_trans:{label}".format(trans_id=trans_id, label=label)
         )
     else:
         return data
@@ -303,7 +299,9 @@ def list_transaction(hostname, username, password, label):
         the label of this transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_transaction bigip admin admin my_transaction
 
@@ -328,8 +326,8 @@ def list_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -347,7 +345,9 @@ def commit_transaction(hostname, username, password, label):
         the label of this transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.commit_transaction bigip admin admin my_transaction
     """
@@ -375,8 +375,8 @@ def commit_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -394,7 +394,9 @@ def delete_transaction(hostname, username, password, label):
         The label of this transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_transaction bigip admin admin my_transaction
     """
@@ -418,8 +420,8 @@ def delete_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -441,7 +443,9 @@ def list_node(hostname, username, password, name=None, trans_label=None):
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_node bigip admin admin my-node
     """
@@ -484,7 +488,9 @@ def create_node(hostname, username, password, name, address, trans_label=None):
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.create_node bigip admin admin 10.1.1.2
     """
@@ -558,7 +564,9 @@ def modify_node(
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_node bigip admin admin 10.1.1.2 ratio=2 logging=enabled
     """
@@ -611,7 +619,9 @@ def delete_node(hostname, username, password, name, trans_label=None):
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_node bigip admin admin my-node
     """
@@ -647,7 +657,9 @@ def list_pool(hostname, username, password, name=None):
         The name of the pool to list. If no name is specified then all pools
         will be listed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_pool bigip admin admin my-pool
     """
@@ -771,7 +783,9 @@ def create_pool(
     slow_ramp_time
         [integer]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.create_pool bigip admin admin my-pool 10.1.1.1:80,10.1.1.2:80,10.1.1.3:80 monitor=http
     """
@@ -927,7 +941,9 @@ def modify_pool(
     slow_ramp_time
         [integer]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_pool bigip admin admin my-pool 10.1.1.1:80,10.1.1.2:80,10.1.1.3:80 min_active_members=1
     """
@@ -998,7 +1014,9 @@ def delete_pool(hostname, username, password, name):
     name
         The name of the pool which will be deleted
 
-    CLI Example::
+    CLI Example
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_node bigip admin admin my-pool
     """
@@ -1036,7 +1054,9 @@ def replace_pool_members(hostname, username, password, name, members):
         List of comma delimited pool members to replace existing members with.
         i.e. 10.1.1.1:80,10.1.1.2:80,10.1.1.3:80
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.replace_pool_members bigip admin admin my-pool 10.2.2.1:80,10.2.2.2:80,10.2.2.3:80
     """
@@ -1046,7 +1066,7 @@ def replace_pool_members(hostname, username, password, name, members):
     # specify members if provided
     if members is not None:
 
-        if isinstance(members, six.string_types):
+        if isinstance(members, str):
             members = members.split(",")
 
         pool_members = []
@@ -1202,7 +1222,9 @@ def modify_pool_member(
     state
         [ user-up | user-down ]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_pool_member bigip admin admin my-pool 10.2.2.1:80 state=use-down session=user-disabled
     """
@@ -1256,7 +1278,9 @@ def delete_pool_member(hostname, username, password, name, member):
     member
         The name of the pool member to delete
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_pool_member bigip admin admin my-pool 10.2.2.2:80
     """
@@ -1293,7 +1317,9 @@ def list_virtual(hostname, username, password, name=None):
         The name of the virtual to list. If no name is specified than all
         virtuals will be listed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_virtual bigip admin admin my-virtual
     """
@@ -1458,7 +1484,9 @@ def create_virtual(
     vlans
         [none | default | [enabled|disabled]:vlan1,vlan2,vlan3 ... ]
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.create_virtual bigip admin admin my-virtual-3 26.2.2.5:80 \
             pool=my-http-pool-http profiles=http,tcp
@@ -1576,14 +1604,16 @@ def create_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
         elif vlans == "default":
             payload["vlans"] = "default"
-        elif isinstance(vlans, six.string_types) and (
+        elif isinstance(vlans, str) and (
             vlans.startswith("enabled") or vlans.startswith("disabled")
         ):
             try:
@@ -1759,7 +1789,9 @@ def modify_virtual(
     vlans
         [none | default | [enabled|disabled]:vlan1,vlan2,vlan3 ... ]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_virtual bigip admin admin my-virtual source_address_translation=none
         salt '*' bigip.modify_virtual bigip admin admin my-virtual rules=my-rule,my-other-rule
@@ -1861,8 +1893,10 @@ def modify_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
@@ -1914,7 +1948,9 @@ def delete_virtual(hostname, username, password, name):
     name
         The name of the virtual to delete
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_virtual bigip admin admin my-virtual
     """
@@ -1938,7 +1974,11 @@ def delete_virtual(hostname, username, password, name):
 
 
 def list_monitor(
-    hostname, username, password, monitor_type, name=None,
+    hostname,
+    username,
+    password,
+    monitor_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing monitor.  If no name is provided than all
@@ -1955,7 +1995,9 @@ def list_monitor(
     name
         The name of the monitor to list
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_monitor bigip admin admin http my-http-monitor
 
@@ -2002,7 +2044,9 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         Consult F5 BIGIP user guide for specific options for each monitor type.
         Typically, tmsh arg names are used.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.create_monitor bigip admin admin http my-http-monitor timeout=10 interval=5
     """
@@ -2016,7 +2060,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     # there's a ton of different monitors and a ton of options for each type of monitor.
     # this logic relies that the end user knows which options are meant for which monitor types
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         if not key.startswith("__"):
             if key not in ["hostname", "username", "password", "type"]:
                 key = key.replace("_", "-")
@@ -2053,7 +2097,9 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
         Consult F5 BIGIP user guide for specific options for each monitor type.
         Typically, tmsh arg names are used.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_monitor bigip admin admin http my-http-monitor  timout=16 interval=6
 
@@ -2067,7 +2113,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     # there's a ton of different monitors and a ton of options for each type of monitor.
     # this logic relies that the end user knows which options are meant for which monitor types
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         if not key.startswith("__"):
             if key not in ["hostname", "username", "password", "type", "name"]:
                 key = key.replace("_", "-")
@@ -2101,7 +2147,9 @@ def delete_monitor(hostname, username, password, monitor_type, name):
     name
         The name of the monitor to delete
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_monitor bigip admin admin http my-http-monitor
 
@@ -2126,7 +2174,11 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
 
 def list_profile(
-    hostname, username, password, profile_type, name=None,
+    hostname,
+    username,
+    password,
+    profile_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing profile.  If no name is provided than all
@@ -2143,7 +2195,9 @@ def list_profile(
     name
         The name of the profile to list
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.list_profile bigip admin admin http my-http-profile
 
@@ -2214,7 +2268,9 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
             Use ``\,`` or ``\:`` or ``\|`` to escape characters which shouldn't
             be treated as delimiters i.e. ``ciphers='DEFAULT\:!SSLv3'``
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
         salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \
@@ -2231,7 +2287,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
 
     # there's a ton of different profiles and a ton of options for each type of profile.
     # this logic relies that the end user knows which options are meant for which profile types
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         if not key.startswith("__"):
             if key not in ["hostname", "username", "password", "profile_type"]:
                 key = key.replace("_", "-")
@@ -2301,7 +2357,9 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
             Use ``\,`` or ``\:`` or ``\|`` to escape characters which shouldn't
             be treated as delimiters i.e. ``ciphers='DEFAULT\:!SSLv3'``
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
 
@@ -2322,7 +2380,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     # there's a ton of different profiles and a ton of options for each type of profile.
     # this logic relies that the end user knows which options are meant for which profile types
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         if not key.startswith("__"):
             if key not in ["hostname", "username", "password", "profile_type"]:
                 key = key.replace("_", "-")
@@ -2362,7 +2420,9 @@ def delete_profile(hostname, username, password, profile_type, name):
     name
         The name of the profile to delete
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bigip.delete_profile bigip admin admin http my-http-profile
 

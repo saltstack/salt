@@ -5,8 +5,10 @@ and the like, but also useful for basic HTTP testing.
 .. versionadded:: 2015.5.0
 """
 
-import cgi
+import email.message
 import gzip
+import http.client
+import http.cookiejar
 import io
 import logging
 import os
@@ -14,14 +16,18 @@ import pprint
 import re
 import socket
 import ssl
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 import zlib
 
+import tornado.httpclient
+import tornado.httputil
+import tornado.simple_httpclient
+from tornado.httpclient import HTTPClient
+
 import salt.config
-import salt.ext.six.moves.http_client
-import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib.request as urllib_request
-import salt.ext.tornado.httputil
-import salt.ext.tornado.simple_httpclient
 import salt.loader
 import salt.syspaths
 import salt.utils.args
@@ -32,17 +38,10 @@ import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.url
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt._compat import ElementTree as ET
-from salt.ext import six
-from salt.ext.six.moves import StringIO
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse
-from salt.ext.tornado.httpclient import HTTPClient
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -65,14 +64,6 @@ except ImportError:
             HAS_MATCHHOSTNAME = False
     # pylint: enable=no-name-in-module
 
-
-try:
-    import salt.ext.tornado.curl_httpclient
-
-    HAS_CURL_HTTPCLIENT = True
-except ImportError:
-    HAS_CURL_HTTPCLIENT = False
-
 try:
     import requests
 
@@ -88,7 +79,7 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-USERAGENT = "Salt/{}".format(salt.version.__version__)
+USERAGENT = f"Salt/{salt.version.__version__}"
 
 
 def __decompressContent(coding, pgctnt):
@@ -121,6 +112,37 @@ def __decompressContent(coding, pgctnt):
 
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt
+
+
+def _decode_result_text(result_text, backend, decode_body=None, result=None):
+    """
+    Decode only the result_text
+    """
+    if backend == "requests":
+        if not isinstance(result_text, str) and decode_body:
+            result_text = result_text.decode(result.encoding or "utf-8")
+    else:
+        if isinstance(result_text, bytes) and decode_body:
+            result_text = result_text.decode("utf-8")
+    return result_text
+
+
+def _decode_result(result_text, result_headers, backend, decode_body=None, result=None):
+    """
+    Decode the result_text and headers.
+    """
+    if "Content-Type" in result_headers:
+        msg = email.message.EmailMessage()
+        msg.add_header("Content-Type", result_headers["Content-Type"])
+        if msg.get_content_type().startswith("text/"):
+            content_charset = msg.get_content_charset()
+            if content_charset and not isinstance(result_text, str):
+                result_text = result_text.decode(content_charset)
+    result_text = _decode_result_text(
+        result_text, backend, decode_body=decode_body, result=result
+    )
+
+    return result_text, result_headers
 
 
 @jinja_filter("http_query")
@@ -174,7 +196,7 @@ def query(
     formdata_fieldname=None,
     formdata_filename=None,
     decode_body=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Query a resource, and decode the return data
@@ -195,6 +217,37 @@ def query(
 
     if not backend:
         backend = opts.get("backend", "tornado")
+
+    proxy_host = opts.get("proxy_host", None)
+    if proxy_host:
+        proxy_host = salt.utils.stringutils.to_str(proxy_host)
+    proxy_port = opts.get("proxy_port", None)
+    proxy_username = opts.get("proxy_username", None)
+    if proxy_username:
+        proxy_username = salt.utils.stringutils.to_str(proxy_username)
+    proxy_password = opts.get("proxy_password", None)
+    if proxy_password:
+        proxy_password = salt.utils.stringutils.to_str(proxy_password)
+    no_proxy = opts.get("no_proxy", [])
+
+    if urllib.parse.urlparse(url).hostname in no_proxy:
+        proxy_host = None
+        proxy_port = None
+        proxy_username = None
+        proxy_password = None
+
+    http_proxy_url = None
+    if proxy_host and proxy_port:
+        if backend != "requests":
+            log.debug("Switching to request backend due to the use of proxies.")
+            backend = "requests"
+
+        if proxy_username and proxy_password:
+            http_proxy_url = (
+                f"http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
+            )
+        else:
+            http_proxy_url = f"http://{proxy_host}:{proxy_port}"
 
     match = re.match(
         r"https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)",
@@ -217,7 +270,7 @@ def query(
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = salt.ext.tornado.httputil.url_concat(url, params) if params else url
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -299,7 +352,7 @@ def query(
             auth = (username, password)
 
     if agent == USERAGENT:
-        agent = "{} http.query()".format(agent)
+        agent = f"{agent} http.query()"
     header_dict["User-agent"] = agent
 
     if backend == "requests":
@@ -309,6 +362,8 @@ def query(
         log.trace("Request Headers: %s", sess.headers)
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
+        if http_proxy_url is not None:
+            sess.proxies = {"http": http_proxy_url}
     elif backend == "urllib2":
         sess_cookies = None
     else:
@@ -317,11 +372,9 @@ def query(
 
     if cookies is not None:
         if cookie_format == "mozilla":
-            sess_cookies = salt.ext.six.moves.http_cookiejar.MozillaCookieJar(
-                cookie_jar
-            )
+            sess_cookies = http.cookiejar.MozillaCookieJar(cookie_jar)
         else:
-            sess_cookies = salt.ext.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
+            sess_cookies = http.cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess_cookies.save()
         sess_cookies.load()
@@ -352,8 +405,7 @@ def query(
                     req_kwargs["cert"] = cert
             else:
                 log.error(
-                    "The client-side certificate path that"
-                    " was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
@@ -366,15 +418,15 @@ def query(
                 method,
                 url,
                 params=params,
-                files={formdata_fieldname: (formdata_filename, StringIO(data))},
-                **req_kwargs
+                files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
+                **req_kwargs,
             )
         else:
             result = sess.request(method, url, params=params, data=data, **req_kwargs)
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
-            header_callback("HTTP/1.0 {} MESSAGE".format(result.status_code))
+            header_callback(f"HTTP/1.0 {result.status_code} MESSAGE")
             # fake streaming the content
             streaming_callback(result.content)
             return {
@@ -395,20 +447,20 @@ def query(
         result_headers = result.headers
         result_text = result.content
         result_cookies = result.cookies
-        body = result.content
-        if not isinstance(body, str) and decode_body:
-            body = body.decode(result.encoding or "utf-8")
-        ret["body"] = body
+        result_text = _decode_result_text(
+            result_text, backend, decode_body=decode_body, result=result
+        )
+        ret["body"] = result_text
     elif backend == "urllib2":
-        request = urllib_request.Request(url_full, data)
+        request = urllib.request.Request(url_full, data)
         handlers = [
-            urllib_request.HTTPHandler,
-            urllib_request.HTTPCookieProcessor(sess_cookies),
+            urllib.request.HTTPHandler,
+            urllib.request.HTTPCookieProcessor(sess_cookies),
         ]
 
         if url.startswith("https"):
             hostname = request.get_host()
-            handlers[0] = urllib_request.HTTPSHandler(1)
+            handlers[0] = urllib.request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning(
                     "match_hostname() not available, SSL hostname checking "
@@ -459,7 +511,7 @@ def query(
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
                         handlers.append(
-                            urllib_request.HTTPSHandler(context=context)
+                            urllib.request.HTTPSHandler(context=context)
                         )  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
@@ -470,17 +522,15 @@ def query(
                         }
                         if len(cert_chain) > 1:
                             cert_kwargs["key_file"] = cert_chain[1]
-                        handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(
-                            **cert_kwargs
-                        )
+                        handlers[0] = http.client.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib_request.build_opener(*handlers)
+        opener = urllib.request.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         try:
             result = opener.open(request)
-        except URLError as exc:
+        except urllib.error.URLError as exc:
             return {"Error": str(exc)}
         if stream is True or handle is True:
             return {
@@ -491,18 +541,9 @@ def query(
         result_status_code = result.code
         result_headers = dict(result.info())
         result_text = result.read()
-        if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
     else:
         # Tornado
@@ -519,13 +560,12 @@ def query(
                     req_kwargs["client_key"] = cert[1]
             else:
                 log.error(
-                    "The client-side certificate path that "
-                    "was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
         if isinstance(data, dict):
-            data = _urlencode(data)
+            data = urllib.parse.urlencode(data)
 
         if verify_ssl:
             req_kwargs["ca_certs"] = ca_bundle
@@ -542,52 +582,10 @@ def query(
             salt.config.DEFAULT_MINION_OPTS["http_request_timeout"],
         )
 
-        client_argspec = None
-
-        proxy_host = opts.get("proxy_host", None)
-        if proxy_host:
-            # tornado requires a str for proxy_host, cannot be a unicode str in py2
-            proxy_host = salt.utils.stringutils.to_str(proxy_host)
-        proxy_port = opts.get("proxy_port", None)
-        proxy_username = opts.get("proxy_username", None)
-        if proxy_username:
-            # tornado requires a str, cannot be unicode str in py2
-            proxy_username = salt.utils.stringutils.to_str(proxy_username)
-        proxy_password = opts.get("proxy_password", None)
-        if proxy_password:
-            # tornado requires a str, cannot be unicode str in py2
-            proxy_password = salt.utils.stringutils.to_str(proxy_password)
-        no_proxy = opts.get("no_proxy", [])
-
-        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
-        # except we remove the valid ones if a url has a no_proxy hostname in it
-        if urlparse(url_full).hostname in no_proxy:
-            proxy_host = None
-            proxy_port = None
-            proxy_username = None
-            proxy_password = None
-
-        # We want to use curl_http if we have a proxy defined
-        if proxy_host and proxy_port:
-            if HAS_CURL_HTTPCLIENT is False:
-                ret["error"] = (
-                    "proxy_host and proxy_port has been set. This requires pycurl and tornado, "
-                    "but the libraries does not seem to be installed"
-                )
-                log.error(ret["error"])
-                return ret
-
-            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(
-                "tornado.curl_httpclient.CurlAsyncHTTPClient"
-            )
-            client_argspec = salt.utils.args.get_function_argspec(
-                salt.ext.tornado.curl_httpclient.CurlAsyncHTTPClient.initialize
-            )
-        else:
-            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(None)
-            client_argspec = salt.utils.args.get_function_argspec(
-                salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
-            )
+        tornado.httpclient.AsyncHTTPClient.configure(None)
+        client_argspec = salt.utils.args.get_function_argspec(
+            tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
+        )
 
         supports_max_body_size = "max_body_size" in client_argspec.args
 
@@ -604,10 +602,6 @@ def query(
                 "header_callback": header_callback,
                 "connect_timeout": connect_timeout,
                 "request_timeout": timeout,
-                "proxy_host": proxy_host,
-                "proxy_port": proxy_port,
-                "proxy_username": proxy_username,
-                "proxy_password": proxy_password,
                 "raise_error": raise_error,
                 "decompress_response": False,
             }
@@ -625,9 +619,15 @@ def query(
                 else HTTPClient()
             )
             result = download_client.fetch(url_full, **req_kwargs)
-        except salt.ext.tornado.httpclient.HTTPError as exc:
+        except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
+            ret["body"], _ = _decode_result(
+                exc.response.body,
+                exc.response.headers,
+                backend,
+                decode_body=decode_body,
+            )
             return ret
         except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
             if status is True:
@@ -645,18 +645,9 @@ def query(
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers["Set-Cookie"])
@@ -814,7 +805,10 @@ def get_ca_bundle(opts=None):
 
 
 def update_ca_bundle(
-    target=None, source=None, opts=None, merge_files=None,
+    target=None,
+    source=None,
+    opts=None,
+    merge_files=None,
 ):
     """
     Attempt to update the CA bundle file from a URL
@@ -994,9 +988,7 @@ def parse_cookie_header(header):
 
         # cookielib.Cookie() requires an epoch
         if "expires" in cookie:
-            cookie["expires"] = salt.ext.six.moves.http_cookiejar.http2time(
-                cookie["expires"]
-            )
+            cookie["expires"] = http.cookiejar.http2time(cookie["expires"])
 
         # Fill in missing required fields
         for req in reqd:
@@ -1012,9 +1004,7 @@ def parse_cookie_header(header):
         # Remove attribs that don't apply to Cookie objects
         cookie.pop("httponly", None)
         cookie.pop("samesite", None)
-        ret.append(
-            salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie)
-        )
+        ret.append(http.cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
 
@@ -1024,7 +1014,7 @@ def sanitize_url(url, hide_fields):
     Make sure no secret fields show up in logs
     """
     if isinstance(hide_fields, list):
-        url_comps = splitquery(url)
+        url_comps = urllib.parse.splitquery(url)
         log_url = url_comps[0]
         if len(url_comps) > 1:
             log_url += "?"
@@ -1049,11 +1039,31 @@ def _sanitize_url_components(comp_list, field):
     """
     if not comp_list:
         return ""
-    elif comp_list[0].startswith("{}=".format(field)):
-        ret = "{}=XXXXXXXXXX&".format(field)
+    elif comp_list[0].startswith(f"{field}="):
+        ret = f"{field}=XXXXXXXXXX&"
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
     else:
-        ret = "{}&".format(comp_list[0])
+        ret = f"{comp_list[0]}&"
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
+
+
+def session(user=None, password=None, verify_ssl=True, ca_bundle=None, headers=None):
+    """
+    create a requests session
+    """
+    session = requests.session()
+    if user and password:
+        session.auth = (user, password)
+    if ca_bundle and not verify_ssl:
+        log.error("You cannot use both ca_bundle and verify_ssl False together")
+        return False
+    if ca_bundle:
+        opts = {"ca_bundle": ca_bundle}
+        session.verify = get_ca_bundle(opts)
+    if not verify_ssl:
+        session.verify = False
+    if headers:
+        session.headers.update(headers)
+    return session

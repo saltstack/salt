@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt module
 ===========================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3.0
 
 This module currently looks for certbot script in the $PATH as
 - certbot,
@@ -34,14 +33,11 @@ Make sure the appropriate certbot plugin for the wanted DNS provider is
 installed before using this module.
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import SaltInvocationError
 
@@ -76,7 +72,7 @@ def _cert_file(name, cert_type):
     """
     Return expected path of a Let's Encrypt live cert
     """
-    return os.path.join(LE_LIVE, name, "{0}.pem".format(cert_type))
+    return os.path.join(LE_LIVE, name, f"{cert_type}.pem")
 
 
 def _expires(name):
@@ -92,9 +88,9 @@ def _expires(name):
         expiry = __salt__["tls.cert_info"](cert_file).get("not_after", 0)
     # Cobble it together using the openssl binary
     else:
-        openssl_cmd = "openssl x509 -in {0} -noout -enddate".format(cert_file)
+        openssl_cmd = f"openssl x509 -in {cert_file} -noout -enddate"
         # No %e format on my Linux'es here
-        strptime_sux_cmd = 'date --date="$({0} | cut -d= -f2)" +%s'.format(openssl_cmd)
+        strptime_sux_cmd = f'date --date="$({openssl_cmd} | cut -d= -f2)" +%s'
         expiry = float(__salt__["cmd.shell"](strptime_sux_cmd, output_loglevel="quiet"))
         # expiry = datetime.datetime.strptime(expiry.split('=', 1)[-1], '%b %e %H:%M:%S %Y %Z')
     return datetime.datetime.fromtimestamp(expiry)
@@ -176,7 +172,7 @@ def cert(
     :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
         expiry date ('not_after')
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -199,10 +195,10 @@ def cert(
         cmd.append("--renew-by-default")
         renew = True
     if server:
-        cmd.append("--server {0}".format(server))
+        cmd.append(f"--server {server}")
 
     if certname:
-        cmd.append("--cert-name {0}".format(certname))
+        cmd.append(f"--cert-name {certname}")
 
     if test_cert:
         if server:
@@ -215,43 +211,41 @@ def cert(
     if webroot:
         cmd.append("--authenticator webroot")
         if webroot is not True:
-            cmd.append("--webroot-path {0}".format(webroot))
+            cmd.append(f"--webroot-path {webroot}")
     elif dns_plugin in supported_dns_plugins:
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
-            cmd.append(
-                "--dns-cloudflare-credentials {0}".format(dns_plugin_credentials)
-            )
+            cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
         else:
             return {
                 "result": False,
-                "comment": "DNS plugin '{0}' is not supported".format(dns_plugin),
+                "comment": f"DNS plugin '{dns_plugin}' is not supported",
             }
     else:
         cmd.append("--authenticator standalone")
 
     if email:
-        cmd.append("--email {0}".format(email))
+        cmd.append(f"--email {email}")
 
     if keysize:
-        cmd.append("--rsa-key-size {0}".format(keysize))
+        cmd.append(f"--rsa-key-size {keysize}")
 
-    cmd.append("--domains {0}".format(name))
+    cmd.append(f"--domains {name}")
     if aliases is not None:
         for dns in aliases:
-            cmd.append("--domains {0}".format(dns))
+            cmd.append(f"--domains {dns}")
 
     if preferred_challenges:
-        cmd.append("--preferred-challenges {}".format(preferred_challenges))
+        cmd.append(f"--preferred-challenges {preferred_challenges}")
 
     if tls_sni_01_port:
-        cmd.append("--tls-sni-01-port {}".format(tls_sni_01_port))
+        cmd.append(f"--tls-sni-01-port {tls_sni_01_port}")
     if tls_sni_01_address:
-        cmd.append("--tls-sni-01-address {}".format(tls_sni_01_address))
+        cmd.append(f"--tls-sni-01-address {tls_sni_01_address}")
     if http_01_port:
-        cmd.append("--http-01-port {}".format(http_01_port))
+        cmd.append(f"--http-01-port {http_01_port}")
     if http_01_address:
-        cmd.append("--http-01-address {}".format(http_01_address))
+        cmd.append(f"--http-01-address {http_01_address}")
 
     res = __salt__["cmd.run_all"](" ".join(cmd))
 
@@ -262,28 +256,26 @@ def cert(
             if res["retcode"] != 0:
                 return {
                     "result": False,
-                    "comment": (
-                        "Certificate {0} renewal failed with:\n{1}"
-                        "".format(name, res["stderr"])
+                    "comment": "Certificate {} renewal failed with:\n{}".format(
+                        name, res["stderr"]
                     ),
                 }
         else:
             return {
                 "result": False,
-                "comment": (
-                    "Certificate {0} renewal failed with:\n{1}"
-                    "".format(name, res["stderr"])
+                "comment": "Certificate {} renewal failed with:\n{}".format(
+                    name, res["stderr"]
                 ),
             }
 
     if "no action taken" in res["stdout"]:
-        comment = "Certificate {0} unchanged".format(cert_file)
+        comment = f"Certificate {cert_file} unchanged"
         result = None
     elif renew:
-        comment = "Certificate {0} renewed".format(certname)
+        comment = f"Certificate {certname} renewed"
         result = True
     else:
-        comment = "Certificate {0} obtained".format(certname)
+        comment = f"Certificate {certname} obtained"
         result = True
 
     ret = {
@@ -303,7 +295,7 @@ def certs():
     """
     Return a list of active certificates
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -327,7 +319,7 @@ def info(name):
         the certificate information, the information will be retrieved as one
         big text block under the key ``text`` using the openssl cli.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -347,7 +339,7 @@ def info(name):
         cert_info = __salt__["x509.read_certificate"](cert_file)
     else:
         # Cobble it together using the openssl binary
-        openssl_cmd = "openssl x509 -in {0} -noout -text".format(cert_file)
+        openssl_cmd = f"openssl x509 -in {cert_file} -noout -text"
         cert_info = {"text": __salt__["cmd.run"](openssl_cmd, output_loglevel="quiet")}
     return cert_info
 
@@ -360,7 +352,7 @@ def expires(name):
     :rtype: str
     :return: Expiry date in ISO format.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

@@ -60,4 +60,3 @@ test_crt:
     - require:
         - x509: {{ tmp_dir  }}/pki/ca.crt
         - x509: {{ tmp_dir  }}/pki/test.csr
-

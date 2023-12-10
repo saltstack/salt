@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
-
-# Import python libs
 import re
 
-# Import salt libs
 import salt.utils.args
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -29,8 +21,8 @@ __opts__ = {
 
 def _get_rvm_location(runas=None):
     if runas:
-        runas_home = os.path.expanduser("~{0}".format(runas))
-        rvmpath = "{0}/.rvm/bin/rvm".format(runas_home)
+        runas_home = os.path.expanduser("~{}".format(runas))
+        rvmpath = "{}/.rvm/bin/rvm".format(runas_home)
         if os.path.exists(rvmpath):
             return [rvmpath]
     return ["/usr/local/rvm/bin/rvm"]
@@ -460,5 +452,5 @@ def do(ruby, command, runas=None, cwd=None, env=None):  # pylint: disable=C0103
     try:
         command = salt.utils.args.shlex_split(command)
     except AttributeError:
-        command = salt.utils.args.shlex_split(six.text_type(command))
+        command = salt.utils.args.shlex_split(str(command))
     return _rvm_do(ruby, command, runas=runas, cwd=cwd, env=env)

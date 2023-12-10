@@ -1,0 +1,2 @@
+pkg/common/salt-master.service /lib/systemd/system
+pkg/common/salt.ufw /etc/ufw/applications.d

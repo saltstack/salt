@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.pkg
 from salt.utils.pkg import rpm
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -65,10 +61,9 @@ class PkgRPMTestCase(TestCase):
         with patch("salt.utils.pkg.rpm.subprocess", subprocess_mock):
             assert rpm.get_osarch() == "Z80"
         assert subprocess_mock.Popen.call_count == 2  # One within the mock
-        assert subprocess_mock.Popen.call_args[1]["close_fds"]
-        assert subprocess_mock.Popen.call_args[1]["shell"]
-        assert len(subprocess_mock.Popen.call_args_list) == 2
-        assert subprocess_mock.Popen.call_args[0][0] == 'rpm --eval "%{_host_cpu}"'
+        subprocess_mock.Popen.assert_called_with(
+            ["rpm", "--eval", "%{_host_cpu}"], close_fds=True, stderr=ANY, stdout=ANY
+        )
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
     @patch("salt.utils.pkg.rpm.subprocess", MagicMock(return_value=False))

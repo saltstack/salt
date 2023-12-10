@@ -1,30 +1,27 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Reg State
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import pytest
-import salt.utils.platform
+from saltfactories.utils import random_string
+
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 UNICODE_VALUE_NAME = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
-    "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
+    "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
-FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
+FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
-@destructiveTest
-@skipIf(not salt.utils.platform.is_windows(), "Windows Specific Test")
+@pytest.mark.destructive_test
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class RegTest(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -36,7 +33,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY, use_32bit_registry=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz(self):
         """
         Testing reg.present with REG_SZ
@@ -46,7 +43,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname="test_reg_sz",
             vdata="fake string data",
         )
@@ -55,7 +52,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -76,7 +73,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_value(self):
         """
         Testing reg.present with REG_SZ and a unicode value
@@ -86,7 +83,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname="test_reg_sz",
             vdata=UNICODE_VALUE,
         )
@@ -95,7 +92,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -116,7 +113,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_default_value(self):
         """
         Testing reg.present with REG_SZ and a unicode default value
@@ -125,14 +122,14 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # default type is 'REG_SZ'
         # Does the state return the correct data
         ret = self.run_state(
-            "reg.present", name="HKLM\\{0}".format(FAKE_KEY), vdata=UNICODE_VALUE
+            "reg.present", name="HKLM\\{}".format(FAKE_KEY), vdata=UNICODE_VALUE
         )
         expected = {
             "reg": {
                 "Added": {
                     "Entry": "(Default)",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -154,7 +151,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_value_name(self):
         """
         Testing reg.present with REG_SZ and a unicode value name
@@ -164,7 +161,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname=UNICODE_VALUE_NAME,
             vdata="fake string data",
         )
@@ -173,7 +170,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": UNICODE_VALUE_NAME,
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -195,7 +192,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_binary(self):
         """
         Testing reg.present with REG_BINARY
@@ -206,7 +203,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname="test_reg_binary",
             vtype="REG_BINARY",
             vdata=test_data,
@@ -216,7 +213,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_binary",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": test_data,
@@ -237,7 +234,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_multi_sz(self):
         """
         Testing reg.present with REG_MULTI_SZ
@@ -247,7 +244,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname="test_reg_multi_sz",
             vtype="REG_MULTI_SZ",
             vdata=["item1", "item2"],
@@ -257,7 +254,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_multi_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": ["item1", "item2"],
@@ -278,7 +275,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_32_bit(self):
         """
         Testing reg.present with REG_SZ using 32bit registry
@@ -288,7 +285,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{0}".format(FAKE_KEY),
+            name="HKLM\\{}".format(FAKE_KEY),
             vname="test_reg_sz",
             vdata="fake string data",
             use_32bit_registry=True,
@@ -299,7 +296,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{0}".format(FAKE_KEY),
+                    "Key": "HKLM\\{}".format(FAKE_KEY),
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",

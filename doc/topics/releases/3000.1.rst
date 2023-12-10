@@ -13,7 +13,9 @@ Statistics
 - Total Issue References: **15**
 - Total PR References: **54**
 
-- Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_, `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
+- Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_,
+  `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_,
+  `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
 
 Changelog for v3000..v3000.1
 ============================
@@ -138,7 +140,7 @@ Changelog for v3000..v3000.1
 
   * 6c83beeb9e Fix win deps
 
-* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel 
+* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel
   @ *2020-03-17 17:01:33 UTC*
 
   * e72a8d2cbc Merge pull request `#56378`_ from Ch3LL/wheel_version

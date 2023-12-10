@@ -5,32 +5,24 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
-
-# Import python libs
-
 import functools
+import io
 import logging
 import os
 import os.path
 import re
 import time
 
-# Import third party libs
 import jinja2
 import jinja2.exceptions
 
-# Import salt libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-from salt.ext.six.moves import (  # pylint: disable=import-error,no-name-in-module
-    StringIO,
-)
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
@@ -686,9 +678,14 @@ def _parse_interfaces(interface_files=None):
                         adapters["source"]["data"]["sources"] = []
                     adapters["source"]["data"]["sources"].append(line.split()[1])
 
+    adapters = _filter_malformed_interfaces(adapters=adapters)
+    return adapters
+
+
+def _filter_malformed_interfaces(*, adapters):
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
-    for iface_name in adapters:
+    for iface_name in list(adapters):
         if iface_name == "source":
             continue
         if "data" not in adapters[iface_name]:
@@ -704,7 +701,6 @@ def _parse_interfaces(interface_files=None):
                             adapters[iface_name]["data"][inet][opt].keys()
                         )
                         adapters[iface_name]["data"][inet][opt + "_keys"] = opt_keys
-
     return adapters
 
 
@@ -842,7 +838,7 @@ def _parse_settings_bond(opts, iface):
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts["mode"] in ["802.3ad", "4"]:
         log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts["mode"] in ["balance-tlb", "5"]:
@@ -1492,9 +1488,9 @@ def _write_file_network(data, filename, create=False):
     argument is True
     """
     if not os.path.exists(filename) and not create:
-        msg = "{0} cannot be written. {0} does not exist\
-                and create is set to False"
-        msg = msg.format(filename)
+        msg = "{0} cannot be written. {0} does not exist and create is setto False".format(
+            filename
+        )
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, "w") as fout:
@@ -1505,7 +1501,7 @@ def _read_temp(data):
     """
     Return what would be written to disk
     """
-    tout = StringIO()
+    tout = io.StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.readlines()
@@ -1654,8 +1650,8 @@ def build_bond(iface, **settings):
     # Load kernel module
     __salt__["kmod.load"]("bonding")
 
-    # install ifenslave-2.6
-    __salt__["pkg.install"]("ifenslave-2.6")
+    # install ifenslave
+    __salt__["pkg.install"]("ifenslave")
 
     return _read_file(path)
 

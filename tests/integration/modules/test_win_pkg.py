@@ -2,15 +2,14 @@ import os
 import textwrap
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows test only")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class WinPKGTest(ModuleCase):
     """
@@ -32,8 +31,8 @@ class WinPKGTest(ModuleCase):
         if os.path.isfile(self.curl_sls_path):
             os.remove(self.curl_sls_path)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_adding_removing_pkg_sls(self):
         """
         Test add and removing a new pkg sls

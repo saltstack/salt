@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to a cassandra server
 
@@ -117,23 +116,17 @@ needs.  SaltStack has seen situations where these timeouts can resolve
 some stacktraces that appear to come from the Datastax Python driver.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import time
 import uuid
 
 import salt.exceptions
-
-# Import salt libs
 import salt.returners
 import salt.utils.jid
 import salt.utils.json
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
-# Import third party libs
 try:
     # The following imports are not directly required by this module. Rather,
     # they are required by the modules/cassandra_cql execution module, on which
@@ -151,10 +144,9 @@ try:
     # installed, both the modules/cassandra_cql execution module and this returner module
     # will not be loaded by Salt's loader system.
     # pylint: disable=unused-import,no-name-in-module
-    from cassandra.cluster import Cluster
-    from cassandra.cluster import NoHostAvailable
-    from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.auth import PlainTextAuthProvider
+    from cassandra.cluster import Cluster, NoHostAvailable
+    from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.query import dict_factory
 
     # pylint: enable=unused-import,no-name-in-module
@@ -195,9 +187,9 @@ def returner(ret):
                ) VALUES (?, ?, ?, ?, ?, ?, ?)"""
 
     statement_arguments = [
-        "{0}".format(ret["jid"]),
-        "{0}".format(ret["id"]),
-        "{0}".format(ret["fun"]),
+        "{}".format(ret["jid"]),
+        "{}".format(ret["id"]),
+        "{}".format(ret["fun"]),
         int(time.time() * 1000),
         salt.utils.json.dumps(ret).replace("'", "''"),
         salt.utils.json.dumps(ret["return"]).replace("'", "''"),
@@ -222,7 +214,7 @@ def returner(ret):
                  minion_id, last_fun
                ) VALUES (?, ?)"""
 
-    statement_arguments = ["{0}".format(ret["id"]), "{0}".format(ret["fun"])]
+    statement_arguments = ["{}".format(ret["id"]), "{}".format(ret["fun"])]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
@@ -234,7 +226,7 @@ def returner(ret):
         raise
     except Exception as e:  # pylint: disable=broad-except
         log.critical(
-            "Unexpected error while inserting minion ID into the minions " "table: %s",
+            "Unexpected error while inserting minion ID into the minions table: %s",
             e,
         )
         raise
@@ -261,7 +253,7 @@ def event_return(events):
                      ?, ?, ?, ?, ?)
                  """
         statement_arguments = [
-            six.text_type(uuid.uuid1()),
+            str(uuid.uuid1()),
             int(time.time() * 1000),
             salt.utils.json.dumps(data).replace("'", "''"),
             __opts__["id"],

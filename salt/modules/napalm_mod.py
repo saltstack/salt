@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM helpers
 ==============
@@ -7,17 +6,11 @@ Helpers for the NAPALM modules.
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import logging
 
-# import NAPALM utils
 import salt.utils.napalm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt modules
-from salt.ext import six
 from salt.utils.decorators import depends
 from salt.utils.napalm import proxy_napalm_wrap
 
@@ -108,7 +101,7 @@ def _get_netmiko_args(optional_args):
     check_self = netmiko_args.pop(0)
     if check_self != "self":
         raise ValueError("Error processing Netmiko arguments")
-    netmiko_argument_map = dict(six.moves.zip(netmiko_args, netmiko_defaults))
+    netmiko_argument_map = dict(zip(netmiko_args, netmiko_defaults))
     # Netmiko arguments that are integrated into NAPALM already
     netmiko_filter = ["ip", "host", "username", "password", "device_type", "timeout"]
     # Filter out all of the arguments that are integrated into NAPALM
@@ -116,7 +109,7 @@ def _get_netmiko_args(optional_args):
         netmiko_argument_map.pop(k)
     # Check if any of these arguments were passed in as NAPALM optional_args
     netmiko_optional_args = {}
-    for k, v in six.iteritems(netmiko_argument_map):
+    for k, v in netmiko_argument_map.items():
         try:
             netmiko_optional_args[k] = optional_args[k]
         except KeyError:
@@ -159,10 +152,64 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}
+
+
+@proxy_napalm_wrap
+def _netmiko_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the network device, over Netmiko, passing
+    the authentication details from the existing NAPALM connection.
+
+    .. warning::
+
+        This function is not suitable for CLI usage, more rather to be used
+        in various Salt modules.
+
+    USAGE Example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.netmiko_conn']()
+        res = conn.send_command('show interfaces')
+        conn.disconnect()
+    """
+    netmiko_kwargs = netmiko_args()
+    kwargs.update(netmiko_kwargs)
+    return __salt__["netmiko.get_connection"](**kwargs)
+
+
+@proxy_napalm_wrap
+def _pyeapi_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the Arista switch, over ``pyeapi``,
+    passing the authentication details from the existing NAPALM connection.
+
+    .. warning::
+        This function is not suitable for CLI usage, more rather to be used in
+        various Salt modules, to reusing the established connection, as in
+        opposite to opening a new connection for each task.
+
+    Usage example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.pyeapi_conn']()
+        res1 = conn.run_commands('show version')
+        res2 = conn.get_config(as_string=True)
+    """
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -267,7 +314,7 @@ def call(method, *args, **kwargs):
         salt '*' napalm.call get_bgp_config group='my-group'
     """
     clean_kwargs = {}
-    for karg, warg in six.iteritems(kwargs):
+    for karg, warg in kwargs.items():
         # remove the __pub args
         if not karg.startswith("__pub_"):
             clean_kwargs[karg] = warg
@@ -275,7 +322,7 @@ def call(method, *args, **kwargs):
         napalm_device,  # pylint: disable=undefined-variable
         method,
         *args,
-        **clean_kwargs
+        **clean_kwargs,
     )
 
 
@@ -514,7 +561,7 @@ def netmiko_fun(fun, *args, **kwargs):
         salt '*' napalm.netmiko_fun send_command 'show version'
     """
     if "netmiko." not in fun:
-        fun = "netmiko.{fun}".format(fun=fun)
+        fun = f"netmiko.{fun}"
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__[fun](*args, **kwargs)
@@ -563,7 +610,6 @@ def netmiko_multi_call(*methods, **kwargs):
         - ``name``: the name of the Netmiko function to invoke.
         - ``args``: list of arguments to send to the ``name`` method.
         - ``kwargs``: key-value arguments to send to the ``name`` method.
-
 
     CLI Example:
 
@@ -619,7 +665,7 @@ def netmiko_commands(*commands, **kwargs):
 
         salt '*' napalm.netmiko_commands 'show version' 'show interfaces'
     """
-    conn = netmiko_conn(**kwargs)
+    conn = _netmiko_conn(**kwargs)
     ret = []
     for cmd in commands:
         ret.append(conn.send_command(cmd))
@@ -694,32 +740,6 @@ def netmiko_config(*config_commands, **kwargs):
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
-
-
-@proxy_napalm_wrap
-def netmiko_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the network device, over Netmiko, passing
-    the authentication details from the existing NAPALM connection.
-
-    .. warning::
-
-        This function is not suitable for CLI usage, more rather to be used
-        in various Salt modules.
-
-    USAGE Example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.netmiko_conn']()
-        res = conn.send_command('show interfaces')
-        conn.disconnect()
-    """
-    netmiko_kwargs = netmiko_args()
-    kwargs.update(netmiko_kwargs)
-    return __salt__["netmiko.get_connection"](**kwargs)
 
 
 @proxy_napalm_wrap
@@ -988,14 +1008,14 @@ def junos_call(fun, *args, **kwargs):
     if not prep["result"]:
         return prep
     if "junos." not in fun:
-        mod_fun = "junos.{}".format(fun)
+        mod_fun = f"junos.{fun}"
     else:
         mod_fun = fun
     if mod_fun not in __salt__:
         return {
             "out": None,
             "result": False,
-            "comment": "{} is not a valid function".format(fun),
+            "comment": f"{fun} is not a valid function",
         }
     return __salt__[mod_fun](*args, **kwargs)
 
@@ -1020,8 +1040,17 @@ def pyeapi_nxos_api_args(**prev_kwargs):
     kwargs["username"] = napalm_opts["USERNAME"]
     kwargs["password"] = napalm_opts["PASSWORD"]
     kwargs["timeout"] = napalm_opts["TIMEOUT"]
-    kwargs["transport"] = optional_args.get("transport")
-    kwargs["port"] = optional_args.get("port")
+
+    if "transport" in optional_args and optional_args["transport"]:
+        kwargs["transport"] = optional_args["transport"]
+    else:
+        kwargs["transport"] = "https"
+
+    if "port" in optional_args and optional_args["port"]:
+        kwargs["port"] = optional_args["port"]
+    else:
+        kwargs["port"] = 80 if kwargs["transport"] == "http" else 443
+
     kwargs["verify"] = optional_args.get("verify")
     prev_kwargs.update(kwargs)
     return prev_kwargs
@@ -1075,34 +1104,9 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
-
-
-@proxy_napalm_wrap
-def pyeapi_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the Arista switch, over ``pyeapi``,
-    passing the authentication details from the existing NAPALM connection.
-
-    .. warning::
-        This function is not suitable for CLI usage, more rather to be used in
-        various Salt modules, to reusing the established connection, as in
-        opposite to opening a new connection for each task.
-
-    Usage example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.pyeapi_conn']()
-        res1 = conn.run_commands('show version')
-        res2 = conn.get_config(as_string=True)
-    """
-    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
-    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
 
 
 @proxy_napalm_wrap
@@ -1113,7 +1117,7 @@ def pyeapi_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1162,7 +1166,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,
@@ -1171,7 +1175,7 @@ def pyeapi_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **pyeapi_kwargs
+        **pyeapi_kwargs,
     )
 
 
@@ -1207,7 +1211,7 @@ def nxos_api_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
      .. versionadded:: 2019.2.0
@@ -1263,7 +1267,7 @@ def nxos_api_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **nxos_api_kwargs
+        **nxos_api_kwargs,
     )
 
 
@@ -1775,7 +1779,11 @@ def config_diff_text(
 
 @depends(HAS_SCP)
 def scp_get(
-    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs
+    remote_path,
+    local_path="",
+    recursive=False,
+    preserve_times=False,
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1851,7 +1859,7 @@ def scp_get(
         local_path=local_path,
         recursive=recursive,
         preserve_times=preserve_times,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1862,7 +1870,7 @@ def scp_put(
     recursive=False,
     preserve_times=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1957,5 +1965,5 @@ def scp_put(
         recursive=recursive,
         preserve_times=preserve_times,
         saltenv=saltenv,
-        **kwargs
+        **kwargs,
     )

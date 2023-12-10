@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage IAM objects
 ==================
@@ -131,76 +130,32 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
+import xml.etree.ElementTree as ET
 
-# Import Salt Libs
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import 3rd party libs
-try:
-    from salt._compat import ElementTree as ET
-
-    HAS_ELEMENT_TREE = True
-except ImportError:
-    HAS_ELEMENT_TREE = False
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = "boto_iam"
 
 
-if six.PY2:
-
-    def _byteify(thing):
-        # Note that we intentionally don't treat odicts here - they won't
-        # compare equal in many circumstances where AWS treats them the same...
-        if isinstance(thing, dict):
-            return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
-        elif isinstance(thing, list):
-            return [_byteify(m) for m in thing]
-        elif isinstance(thing, six.text_type):  # pylint: disable=W1699
-            return thing.encode("utf-8")
-        else:
-            return thing
-
-
-else:  # six.PY3
-
-    def _byteify(text):
-        return text
-
-
 def __virtual__():
     """
     Only load if elementtree xml library and boto are available.
     """
-    if not HAS_ELEMENT_TREE:
-        return (
-            False,
-            "Cannot load {0} state: ElementTree library unavailable".format(
-                __virtualname__
-            ),
-        )
-
     if "boto_iam.get_user" in __salt__:
         return True
     else:
         return (
             False,
-            "Cannot load {0} state: boto_iam module unavailable".format(
-                __virtualname__
-            ),
+            "Cannot load {} state: boto_iam module unavailable".format(__virtualname__),
         )
 
 
@@ -252,7 +207,7 @@ def user_absent(
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if not __salt__["boto_iam.get_user"](name, region, key, keyid, profile):
         ret["result"] = True
-        ret["comment"] = "IAM User {0} does not exist.".format(name)
+        ret["comment"] = "IAM User {} does not exist.".format(name)
         return ret
     # delete the user's access keys
     if delete_keys:
@@ -269,7 +224,7 @@ def user_absent(
                     ret["comment"] = " ".join(
                         [
                             ret["comment"],
-                            "Key {0} is set to be deleted.".format(k["access_key_id"]),
+                            "Key {} is set to be deleted.".format(k["access_key_id"]),
                         ]
                     )
                     ret["result"] = None
@@ -280,7 +235,7 @@ def user_absent(
                         ret["comment"] = " ".join(
                             [
                                 ret["comment"],
-                                "Key {0} has been deleted.".format(k["access_key_id"]),
+                                "Key {} has been deleted.".format(k["access_key_id"]),
                             ]
                         )
                         ret["changes"][k["access_key_id"]] = "deleted"
@@ -296,7 +251,7 @@ def user_absent(
                     ret["comment"] = " ".join(
                         [
                             ret["comment"],
-                            "IAM user {0} MFA device {1} is set to be deactivated.".format(
+                            "IAM user {} MFA device {} is set to be deactivated.".format(
                                 name, serial
                             ),
                         ]
@@ -315,7 +270,7 @@ def user_absent(
                         ret["comment"] = " ".join(
                             [
                                 ret["comment"],
-                                "IAM user {0} MFA device {1} is deactivated.".format(
+                                "IAM user {} MFA device {} is deactivated.".format(
                                     name, serial
                                 ),
                             ]
@@ -324,7 +279,7 @@ def user_absent(
                     ret["comment"] = " ".join(
                         [
                             ret["comment"],
-                            "Virtual MFA device {0} is set to be deleted.".format(
+                            "Virtual MFA device {} is set to be deleted.".format(
                                 serial
                             ),
                         ]
@@ -342,7 +297,7 @@ def user_absent(
                         ret["comment"] = " ".join(
                             [
                                 ret["comment"],
-                                "Virtual MFA device {0} is deleted.".format(serial),
+                                "Virtual MFA device {} is deleted.".format(serial),
                             ]
                         )
     # delete the user's login profile
@@ -351,7 +306,7 @@ def user_absent(
             ret["comment"] = " ".join(
                 [
                     ret["comment"],
-                    "IAM user {0} login profile is set to be deleted.".format(name),
+                    "IAM user {} login profile is set to be deleted.".format(name),
                 ]
             )
             ret["result"] = None
@@ -363,14 +318,14 @@ def user_absent(
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "IAM user {0} login profile is deleted.".format(name),
+                        "IAM user {} login profile is deleted.".format(name),
                     ]
                 )
     if __opts__["test"]:
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "IAM user {0} managed policies are set to be detached.".format(name),
+                "IAM user {} managed policies are set to be detached.".format(name),
             ]
         )
         ret["result"] = None
@@ -385,7 +340,7 @@ def user_absent(
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "IAM user {0} inline policies are set to be deleted.".format(name),
+                "IAM user {} inline policies are set to be deleted.".format(name),
             ]
         )
         ret["result"] = None
@@ -399,19 +354,19 @@ def user_absent(
     # finally, actually delete the user
     if __opts__["test"]:
         ret["comment"] = " ".join(
-            [ret["comment"], "IAM user {0} is set to be deleted.".format(name)]
+            [ret["comment"], "IAM user {} is set to be deleted.".format(name)]
         )
         ret["result"] = None
         return ret
     deleted = __salt__["boto_iam.delete_user"](name, region, key, keyid, profile)
     if deleted is True:
         ret["comment"] = " ".join(
-            [ret["comment"], "IAM user {0} is deleted.".format(name)]
+            [ret["comment"], "IAM user {} is deleted.".format(name)]
         )
         ret["result"] = True
         ret["changes"]["deleted"] = name
         return ret
-    ret["comment"] = "IAM user {0} could not be deleted.\n {1}".format(name, deleted)
+    ret["comment"] = "IAM user {} could not be deleted.\n {}".format(name, deleted)
     ret["result"] = False
     return ret
 
@@ -463,23 +418,23 @@ def keys_present(
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if not __salt__["boto_iam.get_user"](name, region, key, keyid, profile):
         ret["result"] = False
-        ret["comment"] = "IAM User {0} does not exist.".format(name)
+        ret["comment"] = "IAM User {} does not exist.".format(name)
         return ret
     if not isinstance(number, int):
         ret["comment"] = "The number of keys must be an integer."
         ret["result"] = False
         return ret
     if not os.path.isdir(save_dir):
-        ret["comment"] = "The directory {0} does not exist.".format(save_dir)
+        ret["comment"] = "The directory {} does not exist.".format(save_dir)
         ret["result"] = False
         return ret
     keys = __salt__["boto_iam.get_all_access_keys"](
         user_name=name, region=region, key=key, keyid=keyid, profile=profile
     )
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         log.debug("keys are : false %s", keys)
         error, message = _get_error(keys)
-        ret["comment"] = "Could not get keys.\n{0}\n{1}".format(error, message)
+        ret["comment"] = "Could not get keys.\n{}\n{}".format(error, message)
         ret["result"] = False
         return ret
     keys = keys["list_access_keys_response"]["list_access_keys_result"][
@@ -487,11 +442,11 @@ def keys_present(
     ]
     log.debug("Keys are : %s.", keys)
     if len(keys) >= number:
-        ret["comment"] = "The number of keys exist for user {0}".format(name)
+        ret["comment"] = "The number of keys exist for user {}".format(name)
         ret["result"] = True
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Access key is set to be created for {0}.".format(name)
+        ret["comment"] = "Access key is set to be created for {}.".format(name)
         ret["result"] = None
         return ret
     new_keys = {}
@@ -499,23 +454,23 @@ def keys_present(
         created = __salt__["boto_iam.create_access_key"](
             name, region, key, keyid, profile
         )
-        if isinstance(created, six.string_types):
+        if isinstance(created, str):
             error, message = _get_error(created)
-            ret["comment"] = "Could not create keys.\n{0}\n{1}".format(error, message)
+            ret["comment"] = "Could not create keys.\n{}\n{}".format(error, message)
             ret["result"] = False
             return ret
         log.debug("Created is : %s", created)
         response = "create_access_key_response"
         result = "create_access_key_result"
-        new_keys[six.text_type(i)] = {}
-        new_keys[six.text_type(i)]["key_id"] = created[response][result]["access_key"][
+        new_keys[str(i)] = {}
+        new_keys[str(i)]["key_id"] = created[response][result]["access_key"][
             "access_key_id"
         ]
-        new_keys[six.text_type(i)]["secret_key"] = created[response][result][
-            "access_key"
-        ]["secret_access_key"]
+        new_keys[str(i)]["secret_key"] = created[response][result]["access_key"][
+            "secret_access_key"
+        ]
     try:
-        with salt.utils.files.fopen("{0}/{1}".format(save_dir, name), "a") as _wrf:
+        with salt.utils.files.fopen("{}/{}".format(save_dir, name), "a") as _wrf:
             for key_num, key in new_keys.items():
                 key_id = key["key_id"]
                 secret_key = key["secret_key"]
@@ -524,19 +479,17 @@ def keys_present(
                         save_format.format(
                             key_id,
                             secret_key,
-                            "key_id-{0}".format(key_num),
-                            "key-{0}".format(key_num),
+                            "key_id-{}".format(key_num),
+                            "key-{}".format(key_num),
                         )
                     )
                 )
-        ret["comment"] = "Keys have been written to file {0}/{1}.".format(
-            save_dir, name
-        )
+        ret["comment"] = "Keys have been written to file {}/{}.".format(save_dir, name)
         ret["result"] = True
         ret["changes"] = new_keys
         return ret
-    except IOError:
-        ret["comment"] = "Could not write to file {0}/{1}.".format(save_dir, name)
+    except OSError:
+        ret["comment"] = "Could not write to file {}/{}.".format(save_dir, name)
         ret["result"] = False
         return ret
 
@@ -572,7 +525,7 @@ def keys_absent(
     ret = {"name": access_keys, "result": True, "comment": "", "changes": {}}
     if not __salt__["boto_iam.get_user"](user_name, region, key, keyid, profile):
         ret["result"] = False
-        ret["comment"] = "IAM User {0} does not exist.".format(user_name)
+        ret["comment"] = "IAM User {} does not exist.".format(user_name)
         return ret
     for k in access_keys:
         ret = _delete_key(ret, k, user_name, region, key, keyid, profile)
@@ -586,10 +539,10 @@ def _delete_key(
         user_name=user_name, region=region, key=key, keyid=keyid, profile=profile
     )
     log.debug("Keys for user %s are : %s.", keys, user_name)
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         log.debug("Keys %s are a string. Something went wrong.", keys)
         ret["comment"] = " ".join(
-            [ret["comment"], "Key {0} could not be deleted.".format(access_key_id)]
+            [ret["comment"], "Key {} could not be deleted.".format(access_key_id)]
         )
         return ret
     keys = keys["list_access_keys_response"]["list_access_keys_result"][
@@ -599,9 +552,9 @@ def _delete_key(
         log.debug(
             "Key is: %s and is compared with: %s", k["access_key_id"], access_key_id
         )
-        if six.text_type(k["access_key_id"]) == six.text_type(access_key_id):
+        if str(k["access_key_id"]) == str(access_key_id):
             if __opts__["test"]:
-                ret["comment"] = "Access key {0} is set to be deleted.".format(
+                ret["comment"] = "Access key {} is set to be deleted.".format(
                     access_key_id
                 )
                 ret["result"] = None
@@ -611,15 +564,15 @@ def _delete_key(
             )
             if deleted:
                 ret["comment"] = " ".join(
-                    [ret["comment"], "Key {0} has been deleted.".format(access_key_id)]
+                    [ret["comment"], "Key {} has been deleted.".format(access_key_id)]
                 )
                 ret["changes"][access_key_id] = "deleted"
                 return ret
             ret["comment"] = " ".join(
-                [ret["comment"], "Key {0} could not be deleted.".format(access_key_id)]
+                [ret["comment"], "Key {} could not be deleted.".format(access_key_id)]
             )
             return ret
-        ret["comment"] = " ".join([ret["comment"], "Key {0} does not exist.".format(k)])
+        ret["comment"] = " ".join([ret["comment"], "Key {} does not exist.".format(k)])
         return ret
 
 
@@ -696,7 +649,7 @@ def user_present(
     exists = __salt__["boto_iam.get_user"](name, region, key, keyid, profile)
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "IAM user {0} is set to be created.".format(name)
+            ret["comment"] = "IAM user {} is set to be created.".format(name)
             ret["result"] = None
             return ret
         created = __salt__["boto_iam.create_user"](
@@ -705,7 +658,7 @@ def user_present(
         if created:
             ret["changes"]["user"] = created
             ret["comment"] = " ".join(
-                [ret["comment"], "User {0} has been created.".format(name)]
+                [ret["comment"], "User {} has been created.".format(name)]
             )
             if password:
                 ret = _case_password(ret, name, password, region, key, keyid, profile)
@@ -713,7 +666,7 @@ def user_present(
             ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
             ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
     else:
-        ret["comment"] = " ".join([ret["comment"], "User {0} is present.".format(name)])
+        ret["comment"] = " ".join([ret["comment"], "User {} is present.".format(name)])
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
         _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
@@ -734,17 +687,15 @@ def _user_policies_present(
     ret = {"result": True, "comment": "", "changes": {}}
     policies_to_create = {}
     policies_to_delete = []
-    for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, six.string_types):
-            dict_policy = _byteify(
-                salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict)
+    for policy_name, policy in policies.items():
+        if isinstance(policy, str):
+            dict_policy = salt.utils.json.loads(
+                policy, object_pairs_hook=odict.OrderedDict
             )
         else:
-            dict_policy = _byteify(policy)
-        _policy = _byteify(
-            __salt__["boto_iam.get_user_policy"](
-                name, policy_name, region, key, keyid, profile
-            )
+            dict_policy = policy
+        _policy = __salt__["boto_iam.get_user_policy"](
+            name, policy_name, region, key, keyid, profile
         )
         if _policy != dict_policy:
             log.debug("Policy mismatch:\n%s\n%s", _policy, dict_policy)
@@ -759,13 +710,13 @@ def _user_policies_present(
         _to_modify = list(policies_to_delete)
         _to_modify.extend(policies_to_create)
         if __opts__["test"]:
-            ret["comment"] = "{0} policies to be modified on user {1}.".format(
+            ret["comment"] = "{} policies to be modified on user {}.".format(
                 ", ".join(_to_modify), name
             )
             ret["result"] = None
             return ret
         ret["changes"]["old"] = {"policies": _list}
-        for policy_name, policy in six.iteritems(policies_to_create):
+        for policy_name, policy in policies_to_create.items():
             policy_set = __salt__["boto_iam.put_user_policy"](
                 name, policy_name, policy, region, key, keyid, profile
             )
@@ -775,7 +726,7 @@ def _user_policies_present(
                 )
                 ret["changes"]["new"] = {"policies": _list}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} for user {1}".format(
+                ret["comment"] = "Failed to add policy {} for user {}".format(
                     policy_name, name
                 )
                 return ret
@@ -789,7 +740,7 @@ def _user_policies_present(
                 )
                 ret["changes"]["new"] = {"policies": _list}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} to user {1}".format(
+                ret["comment"] = "Failed to add policy {} to user {}".format(
                     policy_name, name
                 )
                 return ret
@@ -797,7 +748,7 @@ def _user_policies_present(
             user_name=name, region=region, key=key, keyid=keyid, profile=profile
         )
         ret["changes"]["new"] = {"policies": _list}
-        ret["comment"] = "{0} policies modified on user {1}.".format(
+        ret["comment"] = "{} policies modified on user {}.".format(
             ", ".join(_list), name
         )
     return ret
@@ -839,7 +790,7 @@ def _user_policies_attached(
         _to_modify = list(policies_to_detach)
         _to_modify.extend(policies_to_attach)
         if __opts__["test"]:
-            ret["comment"] = "{0} policies to be modified on user {1}.".format(
+            ret["comment"] = "{} policies to be modified on user {}.".format(
                 ", ".join(_to_modify), name
             )
             ret["result"] = None
@@ -856,7 +807,7 @@ def _user_policies_attached(
                 newpolicies = [x.get("policy_arn") for x in _list]
                 ret["changes"]["new"] = {"managed_policies": newpolicies}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} to user {1}".format(
+                ret["comment"] = "Failed to add policy {} to user {}".format(
                     policy_name, name
                 )
                 return ret
@@ -871,7 +822,7 @@ def _user_policies_attached(
                 newpolicies = [x.get("policy_arn") for x in _list]
                 ret["changes"]["new"] = {"managed_policies": newpolicies}
                 ret["result"] = False
-                ret["comment"] = "Failed to remove policy {0} from user {1}".format(
+                ret["comment"] = "Failed to remove policy {} from user {}".format(
                     policy_name, name
                 )
                 return ret
@@ -881,7 +832,7 @@ def _user_policies_attached(
         newpolicies = [x.get("policy_arn") for x in _list]
         log.debug(newpolicies)
         ret["changes"]["new"] = {"managed_policies": newpolicies}
-        ret["comment"] = "{0} policies modified on user {1}.".format(
+        ret["comment"] = "{} policies modified on user {}.".format(
             ", ".join(newpolicies), name
         )
     return ret
@@ -894,10 +845,10 @@ def _user_policies_detached(name, region=None, key=None, keyid=None, profile=Non
     )
     oldpolicies = [x.get("policy_arn") for x in _list]
     if not _list:
-        ret["comment"] = "No attached policies in user {0}.".format(name)
+        ret["comment"] = "No attached policies in user {}.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "{0} policies to be detached from user {1}.".format(
+        ret["comment"] = "{} policies to be detached from user {}.".format(
             ", ".join(oldpolicies), name
         )
         ret["result"] = None
@@ -914,16 +865,14 @@ def _user_policies_detached(name, region=None, key=None, keyid=None, profile=Non
             newpolicies = [x.get("policy_arn") for x in _list]
             ret["changes"]["new"] = {"managed_policies": newpolicies}
             ret["result"] = False
-            ret["comment"] = "Failed to detach {0} from user {1}".format(
-                policy_arn, name
-            )
+            ret["comment"] = "Failed to detach {} from user {}".format(policy_arn, name)
             return ret
     _list = __salt__["boto_iam.list_attached_user_policies"](
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     newpolicies = [x.get("policy_arn") for x in _list]
     ret["changes"]["new"] = {"managed_policies": newpolicies}
-    ret["comment"] = "{0} policies detached from user {1}.".format(
+    ret["comment"] = "{} policies detached from user {}.".format(
         ", ".join(oldpolicies), name
     )
     return ret
@@ -935,10 +884,10 @@ def _user_policies_deleted(name, region=None, key=None, keyid=None, profile=None
         user_name=name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not oldpolicies:
-        ret["comment"] = "No inline policies in user {0}.".format(name)
+        ret["comment"] = "No inline policies in user {}.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "{0} policies to be deleted from user {1}.".format(
+        ret["comment"] = "{} policies to be deleted from user {}.".format(
             ", ".join(oldpolicies), name
         )
         ret["result"] = None
@@ -954,7 +903,7 @@ def _user_policies_deleted(name, region=None, key=None, keyid=None, profile=None
             )
             ret["changes"]["new"] = {"inline_policies": newpolicies}
             ret["result"] = False
-            ret["comment"] = "Failed to detach {0} from user {1}".format(
+            ret["comment"] = "Failed to detach {} from user {}".format(
                 policy_name, name
             )
             return ret
@@ -962,7 +911,7 @@ def _user_policies_deleted(name, region=None, key=None, keyid=None, profile=None
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     ret["changes"]["new"] = {"inline_policies": newpolicies}
-    ret["comment"] = "{0} policies deleted from user {1}.".format(
+    ret["comment"] = "{} policies deleted from user {}.".format(
         ", ".join(oldpolicies), name
     )
     return ret
@@ -972,7 +921,7 @@ def _case_password(
     ret, name, password, region=None, key=None, keyid=None, profile=None
 ):
     if __opts__["test"]:
-        ret["comment"] = "Login policy for {0} is set to be changed.".format(name)
+        ret["comment"] = "Login policy for {} is set to be changed.".format(name)
         ret["result"] = None
         return ret
     login = __salt__["boto_iam.create_login_profile"](
@@ -982,11 +931,11 @@ def _case_password(
     if login:
         if "Conflict" in login:
             ret["comment"] = " ".join(
-                [ret["comment"], "Login profile for user {0} exists.".format(name)]
+                [ret["comment"], "Login profile for user {} exists.".format(name)]
             )
         else:
             ret["comment"] = " ".join(
-                [ret["comment"], "Password has been added to User {0}.".format(name)]
+                [ret["comment"], "Password has been added to User {}.".format(name)]
             )
             ret["changes"]["password"] = "REDACTED"
     else:
@@ -994,9 +943,8 @@ def _case_password(
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "Password for user {0} could not be set.\nPlease check your password policy.".format(
-                    name
-                ),
+                "Password for user {} could not be set.\nPlease check your password"
+                " policy.".format(name),
             ]
         )
     return ret
@@ -1028,13 +976,13 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if not __salt__["boto_iam.get_group"](name, region, key, keyid, profile):
         ret["result"] = True
-        ret["comment"] = "IAM Group {0} does not exist.".format(name)
+        ret["comment"] = "IAM Group {} does not exist.".format(name)
         return ret
     if __opts__["test"]:
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "IAM group {0} managed policies are set to be detached.".format(name),
+                "IAM group {} managed policies are set to be detached.".format(name),
             ]
         )
         ret["result"] = None
@@ -1049,7 +997,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "IAM group {0} inline policies are set to be deleted.".format(name),
+                "IAM group {} inline policies are set to be deleted.".format(name),
             ]
         )
         ret["result"] = None
@@ -1061,7 +1009,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
             if ret["result"] is False:
                 return ret
     ret["comment"] = " ".join(
-        [ret["comment"], "IAM group {0} users are set to be removed.".format(name)]
+        [ret["comment"], "IAM group {} users are set to be removed.".format(name)]
     )
     existing_users = __salt__["boto_iam.get_group_members"](
         group_name=name, region=region, key=key, keyid=keyid, profile=profile
@@ -1075,19 +1023,19 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
     # finally, actually delete the group
     if __opts__["test"]:
         ret["comment"] = " ".join(
-            [ret["comment"], "IAM group {0} is set to be deleted.".format(name)]
+            [ret["comment"], "IAM group {} is set to be deleted.".format(name)]
         )
         ret["result"] = None
         return ret
     deleted = __salt__["boto_iam.delete_group"](name, region, key, keyid, profile)
     if deleted is True:
         ret["comment"] = " ".join(
-            [ret["comment"], "IAM group {0} is deleted.".format(name)]
+            [ret["comment"], "IAM group {} is deleted.".format(name)]
         )
         ret["result"] = True
         ret["changes"]["deleted"] = name
         return ret
-    ret["comment"] = "IAM group {0} could not be deleted.\n {1}".format(name, deleted)
+    ret["comment"] = "IAM group {} could not be deleted.\n {}".format(name, deleted)
     ret["result"] = False
     return ret
 
@@ -1171,7 +1119,7 @@ def group_present(
     )
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "IAM group {0} is set to be created.".format(name)
+            ret["comment"] = "IAM group {} is set to be created.".format(name)
             ret["result"] = None
             return ret
         created = __salt__["boto_iam.create_group"](
@@ -1183,17 +1131,15 @@ def group_present(
             profile=profile,
         )
         if not created:
-            ret["comment"] = "Failed to create IAM group {0}.".format(name)
+            ret["comment"] = "Failed to create IAM group {}.".format(name)
             ret["result"] = False
             return ret
         ret["changes"]["group"] = created
         ret["comment"] = " ".join(
-            [ret["comment"], "Group {0} has been created.".format(name)]
+            [ret["comment"], "Group {} has been created.".format(name)]
         )
     else:
-        ret["comment"] = " ".join(
-            [ret["comment"], "Group {0} is present.".format(name)]
-        )
+        ret["comment"] = " ".join([ret["comment"], "Group {} is present.".format(name)])
     # Group exists, ensure group policies and users are set.
     _ret = _group_policies_present(
         name, _policies, region, key, keyid, profile, delete_policies
@@ -1232,16 +1178,14 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
             ret["comment"] = " ".join(
                 [
                     ret["comment"],
-                    "User {0} is already a member of group {1}.".format(
-                        user, group_name
-                    ),
+                    "User {} is already a member of group {}.".format(user, group_name),
                 ]
             )
             continue
         else:
             log.debug("user is set to be added %s", user)
             if __opts__["test"]:
-                ret["comment"] = "User {0} is set to be added to group {1}.".format(
+                ret["comment"] = "User {} is set to be added to group {}.".format(
                     user, group_name
                 )
                 ret["result"] = None
@@ -1252,9 +1196,7 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "User {0} has been added to group {1}.".format(
-                            user, group_name
-                        ),
+                        "User {} has been added to group {}.".format(user, group_name),
                     ]
                 )
                 ret["changes"][user] = group_name
@@ -1264,7 +1206,7 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "User {0} is set to be removed from group {1}.".format(
+                        "User {} is set to be removed from group {}.".format(
                             user, group_name
                         ),
                     ]
@@ -1282,12 +1224,12 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "User {0} has been removed from group {1}.".format(
+                        "User {} has been removed from group {}.".format(
                             user, group_name
                         ),
                     ]
                 )
-                ret["changes"][user] = "Removed from group {0}.".format(group_name)
+                ret["changes"][user] = "Removed from group {}.".format(group_name)
     return ret
 
 
@@ -1303,17 +1245,15 @@ def _group_policies_present(
     ret = {"result": True, "comment": "", "changes": {}}
     policies_to_create = {}
     policies_to_delete = []
-    for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, six.string_types):
-            dict_policy = _byteify(
-                salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict)
+    for policy_name, policy in policies.items():
+        if isinstance(policy, str):
+            dict_policy = salt.utils.json.loads(
+                policy, object_pairs_hook=odict.OrderedDict
             )
         else:
-            dict_policy = _byteify(policy)
-        _policy = _byteify(
-            __salt__["boto_iam.get_group_policy"](
-                name, policy_name, region, key, keyid, profile
-            )
+            dict_policy = policy
+        _policy = __salt__["boto_iam.get_group_policy"](
+            name, policy_name, region, key, keyid, profile
         )
         if _policy != dict_policy:
             log.debug("Policy mismatch:\n%s\n%s", _policy, dict_policy)
@@ -1328,13 +1268,13 @@ def _group_policies_present(
         _to_modify = list(policies_to_delete)
         _to_modify.extend(policies_to_create)
         if __opts__["test"]:
-            ret["comment"] = "{0} policies to be modified on group {1}.".format(
+            ret["comment"] = "{} policies to be modified on group {}.".format(
                 ", ".join(_to_modify), name
             )
             ret["result"] = None
             return ret
         ret["changes"]["old"] = {"policies": _list}
-        for policy_name, policy in six.iteritems(policies_to_create):
+        for policy_name, policy in policies_to_create.items():
             policy_set = __salt__["boto_iam.put_group_policy"](
                 name, policy_name, policy, region, key, keyid, profile
             )
@@ -1344,7 +1284,7 @@ def _group_policies_present(
                 )
                 ret["changes"]["new"] = {"policies": _list}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} to group {1}".format(
+                ret["comment"] = "Failed to add policy {} to group {}".format(
                     policy_name, name
                 )
                 return ret
@@ -1358,7 +1298,7 @@ def _group_policies_present(
                 )
                 ret["changes"]["new"] = {"policies": _list}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} to group {1}".format(
+                ret["comment"] = "Failed to add policy {} to group {}".format(
                     policy_name, name
                 )
                 return ret
@@ -1366,7 +1306,7 @@ def _group_policies_present(
             name, region, key, keyid, profile
         )
         ret["changes"]["new"] = {"policies": _list}
-        ret["comment"] = "{0} policies modified on group {1}.".format(
+        ret["comment"] = "{} policies modified on group {}.".format(
             ", ".join(_list), name
         )
     return ret
@@ -1415,7 +1355,7 @@ def _group_policies_attached(
         _to_modify = list(policies_to_detach)
         _to_modify.extend(policies_to_attach)
         if __opts__["test"]:
-            ret["comment"] = "{0} policies to be modified on group {1}.".format(
+            ret["comment"] = "{} policies to be modified on group {}.".format(
                 ", ".join(_to_modify), name
             )
             ret["result"] = None
@@ -1432,7 +1372,7 @@ def _group_policies_attached(
                 newpolicies = [x.get("policy_arn") for x in _list]
                 ret["changes"]["new"] = {"managed_policies": newpolicies}
                 ret["result"] = False
-                ret["comment"] = "Failed to add policy {0} to group {1}".format(
+                ret["comment"] = "Failed to add policy {} to group {}".format(
                     policy_name, name
                 )
                 return ret
@@ -1447,7 +1387,7 @@ def _group_policies_attached(
                 newpolicies = [x.get("policy_arn") for x in _list]
                 ret["changes"]["new"] = {"managed_policies": newpolicies}
                 ret["result"] = False
-                ret["comment"] = "Failed to remove policy {0} from group {1}".format(
+                ret["comment"] = "Failed to remove policy {} from group {}".format(
                     policy_name, name
                 )
                 return ret
@@ -1457,7 +1397,7 @@ def _group_policies_attached(
         newpolicies = [x.get("policy_arn") for x in _list]
         log.debug(newpolicies)
         ret["changes"]["new"] = {"managed_policies": newpolicies}
-        ret["comment"] = "{0} policies modified on group {1}.".format(
+        ret["comment"] = "{} policies modified on group {}.".format(
             ", ".join(newpolicies), name
         )
     return ret
@@ -1470,10 +1410,10 @@ def _group_policies_detached(name, region=None, key=None, keyid=None, profile=No
     )
     oldpolicies = [x.get("policy_arn") for x in _list]
     if not _list:
-        ret["comment"] = "No attached policies in group {0}.".format(name)
+        ret["comment"] = "No attached policies in group {}.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "{0} policies to be detached from group {1}.".format(
+        ret["comment"] = "{} policies to be detached from group {}.".format(
             ", ".join(oldpolicies), name
         )
         ret["result"] = None
@@ -1490,7 +1430,7 @@ def _group_policies_detached(name, region=None, key=None, keyid=None, profile=No
             newpolicies = [x.get("policy_arn") for x in _list]
             ret["changes"]["new"] = {"managed_policies": newpolicies}
             ret["result"] = False
-            ret["comment"] = "Failed to detach {0} from group {1}".format(
+            ret["comment"] = "Failed to detach {} from group {}".format(
                 policy_arn, name
             )
             return ret
@@ -1499,7 +1439,7 @@ def _group_policies_detached(name, region=None, key=None, keyid=None, profile=No
     )
     newpolicies = [x.get("policy_arn") for x in _list]
     ret["changes"]["new"] = {"managed_policies": newpolicies}
-    ret["comment"] = "{0} policies detached from group {1}.".format(
+    ret["comment"] = "{} policies detached from group {}.".format(
         ", ".join(newpolicies), name
     )
     return ret
@@ -1511,10 +1451,10 @@ def _group_policies_deleted(name, region=None, key=None, keyid=None, profile=Non
         group_name=name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not oldpolicies:
-        ret["comment"] = "No inline policies in group {0}.".format(name)
+        ret["comment"] = "No inline policies in group {}.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "{0} policies to be deleted from group {1}.".format(
+        ret["comment"] = "{} policies to be deleted from group {}.".format(
             ", ".join(oldpolicies), name
         )
         ret["result"] = None
@@ -1530,7 +1470,7 @@ def _group_policies_deleted(name, region=None, key=None, keyid=None, profile=Non
             )
             ret["changes"]["new"] = {"inline_policies": newpolicies}
             ret["result"] = False
-            ret["comment"] = "Failed to detach {0} from group {1}".format(
+            ret["comment"] = "Failed to detach {} from group {}".format(
                 policy_name, name
             )
             return ret
@@ -1538,7 +1478,7 @@ def _group_policies_deleted(name, region=None, key=None, keyid=None, profile=Non
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     ret["changes"]["new"] = {"inline_policies": newpolicies}
-    ret["comment"] = "{0} policies deleted from group {1}.".format(
+    ret["comment"] = "{} policies deleted from group {}.".format(
         ", ".join(oldpolicies), name
     )
     return ret
@@ -1624,17 +1564,14 @@ def account_policy(
     for key, value in config.items():
         if key in ("region", "key", "keyid", "profile", "name"):
             continue
-        if (
-            value is not None
-            and six.text_type(info[key]) != six.text_type(value).lower()
-        ):
+        if value is not None and str(info[key]) != str(value).lower():
             ret["comment"] = " ".join(
                 [
                     ret["comment"],
-                    "Policy value {0} has been set to {1}.".format(value, info[key]),
+                    "Policy value {} has been set to {}.".format(value, info[key]),
                 ]
             )
-            ret["changes"][key] = six.text_type(value).lower()
+            ret["changes"][key] = str(value).lower()
     if not ret["changes"]:
         ret["comment"] = "Account policy is not changed."
         return ret
@@ -1690,18 +1627,18 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
         name, region, key, keyid, profile
     )
     if not exists:
-        ret["comment"] = "Certificate {0} does not exist.".format(name)
+        ret["comment"] = "Certificate {} does not exist.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Server certificate {0} is set to be deleted.".format(name)
+        ret["comment"] = "Server certificate {} is set to be deleted.".format(name)
         ret["result"] = None
         return ret
     deleted = __salt__["boto_iam.delete_server_cert"](name, region, key, keyid, profile)
     if not deleted:
         ret["result"] = False
-        ret["comment"] = "Certificate {0} failed to be deleted.".format(name)
+        ret["comment"] = "Certificate {} failed to be deleted.".format(name)
         return ret
-    ret["comment"] = "Certificate {0} was deleted.".format(name)
+    ret["comment"] = "Certificate {} was deleted.".format(name)
     ret["changes"] = deleted
     return ret
 
@@ -1756,45 +1693,45 @@ def server_cert_present(
     )
     log.debug("Variables are : %s.", locals())
     if exists:
-        ret["comment"] = "Certificate {0} exists.".format(name)
+        ret["comment"] = "Certificate {} exists.".format(name)
         return ret
     if "salt://" in public_key:
         try:
             public_key = __salt__["cp.get_file_str"](public_key)
-        except IOError as e:
+        except OSError as e:
             log.debug(e)
-            ret["comment"] = "File {0} not found.".format(public_key)
+            ret["comment"] = "File {} not found.".format(public_key)
             ret["result"] = False
             return ret
     if "salt://" in private_key:
         try:
             private_key = __salt__["cp.get_file_str"](private_key)
-        except IOError as e:
+        except OSError as e:
             log.debug(e)
-            ret["comment"] = "File {0} not found.".format(private_key)
+            ret["comment"] = "File {} not found.".format(private_key)
             ret["result"] = False
             return ret
     if cert_chain is not None and "salt://" in cert_chain:
         try:
             cert_chain = __salt__["cp.get_file_str"](cert_chain)
-        except IOError as e:
+        except OSError as e:
             log.debug(e)
-            ret["comment"] = "File {0} not found.".format(cert_chain)
+            ret["comment"] = "File {} not found.".format(cert_chain)
             ret["result"] = False
             return ret
     if __opts__["test"]:
-        ret["comment"] = "Server certificate {0} is set to be created.".format(name)
+        ret["comment"] = "Server certificate {} is set to be created.".format(name)
         ret["result"] = None
         return ret
     created = __salt__["boto_iam.upload_server_cert"](
         name, public_key, private_key, cert_chain, path, region, key, keyid, profile
     )
     if created is not False:
-        ret["comment"] = "Certificate {0} was created.".format(name)
+        ret["comment"] = "Certificate {} was created.".format(name)
         ret["changes"] = created
         return ret
     ret["result"] = False
-    ret["comment"] = "Certificate {0} failed to be created.".format(name)
+    ret["comment"] = "Certificate {} failed to be created.".format(name)
     return ret
 
 
@@ -1843,7 +1780,7 @@ def policy_present(
     policy = __salt__["boto_iam.get_policy"](name, region, key, keyid, profile)
     if not policy:
         if __opts__["test"]:
-            ret["comment"] = "IAM policy {0} is set to be created.".format(name)
+            ret["comment"] = "IAM policy {} is set to be created.".format(name)
             ret["result"] = None
             return ret
         created = __salt__["boto_iam.create_policy"](
@@ -1852,7 +1789,7 @@ def policy_present(
         if created:
             ret["changes"]["policy"] = created
             ret["comment"] = " ".join(
-                [ret["comment"], "Policy {0} has been created.".format(name)]
+                [ret["comment"], "Policy {} has been created.".format(name)]
             )
         else:
             ret["result"] = False
@@ -1862,24 +1799,24 @@ def policy_present(
     else:
         policy = policy.get("policy", {})
         ret["comment"] = " ".join(
-            [ret["comment"], "Policy {0} is present.".format(name)]
+            [ret["comment"], "Policy {} is present.".format(name)]
         )
         _describe = __salt__["boto_iam.get_policy_version"](
             name, policy.get("default_version_id"), region, key, keyid, profile
         ).get("policy_version", {})
-        if isinstance(_describe["document"], six.string_types):
+        if isinstance(_describe["document"], str):
             describeDict = salt.utils.json.loads(_describe["document"])
         else:
             describeDict = _describe["document"]
 
-        if isinstance(policy_document, six.string_types):
+        if isinstance(policy_document, str):
             policy_document = salt.utils.json.loads(policy_document)
 
         r = salt.utils.data.compare_dicts(describeDict, policy_document)
 
         if bool(r):
             if __opts__["test"]:
-                ret["comment"] = "Policy {0} set to be modified.".format(name)
+                ret["comment"] = "Policy {} set to be modified.".format(name)
                 ret["result"] = None
                 return ret
 
@@ -1897,7 +1834,7 @@ def policy_present(
             )
             if not r.get("created"):
                 ret["result"] = False
-                ret["comment"] = "Failed to update policy: {0}.".format(
+                ret["comment"] = "Failed to update policy: {}.".format(
                     r["error"]["message"]
                 )
                 ret["changes"] = {}
@@ -1946,11 +1883,11 @@ def policy_absent(name, region=None, key=None, keyid=None, profile=None):
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not r:
-        ret["comment"] = "Policy {0} does not exist.".format(name)
+        ret["comment"] = "Policy {} does not exist.".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Policy {0} is set to be removed.".format(name)
+        ret["comment"] = "Policy {} is set to be removed.".format(name)
         ret["result"] = None
         return ret
     # delete non-default versions
@@ -1971,18 +1908,18 @@ def policy_absent(name, region=None, key=None, keyid=None, profile=None):
             )
             if not r:
                 ret["result"] = False
-                ret["comment"] = "Failed to delete policy {0}.".format(name)
+                ret["comment"] = "Failed to delete policy {}.".format(name)
                 return ret
     r = __salt__["boto_iam.delete_policy"](
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not r:
         ret["result"] = False
-        ret["comment"] = "Failed to delete policy {0}.".format(name)
+        ret["comment"] = "Failed to delete policy {}.".format(name)
         return ret
     ret["changes"]["old"] = {"policy": name}
     ret["changes"]["new"] = {"policy": None}
-    ret["comment"] = "Policy {0} deleted.".format(name)
+    ret["comment"] = "Policy {} deleted.".format(name)
     return ret
 
 
@@ -2018,21 +1955,21 @@ def saml_provider_present(
         try:
             saml_metadata_document = __salt__["cp.get_file_str"](saml_metadata_document)
             ET.fromstring(saml_metadata_document)
-        except IOError as e:
+        except OSError as e:
             log.debug(e)
             ret[
                 "comment"
-            ] = "SAML document file {0} not found or could not be loaded".format(name)
+            ] = "SAML document file {} not found or could not be loaded".format(name)
             ret["result"] = False
             return ret
     for provider in __salt__["boto_iam.list_saml_providers"](
         region=region, key=key, keyid=keyid, profile=profile
     ):
         if provider == name:
-            ret["comment"] = "SAML provider {0} is present.".format(name)
+            ret["comment"] = "SAML provider {} is present.".format(name)
             return ret
     if __opts__["test"]:
-        ret["comment"] = "SAML provider {0} is set to be create.".format(name)
+        ret["comment"] = "SAML provider {} is set to be create.".format(name)
         ret["result"] = None
         return ret
     created = __salt__["boto_iam.create_saml_provider"](
@@ -2044,11 +1981,11 @@ def saml_provider_present(
         profile=profile,
     )
     if created:
-        ret["comment"] = "SAML provider {0} was created.".format(name)
+        ret["comment"] = "SAML provider {} was created.".format(name)
         ret["changes"]["new"] = name
         return ret
     ret["result"] = False
-    ret["comment"] = "SAML provider {0} failed to be created.".format(name)
+    ret["comment"] = "SAML provider {} failed to be created.".format(name)
     return ret
 
 
@@ -2082,21 +2019,21 @@ def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
     if len(provider) == 0:
-        ret["comment"] = "SAML provider {0} is absent.".format(name)
+        ret["comment"] = "SAML provider {} is absent.".format(name)
         return ret
     if __opts__["test"]:
-        ret["comment"] = "SAML provider {0} is set to be removed.".format(name)
+        ret["comment"] = "SAML provider {} is set to be removed.".format(name)
         ret["result"] = None
         return ret
     deleted = __salt__["boto_iam.delete_saml_provider"](
         name, region=region, key=key, keyid=keyid, profile=profile
     )
     if deleted is not False:
-        ret["comment"] = "SAML provider {0} was deleted.".format(name)
+        ret["comment"] = "SAML provider {} was deleted.".format(name)
         ret["changes"]["old"] = name
         return ret
     ret["result"] = False
-    ret["comment"] = "SAML provider {0} failed to be deleted.".format(name)
+    ret["comment"] = "SAML provider {} failed to be deleted.".format(name)
     return ret
 
 

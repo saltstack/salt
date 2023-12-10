@@ -1,5 +1,5 @@
-salt.modules.idem module
-========================
+salt.modules.idem
+=================
 
 .. automodule:: salt.modules.idem
     :members:

@@ -14,11 +14,8 @@ Support for reboot, shutdown, etc on POSIX-like systems.
 
 import os.path
 import re
-
-# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -184,7 +181,9 @@ def has_settable_hwclock():
 
     CLI Example:
 
-    salt '*' system.has_settable_hwclock
+    .. code-block:: bash
+
+        salt '*' system.has_settable_hwclock
     """
     if salt.utils.path.which_bin(["hwclock"]) is not None:
         res = __salt__["cmd.run_all"](

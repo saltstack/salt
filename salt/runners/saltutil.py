@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The Saltutil runner is used to sync custom types to the Master. See the
 :mod:`saltutil module <salt.modules.saltutil>` for documentation on
@@ -6,12 +5,9 @@ managing updates to minions.
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.extmods
 
 log = logging.getLogger(__name__)
@@ -146,6 +142,16 @@ def sync_all(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         extmod_blacklist=extmod_blacklist,
     )
     ret["executors"] = sync_executors(
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )
+    ret["wrapper"] = sync_wrapper(
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )
+    ret["roster"] = sync_roster(
         saltenv=saltenv,
         extmod_whitelist=extmod_whitelist,
         extmod_blacklist=extmod_blacklist,
@@ -830,6 +836,37 @@ def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
     return salt.utils.extmods.sync(
         __opts__,
         "executors",
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )[0]
+
+
+def sync_wrapper(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
+    """
+    .. versionadded:: 3007.0
+
+    Sync salt-ssh wrapper modules from ``salt://_wrapper`` to the master.
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_wrapper
+    """
+    return salt.utils.extmods.sync(
+        __opts__,
+        "wrapper",
         saltenv=saltenv,
         extmod_whitelist=extmod_whitelist,
         extmod_blacklist=extmod_blacklist,

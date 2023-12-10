@@ -1,1 +1,9 @@
-sphinx>=3.0.1,!=3.0.2
+--constraint=./py{py_version}/{platform}.txt
+
+sphinx>=3.5.1; python_version < '3.9'
+sphinx>=6.1.0; python_version >= '3.9'
+myst-docutils[linkify]
+sphinxcontrib-httpdomain>=1.8.0
+sphinxcontrib-spelling
+cherrypy
+jinja2

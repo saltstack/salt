@@ -1,29 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Support for rpm
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.decorators.path
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.versions
-
-# pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import zip
 from salt.utils.versions import LooseVersion
 
 try:
@@ -39,6 +28,13 @@ try:
     HAS_RPMUTILS = True
 except ImportError:
     HAS_RPMUTILS = False
+
+try:
+    import rpm_vercmp
+
+    HAS_PY_RPM = True
+except ImportError:
+    HAS_PY_RPM = False
 
 
 log = logging.getLogger(__name__)
@@ -62,17 +58,26 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (
             False,
-            "The rpm execution module failed to load: failed to detect os or os_family grains.",
+            "The rpm execution module failed to load: failed to detect os or os_family"
+            " grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "VirtuozzoLinux")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
     return (
         False,
-        "The rpm execution module failed to load: only available on redhat/suse type systems "
-        "or amazon, xcp or xenserver.",
+        "The rpm execution module failed to load: only available on redhat/suse type"
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
     )
 
 
@@ -105,14 +110,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {0} from saltenv '{1}'".format(path, saltenv)
+                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{0} does not exist on minion".format(path))
+            raise CommandExecutionError("{} does not exist on minion".format(path))
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{0} does not exist on minion".format(path))
+            raise SaltInvocationError("{} does not exist on minion".format(path))
 
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
     # with 'none'
@@ -187,28 +192,26 @@ def verify(*packages, **kwargs):
     ftypes = {"c": "config", "d": "doc", "g": "ghost", "l": "license", "r": "readme"}
     ret = {}
     ignore_types = kwargs.get("ignore_types", [])
-    if not isinstance(ignore_types, (list, six.string_types)):
+    if not isinstance(ignore_types, (list, str)):
         raise SaltInvocationError(
             "ignore_types must be a list or a comma-separated string"
         )
-    if isinstance(ignore_types, six.string_types):
+    if isinstance(ignore_types, str):
         try:
             ignore_types = [x.strip() for x in ignore_types.split(",")]
         except AttributeError:
-            ignore_types = [x.strip() for x in six.text_type(ignore_types).split(",")]
+            ignore_types = [x.strip() for x in str(ignore_types).split(",")]
 
     verify_options = kwargs.get("verify_options", [])
-    if not isinstance(verify_options, (list, six.string_types)):
+    if not isinstance(verify_options, (list, str)):
         raise SaltInvocationError(
             "verify_options must be a list or a comma-separated string"
         )
-    if isinstance(verify_options, six.string_types):
+    if isinstance(verify_options, str):
         try:
             verify_options = [x.strip() for x in verify_options.split(",")]
         except AttributeError:
-            verify_options = [
-                x.strip() for x in six.text_type(verify_options).split(",")
-            ]
+            verify_options = [x.strip() for x in str(verify_options).split(",")]
 
     cmd = ["rpm"]
     if kwargs.get("root"):
@@ -229,7 +232,7 @@ def verify(*packages, **kwargs):
         # succeeded, but if the retcode is nonzero, then the command failed.
         msg = "Failed to verify package(s)"
         if out["stderr"]:
-            msg += ": {0}".format(out["stderr"])
+            msg += ": {}".format(out["stderr"])
         raise CommandExecutionError(msg)
 
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
@@ -274,7 +277,7 @@ def modified(*packages, **flags):
     root
         use root as top level directory (default: "/")
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -478,7 +481,7 @@ def diff(package_path, path):
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -492,7 +495,7 @@ def diff(package_path, path):
     )
     res = __salt__["cmd.shell"](cmd.format(package_path, path), output_loglevel="trace")
     if res and res.startswith("Binary file"):
-        return "File '{0}' is binary and its content has been " "modified.".format(path)
+        return "File '{}' is binary and its content has been modified.".format(path)
 
     return res
 
@@ -519,7 +522,7 @@ def info(*packages, **kwargs):
 
     :return:
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -551,23 +554,32 @@ def info(*packages, **kwargs):
     # Construct query format
     attr_map = {
         "name": "name: %{NAME}\\n",
-        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "relocations": (
+            "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n"
+        ),
         "version": "version: %{VERSION}\\n",
         "vendor": "vendor: %{VENDOR}\\n",
         "release": "release: %{RELEASE}\\n",
         "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
         "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
         "build_date": "build_date: %{BUILDTIME}\\n",
-        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
-        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "install_date_time_t": (
+            "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n"
+        ),
+        "install_date": (
+            "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n"
+        ),
         "build_host": "build_host: %{BUILDHOST}\\n",
         "group": "group: %{GROUP}\\n",
         "source_rpm": "source_rpm: %{SOURCERPM}\\n",
         "size": "size: " + size_tag + "\\n",
         "arch": "arch: %{ARCH}\\n",
         "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
-        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
-        "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "signature": (
+            "signature:"
+            " %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+            "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n"
+        ),
         "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
         "url": "%|URL?{url: %{URL}\\n}|",
         "summary": "summary: %{SUMMARY}\\n",
@@ -590,7 +602,7 @@ def info(*packages, **kwargs):
             attr.append("edition")
             query.append(attr_map["edition"])
     else:
-        for attr_k, attr_v in six.iteritems(attr_map):
+        for attr_k, attr_v in attr_map.items():
             if attr_k != "description":
                 query.append(attr_v)
     if attr and "description" in attr or not attr:
@@ -599,21 +611,13 @@ def info(*packages, **kwargs):
 
     cmd = " ".join(cmd)
     call = __salt__["cmd.run_all"](
-        cmd + (" --queryformat '{0}'".format("".join(query))),
+        cmd + " --queryformat '{}'".format("".join(query)),
         output_loglevel="trace",
         env={"TZ": "UTC"},
         clean_env=True,
+        ignore_retcode=True,
     )
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"] or call["stdout"]
-        raise CommandExecutionError(comment)
-    elif "error" in call["stderr"]:
-        raise CommandExecutionError(call["stderr"])
-    else:
-        out = call["stdout"]
-
+    out = call["stdout"]
     _ret = list()
     for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
@@ -706,11 +710,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     """
-    normalize = (
-        lambda x: six.text_type(x).split(":", 1)[-1]
-        if ignore_epoch
-        else six.text_type(x)
-    )
+    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 
@@ -727,6 +727,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        elif HAS_PY_RPM:
+            cmp_func = rpm_vercmp.vercmp
         else:
             log.warning(
                 "Please install a package that provides rpm.labelCompare for "
@@ -738,16 +740,29 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             except AttributeError:
                 log.debug("rpmUtils.miscutils.compareEVR is not available")
 
+        # If one EVR is missing a release but not the other and they
+        # otherwise would be equal, ignore the release. This can happen if
+        # e.g. you are checking if a package version 3.2 is satisfied by
+        # 3.2-1.
+        (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+        (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
+
+        if not ver1_r or not ver2_r:
+            ver1_r = ver2_r = ""
+
         if cmp_func is None:
+            ver1 = f"{ver1_e}:{ver1_v}-{ver1_r}"
+            ver2 = f"{ver2_e}:{ver2_v}-{ver2_r}"
             if salt.utils.path.which("rpmdev-vercmp"):
                 log.warning(
-                    "Installing the rpmdevtools package may surface dev tools in production."
+                    "Installing the rpmdevtools package may surface dev tools in"
+                    " production."
                 )
 
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
-                        return "0:{0}".format(ver)
+                        return "0:{}".format(ver)
 
                     try:
                         if ":" not in ver:
@@ -783,22 +798,27 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     )
             else:
                 log.warning(
-                    "Falling back on salt.utils.versions.version_cmp() for version comparisons"
+                    "Falling back on salt.utils.versions.version_cmp() for version"
+                    " comparisons"
                 )
         else:
-            # If one EVR is missing a release but not the other and they
-            # otherwise would be equal, ignore the release. This can happen if
-            # e.g. you are checking if a package version 3.2 is satisfied by
-            # 3.2-1.
-            (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
-            (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
-            if not ver1_r or not ver2_r:
-                ver1_r = ver2_r = ""
+            if HAS_PY_RPM:
+                ver1 = f"{ver1_v}-{ver1_r}"
+                ver2 = f"{ver2_v}-{ver2_r}"
 
-            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
+                # handle epoch version comparison first
+                # rpm_vercmp.vercmp does not handle epoch version comparison
+                ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)
+                if ret in (1, -1):
+                    return ret
+                cmp_result = cmp_func(ver1, ver2)
+            else:
+                cmp_result = cmp_func(
+                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
+                )
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
-                    "Comparison result '{0}' is invalid".format(cmp_result)
+                    "Comparison result '{}' is invalid".format(cmp_result)
                 )
             return cmp_result
 

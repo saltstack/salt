@@ -463,8 +463,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         # If pillarenv is set, only grab pillars with that match pillarenv
         if opts["pillarenv"] and env != opts["pillarenv"]:
             log.debug(
-                "env '%s' for pillar dir '%s' does not match "
-                "pillarenv '%s', skipping",
+                "env '%s' for pillar dir '%s' does not match pillarenv '%s', skipping",
                 env,
                 pillar_dir,
                 opts["pillarenv"],
@@ -472,13 +471,13 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
             continue
         if pillar_dir in git_pillar.pillar_linked_dirs:
             log.debug(
-                "git_pillar is skipping processing on %s as it is a " "mounted repo",
+                "git_pillar is skipping processing on %s as it is a mounted repo",
                 pillar_dir,
             )
             continue
         else:
             log.debug(
-                "git_pillar is processing pillar SLS from %s for pillar " "env '%s'",
+                "git_pillar is processing pillar SLS from %s for pillar env '%s'",
                 pillar_dir,
                 env,
             )

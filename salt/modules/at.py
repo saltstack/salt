@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wrapper module for at(1)
 
@@ -9,26 +8,19 @@ easily tag jobs.
 
 .. versionchanged:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
-
-# Import python libs
 import re
 import time
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.path
 import salt.utils.platform
 
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandNotFoundError
-from salt.ext import six
 
-# Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import map
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
@@ -56,7 +48,7 @@ def _cmd(binary, *args):
     """
     binary = salt.utils.path.which(binary)
     if not binary:
-        raise CommandNotFoundError("{0}: command not found".format(binary))
+        raise CommandNotFoundError(f"{binary}: command not found")
     cmd = [binary] + list(args)
     return __salt__["cmd.run_stdout"]([binary] + list(args), python_shell=False)
 
@@ -113,9 +105,7 @@ def atq(tag=None):
                 timestr = " ".join(tmp[1:5])
                 job = tmp[6]
                 specs = (
-                    datetime.datetime(
-                        *(time.strptime(timestr, "%b %d, %Y " "%H:%M")[0:5])
-                    )
+                    datetime.datetime(*(time.strptime(timestr, "%b %d, %Y %H:%M")[0:5]))
                     .isoformat()
                     .split("T")
                 )
@@ -156,7 +146,7 @@ def atq(tag=None):
                 job_tag = tmp.groups()[0]
 
         if __grains__["os"] in BSD:
-            job = six.text_type(job)
+            job = str(job)
         else:
             job = int(job)
 
@@ -226,11 +216,7 @@ def atrm(*args):
             list(
                 map(
                     str,
-                    [
-                        i["job"]
-                        for i in atq()["jobs"]
-                        if six.text_type(i["job"]) in args
-                    ],
+                    [i["job"] for i in atq()["jobs"] if str(i["job"]) in args],
                 )
             )
         )
@@ -259,6 +245,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         salt '*' at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
         salt '*' at.at '3:05am +3 days' 'bin/myscript' tag=nightly runas=jim
+        salt '*' at.at '"22:02"' 'bin/myscript' tag=nightly runas=jim
     """
 
     if len(args) < 2:
@@ -271,7 +258,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         return "'at.at' is not available."
 
     if "tag" in kwargs:
-        stdin = "### SALT: {0}\n{1}".format(kwargs["tag"], " ".join(args[1:]))
+        stdin = "### SALT: {}\n{}".format(kwargs["tag"], " ".join(args[1:]))
     else:
         stdin = " ".join(args[1:])
     cmd = [binary, args[0]]
@@ -296,7 +283,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     output = output.split()[1]
 
     if __grains__["os"] in BSD:
-        return atq(six.text_type(output))
+        return atq(str(output))
     else:
         return atq(int(output))
 
@@ -315,12 +302,12 @@ def atc(jobid):
     """
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
-    output = _cmd("at", "-c", six.text_type(jobid))
+    output = _cmd("at", "-c", str(jobid))
 
     if output is None:
         return "'at.atc' is not available."
     elif output == "":
-        return {"error": "invalid job id '{0}'".format(jobid)}
+        return {"error": f"invalid job id '{jobid}'"}
 
     return output
 
@@ -339,8 +326,8 @@ def _atq(**kwargs):
     day = kwargs.get("day", None)
     month = kwargs.get("month", None)
     year = kwargs.get("year", None)
-    if year and len(six.text_type(year)) == 2:
-        year = "20{0}".format(year)
+    if year and len(str(year)) == 2:
+        year = f"20{year}"
 
     jobinfo = atq()["jobs"]
     if not jobinfo:
@@ -364,28 +351,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "{0:02d}".format(int(hour)) == job["time"].split(":")[0]:
+        elif f"{int(hour):02d}" == job["time"].split(":")[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "{0:02d}".format(int(minute)) == job["time"].split(":")[1]:
+        elif f"{int(minute):02d}" == job["time"].split(":")[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "{0:02d}".format(int(day)) == job["date"].split("-")[2]:
+        elif f"{int(day):02d}" == job["date"].split("-")[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "{0:02d}".format(int(month)) == job["date"].split("-")[1]:
+        elif f"{int(month):02d}" == job["date"].split("-")[1]:
             pass
         else:
             continue

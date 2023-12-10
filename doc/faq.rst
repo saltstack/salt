@@ -18,7 +18,7 @@ There is much argument over the actual definition of "open core".  From our stan
 
 1. It is a standalone product that anyone is free to use.
 2. It is developed in the open with contributions accepted from the community for the good of the project.
-3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
+3. There are no features of Salt itself that are restricted to separate proprietary products distributed by VMware, Inc.
 4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
 5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
 
@@ -455,6 +455,8 @@ state could be done the same way as for the Salt minion described :ref:`above
 
 Is Targeting using Grain Data Secure?
 -------------------------------------
+
+.. include:: _incl/grains_passwords.rst
 
 Because grains can be set by users that have access to the minion configuration
 files on the local system, grains are considered less secure than other

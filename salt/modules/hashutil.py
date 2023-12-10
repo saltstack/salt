@@ -1,28 +1,17 @@
-# encoding: utf-8
 """
 A collection of hashing and encoding functions
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import hashlib
 import hmac
+import io
 
-# Import Salt libs
 import salt.exceptions
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.stringutils
-from salt.ext import six
-
-if six.PY2:
-    from StringIO import StringIO
-
-    BytesIO = StringIO
-elif six.PY3:
-    from io import BytesIO, StringIO
 
 
 def digest(instr, checksum="md5"):
@@ -50,7 +39,7 @@ def digest(instr, checksum="md5"):
 
     if hash_func is None:
         raise salt.exceptions.CommandExecutionError(
-            "Hash func '{0}' is not supported.".format(checksum)
+            "Hash func '{}' is not supported.".format(checksum)
         )
 
     return hash_func(instr)
@@ -75,7 +64,7 @@ def digest_file(infile, checksum="md5"):
     """
     if not __salt__["file.file_exists"](infile):
         raise salt.exceptions.CommandExecutionError(
-            "File path '{0}' not found.".format(infile)
+            "File path '{}' not found.".format(infile)
         )
 
     with salt.utils.files.fopen(infile, "rb") as f:
@@ -160,7 +149,7 @@ def base64_encodefile(fname):
 
         salt '*' hashutil.base64_encodefile /path/to/binary_file
     """
-    encoded_f = BytesIO()
+    encoded_f = io.BytesIO()
 
     with salt.utils.files.fopen(fname, "rb") as f:
         base64.encode(f, encoded_f)
@@ -197,7 +186,7 @@ def base64_decodefile(instr, outfile):
 
         salt '*' hashutil.base64_decodefile instr='Z2V0IHNhbHRlZAo=' outfile='/path/to/binary_file'
     """
-    encoded_f = StringIO(instr)
+    encoded_f = io.StringIO(instr)
 
     with salt.utils.files.fopen(outfile, "wb") as f:
         base64.decode(encoded_f, f)
@@ -300,8 +289,9 @@ def github_signature(string, shared_secret, challenge_hmac):
     msg = string
     key = shared_secret
     hashtype, challenge = challenge_hmac.split("=")
-    if six.text_type:
+    if isinstance(msg, str):
         msg = salt.utils.stringutils.to_bytes(msg)
+    if isinstance(key, str):
         key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
     return hmac_hash.hexdigest() == challenge

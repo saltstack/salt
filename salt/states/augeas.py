@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration management using Augeas
 
@@ -27,20 +26,15 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
 import logging
 import os.path
-
-# Import python libs
 import re
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
-from salt.ext import six
 from salt.modules.augeas_cfg import METHOD_MAP
 
 log = logging.getLogger(__name__)
@@ -76,7 +70,7 @@ def _check_filepath(changes):
             cmd, arg = change_.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                error = "Command {0} is not supported (yet)".format(cmd)
+                error = "Command {} is not supported (yet)".format(cmd)
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
             parts = salt.utils.args.shlex_split(arg)
@@ -88,7 +82,7 @@ def _check_filepath(changes):
                 error = (
                     "Changes should be prefixed with "
                     "/files if no context is provided,"
-                    " change: {0}".format(change_)
+                    " change: {}".format(change_)
                 )
                 raise ValueError(error)
             filename_ = re.sub("^/files|/$", "", filename_)
@@ -97,7 +91,7 @@ def _check_filepath(changes):
                     error = (
                         "Changes should be made to one "
                         "file at a time, detected changes "
-                        "to {0} and {1}".format(filename, filename_)
+                        "to {} and {}".format(filename, filename_)
                     )
                     raise ValueError(error)
             filename = filename_
@@ -105,11 +99,12 @@ def _check_filepath(changes):
             log.error(err)
             if "error" not in locals():
                 error = (
-                    "Invalid formatted command, "
-                    "see debug log for details: {0}".format(change_)
+                    "Invalid formatted command, see debug log for details: {}".format(
+                        change_
+                    )
                 )
             else:
-                error = six.text_type(err)
+                error = str(err)
             raise ValueError(error)
 
     filename = _workout_filename(filename)
@@ -281,7 +276,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret["comment"] = "Error: {0}".format(err)
+            ret["comment"] = "Error: {}".format(err)
             return ret
     else:
         filename = re.sub("^/files|/$", "", context)
@@ -290,7 +285,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         ret["result"] = True
         ret["comment"] = "Executing commands"
         if context:
-            ret["comment"] += ' in file "{0}":\n'.format(context)
+            ret["comment"] += ' in file "{}":\n'.format(context)
         ret["comment"] += "\n".join(changes)
         return ret
 
@@ -305,7 +300,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
     ret["result"] = result["retval"]
 
     if ret["result"] is False:
-        ret["comment"] = "Error: {0}".format(result["error"])
+        ret["comment"] = "Error: {}".format(result["error"])
         return ret
 
     if filename is not None and os.path.isfile(filename):

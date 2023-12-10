@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration of the GNOME desktop
 ========================================
@@ -24,14 +23,9 @@ Control the GNOME settings
             - clock_show_date: true
             - clock_format: 12h
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +35,7 @@ def _check_current_value(gnome_kwargs, value):
     Check the current value with the passed value
     """
     current_value = __salt__["gnome.get"](**gnome_kwargs)
-    return six.text_type(current_value) == six.text_type(value)
+    return str(current_value) == str(value)
 
 
 def _do(name, gnome_kwargs, preferences):
@@ -62,11 +56,11 @@ def _do(name, gnome_kwargs, preferences):
 
             # need to convert boolean values to strings and make lowercase to
             # pass to gsettings
-            value = six.text_type(value).lower()
+            value = str(value).lower()
 
         elif isinstance(value, int):
             ftype = "int"
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             ftype = "string"
         else:
             ftype = "string"
@@ -74,12 +68,12 @@ def _do(name, gnome_kwargs, preferences):
         gnome_kwargs.update({"key": key, "value": value})
 
         if _check_current_value(gnome_kwargs, value):
-            messages.append("{0} is already set to {1}".format(key, value))
+            messages.append("{} is already set to {}".format(key, value))
         else:
             result = __salt__["gnome.set"](**gnome_kwargs)
             if result["retcode"] == 0:
-                messages.append("Setting {0} to {1}".format(key, value))
-                ret["changes"][key] = "{0}:{1}".format(key, value)
+                messages.append("Setting {} to {}".format(key, value))
+                ret["changes"][key] = "{}:{}".format(key, value)
                 ret["result"] = True
             else:
                 messages.append(result["stdout"])

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution of MySQL queries
 ==========================
@@ -20,18 +19,12 @@ Its output may be stored in a file or in a grain.
         - output:   "/tmp/query_id.txt"
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 import sys
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -63,6 +56,7 @@ def run_file(
     overwrite=True,
     saltenv=None,
     check_db_exists=True,
+    client_flags=None,
     **connection_args
 ):
     """
@@ -101,13 +95,26 @@ def run_file(
         The state run will check that the specified database exists (default=True)
         before running any queries
 
+    client_flags:
+        A list of client flags to pass to the MySQL connection.
+        https://dev.mysql.com/doc/internals/en/capability-flags.html
+
     """
     ret = {
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {0} is already present".format(database),
+        "comment": "Database {} is already present".format(database),
     }
+
+    if client_flags is None:
+        client_flags = []
+    connection_args["client_flags"] = client_flags
+
+    if not isinstance(client_flags, list):
+        ret["comment"] = "Error: client_flags must be a list."
+        ret["result"] = False
+        return ret
 
     if any(
         [
@@ -118,7 +125,7 @@ def run_file(
         query_file = __salt__["cp.cache_file"](query_file, saltenv=saltenv or __env__)
 
     if not os.path.exists(query_file):
-        ret["comment"] = "File {0} does not exist".format(query_file)
+        ret["comment"] = "File {} does not exist".format(query_file)
         ret["result"] = False
         return ret
 
@@ -131,7 +138,7 @@ def run_file(
             return ret
 
         ret["result"] = None
-        ret["comment"] = ("Database {0} is not present").format(database)
+        ret["comment"] = "Database {} is not present".format(database)
         return ret
 
     # Check if execution needed
@@ -203,7 +210,7 @@ def run_file(
             mapped_results.append(mapped_line)
         query_result["results"] = mapped_results
 
-    ret["comment"] = six.text_type(query_result)
+    ret["comment"] = str(query_result)
 
     if output == "grain":
         if grain is not None and key is None:
@@ -224,7 +231,7 @@ def run_file(
         with salt.utils.files.fopen(output, "w") as output_file:
             if "results" in query_result:
                 for res in query_result["results"]:
-                    for col, val in six.iteritems(res):
+                    for col, val in res.items():
                         output_file.write(
                             salt.utils.stringutils.to_str(col + ":" + val + "\n")
                         )
@@ -245,6 +252,7 @@ def run(
     key=None,
     overwrite=True,
     check_db_exists=True,
+    client_flags=None,
     **connection_args
 ):
     """
@@ -277,13 +285,28 @@ def run(
     check_db_exists:
         The state run will check that the specified database exists (default=True)
         before running any queries
+
+    client_flags:
+        A list of client flags to pass to the MySQL connection.
+        https://dev.mysql.com/doc/internals/en/capability-flags.html
+
     """
     ret = {
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {0} is already present".format(database),
+        "comment": "Database {} is already present".format(database),
     }
+
+    if client_flags is None:
+        client_flags = []
+    connection_args["client_flags"] = client_flags
+
+    if not isinstance(client_flags, list):
+        ret["comment"] = "Error: client_flags must be a list."
+        ret["result"] = False
+        return ret
+
     # check if database exists
     if check_db_exists and not __salt__["mysql.db_exists"](database, **connection_args):
         err = _get_mysql_error()
@@ -293,7 +316,7 @@ def run(
             return ret
 
         ret["result"] = None
-        ret["comment"] = ("Database {0} is not present").format(name)
+        ret["comment"] = "Database {} is not present".format(name)
         return ret
 
     # Check if execution needed
@@ -360,7 +383,7 @@ def run(
             mapped_results.append(mapped_line)
         query_result["results"] = mapped_results
 
-    ret["comment"] = six.text_type(query_result)
+    ret["comment"] = str(query_result)
 
     if output == "grain":
         if grain is not None and key is None:
@@ -381,17 +404,17 @@ def run(
         with salt.utils.files.fopen(output, "w") as output_file:
             if "results" in query_result:
                 for res in query_result["results"]:
-                    for col, val in six.iteritems(res):
+                    for col, val in res.items():
                         output_file.write(
                             salt.utils.stringutils.to_str(col + ":" + val + "\n")
                         )
             else:
-                if isinstance(query_result, six.text_type):
+                if isinstance(query_result, str):
                     output_file.write(salt.utils.stringutils.to_str(query_result))
                 else:
-                    for col, val in six.iteritems(query_result):
+                    for col, val in query_result.items():
                         output_file.write(
-                            salt.utils.stringutils.to_str("{0}:{1}\n".format(col, val))
+                            salt.utils.stringutils.to_str("{}:{}\n".format(col, val))
                         )
     else:
         ret["changes"]["query"] = "Executed"

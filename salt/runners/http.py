@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Module for making various web calls. Primarily designed for webhooks and the
 like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import salt libs
 import salt.utils.http
 
 log = logging.getLogger(__name__)

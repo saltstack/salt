@@ -193,7 +193,12 @@ def __virtual__():
     """
     This beacon can only work when running under a regular or a proxy minion, managed through napalm.
     """
-    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+    if salt.utils.napalm.virtual(__opts__, __virtualname__, __file__):
+        return __virtualname__
+    else:
+        err_msg = "NAPALM is not installed."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def _compare(cur_cmp, cur_struct):
@@ -289,9 +294,8 @@ def validate(config):
         if not isinstance(fun_cfg, dict):
             return (
                 False,
-                "The match structure for the {} execution function output must be a dictionary".format(
-                    fun
-                ),
+                "The match structure for the {} execution function output must be a"
+                " dictionary".format(fun),
             )
         if fun not in __salt__:
             return False, "Execution function {} is not availabe!".format(fun)

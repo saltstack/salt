@@ -1,10 +1,2 @@
 # This file only exists to trigger the right static compiled requirements destination
 # Any non hard dependencies of Salt for FreeBSD can go here
-cherrypy
-psutil
-backports.ssl_match_hostname>=3.7.0.1; python_version < '3.7'
-pyopenssl>=19.0.0
-python-dateutil>=2.8.0
-python-gnupg>=0.4.4
-setproctitle>=1.1.10
-timelib>=0.2.5

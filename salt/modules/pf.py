@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control the OpenBSD packet filter (PF).
 
@@ -7,13 +6,10 @@ Control the OpenBSD packet filter (PF).
 .. versionadded:: 2019.2.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -40,7 +36,7 @@ def enable():
     """
     Enable the Packet Filter.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -71,7 +67,7 @@ def disable():
     """
     Disable the Packet Filter.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -106,7 +102,7 @@ def loglevel(level):
         Log level. Should be one of the following: emerg, alert, crit, err, warning, notice,
         info or debug (OpenBSD); or none, urgent, misc, loud (FreeBSD).
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -131,10 +127,10 @@ def loglevel(level):
             "debug",
         ]
     if level not in all_levels:
-        raise SaltInvocationError("Unknown loglevel: {0}".format(level))
+        raise SaltInvocationError("Unknown loglevel: {}".format(level))
 
     result = __salt__["cmd.run_all"](
-        "pfctl -x {0}".format(level), output_loglevel="trace", python_shell=False
+        "pfctl -x {}".format(level), output_loglevel="trace", python_shell=False
     )
 
     if result["retcode"] != 0:
@@ -156,7 +152,7 @@ def load(file="/etc/pf.conf", noop=False):
     noop:
         Don't actually load the rules, just parse them.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -175,7 +171,7 @@ def load(file="/etc/pf.conf", noop=False):
 
     if result["retcode"] != 0:
         raise CommandExecutionError(
-            "Problem loading the ruleset from {0}".format(file),
+            "Problem loading the ruleset from {}".format(file),
             info={"errors": [result["stderr"]], "changes": False},
         )
 
@@ -200,7 +196,7 @@ def flush(modifier):
         Please refer to the OpenBSD `pfctl(8) <https://man.openbsd.org/pfctl#T>`_
         documentation for a detailed explanation of each command.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -218,9 +214,9 @@ def flush(modifier):
         modifier = modifier.title()
 
     if modifier not in all_modifiers:
-        raise SaltInvocationError("Unknown modifier: {0}".format(modifier))
+        raise SaltInvocationError("Unknown modifier: {}".format(modifier))
 
-    cmd = "pfctl -v -F {0}".format(modifier)
+    cmd = "pfctl -v -F {}".format(modifier)
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
     if result["retcode"] == 0:
@@ -232,7 +228,7 @@ def flush(modifier):
         ret["comment"] = result["stderr"]
     else:
         raise CommandExecutionError(
-            "Could not flush {0}".format(modifier),
+            "Could not flush {}".format(modifier),
             info={"errors": [result["stderr"]], "changes": False},
         )
 
@@ -262,7 +258,7 @@ def table(command, table, **kwargs):
         Please refer to the OpenBSD `pfctl(8) <https://man.openbsd.org/pfctl#T>`_
         documentation for a detailed explanation of each command.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -283,7 +279,7 @@ def table(command, table, **kwargs):
         "zero",
     ]
     if command not in all_commands:
-        raise SaltInvocationError("Unknown table command: {0}".format(command))
+        raise SaltInvocationError("Unknown table command: {}".format(command))
 
     cmd = ["pfctl", "-t", table, "-T", command]
 
@@ -320,7 +316,7 @@ def table(command, table, **kwargs):
             ret = {"comment": result["stderr"], "matches": False}
         else:
             raise CommandExecutionError(
-                "Could not apply {0} on table {1}".format(command, table),
+                "Could not apply {} on table {}".format(command, table),
                 info={"errors": [result["stderr"]], "changes": False},
             )
 
@@ -339,7 +335,7 @@ def show(modifier):
         - states
         - tables
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -355,16 +351,16 @@ def show(modifier):
         modifier = modifier.title()
 
     if modifier not in all_modifiers:
-        raise SaltInvocationError("Unknown modifier: {0}".format(modifier))
+        raise SaltInvocationError("Unknown modifier: {}".format(modifier))
 
-    cmd = "pfctl -s {0}".format(modifier)
+    cmd = "pfctl -s {}".format(modifier)
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
     if result["retcode"] == 0:
         ret["comment"] = result["stdout"].split("\n")
     else:
         raise CommandExecutionError(
-            "Could not show {0}".format(modifier),
+            "Could not show {}".format(modifier),
             info={"errors": [result["stderr"]], "changes": False},
         )
 

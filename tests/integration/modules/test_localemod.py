@@ -1,17 +1,14 @@
 import pytest
-import salt.utils.platform
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, requires_salt_modules, slowTest
-from tests.support.unit import skipIf
 
 
-@skipIf(salt.utils.platform.is_windows(), "minion is windows")
-@skipIf(salt.utils.platform.is_darwin(), "locale method is not supported on mac")
-@skipIf(
-    salt.utils.platform.is_freebsd(),
-    "locale method is supported only within login classes or environment variables",
+@pytest.mark.skip_on_windows(reason="minion is windows")
+@pytest.mark.skip_on_darwin(reason="locale method is not supported on mac")
+@pytest.mark.skip_on_freebsd(
+    reason="locale method is supported only within login classes or environment variables"
 )
-@requires_salt_modules("locale")
+@pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
     def _find_new_locale(self, current_locale):
@@ -30,8 +27,8 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function("locale.get_locale")
         self.assertNotIn("Unsupported platform!", locale)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_gen_locale(self):
         # Make sure charmaps are available on test system before attempting
         # call gen_locale. We log this error to the user in the function, but
@@ -50,8 +47,8 @@ class LocaleModuleTest(ModuleCase):
         ret = self.run_function("locale.gen_locale", [new_locale])
         self.assertTrue(ret)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = self._find_new_locale(original_locale)

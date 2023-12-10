@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Namecheap Domain Management
 
@@ -26,12 +25,8 @@ file, or in the Pillar data.
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 CAN_USE_NAMECHEAP = True
 
@@ -306,7 +301,7 @@ def create(domain_name, years, **kwargs):
     ]
     opts = salt.utils.namecheap.get_opts("namecheap.domains.create")
     opts["DomainName"] = domain_name
-    opts["Years"] = six.text_type(years)
+    opts["Years"] = str(years)
 
     def add_to_opts(opts_dict, kwargs, value, suffix, prefices):
         for prefix in prefices:
@@ -314,7 +309,7 @@ def create(domain_name, years, **kwargs):
             if nextkey not in kwargs:
                 opts_dict[nextkey] = value
 
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         if key.startswith("Registrant"):
             add_to_opts(
                 opts,
@@ -369,7 +364,7 @@ def create(domain_name, years, **kwargs):
     for requiredkey in require_opts:
         if requiredkey not in opts:
             log.error("Missing required parameter '%s'", requiredkey)
-            raise Exception("Missing required parameter '" + requiredkey + "'")
+            raise Exception("Missing required parameter '{}'".format(requiredkey))
 
     response_xml = salt.utils.namecheap.post_request(opts)
 

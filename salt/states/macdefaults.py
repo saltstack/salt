@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Writing/reading defaults from a macOS minion
 ============================================
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "macdefaults"
 
 
@@ -62,22 +58,20 @@ def write(name, domain, value, vtype="string", user=None):
         (value in [True, "TRUE", "YES"] and current_value == "1")
         or (value in [False, "FALSE", "NO"] and current_value == "0")
     ):
-        ret["comment"] += "{0} {1} is already set to {2}".format(domain, name, value)
+        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
     elif vtype in ["int", "integer"] and safe_cast(current_value, int) == safe_cast(
         value, int
     ):
-        ret["comment"] += "{0} {1} is already set to {2}".format(domain, name, value)
+        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
     elif current_value == value:
-        ret["comment"] += "{0} {1} is already set to {2}".format(domain, name, value)
+        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
     else:
         out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
         if out["retcode"] != 0:
             ret["result"] = False
-            ret["comment"] = "Failed to write default. {0}".format(out["stdout"])
+            ret["comment"] = "Failed to write default. {}".format(out["stdout"])
         else:
-            ret["changes"]["written"] = "{0} {1} is set to {2}".format(
-                domain, name, value
-            )
+            ret["changes"]["written"] = "{} {} is set to {}".format(domain, name, value)
 
     return ret
 
@@ -102,8 +96,8 @@ def absent(name, domain, user=None):
     out = __salt__["macdefaults.delete"](domain, name, user)
 
     if out["retcode"] != 0:
-        ret["comment"] += "{0} {1} is already absent".format(domain, name)
+        ret["comment"] += "{} {} is already absent".format(domain, name)
     else:
-        ret["changes"]["absent"] = "{0} {1} is now absent".format(domain, name)
+        ret["changes"]["absent"] = "{} {} is now absent".format(domain, name)
 
     return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface with a Junos device via proxy-minion. To connect to a junos device \
 via junos proxy, specify the host information in the pillar in '/srv/pillar/details.sls'
@@ -35,11 +34,9 @@ Run the salt proxy via the following command:
 
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import 3rd-party libs
 try:
     HAS_JUNOS = True
     import jnpr.junos
@@ -47,17 +44,18 @@ try:
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
     from jnpr.junos.exception import (
-        RpcTimeoutError,
-        ConnectClosedError,
-        RpcError,
-        ConnectError,
-        ProbeError,
         ConnectAuthError,
+        ConnectClosedError,
+        ConnectError,
         ConnectRefusedError,
         ConnectTimeoutError,
+        ProbeError,
+        RpcError,
+        RpcTimeoutError,
     )
     from ncclient.operations.errors import TimeoutExpiredError
     from ncclient.transport.third_party.junos.ioproc import IOProc
+
 except ImportError:
     HAS_JUNOS = False
 
@@ -66,6 +64,20 @@ __proxyenabled__ = ["junos"]
 thisproxy = {}
 
 log = logging.getLogger(__name__)
+
+
+class RebootActive:
+    """
+    Class to get static variable, to indicate when a reboot/shutdown
+    is being processed and the keep_alive should not probe the
+    connection since it interferes with the shutdown process.
+    """
+
+    reboot_shutdown = False
+
+    def __init__(self, **kwargs):
+        pass
+
 
 # Define the module's virtual name
 __virtualname__ = "junos"
@@ -78,7 +90,8 @@ def __virtual__():
     if not HAS_JUNOS:
         return (
             False,
-            "Missing dependency: The junos proxy minion requires the 'jnpr' Python module.",
+            "Missing dependency: The junos proxy minion requires the 'jnpr' Python"
+            " module.",
         )
 
     return __virtualname__
@@ -116,7 +129,7 @@ def init(opts):
     for arg in optional_args:
         if arg in proxy_keys:
             args[arg] = opts["proxy"][arg]
-    log.debug("Args: {}".format(args))
+    log.debug("Args: %s", args)
     thisproxy["conn"] = jnpr.junos.Device(**args)
     try:
         thisproxy["conn"].open()
@@ -127,7 +140,7 @@ def init(opts):
         ConnectTimeoutError,
         ConnectError,
     ) as ex:
-        log.error("{} : not able to initiate connection to the device".format(str(ex)))
+        log.error("%s : not able to initiate connection to the device", ex)
         thisproxy["initialized"] = False
         return
 
@@ -143,12 +156,12 @@ def init(opts):
     try:
         thisproxy["conn"].bind(cu=jnpr.junos.utils.config.Config)
     except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with Config class due to: {}".format(str(ex)))
+        log.error("Bind failed with Config class due to: %s", ex)
 
     try:
         thisproxy["conn"].bind(sw=jnpr.junos.utils.sw.SW)
     except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with SW class due to: {}".format(str(ex)))
+        log.error("Bind failed with SW class due to: %s", ex)
     thisproxy["initialized"] = True
 
 
@@ -160,6 +173,18 @@ def conn():
     return thisproxy["conn"]
 
 
+def reboot_active():
+    RebootActive.reboot_shutdown = True
+
+
+def reboot_clear():
+    RebootActive.reboot_shutdown = False
+
+
+def get_reboot_active():
+    return RebootActive.reboot_shutdown
+
+
 def alive(opts):
     """
     Validate and return the connection status with the remote device.
@@ -169,13 +194,15 @@ def alive(opts):
 
     dev = conn()
 
+    # check if SessionListener sets a TransportError if there is a RpcTimeoutError
     thisproxy["conn"].connected = ping()
 
-    if not dev.connected:
+    local_connected = dev.connected
+    if not local_connected:
         __salt__["event.fire_master"](
             {}, "junos/proxy/{}/stop".format(opts["proxy"]["host"])
         )
-    return dev.connected
+    return local_connected
 
 
 def ping():

@@ -21,6 +21,7 @@ beacon modules
     haproxy
     inotify
     journald
+    junos_rre_keys
     load
     log_beacon
     memusage
@@ -30,6 +31,7 @@ beacon modules
     pkg
     proxy_example
     ps
+    salt_monitor
     salt_proxy
     sensehat
     service
@@ -37,6 +39,7 @@ beacon modules
     smartos_imgadm
     smartos_vmadm
     status
+    swapusage
     telegram_bot_msg
     twilio_txt_msg
     watchdog

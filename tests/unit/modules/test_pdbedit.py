@@ -1,15 +1,27 @@
-# -*- coding: utf-8 -*-
+import hashlib
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
-# Import Salt Libs
 import salt.modules.pdbedit as pdbedit
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
+
+
+def _md4_supported():
+    try:
+        hashlib.new("md4", "".encode("utf-16le"))
+        return True
+    except ValueError:
+        return False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        not _md4_supported(),
+        reason="Hash type md4 is unsupported on this OS",
+    ),
+]
 
 
 class PdbeditTestCase(TestCase, LoaderModuleMockMixin):

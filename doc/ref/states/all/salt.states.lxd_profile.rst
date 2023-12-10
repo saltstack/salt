@@ -1,5 +1,5 @@
-salt.states.lxd_profile module
-==============================
+salt.states.lxd_profile
+=======================
 
 .. automodule:: salt.states.lxd_profile
     :members:

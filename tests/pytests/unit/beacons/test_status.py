@@ -6,20 +6,19 @@
 """
 
 import pytest
+
 import salt.modules.status as status_module
 from salt.beacons import status
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules():
+    return {
         status: {
             "__salt__": pytest.helpers.salt_loader_module_functions(status_module)
         },
         status_module: {"__grains__": {"kernel": "Linux"}, "__salt__": {}},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_empty_config():

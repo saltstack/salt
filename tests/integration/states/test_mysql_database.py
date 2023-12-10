@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the MySQL states
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 NO_MYSQL = False
 try:
@@ -26,9 +18,9 @@ if not salt.utils.path.which("mysqladmin"):
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
@@ -39,12 +31,12 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
     user = "root"
     password = "poney"
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         """
         Test presence of MySQL server, enforce a root password
         """
-        super(MysqlDatabaseStateTest, self).setUp()
+        super().setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -93,7 +85,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict) or "results" not in ret:
                 raise AssertionError(
                     (
-                        "Unexpected result while testing connection" " on db '{0}': {1}"
+                        "Unexpected result while testing connection on db '{}': {}"
                     ).format(db_name, repr(ret))
                 )
             self.assertEqual([["1"]], ret["results"])
@@ -112,7 +104,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltStateChangesEqual(ret, {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent(self):
         """
         mysql_database.present
@@ -131,7 +123,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
     # TODO: test with variations on collate and charset, check for db alter
     # once it will be done in mysql_database.present state
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent_fuzzy(self):
         """
         mysql_database.present with utf-8 andf fuzzy db name
@@ -167,8 +159,8 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
             # saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
-    @skipIf(True, "This tests needs issue #8947 to be fixed first")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip(reason="This tests needs issue #8947 to be fixed first")
     def test_utf8_from_sls_file(self):
         """
         Try to create/destroy an utf-8 database name from an sls file #8947
@@ -189,11 +181,11 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", mods="mysql_utf8")
         if not isinstance(ret, dict):
             raise AssertionError(
-                (
-                    "Unexpected result while testing external mysql utf8 sls" ": {0}"
-                ).format(repr(ret))
+                ("Unexpected result while testing external mysql utf8 sls: {}").format(
+                    repr(ret)
+                )
             )
-        for item, descr in six.iteritems(ret):
+        for item, descr in ret.items():
             result[item] = {
                 "__run_num__": descr["__run_num__"],
                 "comment": descr["comment"],

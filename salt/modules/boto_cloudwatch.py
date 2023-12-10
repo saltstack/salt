@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudWatch
 
@@ -44,32 +43,26 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import logging
+
+import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-import yaml  # pylint: disable=blacklisted-import
 
-# Import Salt libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
-
-# Import third party libs
 try:
     import boto
     import boto.ec2.cloudwatch
-    import boto.ec2.cloudwatch.listelement
     import boto.ec2.cloudwatch.dimension
+    import boto.ec2.cloudwatch.listelement
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -88,7 +81,9 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     """
     Get alarm details. Also can be used to check to see if an alarm exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.get_alarm myalarm region=us-east-1
     """
@@ -159,7 +154,9 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None, profile=None)
             $ salt-call boto_cloudwatch.get_all_alarms --out=txt | sed "s/local: //" > final_alarms.sls
             $ diff final_alarms.sls managed_alarms.sls
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.get_all_alarms region=us-east-1 --out=txt
     """
@@ -223,7 +220,9 @@ def create_or_update_alarm(
     boto_cloudwatch_alarm.present states which have alarm_actions that
     reference the scaling_policy.
 
-    CLI example:
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.create_alarm name=myalarm ... region=us-east-1
     """
@@ -234,19 +233,20 @@ def create_or_update_alarm(
         period = int(period)
     if evaluation_periods:
         evaluation_periods = int(evaluation_periods)
-    if isinstance(dimensions, six.string_types):
+    if isinstance(dimensions, str):
         dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
             log.error(
-                "could not parse dimensions argument: must be json encoding of a dict: '%s'",
+                "could not parse dimensions argument: must be json encoding of a dict:"
+                " '%s'",
                 dimensions,
             )
             return False
-    if isinstance(alarm_actions, six.string_types):
+    if isinstance(alarm_actions, str):
         alarm_actions = alarm_actions.split(",")
-    if isinstance(insufficient_data_actions, six.string_types):
+    if isinstance(insufficient_data_actions, str):
         insufficient_data_actions = insufficient_data_actions.split(",")
-    if isinstance(ok_actions, six.string_types):
+    if isinstance(ok_actions, str):
         ok_actions = ok_actions.split(",")
 
     # convert provided action names into ARN's
@@ -296,7 +296,9 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
     Convert a list of strings into actual arns. Converts convenience names such
     as 'scaling_policy:...'
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' convert_to_arn 'scaling_policy:'
     """

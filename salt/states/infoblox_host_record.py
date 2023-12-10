@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Infoblox host record management.
 
@@ -9,9 +8,6 @@ functions accept api_opts:
     api_username:  [default to pillar value]
     api_password:  [default to pillar value]
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name=None, data=None, ensure_data=True, **api_opts):
@@ -59,7 +55,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "please update the name: {0} to equal the updated data name {1}".format(
+            ] = "please update the name: {} to equal the updated data name {}".format(
                 name, data["name"]
             )
             return ret
@@ -76,9 +72,10 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
         diff = __salt__["infoblox.diff_objects"](data, obj)
         if not diff:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "supplied fields already updated (note: removing fields might not update)"
+            ret["comment"] = (
+                "supplied fields already updated (note: removing fields might not"
+                " update)"
+            )
             return ret
 
         if diff:
@@ -114,10 +111,9 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
                                     addr["ipv4addr"] = ip
                                     found_matches += 1
                             if found_matches > 1:
-                                ret[
-                                    "comment"
-                                ] = "infoblox record cant updated because ipaddress {0} matches multiple func:nextavailableip".format(
-                                    ip
+                                ret["comment"] = (
+                                    "infoblox record cant updated because ipaddress {}"
+                                    " matches multiple func:nextavailableip".format(ip)
                                 )
                                 ret["result"] = False
                                 return ret
@@ -126,15 +122,16 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
                 obj["_ref"], data=data, **api_opts
             )
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "infoblox record fields updated (note: removing fields might not update)"
+            ret["comment"] = (
+                "infoblox record fields updated (note: removing fields might not"
+                " update)"
+            )
             # ret['changes'] = {'diff': diff }
             return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create infoblox record {0}".format(name)
+        ret["comment"] = "would attempt to create infoblox record {}".format(name)
         return ret
 
     new_obj_ref = __salt__["infoblox.create_host"](data=data, **api_opts)

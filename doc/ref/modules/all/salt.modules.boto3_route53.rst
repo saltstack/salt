@@ -1,5 +1,5 @@
-salt.modules.boto3_route53 module
-=================================
+salt.modules.boto3_route53
+==========================
 
 .. automodule:: salt.modules.boto3_route53
     :members:

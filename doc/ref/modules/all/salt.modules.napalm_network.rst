@@ -1,5 +1,5 @@
-salt.modules.napalm_network module
-==================================
+salt.modules.napalm_network
+===========================
 
 .. automodule:: salt.modules.napalm_network
     :members:

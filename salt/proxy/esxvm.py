@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing VMWare ESXi virtual machines.
 
@@ -145,13 +144,10 @@ Look there to find an example structure for Pillar as well as an example
 ``.sls`` file for configuring an ESX virtual machine from scratch.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.exceptions as excs
 from salt.utils.dictupdate import merge
 
@@ -283,7 +279,7 @@ def find_credentials():
         return DETAILS["username"], password
     # We've reached the end of the list without successfully authenticating.
     raise excs.VMwareConnectionError(
-        "Cannot complete login due to " "incorrect credentials."
+        "Cannot complete login due to incorrect credentials."
     )
 
 

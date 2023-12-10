@@ -1,5 +1,5 @@
-salt.states.dvs module
-======================
+salt.states.dvs
+===============
 
 .. automodule:: salt.states.dvs
     :members:

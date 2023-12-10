@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 This module allows SPM to use sqlite3 as the backend for SPM's package database.
 
 .. versionadded:: 2015.8.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 import sqlite3
 from sqlite3 import OperationalError
-
-from salt.ext.six.moves import zip
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -98,7 +94,7 @@ def info(package, conn=None):
         "description",
     )
     data = conn.execute(
-        "SELECT {0} FROM packages WHERE package=?".format(",".join(fields)), (package,)
+        "SELECT {} FROM packages WHERE package=?".format(",".join(fields)), (package,)
     )
     row = data.fetchone()
     if close:
@@ -198,7 +194,7 @@ def register_file(name, member, path, digest="", conn=None):
         "INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             name,
-            "{0}/{1}".format(path, member.path),
+            "{}/{}".format(path, member.path),
             member.size,
             member.mode,
             digest,

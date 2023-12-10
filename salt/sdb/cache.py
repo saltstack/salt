@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 cache Module
 
@@ -45,8 +44,6 @@ it must be specified in the URI:
     master_ip: sdb://mastercloudcache/public_ips?bank=cloud/active/ec2/my-ec2-conf/saltmaster
 """
 
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.cache
 

@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
-
 """
 Wrapper function for mine operations for salt-ssh
 
 .. versionadded:: 2015.5.0
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function
 
 import copy
 
-# Import salt libs
 import salt.client.ssh
 
 

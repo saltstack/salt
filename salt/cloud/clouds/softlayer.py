@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SoftLayer Cloud Module
 ======================
@@ -25,20 +24,12 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 :depends: softlayer
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
 import salt.config as config
-
-# Import salt cloud libs
 import salt.utils.cloud
 from salt.exceptions import SaltCloudSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Attempt to import softlayer lib
 try:
@@ -68,12 +59,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("apikey",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("apikey",)
     )
 
 
@@ -248,7 +246,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "softlayer",
+                _get_active_provider_name() or "softlayer",
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -262,7 +260,7 @@ def create(vm_):
     hostname = name
     domain = config.get_cloud_config_value("domain", vm_, __opts__, default=None)
     if domain is None:
-        SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
+        raise SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
 
     if vm_.get("use_fqdn"):
         name = ".".join([name, domain])
@@ -271,7 +269,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -300,8 +298,8 @@ def create(vm_):
         disks = vm_["disk_size"]
 
         if isinstance(disks, int):
-            disks = [six.text_type(disks)]
-        elif isinstance(disks, six.string_types):
+            disks = [str(disks)]
+        elif isinstance(disks, str):
             disks = [size.strip() for size in disks.split(",")]
 
         count = 0
@@ -310,8 +308,8 @@ def create(vm_):
             if count == 1:
                 count += 1
             block_device = {
-                "device": six.text_type(count),
-                "diskImage": {"capacity": six.text_type(disk)},
+                "device": str(count),
+                "diskImage": {"capacity": str(disk)},
             }
             kwargs["blockDevices"].append(block_device)
             count += 1
@@ -397,7 +395,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(name),
+        "salt/cloud/{}/requesting".format(name),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -515,7 +513,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -542,7 +540,7 @@ def list_nodes_full(mask="mask[id]", call=None):
         hostname = node_id["hostname"]
         ret[hostname] = node_id
     __utils__["cloud.cache_node_list"](
-        ret, __active_provider_name__.split(":")[0], __opts__
+        ret, _get_active_provider_name().split(":")[0], __opts__
     )
     return ret
 
@@ -560,7 +558,7 @@ def list_nodes(call=None):
     nodes = list_nodes_full()
     if "error" in nodes:
         raise SaltCloudSystemExit(
-            "An error occurred while listing nodes: {0}".format(
+            "An error occurred while listing nodes: {}".format(
                 nodes["error"]["Errors"]["Error"]["Message"]
             )
         )
@@ -575,7 +573,7 @@ def list_nodes(call=None):
         if "primaryBackendIpAddress" in nodes[node]:
             ret[node]["private_ips"] = nodes[node]["primaryBackendIpAddress"]
         if "status" in nodes[node]:
-            ret[node]["state"] = six.text_type(nodes[node]["status"]["name"])
+            ret[node]["state"] = str(nodes[node]["status"]["name"])
     return ret
 
 
@@ -584,7 +582,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -598,7 +598,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -614,13 +614,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -633,14 +633,14 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return response

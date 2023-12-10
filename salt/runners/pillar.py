@@ -1,12 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Functions to interact with the pillar compiler on the master
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import logging
+
 import salt.pillar
 import salt.utils.minions
+
+log = logging.getLogger(__name__)
 
 
 def show_top(minion=None, saltenv="base"):
@@ -97,3 +98,106 @@ def show_pillar(minion="*", **kwargs):
 
     compiled_pillar = pillar.compile_pillar()
     return compiled_pillar
+
+
+def clear_pillar_cache(minion="*", **kwargs):
+    """
+    Clears the cached values when using pillar_cache
+
+    .. versionadded:: 3003
+
+    CLI Example:
+
+    Clears the pillar cache for a specific minion:
+
+    .. code-block:: bash
+
+        salt-run pillar.clear_pillar_cache 'minion'
+
+    """
+
+    if not __opts__.get("pillar_cache"):
+        log.info("The pillar_cache is set to False or not enabled.")
+        return False
+
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+    ret = ckminions.check_minions(minion)
+
+    pillarenv = kwargs.pop("pillarenv", None)
+    saltenv = kwargs.pop("saltenv", "base")
+
+    pillar_cache = {}
+    for tgt in ret.get("minions", []):
+        id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
+
+        for key in kwargs:
+            grains[key] = kwargs[key]
+
+        if grains is None:
+            grains = {"fqdn": minion}
+
+        pillar = salt.pillar.PillarCache(
+            __opts__, grains, id_, saltenv, pillarenv=pillarenv
+        )
+        pillar.clear_pillar()
+
+        if __opts__.get("pillar_cache_backend") == "memory":
+            _pillar_cache = pillar.cache
+        else:
+            _pillar_cache = pillar.cache._dict
+
+        if tgt in _pillar_cache and _pillar_cache[tgt]:
+            pillar_cache[tgt] = _pillar_cache.get(tgt).get(pillarenv)
+
+    return pillar_cache
+
+
+def show_pillar_cache(minion="*", **kwargs):
+    """
+    Shows the cached values in pillar_cache
+
+    .. versionadded:: 3003
+
+    CLI Example:
+
+    Shows the pillar cache for a specific minion:
+
+    .. code-block:: bash
+
+        salt-run pillar.show_pillar_cache 'minion'
+
+    """
+
+    if not __opts__.get("pillar_cache"):
+        log.info("The pillar_cache is set to False or not enabled.")
+        return False
+
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+    ret = ckminions.check_minions(minion)
+
+    pillarenv = kwargs.pop("pillarenv", None)
+    saltenv = kwargs.pop("saltenv", "base")
+
+    pillar_cache = {}
+    for tgt in ret.get("minions", []):
+        id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
+
+        for key in kwargs:
+            grains[key] = kwargs[key]
+
+        if grains is None:
+            grains = {"fqdn": minion}
+
+        pillar = salt.pillar.PillarCache(
+            __opts__, grains, id_, saltenv, pillarenv=pillarenv
+        )
+
+        if __opts__.get("pillar_cache_backend") == "memory":
+            _pillar_cache = pillar.cache
+        else:
+            _pillar_cache = pillar.cache._dict
+
+        if tgt in _pillar_cache and _pillar_cache[tgt]:
+            pillar_cache[tgt] = _pillar_cache[tgt].get(pillarenv)
+
+    return pillar_cache

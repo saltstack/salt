@@ -10,12 +10,10 @@ To enable these grains set ``fibre_channel_grains: True`` in the minion config.
 
     fibre_channel_grains: True
 """
-# Import Python libs
 
 import glob
 import logging
 
-# Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.platform

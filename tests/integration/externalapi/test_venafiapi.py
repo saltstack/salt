@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt-run command
 """
-from __future__ import absolute_import
 
 import functools
 import random
 import string
 import tempfile
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
-from salt.ext.six import text_type
-from salt.ext.six.moves import range
+
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 
 
 def _random_name(prefix=""):
@@ -45,13 +42,10 @@ class VenafiTest(ShellCase):
     """
 
     @with_random_name
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_request(self, name):
-        cn = "{0}.example.com".format(name)
-
-        # Provide python27 compatibility
-        if not isinstance(cn, text_type):
-            cn = cn.decode()
+        cn = f"{name}.example.com"
 
         ret = self.run_run_plus(
             fun="venafi.request",
@@ -87,7 +81,7 @@ class VenafiTest(ShellCase):
         assert pkey_public_key_pem == cert_public_key_pem
 
     @with_random_name
-    @slowTest
+    @pytest.mark.slow_test
     def test_sign(self, name):
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
@@ -128,10 +122,6 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
             f.flush()
             csr_path = f.name
             cn = "test-csr-32313131.venafi.example.com"
-
-            # Provide python27 compatibility
-            if not isinstance(cn, text_type):
-                cn = cn.decode()
 
             ret = self.run_run_plus(
                 fun="venafi.request", minion_id=cn, csr_path=csr_path, zone="fake"

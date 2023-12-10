@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Extract the pillar data for this minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -16,7 +14,7 @@ import salt.utils.dictupdate
 import salt.utils.functools
 import salt.utils.odict
 import salt.utils.yaml
-from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ["*"]
@@ -26,7 +24,7 @@ log = logging.getLogger(__name__)
 
 def get(
     key,
-    default=KeyError,
+    default=NOT_SET,
     merge=False,
     merge_nested_lists=None,
     delimiter=DEFAULT_TARGET_DELIM,
@@ -34,7 +32,7 @@ def get(
     saltenv=None,
 ):
     """
-    .. versionadded:: 0.14
+    .. versionadded:: 0.14.0
 
     Attempt to retrieve the named value from :ref:`in-memory pillar data
     <pillar-in-memory>`. If the pillar key is not present in the in-memory
@@ -124,6 +122,8 @@ def get(
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
     """
+    if default == NOT_SET:
+        default = KeyError
     if not __opts__.get("pillar_raise_on_missing"):
         if default is KeyError:
             default = ""
@@ -184,7 +184,7 @@ def get(
 
     ret = salt.utils.data.traverse_dict_and_list(pillar_dict, key, default, delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError(f"Pillar key not found: {key}")
 
     return ret
 
@@ -264,18 +264,15 @@ def items(*args, **kwargs):
                 valid_rend=__opts__["decrypt_pillar_renderers"],
             )
         except Exception as exc:  # pylint: disable=broad-except
-            raise CommandExecutionError(
-                "Failed to decrypt pillar override: {0}".format(exc)
-            )
+            raise CommandExecutionError(f"Failed to decrypt pillar override: {exc}")
 
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        dict(__grains__),
         __opts__["id"],
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-
     return pillar.compile_pillar()
 
 
@@ -296,10 +293,10 @@ def _obfuscate_inner(var):
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
-        return "<{0}>".format(var.__class__.__name__)
+        return f"<{var.__class__.__name__}>"
 
 
-def obfuscate(*args):
+def obfuscate(*args, **kwargs):
     """
     .. versionadded:: 2015.8.0
 
@@ -326,7 +323,7 @@ def obfuscate(*args):
         salt '*' pillar.obfuscate
 
     """
-    return _obfuscate_inner(items(*args))
+    return _obfuscate_inner(items(*args, **kwargs))
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
@@ -445,7 +442,7 @@ def raw(key=None):
     if key:
         ret = __pillar__.get(key, {})
     else:
-        ret = __pillar__
+        ret = dict(__pillar__)
 
     return ret
 
@@ -506,7 +503,7 @@ def ext(external, pillar=None):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         ext=external,
@@ -539,10 +536,10 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError(f"Pillar key not found: {key}")
 
     if not isinstance(ret, dict):
-        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+        raise ValueError(f"Pillar value in key {key} is not a dict")
 
     return list(ret)
 
@@ -578,7 +575,7 @@ def file_exists(path, saltenv=None):
     pillar_roots = __opts__.get("pillar_roots")
     if not pillar_roots:
         raise CommandExecutionError(
-            "No pillar_roots found. Are you running " "this on the master?"
+            "No pillar_roots found. Are you running this on the master?"
         )
 
     if saltenv:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execute Chef client runs
 =====================================================================
@@ -19,9 +18,7 @@ Run chef-client or chef-solo
       chef.solo:
         - environment: dev
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import re
 
 
@@ -163,5 +160,9 @@ def _summary(stdout):
 
 
 def _has_changes(stdout):
-    regex = re.search(r"Chef Client finished, (\d+)", _summary(stdout), re.IGNORECASE)
-    return int(regex.group(1)) > 0
+    regex = re.search(
+        r"(Chef Client finished|Chef Infra Client finished|Infra Phase complete), (\d+)",
+        _summary(stdout),
+        re.IGNORECASE,
+    )
+    return int(regex.group(2)) > 0

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Support for Eix
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -16,7 +13,8 @@ def __virtual__():
         return "eix"
     return (
         False,
-        "The eix execution module cannot be loaded: either the system is not Gentoo or the eix binary is not in the path.",
+        "The eix execution module cannot be loaded: either the system is not Gentoo or"
+        " the eix binary is not in the path.",
     )
 
 

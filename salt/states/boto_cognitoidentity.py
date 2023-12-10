@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage CognitoIdentity Functions
 ================================
@@ -46,14 +45,8 @@ config:
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-from salt.ext.six import string_types
-
-# Import Salt Libs
 
 log = logging.getLogger(__name__)
 
@@ -70,14 +63,14 @@ def __virtual__():
 def _get_object(objname, objtype):
     """
     Helper function to retrieve objtype from pillars if objname
-    is string_types, used for SupportedLoginProviders and
+    is str, used for SupportedLoginProviders and
     OpenIdConnectProviderARNs.
     """
     ret = None
     if objname is None:
         return ret
 
-    if isinstance(objname, string_types):
+    if isinstance(objname, str):
         if objname in __opts__:
             ret = __opts__[objname]
         master_opts = __pillar__.get("master", {})
@@ -105,10 +98,10 @@ def _role_present(
     )
     if r.get("error"):
         ret["result"] = False
-        failure_comment = "Failed to get existing identity pool roles: " "{0}".format(
+        failure_comment = "Failed to get existing identity pool roles: {}".format(
             r["error"].get("message", r["error"])
         )
-        ret["comment"] = "{0}\n{1}".format(ret["comment"], failure_comment)
+        ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
         return
 
     existing_identity_pool_role = r.get("identity_pool_roles")[0].get("Roles", {})
@@ -120,10 +113,10 @@ def _role_present(
     )
     if not r.get("set"):
         ret["result"] = False
-        failure_comment = "Failed to set roles: " "{0}".format(
+        failure_comment = "Failed to set roles: {}".format(
             r["error"].get("message", r["error"])
         )
-        ret["comment"] = "{0}\n{1}".format(ret["comment"], failure_comment)
+        ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
         return
 
     updated_identity_pool_role = r.get("roles")
@@ -134,11 +127,9 @@ def _role_present(
             ret["changes"]["new"] = dict()
         ret["changes"]["old"]["Roles"] = existing_identity_pool_role
         ret["changes"]["new"]["Roles"] = r.get("roles")
-        ret["comment"] = "{0}\n{1}".format(
-            ret["comment"], "identity pool roles updated."
-        )
+        ret["comment"] = "{}\n{}".format(ret["comment"], "identity pool roles updated.")
     else:
-        ret["comment"] = "{0}\n{1}".format(
+        ret["comment"] = "{}\n{}".format(
             ret["comment"], "identity pool roles is already current."
         )
 
@@ -216,7 +207,7 @@ def pool_present(
 
     if r.get("error"):
         ret["result"] = False
-        ret["comment"] = "Failed to describe identity pools {0}".format(
+        ret["comment"] = "Failed to describe identity pools {}".format(
             r["error"]["message"]
         )
         return ret
@@ -227,7 +218,7 @@ def pool_present(
         ret["comment"] = (
             "More than one identity pool for the given name matched "
             "Cannot execute pool_present function.\n"
-            "Matched Identity Pools:\n{0}".format(identity_pools)
+            "Matched Identity Pools:\n{}".format(identity_pools)
         )
         return ret
     existing_identity_pool = None if identity_pools is None else identity_pools[0]
@@ -239,13 +230,14 @@ def pool_present(
 
     if __opts__["test"]:
         if identity_pools is None:
-            ret["comment"] = "A new identity pool named {0} will be " "created.".format(
+            ret["comment"] = "A new identity pool named {} will be created.".format(
                 IdentityPoolName
             )
         else:
-            ret["comment"] = (
-                "An existing identity pool named {0} with id "
-                "{1}will be updated.".format(IdentityPoolName, IdentityPoolId)
+            ret[
+                "comment"
+            ] = "An existing identity pool named {} with id {} will be updated.".format(
+                IdentityPoolName, IdentityPoolId
             )
         ret["result"] = None
         return ret
@@ -269,13 +261,14 @@ def pool_present(
         if r.get("created"):
             updated_identity_pool = r.get("identity_pool")
             IdentityPoolId = updated_identity_pool.get("IdentityPoolId")
-            ret["comment"] = (
-                "A new identity pool with name {0}, id {1} "
-                "is created.".format(IdentityPoolName, IdentityPoolId)
+            ret[
+                "comment"
+            ] = "A new identity pool with name {}, id {} is created.".format(
+                IdentityPoolName, IdentityPoolId
             )
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add a new identity pool: " "{0}".format(
+            ret["comment"] = "Failed to add a new identity pool: {}".format(
                 r["error"].get("message", r["error"])
             )
             return ret
@@ -287,26 +280,26 @@ def pool_present(
 
         if r.get("updated"):
             updated_identity_pool = r.get("identity_pool")
-            ret["comment"] = (
-                "Existing identity pool with name {0}, id {1} "
-                "is updated.".format(IdentityPoolName, IdentityPoolId)
+            ret[
+                "comment"
+            ] = "Existing identity pool with name {}, id {} is updated.".format(
+                IdentityPoolName, IdentityPoolId
             )
         else:
             ret["result"] = False
-            ret["comment"] = (
-                "Failed to update an existing identity pool {0} {1}: "
-                "{2}".format(
-                    IdentityPoolName,
-                    IdentityPoolId,
-                    r["error"].get("message", r["error"]),
-                )
+            ret[
+                "comment"
+            ] = "Failed to update an existing identity pool {} {}: {}".format(
+                IdentityPoolName,
+                IdentityPoolId,
+                r["error"].get("message", r["error"]),
             )
             return ret
 
     if existing_identity_pool != updated_identity_pool:
         ret["changes"]["old"] = dict()
         ret["changes"]["new"] = dict()
-        change_key = "Identity Pool Name {0}".format(IdentityPoolName)
+        change_key = "Identity Pool Name {}".format(IdentityPoolName)
         ret["changes"]["old"][change_key] = existing_identity_pool
         ret["changes"]["new"][change_key] = updated_identity_pool
     else:
@@ -371,7 +364,7 @@ def pool_absent(
 
     if r.get("error"):
         ret["result"] = False
-        ret["comment"] = "Failed to describe identity pools {0}".format(
+        ret["comment"] = "Failed to describe identity pools {}".format(
             r["error"]["message"]
         )
         return ret
@@ -380,7 +373,7 @@ def pool_absent(
 
     if identity_pools is None:
         ret["result"] = True
-        ret["comment"] = "No matching identity pool for the given name {0}".format(
+        ret["comment"] = "No matching identity pool for the given name {}".format(
             IdentityPoolName
         )
         return ret
@@ -390,14 +383,15 @@ def pool_absent(
         ret["comment"] = (
             "More than one identity pool for the given name matched "
             "and RemoveAllMatched flag is False.\n"
-            "Matched Identity Pools:\n{0}".format(identity_pools)
+            "Matched Identity Pools:\n{}".format(identity_pools)
         )
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = (
-            "The following matched identity pools will be "
-            "deleted.\n{0}".format(identity_pools)
+        ret[
+            "comment"
+        ] = "The following matched identity pools will be deleted.\n{}".format(
+            identity_pools
         )
         ret["result"] = None
         return ret
@@ -409,28 +403,30 @@ def pool_absent(
         )
         if r.get("error"):
             ret["result"] = False
-            failure_comment = "Failed to delete identity pool {0}: " "{1}".format(
+            failure_comment = "Failed to delete identity pool {}: {}".format(
                 IdentityPoolId, r["error"].get("message", r["error"])
             )
-            ret["comment"] = "{0}\n{1}".format(ret["comment"], failure_comment)
+            ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
             return ret
 
         if r.get("deleted"):
             if not ret["changes"]:
                 ret["changes"]["old"] = dict()
                 ret["changes"]["new"] = dict()
-            change_key = "Identity Pool Id {0}".format(IdentityPoolId)
+            change_key = "Identity Pool Id {}".format(IdentityPoolId)
             ret["changes"]["old"][change_key] = IdentityPoolName
             ret["changes"]["new"][change_key] = None
-            ret["comment"] = "{0}\n{1}".format(
-                ret["comment"], "{0} deleted".format(change_key)
+            ret["comment"] = "{}\n{}".format(
+                ret["comment"], "{} deleted".format(change_key)
             )
         else:
             ret["result"] = False
-            failure_comment = "Identity Pool Id {0} not deleted, returned count 0".format(
-                IdentityPoolId
+            failure_comment = (
+                "Identity Pool Id {} not deleted, returned count 0".format(
+                    IdentityPoolId
+                )
             )
-            ret["comment"] = "{0}\n{1}".format(ret["comment"], failure_comment)
+            ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
             return ret
 
     return ret

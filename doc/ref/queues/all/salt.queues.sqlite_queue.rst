@@ -1,5 +1,5 @@
-salt.queues.sqlite_queue module
-===============================
+salt.queues.sqlite_queue
+========================
 
 .. automodule:: salt.queues.sqlite_queue
     :members:

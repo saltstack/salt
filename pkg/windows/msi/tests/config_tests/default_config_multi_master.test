@@ -1,0 +1,2 @@
+properties START_MINION="" CONFIG_TYPE=Default MASTER=cli.master1,cli.master2
+dormant

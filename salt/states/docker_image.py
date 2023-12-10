@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Docker images
 
@@ -35,24 +34,25 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.args
-
-# Import salt libs
 import salt.utils.dockermod
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 # Enable proper logging
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "docker_image"
 __virtual_aliases__ = ("moby_image",)
+
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
 
 
 def __virtual__():
@@ -78,7 +78,7 @@ def present(
     saltenv="base",
     pillarenv=None,
     pillar=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -100,6 +100,9 @@ def present(
         myuser/myimage:
           docker_image.present:
             - tag: mytag
+
+    name
+        The name of the docker image.
 
     tag
         Tag name for the image. Required when using ``build``, ``load``, or
@@ -146,9 +149,13 @@ def present(
         .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
-    force : False
+    force
         Set this parameter to ``True`` to force Salt to pull/build/load the
         image even if it is already present.
+
+    insecure_registry
+        If ``True``, the Docker client will permit the use of insecure
+        (non-HTTPS) registries.
 
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
@@ -176,7 +183,7 @@ def present(
                 - base: centos
                 - saltenv: base
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
         .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
@@ -212,11 +219,15 @@ def present(
             ``pillar_roots`` or an external Pillar source.
 
         .. versionadded:: 2018.3.0
+
+    kwargs
+        Additional keyword arguments to pass to
+        :py:func:`docker.build <salt.modules.dockermod.build>`
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if not isinstance(name, six.string_types):
-        name = six.text_type(name)
+    if not isinstance(name, str):
+        name = str(name)
 
     # At most one of the args that result in an image being built can be used
     num_build_args = len([x for x in (build, load, sls) if x is not None])
@@ -231,12 +242,12 @@ def present(
                 "'load', or 'sls' is used."
             )
             return ret
-        if not isinstance(tag, six.string_types):
-            tag = six.text_type(tag)
+        if not isinstance(tag, str):
+            tag = str(tag)
         full_image = ":".join((name, tag))
     else:
         if tag:
-            name = "{0}:{1}".format(name, tag)
+            name = f"{name}:{tag}"
         full_image = name
 
     try:
@@ -254,7 +265,7 @@ def present(
         # Specified image is present
         if not force:
             ret["result"] = True
-            ret["comment"] = "Image {0} already present".format(full_image)
+            ret["comment"] = f"Image {full_image} already present"
             return ret
 
     if build or sls:
@@ -267,7 +278,7 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if (image_info is not None and force) or image_info is None:
-            ret["comment"] = "Image {0} will be {1}".format(full_image, action)
+            ret["comment"] = f"Image {full_image} will be {action}"
             return ret
 
     if build:
@@ -286,7 +297,7 @@ def present(
             build_args["dockerfile"] = dockerfile
             image_update = __salt__["docker.build"](**build_args)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error building {0} as {1}: {2}".format(
+            ret["comment"] = "Encountered error building {} as {}: {}".format(
                 build, full_image, exc
             )
             return ret
@@ -307,7 +318,7 @@ def present(
         except Exception as exc:  # pylint: disable=broad-except
             ret[
                 "comment"
-            ] = "Encountered error using SLS {0} for building {1}: {2}".format(
+            ] = "Encountered error using SLS {} for building {}: {}".format(
                 sls, full_image, exc
             )
             return ret
@@ -318,7 +329,7 @@ def present(
         try:
             image_update = __salt__["docker.load"](path=load, repository=name, tag=tag)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error loading {0} as {1}: {2}".format(
+            ret["comment"] = "Encountered error loading {} as {}: {}".format(
                 load, full_image, exc
             )
             return ret
@@ -331,9 +342,7 @@ def present(
                 name, insecure_registry=insecure_registry, client_timeout=client_timeout
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error pulling {0}: {1}".format(
-                full_image, exc
-            )
+            ret["comment"] = f"Encountered error pulling {full_image}: {exc}"
             return ret
         if (
             image_info is not None
@@ -354,7 +363,7 @@ def present(
     except CommandExecutionError as exc:
         msg = exc.__str__()
         if "404" not in msg:
-            error = "Failed to inspect image '{0}' after it was {1}: {2}".format(
+            error = "Failed to inspect image '{}' after it was {}: {}".format(
                 full_image, action, msg
             )
 
@@ -363,11 +372,11 @@ def present(
     else:
         ret["result"] = True
         if not ret["changes"]:
-            ret["comment"] = "Image '{0}' was {1}, but there were no changes".format(
+            ret["comment"] = "Image '{}' was {}, but there were no changes".format(
                 name, action
             )
         else:
-            ret["comment"] = "Image '{0}' was {1}".format(full_image, action)
+            ret["comment"] = f"Image '{full_image}' was {action}"
     return ret
 
 
@@ -376,6 +385,9 @@ def absent(name=None, images=None, force=False):
     Ensure that an image is absent from the Minion. Image names can be
     specified either using ``repo:tag`` notation, or just the repo name (in
     which case a tag of ``latest`` is assumed).
+
+    name
+        The name of the docker image.
 
     images
         Run this state on more than one image at a time. The following two
@@ -403,7 +415,7 @@ def absent(name=None, images=None, force=False):
         all the deletions in a single run, rather than executing the state
         separately on each image (as it would in the first example).
 
-    force : False
+    force
         Salt will fail to remove any images currently in use by a container.
         Set this option to true to remove the image even if it is already
         present.
@@ -444,7 +456,7 @@ def absent(name=None, images=None, force=False):
     if not to_delete:
         ret["result"] = True
         if len(targets) == 1:
-            ret["comment"] = "Image {0} is not present".format(name)
+            ret["comment"] = f"Image {name} is not present"
         else:
             ret["comment"] = "All specified images are not present"
         return ret
@@ -452,9 +464,9 @@ def absent(name=None, images=None, force=False):
     if __opts__["test"]:
         ret["result"] = None
         if len(to_delete) == 1:
-            ret["comment"] = "Image {0} will be removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} will be removed"
         else:
-            ret["comment"] = "The following images will be removed: {0}".format(
+            ret["comment"] = "The following images will be removed: {}".format(
                 ", ".join(to_delete)
             )
         return ret
@@ -466,21 +478,21 @@ def absent(name=None, images=None, force=False):
     if failed:
         if [x for x in to_delete if x not in post_tags]:
             ret["changes"] = result
-            ret["comment"] = "The following image(s) failed to be removed: {0}".format(
+            ret["comment"] = "The following image(s) failed to be removed: {}".format(
                 ", ".join(failed)
             )
         else:
             ret["comment"] = "None of the specified images were removed"
             if "Errors" in result:
-                ret["comment"] += ". The following errors were encountered: {0}".format(
+                ret["comment"] += ". The following errors were encountered: {}".format(
                     "; ".join(result["Errors"])
                 )
     else:
         ret["changes"] = result
         if len(to_delete) == 1:
-            ret["comment"] = "Image {0} was removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} was removed"
         else:
-            ret["comment"] = "The following images were removed: {0}".format(
+            ret["comment"] = "The following images were removed: {}".format(
                 ", ".join(to_delete)
             )
         ret["result"] = True
@@ -507,5 +519,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for " "{0}".format(sfun),
+        "comment": f"watch requisite is not implemented for {sfun}",
     }

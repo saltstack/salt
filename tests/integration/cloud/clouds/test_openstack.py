@@ -1,34 +1,28 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Openstack Cloud Provider
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+import pytest
 
-# Import Salt Testing libs
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 try:
     import keystoneclient  # pylint: disable=import-error,unused-import
-    from libcloud.common.openstack_identity import OpenStackIdentity_3_0_Connection
-    from libcloud.common.openstack_identity import OpenStackIdentityTokenScope
+    from libcloud.common.openstack_identity import (
+        OpenStackIdentity_3_0_Connection,
+        OpenStackIdentityTokenScope,
+    )
 
     HAS_KEYSTONE = True
 except ImportError:
     HAS_KEYSTONE = False
 
-# Import Third-Party Libs
 try:
     import shade  # pylint: disable=unused-import
 
@@ -37,9 +31,9 @@ except ImportError:
     HAS_SHADE = False
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_KEYSTONE,
-    "Please install keystoneclient and a keystone server before running"
+    reason="Please install keystoneclient and a keystone server before running"
     "openstack integration tests.",
 )
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
@@ -50,7 +44,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = "http://localhost:35357/v2.0"
     token = "administrator"
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_aaa_setup_keystone_endpoint(self):
         ret = self.run_state(
             "keystone.service_present",
@@ -136,7 +130,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertTrue(ret["keystone_|-demo_|-demo_|-user_present"]["result"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_zzz_teardown_keystone_endpoint(self):
         ret = self.run_state(
             "keystone.user_absent",
@@ -196,7 +190,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
             ret["keystone_|-keystone_|-keystone_|-service_absent"]["result"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_libcloud_auth_v3(self):
         driver = OpenStackIdentity_3_0_Connection(
             auth_url="http://localhost:5000",
@@ -210,7 +204,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(driver.auth_token)
 
 
-@skipIf(not HAS_SHADE, "openstack driver requires `shade`")
+@pytest.mark.skipif(not HAS_SHADE, reason="openstack driver requires `shade`")
 class RackspaceTest(CloudTest):
     """
     Integration tests for the Rackspace cloud provider using the Openstack driver
@@ -225,7 +219,7 @@ class RackspaceTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p rackspace-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p rackspace-test {}".format(self.instance_name), timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_val)
 

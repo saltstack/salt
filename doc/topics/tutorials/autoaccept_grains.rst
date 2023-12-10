@@ -28,6 +28,8 @@ accept minions based on their ``uuid`` create a file named ``/etc/salt/autosign_
     8f7d68e2-30c5-40c6-b84a-df7e978a03ee
     1d3c5473-1fbc-479e-b0c7-877705a0730f
 
+If already running, the master must be restarted for these config changes to take effect.
+
 The master is now setup to accept minions with either of the two specified uuids.
 Multiple values must always be written into separate lines.
 Lines starting with a ``#`` are ignored.

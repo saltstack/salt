@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
-:depends: libnacl, https://github.com/saltstack/libnacl
+:depends: PyNaCl, https://github.com/pyca/pynacl
 
 This is often useful if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I don't advise making your pillars public
@@ -79,7 +78,7 @@ without extra parameters:
 .. code-block:: bash
 
     salt-run nacl.enc 'asecretpass'
-    salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
+    salt-run nacl.dec data='tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
 .. code-block:: yaml
 
@@ -112,22 +111,21 @@ Larger files like certificates can be encrypted with:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.nacl
 
 __virtualname__ = "nacl"
 
 
 def __virtual__():
+    if __opts__["fips_mode"] is True:
+        return False, "nacl runner not available in FIPS mode"
     return salt.utils.nacl.check_requirements()
 
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCL to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 

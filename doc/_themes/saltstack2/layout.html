@@ -2,10 +2,16 @@
 <!DOCTYPE html>
 {%- endblock %}
 
-{% set xxx = rellinks.extend([
+{%- set link_text = [] %}
+{%- for link_tuple in rellinks %}
+{%- set _ = link_text.append(link_tuple[3]) %}
+{%- endfor %}
+{%- for rellink_add in  [
     ('glossary', 'Glossary', 'g', 'Glossary'),
     ('contents', 'Table of Contents', 't', 'Table of Contents'),
-]) %}
+] %}
+{%- if rellink_add[3] not in link_text %}{% set _ = rellinks.append(rellink_add) %}{% endif %}
+{%- endfor %}
 
 {%- set reldelim1 = reldelim1 is not defined and ' &raquo;' or reldelim1 %}
 {%- set reldelim2 = reldelim2 is not defined and ' |' or reldelim2 %}
@@ -152,19 +158,19 @@
                             <span class="icon-bar"></span>
                             <span class="icon-bar"></span>
                         </button>
-                        <a href="http://saltstack.com/" target="_blank"><img src="{{ pathto('_static/images/SaltStack_white.svg', 1) }}" class="nolightbox" height="40px" width="170px"></a>
+                        <a href="https://saltproject.io/" target="_blank"><img src="https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png" class="nolightbox" height="44.5px" width="125px"></a>
                     </div>
                     <!-- Collect the nav links, forms, and other content for toggling -->
                     <div class="collapse navbar-collapse" id="navbarCollapse">
                         <ul class="nav navbar-nav">
                 <li><a href="/en/latest/">Overview</a></li>
-                <li><a href="/en/getstarted/">Tutorials</a></li>
+                <li><a href="https://docs.saltproject.io/salt/user-guide/en/latest/">Salt User Guide</a></li>
                 <li><a href="/en/latest/contents.html">Documentation</a></li>
-                <li><a href="https://repo.saltstack.com">Downloads</a></li>
+                <li><a href="https://repo.saltproject.io">Downloads</a></li>
                 <li><a href="/en/latest/topics/development/">Develop</a></li>
                             <!--<li><a href="/en/2016.3/faq/">FAQ</a></li>
                             <li><a href="/en/2016.3/samples/">Code Samples</a></li>-->
-                            <!--                <li><a href="https://repo.saltstack.com" target="_blank">Downloads</a></li>-->
+                            <!--                <li><a href="https://repo.saltproject.io" target="_blank">Downloads</a></li>-->
                             <!--<li><a href="http://saltstack.com/training" target="_blank">Training</a></li>
                             <li><a href="http://saltstack.com/support" target="_blank">Support</a></li>-->
                         </ul>
@@ -263,17 +269,17 @@
                                 <p>You are viewing preview docs for the next major release, {{ next_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
                                 {% endif %}
                                 <br>
-                                <p><a href="http://saltstack.com">saltstack.com</a></p>
+                                <p><a href="https://saltproject.io/">saltproject.io</a></p>
 
                                 <div class="footer">
-                                    <p>© {{ copyright }} SaltStack. All Rights Reserved, SaltStack Inc. | <a href="http://saltstack.com/privacy-policy" target="_blank">Privacy Policy</a></p>
+                                    <p>© {{ copyright }} VMware, Inc. | <a href="https://www.vmware.com/help/privacy.html" target="_blank">Privacy Policy</a></p>
                                 </div>
                             </div>
                             <div class="col-sm-6">
                                  <!--
                                  <a href="https://saltstack.com/saltstack-enterprise/" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/enterprise_ad.jpg', 1) }}"/></a>
                                  -->
-                                 <a href="https://saltconf.com/ad" target="_blank"><img class="nolightbox footer-banner center" src="https://get.saltstack.com/rs/304-PHQ-615/images/Salt-docs-ad-330x330.png"/></a>
+                                 <a href="https://docs.saltproject.io/salt/user-guide/en/latest/index.html" target="_blank"><img class="nolightbox footer-banner center" src="https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/misc/banners/try_salt_now.png"/></a>
                             </div>
                             {% endif %}
                         </div>
@@ -295,7 +301,7 @@
                 {% else %}
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
                 {% endif %} #}-->
-                <a href="https://saltconf.com/menu-ad" target="_blank"><img class="nolightbox sidebar-banner center" src="https://get.saltstack.com/rs/304-PHQ-615/images/Salt-docs-menu-ad-250x63.jpg"/></a>
+                <a href="https://saltproject.io" target="_blank"><img class="nolightbox sidebar-banner center" src="https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png"/></a>
 
 
                 {% if build_type=="next" %}
@@ -347,13 +353,13 @@
                 <!--<div class="text-nowrap">
                     &lt;!&ndash;social icons from http://vervex.deviantart.com/art/somacro-45-300dpi-social-media-icons-267955425&ndash;&gt;
                     <ul id="social-links" class="list-inline">
-                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="watch saltstack videos on youtube" href="https://www.youtube.com/user/saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="view the latest saltstack tweets" href="http://twitter.com/saltstackinc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/twitter.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="watch saltstack videos on youtube" href="https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="view the latest saltstack tweets" href="https://twitter.com/Salt_Project_OS" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/twitter.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="subscribe to the salt users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="download saltstack code from github" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="chat in #salt on freenode irc" href="https://webchat.freenode.net/#salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="chat in #salt on liberachat irc" href="https://web.libera.chat/#salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="ask a saltstack question on stackoverflow" href="http://stackoverflow.com/questions/tagged/salt-stack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="ask a saltstack question on stackoverflow" href="https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="join or start a saltstack meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="follow saltstack on linkedin" href="http://www.linkedin.com/company/salt-stack-inc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/linkedin.png', 1) }}" ></a></li>
                     </ul>

@@ -1,5 +1,5 @@
-salt.modules.inspectlib.fsdb module
-===================================
+salt.modules.inspectlib.fsdb
+============================
 
 .. automodule:: salt.modules.inspectlib.fsdb
     :members:

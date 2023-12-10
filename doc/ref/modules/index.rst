@@ -92,7 +92,7 @@ included libraries.
 
 
     def is_ok(person):
-        """ Checks whether a person is really a lumberjack """
+        """Checks whether a person is really a lumberjack"""
         return sleep.all_night(person) and work.all_day(person)
 
 Then, create the zip:
@@ -131,7 +131,7 @@ Once placed in :conf_master:`file_roots`, Salt users can distribute and use
     minion1:
       True
 
-.. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
+.. _`Python package`: https://docs.python.org/3/tutorial/modules.html#packages
 
 .. _cross-calling-execution-modules:
 
@@ -415,6 +415,8 @@ in the minion config file:
 The above example will force the minion to use the :py:mod:`systemd
 <salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
+
+For per-state provider overrides, see documentation on :ref:`state providers <state-providers>`.
 
 .. __: https://github.com/saltstack/salt/issues/new
 

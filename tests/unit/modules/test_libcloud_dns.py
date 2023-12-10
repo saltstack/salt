@@ -1,12 +1,12 @@
 """
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
-
+import pytest
 
 import salt.modules.libcloud_dns as libcloud_dns
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class MockDNSDriver:
@@ -18,7 +18,7 @@ def get_mock_driver():
     return MockDNSDriver()
 
 
-@skipIf(not libcloud_dns.HAS_LIBCLOUD, "No libcloud installed")
+@pytest.mark.skipif(not libcloud_dns.HAS_LIBCLOUD, reason="No libcloud installed")
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         module_globals = {

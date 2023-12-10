@@ -17,17 +17,17 @@ new behavior, the deprecation time frame should be carefully determined based
 on the significance and complexity of the changes required by the user.
 
 Salt feature releases are based on the Periodic Table. Any new features going
-into the develop branch will be named after the next element in the Periodic
-Table. For example, Beryllium was the feature release name of the develop
-branch before the 2015.8 branch was tagged. At that point in time, any new
-features going into the develop branch after 2015.8 was branched were part of
-the Boron feature release.
+into the ``master`` branch will be named after the next element in the Periodic
+Table. For example, Magnesium was the feature release name associated with the
+``v3002`` tag. At that point in time, any new features going into the
+``master`` branch, after ``v3002`` was tagged, were part of the Aluminium feature
+release.
 
 A deprecation warning should be in place for at least two major releases before
 the deprecated code and its accompanying deprecation warning are removed.  More
 time should be given for more complex changes.  For example, if the current
 release under development is ``3001``, the deprecated code and associated
-warnings should remain in place and warn for at least ``Aluminum``.
+warnings should remain in place and warn for at least ``Aluminium``.
 
 To help in this deprecation task, salt provides
 :func:`salt.utils.versions.warn_until <salt.utils.versions.warn_until>`. The
@@ -45,13 +45,20 @@ Consider the following example:
     def some_function(bar=False, foo=None):
         if foo is not None:
             salt.utils.versions.warn_until(
-                "Aluminum",
+                "Aluminium",
                 "The 'foo' argument has been deprecated and its "
                 "functionality removed, as such, its usage is no longer "
                 "required.",
             )
 
-Development begins on the ``Aluminum`` release when the ``3002`` branch is
-forked from the develop branch.  Once this occurs, all uses of the
-``warn_until`` function targeting ``Aluminum``, along with the code they are
+Development begins on ``Aluminium``, or ``v3003``, after the ``v3002`` tag is
+applied to the ``master`` branch.  Once this occurs, all uses of the
+``warn_until`` function targeting ``Aluminium``, along with the code they are
 warning about should be removed from the code.
+
+
+Silence Deprecation Warnings
+----------------------------
+
+If you set the `PYTHONWARNINGS` environment variable to `ignore` Salt will
+not print the deprecation warnings.

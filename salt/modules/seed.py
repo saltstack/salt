@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Virtual machine image management tools
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import shutil
 import tempfile
 import uuid
 
 import salt.config
-
-# Import salt libs
 import salt.crypt
 import salt.syspaths
 import salt.utils.cloud
@@ -48,7 +42,7 @@ def prep_bootstrap(mpt):
     """
     # Verify that the boostrap script is downloaded
     bs_ = __salt__["config.gather_bootstrap_script"]()
-    fpd_ = os.path.join(mpt, "tmp", "{0}".format(uuid.uuid4()))
+    fpd_ = os.path.join(mpt, "tmp", "{}".format(uuid.uuid4()))
     if not os.path.exists(fpd_):
         os.makedirs(fpd_)
     os.chmod(fpd_, 0o700)
@@ -142,7 +136,7 @@ def apply_(
     """
     stats = __salt__["file.stats"](path, follow_symlinks=True)
     if not stats:
-        return "{0} does not exist".format(path)
+        return "{} does not exist".format(path)
     ftype = stats["type"]
     path = stats["target"]
     log.debug("Mounting %s at %s", ftype, path)
@@ -155,7 +149,7 @@ def apply_(
     mpt = _mount(path, ftype, mount_point)
 
     if not mpt:
-        return "{0} could not be mounted".format(path)
+        return "{} could not be mounted".format(path)
 
     tmp = os.path.join(mpt, "tmp")
     log.debug("Attempting to create directory %s", tmp)
@@ -176,7 +170,7 @@ def apply_(
     if _check_install(mpt):
         # salt-minion is already installed, just move the config and keys
         # into place
-        log.info("salt-minion pre-installed on image, " "configuring as %s", id_)
+        log.info("salt-minion pre-installed on image, configuring as %s", id_)
         minion_config = salt.config.minion_config(cfg_files["config"])
         pki_dir = minion_config["pki_dir"]
         if not os.path.isdir(os.path.join(mpt, pki_dir.lstrip("/"))):
@@ -273,7 +267,7 @@ def _install(mpt):
     boot_, tmppath = prep_bootstrap(mpt) or salt.syspaths.BOOTSTRAP
     # Exec the chroot command
     cmd = "if type salt-minion; then exit 0; "
-    cmd += "else sh {0} -c /tmp; fi".format(os.path.join(tmppath, "bootstrap-salt.sh"))
+    cmd += "else sh {} -c /tmp; fi".format(os.path.join(tmppath, "bootstrap-salt.sh"))
     return not __salt__["cmd.run_chroot"](mpt, cmd, python_shell=True)["retcode"]
 
 
@@ -306,6 +300,6 @@ def _check_install(root):
         sh_ = "/bin/bash"
 
     cmd = "if ! type salt-minion; then exit 1; fi"
-    cmd = "chroot '{0}' {1} -c '{2}'".format(root, sh_, cmd)
+    cmd = "chroot '{}' {} -c '{}'".format(root, sh_, cmd)
 
     return not __salt__["cmd.retcode"](cmd, output_loglevel="quiet", python_shell=True)

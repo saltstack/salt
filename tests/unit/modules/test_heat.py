@@ -1,26 +1,16 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.modules.file as file_
 import salt.modules.heat as heat
 import salt.modules.win_file as win_file
-
-# Import Salt Libs
 import salt.utils.platform
-import salt.utils.win_dacl as dacl
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
-class MockStacks(object):
+class MockStacks:
     """
     Mock stacks.StackManager
     """
@@ -57,7 +47,7 @@ class MockStacks(object):
         return self.mock_update
 
 
-class MockClient(object):
+class MockClient:
     """
     Mock of Client class
     """
@@ -87,10 +77,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                     "config.backup_mode": MagicMock(return_value=False),
                 },
             },
-            win_file: {
-                "__utils__": {"dacl.check_perms": salt.utils.win_dacl.check_perms}
-            },
-            dacl: {"__opts__": {"test": False}},
+            win_file: {"__opts__": {"test": False}},
         }
 
     def setUp(self):
@@ -175,7 +162,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {
             "result": False,
-            "comment": "Can not open environment: {0}, ".format(env_file),
+            "comment": f"Can not open environment: {env_file}, ",
         }
 
     def test_heat_update_stack(self):

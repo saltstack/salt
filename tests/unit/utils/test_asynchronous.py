@@ -1,13 +1,11 @@
-# coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
+import tornado.gen
+import tornado.testing
+from tornado.testing import AsyncTestCase
 
-import salt.ext.tornado.gen
-import salt.ext.tornado.testing
 import salt.utils.asynchronous as asynchronous
-from salt.ext.tornado.testing import AsyncTestCase
 
 
-class HelperA(object):
+class HelperA:
 
     async_methods = [
         "sleep",
@@ -16,13 +14,13 @@ class HelperA(object):
     def __init__(self, io_loop=None):
         pass
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def sleep(self):
-        yield salt.ext.tornado.gen.sleep(0.1)
-        raise salt.ext.tornado.gen.Return(True)
+        yield tornado.gen.sleep(0.1)
+        raise tornado.gen.Return(True)
 
 
-class HelperB(object):
+class HelperB:
 
     async_methods = [
         "sleep",
@@ -33,15 +31,15 @@ class HelperB(object):
             a = asynchronous.SyncWrapper(HelperA)
         self.a = a
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def sleep(self):
-        yield salt.ext.tornado.gen.sleep(0.1)
+        yield tornado.gen.sleep(0.1)
         self.a.sleep()
-        raise salt.ext.tornado.gen.Return(False)
+        raise tornado.gen.Return(False)
 
 
 class TestSyncWrapper(AsyncTestCase):
-    @salt.ext.tornado.testing.gen_test
+    @tornado.testing.gen_test
     def test_helpers(self):
         """
         Test that the helper classes do what we expect within a regular asynchronous env

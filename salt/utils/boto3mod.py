@@ -30,19 +30,18 @@ import logging
 import sys
 from functools import partial
 
+import salt.loader.context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
-    import boto
     import boto3
-    import boto.exception
     import boto3.session
     import botocore  # pylint: disable=W0611
+    import botocore.exceptions
 
     # pylint: enable=import-error
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -55,6 +54,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = "boto3"
+__salt_loader__ = salt.loader.context.LoaderContext()
+__context__ = __salt_loader__.named_context("__context__", {})
 
 
 def __virtual__():
@@ -196,11 +197,11 @@ def get_connection(
             aws_access_key_id=keyid, aws_secret_access_key=key, region_name=region
         )
         if session is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
         conn = session.client(module)
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
-    except boto.exception.NoAuthHandlerFound:
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
+    except botocore.exceptions.NoCredentialsError:
         raise SaltInvocationError(
             "No authentication credentials found when "
             "attempting to make boto {} connection to "
@@ -309,6 +310,5 @@ def ordered(obj):
 
 
 def json_objs_equal(left, right):
-    """ Compare two parsed JSON objects, given non-ordering in JSON objects
-    """
+    """Compare two parsed JSON objects, given non-ordering in JSON objects"""
     return ordered(left) == ordered(right)

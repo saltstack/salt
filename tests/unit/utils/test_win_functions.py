@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
+import pytest
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
-import salt.utils.platform
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-
-# Import 3rd Party Libs
 try:
     import win32net
 
@@ -20,14 +12,13 @@ try:
     class WinError(win32net.error):
         winerror = 0
 
-
 except ImportError:
     HAS_WIN32 = False
 
 
 class WinFunctionsTestCase(TestCase):
     """
-    Test cases for salt.utils.win_functions
+    Test cases for salt.utils.win_functions.
     """
 
     def test_escape_argument_simple(self):
@@ -62,21 +53,21 @@ class WinFunctionsTestCase(TestCase):
 
         self.assertEqual(encoded, '^"C:\\Some Path\\With Spaces^"')
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @pytest.mark.skip_unless_on_windows
     def test_broadcast_setting_change(self):
         """
-            Test to rehash the Environment variables
+        Test to rehash the Environment variables
         """
         self.assertTrue(win_functions.broadcast_setting_change())
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @pytest.mark.skip_unless_on_windows
     def test_get_user_groups(self):
         groups = ["Administrators", "Users"]
         with patch("win32net.NetUserGetLocalGroups", return_value=groups):
             ret = win_functions.get_user_groups("Administrator")
             self.assertListEqual(groups, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @pytest.mark.skip_unless_on_windows
     def test_get_user_groups_sid(self):
         groups = ["Administrators", "Users"]
         expected = ["S-1-5-32-544", "S-1-5-32-545"]
@@ -84,15 +75,15 @@ class WinFunctionsTestCase(TestCase):
             ret = win_functions.get_user_groups("Administrator", sid=True)
             self.assertListEqual(expected, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @pytest.mark.skip_unless_on_windows
     def test_get_user_groups_system(self):
         groups = ["SYSTEM"]
         with patch("win32net.NetUserGetLocalGroups", return_value=groups):
             ret = win_functions.get_user_groups("SYSTEM")
             self.assertListEqual(groups, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skip_unless_on_windows
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_unavailable_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -102,8 +93,8 @@ class WinFunctionsTestCase(TestCase):
             ret = win_functions.get_user_groups("Administrator")
             self.assertListEqual(groups, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skip_unless_on_windows
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_unknown_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -113,8 +104,8 @@ class WinFunctionsTestCase(TestCase):
             ret = win_functions.get_user_groups("Administrator")
             self.assertListEqual(groups, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skip_unless_on_windows
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_missing_permission(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -124,8 +115,8 @@ class WinFunctionsTestCase(TestCase):
             ret = win_functions.get_user_groups("Administrator")
             self.assertListEqual(groups, ret)
 
-    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skip_unless_on_windows
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_error(self):
         win_error = WinError()
         win_error.winerror = 1927

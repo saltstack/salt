@@ -142,7 +142,7 @@ def describe_hosted_zones(
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if zone_id and domain_name:
         raise SaltInvocationError(
-            "At most one of zone_id or domain_name may " "be provided"
+            "At most one of zone_id or domain_name may be provided"
         )
     retries = 10
     while retries:
@@ -176,8 +176,8 @@ def describe_hosted_zones(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 retries -= 1
@@ -256,11 +256,13 @@ def zone_exists(
 
     .. versionadded:: 2015.8.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.zone_exists example.org
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -275,7 +277,6 @@ def zone_exists(
         `rate_limit_retries` to ensure backwards compatibility,
         but please migrate to using the favored `error_retries`
         argument instead.
-
     """
     if region is None:
         region = "universal"
@@ -298,8 +299,8 @@ def zone_exists(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request "
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -347,7 +348,9 @@ def create_zone(
     profile
         AWS pillar profile
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_zone example.org
     """
@@ -443,7 +446,9 @@ def create_healthcheck(
 
         AWS pillar profile
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_healthcheck 192.168.0.1
         salt myminion boto_route53.create_healthcheck 192.168.0.1 port=443 hc_type=HTTPS \
@@ -479,8 +484,8 @@ def create_healthcheck(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == exc.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -495,7 +500,9 @@ def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: 2015.8.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.delete_zone example.org
     """
@@ -540,11 +547,13 @@ def get_record(
     """
     Get a record from a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.get_record test.example.org example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -599,8 +608,8 @@ def get_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -649,11 +658,13 @@ def add_record(
     """
     Add a record to a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -699,8 +710,8 @@ def add_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -722,8 +733,8 @@ def add_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -754,11 +765,13 @@ def update_record(
     """
     Modify a record in a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -810,8 +823,8 @@ def update_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -841,11 +854,13 @@ def delete_record(
     """
     Modify a record in a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.delete_record test.example.org example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -898,8 +913,8 @@ def delete_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -1019,7 +1034,9 @@ def create_hosted_zone(
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_hosted_zone example.org
     """
@@ -1028,7 +1045,7 @@ def create_hosted_zone(
 
     if not domain_name.endswith("."):
         raise SaltInvocationError(
-            "Domain MUST be fully-qualified, complete " "with ending period."
+            "Domain MUST be fully-qualified, complete with ending period."
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1048,7 +1065,7 @@ def create_hosted_zone(
     if private_zone:
         if not _exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError(
-                "Either vpc_name or vpc_id is required " "when creating a private zone."
+                "Either vpc_name or vpc_id is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=vpc_id,
@@ -1062,7 +1079,7 @@ def create_hosted_zone(
             vpcs = [v for v in vpcs if v["region"] == vpc_region]
         if not vpcs:
             log.error(
-                "Private zone requested but a VPC matching given criteria" " not found."
+                "Private zone requested but a VPC matching given criteria not found."
             )
             return None
         if len(vpcs) > 1:

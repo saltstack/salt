@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Version agnostic psutil hack to fully support both old (<2.0) and new (>=2.0)
 psutil versions.
@@ -10,14 +9,9 @@ Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
 Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil  # pylint: disable=3rd-party-module-not-gated
-
-# Import Salt libs
-from salt.ext import six
 
 if psutil.version_info >= (2, 0):
     from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import,3rd-party-module-not-gated
@@ -26,7 +20,7 @@ else:
     # Psuedo "from psutil import *"
     _globals = globals()
     for attr in psutil.__all__:
-        _temp = __import__("psutil", globals(), locals(), [attr], -1 if six.PY2 else 0)
+        _temp = __import__("psutil", globals(), locals(), [attr], 0)
         try:
             _globals[attr] = getattr(_temp, attr)
         except AttributeError:
@@ -34,11 +28,9 @@ else:
 
     # Import functions not in __all__
     # pylint: disable=unused-import,3rd-party-module-not-gated
-    from psutil import disk_partitions
-    from psutil import disk_usage
+    from psutil import disk_partitions, disk_usage
 
     # pylint: enable=unused-import,3rd-party-module-not-gated
-
     # Alias new module functions
     def boot_time():
         return psutil.BOOT_TIME
@@ -52,7 +44,7 @@ else:
         users = psutil.get_users
     except AttributeError:
         users = lambda: (_ for _ in ()).throw(
-            NotImplementedError("Your " "psutil version is too old")
+            NotImplementedError("Your psutil version is too old")
         )
 
     # Deprecated in 1.0.1, but not mentioned in blog post
@@ -113,7 +105,7 @@ else:
         "cwd": "getcwd",
     }
 
-    for new, old in six.iteritems(_PROCESS_FUNCTION_MAP):
+    for new, old in _PROCESS_FUNCTION_MAP.items():
         try:
             setattr(Process, new, psutil.Process.__dict__[old])
         except KeyError:

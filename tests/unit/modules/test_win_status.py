@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
-# This is imported late so mock can do its job
+import pytest
+
 import salt.modules.win_status as status
-
-# Import Salt libs
-from salt.ext import six
 from tests.support.mock import ANY, Mock, patch
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import wmi
@@ -21,7 +12,7 @@ except ImportError:
     pass
 
 
-@skipIf(status.HAS_WMI is False, "This test requires Windows")
+@pytest.mark.skipif(status.HAS_WMI is False, reason="This test requires Windows")
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
@@ -60,7 +51,7 @@ class TestProcsCount(TestProcsBase):
         self.assertEqual(len(self.result), 2)
 
     def test_process_key_is_pid(self):
-        self.assertSetEqual(set(self.result.keys()), set([100, 101]))
+        self.assertSetEqual(set(self.result.keys()), {100, 101})
 
 
 class TestProcsAttributes(TestProcsBase):
@@ -93,14 +84,14 @@ class TestProcsAttributes(TestProcsBase):
         self.assertEqual(self.proc["user_domain"], self._expected_domain)
 
 
-@skipIf(
+@pytest.mark.skipif(
     sys.stdin.encoding != "UTF-8",
-    "UTF-8 encoding required for this test is not supported",
+    reason="UTF-8 encoding required for this test is not supported",
 )
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = "\xc1"
-        self.ustr = unicode_str.encode("utf8") if six.PY2 else unicode_str
+        self.ustr = unicode_str
         pid = 100
         self.add_process(
             pid=pid,

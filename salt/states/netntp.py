@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Network NTP
 ===========
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 
@@ -26,16 +25,9 @@ Dependencies
 .. _dnspython: http://www.dnspython.org/
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# import NAPALM utils
 import salt.utils.napalm
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     from netaddr import IPAddress
@@ -46,7 +38,7 @@ except ImportError:
     HAS_NETADDR = False
 
 try:
-    import dns.resolver
+    import dns.resolver  # pylint: disable=no-name-in-module
 
     HAS_DNSRESOLVER = True
 except ImportError:
@@ -109,7 +101,7 @@ def _check(peers):
         return False
 
     for peer in peers:
-        if not isinstance(peer, six.string_types):
+        if not isinstance(peer, str):
             return False
 
     if (
@@ -121,7 +113,7 @@ def _check(peers):
     ip_only_peers = []
     for peer in peers:
         try:
-            ip_only_peers.append(six.text_type(IPAddress(peer)))  # append the str value
+            ip_only_peers.append(str(IPAddress(peer)))  # append the str value
         except AddrFormatError:
             # if not a valid IP Address
             # will try to see if it is a nameserver and resolve it
@@ -136,7 +128,7 @@ def _check(peers):
                 # no a valid DNS entry either
                 return False
             for dns_ip in dns_reply:
-                ip_only_peers.append(six.text_type(dns_ip))
+                ip_only_peers.append(str(dns_ip))
 
     peers = ip_only_peers
 
@@ -391,7 +383,9 @@ def managed(name, peers=None, servers=None):
         ret.update(
             {
                 "result": None,
-                "comment": "This is in testing mode, the device configuration was not changed!",
+                "comment": (
+                    "This is in testing mode, the device configuration was not changed!"
+                ),
             }
         )
         return ret

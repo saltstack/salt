@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudFront
 
@@ -50,17 +49,12 @@ Connection module for Amazon CloudFront
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
-import salt.ext.six as six
 import salt.utils.versions
 from salt.utils.odict import OrderedDict
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto3
@@ -86,7 +80,12 @@ def __virtual__():
 
 
 def _list_distributions(
-    conn, name=None, region=None, key=None, keyid=None, profile=None,
+    conn,
+    name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Private function that returns an iterator over all CloudFront distributions.
@@ -102,7 +101,7 @@ def _list_distributions(
             continue
         for partial_dist in distribution_list["Items"]:
             tags = conn.list_tags_for_resource(Resource=partial_dist["ARN"])
-            tags = dict((kv["Key"], kv["Value"]) for kv in tags["Tags"]["Items"])
+            tags = {kv["Key"]: kv["Value"] for kv in tags["Tags"]["Items"]}
 
             id_ = partial_dist["Id"]
             if "Name" not in tags:
@@ -191,7 +190,12 @@ def get_distribution(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         for _, dist in _list_distributions(
-            conn, name=name, region=region, key=key, keyid=keyid, profile=profile,
+            conn,
+            name=name,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
         ):
             # _list_distributions should only return the one distribution
             # that we want (with the given name).
@@ -237,7 +241,11 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         for name, distribution in _list_distributions(
-            conn, region=region, key=key, keyid=keyid, profile=profile,
+            conn,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
         ):
             config = distribution["distribution"]["DistributionConfig"]
             tags = distribution["tags"]
@@ -247,20 +255,30 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
                 {"config": config},
                 {"tags": tags},
             ]
-            results["Manage CloudFront distribution {0}".format(name)] = {
+            results["Manage CloudFront distribution {}".format(name)] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
-    except botocore.exceptions.ClientError as err:
+    except botocore.exceptions.ClientError as exc:
         # Raise an exception, as this is meant to be user-invoked at the CLI
         # as opposed to being called from execution or state modules
-        six.reraise(*sys.exc_info())
+        log.trace("Boto client error: {}", exc)
 
     dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
-    return __utils__["yaml.dump"](results, default_flow_style=False, Dumper=dumper,)
+    return __utils__["yaml.dump"](
+        results,
+        default_flow_style=False,
+        Dumper=dumper,
+    )
 
 
 def create_distribution(
-    name, config, tags=None, region=None, key=None, keyid=None, profile=None,
+    name,
+    config,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Create a CloudFront distribution with the given name, config, and (optionally) tags.
@@ -301,7 +319,7 @@ def create_distribution(
         if tags["Name"] != name:
             return {"error": "Must not pass `Name` in `tags` but as `name`"}
     tags["Name"] = name
-    tags = {"Items": [{"Key": k, "Value": v} for k, v in six.iteritems(tags)]}
+    tags = {"Items": [{"Key": k, "Value": v} for k, v in tags.items()]}
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -324,7 +342,13 @@ def create_distribution(
 
 
 def update_distribution(
-    name, config, tags=None, region=None, key=None, keyid=None, profile=None,
+    name,
+    config,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Update the config (and optionally tags) for the CloudFront distribution with the given name.
@@ -378,26 +402,29 @@ def update_distribution(
     try:
         if "old" in config_diff or "new" in config_diff:
             conn.update_distribution(
-                DistributionConfig=config, Id=current_distribution["Id"], IfMatch=etag,
+                DistributionConfig=config,
+                Id=current_distribution["Id"],
+                IfMatch=etag,
             )
         if tags:
             arn = current_distribution["ARN"]
             if "new" in tags_diff:
                 tags_to_add = {
                     "Items": [
-                        {"Key": k, "Value": v}
-                        for k, v in six.iteritems(tags_diff["new"])
+                        {"Key": k, "Value": v} for k, v in tags_diff["new"].items()
                     ],
                 }
                 conn.tag_resource(
-                    Resource=arn, Tags=tags_to_add,
+                    Resource=arn,
+                    Tags=tags_to_add,
                 )
             if "old" in tags_diff:
                 tags_to_remove = {
                     "Items": list(tags_diff["old"].keys()),
                 }
                 conn.untag_resource(
-                    Resource=arn, TagKeys=tags_to_remove,
+                    Resource=arn,
+                    TagKeys=tags_to_remove,
                 )
     except botocore.exceptions.ClientError as err:
         return {"error": __utils__["boto3.get_error"](err)}

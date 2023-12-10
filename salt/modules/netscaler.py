@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Citrix Netscaler compatibility to Salt (compatible with netscaler 9.2+)
 
@@ -28,13 +27,16 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-:CLI Examples:
+CLI Examples:
+
     Calls relying on configuration passed using /etc/salt/minion, grains, or pillars:
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name
 
     Calls passing configuration as opts
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name netscaler_host=1.2.3.4 netscaler_user=username netscaler_pass=password
@@ -43,26 +45,23 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
         salt-call netscaler.server_up server_name3 netscaler_host=1.2.3.6 netscaler_useSSL=False
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 try:
-    from nsnitro.nsnitro import NSNitro
     from nsnitro.nsexceptions import NSNitroError
+    from nsnitro.nsnitro import NSNitro
+    from nsnitro.nsresources.nslbvserver import NSLBVServer
+    from nsnitro.nsresources.nslbvserverservicegroupbinding import (
+        NSLBVServerServiceGroupBinding,
+    )
     from nsnitro.nsresources.nsserver import NSServer
     from nsnitro.nsresources.nsservice import NSService
     from nsnitro.nsresources.nsservicegroup import NSServiceGroup
     from nsnitro.nsresources.nsservicegroupserverbinding import (
         NSServiceGroupServerBinding,
-    )
-    from nsnitro.nsresources.nslbvserver import NSLBVServer
-    from nsnitro.nsresources.nslbvserverservicegroupbinding import (
-        NSLBVServerServiceGroupBinding,
     )
     from nsnitro.nsresources.nssslvserversslcertkeybinding import (
         NSSSLVServerSSLCertKeyBinding,
@@ -82,8 +81,7 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The netscaler execution module failed to load: not available "
-            "on Windows.",
+            "The netscaler execution module failed to load: not available on Windows.",
         )
     if HAS_NSNITRO:
         return "netscaler"
@@ -120,7 +118,7 @@ def _connect(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("netscaler.{0}".format(name), None)
+            val = __salt__["config.option"]("netscaler.{}".format(name), None)
             if val is not None:
                 connargs[key] = val
             elif default is not None:
@@ -479,7 +477,6 @@ def service_up(s_name, **connection_args):
 def service_enable(s_name, **connection_args):
     """
     Enable a service
-
 
     CLI Example:
 
@@ -914,7 +911,8 @@ def vserver_servicegroup_delete(v_name, sg_name, **connection_args):
         NSLBVServerServiceGroupBinding.delete(nitro, vsg)
     except NSNitroError as error:
         log.debug(
-            "netscaler module error - NSLBVServerServiceGroupBinding.delete() failed: %s",
+            "netscaler module error - NSLBVServerServiceGroupBinding.delete()"
+            " failed: %s",
             error,
         )
         ret = False
@@ -1010,7 +1008,8 @@ def vserver_sslcert_delete(v_name, sc_name, **connection_args):
         NSSSLVServerSSLCertKeyBinding.delete(nitro, sslcert)
     except NSNitroError as error:
         log.debug(
-            "netscaler module error - NSSSLVServerSSLCertKeyBinding.delete() failed: %s",
+            "netscaler module error - NSSSLVServerSSLCertKeyBinding.delete()"
+            " failed: %s",
             error,
         )
         ret = False

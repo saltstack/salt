@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Docker Proxy Minion
 
-.. versionadded: 2019.2.0
+.. versionadded:: 2019.2.0
 
 :depends: docker
 
@@ -32,15 +31,20 @@ name
 
     Name of the docker container
 """
-from __future__ import absolute_import, unicode_literals
 
 __proxyenabled__ = ["docker"]
 __virtualname__ = "docker"
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {0}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 

@@ -25,7 +25,6 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "modules", "zypp"),
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -48,6 +47,8 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
+    os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
 
@@ -92,9 +93,11 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
     def test_module_name_source_match(self):
@@ -125,19 +128,14 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
             "integration.master.test_event_return",
-            "integration.minion.test_blackout",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
             "integration.modules.test_service",
-            "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
-            "integration.netapi.rest_cherrypy.test_app_pam",
             "integration.netapi.rest_tornado.test_app",
-            "integration.netapi.test_client",
             "integration.output.test_output",
             "integration.pillar.test_pillar_include",
             "integration.proxy.test_shell",
@@ -154,7 +152,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.shell.test_key",
             "integration.shell.test_master",
             "integration.shell.test_master_tops",
-            "integration.shell.test_matcher",
             "integration.shell.test_minion",
             "integration.shell.test_proxy",
             "integration.shell.test_runner",
@@ -169,7 +166,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.spm.test_repo",
             "integration.ssh.test_deploy",
             "integration.ssh.test_grains",
-            "integration.ssh.test_jinja_filters",
             "integration.ssh.test_master",
             "integration.ssh.test_mine",
             "integration.ssh.test_pillar",
@@ -183,8 +179,8 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
             "unit.cache.test_cache",
+            "unit.logging.test_deferred_stream_handler",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
             "unit.setup.test_man",
@@ -205,6 +201,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.utils.scheduler.test_run_job",
             "unit.utils.scheduler.test_schedule",
             "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 

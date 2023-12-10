@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache Solr Salt Module
 
@@ -59,30 +58,12 @@ verbose : True
     Get verbose output
 """
 
-# Import python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import urllib.request
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
-
-# Import 3rd-party libs
-# pylint: disable=no-name-in-module,import-error
-from salt.ext import six
-from salt.ext.six.moves.urllib.request import (
-    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import (
-    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-from salt.ext.six.moves.urllib.request import install_opener as _install_opener
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
-
-# pylint: enable=no-name-in-module,import-error
-
 
 # ######################### PRIVATE METHODS ##############################
 
@@ -100,7 +81,8 @@ def __virtual__():
         return "solr"
     return (
         False,
-        "The solr execution module failed to load: requires both the solr and apache-solr binaries in the path.",
+        "The solr execution module failed to load: requires both the solr and"
+        " apache-solr binaries in the path.",
     )
 
 
@@ -121,7 +103,7 @@ def _get_none_or_value(value):
     elif not value:
         return value
     # if it's a string, and it's not empty check for none
-    elif isinstance(value, six.string_types):
+    elif isinstance(value, str):
         if value.lower() == "none":
             return None
         return value
@@ -224,18 +206,18 @@ def _format_url(handler, host=None, core_name=None, extra=None):
     baseurl = __salt__["config.option"]("solr.baseurl")
     if _get_none_or_value(core_name) is None:
         if extra is None or len(extra) == 0:
-            return "http://{0}:{1}{2}/{3}?wt=json".format(host, port, baseurl, handler)
+            return "http://{}:{}{}/{}?wt=json".format(host, port, baseurl, handler)
         else:
-            return "http://{0}:{1}{2}/{3}?wt=json&{4}".format(
+            return "http://{}:{}{}/{}?wt=json&{}".format(
                 host, port, baseurl, handler, "&".join(extra)
             )
     else:
         if extra is None or len(extra) == 0:
-            return "http://{0}:{1}{2}/{3}/{4}?wt=json".format(
+            return "http://{}:{}{}/{}/{}?wt=json".format(
                 host, port, baseurl, core_name, handler
             )
         else:
-            return "http://{0}:{1}{2}/{3}/{4}?wt=json&{5}".format(
+            return "http://{}:{}{}/{}/{}?wt=json&{}".format(
                 host, port, baseurl, core_name, handler, "&".join(extra)
             )
 
@@ -249,11 +231,11 @@ def _auth(url):
     realm = __salt__["config.get"]("solr.auth_realm", "Solr")
 
     if user and password:
-        basic = _HTTPBasicAuthHandler()
+        basic = urllib.request.HTTPBasicAuthHandler()
         basic.add_password(realm=realm, uri=url, user=user, passwd=password)
-        digest = _HTTPDigestAuthHandler()
+        digest = urllib.request.HTTPDigestAuthHandler()
         digest.add_password(realm=realm, uri=url, user=user, passwd=password)
-        _install_opener(_build_opener(basic, digest))
+        urllib.request.install_opener(urllib.request.build_opener(basic, digest))
 
 
 def _http_request(url, request_timeout=None):
@@ -276,10 +258,10 @@ def _http_request(url, request_timeout=None):
 
         request_timeout = __salt__["config.option"]("solr.request_timeout")
         kwargs = {} if request_timeout is None else {"timeout": request_timeout}
-        data = salt.utils.json.load(_urlopen(url, **kwargs))
+        data = salt.utils.json.load(urllib.request.urlopen(url, **kwargs))
         return _get_return_dict(True, data, [])
     except Exception as err:  # pylint: disable=broad-except
-        return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
+        return _get_return_dict(False, {}, ["{} : {}".format(url, err)])
 
 
 def _replication_request(command, host=None, core_name=None, params=None):
@@ -305,7 +287,7 @@ def _replication_request(command, host=None, core_name=None, params=None):
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     """
     params = [] if params is None else params
-    extra = ["command={0}".format(command)] + params
+    extra = ["command={}".format(command)] + params
     url = _format_url("replication", host=host, core_name=core_name, extra=extra)
     return _http_request(url)
 
@@ -330,7 +312,7 @@ def _get_admin_info(command, host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     """
-    url = _format_url("admin/{0}".format(command), host, core_name=core_name)
+    url = _format_url("admin/{}".format(command), host, core_name=core_name)
     resp = _http_request(url)
     return resp
 
@@ -365,9 +347,9 @@ def _merge_options(options):
     defaults = __salt__["config.option"]("solr.dih.import_options")
     if isinstance(options, dict):
         defaults.update(options)
-    for key, val in six.iteritems(defaults):
+    for key, val in defaults.items():
         if isinstance(val, bool):
-            defaults[key] = six.text_type(val).lower()
+            defaults[key] = str(val).lower()
     return defaults
 
 
@@ -409,10 +391,10 @@ def _pre_index_check(handler, host=None, core_name=None):
             warn = ["An indexing process is already running."]
             return _get_return_dict(True, warnings=warn)
         if status != "idle":
-            errors = ['Unknown status: "{0}"'.format(status)]
+            errors = ['Unknown status: "{}"'.format(status)]
             return _get_return_dict(False, data=resp["data"], errors=errors)
     else:
-        errors = ["Status check failed. Response details: {0}".format(resp)]
+        errors = ["Status check failed. Response details: {}".format(resp)]
         return _get_return_dict(False, data=resp["data"], errors=errors)
 
     return resp
@@ -440,10 +422,10 @@ def _find_value(ret_dict, key, path=None):
     if path is None:
         path = key
     else:
-        path = "{0}:{1}".format(path, key)
+        path = "{}:{}".format(path, key)
 
     ret = []
-    for ikey, val in six.iteritems(ret_dict):
+    for ikey, val in ret_dict.items():
         if ikey == key:
             ret.append({path: val})
         if isinstance(val, list):
@@ -679,7 +661,7 @@ def is_replication_enabled(host=None, core_name=None):
             # check for errors on the slave
             if "ERROR" in slave:
                 success = False
-                err = "{0}: {1} - {2}".format(core, slave["ERROR"], master_url)
+                err = "{}: {} - {}".format(core, slave["ERROR"], master_url)
                 resp["errors"].append(err)
                 # if there is an error return everything
                 data = slave if core is None else {core: {"data": slave}}
@@ -758,7 +740,7 @@ def match_index_versions(host=None, core_name=None):
             if "ERROR" in slave:
                 error = slave["ERROR"]
                 success = False
-                err = "{0}: {1} - {2}".format(core, error, master_url)
+                err = "{}: {} - {}".format(core, error, master_url)
                 resp["errors"].append(err)
                 # if there was an error return the entire response so the
                 # alterer can get what it wants
@@ -883,8 +865,8 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             params = []
             if path is not None:
                 path = path + name if append_core_to_path else path
-                params.append("&location={0}".format(path + name))
-            params.append("&numberToKeep={0}".format(num_backups))
+                params.append("&location={}".format(path + name))
+            params.append("&numberToKeep={}".format(num_backups))
             resp = _replication_request(
                 "backup", host=host, core_name=name, params=params
             )
@@ -900,8 +882,8 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             if append_core_to_path:
                 path += core_name
         if path is not None:
-            params = ["location={0}".format(path)]
-        params.append("&numberToKeep={0}".format(num_backups))
+            params = ["location={}".format(path)]
+        params.append("&numberToKeep={}".format(num_backups))
         resp = _replication_request(
             "backup", host=host, core_name=core_name, params=params
         )
@@ -1026,12 +1008,11 @@ def signal(signal=None):
     # Give a friendly error message for invalid signals
     # TODO: Fix this logic to be reusable and used by apache.signal
     if signal not in valid_signals:
-        msg = valid_signals[:-1] + ("or {0}".format(valid_signals[-1]),)
-        return "{0} is an invalid signal. Try: one of: {1}".format(
-            signal, ", ".join(msg)
+        return "{} is an invalid signal. Try: one of: {} or {}".format(
+            signal, ", ".join(valid_signals[:-1]), valid_signals[-1]
         )
 
-    cmd = "{0} {1}".format(__opts__["solr.init_script"], signal)
+    cmd = "{} {}".format(__opts__["solr.init_script"], signal)
     __salt__["cmd.run"](cmd, python_shell=False)
 
 
@@ -1078,7 +1059,7 @@ def reload_core(host=None, core_name=None):
                 ret, success, data, resp["errors"], resp["warnings"]
             )
         return ret
-    extra = ["action=RELOAD", "core={0}".format(core_name)]
+    extra = ["action=RELOAD", "core={}".format(core_name)]
     url = _format_url("admin/cores", host=host, core_name=None, extra=extra)
     return _http_request(url)
 
@@ -1119,7 +1100,7 @@ def core_status(host=None, core_name=None):
                 ret, success, data, resp["errors"], resp["warnings"]
             )
         return ret
-    extra = ["action=STATUS", "core={0}".format(core_name)]
+    extra = ["action=STATUS", "core={}".format(core_name)]
     url = _format_url("admin/cores", host=host, core_name=None, extra=extra)
     return _http_request(url)
 
@@ -1260,8 +1241,8 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ["Failed to set the replication status on the master."]
             return _get_return_dict(False, errors=errors)
     params = ["command=full-import"]
-    for key, val in six.iteritems(options):
-        params.append("&{0}={1}".format(key, val))
+    for key, val in options.items():
+        params.append("&{}={}".format(key, val))
     url = _format_url(handler, host=host, core_name=core_name, extra=params + extra)
     return _http_request(url)
 
@@ -1313,8 +1294,8 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ["Failed to set the replication status on the master."]
             return _get_return_dict(False, errors=errors)
     params = ["command=delta-import"]
-    for key, val in six.iteritems(options):
-        params.append("{0}={1}".format(key, val))
+    for key, val in options.items():
+        params.append("{}={}".format(key, val))
     url = _format_url(handler, host=host, core_name=core_name, extra=params + extra)
     return _http_request(url)
 

@@ -8,7 +8,6 @@ import socket
 
 import salt.utils.network
 from salt._compat import ipaddress
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 

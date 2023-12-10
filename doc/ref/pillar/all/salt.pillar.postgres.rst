@@ -1,5 +1,5 @@
-salt.pillar.postgres module
-===========================
+salt.pillar.postgres
+====================
 
 .. automodule:: salt.pillar.postgres
     :members:

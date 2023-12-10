@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 The sys module provides information about the available functions on the minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import fnmatch
 import logging
 
-# Import salt libs
 import salt.loader
 import salt.runner
 import salt.state
 import salt.utils.args
+import salt.utils.doc
 import salt.utils.schema
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import zip
-from salt.utils.doc import strip_rst as _strip_rst
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +59,7 @@ def doc(*args):
     if not args:
         for fun in __salt__:
             docs[fun] = __salt__[fun].__doc__
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
     for module in args:
         _use_fnmatch = False
@@ -88,7 +80,7 @@ def doc(*args):
             for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = __salt__[fun].__doc__
-    return _strip_rst(docs)
+    return salt.utils.doc.strip_rst(docs)
 
 
 def state_doc(*args):
@@ -131,7 +123,7 @@ def state_doc(*args):
                 if hasattr(st_.states[fun], "__globals__"):
                     docs[state] = st_.states[fun].__globals__["__doc__"]
             docs[fun] = st_.states[fun].__doc__
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
     for module in args:
         _use_fnmatch = False
@@ -158,7 +150,7 @@ def state_doc(*args):
                         if hasattr(st_.states[fun], "__globals__"):
                             docs[state] = st_.states[fun].__globals__["__doc__"]
                     docs[fun] = st_.states[fun].__doc__
-    return _strip_rst(docs)
+    return salt.utils.doc.strip_rst(docs)
 
 
 def runner_doc(*args):
@@ -196,7 +188,7 @@ def runner_doc(*args):
     if not args:
         for fun in run_.functions:
             docs[fun] = run_.functions[fun].__doc__
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
     for module in args:
         _use_fnmatch = False
@@ -216,7 +208,7 @@ def runner_doc(*args):
             for fun in run_.functions:
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = run_.functions[fun].__doc__
-    return _strip_rst(docs)
+    return salt.utils.doc.strip_rst(docs)
 
 
 def returner_doc(*args):
@@ -255,7 +247,7 @@ def returner_doc(*args):
     if not args:
         for fun in returners_:
             docs[fun] = returners_[fun].__doc__
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
     for module in args:
         _use_fnmatch = False
@@ -273,10 +265,10 @@ def returner_doc(*args):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
         else:
-            for fun in six.iterkeys(returners_):
+            for fun in returners_.keys():
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
-    return _strip_rst(docs)
+    return salt.utils.doc.strip_rst(docs)
 
 
 def renderer_doc(*args):
@@ -309,9 +301,9 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for func in six.iterkeys(renderers_):
+        for func in renderers_.keys():
             docs[func] = renderers_[func].__doc__
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
     for module in args:
         if "*" in module or "." in module:
@@ -319,10 +311,10 @@ def renderer_doc(*args):
                 docs[func] = renderers_[func].__doc__
         else:
             moduledot = module + "."
-            for func in six.iterkeys(renderers_):
+            for func in renderers_.keys():
                 if func.startswith(moduledot):
                     docs[func] = renderers_[func].__doc__
-    return _strip_rst(docs)
+    return salt.utils.doc.strip_rst(docs)
 
 
 def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
@@ -338,6 +330,12 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_functions sys
         salt '*' sys.list_functions sys user
 
+    .. versionadded:: 0.12.0
+
+    .. code-block:: bash
+
+        salt '*' sys.list_functions 'module.specific_function'
+
     Function names can be specified as globs.
 
     .. versionadded:: 2015.5.0
@@ -345,12 +343,6 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' sys.list_functions 'sys.list_*'
-
-    .. versionadded:: ?
-
-    .. code-block:: bash
-
-        salt '*' sys.list_functions 'module.specific_function'
 
     """
     # ## NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -554,7 +546,7 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_state_functions 'file.*'
         salt '*' sys.list_state_functions 'file.s*'
 
-    .. versionadded:: ?
+    .. versionadded:: 2016.9.0
 
     .. code-block:: bash
 
@@ -736,7 +728,7 @@ def list_returners(*args):
     returners = set()
 
     if not args:
-        for func in six.iterkeys(returners_):
+        for func in returners_.keys():
             returners.add(func.split(".")[0])
         return sorted(returners)
 
@@ -821,7 +813,7 @@ def list_renderers(*args):
     renderers = set()
 
     if not args:
-        for rend in six.iterkeys(renderers_):
+        for rend in renderers_.keys():
             renderers.add(rend)
         return sorted(renderers)
 

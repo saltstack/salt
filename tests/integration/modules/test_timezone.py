@@ -1,20 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for timezone module
 
 Linux and Solaris are supported
 """
+import pytest
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
-import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
-from tests.support.unit import skipIf
 
 try:
     import tzlocal  # pylint: disable=unused-import
@@ -32,7 +23,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
         ret_grain = self.run_function("grains.item", ["kernel"])
         if "Linux" not in ret_grain["kernel"]:
             self.skipTest("For Linux only")
-        super(TimezoneLinuxModuleTest, self).setUp()
+        super().setUp()
 
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
@@ -48,7 +39,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
         ret_grain = self.run_function("grains.item", ["os_family"])
         if "Solaris" not in ret_grain["os_family"]:
             self.skipTest("For Solaris only")
-        super(TimezoneSolarisModuleTest, self).setUp()
+        super().setUp()
 
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
@@ -56,7 +47,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
         self.assertIn(ret, timescale)
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows test only")
+@pytest.mark.skip_unless_on_windows
 class TimezoneWindowsModuleTest(ModuleCase):
     def setUp(self):
         self.pre = self.run_function("timezone.get_zone")
@@ -71,7 +62,7 @@ class TimezoneWindowsModuleTest(ModuleCase):
         ret = self.run_function("timezone.get_hwclock")
         self.assertIn(ret, timescale)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_zone(self):
         """
         test timezone.set_zone, get_zone and zone_compare

@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
+
+import pytest
+import yaml
 
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-import yaml
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support import win_installer
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 # THis test needs a longer timeout than other cloud tests
@@ -67,7 +64,7 @@ class EC2Test(CloudTest):
                 "securitygroup or subnetid missing for {} config".format(self.PROVIDER)
             )
 
-        super(EC2Test, self).setUp()
+        super().setUp()
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(
@@ -106,6 +103,11 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        ipv6Address_present = False
+        for each in ret_val:
+            if "ipv6Address:" in each:
+                ipv6Address_present = True
+        assert ipv6Address_present
 
         self.assertDestroyInstance()
 
@@ -115,7 +117,7 @@ class EC2Test(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p ec2-test {0} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            "-p ec2-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
         )
         # check if instance returned
         self.assertInstanceExists(ret_val)
@@ -123,7 +125,7 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + "-changed"
 
         rename_result = self.run_cloud(
-            "-a rename {0} newname={1} --assume-yes".format(
+            "-a rename {} newname={} --assume-yes".format(
                 self.instance_name, changed_name
             ),
             timeout=TIMEOUT,
@@ -160,7 +162,9 @@ class EC2Test(CloudTest):
         )
         self._test_instance("ec2-win2012r2-test", debug=True)
 
-    @skipIf(not HAS_WINRM, "Skip when winrm dependencies are missing")
+    @pytest.mark.skipif(
+        not HAS_WINRM, reason="Skip when winrm dependencies are missing"
+    )
     def test_win2012r2_winrm(self):
         """
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
@@ -194,7 +198,9 @@ class EC2Test(CloudTest):
         )
         self._test_instance("ec2-win2016-test", debug=True)
 
-    @skipIf(not HAS_WINRM, "Skip when winrm dependencies are missing")
+    @pytest.mark.skipif(
+        not HAS_WINRM, reason="Skip when winrm dependencies are missing"
+    )
     def test_win2016_winrm(self):
         """
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm

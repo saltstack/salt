@@ -165,7 +165,7 @@ def send(
 
     .. code-block:: bash
 
-        $ salt '*' mandrill.send message="{'subject': 'Hi', 'from_email': 'test@example.com', 'to': [{'email': 'recv@example.com', 'type': 'to'}]}"
+        salt '*' mandrill.send message="{'subject': 'Hi', 'from_email': 'test@example.com', 'to': [{'email': 'recv@example.com', 'type': 'to'}]}"
 
     ``message`` structure example (as YAML for readability):
 

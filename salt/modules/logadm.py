@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing Solaris logadm based log rotations.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import shlex
 
@@ -12,15 +9,6 @@ import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import salt libs
-from salt.ext import six
-
-try:
-    from shlex import quote as _quote_args  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _quote_args
-
 
 log = logging.getLogger(__name__)
 default_conf = "/etc/logadm.conf"
@@ -301,11 +289,12 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
     command = "logadm -f {}".format(conf_file)
     for arg, val in kwargs.items():
         if arg in option_toggles.values() and val:
-            command = "{} {}".format(command, _arg2opt(arg),)
-        elif arg in option_flags.values():
-            command = "{} {} {}".format(
-                command, _arg2opt(arg), _quote_args(six.text_type(val))
+            command = "{} {}".format(
+                command,
+                _arg2opt(arg),
             )
+        elif arg in option_flags.values():
+            command = "{} {} {}".format(command, _arg2opt(arg), shlex.quote(str(val)))
         elif arg != "log_file":
             log.warning("Unknown argument %s, don't know how to map this!", arg)
     if "log_file" in kwargs:
@@ -318,9 +307,9 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         #     % logadm -C2 -w mylog /my/really/long/log/file/name
         #     % logadm -C2 -w /my/really/long/log/file/name
         if "entryname" not in kwargs:
-            command = "{} -w {}".format(command, _quote_args(kwargs["log_file"]))
+            command = "{} -w {}".format(command, shlex.quote(kwargs["log_file"]))
         else:
-            command = "{} {}".format(command, _quote_args(kwargs["log_file"]))
+            command = "{} {}".format(command, shlex.quote(kwargs["log_file"]))
 
     log.debug("logadm.rotate - command: %s", command)
     result = __salt__["cmd.run_all"](command, python_shell=False)
@@ -340,7 +329,7 @@ def remove(name, conf_file=default_conf):
 
       salt '*' logadm.remove myapplog
     """
-    command = "logadm -f {0} -r {1}".format(conf_file, name)
+    command = "logadm -f {} -r {}".format(conf_file, name)
     result = __salt__["cmd.run_all"](command, python_shell=False)
     if result["retcode"] != 0:
         return dict(

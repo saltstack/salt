@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Keystone module for interacting with OpenStack Keystone
 
@@ -26,7 +25,6 @@ Example configuration
       identity_api_version: 3
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:
@@ -48,7 +46,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The keystoneng execution module failed to load: shade python module is not available",
+        "The keystoneng execution module failed to load: shade python module is not"
+        " available",
     )
 
 

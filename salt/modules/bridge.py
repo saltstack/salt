@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing bridging information
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import sys
@@ -33,8 +31,9 @@ def __virtual__():
             return True
     return (
         False,
-        "The bridge execution module failed to load: requires one of the following tool/os"
-        " combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig on NetBSD.",
+        "The bridge execution module failed to load: requires one of the following"
+        " tool/os combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig"
+        " on NetBSD.",
     )
 
 
@@ -52,9 +51,9 @@ def _linux_brshow(br=None):
     brctl = _tool_path("brctl")
 
     if br:
-        cmd = "{0} show {1}".format(brctl, br)
+        cmd = f"{brctl} show {br}"
     else:
-        cmd = "{0} show".format(brctl)
+        cmd = f"{brctl} show"
 
     brs = {}
 
@@ -97,7 +96,7 @@ def _linux_bradd(br):
     Internal, creates the bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"]("{0} addbr {1}".format(brctl, br), python_shell=False)
+    return __salt__["cmd.run"](f"{brctl} addbr {br}", python_shell=False)
 
 
 def _linux_brdel(br):
@@ -105,7 +104,7 @@ def _linux_brdel(br):
     Internal, deletes the bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"]("{0} delbr {1}".format(brctl, br), python_shell=False)
+    return __salt__["cmd.run"](f"{brctl} delbr {br}", python_shell=False)
 
 
 def _linux_addif(br, iface):
@@ -113,9 +112,7 @@ def _linux_addif(br, iface):
     Internal, adds an interface to a bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"](
-        "{0} addif {1} {2}".format(brctl, br, iface), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{brctl} addif {br} {iface}", python_shell=False)
 
 
 def _linux_delif(br, iface):
@@ -123,9 +120,7 @@ def _linux_delif(br, iface):
     Internal, removes an interface from a bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"](
-        "{0} delif {1} {2}".format(brctl, br, iface), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{brctl} delif {br} {iface}", python_shell=False)
 
 
 def _linux_stp(br, state):
@@ -133,9 +128,7 @@ def _linux_stp(br, state):
     Internal, sets STP state
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"](
-        "{0} stp {1} {2}".format(brctl, br, state), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{brctl} stp {br} {state}", python_shell=False)
 
 
 def _bsd_brshow(br=None):
@@ -152,14 +145,14 @@ def _bsd_brshow(br=None):
     if br:
         ifaces[br] = br
     else:
-        cmd = "{0} -g bridge".format(ifconfig)
+        cmd = f"{ifconfig} -g bridge"
         for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
             ifaces[line] = line
 
     brs = {}
 
     for iface in ifaces:
-        cmd = "{0} {1}".format(ifconfig, iface)
+        cmd = f"{ifconfig} {iface}"
         for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
             brs[iface] = {"interfaces": [], "stp": "no"}
             line = line.lstrip()
@@ -180,9 +173,9 @@ def _netbsd_brshow(br=None):
     brconfig = _tool_path("brconfig")
 
     if br:
-        cmd = "{0} {1}".format(brconfig, br)
+        cmd = f"{brconfig} {br}"
     else:
-        cmd = "{0} -a".format(brconfig)
+        cmd = f"{brconfig} -a"
 
     brs = {}
     start_int = False
@@ -220,23 +213,13 @@ def _bsd_bradd(br):
     if not br:
         return False
 
-    if (
-        __salt__["cmd.retcode"](
-            "{0} {1} create up".format(ifconfig, br), python_shell=False
-        )
-        != 0
-    ):
+    if __salt__["cmd.retcode"](f"{ifconfig} {br} create up", python_shell=False) != 0:
         return False
 
     # NetBSD is two cmds
     if kernel == "NetBSD":
         brconfig = _tool_path("brconfig")
-        if (
-            __salt__["cmd.retcode"](
-                "{0} {1} up".format(brconfig, br), python_shell=False
-            )
-            != 0
-        ):
+        if __salt__["cmd.retcode"](f"{brconfig} {br} up", python_shell=False) != 0:
             return False
 
     return True
@@ -249,9 +232,7 @@ def _bsd_brdel(br):
     ifconfig = _tool_path("ifconfig")
     if not br:
         return False
-    return __salt__["cmd.run"](
-        "{0} {1} destroy".format(ifconfig, br), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{ifconfig} {br} destroy", python_shell=False)
 
 
 def _bsd_addif(br, iface):
@@ -269,9 +250,7 @@ def _bsd_addif(br, iface):
     if not br or not iface:
         return False
 
-    return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, brcmd, iface), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{cmd} {br} {brcmd} {iface}", python_shell=False)
 
 
 def _bsd_delif(br, iface):
@@ -289,9 +268,7 @@ def _bsd_delif(br, iface):
     if not br or not iface:
         return False
 
-    return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, brcmd, iface), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{cmd} {br} {brcmd} {iface}", python_shell=False)
 
 
 def _bsd_stp(br, state, iface):
@@ -308,9 +285,7 @@ def _bsd_stp(br, state, iface):
     if not br or not iface:
         return False
 
-    return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, state, iface), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{cmd} {br} {state} {iface}", python_shell=False)
 
 
 def _os_dispatch(func, *args, **kwargs):
@@ -322,7 +297,7 @@ def _os_dispatch(func, *args, **kwargs):
     else:
         kernel = __grains__["kernel"].lower()
 
-    _os_func = getattr(sys.modules[__name__], "_{0}_{1}".format(kernel, func))
+    _os_func = getattr(sys.modules[__name__], f"_{kernel}_{func}")
 
     if callable(_os_func):
         return _os_func(*args, **kwargs)
@@ -494,6 +469,3 @@ def stp(br=None, state="disable", iface=None):
         return _os_dispatch("stp", br, states[state], iface)
     else:
         return False
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

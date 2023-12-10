@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM BGP
 ==========
@@ -18,9 +17,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python lib
 import logging
 
 # import NAPALM utils

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 The match module allows for match routines to be run and determine target specs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import inspect
@@ -13,11 +11,18 @@ from collections.abc import Mapping
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
+from salt.utils.decorators.jinja import jinja_global
 
 __func_alias__ = {"list_": "list"}
 
 log = logging.getLogger(__name__)
+
+
+def _load_matchers():
+    """
+    Store matchers in __context__ so they're only loaded once
+    """
+    __context__["matchers"] = salt.loader.matchers(__opts__)
 
 
 def compound(tgt, minion_id=None):
@@ -36,18 +41,19 @@ def compound(tgt, minion_id=None):
         salt '*' match.compound 'L@cheese,foo and *'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["compound_match.match"](tgt)
+        ret = __context__["matchers"]["compound_match.match"](
+            tgt, opts=__opts__, minion_id=minion_id
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
-        return False
+        ret = False
+
+    return ret
 
 
 def ipcidr(tgt):
@@ -70,9 +76,10 @@ def ipcidr(tgt):
          - nodeclass: internal
 
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["ipcidr_match.match"](tgt, opts=__opts__)
+        return __context__["matchers"]["ipcidr_match.match"](tgt, opts=__opts__)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -101,9 +108,10 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["pillar_pcre_match.match"](
+        return __context__["matchers"]["pillar_pcre_match.match"](
             tgt, delimiter=delimiter, opts=__opts__
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -134,9 +142,12 @@ def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["pillar_match.match"](tgt, delimiter=delimiter, opts=__opts__)
+        return __context__["matchers"]["pillar_match.match"](
+            tgt, delimiter=delimiter, opts=__opts__
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -152,9 +163,10 @@ def data(tgt):
 
         salt '*' match.data 'spam:eggs'
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["data_match.match"](tgt, opts=__opts__)
+        return __context__["matchers"]["data_match.match"](tgt, opts=__opts__)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -183,9 +195,10 @@ def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["grain_pcre_match.match"](
+        return __context__["matchers"]["grain_pcre_match.match"](
             tgt, delimiter=delimiter, opts=__opts__
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -216,9 +229,12 @@ def grain(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     """
-    matchers = salt.loader.matchers(__opts__)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["grain_match.match"](tgt, delimiter=delimiter, opts=__opts__)
+        return __context__["matchers"]["grain_match.match"](
+            tgt, delimiter=delimiter, opts=__opts__
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -240,15 +256,14 @@ def list_(tgt, minion_id=None):
         salt '*' match.list 'server1,server2'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["list_match.match"](tgt, opts=opts)
+        return __context__["matchers"]["list_match.match"](
+            tgt, opts=__opts__, minion_id=minion_id
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -270,15 +285,14 @@ def pcre(tgt, minion_id=None):
         salt '*' match.pcre '.*'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    if "matchers" not in __context__:
+        _load_matchers()
     try:
-        return matchers["pcre_match.match"](tgt, opts=opts)
+        return __context__["matchers"]["pcre_match.match"](
+            tgt, opts=__opts__, minion_id=minion_id
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -300,16 +314,15 @@ def glob(tgt, minion_id=None):
         salt '*' match.glob '*'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    if "matchers" not in __context__:
+        _load_matchers()
 
     try:
-        return matchers["glob_match.match"](tgt, opts=opts)
+        return __context__["matchers"]["glob_match.match"](
+            tgt, opts=__opts__, minion_id=minion_id
+        )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -342,7 +355,7 @@ def filter_by(
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }, default='web*') %}
+        }, minion_id=grains['id'], default='web*') %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
@@ -413,3 +426,66 @@ def search_by(lookup, tgt_type="compound", minion_id=None):
                 matches.append(key)
 
     return matches or None
+
+
+@jinja_global("ifelse")
+def ifelse(
+    *args,
+    tgt_type="compound",
+    minion_id=None,
+    merge=None,
+    merge_lists=False,
+):
+    """
+    .. versionadded:: 3006.0
+
+    Evaluate each pair of arguments up to the last one as a (matcher, value)
+    tuple, returning ``value`` if matched.  If none match, returns the last
+    argument.
+
+    The ``ifelse`` function is like a multi-level if-else statement. It was
+    inspired by CFEngine's ``ifelse`` function which in turn was inspired by
+    Oracle's ``DECODE`` function. It must have an odd number of arguments (from
+    1 to N). The last argument is the default value, like the ``else`` clause in
+    standard programming languages. Every pair of arguments before the last one
+    are evaluated as a pair. If the first one evaluates true then the second one
+    is returned, as if you had used the first one in a compound match
+    expression. Boolean values can also be used as the first item in a pair,
+    as it will be translated to a match that will always match ("*") or never
+    match ("SALT_IFELSE_MATCH_NOTHING") a target system.
+
+    This is essentially another way to express the ``filter_by`` functionality
+    in way that's familiar to CFEngine or Oracle users. Consider using
+    ``filter_by`` unless this function fits your workflow.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' match.ifelse 'foo*' 'Foo!' 'bar*' 'Bar!' minion_id=bar03
+    """
+    if len(args) % 2 == 0:
+        raise SaltException("The ifelse function must have an odd number of arguments!")
+    elif len(args) == 1:
+        return args[0]
+
+    default_key = "SALT_IFELSE_FUNCTION_DEFAULT"
+
+    keys = list(args[::2])
+    for idx, key in enumerate(keys):
+        if key is True:
+            keys[idx] = "*"
+        elif key is False:
+            keys[idx] = "SALT_IFELSE_MATCH_NOTHING"
+
+    lookup = dict(zip(keys, args[1::2]))
+    lookup.update({default_key: args[-1]})
+
+    return filter_by(
+        lookup=lookup,
+        tgt_type=tgt_type,
+        minion_id=minion_id,
+        merge=merge,
+        merge_lists=merge_lists,
+        default=default_key,
+    )

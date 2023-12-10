@@ -1,14 +1,19 @@
+import logging
+import sys
 import time
 import uuid
 
 import attr
-from saltfactories.factories.daemons.container import SaltMinionContainerFactory
-from saltfactories.utils import ports
-from tests.support.runtests import RUNTIME_VARS
+from pytestshellutils.utils import ports
+from saltfactories.daemons.container import SaltMinion
+
+from tests.conftest import CODE_DIR
+
+log = logging.getLogger(__name__)
 
 
 @attr.s(kw_only=True, slots=True)
-class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
+class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))
     ssh_port = attr.ib(
@@ -28,16 +33,11 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
     tls_uri = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        self.uri = "localhost:{}".format(self.sshd_port)
-        self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
-        self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
-        self.tls_uri = "qemu+tls://localhost:{}/system".format(self.libvirt_tls_port)
+        self.uri = f"localhost:{self.sshd_port}"
+        self.ssh_uri = f"qemu+ssh://{self.uri}/system"
+        self.tcp_uri = f"qemu+tcp://localhost:{self.libvirt_tcp_port}/system"
+        self.tls_uri = f"qemu+tls://127.0.0.1:{self.libvirt_tls_port}/system"
 
-        if self.check_ports is None:
-            self.check_ports = []
-        self.check_ports.extend(
-            [self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port]
-        )
         if "environment" not in self.container_run_kwargs:
             self.container_run_kwargs["environment"] = {}
         self.container_run_kwargs["environment"].update(
@@ -49,38 +49,69 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
                 "NO_START_MINION": "1",
                 "HOST_UUID": self.host_uuid,
                 "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPATH": str(CODE_DIR),
             }
         )
-        if "ports" not in self.container_run_kwargs:
-            self.container_run_kwargs["ports"] = {}
-        self.container_run_kwargs["ports"].update(
-            {
-                "{}/tcp".format(self.ssh_port): self.ssh_port,
-                "{}/tcp".format(self.sshd_port): self.sshd_port,
-                "{}/tcp".format(self.libvirt_tcp_port): self.libvirt_tcp_port,
-                "{}/tcp".format(self.libvirt_tls_port): self.libvirt_tls_port,
-            }
-        )
+        super().__attrs_post_init__()
         if "volumes" not in self.container_run_kwargs:
             self.container_run_kwargs["volumes"] = {}
         self.container_run_kwargs["volumes"].update(
             {
-                RUNTIME_VARS.CODE_DIR: {"bind": "/salt", "mode": "z"},
-                RUNTIME_VARS.CODE_DIR: {"bind": RUNTIME_VARS.CODE_DIR, "mode": "z"},
+                str(CODE_DIR): {"bind": "/salt", "mode": "z"},
             }
         )
-        self.container_run_kwargs["working_dir"] = RUNTIME_VARS.CODE_DIR
+        self.container_run_kwargs["working_dir"] = str(CODE_DIR)
         self.container_run_kwargs["network_mode"] = "host"
         self.container_run_kwargs["cap_add"] = ["ALL"]
         self.container_run_kwargs["privileged"] = True
-        super().__attrs_post_init__()
         self.python_executable = "python3"
+        self.container_start_check(self._check_script_path_exists)
+        for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
+            self.check_ports[port] = port
+        self.before_start(self._install_salt_in_container, on_container=False)
 
-    def _container_start_checks(self):
-        # Once we're able to ls the salt-minion script it means the container
-        # has salt installed
-        ret = self.run("ls", "-lah", self.get_script_path())
-        if ret.exitcode == 0:
-            return True
-        time.sleep(1)
-        return False
+    def _check_script_path_exists(self, timeout_at):
+        while time.time() <= timeout_at:
+            # Once we're able to ls the salt-minion script it means the container
+            # has salt installed
+            ret = self.run("ls", "-lah", self.get_script_path())
+            if ret.returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            return False
+        return True
+
+    def _install_salt_in_container(self):
+        ret = self.run("bash", "-c", "echo $SALT_PY_VERSION")
+        assert ret.returncode == 0
+        if not ret.stdout:
+            log.warning(
+                "The 'SALT_PY_VERSION' environment variable is not set on the container"
+            )
+            salt_py_version = 3
+            ret = self.run(
+                "python3",
+                "-c",
+                "import sys; sys.stderr.write('{}.{}'.format(*sys.version_info))",
+            )
+            assert ret.returncode == 0
+            if not ret.stdout:
+                requirements_py_version = "{}.{}".format(*sys.version_info)
+            else:
+                requirements_py_version = ret.stdout.strip()
+        else:
+            salt_py_version = requirements_py_version = ret.stdout.strip()
+
+        self.python_executable = f"python{salt_py_version}"
+
+        ret = self.run(
+            self.python_executable,
+            "-m",
+            "pip",
+            "install",
+            f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
+            "/salt",
+        )
+        log.debug("Install Salt in the container: %s", ret)
+        assert ret.returncode == 0

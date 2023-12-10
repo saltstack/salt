@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A general map/reduce style salt runner for aggregating results
 returned by several different minions.
@@ -12,16 +11,8 @@ Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.client
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
@@ -96,26 +87,26 @@ def diff(*args, **kwargs):
 
     is_first_time = True
     for k in bulk_ret:
-        print("minion pool :\n" "------------")
+        print("minion pool :\n------------")
         print(k["pool"])
-        print("pool size :\n" "----------")
-        print("    " + six.text_type(len(k["pool"])))
+        print("pool size :\n----------")
+        print("    " + str(len(k["pool"])))
         if is_first_time:
             is_first_time = False
-            print("pool result :\n" "------------")
+            print("pool result :\n------------")
             print("    " + bulk_ret[0]["result"])
             print()
             continue
 
-        outs = ('differences from "{0}" results :').format(bulk_ret[0]["pool"][0])
+        outs = 'differences from "{}" results :'.format(bulk_ret[0]["pool"][0])
         print(outs)
         print("-" * (len(outs) - 1))
         from_result = bulk_ret[0]["result"].splitlines()
-        for i in range(0, len(from_result)):
-            from_result[i] += "\n"
+        for idx, _ in enumerate(from_result):
+            from_result[idx] += "\n"
         to_result = k["result"].splitlines()
-        for i in range(0, len(to_result)):
-            to_result[i] += "\n"
+        for idx, _ in enumerate(to_result):
+            to_result[idx] += "\n"
         outs = ""
         outs += "".join(
             difflib.unified_diff(
@@ -160,33 +151,33 @@ def _get_pool_results(*args, **kwargs):
     if tgt_type not in ["compound", "pcre"]:
         tgt_type = "compound"
 
-    kwargs_passthru = dict(
-        (k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith("_")
-    )
+    kwargs_passthru = {
+        key: value for (key, value) in kwargs.items() if not key.startswith("_")
+    }
 
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    try:
-        minions = client.cmd(
-            tgt,
-            cmd,
-            args[2:],
-            timeout=__opts__["timeout"],
-            tgt_type=tgt_type,
-            kwarg=kwargs_passthru,
-        )
-    except SaltClientError as client_error:
-        print(client_error)
-        return ret
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            minions = client.cmd(
+                tgt,
+                cmd,
+                args[2:],
+                timeout=__opts__["timeout"],
+                tgt_type=tgt_type,
+                kwarg=kwargs_passthru,
+            )
+        except SaltClientError as client_error:
+            print(client_error)
+            return ret
 
     # hash minion return values as a string
     for minion in sorted(minions):
         digest = hashlib.sha256(
-            six.text_type(minions[minion]).encode(__salt_system_encoding__)
+            str(minions[minion]).encode(__salt_system_encoding__)
         ).hexdigest()
         if digest not in ret:
             ret[digest] = {}
             ret[digest]["pool"] = []
-            ret[digest]["result"] = six.text_type(minions[minion])
+            ret[digest]["result"] = str(minions[minion])
 
         ret[digest]["pool"].append(minion)
 

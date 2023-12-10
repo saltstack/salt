@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for functions located in the salt.cloud.__init__.py file.
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
 import salt.cloud
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
-from tests.support.helpers import PRE_PYTEST_SKIP, expensiveTest
+from tests.support.helpers import PRE_PYTEST_SKIP
 
 
 @PRE_PYTEST_SKIP
@@ -20,16 +18,16 @@ class CloudClientTestCase(CloudTest):
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     IMAGE_NAME = "14.04.5 x64"
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
 
         # Use a --list-images salt-cloud call to see if the DigitalOcean provider is
         # configured correctly before running any tests.
-        images = self.run_cloud("--list-images {0}".format(self.PROVIDER))
+        images = self.run_cloud("--list-images {}".format(self.PROVIDER))
 
         if self.image_name not in [i.strip() for i in images]:
             self.skipTest(
-                "Image '{0}' was not found in image search. Is the {1} provider "
+                "Image '{}' was not found in image search. Is the {} provider "
                 "configured correctly for this test?".format(
                     self.PROVIDER, self.image_name
                 )

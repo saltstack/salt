@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Manage HP ILO
 
 :depends: hponcfg (SmartStart Scripting Toolkit Linux Edition)
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import tempfile
+import xml.etree.ElementTree as ET
 
 import salt.utils.path
-
-# Import Salt libs
-from salt._compat import ElementTree as ET
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +39,7 @@ def __execute_cmd(name, xml):
         os.mkdir(tmp_dir)
     with tempfile.NamedTemporaryFile(
         dir=tmp_dir,
-        prefix=name + six.text_type(os.getpid()),
+        prefix=name + str(os.getpid()),
         suffix=".xml",
         mode="w",
         delete=False,
@@ -54,7 +47,7 @@ def __execute_cmd(name, xml):
         tmpfilename = fh.name
         fh.write(xml)
 
-    cmd = __salt__["cmd.run_all"]("hponcfg -f {0}".format(tmpfilename))
+    cmd = __salt__["cmd.run_all"]("hponcfg -f {}".format(tmpfilename))
 
     # Clean up the temp file
     __salt__["file.remove"](tmpfilename)
@@ -70,7 +63,7 @@ def __execute_cmd(name, xml):
             # Make sure dict keys don't collide
             if ret[name.replace("_", " ")].get(i.tag, False):
                 ret[name.replace("_", " ")].update(
-                    {i.tag + "_" + six.text_type(id_num): i.attrib}
+                    {i.tag + "_" + str(id_num): i.attrib}
                 )
                 id_num += 1
             else:
@@ -122,7 +115,7 @@ def set_http_port(port=80):
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
                     <MOD_GLOBAL_SETTINGS>
-                      <HTTP_PORT value="{0}"/>
+                      <HTTP_PORT value="{}"/>
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
@@ -152,7 +145,7 @@ def set_https_port(port=443):
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
                     <MOD_GLOBAL_SETTINGS>
-                      <HTTPS_PORT value="{0}"/>
+                      <HTTPS_PORT value="{}"/>
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
@@ -238,7 +231,7 @@ def set_ssh_port(port=22):
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
                     <MOD_GLOBAL_SETTINGS>
-                       <SSH_PORT value="{0}"/>
+                       <SSH_PORT value="{}"/>
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
@@ -267,7 +260,7 @@ def set_ssh_key(public_key):
                   <RIB_INFO MODE="write">
                     <IMPORT_SSH_KEY>
                       -----BEGIN SSH KEY-----
-                      {0}
+                      {}
                       -----END SSH KEY-----
                     </IMPORT_SSH_KEY>
                   </RIB_INFO>
@@ -292,7 +285,7 @@ def delete_ssh_key(username):
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="admin" PASSWORD="admin123">
                   <USER_INFO MODE="write">
-                    <MOD_USER USER_LOGIN="{0}">
+                    <MOD_USER USER_LOGIN="{}">
                       <DEL_USERS_SSH_KEY/>
                     </MOD_USER>
                   </USER_INFO>
@@ -402,7 +395,7 @@ def create_user(name, password, *privileges):
         password,
         "\n".join(
             [
-                '<{0} value="Y" />'.format(i.upper())
+                '<{} value="Y" />'.format(i.upper())
                 for i in privileges
                 if i.upper() in _priv
             ]
@@ -425,7 +418,7 @@ def delete_user(username):
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="write">
-                    <DELETE_USER USER_LOGIN="{0}" />
+                    <DELETE_USER USER_LOGIN="{}" />
                   </USER_INFO>
                 </LOGIN>
               </RIBCL>""".format(
@@ -448,7 +441,7 @@ def get_user(username):
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="read">
-                    <GET_USER USER_LOGIN="{0}" />
+                    <GET_USER USER_LOGIN="{}" />
                   </USER_INFO>
                 </LOGIN>
               </RIBCL>""".format(
@@ -497,8 +490,8 @@ def change_password(username, password):
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="write">
-                    <MOD_USER USER_LOGIN="{0}">
-                      <PASSWORD value="{1}"/>
+                    <MOD_USER USER_LOGIN="{}">
+                      <PASSWORD value="{}"/>
                     </MOD_USER>
                   </USER_INFO>
                 </LOGIN>
@@ -554,9 +547,9 @@ def configure_network(ip, netmask, gateway):
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
                     <MOD_NETWORK_SETTINGS>
-                      <IP_ADDRESS value="{0}"/>
-                      <SUBNET_MASK value="{1}"/>
-                      <GATEWAY_IP_ADDRESS value="{2}"/>
+                      <IP_ADDRESS value="{}"/>
+                      <SUBNET_MASK value="{}"/>
+                      <GATEWAY_IP_ADDRESS value="{}"/>
                     </MOD_NETWORK_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
@@ -638,13 +631,13 @@ def configure_snmp(community, snmp_port=161, snmp_trapport=161):
                   <RIB_INFO mode="write">
                     <MOD_GLOBAL_SETTINGS>
                       <SNMP_ACCESS_ENABLED VALUE="Yes"/>
-                      <SNMP_PORT VALUE="{0}"/>
-                      <SNMP_TRAP_PORT VALUE="{1}"/>
+                      <SNMP_PORT VALUE="{}"/>
+                      <SNMP_TRAP_PORT VALUE="{}"/>
                     </MOD_GLOBAL_SETTINGS>
 
                    <MOD_SNMP_IM_SETTINGS>
                      <SNMP_ADDRESS_1 VALUE=""/>
-                     <SNMP_ADDRESS_1_ROCOMMUNITY VALUE="{2}"/>
+                     <SNMP_ADDRESS_1_ROCOMMUNITY VALUE="{}"/>
                      <SNMP_ADDRESS_1_TRAPCOMMUNITY VERSION="" VALUE=""/>
                      <RIB_TRAPS VALUE="Y"/>
                      <OS_TRAPS VALUE="Y"/>

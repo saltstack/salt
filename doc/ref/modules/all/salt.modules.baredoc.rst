@@ -1,5 +1,5 @@
-salt.modules.baredoc module
-===========================
+salt.modules.baredoc
+====================
 
 .. automodule:: salt.modules.baredoc
     :members:

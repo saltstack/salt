@@ -1,19 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Docker executor module
 
-.. versionadded: 2019.2.0
+.. versionadded:: 2019.2.0
 
 Used with the docker proxy minion.
 """
-from __future__ import absolute_import, unicode_literals
 
 __virtualname__ = "docker"
+
 DOCKER_MOD_MAP = {
     "state.sls": "docker.sls",
     "state.apply": "docker.apply",
     "state.highstate": "docker.highstate",
 }
+
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
 
 
 def __virtual__():
@@ -23,7 +28,7 @@ def __virtual__():
             "Docker executor is only meant to be used with Docker Proxy Minions",
         )
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {0}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 

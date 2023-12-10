@@ -6,7 +6,6 @@
 import hashlib
 import os
 
-from yum import config
 from yum.plugins import TYPE_CORE
 
 CK_PATH = "/var/cache/salt/minion/rpmdb.cookie"

@@ -1,0 +1,5 @@
+# User config line 1/3
+master: existing.master
+# User config line 2/3
+id: existing.minion
+# User config line 3/3

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for IFTTT
 
@@ -12,13 +11,10 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
       secret_key: '280d4699-a817-4719-ba6f-ca56e573e44f'
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
-# Import salt libs
 import salt.utils.http
 import salt.utils.json
 
@@ -43,7 +39,7 @@ def _query(event=None, method="GET", args=None, header_dict=None, data=None):
     secret_key = __salt__["config.get"]("ifttt.secret_key") or __salt__["config.get"](
         "ifttt:secret_key"
     )
-    path = "https://maker.ifttt.com/trigger/{0}/with/key/{1}".format(event, secret_key)
+    path = "https://maker.ifttt.com/trigger/{}/with/key/{}".format(event, secret_key)
 
     if header_dict is None:
         header_dict = {"Content-type": "application/json"}

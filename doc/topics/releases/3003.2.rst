@@ -1,0 +1,18 @@
+.. _release-3003-2:
+
+=========================
+Salt 3003.2 Release Notes
+=========================
+
+Version 3003.2 is a bug fix release for :ref:`3003 <release-3003>`.
+
+Fixed
+-----
+
+- Periodically restart the fileserver update process to avoid leaks (#50313)
+- Add ssh_timeout to kwargs in deploy_script (#59901)
+- Update the external ipaddress to the latest 3.9.5 version which has some security fixes. Updating the compat.p to use the vendored version if the python version is below 3.9.5 and only run the test_ipaddress.py tests if below 3.9.5. (#60168)
+- Use the right crypto library for salt.utils.crypt.reinit_crypto (#60215)
+- Stop SSH from hanging if connection is lost. Also added args to customize grace period. (#60216)
+- Improve reliability of Terminal class (#60504)
+- Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)

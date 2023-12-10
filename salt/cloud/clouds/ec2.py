@@ -88,9 +88,10 @@ import os
 import pprint
 import re
 import stat
-import sys
 import time
+import urllib.parse
 import uuid
+import xml.etree.ElementTree as ET
 from functools import cmp_to_key
 
 import salt.config as config
@@ -105,7 +106,6 @@ import salt.utils.json
 import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -113,8 +113,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 try:
     import requests
@@ -142,7 +140,7 @@ EC2_LOCATIONS = {
 }
 DEFAULT_LOCATION = "us-east-1"
 
-DEFAULT_EC2_API_VERSION = "2014-10-01"
+DEFAULT_EC2_API_VERSION = "2016-11-15"
 
 EC2_RETRY_CODES = [
     "RequestLimitExceeded",
@@ -172,12 +170,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
+        __opts__, _get_active_provider_name() or __virtualname__, ("id", "key")
     )
 
 
@@ -196,12 +201,7 @@ def _xml_to_dict(xmltree):
     """
     Convert an XML tree into a dict
     """
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
-
-    if children_len < 1:
+    if len(xmltree) < 1:
         name = xmltree.tag
         if "}" in name:
             comps = name.split("}")
@@ -215,12 +215,7 @@ def _xml_to_dict(xmltree):
             comps = name.split("}")
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
-
-            if children_len > 0:
+            if len(item) > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -306,17 +301,17 @@ def query(
             )
 
             requesturl = "https://{}/".format(endpoint)
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
         else:
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
             if endpoint == "":
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
-                    "requesturl: {}. Looking for something "
-                    "like https://some.ec2.endpoint/?args"
-                ).format(requesturl)
+                    "requesturl: {}. Looking for something like "
+                    "https://some.ec2.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl
@@ -328,7 +323,7 @@ def query(
         method = "GET"
         region = location
         service = "ec2"
-        canonical_uri = _urlparse(requesturl).path
+        canonical_uri = urllib.parse.urlparse(requesturl).path
         host = endpoint.strip()
 
         # Create a date for headers and the credential string
@@ -347,7 +342,7 @@ def query(
 
         keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
-        querystring = _urlencode(list(zip(keys, values)))
+        querystring = urllib.parse.urlencode(list(zip(keys, values)))
         querystring = querystring.replace("+", "%20")
 
         canonical_request = (
@@ -465,15 +460,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:
@@ -525,7 +515,7 @@ def _wait_for_spot_instance(
     duration = timeout
     while True:
         log.debug(
-            "Waiting for spot instance reservation. Giving up in " "00:%02d:%02d",
+            "Waiting for spot instance reservation. Giving up in 00:%02d:%02d",
             int(timeout // 60),
             int(timeout % 60),
         )
@@ -557,7 +547,7 @@ def _wait_for_spot_instance(
             interval *= interval_multiplier
             if interval > timeout:
                 interval = timeout + 1
-            log.info("Interval multiplier in effect; interval is " "now %ss", interval)
+            log.info("Interval multiplier in effect; interval is now %ss", interval)
 
 
 def avail_sizes(call=None):
@@ -577,13 +567,13 @@ def avail_sizes(call=None):
         "Cluster Compute": {
             "cc2.8xlarge": {
                 "id": "cc2.8xlarge",
-                "cores": "16 (2 x Intel Xeon E5-2670, eight-core with " "hyperthread)",
+                "cores": "16 (2 x Intel Xeon E5-2670, eight-core with hyperthread)",
                 "disk": "3360 GiB (4 x 840 GiB)",
                 "ram": "60.5 GiB",
             },
             "cc1.4xlarge": {
                 "id": "cc1.4xlarge",
-                "cores": "8 (2 x Intel Xeon X5570, quad-core with " "hyperthread)",
+                "cores": "8 (2 x Intel Xeon X5570, quad-core with hyperthread)",
                 "disk": "1690 GiB (2 x 840 GiB)",
                 "ram": "22.5 GiB",
             },
@@ -591,8 +581,10 @@ def avail_sizes(call=None):
         "Cluster CPU": {
             "cg1.4xlarge": {
                 "id": "cg1.4xlarge",
-                "cores": "8 (2 x Intel Xeon X5570, quad-core with "
-                "hyperthread), plus 2 NVIDIA Tesla M2050 GPUs",
+                "cores": (
+                    "8 (2 x Intel Xeon X5570, quad-core with "
+                    "hyperthread), plus 2 NVIDIA Tesla M2050 GPUs"
+                ),
                 "disk": "1680 GiB (2 x 840 GiB)",
                 "ram": "22.5 GiB",
             },
@@ -1163,15 +1155,17 @@ def get_availability_zone(vm_):
     # Validate user-specified AZ
     if avz not in zones:
         raise SaltCloudException(
-            "The specified availability zone isn't valid in this region: "
-            "{}\n".format(avz)
+            "The specified availability zone isn't valid in this region: {}\n".format(
+                avz
+            )
         )
 
     # check specified AZ is available
     elif zones[avz] != "available":
         raise SaltCloudException(
-            "The specified availability zone isn't currently available: "
-            "{}\n".format(avz)
+            "The specified availability zone isn't currently available: {}\n".format(
+                avz
+            )
         )
 
     return avz
@@ -1233,13 +1227,16 @@ def _get_subnetname_id(subnetname):
         opts=__opts__,
         sigver="4",
     ):
-        tags = subnet.get("tagSet", {}).get("item", {})
-        if not isinstance(tags, list):
-            tags = [tags]
-        for tag in tags:
-            if tag["key"] == "Name" and tag["value"] == subnetname:
-                log.debug("AWS Subnet ID of %s is %s", subnetname, subnet["subnetId"])
-                return subnet["subnetId"]
+        if "tagSet" in subnet:
+            tags = subnet.get("tagSet", {}).get("item", [])
+            if not isinstance(tags, list):
+                tags = [tags]
+            for tag in tags:
+                if tag["key"] == "Name" and tag["value"] == subnetname:
+                    log.debug(
+                        "AWS Subnet ID of %s is %s", subnetname, subnet["subnetId"]
+                    )
+                    return subnet["subnetId"]
     return None
 
 
@@ -1344,7 +1341,7 @@ def get_provider(vm_=None):
     Extract the provider name from vm
     """
     if vm_ is None:
-        provider = __active_provider_name__ or "ec2"
+        provider = _get_active_provider_name() or "ec2"
     else:
         provider = vm_.get("provider", "ec2")
 
@@ -1792,8 +1789,9 @@ def request_instance(vm_=None, call=None):
     if spot_config is not None:
         if "spot_price" not in spot_config:
             raise SaltCloudSystemExit(
-                "Spot instance config for {} requires a spot_price "
-                "attribute.".format(vm_["name"])
+                "Spot instance config for {} requires a spot_price attribute.".format(
+                    vm_["name"]
+                )
             )
 
         params = {
@@ -1981,7 +1979,7 @@ def request_instance(vm_=None, call=None):
         # use different device identifiers
 
         log.info(
-            "Attempting to look up root device name for image id %s on " "VM %s",
+            "Attempting to look up root device name for image id %s on VM %s",
             image_id,
             vm_["name"],
         )
@@ -2000,7 +1998,7 @@ def request_instance(vm_=None, call=None):
             log.debug("EC2 Response: '%s'", rd_data)
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Error getting root device name for image id %s for " "VM %s: \n%s",
+                "Error getting root device name for image id %s for VM %s: \n%s",
                 image_id,
                 vm_["name"],
                 exc,
@@ -2106,8 +2104,7 @@ def request_instance(vm_=None, call=None):
             return data["error"]
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
-            "Error creating %s on EC2 when trying to run the initial "
-            "deployment: \n%s",
+            "Error creating %s on EC2 when trying to run the initial deployment: \n%s",
             vm_["name"],
             exc,
             # Show the traceback if the debug logging level is enabled
@@ -2203,7 +2200,7 @@ def request_instance(vm_=None, call=None):
                 )
 
                 log.debug(
-                    "Canceled spot instance request %s. Data " "returned: %s",
+                    "Canceled spot instance request %s. Data returned: %s",
                     sir_id,
                     data,
                 )
@@ -2258,13 +2255,13 @@ def query_instance(vm_=None, call=None):
 
         if isinstance(data, dict) and "error" in data:
             log.warning(
-                "There was an error in the query. %s attempts " "remaining: %s",
+                "There was an error in the query. %s attempts remaining: %s",
                 attempts,
                 data["error"],
             )
         elif isinstance(data, list) and not data:
             log.warning(
-                "Query returned an empty list. %s attempts " "remaining.", attempts
+                "Query returned an empty list. %s attempts remaining.", attempts
             )
         else:
             break
@@ -2342,7 +2339,11 @@ def query_instance(vm_=None, call=None):
 
 
 def wait_for_instance(
-    vm_=None, data=None, ip_address=None, display_ssh_output=True, call=None,
+    vm_=None,
+    data=None,
+    ip_address=None,
+    display_ssh_output=True,
+    call=None,
 ):
     """
     Wait for an instance upon creation from the EC2 API, to become available
@@ -2587,7 +2588,7 @@ def create(vm_=None, call=None):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "ec2", vm_["profile"], vm_=vm_
+                __opts__, _get_active_provider_name() or "ec2", vm_["profile"], vm_=vm_
             )
             is False
         ):
@@ -2883,7 +2884,7 @@ def create(vm_=None, call=None):
 
     # Ensure that the latest node data is returned
     node = _get_node(instance_id=vm_["instance_id"])
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     ret.update(node)
 
     # Add any block device tags specified
@@ -2955,7 +2956,7 @@ def queue_instances(instances):
     """
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+        __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -2964,7 +2965,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     if "instance_id" not in kwargs:
@@ -3341,7 +3342,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     node_metadata = _get_node(name)
@@ -3378,7 +3379,7 @@ def destroy(name, call=None):
         newname = "{}-DEL{}".format(name, uuid.uuid4().hex)
         rename(name, kwargs={"newname": newname}, call="action")
         log.info(
-            "Machine will be identified as %s until it has been " "cleaned up.", newname
+            "Machine will be identified as %s until it has been cleaned up.", newname
         )
         ret["newname"] = newname
 
@@ -3418,7 +3419,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return ret
@@ -3501,11 +3502,11 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     if not name and not instance_id:
         raise SaltCloudSystemExit(
-            "The show_instance function requires " "either a name or an instance_id"
+            "The show_instance function requires either a name or an instance_id"
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -3539,7 +3540,7 @@ def _get_node(name=None, instance_id=None, location=None):
         except IndexError:
             attempts += 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 instance_id or name,
                 attempts,
             )
@@ -3553,7 +3554,7 @@ def list_nodes_full(location=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f " "or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     return _list_nodes_full(location or get_location())
@@ -3616,7 +3617,7 @@ def _list_nodes_full(location=None):
     """
     Return a list of the VMs that in this location
     """
-    provider = __active_provider_name__ or "ec2"
+    provider = _get_active_provider_name() or "ec2"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -3714,7 +3715,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(get_location()), __opts__["query.selection"], call,
+        list_nodes_full(get_location()),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -3774,8 +3777,8 @@ def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False
 
     if not name and not instance_id:
         raise SaltCloudSystemExit(
-            "The show_detailed_monitoring action must be provided with a name or instance\
- ID"
+            "The show_detailed_monitoring action must be provided with a name or"
+            " instance ID"
         )
     matched = _get_node(name=name, instance_id=instance_id, location=location)
     log.log(
@@ -3823,7 +3826,7 @@ def enable_term_protect(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The enable_term_protect action must be called with " "-a or --action."
+            "The enable_term_protect action must be called with -a or --action."
         )
 
     return _toggle_term_protect(name, "true")
@@ -3841,7 +3844,7 @@ def disable_term_protect(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The enable_term_protect action must be called with " "-a or --action."
+            "The enable_term_protect action must be called with -a or --action."
         )
 
     return _toggle_term_protect(name, "false")
@@ -3850,12 +3853,10 @@ def disable_term_protect(name, call=None):
 def disable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The enable_term_protect action must be called with " "-a or --action."
+            "The enable_term_protect action must be called with -a or --action."
         )
 
     instance_id = _get_node(name)["instanceId"]
@@ -3876,13 +3877,10 @@ def disable_detailed_monitoring(name, call=None):
 def enable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
-
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The enable_term_protect action must be called with " "-a or --action."
+            "The enable_term_protect action must be called with -a or --action."
         )
 
     instance_id = _get_node(name)["instanceId"]
@@ -3913,7 +3911,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
 
     if call != "action":
         raise SaltCloudSystemExit(
-            "The show_delvol_on_destroy action must be called " "with -a or --action."
+            "The show_delvol_on_destroy action must be called with -a or --action."
         )
 
     if not kwargs:
@@ -4097,12 +4095,14 @@ def register_image(kwargs=None, call=None):
     if not block_device_mapping:
         if "snapshot_id" not in kwargs:
             log.error(
-                "snapshot_id or block_device_mapping must be specified to register an image."
+                "snapshot_id or block_device_mapping must be specified to register an"
+                " image."
             )
             return False
         if "root_device_name" not in kwargs:
             log.error(
-                "root_device_name or block_device_mapping must be specified to register an image."
+                "root_device_name or block_device_mapping must be specified to register"
+                " an image."
             )
             return False
         block_device_mapping = [
@@ -4162,6 +4162,31 @@ def volume_create(**kwargs):
     return create_volume(kwargs, "function")
 
 
+def _load_params(kwargs):
+    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
+
+    if "size" in kwargs:
+        params["Size"] = kwargs["size"]
+
+    if "snapshot" in kwargs:
+        params["SnapshotId"] = kwargs["snapshot"]
+
+    if "type" in kwargs:
+        params["VolumeType"] = kwargs["type"]
+
+    # io1 and io2 types require the iops parameter
+    if "iops" in kwargs and kwargs.get("type", "standard").lower() in ["io1", "io2"]:
+        params["Iops"] = kwargs["iops"]
+
+    # You can't set `encrypted` if you pass a snapshot
+    if "encrypted" in kwargs and "snapshot" not in kwargs:
+        params["Encrypted"] = kwargs["encrypted"]
+        if "kmskeyid" in kwargs:
+            params["KmsKeyId"] = kwargs["kmskeyid"]
+
+    return params
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     """
     Create a volume.
@@ -4176,16 +4201,17 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         The snapshot-id from which to create the volume. Integer.
 
     type
-        The volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned
-        IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for
-        Magnetic volumes. String.
+        The volume type. This can be ``gp2`` for General Purpose SSD, ``io1`` or
+        ``io2`` for Provisioned IOPS SSD, ``st1`` for Throughput Optimized HDD,
+        ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes. String.
 
     iops
         The number of I/O operations per second (IOPS) to provision for the volume,
         with a maximum ratio of 50 IOPS/GiB. Only valid for Provisioned IOPS SSD
         volumes. Integer.
 
-        This option will only be set if ``type`` is also specified as ``io1``.
+        This option will only be set if ``type`` is also specified as ``io1`` or
+        ``io2``
 
     encrypted
         Specifies whether the volume will be encrypted. Boolean.
@@ -4220,32 +4246,19 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         log.error("An availability zone must be specified to create a volume.")
         return False
 
+    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
+        log.error("If a KMS Key ID is specified, encryption must be enabled")
+        return False
+
+    if kwargs.get("type").lower() in ["io1", "io2"] and "iops" not in kwargs:
+        log.error("Iops must be specified for types 'io1' and 'io2'")
+        return False
+
     if "size" not in kwargs and "snapshot" not in kwargs:
         # This number represents GiB
         kwargs["size"] = "10"
 
-    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
-
-    if "size" in kwargs:
-        params["Size"] = kwargs["size"]
-
-    if "snapshot" in kwargs:
-        params["SnapshotId"] = kwargs["snapshot"]
-
-    if "type" in kwargs:
-        params["VolumeType"] = kwargs["type"]
-
-    if "iops" in kwargs and kwargs.get("type", "standard") == "io1":
-        params["Iops"] = kwargs["iops"]
-
-    # You can't set `encrypted` if you pass a snapshot
-    if "encrypted" in kwargs and "snapshot" not in kwargs:
-        params["Encrypted"] = kwargs["encrypted"]
-        if "kmskeyid" in kwargs:
-            params["KmsKeyId"] = kwargs["kmskeyid"]
-    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
-        log.error("If a KMS Key ID is specified, encryption must be enabled")
-        return False
+    params = _load_params(kwargs)
 
     log.debug(params)
 
@@ -4452,9 +4465,7 @@ def describe_volumes(kwargs=None, call=None):
     TODO: Add all of the filters.
     """
     if call != "function":
-        log.error(
-            "The describe_volumes function must be called with -f " "or --function."
-        )
+        log.error("The describe_volumes function must be called with -f or --function.")
         return False
 
     if not kwargs:
@@ -4627,7 +4638,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The create_snapshot function must be called with -f " "or --function."
+            "The create_snapshot function must be called with -f or --function."
         )
 
     if kwargs is None:
@@ -4683,9 +4694,7 @@ def delete_snapshot(kwargs=None, call=None):
     Delete a snapshot
     """
     if call != "function":
-        log.error(
-            "The delete_snapshot function must be called with -f " "or --function."
-        )
+        log.error("The delete_snapshot function must be called with -f or --function.")
         return False
 
     if "snapshot_id" not in kwargs:
@@ -4773,7 +4782,7 @@ def describe_snapshots(kwargs=None, call=None):
     """
     if call != "function":
         log.error(
-            "The describe_snapshot function must be called with -f " "or --function."
+            "The describe_snapshot function must be called with -f or --function."
         )
         return False
 
@@ -4812,7 +4821,11 @@ def describe_snapshots(kwargs=None, call=None):
 
 
 def get_console_output(
-    name=None, location=None, instance_id=None, call=None, kwargs=None,
+    name=None,
+    location=None,
+    instance_id=None,
+    call=None,
+    kwargs=None,
 ):
     """
     Show the console output from the instance.
@@ -4822,7 +4835,7 @@ def get_console_output(
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The get_console_output action must be called with " "-a or --action."
+            "The get_console_output action must be called with -a or --action."
         )
 
     if location is None:
@@ -4861,7 +4874,10 @@ def get_console_output(
 
 
 def get_password_data(
-    name=None, kwargs=None, instance_id=None, call=None,
+    name=None,
+    kwargs=None,
+    instance_id=None,
+    call=None,
 ):
     """
     Return password data for a Windows instance.
@@ -4885,7 +4901,7 @@ def get_password_data(
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The get_password_data action must be called with " "-a or --action."
+            "The get_password_data action must be called with -a or --action."
         )
 
     if not instance_id:
@@ -5093,8 +5109,10 @@ def show_pricing(kwargs=None, call=None):
         raw = ec2_price[region][size]
     except KeyError:
         return {
-            "Error": "The size ({}) in the requested profile does not have "
-            "a price associated with it for the {} region".format(size, region)
+            "Error": (
+                "The size ({}) in the requested profile does not have "
+                "a price associated with it for the {} region".format(size, region)
+            )
         }
 
     ret = {}
@@ -5129,7 +5147,7 @@ def ssm_create_association(name=None, kwargs=None, instance_id=None, call=None):
 
     if call != "action":
         raise SaltCloudSystemExit(
-            "The ssm_create_association action must be called with " "-a or --action."
+            "The ssm_create_association action must be called with -a or --action."
         )
 
     if not kwargs:
@@ -5182,7 +5200,7 @@ def ssm_describe_association(name=None, kwargs=None, instance_id=None, call=None
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The ssm_describe_association action must be called with " "-a or --action."
+            "The ssm_describe_association action must be called with -a or --action."
         )
 
     if not kwargs:

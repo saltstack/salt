@@ -1,5 +1,5 @@
-salt.states.helm module
-=======================
+salt.states.helm
+================
 
 .. automodule:: salt.states.helm
     :members:

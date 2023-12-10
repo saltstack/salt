@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+tests.integration.modules.pw_user
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
 
-    tests.integration.modules.pw_user
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
+from saltfactories.utils import random_string
 
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    random_string,
-    runs_on,
-    skip_if_not_root,
-)
 
 
-@runs_on(kernel="FreeBSD")
+@pytest.mark.skip_unless_on_freebsd
 class PwUserModuleTest(ModuleCase):
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the name
         uname = random_string("PWU-", lowercase=False)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 
@@ -373,22 +372,16 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 +----------------+-------------------------+-------------------------+
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.yaml
 
-# Import 3rd-party libs
-from salt.ext import six
-
 try:
-    from mako.lookup import TemplateLookup
     from mako import exceptions
+    from mako.lookup import TemplateLookup
 
     HAS_MAKO = True
 except ImportError:
@@ -420,12 +413,13 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         "grains": functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
         "opts": functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
     }
-    for matcher, matchs in six.iteritems(kwargs):
+    for matcher, matchs in kwargs.items():
         t, matcher = matcher.split(":", 1)
         if t not in traverse:
             raise Exception(
-                'Unknown traverse option "{0}", '
-                "should be one of {1}".format(t, traverse.keys())
+                'Unknown traverse option "{}", should be one of {}'.format(
+                    t, traverse.keys()
+                )
             )
         cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):
@@ -495,7 +489,7 @@ def _cleanup(obj):
     if obj:
         if isinstance(obj, dict):
             obj.pop("__", None)
-            for k, v in six.iteritems(obj):
+            for k, v in obj.items():
                 obj[k] = _cleanup(v)
         elif isinstance(obj, list) and isinstance(obj[0], dict) and "__" in obj[0]:
             del obj[0]
@@ -506,12 +500,12 @@ def _merge_dict(stack, obj):
     strategy = obj.pop("__", "merge-last")
     if strategy not in strategies:
         raise Exception(
-            'Unknown strategy "{0}", should be one of {1}'.format(strategy, strategies)
+            'Unknown strategy "{}", should be one of {}'.format(strategy, strategies)
         )
     if strategy == "overwrite":
         return _cleanup(obj)
     else:
-        for k, v in six.iteritems(obj):
+        for k, v in obj.items():
             if strategy == "remove":
                 stack.pop(k, None)
                 continue
@@ -545,7 +539,7 @@ def _merge_list(stack, obj):
         del obj[0]
     if strategy not in strategies:
         raise Exception(
-            'Unknown strategy "{0}", should be one of {1}'.format(strategy, strategies)
+            'Unknown strategy "{}", should be one of {}'.format(strategy, strategies)
         )
     if strategy == "overwrite":
         return obj

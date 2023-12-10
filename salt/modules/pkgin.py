@@ -8,13 +8,11 @@ Package support for pkgin based systems, inspired from freebsdpkg module
     <module-provider-override>`.
 """
 
-# Import python libs
 import copy
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators as decorators
 import salt.utils.functools
@@ -42,7 +40,7 @@ def _check_pkgin():
                 "pkg_info -Q LOCALBASE pkgin", output_loglevel="trace"
             )
             if localbase is not None:
-                ppath = "{}/bin/pkgin".format(localbase)
+                ppath = f"{localbase}/bin/pkgin"
                 if not os.path.exists(ppath):
                     return None
         except CommandExecutionError:
@@ -74,7 +72,7 @@ def _supports_regex():
     """
     Check support of regexp
     """
-    return tuple([int(i) for i in _get_version()]) > (0, 5)
+    return tuple(int(i) for i in _get_version()) > (0, 5)
 
 
 @decorators.memoize
@@ -82,7 +80,7 @@ def _supports_parsing():
     """
     Check support of parsing
     """
-    return tuple([int(i) for i in _get_version()]) > (0, 6)
+    return tuple(int(i) for i in _get_version()) > (0, 6)
 
 
 def __virtual__():
@@ -126,7 +124,7 @@ def search(pkg_name, **kwargs):
         return pkglist
 
     if _supports_regex():
-        pkg_name = "^{}$".format(pkg_name)
+        pkg_name = f"^{pkg_name}$"
 
     out = __salt__["cmd.run"]([pkgin, "se", pkg_name], output_loglevel="trace")
     for line in out.splitlines():
@@ -140,7 +138,7 @@ def search(pkg_name, **kwargs):
 
 def latest_version(*names, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     Return the latest version of the named package available for upgrade or
     installation.
@@ -172,7 +170,7 @@ def latest_version(*names, **kwargs):
         cmd_prefix.insert(1, "-p")
     for name in names:
         cmd = copy.deepcopy(cmd_prefix)
-        cmd.append("^{}$".format(name) if _supports_regex() else name)
+        cmd.append(f"^{name}$" if _supports_regex() else name)
 
         out = __salt__["cmd.run"](cmd, output_loglevel="trace")
         for line in out.splitlines():
@@ -230,7 +228,6 @@ def refresh_db(force=False, **kwargs):
 
         .. versionadded:: 2018.3.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -257,9 +254,21 @@ def refresh_db(force=False, **kwargs):
     return True
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the packages currently installed as a dict::
 
@@ -278,13 +287,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     pkgin = _check_pkgin()
     ret = {}
@@ -470,7 +474,6 @@ def upgrade(refresh=True, pkgs=None, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -561,9 +564,9 @@ def remove(name=None, pkgs=None, **kwargs):
         if not ver:
             continue
         if isinstance(ver, list):
-            args.extend(["{}-{}".format(param, v) for v in ver])
+            args.extend([f"{param}-{v}" for v in ver])
         else:
-            args.append("{}-{}".format(param, ver))
+            args.append(f"{param}-{ver}")
 
     if not args:
         return {}
@@ -654,7 +657,7 @@ def file_list(package, **kwargs):
 
 def file_dict(*packages, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the files that belong to a package.
 
@@ -698,6 +701,3 @@ def normalize_name(pkgs, **kwargs):
         with the pkg_resource provider.)
     """
     return pkgs
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

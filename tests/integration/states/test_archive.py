@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the archive state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
 
+import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import Webserver, skip_if_not_root, slowTest
+from tests.support.helpers import Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -23,7 +23,7 @@ ARCHIVE_DIR = (
 )
 
 ARCHIVE_NAME = "custom.tar.gz"
-ARCHIVE_TAR_SOURCE = "http://localhost:{0}/{1}".format(9999, ARCHIVE_NAME)
+ARCHIVE_TAR_SOURCE = f"http://localhost:{9999}/{ARCHIVE_NAME}"
 ARCHIVE_TAR_HASH = "md5=7643861ac07c30fe7d2310e9f25ca514"
 ARCHIVE_TAR_SHA_HASH = (
     "sha256=9591159d86f0a180e4e0645b2320d0235e23e66c66797df61508bf185e0ac1d2"
@@ -42,7 +42,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         cls.webserver = Webserver()
         cls.webserver.start()
         cls.archive_tar_source = cls.webserver.url("custom.tar.gz")
-        cls.archive_local_tar_source = "file://{0}".format(
+        cls.archive_local_tar_source = "file://{}".format(
             os.path.join(RUNTIME_VARS.BASE_FILES, ARCHIVE_NAME)
         )
         cls.untar_file = os.path.join(ARCHIVE_DIR, "custom/README")
@@ -80,12 +80,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(path))
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(ArchiveTest, self).run_function(*args, **kwargs)
+        ret = super().run_function(*args, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
     def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(ArchiveTest, self).run_state(*args, **kwargs)
+        ret = super().run_state(*args, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
@@ -106,6 +106,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_with_source_hash(self):
         """
         test archive.extracted without skip_verify
@@ -126,7 +127,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_with_root_user_and_group(self):
         """
         test archive.extracted with user and group set to "root"
@@ -150,7 +152,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_with_strip_in_options(self):
         """
         test archive.extracted with --strip in options
@@ -170,6 +173,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(os.path.join(ARCHIVE_DIR, "README"))
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_with_strip_components_in_options(self):
         """
         test archive.extracted with --strip-components in options
@@ -189,7 +193,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(os.path.join(ARCHIVE_DIR, "README"))
 
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_without_archive_format(self):
         """
         test archive.extracted with no archive_format option
@@ -206,6 +211,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_archive_extracted_with_cmd_unzip_false(self):
         """
         test archive.extracted using use_cmd_unzip argument as false
@@ -240,6 +246,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_local_archive_extracted_skip_verify(self):
         """
         test archive.extracted with local file, bad hash and skip_verify
@@ -257,7 +264,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_local_archive_extracted_with_source_hash(self):
         """
         test archive.extracted with local file and valid hash
@@ -274,7 +282,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_local_archive_extracted_with_bad_source_hash(self):
         """
         test archive.extracted with local file and bad hash
@@ -289,6 +298,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltFalseReturn(ret)
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_local_archive_extracted_with_uppercase_source_hash(self):
         """
         test archive.extracted with local file and bad hash
@@ -305,7 +315,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_archive_extracted_with_non_base_saltenv(self):
         """
         test archive.extracted with a saltenv other than `base`
@@ -319,7 +329,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self._check_extracted(os.path.join(ARCHIVE_DIR, self.untar_file))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_local_archive_extracted_with_skip_files_list_verify(self):
         """
         test archive.extracted with local file and skip_files_list_verify set to True
@@ -410,7 +420,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(expected_comment, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_local_archive_extracted_trim_output(self):
         """
         test archive.extracted with local file and trim_output set to 1

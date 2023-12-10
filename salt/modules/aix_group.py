@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage groups on Solaris
 
@@ -8,18 +7,15 @@ Manage groups on Solaris
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-
-log = logging.getLogger(__name__)
-
 
 try:
     import grp
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "group"
@@ -33,12 +29,11 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The aix_group execution module failed to load: "
-        "only available on AIX systems.",
+        "The aix_group execution module failed to load: only available on AIX systems.",
     )
 
 
-def add(name, gid=None, system=False, root=None):
+def add(name, gid=None, system=False, root=None, **kwargs):
     """
     Add the specified group
 
@@ -53,7 +48,7 @@ def add(name, gid=None, system=False, root=None):
         cmd += "-a "
 
     if gid:
-        cmd += "id={0} ".format(gid)
+        cmd += "id={} ".format(gid)
 
     cmd += name
 
@@ -72,7 +67,7 @@ def delete(name):
 
         salt '*' group.delete foo
     """
-    ret = __salt__["cmd.run_all"]("rmgroup {0}".format(name), python_shell=False)
+    ret = __salt__["cmd.run_all"]("rmgroup {}".format(name), python_shell=False)
 
     return not ret["retcode"]
 
@@ -134,7 +129,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     if gid == pre_gid:
         return True
-    cmd = "chgroup id={0} {1}".format(gid, name)
+    cmd = "chgroup id={} {}".format(gid, name)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_gid = __salt__["file.group_to_gid"](name)
     if post_gid != pre_gid:
@@ -155,7 +150,7 @@ def adduser(name, username, root=None):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     """
-    cmd = "chgrpmem -m + {0} {1}".format(username, name)
+    cmd = "chgrpmem -m + {} {}".format(username, name)
 
     retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
 
@@ -178,7 +173,7 @@ def deluser(name, username, root=None):
     grp_info = __salt__["group.info"](name)
     try:
         if username in grp_info["members"]:
-            cmd = "chgrpmem -m - {0} {1}".format(username, name)
+            cmd = "chgrpmem -m - {} {}".format(username, name)
             ret = __salt__["cmd.run"](cmd, python_shell=False)
             return not ret["retcode"]
         else:
@@ -193,12 +188,14 @@ def members(name, members_list, root=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' group.members foo 'user1,user2,user3,...'
 
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     """
-    cmd = "chgrpmem -m = {0} {1}".format(members_list, name)
+    cmd = "chgrpmem -m = {} {}".format(members_list, name)
     retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
 
     return not retcode

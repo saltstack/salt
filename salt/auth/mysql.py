@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Provide authentication using MySQL.
 
@@ -49,7 +47,6 @@ Enable MySQL authentication.
 :depends:   - MySQL-python Python module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -58,8 +55,8 @@ log = logging.getLogger(__name__)
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
+    import MySQLdb.cursors
     from MySQLdb.connections import OperationalError
 except ImportError:
     try:
@@ -68,8 +65,8 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
+        import MySQLdb.cursors
         from MySQLdb.err import OperationalError
     except ImportError:
         MySQLdb = None

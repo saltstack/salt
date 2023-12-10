@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Take data from salt and "return" it into a carbon receiver
 
@@ -80,7 +79,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return carbon --return_kwargs '{"skip_on_error": False}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import pickle
@@ -133,7 +131,7 @@ def _carbon(host, port):
         )
 
         carbon_sock.connect((host, port))
-    except socket.error as err:
+    except OSError as err:
         log.error("Error connecting to %s:%s, %s", host, port, err)
         raise
     else:
@@ -192,7 +190,7 @@ def _walk(path, value, metrics, timestamp, skip):
         to a float. Defaults to `False`.
     """
     log.trace(
-        "Carbon return walking path: %s, value: %s, metrics: %s, " "timestamp: %s",
+        "Carbon return walking path: %s, value: %s, metrics: %s, timestamp: %s",
         path,
         value,
         metrics,
@@ -200,10 +198,10 @@ def _walk(path, value, metrics, timestamp, skip):
     )
     if isinstance(value, Mapping):
         for key, val in value.items():
-            _walk("{0}.{1}".format(path, key), val, metrics, timestamp, skip)
+            _walk("{}.{}".format(path, key), val, metrics, timestamp, skip)
     elif isinstance(value, list):
         for item in value:
-            _walk("{0}.{1}".format(path, item), item, metrics, timestamp, skip)
+            _walk("{}.{}".format(path, item), item, metrics, timestamp, skip)
 
     else:
         try:
@@ -212,7 +210,7 @@ def _walk(path, value, metrics, timestamp, skip):
         except (TypeError, ValueError):
             msg = (
                 "Error in carbon returner, when trying to convert metric: "
-                "{0}, with val: {1}".format(path, value)
+                "{}, with val: {}".format(path, value)
             )
             if skip:
                 log.debug(msg)
