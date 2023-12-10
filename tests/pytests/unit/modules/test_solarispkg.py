@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.solarispkg as solarispkg
 from tests.support.mock import ANY, MagicMock, call, patch
 
@@ -181,9 +182,7 @@ def test_install_single_named_package_global_zone_boolean():
                 "-n",
                 "-a",
                 ANY,
-                "-",
-                "G",
-                " ",
+                "-G ",
                 "-d",
                 install_target,
                 "all",
@@ -241,9 +240,7 @@ def test_install_single_named_package_global_zone_text():
                 "-n",
                 "-a",
                 ANY,
-                "-",
-                "G",
-                " ",
+                "-G ",
                 "-d",
                 install_target,
                 "all",

@@ -1,1 +1,0 @@
-Fixed interrupting salt-call in a pdb session.

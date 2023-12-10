@@ -6,6 +6,7 @@ import copy
 import logging
 
 import pytest
+
 import salt.utils.platform
 from salt import client
 from salt.exceptions import (
@@ -19,14 +20,7 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def master_config():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-    opts["__role"] = "master"
-    return opts
-
-
-def test_job_result_return_success(master_config):
+def test_job_result_return_success(master_opts):
     """
     Should return the `expected_return`, since there is a job with the right jid.
     """
@@ -34,7 +28,7 @@ def test_job_result_return_success(master_config):
     jid = "0815"
     raw_return = {"id": "fake-id", "jid": jid, "data": "", "return": "fake-return"}
     expected_return = {"fake-id": {"ret": "fake-return"}}
-    with client.LocalClient(mopts=master_config) as local_client:
+    with client.LocalClient(mopts=master_opts) as local_client:
         local_client.event.get_event = MagicMock(return_value=raw_return)
         local_client.returners = MagicMock()
         ret = local_client.get_event_iter_returns(jid, minions)
@@ -42,7 +36,7 @@ def test_job_result_return_success(master_config):
         assert val == expected_return
 
 
-def test_job_result_return_failure(master_config):
+def test_job_result_return_failure(master_opts):
     """
     We are _not_ getting a job return, because the jid is different. Instead we should
     get a StopIteration exception.
@@ -55,7 +49,7 @@ def test_job_result_return_failure(master_config):
         "data": "",
         "return": "fake-return",
     }
-    with client.LocalClient(mopts=master_config) as local_client:
+    with client.LocalClient(mopts=master_opts) as local_client:
         local_client.event.get_event = MagicMock()
         local_client.event.get_event.side_effect = [raw_return, None]
         local_client.returners = MagicMock()
@@ -64,8 +58,8 @@ def test_job_result_return_failure(master_config):
             next(ret)
 
 
-def test_create_local_client(master_config):
-    with client.LocalClient(mopts=master_config) as local_client:
+def test_create_local_client(master_opts):
+    with client.LocalClient(mopts=master_opts) as local_client:
         assert isinstance(
             local_client, client.LocalClient
         ), "LocalClient did not create a LocalClient instance"

@@ -95,9 +95,6 @@ def __virtual__():
     return HAS_NOVA
 
 
-__opts__ = {}
-
-
 def _auth(profile=None):
     """
     Set up nova credentials

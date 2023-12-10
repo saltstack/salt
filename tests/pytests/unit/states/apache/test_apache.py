@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.apache as apache
 import salt.utils.files
 from tests.support.mock import MagicMock, mock_open, patch

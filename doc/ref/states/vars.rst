@@ -4,17 +4,9 @@ SLS Template Variable Reference
 
 
 .. warning::
-   In the 3002 release ``sls_path``, ``tplfile``, and ``tpldir`` have had some significant
+   In the 3005 release ``sls_path``, ``tplfile``, and ``tpldir`` have had some significant
    improvements which have the potential to break states that rely on old and
-   broken functionality. These fixes can be enabled by setting the
-   ``enable_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
-   This functionality will become the default in the 3005 release.
-
-   .. code-block:: yaml
-
-       features:
-         enable_slsvars_fixes: True
-
+   broken functionality.
 
 
 The template engines available to sls files and file templates come loaded

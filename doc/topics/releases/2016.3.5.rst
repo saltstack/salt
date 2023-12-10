@@ -12,7 +12,17 @@ Statistics
 - Total Issue References: **112**
 - Total PR References: **281**
 
-- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `Firewire2002`_, `Mrten`_, `Talkless`_, `TronPaul`_, `UtahDave`_, `aaronm-cloudtek`_, `alex-zel`_, `alexandr-orlov`_, `alexbleotu`_, `attiasr`_, `basepi`_, `bdrung`_, `bshelton229`_, `cachedout`_, `calve`_, `clan`_, `clinta`_, `cro`_, `dere`_, `dereckson`_, `dhaines`_, `dincamihai`_, `do3meli`_, `dragon788`_, `edgan`_, `fedusia`_, `fj40crawler`_, `genuss`_, `gtmanfred`_, `haeac`_, `heewa`_, `hu-dabao`_, `jeanpralo`_, `jfindlay`_, `jinm`_, `kevinquinnyo`_, `kontrolld`_, `laleocen`_, `lorengordon`_, `m03`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mikejford`_, `moio`_, `multani`_, `nevins-b`_, `pass-by-value`_, `rallytime`_, `rbjorklin`_, `siccrusher`_, `silenius`_, `sjmh`_, `sjorge`_, `skizunov`_, `slinn0`_, `sofixa`_, `techhat`_, `tedski`_, `terminalmage`_, `thatch45`_, `thusoy`_, `toanju`_, `tobithiel`_, `twangboy`_, `tyhunt99`_, `vutny`_, `wanparo`_, `whiteinge`_, `xiaoanyunfei`_, `yhekma`_, `zwo-bot`_)
+- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `Firewire2002`_, `Mrten`_, `Talkless`_,
+  `TronPaul`_, `UtahDave`_, `aaronm-cloudtek`_, `alex-zel`_, `alexandr-orlov`_, `alexbleotu`_,
+  `attiasr`_, `basepi`_, `bdrung`_, `bshelton229`_, `cachedout`_, `calve`_, `clan`_, `clinta`_,
+  `cro`_, `dere`_, `dereckson`_, `dhaines`_, `dincamihai`_, `do3meli`_, `dragon788`_, `edgan`_,
+  `fedusia`_, `fj40crawler`_, `genuss`_, `gtmanfred`_, `haeac`_, `heewa`_, `hu-dabao`_,
+  `jeanpralo`_, `jfindlay`_, `jinm`_, `kevinquinnyo`_, `kontrolld`_, `laleocen`_, `lorengordon`_,
+  `m03`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mikejford`_, `moio`_, `multani`_, `nevins-b`_,
+  `pass-by-value`_, `rallytime`_, `rbjorklin`_, `siccrusher`_, `silenius`_, `sjmh`_, `sjorge`_,
+  `skizunov`_, `slinn0`_, `sofixa`_, `techhat`_, `tedski`_, `terminalmage`_, `thatch45`_,
+  `thusoy`_, `toanju`_, `tobithiel`_, `twangboy`_, `tyhunt99`_, `vutny`_, `wanparo`_, `whiteinge`_,
+  `xiaoanyunfei`_, `yhekma`_, `zwo-bot`_)
 
 
 Security Fixes
@@ -169,9 +179,9 @@ Changelog for v2016.3.4..v2016.3.5
 
   * fd2ee7db30 Add some simple unit tests for salt.config.api_config function
 
-  * 3d2fefc83b Make sure the pidfile and log_file values are overriden by api opts
+  * 3d2fefc83b Make sure the pidfile and log_file values are overridden by api opts
 
-  * 1f6b540e46 Make sure the pidfile and log_file values are overriden by api opts
+  * 1f6b540e46 Make sure the pidfile and log_file values are overridden by api opts
 
   * 04d307f917 salt-api no longer forces the default timeout
 
@@ -284,7 +294,7 @@ Changelog for v2016.3.4..v2016.3.5
 
   * 7b657ca4ae add the ability to use keystone v2 and v3
 
-  * 5646ae1b34 add ability to use keystoneauth to authenitcate in nova driver
+  * 5646ae1b34 add ability to use keystoneauth to authenticate in nova driver
 
 * **ISSUE** `#38648`_: (`ericuldall`_) No release file error from PPA on Ubuntu (refs: `#38650`_)
 
@@ -1100,7 +1110,7 @@ Changelog for v2016.3.4..v2016.3.5
 
   * **PR** `#37826`_: (`rallytime`_) Update branch refs to more relevant branch
 
-  * **PR** `#37822`_: (`laleocen`_) add documenation for multiline encryption using nacl (refs: `#37826`_)
+  * **PR** `#37822`_: (`laleocen`_) add documentation for multiline encryption using nacl (refs: `#37826`_)
 
 * **ISSUE** `#19269`_: (`markuskramerIgitt`_) Undocumented  feature `names:` of `file.directory` (refs: `#37823`_)
 

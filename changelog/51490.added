@@ -1,3 +1,0 @@
-The netbox pillar now been enhanced to add support for querying virtual machines
-(in addition to devices), as well as minion interfaces and associated IP
-addresses.

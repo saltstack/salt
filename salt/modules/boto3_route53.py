@@ -258,7 +258,7 @@ def get_hosted_zones_by_domain(Name, region=None, key=None, keyid=None, profile=
     zones = [
         z
         for z in _collect_results(conn.list_hosted_zones, "HostedZones", {})
-        if z["Name"] == aws_encode(Name)
+        if z["Name"] == _aws_encode(Name)
     ]
     ret = []
     for z in zones:
@@ -379,7 +379,7 @@ def create_hosted_zone(
         raise SaltInvocationError(
             "Domain must be fully-qualified, complete with trailing period."
         )
-    Name = aws_encode(Name)
+    Name = _aws_encode(Name)
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     deets = find_hosted_zone(
         Name=Name,
@@ -856,7 +856,7 @@ def delete_hosted_zone_by_domain(
     )
 
 
-def aws_encode(x):
+def _aws_encode(x):
     """
     An implementation of the encoding required to support AWS's domain name
     rules defined here__:
@@ -878,7 +878,7 @@ def aws_encode(x):
     ret = None
     try:
         x.encode("ascii")
-        ret = re.sub(r"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
+        ret = re.sub(rb"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
     except UnicodeEncodeError:
         ret = x.encode("idna")
     except Exception as e:  # pylint: disable=broad-except
@@ -887,7 +887,7 @@ def aws_encode(x):
         )
         raise CommandExecutionError(e)
     log.debug("AWS-encoded result for %s: %s", x, ret)
-    return ret
+    return ret.decode("utf-8")
 
 
 def _aws_encode_changebatch(o):
@@ -896,7 +896,7 @@ def _aws_encode_changebatch(o):
     """
     change_idx = 0
     while change_idx < len(o["Changes"]):
-        o["Changes"][change_idx]["ResourceRecordSet"]["Name"] = aws_encode(
+        o["Changes"][change_idx]["ResourceRecordSet"]["Name"] = _aws_encode(
             o["Changes"][change_idx]["ResourceRecordSet"]["Name"]
         )
         if "ResourceRecords" in o["Changes"][change_idx]["ResourceRecordSet"]:
@@ -906,7 +906,7 @@ def _aws_encode_changebatch(o):
             ):
                 o["Changes"][change_idx]["ResourceRecordSet"]["ResourceRecords"][
                     rr_idx
-                ]["Value"] = aws_encode(
+                ]["Value"] = _aws_encode(
                     o["Changes"][change_idx]["ResourceRecordSet"]["ResourceRecords"][
                         rr_idx
                     ]["Value"]
@@ -915,7 +915,7 @@ def _aws_encode_changebatch(o):
         if "AliasTarget" in o["Changes"][change_idx]["ResourceRecordSet"]:
             o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"][
                 "DNSName"
-            ] = aws_encode(
+            ] = _aws_encode(
                 o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"]["DNSName"]
             )
         change_idx += 1
@@ -945,7 +945,11 @@ def _aws_decode(x):
     """
     if "\\" in x:
         return x.decode("unicode_escape")
-    return x.decode("idna")
+
+    if type(x) == bytes:
+        return x.decode("idna")
+
+    return x
 
 
 def _hexReplace(x):
@@ -1023,7 +1027,7 @@ def get_resource_records(
             return ret
         args = {"HostedZoneId": HostedZoneId}
         args.update(
-            {"StartRecordName": aws_encode(next_rr_name)}
+            {"StartRecordName": _aws_encode(next_rr_name)}
         ) if next_rr_name else None
         # Grrr, can't specify type unless name is set...  We'll do this via filtering later instead
         args.update(

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.lvs_server as lvs_server
 from tests.support.mock import MagicMock, patch
 

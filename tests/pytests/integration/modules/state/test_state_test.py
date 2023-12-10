@@ -1,6 +1,7 @@
 import pathlib
 
 import pytest
+
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -16,8 +17,8 @@ def reset_pillar(salt_call_cli):
     finally:
         # Refresh pillar once all tests are done.
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 @pytest.fixture(scope="module")
@@ -40,8 +41,8 @@ def pillar_test_true(
         "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
         yield
 
 
@@ -63,8 +64,8 @@ def pillar_test_empty(
         "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
         yield
 
 
@@ -88,8 +89,8 @@ def pillar_test_false(
         "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
         yield
 
 
@@ -122,8 +123,8 @@ def test_state_sls_id_test(salt_call_cli, testfile_path):
         "be different due to other states."
     ).format(testfile_path)
     ret = salt_call_cli.run("state.sls", "sls-id-test")
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == expected_comment
         assert val["changes"] == {"newfile": str(testfile_path)}
 
@@ -138,8 +139,8 @@ def test_state_sls_id_test_state_test_post_run(salt_call_cli, testfile_path):
     testfile_path.write_text(source.read_text())
     testfile_path.chmod(0o644)
     ret = salt_call_cli.run("state.sls", "sls-id-test")
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == "The file {} is in the correct state".format(
             testfile_path
         )
@@ -156,8 +157,8 @@ def test_state_sls_id_test_true(salt_call_cli, testfile_path):
         "be different due to other states."
     ).format(testfile_path)
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == expected_comment
         assert val["changes"] == {"newfile": str(testfile_path)}
 
@@ -169,15 +170,15 @@ def test_state_sls_id_test_true_post_run(salt_call_cli, testfile_path):
     arg post the state already being run previously
     """
     ret = salt_call_cli.run("state.sls", "sls-id-test")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     assert testfile_path.exists()
-    for val in ret.json.values():
+    for val in ret.data.values():
         assert val["comment"] == "File {} updated".format(testfile_path)
         assert val["changes"]["diff"] == "New file"
 
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == "The file {} is in the correct state".format(
             testfile_path
         )
@@ -192,8 +193,8 @@ def test_state_sls_id_test_false_pillar_true(salt_call_cli, testfile_path):
     return test=False.
     """
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=False)
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == "File {} updated".format(testfile_path)
         assert val["changes"]["diff"] == "New file"
 
@@ -208,8 +209,8 @@ def test_state_test_pillar_false(salt_call_cli, testfile_path):
         "be different due to other states."
     ).format(testfile_path)
     ret = salt_call_cli.run("state.test", "sls-id-test")
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == expected_comment
         assert val["changes"] == {"newfile": str(testfile_path)}
 
@@ -225,7 +226,7 @@ def test_state_test_test_false_pillar_false(salt_call_cli, testfile_path):
         "be different due to other states."
     ).format(testfile_path)
     ret = salt_call_cli.run("state.test", "sls-id-test", test=False)
-    assert ret.exitcode == 0
-    for val in ret.json.values():
+    assert ret.returncode == 0
+    for val in ret.data.values():
         assert val["comment"] == expected_comment
         assert val["changes"] == {"newfile": str(testfile_path)}

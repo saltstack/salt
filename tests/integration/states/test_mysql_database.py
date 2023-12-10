@@ -3,10 +3,10 @@ Tests for the MySQL states
 """
 
 import pytest
+
 import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 NO_MYSQL = False
 try:
@@ -18,9 +18,9 @@ if not salt.utils.path.which("mysqladmin"):
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
@@ -160,7 +160,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @pytest.mark.destructive_test
-    @skipIf(True, "This tests needs issue #8947 to be fixed first")
+    @pytest.mark.skip(reason="This tests needs issue #8947 to be fixed first")
     def test_utf8_from_sls_file(self):
         """
         Try to create/destroy an utf-8 database name from an sls file #8947

@@ -47,7 +47,7 @@ Manage Elasticsearch Service
 import logging
 
 import salt.utils.json
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 __virtualname__ = "boto3_elasticsearch"
@@ -544,7 +544,7 @@ def upgraded(
                 "at the desired version {}"
                 "".format(name, elasticsearch_version)
             )
-        elif LooseVersion(elasticsearch_version) < LooseVersion(current_version):
+        elif Version(elasticsearch_version) < Version(current_version):
             ret["result"] = False
             ret["comment"].append(
                 'Elasticsearch domain "{}" cannot be downgraded '

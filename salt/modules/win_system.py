@@ -24,12 +24,13 @@ import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 try:
+    from ctypes import windll
+
     import pywintypes
     import win32api
     import win32con
     import win32net
     import wmi
-    from ctypes import windll
 
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -507,16 +508,16 @@ def get_system_info():
 
     def byte_calc(val):
         val = float(val)
-        if val < 2 ** 10:
-            return "{:.3f}B".format(val)
-        elif val < 2 ** 20:
-            return "{:.3f}KB".format(val / 2 ** 10)
-        elif val < 2 ** 30:
-            return "{:.3f}MB".format(val / 2 ** 20)
-        elif val < 2 ** 40:
-            return "{:.3f}GB".format(val / 2 ** 30)
+        if val < 2**10:
+            return f"{val:.3f}B"
+        elif val < 2**20:
+            return f"{val / 2**10:.3f}KB"
+        elif val < 2**30:
+            return f"{val / 2**20:.3f}MB"
+        elif val < 2**40:
+            return f"{val / 2**30:.3f}GB"
         else:
-            return "{:.3f}TB".format(val / 2 ** 40)
+            return f"{val / 2**40:.3f}TB"
 
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}
@@ -754,7 +755,7 @@ def join_domain(
             ``True`` will restart the computer after a successful join. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
@@ -771,10 +772,10 @@ def join_domain(
     status = get_domain_workgroup()
     if "Domain" in status:
         if status["Domain"] == domain:
-            return "Already joined to {}".format(domain)
+            return f"Already joined to {domain}"
 
     if username and "\\" not in username and "@" not in username:
-        username = "{}@{}".format(username, domain)
+        username = f"{username}@{domain}"
 
     if username and password is None:
         return "Must specify a password if you pass a username"
@@ -888,7 +889,7 @@ def unjoin_domain(
         workgroup (str):
             The workgroup to join the computer to. Default is ``WORKGROUP``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
         disable (bool):
             ``True`` to disable the computer account in Active Directory.
@@ -898,7 +899,7 @@ def unjoin_domain(
             ``True`` will restart the computer after successful unjoin. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
@@ -917,11 +918,11 @@ def unjoin_domain(
     status = get_domain_workgroup()
     if "Workgroup" in status:
         if status["Workgroup"] == workgroup:
-            return "Already joined to {}".format(workgroup)
+            return f"Already joined to {workgroup}"
 
     if username and "\\" not in username and "@" not in username:
         if domain:
-            username = "{}@{}".format(username, domain)
+            username = f"{username}@{domain}"
         else:
             return "Must specify domain if not supplied in username"
 
@@ -1059,7 +1060,7 @@ def get_system_time():
     elif hours > 12:
         hours = hours - 12
         meridian = "PM"
-    return "{:02d}:{:02d}:{:02d} {}".format(hours, now[5], now[6], meridian)
+    return f"{hours:02d}:{now[5]:02d}:{now[6]:02d} {meridian}"
 
 
 def set_system_time(newtime):
@@ -1198,7 +1199,7 @@ def get_system_date():
         salt '*' system.get_system_date
     """
     now = win32api.GetLocalTime()
-    return "{:02d}/{:02d}/{:04d}".format(now[1], now[3], now[0])
+    return f"{now[1]:02d}/{now[3]:02d}/{now[0]:04d}"
 
 
 def set_system_date(newdate):

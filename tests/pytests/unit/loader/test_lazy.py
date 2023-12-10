@@ -4,6 +4,7 @@ Tests for salt.loader.lazy
 import sys
 
 import pytest
+
 import salt.loader
 import salt.loader.context
 import salt.loader.lazy
@@ -118,3 +119,23 @@ def test_missing_loader_from_salt_internal_loaders():
         salt.loader._module_dirs(
             {"extension_modules": "/tmp/foo"}, "missingmodules", "module"
         )
+
+
+def test_loader_pack_always_has_opts(loader_dir):
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts={"foo": "bar"})
+    assert "__opts__" in loader.pack
+    assert "foo" in loader.pack["__opts__"]
+    assert loader.pack["__opts__"]["foo"] == "bar"
+
+
+def test_loader_pack_opts_not_overwritten(loader_dir):
+    opts = {"foo": "bar"}
+    loader = salt.loader.lazy.LazyLoader(
+        [loader_dir],
+        opts={"foo": "bar"},
+        pack={"__opts__": {"baz": "bif"}},
+    )
+    assert "__opts__" in loader.pack
+    assert "foo" not in loader.pack["__opts__"]
+    assert "baz" in loader.pack["__opts__"]
+    assert loader.pack["__opts__"]["baz"] == "bif"

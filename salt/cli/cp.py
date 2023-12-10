@@ -36,11 +36,6 @@ class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
         Execute salt-cp
         """
         self.parse_args()
-
-        # Setup file logging!
-        self.setup_logfile_logger()
-        salt.utils.verify.verify_log(self.config)
-
         cp_ = SaltCP(self.config)
         cp_.run()
 

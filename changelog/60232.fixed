@@ -1,1 +1,0 @@
-Handle IPv6 route types such as anycast, multicast, etc when returned from IPv6 route table queries

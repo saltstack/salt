@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.boto_kinesis as boto_kinesis
 from tests.support.mock import MagicMock, patch
 

@@ -5,6 +5,7 @@
     glxinfo beacon test cases
 """
 import pytest
+
 import salt.beacons.glxinfo as glxinfo
 from tests.support.mock import Mock, patch
 
@@ -21,7 +22,7 @@ def test_no_glxinfo_command():
         ret = glxinfo.__virtual__()
 
         mock.assert_called_once_with("glxinfo")
-        assert not ret
+        assert ret == (False, "glxinfo is missing.")
 
 
 def test_with_glxinfo_command():

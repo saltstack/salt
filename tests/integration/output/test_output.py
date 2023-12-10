@@ -6,10 +6,11 @@ import os
 import traceback
 
 import pytest
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.config
 import salt.utils.yaml
 from salt.output import display_output
-from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ShellCase
 from tests.support.mixins import RUNTIME_VARS
 

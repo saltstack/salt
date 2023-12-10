@@ -1,6 +1,16 @@
 """
 Manage VMware ESXi Clusters.
 
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESX cluster module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
+
 Dependencies
 ============
 
@@ -41,6 +51,7 @@ Module was developed against.
 
 import logging
 import sys
+from functools import wraps
 
 import salt.exceptions
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, LicenseSchema
@@ -88,6 +99,28 @@ def __virtual__():
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3008,
+            "The 'esxcluster' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     """
     Retrieves and adapt the login credentials from the proxy connection module
@@ -107,11 +140,12 @@ def _get_vsan_datastore(si, cluster_name):
 
     if not vsan_datastores:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No vSAN datastores where retrieved for cluster '{}'".format(cluster_name)
+            f"No vSAN datastores where retrieved for cluster '{cluster_name}'"
         )
     return vsan_datastores[0]
 
 
+@_deprecation_message
 def cluster_configured(name, cluster_config):
     """
     Configures a cluster. Creates a new cluster, if it doesn't exist on the
@@ -167,9 +201,7 @@ def cluster_configured(name, cluster_config):
             __salt__["esxcluster.get_details"]()["datacenter"],
         )
     else:
-        raise salt.exceptions.CommandExecutionError(
-            "Unsupported proxy {}".format(proxy_type)
-        )
+        raise salt.exceptions.CommandExecutionError(f"Unsupported proxy {proxy_type}")
     log.info(
         "Running %s for cluster '%s' in datacenter '%s'",
         name,
@@ -254,13 +286,11 @@ def cluster_configured(name, cluster_config):
                 changes_required = True
                 changes_str = ""
                 if diff.diffs:
-                    changes_str = "{}{}".format(changes_str, diff.changes_str)
+                    changes_str = f"{changes_str}{diff.changes_str}"
                 if ldiff and ldiff.diffs:
                     changes_str = "{}\nha:\n  options:\n{}".format(
                         changes_str,
-                        "\n".join(
-                            ["  {}".format(l) for l in ldiff.changes_str2.split("\n")]
-                        ),
+                        "\n".join([f"  {l}" for l in ldiff.changes_str2.split("\n")]),
                     )
                 # Apply the changes
                 if __opts__["test"]:
@@ -307,6 +337,7 @@ def cluster_configured(name, cluster_config):
         return ret
 
 
+@_deprecation_message
 def vsan_datastore_configured(name, datastore_name):
     """
     Configures the cluster's VSAN datastore
@@ -320,7 +351,7 @@ def vsan_datastore_configured(name, datastore_name):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    display_name = f"{datacenter_name}/{cluster_name}"
     log.info("Running vsan_datastore_configured for '%s'", display_name)
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
@@ -359,9 +390,7 @@ def vsan_datastore_configured(name, datastore_name):
                     new_datastore_name=datastore_name,
                     service_instance=si,
                 )
-                comments.append(
-                    "Renamed vSAN datastore to '{}'.".format(datastore_name)
-                )
+                comments.append(f"Renamed vSAN datastore to '{datastore_name}'.")
                 changes = {
                     "vsan_datastore": {
                         "new": {"name": datastore_name},
@@ -391,6 +420,7 @@ def vsan_datastore_configured(name, datastore_name):
         return ret
 
 
+@_deprecation_message
 def licenses_configured(name, licenses=None):
     """
     Configures licenses on the cluster entity
@@ -410,7 +440,7 @@ def licenses_configured(name, licenses=None):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    display_name = f"{datacenter_name}/{cluster_name}"
     log.info("Running licenses configured for '%s'", display_name)
     log.trace("licenses = %s", licenses)
     entity = {"type": "cluster", "datacenter": datacenter_name, "cluster": cluster_name}
@@ -460,7 +490,7 @@ def licenses_configured(name, licenses=None):
                         log.error(comments[-1])
                         has_errors = True
                         continue
-                    comments.append("Added license '{}'.".format(license_name))
+                    comments.append(f"Added license '{license_name}'.")
                     log.info(comments[-1])
             else:
                 # License exists let's check if it's assigned to the cluster

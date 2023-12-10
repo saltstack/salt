@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.boto_dynamodb as boto_dynamodb
 from tests.support.mock import MagicMock, patch
 

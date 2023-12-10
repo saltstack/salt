@@ -4,6 +4,7 @@
 import copy
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
@@ -13,20 +14,19 @@ from tests.support.mock import patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts)
+    modules = salt.loader.minion_mods(minion_opts, utils=utils)
     return {
         win_lgpo: {
-            "__opts__": copy.deepcopy(opts),
+            "__opts__": copy.deepcopy(minion_opts),
             "__salt__": modules,
             "__utils__": utils,
         }
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_clear():
     # Make sure policy is not set to begin with, unsets it after test
     try:
@@ -40,7 +40,7 @@ def policy_clear():
             win_lgpo.set_(name="test_state", computer_policy=computer_policy)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_set():
     # Make sure policy is set to begin with, unsets it after test
     try:
@@ -202,25 +202,11 @@ def test_old_element_naming_style(policy_clear):
 
     with patch.dict(win_lgpo.__opts__, {"test": False}):
         result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-    expected = {
-        "Point and Print Restrictions": {
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            "Users can only point and print to these servers": True,
-            "When updating drivers for an existing connection": "Show warning only",
-        }
-    }
-    assert result["changes"]["new"]["Computer Configuration"] == expected
+    assert result["changes"] == {}
     expected = (
-        'The LGPO module changed the way it gets policy element names.\n"Security'
-        ' Prompts: When installing drivers for a new connection" is no longer'
-        ' valid.\nPlease use "When installing drivers for a new connection"'
-        " instead.\nThe following policies changed:\nPoint and Print Restrictions"
+        "The LGPO module changed the way it gets policy element names.\n"
+        '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
+        'Please use "When installing drivers for a new connection" instead.'
     )
     assert result["comment"] == expected
 
@@ -311,14 +297,13 @@ def test_old_element_naming_style_true(policy_set):
     expected = {
         "changes": {},
         "comment": (
-            'The LGPO module changed the way it gets policy element names.\n"Security'
-            ' Prompts: When installing drivers for a new connection" is no longer'
-            ' valid.\nPlease use "When installing drivers for a new connection"'
-            " instead.\nAll specified policies are properly configured"
+            "The LGPO module changed the way it gets policy element names.\n"
+            '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
+            'Please use "When installing drivers for a new connection" instead.'
         ),
     }
     assert result["changes"] == expected["changes"]
-    assert result["result"]
+    assert not result["result"]
     assert result["comment"] == expected["comment"]
 
 

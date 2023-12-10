@@ -3,9 +3,9 @@
 """
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -14,9 +14,9 @@ DEL_PKG = "acme"
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_binaries_missing("brew")
+@pytest.mark.skip_unless_on_darwin
 class BrewModuleTest(ModuleCase):
     """
     Integration tests for the brew module

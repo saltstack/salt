@@ -72,9 +72,12 @@ import salt.output
 import salt.utils.network
 
 try:
+    # pylint: disable=no-name-in-module
+    from napalm.base import helpers as napalm_helpers
     from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
-    from napalm.base import helpers as napalm_helpers
+
+    # pylint: enable=no-name-in-module
 
     HAS_NAPALM = True
 except ImportError:

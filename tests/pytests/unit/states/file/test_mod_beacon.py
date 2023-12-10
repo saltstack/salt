@@ -3,11 +3,16 @@
 """
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.file as filestate
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
 
 
 @pytest.fixture

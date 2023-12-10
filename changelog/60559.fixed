@@ -1,1 +1,0 @@
-Remove check for TIAMAT_BUILD enforcing USE_STATIC_REQUIREMENTS, this is now controled by Tiamat v7.10.1 and above

@@ -10,7 +10,7 @@ consisting of  one master, and one minion running on a local VM hosted on macOS.
 .. note::
     This guide is aimed at developers who wish to run Salt in a virtual machine.
     The official (Linux) walkthrough can be found
-    `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+    `here <https://docs.saltproject.io/topics/tutorials/walkthrough.html>`_.
 
 The 5 Cent Salt Intro
 =====================
@@ -81,8 +81,8 @@ distribution.
 Step 1 - Configuring The Salt Master On Your Mac
 ================================================
 
-`Official Documentation
-<http://docs.saltstack.com/topics/installation/osx.html>`_
+See the `Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+for macOS installation instructions.
 
 Because Salt has a lot of dependencies that are not built in macOS, we will use
 Homebrew to install Salt. Homebrew is a package manager for Mac, it's great, use
@@ -163,7 +163,7 @@ Create The Master Configuration
 
 If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
-http://docs.saltstack.com/ref/configuration/examples.html#configuration-examples-master
+https://docs.saltproject.io/en/latest/ref/configuration/examples.html#configuration-examples-master
 
 .. note::
 
@@ -246,36 +246,16 @@ From the minion folder, type
 
 .. code-block:: bash
 
-    vagrant init
+    vagrant init ubuntu/focal64
 
-This command creates a default Vagrantfile configuration file. This
+This command creates a default Vagrantfile configuration file and import focal64 virtualbox image file to configuration, so it could be used. This
 configuration file will be used to pass configuration parameters to the Salt
 provisioner in Step 3.
-
-Import Precise64 Ubuntu Box
----------------------------
-
-.. code-block:: bash
-
-    vagrant box add precise64 http://files.vagrantup.com/precise64.box
-
-.. note::
-
-    This box is added at the global Vagrant level. You only need to do it
-    once as each VM will use this same file.
 
 Modify the Vagrantfile
 ----------------------
 
-Modify ./minion/Vagrantfile to use th precise64 box. Change the ``config.vm.box``
-line to:
-
-.. code-block:: yaml
-
-    config.vm.box = "precise64"
-
-Uncomment the line creating a host-only IP. This is the ip of your minion
-(you can change it to something else if that IP is already in use):
+Modify Vagrantfile to use th private_ip in local network.
 
 .. code-block:: yaml
 
@@ -310,7 +290,7 @@ Now log into the VM in ssh using Vagrant again:
     vagrant ssh
 
 You should see the shell prompt change to something similar to
-``vagrant@precise64:~$`` meaning you're inside the VM. From there, enter the
+``vagrant@focal64:~$`` meaning you're inside the VM. From there, enter the
 following:
 
 .. code-block:: bash
@@ -503,4 +483,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/en/latest/index.html#configuration-management
+https://docs.saltproject.io/en/latest/index.html#configuration-management

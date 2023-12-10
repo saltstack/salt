@@ -54,10 +54,12 @@ try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
     from boto.ec2.elb import HealthCheck
-    from boto.ec2.elb.attributes import AccessLogAttribute
-    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
-    from boto.ec2.elb.attributes import ConnectionSettingAttribute
-    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
+    from boto.ec2.elb.attributes import (
+        AccessLogAttribute,
+        ConnectionDrainingAttribute,
+        ConnectionSettingAttribute,
+        CrossZoneLoadBalancingAttribute,
+    )
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -192,6 +194,9 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             for policy_list in lb_policy_lists:
                 policies += [p.policy_name for p in policy_list]
             ret["policies"] = policies
+            ret["canonical_hosted_zone_name"] = lb.canonical_hosted_zone_name
+            ret["canonical_hosted_zone_name_id"] = lb.canonical_hosted_zone_name_id
+            ret["vpc_id"] = lb.vpc_id
             return ret
         except boto.exception.BotoServerError as error:
             if error.error_code == "Throttling":

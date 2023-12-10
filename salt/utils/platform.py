@@ -1,15 +1,33 @@
 """
 Functions for identifying which platform a machine is
 """
-
+import contextlib
 import multiprocessing
 import os
 import platform
 import subprocess
 import sys
 
-from distro import linux_distribution
+import distro
+
 from salt.utils.decorators import memoize as real_memoize
+
+
+def linux_distribution(full_distribution_name=True):
+    """
+    Simple function to return information about the OS distribution (id_name, version, codename).
+    """
+    if full_distribution_name:
+        distro_name = distro.name()
+    else:
+        distro_name = distro.id()
+    # Empty string fallbacks
+    distro_version = distro_codename = ""
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_version = distro.version(best=True)
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_codename = distro.codename()
+    return distro_name, distro_version, distro_codename
 
 
 @real_memoize
@@ -187,9 +205,9 @@ def is_fedora():
     """
     Simple function to return if host is Fedora or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "Fedora"
 
 
@@ -198,9 +216,9 @@ def is_photonos():
     """
     Simple function to return if host is Photon OS or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "VMware Photon OS"
 
 
@@ -217,5 +235,6 @@ def spawning_platform():
     Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
 
     This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
+    Salt, however, will force macOS to spawning by default on all python versions
     """
     return multiprocessing.get_start_method(allow_none=False) == "spawn"

@@ -5,9 +5,9 @@ Tests for the Keystone states
 import logging
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -18,9 +18,9 @@ except ImportError:
     NO_KEYSTONE = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_KEYSTONE,
-    "Please install keystoneclient and a keystone server before running"
+    reason="Please install keystoneclient and a keystone server before running "
     "keystone integration tests.",
 )
 class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):

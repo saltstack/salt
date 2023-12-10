@@ -49,6 +49,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
@@ -136,7 +137,7 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_OVERRIDES:
-        per_remote_defaults[param] = str(__opts__["svnfs_{}".format(param)])
+        per_remote_defaults[param] = str(__opts__[f"svnfs_{param}"])
 
     for remote in __opts__["svnfs_remotes"]:
         repo_conf = copy.deepcopy(per_remote_defaults)
@@ -192,7 +193,7 @@ def init():
             # mountpoint not specified
             pass
 
-        hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+        hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
         repo_hash = hash_type(repo_url).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
@@ -239,7 +240,7 @@ def init():
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# svnfs_remote map as of {}\n".format(timestamp))
+                fp_.write(f"# svnfs_remote map as of {timestamp}\n")
                 for repo_conf in repos:
                     fp_.write(
                         salt.utils.stringutils.to_str(
@@ -306,7 +307,7 @@ def clear_cache():
             try:
                 shutil.rmtree(rdir)
             except OSError as exc:
-                errors.append("Unable to delete {}: {}".format(rdir, exc))
+                errors.append(f"Unable to delete {rdir}: {exc}")
     return errors
 
 
@@ -472,9 +473,8 @@ def update():
         if not os.path.exists(env_cachedir):
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(env_cache, "wb+") as fp_:
-            fp_.write(serial.dumps(new_envs))
+            fp_.write(salt.payload.dumps(new_envs))
             log.trace("Wrote env cache data to %s", env_cache)
 
     # if there is a change, fire an event
@@ -482,7 +482,6 @@ def update():
         with salt.utils.event.get_event(
             "master",
             __opts__["sock_dir"],
-            __opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:

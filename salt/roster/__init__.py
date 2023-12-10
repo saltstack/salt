@@ -103,5 +103,4 @@ class Roster:
             except OSError as exc:
                 log.error("Can't access roster for backend %s: %s", back, exc)
 
-        log.debug("Matched minions: %s", targets)
         return targets

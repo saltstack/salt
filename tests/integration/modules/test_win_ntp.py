@@ -1,10 +1,12 @@
 import pytest
+
 from tests.support.case import ModuleCase
 
 
 @pytest.mark.flaky(max_runs=4)
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class NTPTest(ModuleCase):
     """
     Validate windows ntp module

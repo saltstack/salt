@@ -25,7 +25,7 @@ The default action is 'print=path'.
 
 file-glob:
     *                = match zero or more chars
-    ?                = match any char
+    ?                = match zero or single char
     [abc]            = match a, b, or c
     [!abc] or [^abc] = match anything except a, b, and c
     [x-y]            = match chars x through y
@@ -193,11 +193,11 @@ def _parse_size(value):
 
     if scalar:
         multiplier = {
-            "b": 2 ** 0,
-            "k": 2 ** 10,
-            "m": 2 ** 20,
-            "g": 2 ** 30,
-            "t": 2 ** 40,
+            "b": 2**0,
+            "k": 2**10,
+            "m": 2**20,
+            "g": 2**30,
+            "t": 2**40,
         }.get(scalar[-1].lower())
         if multiplier:
             scalar = scalar[:-1].strip()

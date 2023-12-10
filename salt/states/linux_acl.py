@@ -14,6 +14,17 @@ Ensure a Linux ACL is present
          - acl_name: damian
          - perms: rwx
 
+Ensure a Linux ACL is present as a default for all new objects
+
+.. code-block:: yaml
+
+     root:
+       acl.present:
+         - name: /root
+         - acl_type: "default:user"
+         - acl_name: damian
+         - perms: rwx
+
 Ensure a Linux ACL does not exist
 
 .. code-block:: yaml
@@ -50,6 +61,24 @@ Ensure a Linux ACL list does not exist
            - damian
            - homer
          - perms: rwx
+
+.. warning::
+
+    The effective permissions of Linux file access control lists (ACLs) are
+    governed by the "effective rights mask" (the `mask` line in the output of
+    the `getfacl` command) combined with the `perms` set by this module: any
+    permission bits (for example, r=read) present in an ACL but not in the mask
+    are ignored.  The mask is automatically recomputed when setting an ACL, so
+    normally this isn't important.  However, if the file permissions are
+    changed (with `chmod` or `file.managed`, for example), the mask will
+    generally be set based on just the group bits of the file permissions.
+
+    As a result, when using `file.managed` or similar to control file
+    permissions as well as this module, you should set your group permissions
+    to be at least as broad as any permissions in your ACL. Otherwise, the two
+    state declarations will each register changes each run, and if the `file`
+    declaration runs later, your ACL will be ineffective.
+
 """
 
 
@@ -145,7 +174,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             user = None
 
         if user:
-            octal_sum = sum([_octal.get(i, i) for i in perms])
+            octal_sum = sum(_octal.get(i, i) for i in perms)
             need_refresh = False
             # If recursive check all paths retrieved via acl.getfacl
             if recurse:
@@ -169,7 +198,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                         break
 
             # Check the permissions from the already located file
-            elif user[_search_name]["octal"] == sum([_octal.get(i, i) for i in perms]):
+            elif user[_search_name]["octal"] == sum(_octal.get(i, i) for i in perms):
                 need_refresh = False
             # If they don't match then refresh
             else:
@@ -402,7 +431,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
-    _octal_perms = sum([_octal.get(i, i) for i in perms])
+    _octal_perms = sum(_octal.get(i, i) for i in perms)
     if not os.path.exists(name):
         ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
@@ -475,7 +504,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
             for count, search_name in enumerate(_search_names):
                 if search_name in users:
                     if users[search_name]["octal"] == sum(
-                        [_octal.get(i, i) for i in perms]
+                        _octal.get(i, i) for i in perms
                     ):
                         ret["comment"] = "Permissions are in the desired state"
                     else:

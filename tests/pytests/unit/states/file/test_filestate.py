@@ -5,6 +5,7 @@ import pprint
 
 import msgpack
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -17,7 +18,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, mock_open, patch
 
 log = logging.getLogger(__name__)
 
@@ -535,6 +536,26 @@ def test_serialize_into_managed_file():
             ret.update({"comment": comt, "result": None})
             assert filestate.serialize(name, dataset=True, formatter="python") == ret
 
+    # merge_if_exists deserialization error
+    mock_exception = MagicMock(side_effect=TypeError("test"))
+    with patch.object(os.path, "isfile", mock_t):
+        with patch.dict(
+            filestate.__serializers__,
+            {
+                "exception.serialize": mock_exception,
+                "exception.deserialize": mock_exception,
+            },
+        ):
+            with patch.object(salt.utils.files, "fopen", mock_open(read_data="foo")):
+                comt = "Failed to deserialize existing data: test"
+                ret.update({"comment": comt, "result": False, "changes": {}})
+                assert (
+                    filestate.serialize(
+                        name, dataset=True, merge_if_exists=True, serializer="exception"
+                    )
+                    == ret
+                )
+
 
 # 'mknod' function tests: 1
 def test_mknod():
@@ -577,3 +598,45 @@ def test_mod_run_check_cmd():
         assert filestate.mod_run_check_cmd(cmd, filename) == ret
 
         assert filestate.mod_run_check_cmd(cmd, filename)
+
+
+def test_recurse_test_mode_user_group_not_present():
+    """
+    Test file recurse in test mode with no user or group existing
+    """
+    filename = "/tmp/recurse_no_user_group_test_mode"
+    source = "salt://tmp/src_recurse_no_user_group_test_mode"
+    mock_l = MagicMock(return_value=[])
+    mock_emt = MagicMock(return_value=["tmp/src_recurse_no_user_group_test_mode"])
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "file.group_to_gid": MagicMock(side_effect=["1234", "", ""]),
+            "file.user_to_uid": MagicMock(side_effect=["", "4321", ""]),
+            "file.get_mode": MagicMock(return_value="0644"),
+            "file.source_list": MagicMock(return_value=[source, ""]),
+            "cp.list_master_dirs": mock_emt,
+            "cp.list_master": mock_l,
+        },
+    ), patch.dict(filestate.__opts__, {"test": True}), patch.object(
+        os.path, "exists", return_value=True
+    ), patch.object(
+        os.path, "isdir", return_value=True
+    ):
+        ret = filestate.recurse(
+            filename, source, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.recurse(
+            filename, source, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.recurse(
+            filename, source, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]

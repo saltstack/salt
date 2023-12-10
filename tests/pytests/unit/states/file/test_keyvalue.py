@@ -2,6 +2,7 @@ import collections
 import logging
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -119,3 +120,30 @@ def test_file_keyvalue_not_dict(tmp_path):
         f_contents = tempfile.read_text()
         assert "PermitRootLogin yes" not in f_contents
         assert "#StrictMode yes" in f_contents
+
+
+def test_file_keyvalue_create_if_missing(tmp_path):
+    tempfile = tmp_path / "tempfile"
+    assert not tempfile.exists()
+
+    ret = filestate.keyvalue(
+        name=str(tempfile),
+        key="myKey",
+        value="likesIt",
+        create_if_missing=False,
+    )
+    assert ret["result"] is False
+    assert not tempfile.exists()
+
+    ret = filestate.keyvalue(
+        name=str(tempfile),
+        key="myKey",
+        value="likesIt",
+        create_if_missing=True,
+    )
+    assert ret["result"] is True
+    assert tempfile.exists()
+    f_contents = tempfile.read_text()
+    assert "myKey=likesIt" in f_contents
+
+    tempfile.unlink()

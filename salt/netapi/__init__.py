@@ -14,7 +14,6 @@ import salt.client.ssh.client
 import salt.config
 import salt.daemons.masterapi
 import salt.exceptions
-import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
@@ -23,6 +22,40 @@ import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
+
+
+def sorted_permissions(perms):
+    """
+    Return a sorted list of the passed in permissions, de-duplicating in the process
+    """
+    _str_perms = []
+    _non_str_perms = []
+    for entry in perms:
+        if isinstance(entry, str):
+            if entry in _str_perms:
+                continue
+            _str_perms.append(entry)
+            continue
+        if entry in _non_str_perms:
+            continue
+        _non_str_perms.append(entry)
+    return sorted(_str_perms) + sorted(_non_str_perms, key=repr)
+
+
+def sum_permissions(token, eauth):
+    """
+    Returns the sum of '*', user-specific and group specific permissions
+    """
+    perms = eauth.get(token["name"], [])
+    perms.extend(eauth.get("*", []))
+
+    if "groups" in token and token["groups"]:
+        user_groups = set(token["groups"])
+        eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
+
+        for group in user_groups & eauth_groups:
+            perms.extend(eauth["{}%".format(group)])
+    return perms
 
 
 class NetapiClient:
@@ -122,6 +155,13 @@ class NetapiClient:
         if low.get("client") not in CLIENTS:
             raise salt.exceptions.SaltInvocationError(
                 "Invalid client specified: '{}'".format(low.get("client"))
+            )
+
+        if low.get("client") not in self.opts.get("netapi_enable_clients"):
+            raise salt.exceptions.SaltInvocationError(
+                "Client disabled: '{}'. Add to 'netapi_enable_clients' master config option to enable.".format(
+                    low.get("client")
+                )
             )
 
         if not ("token" in low or "eauth" in low):

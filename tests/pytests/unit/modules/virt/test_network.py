@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
 

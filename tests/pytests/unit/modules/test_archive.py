@@ -1,6 +1,7 @@
 import os.path
 
 import pytest
+
 import salt.modules.archive as archive
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import MagicMock, patch
@@ -375,6 +376,48 @@ def test_unzip():
             extract_perms=False,
         )
         assert ["salt"] == ret
+
+
+def test_unzip_password():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password="spongebob", extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"spongebob")
+
+
+def test_unzip_password_bytestring():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password=b"spongebob", extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"spongebob")
+
+
+def test_unzip_password_integer():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password=12345, extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"12345")
 
 
 def test_unzip_raises_exception_if_not_found():

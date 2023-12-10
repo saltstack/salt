@@ -2,6 +2,7 @@ import json
 import logging
 
 import pytest
+
 from tests.support.helpers import SaltVirtualEnv
 from tests.support.pytest.helpers import FakeSaltExtension
 

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.saltutil
@@ -46,6 +47,7 @@ def get_top(configure_mocks):
         yield get_top
 
 
+@pytest.mark.slow_test
 def test__get_top_file_envs(modules, get_top, destroy):
     """
     Ensure we cleanup objects created by saltutil._get_top_file_envs #60449

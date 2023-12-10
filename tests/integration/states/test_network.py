@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -18,9 +19,11 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         os_family = self.run_function("grains.get", ["os_family"])
-        if os_family not in ("RedHat", "Debian"):
+        os = self.run_function("grains.get", ["os"])
+        if os_family not in ("RedHat", "Debian") or os == "VMware Photon OS":
             self.skipTest(
-                "Network state only supported on RedHat and Debian based systems"
+                "Network state only supported on RedHat and Debian based systems."
+                "The network state does not currently work on VMware Photon OS."
             )
 
     @pytest.mark.slow_test

@@ -1,6 +1,7 @@
 import random
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
 
@@ -13,6 +14,7 @@ class StatusModuleTest(ModuleCase):
 
     @pytest.mark.skip_on_windows
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.slow_test
     def test_status_pid(self):
         """
         status.pid
@@ -42,6 +44,7 @@ class StatusModuleTest(ModuleCase):
         self.assertTrue(isinstance(ret, int))
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_status_diskusage(self):
         """
         status.diskusage

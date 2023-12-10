@@ -20,7 +20,7 @@ Example output:
 
 .. code-block:: python
 
-    salt '*' foo.bar --out=table
+    salt '*' foo.bar --out=raw
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
 """
 

@@ -93,9 +93,6 @@ def __virtual__():
     )
 
 
-__opts__ = {}
-
-
 def _auth(profile=None, api_version=1, **connection_args):
     """
     Set up heat credentials, returns

@@ -3,6 +3,7 @@ tests for host state
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 
 

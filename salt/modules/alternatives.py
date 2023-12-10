@@ -57,6 +57,37 @@ def display(name):
     return out["stdout"]
 
 
+def _read_alternative_link_directly(name, path):
+    try:
+        with salt.utils.files.fopen(os.path.join(path, name), "rb") as r_file:
+            contents = salt.utils.stringutils.to_unicode(r_file.read())
+            return contents.splitlines(True)[1].rstrip("\n")
+    except OSError:
+        log.error("alternatives: %s does not exist", name)
+    except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
+        log.error(
+            "alternatives: unable to get master link for %s. Exception: %s",
+            name,
+            exc,
+        )
+
+    return False
+
+
+def _read_alternative_link_with_command(name):
+    cmd = [_get_cmd(), "--query", name]
+    out = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if out["retcode"] > 0 and out["stderr"] != "":
+        return False
+
+    first_block = out["stdout"].split("\n\n", 1)[0]
+    for line in first_block.split("\n"):
+        if line.startswith("Link:"):
+            return line.split(":", 1)[1].strip()
+
+    return False
+
+
 def show_link(name):
     """
     Display master link for the alternative
@@ -71,28 +102,12 @@ def show_link(name):
     """
 
     if __grains__["os_family"] == "RedHat":
-        path = "/var/lib/"
+        return _read_alternative_link_directly(name, "/var/lib/alternatives")
     elif __grains__["os_family"] == "Suse":
-        path = "/var/lib/rpm/"
+        return _read_alternative_link_directly(name, "/var/lib/rpm/alternatives")
     else:
-        path = "/var/lib/dpkg/"
-
-    path += "alternatives/{}".format(name)
-
-    try:
-        with salt.utils.files.fopen(path, "rb") as r_file:
-            contents = salt.utils.stringutils.to_unicode(r_file.read())
-            return contents.splitlines(True)[1].rstrip("\n")
-    except OSError:
-        log.error("alternatives: %s does not exist", name)
-    except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
-        log.error(
-            "alternatives: unable to get master link for %s. Exception: %s",
-            name,
-            exc,
-        )
-
-    return False
+        # Debian based systems
+        return _read_alternative_link_with_command(name)
 
 
 def show_current(name):

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_powercfg as powercfg
 from tests.support.mock import MagicMock, patch
 

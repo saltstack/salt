@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
@@ -244,7 +245,7 @@ def test_running():
 
         with patch.dict(service.__opts__, {"test": True}):
             with patch.dict(service.__salt__, {"service.status": tmock}):
-                assert service.running("salt") == ret[10]
+                assert service.running("salt") == ret[5]
 
             with patch.dict(service.__salt__, {"service.status": fmock}):
                 assert service.running("salt") == ret[3]
@@ -477,7 +478,7 @@ def test_dead_with_missing_service():
         ret = service.dead(name=name)
         assert ret == {
             "changes": {},
-            "comment": "The named service {} is not available".format(name),
+            "comment": f"The named service {name} is not available",
             "result": True,
             "name": name,
         }
@@ -506,6 +507,26 @@ def test_enabled():
     ret = {"changes": "saltstack", "comment": "", "name": "salt", "result": True}
     mock = MagicMock(return_value={"changes": "saltstack"})
     with patch.object(service, "_enable", mock):
+        assert service.enabled("salt") == ret
+        assert service.__context__ == {"service.state": "enabled"}
+
+
+def test_enabled_in_test_mode():
+    ret = {
+        "changes": {},
+        "comment": "Service salt not present; if created in this state run, it would have been enabled",
+        "name": "salt",
+        "result": None,
+    }
+    mock = MagicMock(
+        return_value={
+            "result": "False",
+            "comment": "The named service salt is not available",
+        }
+    )
+    with patch.object(service, "_enable", mock), patch.dict(
+        service.__opts__, {"test": True}
+    ):
         assert service.enabled("salt") == ret
         assert service.__context__ == {"service.state": "enabled"}
 
@@ -566,6 +587,7 @@ def test_mod_watch():
         assert service.mod_watch("salt", "stack") == ret[1]
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a service
@@ -658,21 +680,22 @@ def test_mod_beacon(tmp_path):
 
 
 @pytest.mark.skip_on_darwin(reason="service.running is currently failing on OSX")
+@pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_running_with_reload():
+def test_running_with_reload(minion_opts):
     """
     Test that a running service is properly reloaded
     """
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
+    # TODO: This is not a unit test, it interacts with the system. Move to functional.
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
+    utils = salt.loader.utils(minion_opts)
+    modules = salt.loader.minion_mods(minion_opts, utils=utils)
 
     service_name = "cron"
     cmd_name = "crontab"
-    os_family = opts["grains"]["os_family"]
-    os_release = opts["grains"]["osrelease"]
+    os_family = minion_opts["grains"]["os_family"]
+    os_release = minion_opts["grains"]["osrelease"]
     if os_family == "RedHat":
         service_name = "crond"
     elif os_family == "Arch":
@@ -686,7 +709,7 @@ def test_running_with_reload():
         service_name = "Spooler"
 
     if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-        pytest.skip("{} is not installed".format(cmd_name))
+        pytest.skip(f"{cmd_name} is not installed")
 
     pre_srv_enabled = (
         True if service_name in modules["service.get_enabled"]() else False
@@ -697,8 +720,8 @@ def test_running_with_reload():
         post_srv_disable = True
 
     try:
-        with patch.dict(service.__grains__, opts["grains"]), patch.dict(
-            service.__opts__, opts
+        with patch.dict(service.__grains__, minion_opts["grains"]), patch.dict(
+            service.__opts__, minion_opts
         ), patch.dict(service.__salt__, modules), patch.dict(
             service.__utils__, utils
         ), patch.dict(
@@ -710,9 +733,9 @@ def test_running_with_reload():
             result = service.running(name=service_name, enable=True, reload=False)
 
         if salt.utils.platform.is_windows():
-            comment = "Started service {}".format(service_name)
+            comment = f"Started service {service_name}"
         else:
-            comment = "Service {} has been enabled, and is running".format(service_name)
+            comment = f"Service {service_name} has been enabled, and is running"
         expected = {
             "changes": {service_name: True},
             "comment": comment,

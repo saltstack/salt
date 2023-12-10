@@ -34,25 +34,24 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 from salt.utils.functools import namespaced_function
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeDriver, NodeState
-    from libcloud.compute.base import NodeAuthPassword
-    from libcloud.compute.types import Provider
+    from libcloud.compute.base import NodeAuthPassword, NodeDriver, NodeState
     from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.base import Member
-    from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     # This work-around for Issue #32743 is no longer needed for libcloud >=
     # 1.4.0. However, older versions of libcloud must still be supported with
     # this work-around. This work-around can be removed when the required
     # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
     # implemented in Salt 2018.3.0).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("1.4.0"):
+    if Version(libcloud.__version__) < Version("1.4.0"):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
 

@@ -319,7 +319,14 @@ def present(
                     continue
 
                 # compare current and wanted value
-                if properties_current[prop] != properties[prop]:
+                # Enabled "feature@" properties may report either "enabled" or
+                # "active", depending on whether they're currently in-use.
+                if prop.startswith("feature@") and properties_current[prop] == "active":
+                    effective_property = "enabled"
+                else:
+                    effective_property = properties_current[prop]
+
+                if effective_property != properties[prop]:
                     properties_update.append(prop)
 
         # update pool properties
@@ -354,7 +361,7 @@ def present(
             ret["result"] = mod_res["imported"]
             if ret["result"]:
                 ret["changes"][name] = "imported"
-                ret["comment"] = "storage pool {} was imported".format(name)
+                ret["comment"] = f"storage pool {name} was imported"
 
         # create pool
         if not ret["result"] and vdevs:
@@ -365,17 +372,17 @@ def present(
                 *vdevs,
                 force=config["force"],
                 properties=properties,
-                filesystem_properties=filesystem_properties
+                filesystem_properties=filesystem_properties,
             )
 
             ret["result"] = mod_res["created"]
             if ret["result"]:
                 ret["changes"][name] = "created"
-                ret["comment"] = "storage pool {} was created".format(name)
+                ret["comment"] = f"storage pool {name} was created"
             elif "error" in mod_res:
                 ret["comment"] = mod_res["error"]
             else:
-                ret["comment"] = "could not create storage pool {}".format(name)
+                ret["comment"] = f"could not create storage pool {name}"
 
         # give up, we cannot import the pool and we do not have a layout to create it
         if not ret["result"] and not vdevs:
@@ -432,9 +439,6 @@ def absent(name, export=False, force=False):
 
     else:  # we are looking good
         ret["result"] = True
-        ret["comment"] = "storage pool {} is absent".format(name)
+        ret["comment"] = f"storage pool {name} is absent"
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -260,7 +260,7 @@ def create(vm_):
     hostname = name
     domain = config.get_cloud_config_value("domain", vm_, __opts__, default=None)
     if domain is None:
-        SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
+        raise SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
 
     if vm_.get("use_fqdn"):
         name = ".".join([name, domain])

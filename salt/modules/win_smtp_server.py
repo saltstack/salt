@@ -27,6 +27,7 @@ from salt.exceptions import SaltInvocationError
 
 try:
     import wmi
+
     import salt.utils.winapi
 
     _HAS_MODULE_DEPENDENCIES = True

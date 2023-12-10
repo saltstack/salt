@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.serverdensity_device as serverdensity_device
 from tests.support.mock import MagicMock, patch
 

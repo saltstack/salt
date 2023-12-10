@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.mdadm_raid as mdadm
 from tests.support.mock import MagicMock, patch
 

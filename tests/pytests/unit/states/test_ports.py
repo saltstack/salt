@@ -4,6 +4,7 @@
 import os
 
 import pytest
+
 import salt.states.ports as ports
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

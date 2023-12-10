@@ -1,4 +1,0 @@
-# macro
-{% macro mymacro(greeting, greetee='world') -} <-- error is here
-{{ greeting ~ ' ' ~ greetee }} !
-{%- endmacro %}

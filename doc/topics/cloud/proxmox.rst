@@ -2,6 +2,11 @@
 Getting Started With Proxmox
 ============================
 
+.. warning::
+    This cloud provider will be removed from Salt in version 3009.0 in favor of
+    the `saltext.proxmox Salt Extension
+    <https://github.com/salt-extensions/saltext-proxmox>`_
+
 Proxmox Virtual Environment is a complete server virtualization management solution,
 based on OpenVZ(in Proxmox up to 3.4)/LXC(from Proxmox 4.0 and up) and full virtualization with KVM.
 Further information can be found at:
@@ -244,6 +249,9 @@ QEMU profile file (for a clone):
 
     # Workaround https://github.com/saltstack/salt/issues/27821
     size: ''
+
+    # Enable the use of a Qemu agent on VM to retrieve the IP-address from.
+    agent_get_ip: True
 
 More information can be found on Proxmox API under the 'POST' method of /nodes/{node}/qemu/{vmid}/clone
 

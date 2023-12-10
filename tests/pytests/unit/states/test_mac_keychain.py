@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.mac_keychain as keychain
 from tests.support.mock import MagicMock, call, patch
 

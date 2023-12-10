@@ -1,0 +1,20 @@
+.. _release-3003-3:
+
+========================
+Salt 3003.3 (2021-08-20)
+========================
+
+Version 3003.3 is a CVE security fix release for :ref:`3003 <release-3003>`.
+
+
+Fixed
+-----
+
+- Fix issue introduced in https://github.com/saltstack/salt/pull/59648 (#60046)
+
+
+Security
+--------
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)

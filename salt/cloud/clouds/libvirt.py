@@ -48,7 +48,7 @@ Tested on:
 """
 
 # TODO: look at event descriptions here:
-#       https://docs.saltstack.com/en/latest/topics/cloud/reactor.html
+#       https://docs.saltproject.io/en/latest/topics/cloud/reactor.html
 # TODO: support reboot? salt-cloud -a reboot vm1 vm2 vm2
 # TODO: by using metadata tags in the libvirt XML we could make provider only
 #       manage domains that we actually created
@@ -538,7 +538,7 @@ def do_cleanup(cleanup):
     behavior over time. Passed in volumes and domains are deleted, any errors
     are ignored. Used when cloning/provisioning a domain fails.
 
-    :param cleanup: list containing dictonaries with two keys: 'what' and 'item'.
+    :param cleanup: list containing dictionaries with two keys: 'what' and 'item'.
                     If 'what' is domain the 'item' is a libvirt domain object.
                     If 'what' is volume then the item is a libvirt volume object.
 

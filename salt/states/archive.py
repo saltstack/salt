@@ -189,11 +189,12 @@ def extracted(
     enforce_toplevel=True,
     enforce_ownership_on=None,
     archive_format=None,
+    use_etag=False,
     **kwargs
 ):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.11.0
+    .. versionchanged:: 2016.11.0,3005
         This state has been rewritten. Some arguments are new to this release
         and will not be available in the 2016.3 release cycle (and earlier).
         Additionally, the **ZIP Archive Handling** section below applies
@@ -661,6 +662,15 @@ def extracted(
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
     .. _xz: http://tukaani.org/xz/
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -1052,6 +1062,7 @@ def extracted(
                 source_hash_name=source_hash_name,
                 skip_verify=skip_verify,
                 saltenv=__env__,
+                use_etag=use_etag,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
@@ -1085,7 +1096,7 @@ def extracted(
         # implicitly enabled by setting the "options" argument.
         try:
             encrypted_zip = __salt__["archive.is_encrypted"](
-                cached, clean=False, saltenv=__env__
+                cached, clean=False, saltenv=__env__, use_etag=use_etag
             )
         except CommandExecutionError:
             # This would happen if archive_format=zip and the source archive is
@@ -1109,6 +1120,7 @@ def extracted(
             strip_components=strip_components,
             clean=False,
             verbose=True,
+            use_etag=use_etag,
         )
     except CommandExecutionError as exc:
         contents = None

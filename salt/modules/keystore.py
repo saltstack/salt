@@ -39,14 +39,14 @@ def _parse_cert(alias, public_cert, return_cert=False):
     ASN1 = OpenSSL.crypto.FILETYPE_ASN1
     PEM = OpenSSL.crypto.FILETYPE_PEM
     cert_data = {}
-    sha1 = public_cert.digest(b"sha1")
+    sha1 = public_cert.digest("sha1")
 
     cert_pem = OpenSSL.crypto.dump_certificate(PEM, public_cert)
-    raw_until = public_cert.get_notAfter()
+    raw_until = public_cert.get_notAfter().decode(__salt_system_encoding__)
     date_until = datetime.strptime(raw_until, "%Y%m%d%H%M%SZ")
     string_until = date_until.strftime("%B %d %Y")
 
-    raw_start = public_cert.get_notBefore()
+    raw_start = public_cert.get_notBefore().decode(__salt_system_encoding__)
     date_start = datetime.strptime(raw_start, "%Y%m%d%H%M%SZ")
     string_start = date_start.strftime("%B %d %Y")
 
@@ -83,8 +83,6 @@ def list(keystore, passphrase, alias=None, return_cert=False):
         salt '*' keystore.list /usr/lib/jvm/java-8/jre/lib/security/cacerts changeit debian:verisign_-_g5.pem
 
     """
-    ASN1 = OpenSSL.crypto.FILETYPE_ASN1
-    PEM = OpenSSL.crypto.FILETYPE_PEM
     decoded_certs = []
     entries = []
 
@@ -112,16 +110,26 @@ def list(keystore, passphrase, alias=None, return_cert=False):
                     "Unsupported EntryType detected in keystore"
                 )
 
-            # Detect if ASN1 binary, otherwise assume PEM
-            if "\x30" in cert_result[0]:
-                public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_result)
-            else:
-                public_cert = OpenSSL.crypto.load_certificate(PEM, cert_result)
-
+            public_cert = _get_cert(cert_result)
             entry_data.update(_parse_cert(entry_alias, public_cert, return_cert))
             decoded_certs.append(entry_data)
 
     return decoded_certs
+
+
+def _get_cert(certificate):
+    """
+    Gets the correct certificate depending of the encoding
+
+    :param certificate: str
+    """
+    ASN1 = OpenSSL.crypto.FILETYPE_ASN1
+    PEM = OpenSSL.crypto.FILETYPE_PEM
+    if certificate[0] == 0x30:
+        public_cert = OpenSSL.crypto.load_certificate(ASN1, certificate)
+    else:
+        public_cert = OpenSSL.crypto.load_certificate(PEM, certificate)
+    return public_cert
 
 
 def add(name, keystore, passphrase, certificate, private_key=None):
@@ -206,3 +214,20 @@ def remove(name, keystore, passphrase):
     else:
         # No alias found, notify user
         return False
+
+
+def get_sha1(certificate):
+    """
+    Returns the SHA1 sum of a ASN1/PEM certificate
+
+    :param name: ASN1/PEM certificate
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystore.get_sha1 "(certificate_content_string)"
+
+    """
+    public_cert = _get_cert(certificate)
+    return public_cert.digest("SHA1")

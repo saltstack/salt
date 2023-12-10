@@ -6,6 +6,7 @@
 import os
 
 import pytest
+
 import salt.states.archive as archive
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch

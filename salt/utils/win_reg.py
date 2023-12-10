@@ -28,23 +28,21 @@ pairs.
 # When production windows installer is using Python 3, Python 2 code can be removed
 
 import logging
-import sys
 
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
-    import win32gui
     import win32api
     import win32con
+    import win32gui
 
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
 
-PY2 = sys.version_info[0] == 2
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -114,6 +112,7 @@ class Registry:  # pylint: disable=R0903
             "HKU": win32con.HKEY_USERS,
         }
         self.vtype = {
+            "REG_NONE": 0,
             "REG_BINARY": win32con.REG_BINARY,
             "REG_DWORD": win32con.REG_DWORD,
             "REG_EXPAND_SZ": win32con.REG_EXPAND_SZ,
@@ -124,6 +123,7 @@ class Registry:  # pylint: disable=R0903
         self.opttype = {"REG_OPTION_NON_VOLATILE": 0, "REG_OPTION_VOLATILE": 1}
         # Return Unicode due to from __future__ import unicode_literals
         self.vtype_reverse = {
+            0: "REG_NONE",
             win32con.REG_BINARY: "REG_BINARY",
             win32con.REG_DWORD: "REG_DWORD",
             win32con.REG_EXPAND_SZ: "REG_EXPAND_SZ",
@@ -196,6 +196,9 @@ def key_exists(hive, key, use_32bit_registry=False):
     except win32api.error as exc:
         if exc.winerror == 2:
             return False
+        if exc.winerror == 5:
+            # It exists, but we don't have permission to read it
+            return True
         raise
     finally:
         if handle:
@@ -262,7 +265,8 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
             # value/data pair not found
             return False
     finally:
-        win32api.RegCloseKey(handle)
+        if handle:
+            win32api.RegCloseKey(handle)
 
 
 def broadcast_change():
@@ -346,20 +350,20 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         for i in range(win32api.RegQueryInfoKey(handle)[0]):
             subkey = win32api.RegEnumKey(handle, i)
-            if PY2:
-                subkeys.append(_to_mbcs(subkey))
-            else:
-                subkeys.append(subkey)
+            subkeys.append(subkey)
 
     except win32api.error as exc:
         if exc.winerror == 2:
             log.debug(r"Cannot find key: %s\%s", hive, key, exc_info=True)
             return False, r"Cannot find key: {}\{}".format(hive, key)
+        if exc.winerror == 5:
+            log.debug(r"Access is denied: %s\%s", hive, key, exc_info=True)
+            return False, r"Access is denied: {}\{}".format(hive, key)
         raise
 
     finally:
         if handle:
-            handle.Close()
+            win32api.RegCloseKey(handle)
 
     return subkeys
 
@@ -442,11 +446,14 @@ def list_values(hive, key=None, use_32bit_registry=False):
         if exc.winerror == 2:
             log.debug(r"Cannot find key: %s\%s", hive, key)
             return False, r"Cannot find key: {}\{}".format(hive, key)
+        elif exc.winerror == 5:
+            log.debug(r"Access is denied: %s\%s", hive, key)
+            return False, r"Access is denied: {}\{}".format(hive, key)
         raise
 
     finally:
         if handle:
-            handle.Close()
+            win32api.RegCloseKey(handle)
     return values
 
 
@@ -520,6 +527,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         "key": local_key,
         "vname": local_vname,
         "vdata": None,
+        "vtype": None,
         "success": True,
     }
 
@@ -533,6 +541,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         raise CommandExecutionError("Invalid Hive: {}".format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
+    handle = None
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
         try:
@@ -570,8 +579,18 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
             log.trace(msg)
             ret["comment"] = msg
             ret["success"] = False
+        elif exc.winerror == 5:
+            msg = "Access is denied: {}\\{}".format(local_hive, local_key)
+            log.trace(exc)
+            log.trace(msg)
+            ret["comment"] = msg
+            ret["success"] = False
         else:
             raise
+    finally:
+        if handle:
+            win32api.RegCloseKey(handle)
+
     return ret
 
 
@@ -615,7 +634,7 @@ def set_value(
             The type of data this parameter expects is determined by the value
             type specified in ``vtype``. The correspondence is as follows:
 
-                - REG_BINARY: Binary data (str in Py2, bytes in Py3)
+                - REG_BINARY: Binary data (bytes)
                 - REG_DWORD: int
                 - REG_EXPAND_SZ: str
                 - REG_MULTI_SZ: list of str
@@ -749,10 +768,11 @@ def set_value(
 
     except win32api.error as exc:
         log.exception(
-            "Error creating/opening key: %s\\%s\n%s",
+            "Error creating/opening key: %s\\%s\n%s\n%s",
             local_hive,
             local_key,
             exc.winerror,
+            exc.strerror,
         )
         return False
 
@@ -927,7 +947,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
             ret["Failed"].append(r"{}\{} {}".format(hive, sub_key_path, exc.strerror))
         finally:
             if key_handle:
-                win32api.CloseHandle(key_handle)
+                win32api.RegCloseKey(key_handle)
 
     broadcast_change()
 

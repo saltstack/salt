@@ -5,9 +5,15 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 from salt.utils.decorators import state as statedecorators
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 def test_state_output_check_changes_is_dict():

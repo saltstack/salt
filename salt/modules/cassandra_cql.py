@@ -77,6 +77,20 @@ queries based on the internal schema of said version.
           # defaults to 4, if not set
           protocol_version: 3
 
+    Also all configuration could be passed directly to module as arguments.
+
+    .. code-block:: bash
+
+    salt minion1 cassandra_cql.info contact_points=delme-nextgen-01 port=9042 cql_user=cassandra cql_pass=cassandra protocol_version=4
+
+    salt minion1 cassandra_cql.info ssl_options='{"ca_certs": /path/to/-ca.crt}'
+
+    We can also provide the load balancing policy as arguments
+
+    .. code-block:: bash
+
+    salt minion1 cassandra_cql.cql_query "alter user cassandra with password 'cassandra2' ;" contact_points=scylladb cql_user=user1 cql_pass=password port=9142 protocol_version=4 ssl_options='{"ca_certs": path-to-client-ca.crt}' load_balancing_policy=DCAwareRoundRobinPolicy load_balancing_policy_args='{"local_dc": "datacenter1"}'
+
 """
 
 import logging
@@ -96,18 +110,49 @@ __virtualname__ = "cassandra_cql"
 HAS_DRIVER = False
 try:
     # pylint: disable=import-error,no-name-in-module
-    from cassandra.cluster import Cluster
-    from cassandra.cluster import NoHostAvailable
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.cluster import Cluster, NoHostAvailable
     from cassandra.connection import (
         ConnectionException,
         ConnectionShutdown,
         OperationTimedOut,
     )
-    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.policies import (
+        DCAwareRoundRobinPolicy,
+        ExponentialReconnectionPolicy,
+        HostDistance,
+        HostFilterPolicy,
+        IdentityTranslator,
+        LoadBalancingPolicy,
+        NoSpeculativeExecutionPlan,
+        NoSpeculativeExecutionPolicy,
+        RetryPolicy,
+        RoundRobinPolicy,
+        SimpleConvictionPolicy,
+        TokenAwarePolicy,
+        WhiteListRoundRobinPolicy,
+    )
     from cassandra.query import dict_factory
 
     # pylint: enable=import-error,no-name-in-module
     HAS_DRIVER = True
+
+    LOAD_BALANCING_POLICY_MAP = {
+        "HostDistance": HostDistance,
+        "LoadBalancingPolicy": LoadBalancingPolicy,
+        "RoundRobinPolicy": RoundRobinPolicy,
+        "DCAwareRoundRobinPolicy": DCAwareRoundRobinPolicy,
+        "WhiteListRoundRobinPolicy": WhiteListRoundRobinPolicy,
+        "TokenAwarePolicy": TokenAwarePolicy,
+        "HostFilterPolicy": HostFilterPolicy,
+        "SimpleConvictionPolicy": SimpleConvictionPolicy,
+        "ExponentialReconnectionPolicy": ExponentialReconnectionPolicy,
+        "RetryPolicy": RetryPolicy,
+        "IdentityTranslator": IdentityTranslator,
+        "NoSpeculativeExecutionPlan": NoSpeculativeExecutionPlan,
+        "NoSpeculativeExecutionPolicy": NoSpeculativeExecutionPolicy,
+    }
+
 except ImportError:
     pass
 
@@ -126,6 +171,16 @@ def __virtual__():
 
 def _async_log_errors(errors):
     log.error("Cassandra_cql asynchronous call returned: %s", errors)
+
+
+def _get_lbp_policy(name, **policy_args):
+    """
+    Returns the Load Balancer Policy class by name
+    """
+    if name in LOAD_BALANCING_POLICY_MAP:
+        return LOAD_BALANCING_POLICY_MAP.get(name)(**policy_args)
+    else:
+        log.error("The policy %s is not available", name)
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):
@@ -148,7 +203,7 @@ def _load_properties(property_name, config_option, set_default=False, default=No
             "No property specified in function, trying to load from salt configuration"
         )
         try:
-            options = __salt__["config.option"]("cassandra")
+            options = __salt__["config.option"]("cassandra", default={})
         except BaseException as e:
             log.error("Failed to get cassandra config options. Reason: %s", e)
             raise
@@ -176,7 +231,9 @@ def _get_ssl_opts():
     Parse out ssl_options for Cassandra cluster connection.
     Make sure that the ssl_version (if any specified) is valid.
     """
-    sslopts = __salt__["config.option"]("cassandra").get("ssl_options", None)
+    sslopts = __salt__["config.option"]("cassandra", default={}).get(
+        "ssl_options", None
+    )
     ssl_opts = {}
 
     if sslopts:
@@ -199,7 +256,14 @@ def _get_ssl_opts():
 
 
 def _connect(
-    contact_points=None, port=None, cql_user=None, cql_pass=None, protocol_version=None
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Connect to a Cassandra cluster.
@@ -212,8 +276,14 @@ def _connect(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
-    :param protocol_version:  Cassandra protocol version to use.
-    :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
     """
@@ -240,40 +310,70 @@ def _connect(
             __context__["cassandra_cql_returner_session"],
         )
     else:
-
-        contact_points = _load_properties(
-            property_name=contact_points, config_option="cluster"
-        )
+        if contact_points is None:
+            contact_points = _load_properties(
+                property_name=contact_points, config_option="cluster"
+            )
         contact_points = (
             contact_points
             if isinstance(contact_points, list)
             else contact_points.split(",")
         )
-        port = _load_properties(
-            property_name=port, config_option="port", set_default=True, default=9042
-        )
-        cql_user = _load_properties(
-            property_name=cql_user,
-            config_option="username",
-            set_default=True,
-            default="cassandra",
-        )
-        cql_pass = _load_properties(
-            property_name=cql_pass,
-            config_option="password",
-            set_default=True,
-            default="cassandra",
-        )
-        protocol_version = _load_properties(
-            property_name=protocol_version,
-            config_option="protocol_version",
-            set_default=True,
-            default=4,
-        )
+        if port is None:
+            port = _load_properties(
+                property_name=port, config_option="port", set_default=True, default=9042
+            )
+        if cql_user is None:
+            cql_user = _load_properties(
+                property_name=cql_user,
+                config_option="username",
+                set_default=True,
+                default="cassandra",
+            )
+        if cql_pass is None:
+            cql_pass = _load_properties(
+                property_name=cql_pass,
+                config_option="password",
+                set_default=True,
+                default="cassandra",
+            )
+        if protocol_version is None:
+            protocol_version = _load_properties(
+                property_name=protocol_version,
+                config_option="protocol_version",
+                set_default=True,
+                default=4,
+            )
+
+        if load_balancing_policy_args is None:
+            load_balancing_policy_args = _load_properties(
+                property_name=load_balancing_policy_args,
+                config_option="load_balancing_policy_args",
+                set_default=True,
+                default={},
+            )
+
+        if load_balancing_policy is None:
+            load_balancing_policy = _load_properties(
+                property_name=load_balancing_policy,
+                config_option="load_balancing_policy",
+                set_default=True,
+                default="RoundRobinPolicy",
+            )
+
+        if load_balancing_policy_args:
+            lbp_policy_cls = _get_lbp_policy(
+                load_balancing_policy, **load_balancing_policy_args
+            )
+        else:
+            lbp_policy_cls = _get_lbp_policy(load_balancing_policy)
 
         try:
             auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
-            ssl_opts = _get_ssl_opts()
+            if ssl_options is None:
+                ssl_opts = _get_ssl_opts()
+            else:
+                ssl_opts = ssl_options
             if ssl_opts:
                 cluster = Cluster(
                     contact_points,
@@ -281,6 +381,7 @@ def _connect(
                     auth_provider=auth_provider,
                     ssl_options=ssl_opts,
                     protocol_version=protocol_version,
+                    load_balancing_policy=lbp_policy_cls,
                     compression=True,
                 )
             else:
@@ -289,6 +390,7 @@ def _connect(
                     port=port,
                     auth_provider=auth_provider,
                     protocol_version=protocol_version,
+                    load_balancing_policy=lbp_policy_cls,
                     compression=True,
                 )
             for recontimes in range(1, 4):
@@ -313,14 +415,22 @@ def _connect(
             return cluster, session
         except TypeError:
             pass
-        except (ConnectionException, ConnectionShutdown, NoHostAvailable):
+        except (ConnectionException, ConnectionShutdown, NoHostAvailable) as err:
             log.error("Could not connect to Cassandra cluster at %s", contact_points)
-            raise CommandExecutionError(
-                "ERROR: Could not connect to Cassandra cluster."
-            )
+            raise CommandExecutionError(str(err))
 
 
-def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
+def cql_query(
+    query,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
+):
     """
     Run a query on a Cassandra cluster and return a dictionary.
 
@@ -336,6 +446,14 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     :type  port:           int
     :param params:         The parameters for the query, optional.
     :type  params:         str
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
 
@@ -351,6 +469,10 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
             port=port,
             cql_user=cql_user,
             cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
         )
     except CommandExecutionError:
         log.critical("Could not get Cassandra cluster session.")
@@ -417,6 +539,10 @@ def cql_query_with_prepare(
     port=None,
     cql_user=None,
     cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
     **kwargs
 ):
     """
@@ -449,6 +575,14 @@ def cql_query_with_prepare(
     :type  port:           int
     :param params:         The parameters for the query, optional.
     :type  params:         str
+    :param protocol_version:  Cassandra protocol version to use.
+    :type  port:           int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
 
@@ -473,6 +607,10 @@ def cql_query_with_prepare(
             port=port,
             cql_user=cql_user,
             cql_pass=cql_pass,
+            protocol_version=None,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=None,
         )
     except CommandExecutionError:
         log.critical("Could not get Cassandra cluster session.")
@@ -526,7 +664,16 @@ def cql_query_with_prepare(
     return ret
 
 
-def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def version(
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
+):
     """
     Show the Cassandra version.
 
@@ -538,6 +685,14 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The version for this Cassandra cluster.
     :rtype:                str
 
@@ -552,7 +707,17 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
     query = "select release_version from system.local limit 1;"
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not get Cassandra version.")
         raise
@@ -563,7 +728,16 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
     return ret[0].get("release_version")
 
 
-def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def info(
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
+):
     """
     Show the Cassandra information for this cluster.
 
@@ -575,6 +749,14 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The information for this Cassandra cluster.
     :rtype:                dict
 
@@ -602,7 +784,17 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
     ret = {}
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not list Cassandra info.")
         raise
@@ -613,7 +805,16 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
     return ret
 
 
-def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def list_keyspaces(
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
+):
     """
     List keyspaces in a Cassandra cluster.
 
@@ -625,6 +826,14 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The keyspaces in this Cassandra cluster.
     :rtype:                list[dict]
 
@@ -644,7 +853,17 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
     ret = {}
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not list keyspaces.")
         raise
@@ -656,7 +875,15 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
 
 
 def list_column_families(
-    keyspace=None, contact_points=None, port=None, cql_user=None, cql_pass=None
+    keyspace=None,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     List column families in a Cassandra cluster for all keyspaces or just the provided one.
@@ -671,6 +898,14 @@ def list_column_families(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The column families in this Cassandra cluster.
     :rtype:                list[dict]
 
@@ -696,7 +931,17 @@ def list_column_families(
     ret = {}
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not list column families.")
         raise
@@ -708,7 +953,15 @@ def list_column_families(
 
 
 def keyspace_exists(
-    keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None
+    keyspace,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Check if a keyspace exists in a Cassandra cluster.
@@ -723,6 +976,14 @@ def keyspace_exists(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:    Cassandra protocol version to use.
+    :type  ssl_options:    dict
     :return:               The info for the keyspace or False if it does not exist.
     :rtype:                dict
 
@@ -744,7 +1005,17 @@ def keyspace_exists(
     }
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not determine if keyspace exists.")
         raise
@@ -764,6 +1035,10 @@ def create_keyspace(
     port=None,
     cql_user=None,
     cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Create a new keyspace in Cassandra.
@@ -785,6 +1060,14 @@ def create_keyspace(
     :type  cql_pass:                str
     :param port:                    The Cassandra cluster port, defaults to None.
     :type  port:                    int
+    :param protocol_version:        Cassandra protocol version to use.
+    :type  protocol_version:        int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options:             Cassandra protocol version to use.
+    :type  ssl_options:             dict
     :return:                        The info for the keyspace or False if it does not exist.
     :rtype:                         dict
 
@@ -798,7 +1081,17 @@ def create_keyspace(
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
         replication_datacenters='{"datacenter_1": 3, "datacenter_2": 2}'
     """
-    existing_keyspace = keyspace_exists(keyspace, contact_points, port)
+    existing_keyspace = keyspace_exists(
+        keyspace,
+        contact_points=contact_points,
+        cql_user=cql_user,
+        cql_pass=cql_pass,
+        port=port,
+        protocol_version=protocol_version,
+        load_balancing_policy=load_balancing_policy,
+        load_balancing_policy_args=load_balancing_policy_args,
+        ssl_options=ssl_options,
+    )
     if not existing_keyspace:
         # Add the strategy, replication_factor, etc.
         replication_map = {"class": replication_strategy}
@@ -823,7 +1116,17 @@ def create_keyspace(
         )
 
         try:
-            cql_query(query, contact_points, port, cql_user, cql_pass)
+            cql_query(
+                query,
+                contact_points=contact_points,
+                port=port,
+                cql_user=cql_user,
+                cql_pass=cql_pass,
+                protocol_version=protocol_version,
+                load_balancing_policy=load_balancing_policy,
+                load_balancing_policy_args=load_balancing_policy_args,
+                ssl_options=ssl_options,
+            )
         except CommandExecutionError:
             log.critical("Could not create keyspace.")
             raise
@@ -833,7 +1136,15 @@ def create_keyspace(
 
 
 def drop_keyspace(
-    keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None
+    keyspace,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Drop a keyspace if it exists in a Cassandra cluster.
@@ -848,6 +1159,14 @@ def drop_keyspace(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options: Cassandra protocol version to use.
+    :type  ssl_options: dict
     :return:               The info for the keyspace or False if it does not exist.
     :rtype:                dict
 
@@ -859,11 +1178,31 @@ def drop_keyspace(
 
         salt 'minion1' cassandra_cql.drop_keyspace keyspace=test contact_points=minion1
     """
-    existing_keyspace = keyspace_exists(keyspace, contact_points, port)
+    existing_keyspace = keyspace_exists(
+        keyspace,
+        contact_points=contact_points,
+        cql_user=cql_user,
+        cql_pass=cql_pass,
+        port=port,
+        protocol_version=protocol_version,
+        load_balancing_policy=load_balancing_policy,
+        load_balancing_policy_args=load_balancing_policy_args,
+        ssl_options=ssl_options,
+    )
     if existing_keyspace:
         query = """drop keyspace {};""".format(keyspace)
         try:
-            cql_query(query, contact_points, port, cql_user, cql_pass)
+            cql_query(
+                query,
+                contact_points=contact_points,
+                port=port,
+                cql_user=cql_user,
+                cql_pass=cql_pass,
+                protocol_version=protocol_version,
+                load_balancing_policy=load_balancing_policy,
+                load_balancing_policy_args=load_balancing_policy_args,
+                ssl_options=ssl_options,
+            )
         except CommandExecutionError:
             log.critical("Could not drop keyspace.")
             raise
@@ -874,7 +1213,16 @@ def drop_keyspace(
     return True
 
 
-def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def list_users(
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
+):
     """
     List existing users in this Cassandra cluster.
 
@@ -886,6 +1234,14 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :type  cql_user:       str
     :param cql_pass:       The Cassandra user password if authentication is turned on.
     :type  cql_pass:       str
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options: Cassandra protocol version to use.
+    :type  ssl_options: dict
     :return:               The list of existing users.
     :rtype:                dict
 
@@ -902,7 +1258,17 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
     ret = {}
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not list users.")
         raise
@@ -921,6 +1287,10 @@ def create_user(
     port=None,
     cql_user=None,
     cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Create a new cassandra user with credentials and superuser status.
@@ -939,6 +1309,14 @@ def create_user(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options: Cassandra protocol version to use.
+    :type  ssl_options: dict
     :return:
     :rtype:
 
@@ -965,7 +1343,17 @@ def create_user(
     # The create user query doesn't actually return anything if the query succeeds.
     # If the query fails, catch the exception, log a messange and raise it again.
     try:
-        cql_query(query, contact_points, port, cql_user, cql_pass)
+        cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not create user.")
         raise
@@ -985,6 +1373,10 @@ def list_permissions(
     port=None,
     cql_user=None,
     cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     List permissions.
@@ -1005,6 +1397,14 @@ def list_permissions(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options: Cassandra protocol version to use.
+    :type  ssl_options: dict
     :return:               Dictionary of permissions.
     :rtype:                dict
 
@@ -1035,7 +1435,17 @@ def list_permissions(
     ret = {}
 
     try:
-        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+        ret = cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not list permissions.")
         raise
@@ -1055,6 +1465,10 @@ def grant_permission(
     port=None,
     cql_user=None,
     cql_pass=None,
+    protocol_version=None,
+    load_balancing_policy=None,
+    load_balancing_policy_args=None,
+    ssl_options=None,
 ):
     """
     Grant permissions to a user.
@@ -1075,6 +1489,14 @@ def grant_permission(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
+    :param protocol_version: Cassandra protocol version to use.
+    :type  protocol_version: int
+    :param load_balancing_policy: cassandra.policy class name to use
+    :type  load_balancing_policy: str
+    :param load_balancing_policy_args: cassandra.policy constructor args
+    :type  load_balancing_policy_args: dict
+    :param ssl_options: Cassandra protocol version to use.
+    :type  ssl_options: dict
     :return:
     :rtype:
 
@@ -1099,7 +1521,17 @@ def grant_permission(
     log.debug("Attempting to grant permissions with query '%s'", query)
 
     try:
-        cql_query(query, contact_points, port, cql_user, cql_pass)
+        cql_query(
+            query,
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+            protocol_version=protocol_version,
+            load_balancing_policy=load_balancing_policy,
+            load_balancing_policy_args=load_balancing_policy_args,
+            ssl_options=ssl_options,
+        )
     except CommandExecutionError:
         log.critical("Could not grant permissions.")
         raise

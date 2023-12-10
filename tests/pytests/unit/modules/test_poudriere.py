@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.modules.poudriere as poudriere
 from tests.support.mock import MagicMock, mock_open, patch
 

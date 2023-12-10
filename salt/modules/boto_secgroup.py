@@ -401,7 +401,7 @@ def convert_to_group_ids(
             # But... if we're running in test mode, it may just be that the SG is scheduled
             # to be created, and thus WOULD have been there if running "for real"...
             if __opts__["test"]:
-                log.warn(
+                log.warning(
                     "Security Group `%s` could not be resolved to an ID.  This may "
                     "cause a failure when not running in test mode.",
                     group,

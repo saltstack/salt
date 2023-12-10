@@ -11,7 +11,7 @@ Fixed
 
 - Prevent shell injections in netapi ssh client (cve-2020-16846)
 - Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
-- Properly validate eauth credentials and tokens along with their ACLs. 
+- Properly validate eauth credentials and tokens along with their ACLs.
   Prior to this change eauth was not properly validated when calling
   Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
   to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)

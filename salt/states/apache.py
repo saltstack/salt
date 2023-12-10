@@ -36,7 +36,7 @@ the above word between angle brackets (<>).
                   - FollowSymlinks
                 AllowOverride: All
 
-.. versionchanged:: 2018.3
+.. versionchanged:: 2018.3.0
 
 Allows having the same section container multiple times (e.g. <Directory /path/to/dir>).
 
@@ -89,6 +89,12 @@ import os
 
 import salt.utils.files
 import salt.utils.stringutils
+
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
 
 
 def __virtual__():

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.rabbitmq_vhost as rabbitmq_vhost
 from tests.support.mock import MagicMock, patch
 

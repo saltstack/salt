@@ -18,13 +18,15 @@
 
 import os
 
+import pytest
+
 from salt.modules.inspectlib.collector import Inspector
 from tests.support.helpers import no_symlinks
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(no_symlinks(), "Git missing 'core.symlinks=true' config")
+@pytest.mark.skipif(no_symlinks(), reason="Git missing 'core.symlinks=true' config")
 class InspectorCollectorTestCase(TestCase):
     """
     Test inspectlib:collector:Inspector

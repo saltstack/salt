@@ -66,6 +66,9 @@ The information which can be stored in a roster ``target`` is the following:
                         # does not exist, unless --pre-flight is passed to salt-ssh
                         # command or ssh_run_pre_flight is set to true in the config
                         # Added in 3001 Release.
+        ssh_pre_flight_args: # The list of arguments to pass to the script
+                             # running on the minion with ssh_pre_flight.
+                             # Can be specified as single string.
         set_path:    # Set the path environment variable, to ensure the expected python
                      # binary is in the salt-ssh path, when running the command.
                      # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
@@ -87,6 +90,15 @@ you want to intentionally run the script again you have a couple of options:
 * Wipe out your thin dir by using the -w salt-ssh arg.
 * Set ssh_run_pre_flight to True in the config
 * Run salt-ssh with the --pre-flight arg.
+
+.. _ssh_pre_flight_args:
+
+ssh_pre_flight_args
+-------------------
+
+Additional arguments to the script running on the minion with `ssh_pre_flight` can be passed
+with specifying a list of arguments or a single string. In case of using single string
+distinct arguments will be passed to the script by splitting this string with the spaces.
 
 .. _roster_defaults:
 

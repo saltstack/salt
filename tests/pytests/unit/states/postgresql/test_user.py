@@ -1,4 +1,6 @@
 import pytest
+from pytestskipmarkers.utils import platform
+
 import salt.modules.postgres as postgres
 import salt.states.postgres_user as postgres_user
 from tests.support.mock import create_autospec, patch
@@ -24,6 +26,8 @@ def fixture_db_args():
 @pytest.fixture(name="md5_pw")
 def fixture_md5_pw():
     # 'md5' + md5('password' + 'username')
+    if platform.is_fips_enabled():
+        pytest.skip("Test cannot run on a FIPS enabled platform")
     return "md55a231fcdb710d73268c4f44283487ba2"
 
 
@@ -61,8 +65,8 @@ def fixture_test_mode():
         yield
 
 
-@pytest.fixture(name="mocks")
-def fixture_mocks():
+@pytest.fixture
+def mocks():
     return {
         "postgres.role_get": create_autospec(postgres.role_get, return_value=None),
         "postgres.user_exists": create_autospec(
@@ -80,14 +84,12 @@ def fixture_mocks():
     }
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(mocks):
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules(mocks):
+    return {
         postgres_user: {"__opts__": {"test": False}, "__salt__": mocks},
         postgres: {"__opts__": {"test": False}},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 # ==========

@@ -8,9 +8,11 @@ import struct
 import sys
 from io import BytesIO
 
+import pytest
+
 import salt.utils.msgpack
 from salt.utils.odict import OrderedDict
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import msgpack
@@ -22,7 +24,9 @@ except ImportError:
 raw = {"raw": False} if msgpack.version > (0, 5, 2) else {}
 
 
-@skipIf(not salt.utils.msgpack.HAS_MSGPACK, "msgpack module required for these tests")
+@pytest.mark.skipif(
+    not salt.utils.msgpack.HAS_MSGPACK, reason="msgpack module required for these tests"
+)
 class TestMsgpack(TestCase):
     """
     In msgpack, the following aliases exist:
@@ -259,7 +263,7 @@ class TestMsgpack(TestCase):
         self.assertEqual(unpacker.unpack(), 4)
         self.assertRaises(salt.utils.msgpack.exceptions.OutOfData, unpacker.unpack)
 
-    @skipIf(
+    @pytest.mark.skipif(
         not hasattr(sys, "getrefcount"), "sys.getrefcount() is needed to pass this test"
     )
     def _test_unpacker_hook_refcnt(self, pack_func, **kwargs):
@@ -346,7 +350,6 @@ class TestMsgpack(TestCase):
         for td in test_data:
             self._check(td, pack_func, unpack_func)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_unicode_errors(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func(b"abc\xeddef", use_bin_type=False), unicode_errors="ignore", **raw
@@ -357,7 +360,6 @@ class TestMsgpack(TestCase):
         packed = pack_func(b"abc\xeddef", use_bin_type=False)
         self.assertRaises(UnicodeDecodeError, unpack_func, packed, use_list=True, **raw)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_errors_pack(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
@@ -370,7 +372,7 @@ class TestMsgpack(TestCase):
         ret = unpack_func(pack_func(b"abc"), use_list=True)
         self.assertEqual(b"abc", ret)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 2, 2),
         "use_single_float was added in msgpack==0.2.2",
     )
@@ -406,7 +408,7 @@ class TestMsgpack(TestCase):
             unpacked = unpack_func(packed, object_pairs_hook=list)
         self.assertEqual(pairlist, unpacked)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 6, 0),
         "getbuffer() was added to Packer in msgpack 0.6.0",
     )

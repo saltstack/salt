@@ -41,6 +41,7 @@ allowing users to manage their own custom rows.
 import copy
 
 import requests
+
 import salt.utils.json
 from salt.utils.dictdiffer import DictDiffer
 

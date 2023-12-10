@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.zk_concurrency as zk_concurrency
 from tests.support.mock import MagicMock, patch
 

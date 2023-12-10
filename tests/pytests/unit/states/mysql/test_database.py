@@ -2,6 +2,7 @@
 This test checks mysql_database salt state
 """
 import pytest
+
 import salt.states.mysql_database as mysql_database
 from tests.support.mock import MagicMock, patch
 

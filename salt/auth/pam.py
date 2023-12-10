@@ -24,18 +24,16 @@ authenticated against.  This defaults to `login`
 
     The Python interface to PAM does not support authenticating as ``root``.
 
-.. note:: Using PAM groups with SSSD groups on python2.
-
-    To use sssd with the PAM eauth module and groups the `pysss` module is
-    needed.  On RedHat/CentOS this is `python-sss`.
-
-    This should not be needed with python >= 3.3, because the `os` modules has the
-    `getgrouplist` function.
-
+.. note:: This module executes itself in a subprocess in order to user the system python
+    and pam libraries. We do this to avoid openssl version conflicts when
+    running under a salt onedir build.
 """
 
-
 import logging
+import os
+import pathlib
+import subprocess
+import sys
 from ctypes import (
     CDLL,
     CFUNCTYPE,
@@ -52,7 +50,11 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
-import salt.utils.user
+HAS_USER = True
+try:
+    import salt.utils.user
+except ImportError:
+    HAS_USER = False
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ class PamMessage(Structure):
     ]
 
     def __repr__(self):
-        return "<PamMessage {} '{}'>".format(self.msg_style, self.msg)
+        return f"<PamMessage {self.msg_style} '{self.msg}'>"
 
 
 class PamResponse(Structure):
@@ -116,7 +118,7 @@ class PamResponse(Structure):
     ]
 
     def __repr__(self):
-        return "<PamResponse {} '{}'>".format(self.resp_retcode, self.resp)
+        return f"<PamResponse {self.resp_retcode} '{self.resp}'>"
 
 
 CONV_FUNC = CFUNCTYPE(
@@ -163,7 +165,7 @@ def __virtual__():
     return HAS_LIBC and HAS_PAM
 
 
-def authenticate(username, password):
+def _authenticate(username, password, service, encoding="utf-8"):
     """
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
@@ -172,14 +174,12 @@ def authenticate(username, password):
 
     ``password``: the password in plain text
     """
-    service = __opts__.get("auth.pam.service", "login")
-
     if isinstance(username, str):
-        username = username.encode(__salt_system_encoding__)
+        username = username.encode(encoding)
     if isinstance(password, str):
-        password = password.encode(__salt_system_encoding__)
+        password = password.encode(encoding)
     if isinstance(service, str):
-        service = service.encode(__salt_system_encoding__)
+        service = service.encode(encoding)
 
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
@@ -209,9 +209,40 @@ def authenticate(username, password):
 
     retval = PAM_AUTHENTICATE(handle, 0)
     if retval == 0:
-        PAM_ACCT_MGMT(handle, 0)
+        retval = PAM_ACCT_MGMT(handle, 0)
     PAM_END(handle, 0)
     return retval == 0
+
+
+def authenticate(username, password):
+    """
+    Returns True if the given username and password authenticate for the
+    given service.  Returns False otherwise
+
+    ``username``: the username to authenticate
+
+    ``password``: the password in plain text
+    """
+    env = os.environ.copy()
+    env["SALT_PAM_USERNAME"] = username
+    env["SALT_PAM_PASSWORD"] = password
+    env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
+    env["SALT_PAM_ENCODING"] = __salt_system_encoding__
+    pyexe = pathlib.Path(__opts__.get("auth.pam.python", "/usr/bin/python3")).resolve()
+    pyfile = pathlib.Path(__file__).resolve()
+    if not pyexe.exists():
+        log.error("Error 'auth.pam.python' config value does not exist: %s", pyexe)
+        return False
+    ret = subprocess.run(
+        [str(pyexe), str(pyfile)],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    if ret.returncode == 0:
+        return True
+    log.error("Pam auth failed for %s: %s %s", username, ret.stdout, ret.stderr)
+    return False
 
 
 def auth(username, password, **kwargs):
@@ -228,3 +259,14 @@ def groups(username, *args, **kwargs):
     Uses system groups
     """
     return salt.utils.user.get_group_list(username)
+
+
+if __name__ == "__main__":
+    if _authenticate(
+        os.environ["SALT_PAM_USERNAME"],
+        os.environ["SALT_PAM_PASSWORD"],
+        os.environ["SALT_PAM_SERVICE"],
+        os.environ["SALT_PAM_ENCODING"],
+    ):
+        sys.exit(0)
+    sys.exit(1)

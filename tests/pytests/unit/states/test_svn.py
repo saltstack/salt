@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.states.svn as svn
 from tests.support.mock import MagicMock, patch
 

@@ -2,16 +2,17 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import types
 from datetime import datetime
+
+import pytest
 
 import salt.modules.win_system as win_system
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import wmi
@@ -122,8 +123,8 @@ class MockWMI_BIOS:
         pass
 
 
-@skipIf(not HAS_WMI, "WMI only available on Windows")
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skipif(not HAS_WMI, reason="WMI only available on Windows")
+@pytest.mark.skip_unless_on_windows
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.win_system
@@ -177,7 +178,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(win_system.init(3), "Not implemented on Windows at this time.")
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_poweroff(self):
         """
         Test to poweroff a running system
@@ -186,7 +189,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_system, "shutdown", mock):
             self.assertEqual(win_system.poweroff(), "salt")
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_reboot(self):
         """
         Test to reboot the system
@@ -194,7 +199,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.win_system.shutdown", MagicMock(return_value=True)):
             self.assertEqual(win_system.reboot(), True)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_reboot_with_timeout_in_minutes(self):
         """
         Test to reboot the system with a timeout
@@ -207,7 +214,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 timeout=5, in_seconds=False, reboot=True, only_on_pending_reboot=False
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_reboot_with_timeout_in_seconds(self):
         """
         Test to reboot the system with a timeout
@@ -220,7 +229,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 timeout=5, in_seconds=True, reboot=True, only_on_pending_reboot=False
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_reboot_with_wait(self):
         """
         Test to reboot the system with a timeout and
@@ -232,7 +243,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.reboot(wait_for_reboot=True), True)
             time.assert_called_with(330)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_shutdown(self):
         """
         Test to shutdown a running system
@@ -242,7 +255,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(win_system.shutdown(), True)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_shutdown_hard(self):
         """
         Test to shutdown a running system with no timeout or warning
@@ -253,7 +268,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.shutdown_hard(), True)
             shutdown.assert_called_with(timeout=0)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_set_computer_name(self):
         """
         Test to set the Windows computer name
@@ -279,7 +296,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_system.set_computer_name("salt"))
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_set_computer_desc(self):
         """
         Test to set the Windows computer description
@@ -299,7 +318,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 {"Computer Description": "Salt's comp"},
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_get_computer_desc(self):
         """
         Test to get the Windows computer description
@@ -313,7 +334,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.get_computer_desc(), "salt description")
             self.assertFalse(win_system.get_computer_desc())
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_join_domain(self):
         """
         Test to join a computer to an Active Directory domain
@@ -329,7 +352,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 {"Domain": "saltstack", "Restart": False},
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_join_domain_already_joined(self):
         """
         Test to join a computer to an Active Directory domain when it is
@@ -346,7 +371,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 "Already joined to saltstack",
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_unjoin_domain(self):
         """
         Test unjoining a computer from an Active Directory domain
@@ -362,7 +389,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 {"Workgroup": "WORKGROUP", "Restart": False},
             )
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_unjoin_domain_already_unjoined(self):
         """
         Test unjoining a computer from an Active Directory domain
@@ -389,7 +418,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertTrue(re.search(r"^\d{2}:\d{2} \w{2}$", win_tm))
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_set_system_time(self):
         """
         Test to set system time
@@ -408,7 +439,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         date = datetime.strftime(datetime.now(), "%m/%d/%Y")
         self.assertEqual(win_system.get_system_date(), date)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_set_system_date(self):
         """
         Test to set system date
@@ -479,7 +512,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret, "MINION")
         cmd_run_mock.assert_called_once_with(cmd="hostname")
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_get_system_info(self):
         fields = [
             "bios_caption",
@@ -589,7 +624,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(ret["chassis_bootup_state"], warning_states)
         self.assertIn(ret["thermal_state"], warning_states)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @pytest.mark.skipif(
+        not win_system.HAS_WIN32NET_MODS, reason="Missing win32 libraries"
+    )
     def test_get_system_info_no_number_of_enabled_core(self):
         """
         Tests get_system_info when there is no `NumberOfEnabledCore` property in

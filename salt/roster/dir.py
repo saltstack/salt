@@ -99,7 +99,7 @@ def _render(roster_file, **kwargs):
             __opts__["renderer"],
             __opts__["renderer_blacklist"],
             __opts__["renderer_whitelist"],
-            mask_value="passw*",
+            mask_value="*passw*",
             **kwargs
         )
         result.setdefault("host", "{}.{}".format(os.path.basename(roster_file), domain))

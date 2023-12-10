@@ -1,2 +1,0 @@
-IPCMessageSubscriber objects expose their connect method as a corotine so they
-can be wrapped by SyncWrapper.

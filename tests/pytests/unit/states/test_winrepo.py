@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.config
 import salt.states.winrepo as winrepo
 import salt.utils.path
@@ -43,8 +44,8 @@ class MockRunnerClient:
 @pytest.fixture
 def configure_loader_modules():
     patcher = patch("salt.states.winrepo.salt.runner", MockRunnerClient)
-    patcher.start()
-    return {winrepo: {}}
+    with patcher:
+        yield {winrepo: {}}
 
 
 def test_genrepo():

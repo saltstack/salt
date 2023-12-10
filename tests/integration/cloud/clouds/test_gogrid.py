@@ -2,13 +2,12 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
+import pytest
 
-# Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 
-@skipIf(True, "waiting on bug report fixes from #13365")
+@pytest.mark.skip(reason="waiting on bug report fixes from #13365")
 class GoGridTest(CloudTest):
     """
     Integration tests for the GoGrid cloud provider in Salt-Cloud

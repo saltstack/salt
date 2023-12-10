@@ -680,10 +680,13 @@ allowed-3rd-party-modules=msgpack,
                           libcloud,
                           zmq,
                           pytest,
+                          _pytest,
                           attr,
                           setuptools,
                           pytestsalt,
                           saltfactories,
+                          psutil,
+                          pytestshellutils,
                           distro,
                           os,
                           re,
@@ -691,7 +694,12 @@ allowed-3rd-party-modules=msgpack,
                           copy,
                           base64,
                           tempfile,
-                          fnmatch
+                          fnmatch,
+                          ptscripts,
+                          packaging,
+                          looseversion,
+                          pytestskipmarkers,
+                          cryptography
 
 [EXCEPTIONS]
 

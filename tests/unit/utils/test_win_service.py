@@ -1,5 +1,6 @@
-import salt.utils.platform
-from tests.support.unit import TestCase, skipIf
+import pytest
+
+from tests.support.unit import TestCase
 
 try:
     import salt.utils.win_service as win_service
@@ -18,7 +19,7 @@ class WinServiceImportTestCase(TestCase):
             )
 
 
-@skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")
+@pytest.mark.skip_unless_on_windows
 class WinServiceTestCase(TestCase):
     """
     Test cases for salt.utils.win_service

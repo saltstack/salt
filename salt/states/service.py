@@ -19,6 +19,13 @@ If your service states are running into trouble with init system detection,
 please see the :ref:`Overriding Virtual Module Providers <module-provider-override>`
 section of Salt's module documentation to work around possible errors.
 
+For services managed by systemd, the systemd_service module includes a built-in
+feature to reload the daemon when unit files are changed or extended. This
+feature is used automatically by the service state and the systemd_service
+module when running on a systemd minion, so there is no need to set up your own
+methods of reloading the daemon. If you need to manually reload the daemon for
+some reason, you can use the :func:`systemd_service.systemctl_reload <salt.modules.systemd_service.systemctl_reload>` function provided by Salt.
+
 .. note::
     The current status of a service is determined by the return code of the init/rc
     script status command. A status return code of 0 it is considered running.  Any
@@ -508,19 +515,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, None, **kwargs))
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
-        else:
-            if __opts__["test"]:
-                ret["result"] = None
-                ret["comment"] = "\n".join(
-                    [
-                        _f
-                        for _f in [
-                            "The service {} is set to restart".format(name),
-                            unmask_ret["comment"],
-                        ]
-                        if _f
-                    ]
-                )
         return ret
 
     # Run the tests
@@ -797,6 +791,14 @@ def enabled(name, **kwargs):
     __context__["service.state"] = "enabled"
 
     ret.update(_enable(name, None, **kwargs))
+    if __opts__.get("test") and ret.get(
+        "comment"
+    ) == "The named service {} is not available".format(name):
+        ret["result"] = None
+        ret["comment"] = (
+            "Service {} not present; if created in this state run, "
+            "it would have been enabled".format(name)
+        )
     return ret
 
 

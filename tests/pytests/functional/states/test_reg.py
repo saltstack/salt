@@ -1,4 +1,5 @@
 import pytest
+
 from tests.support.mock import patch
 
 try:
@@ -28,7 +29,7 @@ class RegVars:
         self.key = "SOFTWARE\\Salt-Testing"
         self.hive = self.hive
         self.key = self.key
-        self.name = "{}\\{}".format(self.hive, self.key)
+        self.name = f"{self.hive}\\{self.key}"
         self.vname = "version"
         self.vdata = "0.15.3"
         self.current_user = win_functions.get_current_user(with_domain=False)
@@ -48,7 +49,6 @@ def configure_loader_modules():
                 "dacl.check_perms": win_dacl.check_perms,
             },
         },
-        win_dacl: {"__opts__": {"test": False}},
     }
 
 
@@ -97,7 +97,7 @@ def test_present(reg_vars):
     Test reg.present
     """
     expected = {
-        "comment": "Added {} to {}".format(reg_vars.vname, reg_vars.name),
+        "comment": f"Added {reg_vars.vname} to {reg_vars.name}",
         "changes": {
             "reg": {
                 "Added": {
@@ -234,7 +234,7 @@ def test_present_string_dword(reg_vars, clean):
     vtype = "REG_DWORD"
     expected_vdata = 1
     expected = {
-        "comment": "Added {} to {}".format(vname, reg_vars.name),
+        "comment": f"Added {vname} to {reg_vars.name}",
         "changes": {
             "reg": {
                 "Added": {
@@ -268,7 +268,7 @@ def test_present_string_dword_existing(reg_vars, clean):
         hive=reg_vars.hive, key=reg_vars.key, vname=vname, vdata=vdata, vtype=vtype
     )
     expected = {
-        "comment": "{} in {} is already present".format(vname, reg_vars.name),
+        "comment": f"{vname} in {reg_vars.name} is already present",
         "changes": {},
         "name": reg_vars.name,
         "result": True,
@@ -304,7 +304,7 @@ def test_present_test_true(reg_vars, clean):
 
 def test_present_existing(reg_vars, reset):
     expected = {
-        "comment": "{} in {} is already present".format(reg_vars.vname, reg_vars.name),
+        "comment": f"{reg_vars.vname} in {reg_vars.name} is already present",
         "changes": {},
         "name": reg_vars.name,
         "result": True,
@@ -323,7 +323,7 @@ def test_present_existing_key_only(reg_vars, clean):
     reg_util.set_value(hive=reg_vars.hive, key=reg_vars.key)
 
     expected = {
-        "comment": "(Default) in {} is already present".format(reg_vars.name),
+        "comment": f"(Default) in {reg_vars.name} is already present",
         "changes": {},
         "name": reg_vars.name,
         "result": True,
@@ -333,7 +333,7 @@ def test_present_existing_key_only(reg_vars, clean):
 
 def test_present_existing_test_true(reg_vars, reset):
     expected = {
-        "comment": "{} in {} is already present".format(reg_vars.vname, reg_vars.name),
+        "comment": f"{reg_vars.vname} in {reg_vars.name} is already present",
         "changes": {},
         "name": reg_vars.name,
         "result": True,
@@ -350,7 +350,7 @@ def test_absent(reg_vars, reset):
     Test to remove a registry entry.
     """
     expected = {
-        "comment": "Removed {} from {}".format(reg_vars.key, reg_vars.hive),
+        "comment": f"Removed {reg_vars.key} from {reg_vars.hive}",
         "changes": {
             "reg": {"Removed": {"Entry": reg_vars.vname, "Key": reg_vars.name}}
         },
@@ -379,7 +379,7 @@ def test_absent_already_absent(reg_vars, clean):
     Test to remove a registry entry.
     """
     expected = {
-        "comment": "{} is already absent".format(reg_vars.name),
+        "comment": f"{reg_vars.name} is already absent",
         "changes": {},
         "name": reg_vars.name,
         "result": True,
@@ -392,7 +392,7 @@ def test_absent_already_absent_test_true(reg_vars, clean):
     Test to remove a registry entry.
     """
     expected = {
-        "comment": "{} is already absent".format(reg_vars.name),
+        "comment": f"{reg_vars.name} is already absent",
         "changes": {},
         "name": reg_vars.name,
         "result": True,

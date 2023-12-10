@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.win_network as win_network
 from tests.support.mock import MagicMock, patch
 

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.rdp as rdp
 from tests.support.mock import MagicMock, patch
 

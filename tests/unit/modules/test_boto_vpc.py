@@ -6,6 +6,7 @@ import random
 import string
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+import pytest
 from pkg_resources import (  # pylint: disable=3rd-party-module-not-gated
     DistributionNotFound,
 )
@@ -15,11 +16,11 @@ import salt.loader
 import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=no-name-in-module,unused-import
 try:
@@ -93,7 +94,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True
@@ -105,7 +106,7 @@ def _get_boto_version():
     """
     if not HAS_BOTO:
         return False
-    return LooseVersion(boto.__version__)
+    return Version(boto.__version__)
 
 
 def _get_moto_version():
@@ -113,10 +114,10 @@ def _get_moto_version():
     Returns the moto version
     """
     try:
-        return LooseVersion(str(moto.__version__))
+        return Version(str(moto.__version__))
     except AttributeError:
         try:
-            return LooseVersion(pkg_resources.get_distribution("moto").version)
+            return Version(pkg_resources.get_distribution("moto").version)
         except DistributionNotFound:
             return False
 
@@ -129,22 +130,22 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        if _get_moto_version() < LooseVersion(required_moto_version):
+        if _get_moto_version() < Version(required_moto_version):
             return False
         return True
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version() if HAS_BOTO else "None"
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}. Installed: {}".format(
+    reason="The moto version must be >= to version {}. Installed: {}".format(
         required_moto_version, _get_moto_version() if HAS_MOTO else "None"
     ),
 )
@@ -585,7 +586,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
         """
         tests False VPC not created.
@@ -631,7 +634,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         # With moto 0.4.25 through 0.4.30, is_default is set to True.
         # 0.4.24 and older and 0.4.31 and newer, is_default is False
-        if LooseVersion("0.4.25") <= _get_moto_version() < LooseVersion("0.4.31"):
+        if Version("0.4.25") <= _get_moto_version() < Version("0.4.31"):
             is_default = True
         else:
             is_default = False
@@ -667,7 +670,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(describe_vpc["vpc"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_error(self):
         """
         Tests describing parameters failure
@@ -693,17 +698,17 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(describe_vpc["vpc"]["is_default"])
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -796,7 +801,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(subnet_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_error(
         self,
     ):
@@ -930,7 +937,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(subnet_exists_result["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_checking_if_a_subnet_exists_but_providing_no_filters_the_subnet_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -944,7 +953,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         ):
             boto_vpc.subnet_exists(**conn_parameters)
 
-    @skipIf(True, "Skip these tests while investigating failures")
+    @pytest.mark.skip(reason="Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnet_by_id_for_existing_subnet_returns_correct_data(self):
         """
@@ -1062,11 +1071,11 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1130,11 +1139,11 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(igw_creation_result.get("created"))
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1191,17 +1200,17 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(ngw_creation_result.get("created"))
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
 class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_customer_gateway_the_create_customer_gateway_method_returns_true(
         self,
     ):
@@ -1215,7 +1224,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(gw_creation_result.get("created"))
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_checking_if_a_subnet_exists_by_id_the_subnet_exists_method_returns_true(
         self,
     ):
@@ -1232,7 +1241,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(gw_exists_result["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_a_subnet_does_not_exist_the_subnet_exists_method_returns_false(
         self,
     ):
@@ -1243,17 +1252,17 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(gw_exists_result["exists"])
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1270,7 +1279,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_options_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_dhcp_options_and_specifying_a_name_succeeds_the_create_dhcp_options_method_returns_true(
         self,
     ):
@@ -1297,7 +1306,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_options_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_error(
         self,
     ):
@@ -1375,7 +1386,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
         self,
     ):
@@ -1394,7 +1407,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue("error" in r)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
         self,
     ):
@@ -1449,7 +1464,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(r["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -1463,11 +1480,11 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1531,7 +1548,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue("error" in network_acl_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_network_acl_fails_the_create_network_acl_method_returns_false(
         self,
     ):
@@ -1609,7 +1626,9 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_deletion_result["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_checking_if_network_acl_exists_but_providing_no_filters_the_network_acl_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -1623,7 +1642,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_network_acl_entry_successfully_the_create_network_acl_entry_method_returns_true(
         self,
     ):
@@ -1640,7 +1659,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_network_acl_entry_for_a_non_existent_network_acl_the_create_network_acl_entry_method_returns_false(
         self,
     ):
@@ -1654,7 +1673,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_replacing_a_network_acl_entry_successfully_the_replace_network_acl_entry_method_returns_true(
         self,
     ):
@@ -1672,7 +1691,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_replacing_a_network_acl_entry_for_a_non_existent_network_acl_the_replace_network_acl_entry_method_returns_false(
         self,
     ):
@@ -1685,7 +1704,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_an_existing_network_acl_entry_the_delete_network_acl_entry_method_returns_true(
         self,
     ):
@@ -1705,7 +1724,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_entry_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_a_non_existent_network_acl_entry_the_delete_network_acl_entry_method_returns_false(
         self,
     ):
@@ -1719,7 +1738,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_entry_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_associating_an_existing_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_true(
         self,
     ):
@@ -1753,7 +1772,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue("error" in network_acl_association_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_associating_an_existing_network_acl_to_a_non_existent_subnet_the_associate_network_acl_method_returns_false(
         self,
     ):
@@ -1770,7 +1789,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_association_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
         self,
     ):
@@ -1789,7 +1808,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_a_name_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
         self,
     ):
@@ -1808,7 +1827,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_tags_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
         self,
     ):
@@ -1827,7 +1846,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_subnet_the_associate_new_network_acl_to_subnet_method_returns_false(
         self,
     ):
@@ -1861,7 +1880,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue("error" in network_acl_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_disassociating_network_acl_succeeds_the_disassociate_network_acl_method_should_return_true(
         self,
     ):
@@ -1878,7 +1897,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(
         self,
     ):
@@ -1895,7 +1914,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(dhcp_disassociate_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(
         self,
     ):
@@ -1911,17 +1930,17 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(dhcp_disassociate_result)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
 class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_route_table_succeeds_the_create_route_table_method_returns_true(
         self,
     ):
@@ -1937,7 +1956,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_route_table_on_a_non_existent_vpc_the_create_route_table_method_returns_false(
         self,
     ):
@@ -1951,7 +1970,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_a_route_table_succeeds_the_delete_route_table_method_returns_true(
         self,
     ):
@@ -1968,7 +1987,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_table_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_a_non_existent_route_table_the_delete_route_table_method_returns_false(
         self,
     ):
@@ -1982,7 +2001,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_table_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_route_table_exists_the_route_table_exists_method_returns_true(
         self,
     ):
@@ -1999,7 +2018,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_table_existence_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_route_table_does_not_exist_the_route_table_exists_method_returns_false(
         self,
     ):
@@ -2013,7 +2032,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_table_existence_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_that_when_checking_if_a_route_table_exists_but_providing_no_filters_the_route_table_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -2027,7 +2048,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
         self,
     ):
@@ -2045,7 +2066,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(association_id)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
         self,
     ):
@@ -2062,7 +2083,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(association_id)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_associating_a_route_table_with_a_non_existent_subnet_the_associate_route_table_method_should_return_false(
         self,
     ):
@@ -2079,7 +2100,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(association_id)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_disassociating_a_route_table_succeeds_the_disassociate_route_table_method_should_return_true(
         self,
     ):
@@ -2099,7 +2120,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_route_succeeds_the_create_route_method_should_return_true(
         self,
     ):
@@ -2116,7 +2137,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_creating_a_route_with_a_non_existent_route_table_the_create_route_method_should_return_false(
         self,
     ):
@@ -2130,7 +2151,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_a_route_succeeds_the_delete_route_method_should_return_true(
         self,
     ):
@@ -2147,7 +2168,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_deleting_a_route_with_a_non_existent_route_table_the_delete_route_method_should_return_false(
         self,
     ):
@@ -2161,7 +2182,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_deletion_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_replacing_a_route_succeeds_the_replace_route_method_should_return_true(
         self,
     ):
@@ -2178,7 +2199,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(route_replacing_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
+    @pytest.mark.skip(reason="Moto has not implemented this feature. Skipping for now.")
     def test_that_when_replacing_a_route_with_a_non_existent_route_table_the_replace_route_method_should_return_false(
         self,
     ):
@@ -2192,17 +2213,17 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_replacing_result)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2220,6 +2241,22 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 peer_vpc_id=other_vpc.id,
                 **conn_parameters
             )
+        )
+
+    @mock_ec2_deprecated
+    def test_request_vpc_peering_peer_region(self):
+        """
+        Run with 2 vpc ids with peer_region set
+        and returns a message
+        """
+        my_vpc = self._create_vpc()
+        other_vpc = self._create_vpc()
+        assert "msg" in boto_vpc.request_vpc_peering_connection(
+            name="my_peering",
+            requester_vpc_id=my_vpc.id,
+            peer_vpc_id=other_vpc.id,
+            peer_region="test_region",
+            **conn_parameters
         )
 
     @mock_ec2_deprecated

@@ -15,7 +15,7 @@ import re
 
 import salt.utils.json
 import salt.utils.platform
-import yaml
+import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ def _prepare_settings(pspath, settings):
         match = re.search(r"Collection\[(\{.*\})\]", setting["name"])
         if match:
             name = setting["name"][: match.start(1) - 1]
-            match_dict = yaml.load(match.group(1))
+            match_dict = salt.utils.yaml.load(match.group(1))
             index = _collection_match_to_index(
                 pspath, setting["filter"], name, match_dict
             )
@@ -247,7 +247,7 @@ def list_sites():
                     filtered_binding.update({key.lower(): binding[key]})
 
             binding_info = binding["bindingInformation"].split(":", 2)
-            ipaddress, port, hostheader = [element.strip() for element in binding_info]
+            ipaddress, port, hostheader = (element.strip() for element in binding_info)
             filtered_binding.update(
                 {"hostheader": hostheader, "ipaddress": ipaddress, "port": port}
             )

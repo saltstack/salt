@@ -33,8 +33,8 @@ systems hardware through IPMI drivers. It uses a python module `pyghmi`.
 
 IMPORT_ERR = None
 try:
-    from pyghmi.ipmi import command
-    from pyghmi.ipmi.private import session
+    from pyghmi.ipmi import command  # nosec
+    from pyghmi.ipmi.private import session  # nosec
 except Exception as ex:  # pylint: disable=broad-except
     IMPORT_ERR = str(ex)
 

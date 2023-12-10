@@ -11,7 +11,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def url(modules):
-    return "google-public-dns-a.google.com"
+    return "rewrite.amazon.com"
 
 
 @pytest.fixture(scope="module")

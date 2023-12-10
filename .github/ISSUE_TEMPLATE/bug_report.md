@@ -21,8 +21,11 @@ Please be as specific as possible and give set-up details.
 - [ ] container (Kubernetes, Docker, containerd, etc. please specify)
 - [ ] or a combination, please be explicit
 - [ ] jails if it is FreeBSD
+- [ ] classic packaging
+- [ ] onedir packaging
+- [ ] used bootstrap to install
 
-  
+
 **Steps to Reproduce the behavior**
 (Include debug logs if possible and relevant)
 
@@ -34,9 +37,9 @@ If applicable, add screenshots to help explain your problem.
 
 **Versions Report**
 <details><summary>salt --versions-report</summary>
-(Provided by running salt --versions-report. Please also mention any differences in master/minion versions.) 
+(Provided by running salt --versions-report. Please also mention any differences in master/minion versions.)
 
-```
+```yaml
 PASTE HERE
 ```
 </details>

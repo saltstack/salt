@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.cloud as cloud
 import salt.utils.cloud
 from tests.support.mock import MagicMock, patch

@@ -2,6 +2,7 @@ import logging
 import os
 
 import pytest
+
 import salt.modules.file as filemod
 import salt.states.file as filestate
 import salt.utils.files

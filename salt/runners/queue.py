@@ -204,7 +204,6 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False):
     with get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=False,
     ) as event_bus:

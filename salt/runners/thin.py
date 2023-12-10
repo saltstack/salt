@@ -14,8 +14,6 @@ def generate(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
 ):
@@ -42,8 +40,6 @@ def generate(
         extra_mods,
         overwrite,
         so_mods,
-        python2_bin,
-        python3_bin,
         absonly,
         compress,
     )
@@ -53,8 +49,6 @@ def generate_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-thin tarball and print the location of the tarball
@@ -72,5 +66,8 @@ def generate_min(
         extra_mods = ",".join([conf_mods, extra_mods])
 
     return salt.utils.thin.gen_min(
-        __opts__["cachedir"], extra_mods, overwrite, so_mods, python2_bin, python3_bin
+        __opts__["cachedir"],
+        extra_mods,
+        overwrite,
+        so_mods,
     )

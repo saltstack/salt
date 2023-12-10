@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -37,13 +38,13 @@ def configure_loader_modules():
 
 
 # 'rename' function tests: 1
-def test_rename():
+def test_rename(tmp_path):
     """
     Test if the source file exists on the system,
     rename it to the named file.
     """
-    name = "/tmp/salt"
-    source = "/tmp/salt/salt"
+    name = str(tmp_path / "salt")
+    source = str(tmp_path / "salt" / "salt")
 
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
@@ -101,7 +102,7 @@ def test_rename():
         with patch.object(os.path, "lexists", mock_lex):
             with patch.object(os.path, "isdir", mock_f):
                 with patch.dict(filestate.__opts__, {"test": False}):
-                    comt = "The target directory /tmp is not present"
+                    comt = "The target directory {} is not present".format(tmp_path)
                     ret.update({"name": name, "comment": comt, "result": False})
                     assert filestate.rename(name, source) == ret
 

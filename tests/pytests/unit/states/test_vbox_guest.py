@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.vbox_guest as vbox_guest
 from tests.support.mock import MagicMock, patch
 

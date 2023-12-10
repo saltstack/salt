@@ -10,19 +10,19 @@ import time
 import salt.utils.cloud
 import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
     import novaclient
-    from novaclient import client
-    from novaclient.shell import OpenStackComputeShell
-    import novaclient.utils
     import novaclient.auth_plugin
+    import novaclient.base
     import novaclient.exceptions
     import novaclient.extension
-    import novaclient.base
+    import novaclient.utils
+    from novaclient import client
+    from novaclient.shell import OpenStackComputeShell
 
     HAS_NOVA = True
 except ImportError:
@@ -63,9 +63,9 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = _LooseVersion(novaclient.__version__)
-        min_ver = _LooseVersion(NOVACLIENT_MINVER)
-        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
+        novaclient_ver = Version(novaclient.__version__)
+        min_ver = Version(NOVACLIENT_MINVER)
+        max_ver = Version(NOVACLIENT_MAXVER)
         if min_ver <= novaclient_ver <= max_ver:
             return HAS_NOVA
         elif novaclient_ver > max_ver:

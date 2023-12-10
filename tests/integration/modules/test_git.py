@@ -17,36 +17,37 @@ import tempfile
 from contextlib import closing
 
 import pytest
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 def _git_version():
-    try:
-        git_version = subprocess.Popen(
-            ["git", "--version"],
-            shell=False,
-            close_fds=False if salt.utils.platform.is_windows() else True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ).communicate()[0]
-    except OSError:
-        return False
-    if not git_version:
+    git = shutil.which("git")
+    if not git:
         log.debug("Git not installed")
         return False
-    git_version = git_version.strip().split()[-1]
-    git_version = git_version.decode(__salt_system_encoding__)
+    ret = subprocess.run(
+        ["git", "--version"],
+        stdout=subprocess.PIPE,
+        check=False,
+        shell=False,
+        universal_newlines=True,
+    )
+    # On macOS, the git version is displayed in a different format
+    #  git version 2.21.1 (Apple Git-122.3)
+    # As opposed to:
+    #  git version 2.21.1
+    version_str = ret.stdout.strip().split("(")[0].strip().split()[-1]
+    git_version = LooseVersion(version_str)
     log.debug("Detected git version: %s", git_version)
-    return LooseVersion(git_version)
+    return git_version
 
 
 def _worktrees_supported():
@@ -84,7 +85,7 @@ class GitModuleTest(ModuleCase):
                         "This is a test file named {}.".format(filename).encode("utf-8")
                     )
         # Navigate to the root of the repo to init, stage, and commit
-        with change_cwd(self.repo):
+        with pytest.helpers.change_cwd(self.repo):
             # Initialize a new git repository
             subprocess.check_call(["git", "init", "--quiet", self.repo])
 
@@ -157,7 +158,7 @@ class GitModuleTest(ModuleCase):
                     )
                 )
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted("add '{}'".format(x) for x in files_relpath))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
@@ -783,7 +784,7 @@ class GitModuleTest(ModuleCase):
         )
         # Remove an entire dir
         expected = "\n".join(
-            sorted(["rm '" + os.path.join(entire_dir, x) + "'" for x in self.files])
+            sorted("rm '" + os.path.join(entire_dir, x) + "'" for x in self.files)
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace("\\", "/")
@@ -869,8 +870,9 @@ class GitModuleTest(ModuleCase):
             "refs/heads/master",
         )
 
-    @skipIf(
-        not _worktrees_supported(), "Git 2.5 or newer required for worktree support"
+    @pytest.mark.skipif(
+        not _worktrees_supported(),
+        reason="Git 2.5 or newer required for worktree support",
     )
     @pytest.mark.slow_test
     def test_worktree_add_rm(self):
@@ -882,7 +884,8 @@ class GitModuleTest(ModuleCase):
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
         # get here in the first place.
-        if _git_version() >= LooseVersion("2.6.0"):
+        git_version = _git_version()
+        if git_version >= LooseVersion("2.6.0"):
             worktree_add_prefix = "Preparing "
         else:
             worktree_add_prefix = "Enter "

@@ -7,6 +7,7 @@ import os
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
@@ -133,7 +134,7 @@ def _parse_rh_config(path):
     if rh_config:
         for line in rh_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith("!") or line.startswith("#"):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -468,7 +469,19 @@ def _parse_settings_bond_4(opts, iface):
             bond.update({binding: _BOND_DEFAULTS[binding]})
 
     if "hashing-algorithm" in opts:
-        valid = ("layer2", "layer2+3", "layer3+4")
+        if __grains__["os_family"] == "RedHat":
+            # allowing for Amazon 2 based of RHEL/Centos 7
+            if __grains__["osmajorrelease"] < 8:
+                valid = ("layer2", "layer2+3", "layer3+4", "encap2+3", "encap3+4")
+            else:
+                valid = (
+                    "layer2",
+                    "layer2+3",
+                    "layer3+4",
+                    "encap2+3",
+                    "encap3+4",
+                    "vlan+srcmac",
+                )
         if opts["hashing-algorithm"] in valid:
             bond.update({"xmit_hash_policy": opts["hashing-algorithm"]})
         else:
@@ -537,7 +550,7 @@ def _parse_settings_vlan(opts, iface):
             _raise_error_iface(iface, "vlan_id", "Positive integer")
 
     if "phys_dev" in opts:
-        if len(opts["phys_dev"]) > 0:
+        if opts["phys_dev"]:
             vlan.update({"phys_dev": opts["phys_dev"]})
         else:
             _raise_error_iface(iface, "phys_dev", "Non-empty string")
@@ -712,7 +725,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["ipaddrs"] = []
         for opt in opts["ipaddrs"]:
             if salt.utils.validate.net.ipv4_addr(opt):
-                ip, prefix = [i.strip() for i in opt.split("/")]
+                ip, prefix = (i.strip() for i in opt.split("/"))
                 result["ipaddrs"].append({"ipaddr": ip, "prefix": prefix})
             else:
                 msg = "ipv4 CIDR is invalid"
@@ -1250,7 +1263,10 @@ def apply_network_settings(**settings):
         )
         res = True
     else:
-        res = __salt__["service.restart"]("network")
+        if __grains__["osmajorrelease"] >= 8:
+            res = __salt__["service.restart"]("NetworkManager")
+        else:
+            res = __salt__["service.restart"]("network")
 
     return hostname_res and res
 

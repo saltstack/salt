@@ -1,10 +1,12 @@
 import logging
 
+import pytest
+
 import salt.utils.json
 import salt.utils.virtualbox
 import tests.integration.cloud.helpers
 from tests.support.case import ShellCase
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = tests.integration.cloud.helpers.random_name()
@@ -20,7 +22,9 @@ BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
 log = logging.getLogger(__name__)
 
 
-@skipIf(salt.utils.virtualbox.HAS_LIBS is False, "virtualbox has to be installed")
+@pytest.mark.skipif(
+    salt.utils.virtualbox.HAS_LIBS is False, reason="virtualbox has to be installed"
+)
 class VirtualboxTestCase(TestCase):
     def setUp(self):
         self.vbox = salt.utils.virtualbox.vb_get_box()
@@ -43,9 +47,9 @@ class VirtualboxTestCase(TestCase):
         )
 
 
-@skipIf(
+@pytest.mark.skipif(
     salt.utils.virtualbox.HAS_LIBS is False,
-    "salt-cloud requires virtualbox to be installed",
+    reason="salt-cloud requires virtualbox to be installed",
 )
 class VirtualboxCloudTestCase(ShellCase):
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None, config_dir=None):

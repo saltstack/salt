@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.opkg as opkg
 from tests.support.mock import patch

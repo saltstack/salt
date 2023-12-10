@@ -526,8 +526,11 @@ def hosted_zone_present(
             create = True
         else:
             if private_zone:
-                for v, d in deets.get("VPCs", {}).items():
-                    if d["VPCId"] == vpc_id and d["VPCRegion"] == vpc_region:
+                vpcs = deets.get("VPCs", [])
+                if isinstance(vpcs, dict):
+                    vpcs = vpcs.values()
+                for vpc in vpcs:
+                    if vpc["VPCId"] == vpc_id and vpc["VPCRegion"] == vpc_region:
                         create = False
                         break
                     else:

@@ -16,6 +16,7 @@ import os
 import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
@@ -99,6 +100,16 @@ def _build_gecos(gecos_dict):
     ).rstrip(",")
 
 
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
+    return _cmd
+
+
 def _update_gecos(name, key, value, root=None):
     """
     Common code to change a user's GECOS information
@@ -117,7 +128,8 @@ def _update_gecos(name, key, value, root=None):
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
 
-    cmd = ["usermod"]
+    cmd = [_which("usermod")]
+
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
     cmd.extend(("-c", _build_gecos(gecos_data), name))
@@ -145,6 +157,7 @@ def add(
     nologinit=False,
     root=None,
     usergroup=None,
+    local=False,
 ):
     """
     Add a user to the minion
@@ -203,13 +216,19 @@ def add(
     usergroup
         Create and add the user to a new primary group of the same name
 
+    local (Only on systems with luseradd available)
+        Specifically add the user locally rather than possibly through remote providers (e.g. LDAP)
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     """
-    cmd = ["useradd"]
+    cmd = [_which("luseradd" if local else "useradd")]
+
     if shell:
         cmd.extend(["-s", shell])
     if uid not in (None, ""):
@@ -217,9 +236,10 @@ def add(
     if gid not in (None, ""):
         cmd.extend(["-g", gid])
     elif usergroup:
-        cmd.append("-U")
-        if __grains__["kernel"] != "Linux":
-            log.warning("'usergroup' is only supported on GNU/Linux hosts.")
+        if not local:
+            cmd.append("-U")
+            if __grains__["kernel"] != "Linux":
+                log.warning("'usergroup' is only supported on GNU/Linux hosts.")
     elif groups is not None and name in groups:
         defs_file = "/etc/login.defs"
         if __grains__["kernel"] != "OpenBSD":
@@ -256,14 +276,15 @@ def add(
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    # Setting usergroup to False adds the -N command argument. If
+    # Setting usergroup to False adds a command argument. If
     # usergroup is None, no arguments are added to allow useradd to go
     # with the defaults defined for the OS.
     if usergroup is False:
-        cmd.append("-N")
+        cmd.append("-n" if local else "-N")
 
     if createhome:
-        cmd.append("-m")
+        if not local:
+            cmd.append("-m")
     elif __grains__["kernel"] != "NetBSD" and __grains__["kernel"] != "OpenBSD":
         cmd.append("-M")
 
@@ -289,7 +310,7 @@ def add(
 
     cmd.append(name)
 
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and not local and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -320,7 +341,7 @@ def add(
     return True
 
 
-def delete(name, remove=False, force=False, root=None):
+def delete(name, remove=False, force=False, root=None, local=False):
     """
     Remove a user from the minion
 
@@ -336,23 +357,34 @@ def delete(name, remove=False, force=False, root=None):
     root
         Directory to chroot into
 
+    local (Only on systems with luserdel available):
+        Ensure the user account is removed locally ignoring global
+        account management (default is False).
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' user.delete name remove=True force=True
     """
-    cmd = ["userdel"]
+    cmd = [_which("luserdel" if local else "userdel")]
 
     if remove:
         cmd.append("-r")
 
-    if force and __grains__["kernel"] != "OpenBSD" and __grains__["kernel"] != "AIX":
+    if (
+        force
+        and __grains__["kernel"] != "OpenBSD"
+        and __grains__["kernel"] != "AIX"
+        and not local
+    ):
         cmd.append("-f")
 
     cmd.append(name)
 
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and __grains__["kernel"] != "AIX" and not local:
         cmd.extend(("-R", root))
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -416,12 +448,12 @@ def _chattrib(name, key, value, param, persist=False, root=None):
     """
     pre_info = info(name, root=root)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
 
     if value == pre_info[key]:
         return True
 
-    cmd = ["usermod"]
+    cmd = [_which("usermod")]
 
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
@@ -556,7 +588,8 @@ def chgroups(name, groups, append=False, root=None):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = ["usermod"]
+
+    cmd = [_which("usermod")]
 
     if __grains__["kernel"] != "OpenBSD":
         if append and __grains__["kernel"] != "AIX":
@@ -719,7 +752,7 @@ def chloginclass(name, loginclass, root=None):
     if loginclass == get_loginclass(name):
         return True
 
-    cmd = ["usermod", "-L", loginclass, name]
+    cmd = [_which("usermod"), "-L", loginclass, name]
 
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
@@ -874,7 +907,7 @@ def list_users(root=None):
     else:
         getpwall = functools.partial(pwd.getpwall)
 
-    return sorted([user.pw_name for user in getpwall()])
+    return sorted(user.pw_name for user in getpwall())
 
 
 def rename(name, new_name, root=None):
@@ -897,7 +930,7 @@ def rename(name, new_name, root=None):
         salt '*' user.rename name new_name
     """
     if info(new_name, root=root):
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
 
     return _chattrib(name, "name", new_name, "-l", root=root)
 

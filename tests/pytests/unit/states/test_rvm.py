@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.rvm as rvm
 from tests.support.mock import MagicMock, patch
 

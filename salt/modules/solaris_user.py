@@ -443,7 +443,7 @@ def list_users():
 
         salt '*' user.list_users
     """
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    return sorted(user.pw_name for user in pwd.getpwall())
 
 
 def rename(name, new_name):

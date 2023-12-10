@@ -4,12 +4,12 @@ Modules used to control the master itself
 
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.client.mixins
 import salt.config
 import salt.loader
-import salt.transport.client
 import salt.utils.error
-import salt.utils.zeromq
+import salt.utils.network
 
 
 class WheelClient(
@@ -39,9 +39,8 @@ class WheelClient(
     client = "wheel"
     tag_prefix = "wheel"
 
-    def __init__(self, opts=None):
-        self.opts = opts
-        self.context = {}
+    def __init__(self, opts, context=None):
+        super().__init__(opts, context=context)
         self.functions = salt.loader.wheels(opts, context=self.context)
 
     # TODO: remove/deprecate
@@ -67,11 +66,13 @@ class WheelClient(
         interface = self.opts["interface"]
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
+        if interface == "::":
+            interface = "::1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface),
+            salt.utils.network.ip_bracket(interface),
             str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)

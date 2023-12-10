@@ -5,9 +5,10 @@ Publish a command from a minion to a target
 import logging
 import time
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 from salt.exceptions import SaltInvocationError, SaltReqTimeoutError
 
@@ -18,7 +19,9 @@ __virtualname__ = "publish"
 
 def __virtual__():
     return (
-        __virtualname__ if __opts__.get("transport", "") in ("zeromq", "tcp") else False
+        __virtualname__
+        if __opts__.get("transport", "") in salt.transport.TRANSPORTS
+        else False
     )
 
 
@@ -135,7 +138,7 @@ def _publish(
         "no_parse": __opts__.get("no_parse", []),
     }
 
-    with salt.transport.client.ReqChannel.factory(
+    with salt.channel.client.ReqChannel.factory(
         __opts__, master_uri=master_uri
     ) as channel:
         try:
@@ -150,7 +153,7 @@ def _publish(
             matched_minions = set(peer_data["minions"])
             returned_minions = set()
             loop_counter = 0
-            while len(returned_minions ^ matched_minions) > 0:
+            while returned_minions ^ matched_minions:
                 load = {
                     "cmd": "pub_ret",
                     "id": __opts__["id"],
@@ -165,7 +168,7 @@ def _publish(
                     end_loop = True
                 elif (loop_interval * loop_counter) > timeout:
                     # This may be unnecessary, but I am paranoid
-                    if len(returned_minions) < 1:
+                    if not returned_minions:
                         return {}
                     end_loop = True
 
@@ -341,7 +344,7 @@ def runner(fun, arg=None, timeout=5):
         "no_parse": __opts__.get("no_parse", []),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         try:
             return channel.send(load)
         except SaltReqTimeoutError:

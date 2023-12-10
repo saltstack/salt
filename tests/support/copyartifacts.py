@@ -7,6 +7,7 @@ import os
 import subprocess
 
 import paramiko
+
 import salt.utils.yaml
 
 

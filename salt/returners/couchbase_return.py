@@ -7,7 +7,7 @@ settings are listed below, along with sane defaults.
     couchbase.host:   'salt'
     couchbase.port:   8091
     couchbase.bucket: 'salt'
-    couchbase.ttl: 24
+    couchbase.ttl: 86400
     couchbase.password: 'password'
     couchbase.skip_verify_views: False
 
@@ -167,7 +167,7 @@ def _get_ttl():
     """
     Return the TTL that we should store our objects with
     """
-    return __opts__.get("couchbase.ttl", 24) * 60 * 60  # keep_jobs is in hours
+    return __opts__.get("couchbase.ttl", 86400)
 
 
 # TODO: add to returner docs-- this is a new one

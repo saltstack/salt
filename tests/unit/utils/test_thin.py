@@ -12,6 +12,7 @@ import tempfile
 
 import jinja2
 import pytest
+
 import salt.exceptions
 import salt.utils.hashutils
 import salt.utils.json
@@ -22,12 +23,7 @@ from salt.utils.stringutils import to_bytes as bts
 from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
 def patch_if(condition, *args, **kwargs):
@@ -43,7 +39,6 @@ def patch_if(condition, *args, **kwargs):
     return inner
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.
@@ -85,6 +80,8 @@ class SSHThinTestCase(TestCase):
             "msgpack": str(code_dir / "msgpack"),
             "certifi": str(code_dir / "certifi"),
             "singledispatch": str(code_dir / "singledispatch.py"),
+            "looseversion": str(code_dir / "looseversion.py"),
+            "packaging": str(code_dir / "packaging"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -223,7 +220,7 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit):
             thin.get_ext_tops(cfg)
         assert len(thin.log.warning.mock_calls) == 4
-        assert sorted([x[1][1] for x in thin.log.warning.mock_calls]) == [
+        assert sorted(x[1][1] for x in thin.log.warning.mock_calls) == [
             "jinja2",
             "msgpack",
             "tornado",
@@ -441,6 +438,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -467,6 +472,8 @@ class SSHThinTestCase(TestCase):
             "backports_abc",
             "concurrent",
             "contextvars",
+            "looseversion",
+            "packaging",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -536,6 +543,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -562,6 +577,8 @@ class SSHThinTestCase(TestCase):
             "markupsafe",
             "backports_abc",
             "contextvars",
+            "looseversion",
+            "packaging",
             "foo",
             "bar.py",
         ]
@@ -641,6 +658,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -667,6 +692,8 @@ class SSHThinTestCase(TestCase):
             "markupsafe",
             "backports_abc",
             "contextvars",
+            "looseversion",
+            "packaging",
             "foo.so",
             "bar.so",
         ]
@@ -1103,6 +1130,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1143,6 +1172,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1186,6 +1217,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                 ],
             ),
         )
@@ -1346,9 +1379,7 @@ class SSHThinTestCase(TestCase):
                 assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     @pytest.mark.slow_test
-    @skipIf(
-        salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
-    )
+    @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")
     def test_thin_dir(self):
         """
         Test the thin dir to make sure salt-call can run
@@ -1371,4 +1402,4 @@ class SSHThinTestCase(TestCase):
                 "--version",
                 check=False,
             )
-            assert ret.exitcode == 0, ret
+            assert ret.returncode == 0, ret

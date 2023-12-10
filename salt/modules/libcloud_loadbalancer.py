@@ -34,7 +34,7 @@ import logging
 
 import salt.utils.args
 import salt.utils.compat
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -42,13 +42,13 @@ REQUIRED_LIBCLOUD_VERSION = "1.5.0"
 try:
     # pylint: disable=unused-import
     import libcloud
+    from libcloud.loadbalancer.base import Algorithm, Member
     from libcloud.loadbalancer.providers import get_driver
-    from libcloud.loadbalancer.base import Member, Algorithm
 
     # pylint: enable=unused-import
-    if hasattr(libcloud, "__version__") and _LooseVersion(
-        libcloud.__version__
-    ) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+    if hasattr(libcloud, "__version__") and Version(libcloud.__version__) < Version(
+        REQUIRED_LIBCLOUD_VERSION
+    ):
         raise ImportError()
     logging.getLogger("libcloud").setLevel(logging.CRITICAL)
     HAS_LIBCLOUD = True

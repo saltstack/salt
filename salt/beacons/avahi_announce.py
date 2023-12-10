@@ -54,18 +54,13 @@ def __virtual__():
     if HAS_PYAVAHI:
         if HAS_DBUS:
             return __virtualname__
-        return (
-            False,
-            "The {} beacon cannot be loaded. The 'python-dbus' dependency is missing.".format(
-                __virtualname__
-            ),
-        )
-    return (
-        False,
-        "The {} beacon cannot be loaded. The 'python-avahi' dependency is missing.".format(
-            __virtualname__
-        ),
-    )
+        err_msg = "The 'python-dbus' dependency is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
+
+    err_msg = "The 'python-avahi' dependency is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def validate(config):

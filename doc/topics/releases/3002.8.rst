@@ -1,0 +1,34 @@
+.. _release-3002-8:
+
+========================
+Salt 3002.8 (2022-02-25)
+========================
+
+Version 3002.8 is a CVE security fix release for :ref:`3002 <release-3002>`.
+
+
+Important notice about upgrading
+--------------------------------
+
+Version 3002.8 is a security release. 3002.8 minions are not able to
+communicate with masters older than 3002.8. You must upgrade your masters
+before upgrading minions.
+
+
+Minion authentication security
+------------------------------
+
+Authentication between masters and minions rely on public/private key
+encryption and message signing. To secure minion authentication before you must
+pre-seed the master's public key on minions. To pre-seed the minions' master
+key, place a copy of the master's public key in the minion's pki directory as
+``minion_master.pub``.
+
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2020-22935)
+- Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)

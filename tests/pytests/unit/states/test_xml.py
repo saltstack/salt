@@ -3,6 +3,7 @@ Test cases for xml state
 """
 
 import pytest
+
 import salt.states.xml as xml
 from tests.support.mock import MagicMock, patch
 

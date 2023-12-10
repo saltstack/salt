@@ -3,11 +3,19 @@
 """
 
 import logging
+import textwrap
 
 import pytest  # pylint: disable=unused-import
+
 import salt.state
+from salt.utils.odict import DefaultOrderedDict, OrderedDict
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture
@@ -102,6 +110,29 @@ def test_compile_state_usage(highstate, state_tree_dir):
         assert state_usage_dict["base"]["unused"] == ["bar", "top"]
 
 
+def test_compile_state_usage_empty_topfile(highstate, state_tree_dir):
+    """
+    See https://github.com/saltstack/salt/issues/61614.
+
+    The failure was triggered by having a saltenv that contained states but was
+    not referenced in any topfile. A simple test case is an empty topfile in
+    the base saltenv.
+    """
+    top = pytest.helpers.temp_file("top.sls", "", str(state_tree_dir))
+    unused_state = pytest.helpers.temp_file(
+        "foo.sls", "foo: test.nop", str(state_tree_dir)
+    )
+
+    with top, unused_state:
+        state_usage_dict = highstate.compile_state_usage()
+
+        assert state_usage_dict["base"]["count_unused"] == 2
+        assert state_usage_dict["base"]["count_used"] == 0
+        assert state_usage_dict["base"]["count_all"] == 2
+        assert state_usage_dict["base"]["used"] == []
+        assert state_usage_dict["base"]["unused"] == ["foo", "top"]
+
+
 def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
     """
     See https://github.com/saltstack/salt/issues/47182
@@ -157,7 +188,7 @@ def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
         with pytest.helpers.temp_file(
             "slsfile1.sls", slsfile1, sls_dir
         ), pytest.helpers.temp_file(
-            "slsfile1.sls", slsfile1, sls_dir
+            "slsfile2.sls", slsfile2, sls_dir
         ), pytest.helpers.temp_file(
             "stateB.sls", stateB, sls_dir
         ), pytest.helpers.temp_file(
@@ -173,3 +204,217 @@ def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
             high, _ = highstate.render_highstate(matches)
             ret = salt.state.find_sls_ids("issue-47182.stateA.newer", high)
             assert ret == [("somestuff", "cmd")]
+
+
+def test_dont_extend_in_excluded_sls_file(highstate, state_tree_dir):
+    """
+    See https://github.com/saltstack/salt/issues/62082#issuecomment-1245461333
+    """
+    top_sls = textwrap.dedent(
+        """\
+        base:
+          '*':
+            - test1
+            - exclude
+        """
+    )
+    exclude_sls = textwrap.dedent(
+        """\
+       exclude:
+         - sls: test2
+       """
+    )
+    test1_sls = textwrap.dedent(
+        """\
+       include:
+         - test2
+
+       test1:
+         cmd.run:
+           - name: echo test1
+       """
+    )
+    test2_sls = textwrap.dedent(
+        """\
+        extend:
+          test1:
+            cmd.run:
+              - name: echo "override test1 in test2"
+
+        test2-id:
+          cmd.run:
+            - name: echo test2
+        """
+    )
+    sls_dir = str(state_tree_dir)
+    with pytest.helpers.temp_file(
+        "top.sls", top_sls, sls_dir
+    ), pytest.helpers.temp_file(
+        "test1.sls", test1_sls, sls_dir
+    ), pytest.helpers.temp_file(
+        "test2.sls", test2_sls, sls_dir
+    ), pytest.helpers.temp_file(
+        "exclude.sls", exclude_sls, sls_dir
+    ):
+        # manually compile the high data, error checking is not needed in this
+        # test case.
+        top = highstate.get_top()
+        matches = highstate.top_matches(top)
+        high, _ = highstate.render_highstate(matches)
+
+        # high is mutated by call_high and the different "pipeline steps"
+        assert high == OrderedDict(
+            [
+                (
+                    "__extend__",
+                    [
+                        {
+                            "test1": OrderedDict(
+                                [
+                                    ("__sls__", "test2"),
+                                    ("__env__", "base"),
+                                    (
+                                        "cmd",
+                                        [
+                                            OrderedDict(
+                                                [
+                                                    (
+                                                        "name",
+                                                        'echo "override test1 in test2"',
+                                                    )
+                                                ]
+                                            ),
+                                            "run",
+                                        ],
+                                    ),
+                                ]
+                            )
+                        }
+                    ],
+                ),
+                (
+                    "test1",
+                    OrderedDict(
+                        [
+                            (
+                                "cmd",
+                                [
+                                    OrderedDict([("name", "echo test1")]),
+                                    "run",
+                                    {"order": 10001},
+                                ],
+                            ),
+                            ("__sls__", "test1"),
+                            ("__env__", "base"),
+                        ]
+                    ),
+                ),
+                (
+                    "test2-id",
+                    OrderedDict(
+                        [
+                            (
+                                "cmd",
+                                [
+                                    OrderedDict([("name", "echo test2")]),
+                                    "run",
+                                    {"order": 10000},
+                                ],
+                            ),
+                            ("__sls__", "test2"),
+                            ("__env__", "base"),
+                            ("__sls_included_from__", ["test1"]),
+                        ]
+                    ),
+                ),
+                ("__exclude__", [OrderedDict([("sls", "test2")])]),
+            ]
+        )
+        highstate.state.call_high(high)
+        # assert that the extend declaration was not applied
+        assert high == OrderedDict(
+            [
+                (
+                    "test1",
+                    OrderedDict(
+                        [
+                            (
+                                "cmd",
+                                [
+                                    OrderedDict([("name", "echo test1")]),
+                                    "run",
+                                    {"order": 10001},
+                                ],
+                            ),
+                            ("__sls__", "test1"),
+                            ("__env__", "base"),
+                        ]
+                    ),
+                )
+            ]
+        )
+
+
+def test_verify_tops(highstate):
+    """
+    test basic functionality of verify_tops
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops["base"] = OrderedDict([("*", ["test", "test2"])])
+    matches = highstate.verify_tops(tops)
+    # [] means there where no errors when verifying tops
+    assert matches == []
+
+
+def test_verify_tops_not_dict(highstate):
+    """
+    test verify_tops when top data is not a dict
+    """
+    matches = highstate.verify_tops(["base", "test", "test2"])
+    assert matches == ["Top data was not formed as a dict"]
+
+
+def test_verify_tops_env_empty(highstate):
+    """
+    test verify_tops when the environment is empty
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops[""] = OrderedDict([("*", ["test", "test2"])])
+    matches = highstate.verify_tops(tops)
+    assert matches == ["Empty saltenv statement in top file"]
+
+
+def test_verify_tops_sls_not_list(highstate):
+    """
+    test verify_tops when the sls files are not a list
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops["base"] = OrderedDict([("*", "test test2")])
+    matches = highstate.verify_tops(tops)
+    # [] means there where no errors when verifying tops
+    assert matches == ["Malformed topfile (state declarations not formed as a list)"]
+
+
+def test_verify_tops_match(highstate):
+    """
+    test basic functionality of verify_tops when using a matcher
+    like `match: glob`.
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops["base"] = OrderedDict(
+        [("*", [OrderedDict([("match", "glob")]), "test", "test2"])]
+    )
+    matches = highstate.verify_tops(tops)
+    # [] means there where no errors when verifying tops
+    assert matches == []
+
+
+def test_verify_tops_match_none(highstate):
+    """
+    test basic functionality of verify_tops when using a matcher
+    when it is empty, like `match: ""`.
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops["base"] = OrderedDict([("*", [OrderedDict([("match", "")]), "test", "test2"])])
+    matches = highstate.verify_tops(tops)
+    assert "Improperly formatted top file matcher in saltenv" in matches[0]

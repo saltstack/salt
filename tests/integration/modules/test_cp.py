@@ -10,16 +10,16 @@ import uuid
 
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -63,10 +63,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "This test hangs on Windows on Py3",
-    )
+    @pytest.mark.skip_on_windows(reason="This test hangs on Windows on Py3")
     def test_get_file_templated_paths(self, tgt):
         """
         cp.get_file
@@ -92,12 +89,12 @@ class CPModuleTest(ModuleCase):
         """
         src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
         with salt.utils.files.fopen(src, "rb") as fp_:
-            hash_str = hashlib.md5(fp_.read()).hexdigest()
+            hash_str = hashlib.sha256(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
         with salt.utils.files.fopen(tgt, "rb") as scene:
             data = scene.read()
-        self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
+        self.assertEqual(hash_str, hashlib.sha256(data).hexdigest())
         data = salt.utils.stringutils.to_unicode(data)
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -237,9 +234,9 @@ class CPModuleTest(ModuleCase):
         self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -253,9 +250,9 @@ class CPModuleTest(ModuleCase):
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -276,9 +273,9 @@ class CPModuleTest(ModuleCase):
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
             raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -314,13 +311,13 @@ class CPModuleTest(ModuleCase):
         self.run_function(
             "cp.get_url",
             [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
+                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT",
                 tgt,
             ],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Base system", data)
+        self.assertIn("The official FreeBSD", data)
 
     # cp.get_file_str tests
 
@@ -349,9 +346,9 @@ class CPModuleTest(ModuleCase):
         """
         src = "https://repo.saltproject.io/index.html"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -416,15 +413,15 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, "r") as cp_:
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
+    @pytest.mark.skip_if_binaries_missing("nginx")
     @pytest.mark.slow_test
     @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):
         """
         cp.cache_file
         """
-        nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{}/".format(nginx_port)
+        nginx_port = ports.get_unused_localhost_port()
+        url_prefix = f"http://localhost:{nginx_port}/"
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -447,7 +444,7 @@ class CPModuleTest(ModuleCase):
             fp_.write(
                 textwrap.dedent(
                     salt.utils.stringutils.to_str(
-                        """\
+                        f"""\
                 user root;
                 worker_processes 1;
                 error_log {nginx_conf_dir}/server_error.log;
@@ -477,9 +474,7 @@ class CPModuleTest(ModuleCase):
                             return 302 /actual_file;
                         }}
                     }}
-                }}""".format(
-                            **locals()
-                        )
+                }}"""
                     )
                 )
             )

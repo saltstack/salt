@@ -2,6 +2,7 @@ import logging
 import os
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -373,3 +374,60 @@ def test_managed():
                                         filestate.managed(name, user=user, group=group)
                                         == ret
                                     )
+
+
+def test_managed_test_mode_user_group_not_present():
+    """
+    Test file managed in test mode with no user or group existing
+    """
+    filename = "/tmp/managed_no_user_group_test_mode"
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "file.group_to_gid": MagicMock(side_effect=["1234", "", ""]),
+            "file.user_to_uid": MagicMock(side_effect=["", "4321", ""]),
+        },
+    ), patch.dict(filestate.__opts__, {"test": True}):
+        ret = filestate.managed(
+            filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.managed(
+            filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.managed(
+            filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+
+@pytest.mark.parametrize(
+    "source,check_result",
+    [
+        ("http://@$@dead_link@$@/src.tar.gz", True),
+        ("https://@$@dead_link@$@/src.tar.gz", True),
+        ("ftp://@$@dead_link@$@/src.tar.gz", True),
+        ("salt://@$@dead_link@$@/src.tar.gz", False),
+        ("file://@$@dead_link@$@/src.tar.gz", False),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "https://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+        (
+            ["salt://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            False,
+        ),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+    ],
+)
+def test_sources_source_hash_check(source, check_result):
+    assert filestate._http_ftp_check(source) is check_result

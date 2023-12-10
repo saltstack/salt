@@ -96,7 +96,7 @@ def _blkid(fs_type=None):
         dev_name = device.pop(0)[:-1]
         data[dev_name] = dict()
         for k_set in device:
-            ks_key, ks_value = [elm.replace('"', "") for elm in k_set.split("=")]
+            ks_key, ks_value = (elm.replace('"', "") for elm in k_set.split("="))
             data[dev_name][ks_key.lower()] = ks_value
 
     if fs_type:

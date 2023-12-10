@@ -84,7 +84,7 @@ def _present_test(
             for key, status in keys.items():
                 if status == "exists":
                     continue
-                comment += "Set to {}: {}\n".format(status, key)
+                comment += f"Set to {status}: {key}\n"
             if comment:
                 return result, comment
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(
@@ -95,11 +95,11 @@ def _present_test(
         else:
             return (
                 True,
-                "All host keys in file {} are already present".format(source),
+                f"All host keys in file {source} are already present",
             )
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -128,9 +128,9 @@ def _present_test(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if check == "update":
-        comment = "Key {} for user {} is set to be updated".format(name, user)
+        comment = f"Key {name} for user {user} is set to be updated"
     elif check == "add":
-        comment = "Key {} for user {} is set to be added".format(name, user)
+        comment = f"Key {name} for user {user} is set to be added"
     elif check == "exists":
         result = True
         comment = "The authorized host key {} is already present for user {}".format(
@@ -160,7 +160,7 @@ def _absent_test(
             for key, status in list(keys.items()):
                 if status == "add":
                     continue
-                comment += "Set to remove: {}\n".format(key)
+                comment += f"Set to remove: {key}\n"
             if comment:
                 return result, comment
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(
@@ -169,10 +169,10 @@ def _absent_test(
         if err:
             return False, err
         else:
-            return (True, "All host keys in file {} are already absent".format(source))
+            return (True, f"All host keys in file {source} are already absent")
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -201,7 +201,7 @@ def _absent_test(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if check == "update" or check == "exists":
-        comment = "Key {} for user {} is set for removal".format(name, user)
+        comment = f"Key {name} for user {user} is set for removal"
     else:
         comment = "Key is already absent"
         result = True
@@ -218,7 +218,7 @@ def present(
     options=None,
     config=".ssh/authorized_keys",
     fingerprint_hash_type=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Verifies that the specified SSH key is present for the specified user
@@ -230,8 +230,8 @@ def present(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
@@ -269,7 +269,7 @@ def present(
 
     if source == "":
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -311,7 +311,7 @@ def present(
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
         filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(ssh\-|ecds).*")
+        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
             filehasoptions = sshre.match(keyline)
@@ -413,8 +413,8 @@ def absent(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
@@ -460,7 +460,7 @@ def absent(
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
         filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(ssh\-|ecds).*")
+        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
             filehasoptions = sshre.match(keyline)
@@ -483,7 +483,7 @@ def absent(
                 )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -524,7 +524,7 @@ def manage(
     options=None,
     config=".ssh/authorized_keys",
     fingerprint_hash_type=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 3000
@@ -538,8 +538,8 @@ def manage(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
@@ -580,15 +580,29 @@ def manage(
         # gather list potential ssh keys for removal comparison
         # options, enc, and comments could be in the mix
         all_potential_keys.extend(ssh_key.split(" "))
-    existing_keys = __salt__["ssh.auth_keys"](user=user).keys()
+
+    existing_keys = __salt__["ssh.auth_keys"](
+        user=user, config=config, fingerprint_hash_type=fingerprint_hash_type
+    ).keys()
+
     remove_keys = set(existing_keys).difference(all_potential_keys)
     for remove_key in remove_keys:
         if __opts__["test"]:
-            remove_comment = "{} Key set for removal".format(remove_key)
+            remove_comment = f"{remove_key} Key set for removal"
             ret["comment"] = remove_comment
             ret["result"] = None
         else:
-            remove_comment = absent(remove_key, user)["comment"]
+            remove_comment = absent(
+                remove_key,
+                user,
+                enc=enc,
+                comment=comment,
+                source=source,
+                options=options,
+                config=config,
+                fingerprint_hash_type=fingerprint_hash_type,
+                **kwargs,
+            )["comment"]
             ret["changes"][remove_key] = remove_comment
 
     for ssh_key in ssh_keys:
@@ -601,7 +615,7 @@ def manage(
             options,
             config,
             fingerprint_hash_type,
-            **kwargs
+            **kwargs,
         )
         if run_return["changes"]:
             ret["changes"].update(run_return["changes"])

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.pecl as pecl
 from tests.support.mock import MagicMock, patch
 

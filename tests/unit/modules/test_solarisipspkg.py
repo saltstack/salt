@@ -1,14 +1,18 @@
 import sys
 
+import pytest
+
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.solarisipspkg as solarisips
 import salt.utils.data
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(sys.platform != "solaris", "Skip when not running on Solaris")
+@pytest.mark.skipif(
+    sys.platform != "solaris", reason="Skip when not running on Solaris"
+)
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.solarisips

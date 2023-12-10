@@ -4,7 +4,6 @@ import salt.cli.caller
 import salt.defaults.exitcodes
 import salt.utils.parsers
 from salt.config import _expand_glob_path
-from salt.utils.verify import verify_log
 
 
 class SaltCall(salt.utils.parsers.SaltCallOptionParser):
@@ -37,10 +36,6 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             self.config["file_client"] = "local"
         if self.options.master:
             self.config["master"] = self.options.master
-
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
 
         caller = salt.cli.caller.Caller.factory(self.config)
 

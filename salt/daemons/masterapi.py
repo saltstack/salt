@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.mine
 import salt.utils.minions
 import salt.utils.path
@@ -87,7 +88,7 @@ def clean_fsbackend(opts):
     # Clear remote fileserver backend caches so they get recreated
     for backend in ("git", "hg", "svn"):
         if backend in opts["fileserver_backend"]:
-            env_cache = os.path.join(opts["cachedir"], "{}fs".format(backend), "envs.p")
+            env_cache = os.path.join(opts["cachedir"], f"{backend}fs", "envs.p")
             if os.path.isfile(env_cache):
                 log.debug("Clearing %sfs env cache", backend)
                 try:
@@ -98,7 +99,7 @@ def clean_fsbackend(opts):
                     )
 
             file_lists_dir = os.path.join(
-                opts["cachedir"], "file_lists", "{}fs".format(backend)
+                opts["cachedir"], "file_lists", f"{backend}fs"
             )
             try:
                 file_lists_caches = os.listdir(file_lists_dir)
@@ -137,7 +138,7 @@ def clean_pub_auth(opts):
                     if not os.path.isfile(auth_file_path):
                         continue
                     if time.time() - os.path.getmtime(auth_file_path) > (
-                        opts["keep_jobs"] * 3600
+                        salt.utils.job.get_keep_jobs_seconds(opts)
                     ):
                         os.remove(auth_file_path)
     except OSError:
@@ -176,7 +177,7 @@ def mk_key(opts, user):
             opts["cachedir"], ".{}_key".format(user.replace("\\", "_"))
         )
     else:
-        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
 
     if os.path.exists(keyfile):
         log.debug("Removing stale keyfile: %s", keyfile)
@@ -218,7 +219,13 @@ def access_keys(opts):
     acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
-        key = mk_key(opts, user)
+
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
+        if os.path.exists(keyfile):
+            with salt.utils.files.fopen(keyfile, "r") as fp:
+                key = salt.utils.stringutils.to_unicode(fp.read())
+        else:
+            key = mk_key(opts, user)
         if key is not None:
             keys[user] = key
 
@@ -230,7 +237,11 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
-                keys[user] = mk_key(opts, user)
+                if os.path.exists(keyfile):
+                    with salt.utils.files.fopen(keyfile, "r") as fp:
+                        keys[user] = salt.utils.stringutils.to_unicode(fp.read())
+                else:
+                    keys[user] = mk_key(opts, user)
         log.profile("End pwd.getpwall() call in masterapi access_keys function")
 
     return keys
@@ -321,7 +332,11 @@ class AutoKey:
         """
         Check a keyid for membership in a autosign directory.
         """
-        autosign_dir = os.path.join(self.opts["pki_dir"], "minions_autosign")
+        if self.opts["cluster_id"]:
+            pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            pki_dir = self.opts["pki_dir"]
+        autosign_dir = os.path.join(pki_dir, "minions_autosign")
 
         # cleanup expired files
         expire_minutes = self.opts.get("autosign_timeout", 120)
@@ -365,7 +380,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
@@ -401,11 +416,9 @@ class RemoteFuncs:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
@@ -590,7 +603,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("minions/{}".format(minion), "mine")
+            mine_data = self.cache.fetch(f"minions/{minion}", "mine")
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -617,7 +630,7 @@ class RemoteFuncs:
                                 continue
                             salt.utils.dictupdate.set_dict_key_value(
                                 minion_side_acl,
-                                "{}:{}".format(minion, function),
+                                f"{minion}:{function}",
                                 get_minion,
                             )
                 if salt.utils.mine.minion_side_acl_denied(
@@ -1067,13 +1080,11 @@ class LocalFuncs:
     # _auth
     def __init__(self, opts, key):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
@@ -1179,7 +1190,7 @@ class LocalFuncs:
         fun = load.pop("fun")
         tag = salt.utils.event.tagify(jid, prefix="wheel")
         data = {
-            "fun": "wheel.{}".format(fun),
+            "fun": f"wheel.{fun}",
             "jid": jid,
             "tag": tag,
             "user": username,
@@ -1263,7 +1274,7 @@ class LocalFuncs:
         # Setup authorization list variable and error information
         auth_list = auth_check.get("auth_list", [])
         error = auth_check.get("error")
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+        err_msg = f'Authentication failure of type "{auth_type}" occurred.'
 
         if error:
             # Authentication error occurred: do not continue.

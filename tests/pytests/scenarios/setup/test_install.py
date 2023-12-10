@@ -3,11 +3,14 @@ Tests for building and installing salt
 """
 import json
 import logging
+import os
 import pathlib
 import re
 import sys
 
 import pytest
+
+import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.version
@@ -16,10 +19,17 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
+
+
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
 
 
 def use_static_requirements_ids(value):
@@ -39,6 +49,7 @@ def virtualenv(virtualenv, use_static_requirements):
     return virtualenv
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_wheel package
@@ -96,7 +107,7 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt wheel
+        # Let's also ensure we have a salt/_version.txt from the installed salt wheel
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -109,7 +120,7 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = pathlib.Path(venv.venv_dir)
         installed_salt_path = installed_salt_path.joinpath(*subdir)
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
 
 
@@ -127,7 +138,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version
@@ -173,7 +184,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version
@@ -231,7 +242,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt egg
+        # Let's also ensure we have a salt/_version.txt from the installed salt egg
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -248,20 +259,13 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         log.debug("Installed salt path glob matches: %s", installed_salt_path)
         installed_salt_path = installed_salt_path[0] / "salt"
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file(), "{} is not a file".format(
             salt_generated_version_file_path
         )
 
 
-# On python 3.5 Windows sdist fails with encoding errors. This is resolved
-# in later versions.
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows()
-    and sys.version_info > (3,)
-    and sys.version_info < (3, 6),
-    reason="Skip on python 3.5",
-)
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package
@@ -314,6 +318,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             str(cache_dir),
             cwd=src_dir,
         )
+
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))
@@ -332,7 +337,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
 
         venv.install(str(salt_generated_package))
 
-        # Let's also ensure we have a salt/_version.py from the installed salt wheel
+        # Let's also ensure we have a salt/_version.txt from the installed salt wheel
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -345,10 +350,10 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = pathlib.Path(venv.venv_dir)
         installed_salt_path = installed_salt_path.joinpath(*subdir)
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
         with salt_generated_version_file_path.open() as rfh:
-            log.debug("_version.py contents:\n >>>>>>\n%s\n <<<<<<", rfh.read())
+            log.debug("_version.txt contents:\n >>>>>>\n%s\n <<<<<<", rfh.read())
 
         # Let's ensure the version is correct
         cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")
@@ -366,6 +371,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test installing directly from source
@@ -436,7 +442,7 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt
+        # Let's also ensure we have a salt/_version.txt from the installed salt
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -451,5 +457,40 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
         if not installed_salt_path:
             pytest.fail("Failed to find the installed salt path")
         installed_salt_path = installed_salt_path[0] / "salt"
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
+
+
+def test_salt_install_args(
+    virtualenv, cache_dir, use_static_requirements, src_dir, tmp_path
+):
+    """
+    test building with `install` command with --salt-*
+    args. For example, --salt-config-dir and --salt-cache-dir.
+    """
+    cache_dir = tmp_path / "cache_dir"
+    config_dir = tmp_path / "config_dir"
+    # Let's create the testing virtualenv
+    with virtualenv as venv:
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
+        env = os.environ.copy()
+        env["GENERATE_SALT_SYSPATHS"] = "True"
+        ret = venv.run(
+            venv.venv_python,
+            "setup.py",
+            "--salt-config-dir",
+            str(config_dir),
+            "--salt-cache-dir",
+            str(cache_dir),
+            "install",
+            cwd=src_dir,
+            env=env,
+        )
+        assert ret.returncode == 0
+        syspath = pathlib.Path(src_dir, "build", "lib", "salt", "_syspaths.py")
+        assert syspath.exists()
+        with salt.utils.files.fopen(syspath) as fp:
+            data = fp.read()
+        assert str(cache_dir) in data
+        assert str(config_dir) in data
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)

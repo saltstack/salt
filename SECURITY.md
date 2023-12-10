@@ -1,7 +1,7 @@
 # SaltStack's Security Disclosure Policy
 
 **Email**
-- security@saltstack.com
+- saltproject-security.pdl@broadcom.com
 
 **GPG key ID:**
 - 4EA0793D
@@ -78,7 +78,7 @@ vtBIWO4LPeGEvb2Gs65PL2eouOqU6yvBr5Y=
 -----END PGP PUBLIC KEY BLOCK-----
 ```
 
-The SaltStack Security Team is available at security@saltstack.com for
+The SaltStack Security Team is available at saltproject-security.pdl@broadcom.com for
 security-related bug reports or questions.
 
 We request the disclosure of any security-related bugs or issues be reported
@@ -92,7 +92,7 @@ SaltStack takes security and the trust of our customers and users very
 seriously. Our disclosure policy is intended to resolve security issues as
 quickly and safely as is possible.
 
-1.  A security report sent to security@saltstack.com is assigned to a team
+1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned to a team
     member. This person is the primary contact for questions and will
     coordinate the fix, release, and announcement.
 

@@ -6,13 +6,8 @@ import functools
 import logging
 import re
 
-try:
-    from salt.utils.versions import LooseVersion as _LooseVersion
-    from salt.exceptions import CommandExecutionError
-
-    HAS_REQUIRED_LIBS = True
-except ImportError:
-    HAS_REQUIRED_LIBS = False
+from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -24,10 +19,6 @@ def __virtual__():
     """
     Load this module on Debian-based systems only
     """
-
-    if not HAS_REQUIRED_LIBS:
-        return (False, "Required library could not be imported")
-
     if __grains__.get("os_family", "") in ("Kali", "Debian"):
         return __virtualname__
     elif __grains__.get("os_family", "") == "Cumulus":
@@ -74,7 +65,7 @@ def list_installed():
     prefix_len = len(_package_prefix()) + 1
 
     return sorted(
-        [pkg[prefix_len:] for pkg in result], key=functools.cmp_to_key(_cmp_version)
+        (pkg[prefix_len:] for pkg in result), key=functools.cmp_to_key(_cmp_version)
     )
 
 
@@ -133,7 +124,7 @@ def needs_reboot():
 
         salt '*' kernelpkg.needs_reboot
     """
-    return _LooseVersion(active()) < _LooseVersion(latest_installed())
+    return LooseVersion(active()) < LooseVersion(latest_installed())
 
 
 def upgrade(reboot=False, at_time=None):
@@ -192,7 +183,7 @@ def upgrade_available():
 
         salt '*' kernelpkg.upgrade_available
     """
-    return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+    return LooseVersion(latest_available()) > LooseVersion(latest_installed())
 
 
 def remove(release):
@@ -278,8 +269,8 @@ def _cmp_version(item1, item2):
     """
     Compare function for package version sorting
     """
-    vers1 = _LooseVersion(item1)
-    vers2 = _LooseVersion(item2)
+    vers1 = LooseVersion(item1)
+    vers2 = LooseVersion(item2)
 
     if vers1 < vers2:
         return -1

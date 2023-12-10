@@ -8,12 +8,14 @@
 
     Test support helpers
 """
+import asyncio
 import base64
 import builtins
 import errno
 import fnmatch
 import functools
 import inspect
+import io
 import json
 import logging
 import os
@@ -29,64 +31,62 @@ import textwrap
 import threading
 import time
 import types
-from contextlib import contextmanager
 
 import attr
 import pytest
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
+import pytestskipmarkers.utils.platform
+import tornado.ioloop
+import tornado.web
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from saltfactories.exceptions import FactoryFailure as ProcessFailed
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
-
-HAS_SYMLINKS = None
-
 
 PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
-ON_PY35 = sys.version_info < (3, 6)
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
 
+@functools.lru_cache(maxsize=1, typed=False)
 def no_symlinks():
     """
     Check if git is installed and has symlinks enabled in the configuration.
     """
-    global HAS_SYMLINKS
-    if HAS_SYMLINKS is not None:
-        return not HAS_SYMLINKS
-    output = ""
     try:
-        output = subprocess.Popen(
+        ret = subprocess.run(
             ["git", "config", "--get", "core.symlinks"],
-            cwd=RUNTIME_VARS.TMP,
+            shell=False,
+            text=True,
+            cwd=RUNTIME_VARS.CODE_DIR,
             stdout=subprocess.PIPE,
-        ).communicate()[0]
+            check=False,
+        )
+        if ret.returncode == 0 and ret.stdout.strip() == "true":
+            return False
+        return True
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    except subprocess.CalledProcessError:
-        # git returned non-zero status
-        pass
-    HAS_SYMLINKS = False
-    if output.strip() == "true":
-        HAS_SYMLINKS = True
-    return not HAS_SYMLINKS
+    return True
 
 
 def destructiveTest(caller):
@@ -263,7 +263,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
                     teardown()
-                backoff_time = attempt ** 2
+                backoff_time = attempt**2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls
@@ -496,7 +496,7 @@ class ForceImportErrorOn:
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
     def __fake_import__(
@@ -510,7 +510,7 @@ class ForceImportErrorOn:
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
-                raise ImportError("Forced ImportError raised for {!r}".format(name))
+                raise ImportError(f"Forced ImportError raised for {name!r}")
 
             if importerror_fromlist.intersection(set(fromlist)):
                 raise ImportError(
@@ -525,7 +525,7 @@ class ForceImportErrorOn:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
 class MockWraps:
@@ -700,7 +700,7 @@ def with_system_user(
                 log.debug("Failed to create system user")
                 # The user was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {!r}".format(username))
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system user %r", username)
@@ -728,7 +728,7 @@ def with_system_user(
                     hashed_password = password
                 else:
                     hashed_password = salt.utils.pycrypto.gen_hash(password=password)
-                hashed_password = "'{}'".format(hashed_password)
+                hashed_password = f"'{hashed_password}'"
                 add_pwd = cls.run_function(
                     "shadow.set_password", [username, hashed_password]
                 )
@@ -807,7 +807,7 @@ def with_system_group(group, on_existing="delete", delete=True):
                 log.debug("Failed to create system group")
                 # The group was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {!r}".format(group))
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system group %r", group)
@@ -904,7 +904,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                 log.debug("Failed to create system user")
                 # The user was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {!r}".format(username))
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system user %r", username)
@@ -931,7 +931,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                 log.debug("Failed to create system group")
                 # The group was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {!r}".format(group))
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system group %r", group)
@@ -1086,57 +1086,6 @@ def requires_system_grains(func):
     return decorator
 
 
-@requires_system_grains
-def runs_on(grains=None, **kwargs):
-    """
-    Skip the test if grains don't match the values passed into **kwargs
-    if a kwarg value is a list then skip if the grains don't match any item in the list
-    """
-    reason = kwargs.pop("reason", None)
-    for kw, value in kwargs.items():
-        if isinstance(value, list):
-            if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
-                if reason is None:
-                    reason = "This test does not run on {}={}".format(
-                        kw, grains.get(kw)
-                    )
-                return skip(reason)
-        else:
-            if str(grains.get(kw)).lower() != str(value).lower():
-                if reason is None:
-                    reason = "This test runs on {}={}, not {}".format(
-                        kw, value, grains.get(kw)
-                    )
-                return skip(reason)
-    return _id
-
-
-@requires_system_grains
-def not_runs_on(grains=None, **kwargs):
-    """
-    Reverse of `runs_on`.
-    Skip the test if any grains match the values passed into **kwargs
-    if a kwarg value is a list then skip if the grains match any item in the list
-    """
-    reason = kwargs.pop("reason", None)
-    for kw, value in kwargs.items():
-        if isinstance(value, list):
-            if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
-                if reason is None:
-                    reason = "This test does not run on {}={}".format(
-                        kw, grains.get(kw)
-                    )
-                return skip(reason)
-        else:
-            if str(grains.get(kw)).lower() == str(value).lower():
-                if reason is None:
-                    reason = "This test does not run on {}={}, got {}".format(
-                        kw, value, grains.get(kw)
-                    )
-                return skip(reason)
-    return _id
-
-
 def _check_required_sminion_attributes(sminion_attr, *required_items):
     """
     :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
@@ -1151,7 +1100,7 @@ def _check_required_sminion_attributes(sminion_attr, *required_items):
     available_items = list(getattr(sminion, sminion_attr))
     not_available_items = set()
 
-    name = "__not_available_{items}s__".format(items=sminion_attr)
+    name = f"__not_available_{sminion_attr}s__"
     if not hasattr(sminion, name):
         setattr(sminion, name, set())
 
@@ -1233,13 +1182,13 @@ def skip_if_binaries_missing(*binaries, **kwargs):
             if salt.utils.path.which(binary) is None:
                 return skip(
                     "{}The {!r} binary was not found".format(
-                        message and "{}. ".format(message) or "", binary
+                        message and f"{message}. " or "", binary
                     )
                 )
     elif salt.utils.path.which_bin(binaries) is None:
         return skip(
             "{}None of the following binaries was found: {}".format(
-                message and "{}. ".format(message) or "", ", ".join(binaries)
+                message and f"{message}. " or "", ", ".join(binaries)
             )
         )
     return _id
@@ -1330,7 +1279,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
+        class AuthenticatedHandler(tornado.web.RequestHandler):
             pass
     """
 
@@ -1474,9 +1423,7 @@ class Webserver:
 
         self.port = port
         self.wait = wait
-        self.handler = (
-            handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
-        )
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
         self.ssl_opts = ssl_opts
 
@@ -1484,16 +1431,14 @@ class Webserver:
         """
         Threading target which stands up the tornado application
         """
-        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
-        self.ioloop.make_current()
-        if self.handler == salt.ext.tornado.web.StaticFileHandler:
-            self.application = salt.ext.tornado.web.Application(
+        self.ioloop = tornado.ioloop.IOLoop()
+        asyncio.set_event_loop(self.ioloop.asyncio_loop)
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
             )
         else:
-            self.application = salt.ext.tornado.web.Application(
-                [(r"/(.*)", self.handler)]
-            )
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
         self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
@@ -1502,7 +1447,10 @@ class Webserver:
         if self.port is None:
             return False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        try:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        finally:
+            sock.close()
 
     def url(self, path):
         """
@@ -1532,7 +1480,7 @@ class Webserver:
         Starts the webserver
         """
         if self.port is None:
-            self.port = get_unused_localhost_port()
+            self.port = ports.get_unused_localhost_port()
 
         self.web_root = "http{}://127.0.0.1:{}".format(
             "s" if self.ssl_opts else "", self.port
@@ -1560,8 +1508,15 @@ class Webserver:
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
 
+    def __enter__(self):
+        self.start()
+        return self
 
-class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
+    def __exit__(self, *_):
+        self.stop()
+
+
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
     """
     Save all requests sent to the server.
     """
@@ -1581,7 +1536,7 @@ class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
+class MirrorPostHandler(tornado.web.RequestHandler):
     """
     Mirror a POST body back to the client
     """
@@ -1625,22 +1580,6 @@ class PatchedEnviron:
         self.original_environ = os.environ.copy()
         for key in self.cleanup_keys:
             os.environ.pop(key, None)
-
-        # Make sure there are no unicode characters in the self.kwargs if we're
-        # on Python 2. These are being added to `os.environ` and causing
-        # problems
-        if sys.version_info < (3,):
-            kwargs = self.kwargs.copy()
-            clean_kwargs = {}
-            for k in self.kwargs:
-                key = k
-                if isinstance(key, str):
-                    key = key.encode("utf-8")
-                if isinstance(self.kwargs[k], str):
-                    kwargs[k] = kwargs[k].encode("utf-8")
-                clean_kwargs[key] = kwargs[k]
-            self.kwargs = clean_kwargs
-
         os.environ.update(**self.kwargs)
         return self
 
@@ -1663,13 +1602,25 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
-    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
-    setuptools_requirement = attr.ib(
-        default="setuptools!=50.*,!=51.*,!=52.*", repr=False
-    )
+    pip_requirement = attr.ib(repr=False)
+    setuptools_requirement = attr.ib(repr=False)
+    # TBD build_requirement = attr.ib(default="build!=0.6.*", repr=False)   # add build when implement pyproject.toml
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
+
+    @pip_requirement.default
+    def _default_pip_requiremnt(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            return "pip>=22.3.1,<23.0"
+        return "pip>=20.2.4,<21.2"
+
+    @setuptools_requirement.default
+    def _default_setuptools_requirement(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            return "setuptools>=65.6.3,<66"
+        return "setuptools!=50.*,!=51.*,!=52.*,<59"
 
     @venv_dir.default
     def _default_venv_dir(self):
@@ -1694,6 +1645,10 @@ class VirtualEnv:
         return pathlib.Path(self.venv_python).parent
 
     def __enter__(self):
+        if pytestskipmarkers.utils.platform.is_fips_enabled():
+            pytest.skip(
+                "Test cannot currently create virtual environments on a FIPS enabled platform"
+            )
         try:
             self._create_virtualenv()
         except subprocess.CalledProcessError:
@@ -1713,14 +1668,18 @@ class VirtualEnv:
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
-        kwargs.setdefault("cwd", str(self.venv_dir))
+        kwargs.setdefault("cwd", tempfile.gettempdir())
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        kwargs.setdefault("env", self.environ)
-        proc = subprocess.run(args, check=False, **kwargs)
+        env = kwargs.pop("env", None)
+        if env:
+            env = self.environ.copy().update(env)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
             stderr=proc.stderr,
             cmdline=proc.args,
@@ -1731,11 +1690,7 @@ class VirtualEnv:
                 proc.check_returncode()
             except subprocess.CalledProcessError:
                 raise ProcessFailed(
-                    "Command failed return code check",
-                    cmdline=proc.args,
-                    stdout=proc.stdout,
-                    stderr=proc.stderr,
-                    exitcode=proc.returncode,
+                    "Command failed return code check", process_result=proc
                 )
         return ret
 
@@ -1773,14 +1728,16 @@ class VirtualEnv:
         except AttributeError:
             return sys.executable
 
-    def run_code(self, code_string, **kwargs):
+    def run_code(self, code_string, python=None, **kwargs):
         if code_string.startswith("\n"):
             code_string = code_string[1:]
         code_string = textwrap.dedent(code_string).rstrip()
         log.debug(
             "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
         )
-        return self.run(str(self.venv_python), "-c", code_string, **kwargs)
+        if python is None:
+            python = str(self.venv_python)
+        return self.run(python, "-c", code_string, **kwargs)
 
     def get_installed_packages(self):
         data = {}
@@ -1790,13 +1747,23 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            str(self.venv_dir),
-            python=self.get_real_python(),
-            system_site_packages=self.system_site_packages,
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            f"--python={self.get_real_python()}",
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
+        self.install(
+            "-U",
+            self.pip_requirement,
+            self.setuptools_requirement,
+            # TBD self.build_requirement, # add build when implement pyproject.toml
         )
-        self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 
@@ -1817,22 +1784,6 @@ class SaltVirtualEnv(VirtualEnv):
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)
-
-
-@contextmanager
-def change_cwd(path):
-    """
-    Context manager helper to change CWD for a with code block and restore
-    it at the end
-    """
-    old_cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        # Do stuff
-        yield
-    finally:
-        # Restore Old CWD
-        os.chdir(old_cwd)
 
 
 @functools.lru_cache(maxsize=1)
@@ -1868,3 +1819,85 @@ def get_virtualenv_binary_path():
         # We're not running inside a virtualenv
         virtualenv_binary = None
     return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()
+
+
+class Keys:
+    """
+    Temporary ssh key pair
+    """
+
+    def __init__(self, tmp_path_factory):
+        """
+        tmp_path_factory is the session scoped pytest fixture of the same name
+        """
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
+        self.priv_path = priv_path
+
+    def generate(self):
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
+
+    @property
+    def pub_path(self):
+        return self.priv_path.with_name(f"{self.priv_path.name}.pub")
+
+    @property
+    def pub(self):
+        return self.pub_path.read_text()
+
+    @property
+    def priv(self):
+        return self.priv_path.read_text()
+
+    def __enter__(self):
+        self.generate()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)

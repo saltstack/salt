@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_dism as dism
 from tests.support.mock import MagicMock, patch
 
@@ -547,3 +548,136 @@ def test_package_removed_removed():
                 mock_removed.assert_called_once_with()
                 assert not mock_remove.called
                 assert out == expected
+
+
+def test_kb_removed():
+    """
+    Test removing a package using the KB number
+    """
+    pkg_name = "Package_for_KB1231231~31bf3856ad364e35~amd64~~22000.345.1.1"
+    expected = {
+        "comment": "Removed KB1231231",
+        "changes": {"package": {"old": [pkg_name]}, "retcode": 0},
+        "name": "KB1231231",
+        "result": True,
+    }
+    pre_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+        pkg_name,
+    ]
+    post_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+    ]
+    mock_get_name = MagicMock(return_value=pkg_name)
+    mock_installed = MagicMock(side_effect=[pre_removed, post_removed])
+    mock_remove = MagicMock(return_value={"retcode": 0})
+
+    patch_salt = {
+        "dism.get_kb_package_name": mock_get_name,
+        "dism.installed_packages": mock_installed,
+        "dism.remove_kb": mock_remove,
+    }
+
+    with patch.dict(dism.__salt__, patch_salt):
+        with patch.dict(dism.__opts__, {"test": False}):
+            result = dism.kb_removed("KB1231231")
+            mock_remove.assert_called_once_with(
+                kb="KB1231231", image=None, restart=False
+            )
+            assert result == expected
+
+
+def test_kb_removed_not_installed():
+    """
+    Test removing a package using the KB number when the package is not
+    installed
+    """
+    pkg_name = None
+    expected = {
+        "comment": "KB1231231 is not installed",
+        "changes": {},
+        "name": "KB1231231",
+        "result": True,
+    }
+    mock_get_name = MagicMock(return_value=pkg_name)
+
+    patch_salt = {"dism.get_kb_package_name": mock_get_name}
+
+    with patch.dict(dism.__salt__, patch_salt):
+        result = dism.kb_removed("KB1231231")
+        assert result == expected
+
+
+def test_kb_removed_test():
+    """
+    Test removing a package using the KB number with test=True
+    """
+    pkg_name = "Package_for_KB1231231~31bf3856ad364e35~amd64~~22000.345.1.1"
+    expected = {
+        "comment": "",
+        "changes": {"package": "KB1231231 will be removed"},
+        "name": "KB1231231",
+        "result": None,
+    }
+    pre_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+        pkg_name,
+    ]
+    post_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+    ]
+    mock_get_name = MagicMock(return_value=pkg_name)
+    mock_installed = MagicMock(side_effect=[pre_removed, post_removed])
+
+    patch_salt = {
+        "dism.get_kb_package_name": mock_get_name,
+        "dism.installed_packages": mock_installed,
+    }
+
+    with patch.dict(dism.__salt__, patch_salt):
+        with patch.dict(dism.__opts__, {"test": True}):
+            result = dism.kb_removed("KB1231231")
+            assert result == expected
+
+
+def test_kb_removed_failed():
+    """
+    Test removing a package using the KB number with a failure
+    """
+    pkg_name = "Package_for_KB1231231~31bf3856ad364e35~amd64~~22000.345.1.1"
+    expected = {
+        "comment": "Failed to remove KB1231231: error",
+        "changes": {},
+        "name": "KB1231231",
+        "result": False,
+    }
+    pre_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+        pkg_name,
+    ]
+    post_removed = [
+        "Package_for_KB5007575~31bf3856ad364e35~amd64~~22000.345.1.1",
+        "Package_for_KB5012170~31bf3856ad364e35~amd64~~22000.850.1.1",
+    ]
+    mock_get_name = MagicMock(return_value=pkg_name)
+    mock_installed = MagicMock(side_effect=[pre_removed, post_removed])
+    mock_remove = MagicMock(return_value={"retcode": 1, "stdout": "error"})
+
+    patch_salt = {
+        "dism.get_kb_package_name": mock_get_name,
+        "dism.installed_packages": mock_installed,
+        "dism.remove_kb": mock_remove,
+    }
+
+    with patch.dict(dism.__salt__, patch_salt):
+        with patch.dict(dism.__opts__, {"test": False}):
+            result = dism.kb_removed("KB1231231")
+            mock_remove.assert_called_once_with(
+                kb="KB1231231", image=None, restart=False
+            )
+            assert result == expected

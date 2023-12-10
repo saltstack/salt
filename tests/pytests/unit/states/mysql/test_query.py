@@ -6,6 +6,7 @@ import logging
 import os
 
 import pytest
+
 import salt.modules.mysql as mysql_mod
 import salt.states.mysql_query as mysql_query
 from tests.support.mock import MagicMock, patch

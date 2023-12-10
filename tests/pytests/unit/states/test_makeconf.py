@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.makeconf as makeconf
 from tests.support.mock import MagicMock, patch
 

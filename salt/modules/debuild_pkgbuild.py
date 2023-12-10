@@ -33,6 +33,7 @@ REPREPRO_SIGN_PROMPT_RE = re.compile(r"Passphrase: ", re.M)
 
 try:
     import gnupg  # pylint: disable=unused-import
+
     import salt.modules.gpg
 
     HAS_LIBS = True
@@ -407,7 +408,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv="base", runas="root"
 
         return ret
 
-    # obtain name of 'python setup.py sdist' generated tarball, extract the version
+    # obtain name of 'sdist' generated tarball, extract the version
     # and manipulate the name for debian use (convert minix and add '+ds')
     salttarball = None
     for afile in os.listdir(tree_base):

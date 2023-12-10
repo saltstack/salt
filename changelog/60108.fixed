@@ -1,1 +1,0 @@
-Fixed pkgng.latest_version when querying by origin (e.g. "shells/bash").

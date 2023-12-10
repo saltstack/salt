@@ -14,7 +14,11 @@ Statistics
 - Total Issue References: **26**
 - Total PR References: **64**
 
-- Contributors: **30** (`DmitryKuzmenko`_, `RealKelsar`_, `alexproca`_, `anlutro`_, `basepi`_, `bogdanr`_, `cachedout`_, `cedwards`_, `chrigl`_, `cro`_, `fcrozat`_, `gtmanfred`_, `isbm`_, `jfindlay`_, `kiorky`_, `kt97679`_, `lomeroe`_, `lorengordon`_, `mhoogendoorn`_, `nmadhok`_, `optix2000`_, `paulnivin`_, `quantonganh`_, `rallytime`_, `s0undt3ch`_, `schwing`_, `sjorge`_, `tampakrap`_, `terminalmage`_, `ticosax`_)
+- Contributors: **30** (`DmitryKuzmenko`_, `RealKelsar`_, `alexproca`_, `anlutro`_, `basepi`_,
+  `bogdanr`_, `cachedout`_, `cedwards`_, `chrigl`_, `cro`_, `fcrozat`_, `gtmanfred`_, `isbm`_,
+  `jfindlay`_, `kiorky`_, `kt97679`_, `lomeroe`_, `lorengordon`_, `mhoogendoorn`_, `nmadhok`_,
+  `optix2000`_, `paulnivin`_, `quantonganh`_, `rallytime`_, `s0undt3ch`_, `schwing`_, `sjorge`_,
+  `tampakrap`_, `terminalmage`_, `ticosax`_)
 
 
 Security Fix
@@ -295,7 +299,7 @@ Changelog for v2015.8.2..v2015.8.3
 
   * 15f83e180d Add more preset colors
 
-  * 44339f3dc1 Impement color setter with transition
+  * 44339f3dc1 Implement color setter with transition
 
   * 0f4d5b9eac Implement effects method
 

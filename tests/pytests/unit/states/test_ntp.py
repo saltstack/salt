@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.ntp as ntp
 from tests.support.mock import MagicMock, patch
 

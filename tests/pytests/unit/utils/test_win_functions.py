@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
 
@@ -13,7 +14,6 @@ try:
     class WinError(win32net.error):
         winerror = 0
 
-
 except ImportError:
     HAS_WIN32 = False
 
@@ -24,7 +24,6 @@ try:
 
     class PyWinError(pywintypes.error):
         pywinerror = 0
-
 
 except ImportError:
     HAS_PYWIN = False

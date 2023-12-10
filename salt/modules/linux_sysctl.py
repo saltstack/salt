@@ -8,6 +8,7 @@ import re
 
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
@@ -32,6 +33,16 @@ def __virtual__():
             " Linux systems.",
         )
     return __virtualname__
+
+
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
 
 
 def default_config():
@@ -77,21 +88,16 @@ def show(config_file=False):
         try:
             with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:
-                    line = salt.utils.stringutils.to_str(line)
+                    line = salt.utils.stringutils.to_str(line).strip()
                     if not line.startswith("#") and "=" in line:
-                        # search if we have some '=' instead of ' = ' separators
-                        SPLIT = " = "
-                        if SPLIT not in line:
-                            SPLIT = SPLIT.strip()
-                        key, value = line.split(SPLIT, 1)
-                        key = key.strip()
-                        value = value.lstrip()
-                        ret[key] = value
+                        key, value = line.split("=", 1)
+                        ret[key.rstrip()] = value.lstrip()
         except OSError:
             log.error("Could not open sysctl file")
             return None
     else:
-        cmd = "sysctl -a"
+        _sysctl = "{}".format(_which("sysctl"))
+        cmd = [_sysctl, "-a"]
         out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace")
         for line in out.splitlines():
             if not line or " = " not in line:
@@ -111,7 +117,8 @@ def get(name):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     """
-    cmd = "sysctl -n {}".format(name)
+    _sysctl = "{}".format(_which("sysctl"))
+    cmd = [_sysctl, "-n", name]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -135,7 +142,8 @@ def assign(name, value):
         raise CommandExecutionError("sysctl {} does not exist".format(name))
 
     ret = {}
-    cmd = 'sysctl -w {}="{}"'.format(name, value)
+    _sysctl = "{}".format(_which("sysctl"))
+    cmd = [_sysctl, "-w", "{}={}".format(name, value)]
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
@@ -154,6 +162,17 @@ def assign(name, value):
     new_name, new_value = out.split(" = ", 1)
     ret[new_name] = new_value
     return ret
+
+
+def _sanitize_sysctl_value(value):
+    """Replace separating whitespaces by exactly one tab.
+
+    On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or many
+    other sysctl with whitespace in it consistently use one tab. When
+    setting the value, spaces or tabs can be used and will be converted
+    to tabs by the kernel (when reading them again).
+    """
+    return re.sub(r"\s+", "\t", str(value))
 
 
 def persist(name, value, config=None):
@@ -196,9 +215,6 @@ def persist(name, value, config=None):
         raise CommandExecutionError(msg.format(config))
 
     for line in config_data:
-        if line.startswith("#"):
-            nlines.append(line)
-            continue
         if "=" not in line:
             nlines.append(line)
             continue
@@ -206,25 +222,17 @@ def persist(name, value, config=None):
         # Strip trailing whitespace and split the k,v
         comps = [i.strip() for i in line.split("=", 1)]
 
-        # On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or any
-        # other sysctl with whitespace in it consistently uses 1 tab.  Lets
-        # allow our users to put a space or tab between multi-value sysctls
-        # and have salt not try to set it every single time.
-        if isinstance(comps[1], str) and " " in comps[1]:
-            comps[1] = re.sub(r"\s+", "\t", comps[1])
-
-        # Do the same thing for the value 'just in case'
-        if isinstance(value, str) and " " in value:
-            value = re.sub(r"\s+", "\t", value)
-
-        if len(comps) < 2:
+        if comps[0].startswith("#"):
+            # Check for comment lines after stripping leading whitespaces.
             nlines.append(line)
             continue
+
         if name == comps[0]:
             # This is the line to edit
-            if str(comps[1]) == str(value):
+            sanitized_value = _sanitize_sysctl_value(value)
+            if _sanitize_sysctl_value(comps[1]) == sanitized_value:
                 # It is correct in the config, check if it is correct in /proc
-                if str(get(name)) != str(value):
+                if _sanitize_sysctl_value(get(name)) != sanitized_value:
                     assign(name, value)
                     return "Updated"
                 else:

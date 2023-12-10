@@ -69,7 +69,7 @@ def _parse_fmdump(output):
     # parse entries
     for entry in output:
         entry = [item for item in entry.split(" ") if item]
-        entry = ["{} {} {}".format(entry[0], entry[1], entry[2])] + entry[3:]
+        entry = [f"{entry[0]} {entry[1]} {entry[2]}"] + entry[3:]
 
         # prepare faults
         fault = OrderedDict()
@@ -93,14 +93,14 @@ def _parse_fmdump_verbose(output):
     for line in output:
         if line.startswith("TIME"):
             fault.append(line)
-            if len(verbose_fault) > 0:
+            if verbose_fault:
                 result.append(verbose_fault)
                 verbose_fault = {}
         elif len(fault) == 1:
             fault.append(line)
             verbose_fault = _parse_fmdump("\n".join(fault))[0]
             fault = []
-        elif len(verbose_fault) > 0:
+        elif verbose_fault:
             if "details" not in verbose_fault:
                 verbose_fault["details"] = ""
             if line.strip() == "":
@@ -152,7 +152,7 @@ def _fmadm_action_fmri(action, fmri):
     """
     ret = {}
     fmadm = _check_fmadm()
-    cmd = "{cmd} {action} {fmri}".format(cmd=fmadm, action=action, fmri=fmri)
+    cmd = f"{fmadm} {action} {fmri}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     result = {}
@@ -260,8 +260,8 @@ def list_records(after=None, before=None):
     fmdump = _check_fmdump()
     cmd = "{cmd}{after}{before}".format(
         cmd=fmdump,
-        after=" -t {}".format(after) if after else "",
-        before=" -T {}".format(before) if before else "",
+        after=f" -t {after}" if after else "",
+        before=f" -T {before}" if before else "",
     )
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
@@ -289,7 +289,7 @@ def show(uuid):
     """
     ret = {}
     fmdump = _check_fmdump()
-    cmd = "{cmd} -u {uuid} -V".format(cmd=fmdump, uuid=uuid)
+    cmd = f"{fmdump} -u {uuid} -V"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     result = {}
@@ -313,7 +313,7 @@ def config():
     """
     ret = {}
     fmadm = _check_fmadm()
-    cmd = "{cmd} config".format(cmd=fmadm)
+    cmd = f"{fmadm} config"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     result = {}
@@ -340,7 +340,7 @@ def load(path):
     """
     ret = {}
     fmadm = _check_fmadm()
-    cmd = "{cmd} load {path}".format(cmd=fmadm, path=path)
+    cmd = f"{fmadm} load {path}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     result = {}
@@ -367,7 +367,7 @@ def unload(module):
     """
     ret = {}
     fmadm = _check_fmadm()
-    cmd = "{cmd} unload {module}".format(cmd=fmadm, module=module)
+    cmd = f"{fmadm} unload {module}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     result = {}
@@ -397,7 +397,7 @@ def reset(module, serd=None):
     ret = {}
     fmadm = _check_fmadm()
     cmd = "{cmd} reset {serd}{module}".format(
-        cmd=fmadm, serd="-s {} ".format(serd) if serd else "", module=module
+        cmd=fmadm, serd=f"-s {serd} " if serd else "", module=module
     )
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
@@ -509,6 +509,3 @@ def healthy():
         salt '*' fmadm.healthy
     """
     return False if faulty() else True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

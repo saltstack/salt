@@ -29,6 +29,13 @@ try:
 except ImportError:
     HAS_RPMUTILS = False
 
+try:
+    import rpm_vercmp
+
+    HAS_PY_RPM = True
+except ImportError:
+    HAS_PY_RPM = False
+
 
 log = logging.getLogger(__name__)
 
@@ -55,14 +62,22 @@ def __virtual__():
             " grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
     return (
         False,
         "The rpm execution module failed to load: only available on redhat/suse type"
-        " systems or amazon, xcp or xenserver.",
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
     )
 
 
@@ -600,17 +615,9 @@ def info(*packages, **kwargs):
         output_loglevel="trace",
         env={"TZ": "UTC"},
         clean_env=True,
+        ignore_retcode=True,
     )
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"] or call["stdout"]
-        raise CommandExecutionError(comment)
-    elif "error" in call["stderr"]:
-        raise CommandExecutionError(call["stderr"])
-    else:
-        out = call["stdout"]
-
+    out = call["stdout"]
     _ret = list()
     for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
@@ -720,6 +727,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        elif HAS_PY_RPM:
+            cmp_func = rpm_vercmp.vercmp
         else:
             log.warning(
                 "Please install a package that provides rpm.labelCompare for "
@@ -731,7 +740,19 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             except AttributeError:
                 log.debug("rpmUtils.miscutils.compareEVR is not available")
 
+        # If one EVR is missing a release but not the other and they
+        # otherwise would be equal, ignore the release. This can happen if
+        # e.g. you are checking if a package version 3.2 is satisfied by
+        # 3.2-1.
+        (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+        (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
+
+        if not ver1_r or not ver2_r:
+            ver1_r = ver2_r = ""
+
         if cmp_func is None:
+            ver1 = f"{ver1_e}:{ver1_v}-{ver1_r}"
+            ver2 = f"{ver2_e}:{ver2_v}-{ver2_r}"
             if salt.utils.path.which("rpmdev-vercmp"):
                 log.warning(
                     "Installing the rpmdevtools package may surface dev tools in"
@@ -781,16 +802,20 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     " comparisons"
                 )
         else:
-            # If one EVR is missing a release but not the other and they
-            # otherwise would be equal, ignore the release. This can happen if
-            # e.g. you are checking if a package version 3.2 is satisfied by
-            # 3.2-1.
-            (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
-            (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
-            if not ver1_r or not ver2_r:
-                ver1_r = ver2_r = ""
+            if HAS_PY_RPM:
+                ver1 = f"{ver1_v}-{ver1_r}"
+                ver2 = f"{ver2_v}-{ver2_r}"
 
-            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
+                # handle epoch version comparison first
+                # rpm_vercmp.vercmp does not handle epoch version comparison
+                ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)
+                if ret in (1, -1):
+                    return ret
+                cmp_result = cmp_func(ver1, ver2)
+            else:
+                cmp_result = cmp_func(
+                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
+                )
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
                     "Comparison result '{}' is invalid".format(cmp_result)

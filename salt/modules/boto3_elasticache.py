@@ -57,8 +57,8 @@ log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=unused-import
-    import botocore
     import boto3
+    import botocore
 
     # pylint: enable=unused-import
     logging.getLogger("boto3").setLevel(logging.CRITICAL)

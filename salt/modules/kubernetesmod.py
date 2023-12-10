@@ -1,7 +1,8 @@
 """
 Module for handling kubernetes calls.
 
-:optdepends:    - kubernetes Python client
+:optdepends:    - kubernetes Python client < 4.0
+                - PyYAML < 6.0
 :configuration: The k8s API settings are provided either in a pillar, in
     the minion's config file, or in master's config file::
 
@@ -17,6 +18,8 @@ The data format for `kubernetes.kubeconfig-data` value is the content of
 
 Only `kubeconfig` or `kubeconfig-data` should be provided. In case both are
 provided `kubeconfig` entry is preferred.
+
+CLI Example:
 
 .. code-block:: bash
 
@@ -59,6 +62,7 @@ import salt.utils.templates
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, TimeoutError
 
+# pylint: disable=import-error,no-name-in-module
 try:
     import kubernetes  # pylint: disable=import-self
     import kubernetes.client
@@ -71,15 +75,21 @@ try:
         from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
         from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
     except ImportError:
-        from kubernetes.client import AppsV1beta1Deployment
-        from kubernetes.client import AppsV1beta1DeploymentSpec
+        from kubernetes.client import AppsV1beta1Deployment, AppsV1beta1DeploymentSpec
     # pylint: enable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
+# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "kubernetes",
+    "https://github.com/salt-extensions/saltext-kubernetes",
+)
 
 __virtualname__ = "kubernetes"
 
@@ -1095,7 +1105,7 @@ def create_secret(
     source=None,
     template=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Creates the kubernetes secret as defined by the user.
@@ -1270,7 +1280,7 @@ def replace_service(
     old_service,
     saltenv,
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing service with a new one defined by name and namespace,
@@ -1320,7 +1330,7 @@ def replace_secret(
     template=None,
     saltenv="base",
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing secret with a new one defined by name and namespace,
@@ -1375,7 +1385,7 @@ def replace_configmap(
     template=None,
     saltenv="base",
     namespace="default",
-    **kwargs
+    **kwargs,
 ):
     """
     Replaces an existing configmap with a new one defined by name and
@@ -1442,7 +1452,7 @@ def __create_object_body(
             or src_obj["kind"] != kind
         ):
             raise CommandExecutionError(
-                "The source file should define only a {} object".format(kind)
+                f"The source file should define only a {kind} object"
             )
 
         if "metadata" in src_obj:
@@ -1463,7 +1473,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
     """
     sfn = __salt__["cp.cache_file"](source, saltenv)
     if not sfn:
-        raise CommandExecutionError("Source file '{}' not found".format(source))
+        raise CommandExecutionError(f"Source file '{source}' not found")
 
     with salt.utils.files.fopen(sfn, "r") as src:
         contents = src.read()
@@ -1492,9 +1502,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
 
                 contents = data["data"].encode("utf-8")
             else:
-                raise CommandExecutionError(
-                    "Unknown template specified: {}".format(template)
-                )
+                raise CommandExecutionError(f"Unknown template specified: {template}")
 
         return salt.utils.yaml.safe_load(contents)
 

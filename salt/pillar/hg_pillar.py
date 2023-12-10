@@ -16,8 +16,6 @@ This external Pillar source can be configured in the master config file as such:
    ext_pillar:
      - hg: ssh://hg@example.co/user/repo
 """
-
-
 import copy
 import hashlib
 import logging
@@ -25,19 +23,16 @@ import os
 
 import salt.pillar
 import salt.utils.stringutils
+from salt.config import DEFAULT_HASH_TYPE
 
 try:
     import hglib
 except ImportError:
     hglib = None
 
-
-__virtualname__ = "hg"
 log = logging.getLogger(__name__)
 
-
-# The default option values
-__opts__ = {}
+__virtualname__ = "hg"
 
 
 def __virtual__():
@@ -96,7 +91,7 @@ class Repo:
         """Initialize a hg repo (or open it if it already exists)"""
         self.repo_uri = repo_uri
         cachedir = os.path.join(__opts__["cachedir"], "hg_pillar")
-        hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+        hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
         repo_hash = hash_type(salt.utils.stringutils.to_bytes(repo_uri)).hexdigest()
         self.working_dir = os.path.join(cachedir, repo_hash)
         if not os.path.isdir(self.working_dir):

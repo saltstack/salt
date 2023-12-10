@@ -31,6 +31,7 @@ import sys
 from code import InteractiveConsole
 
 import jinja2
+
 import salt.client
 import salt.config
 import salt.loader

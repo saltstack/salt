@@ -38,12 +38,9 @@ def __virtual__():
     if "vmadm.list" in __salt__:
         return True
     else:
-        return (
-            False,
-            "{} beacon can only be loaded on SmartOS compute nodes".format(
-                __virtualname__
-            ),
-        )
+        err_msg = "Only available on SmartOS compute nodes."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
@@ -85,7 +82,7 @@ def beacon(config):
     for uuid in current_vms:
         event = {}
         if uuid not in VMADM_STATE["vms"]:
-            event["tag"] = "created/{}".format(uuid)
+            event["tag"] = f"created/{uuid}"
             for label in current_vms[uuid]:
                 if label == "state":
                     continue
@@ -98,7 +95,7 @@ def beacon(config):
     for uuid in VMADM_STATE["vms"]:
         event = {}
         if uuid not in current_vms:
-            event["tag"] = "deleted/{}".format(uuid)
+            event["tag"] = f"deleted/{uuid}"
             for label in VMADM_STATE["vms"][uuid]:
                 if label == "state":
                     continue
@@ -135,6 +132,3 @@ def beacon(config):
         VMADM_STATE["first_run"] = False
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

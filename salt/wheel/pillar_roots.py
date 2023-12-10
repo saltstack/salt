@@ -104,7 +104,7 @@ def write(data, path, saltenv="base", index=0):
         )
     roots_dir = __opts__["pillar_roots"][saltenv][index]
     dest = os.path.join(roots_dir, path)
-    if not salt.utils.verify.clean_path(roots_dir, dest):
+    if not salt.utils.verify.clean_path(roots_dir, dest, subdir=True):
         return "Invalid path"
     dest = os.path.join(__opts__["pillar_roots"][saltenv][index], path)
     dest_dir = os.path.dirname(dest)

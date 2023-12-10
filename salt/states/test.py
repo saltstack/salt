@@ -134,7 +134,7 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret = {"name": name, "changes": {}, "result": True, "comment": comment}
 
     # Following the docs as written here
-    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    # https://docs.saltproject.io/ref/states/writing.html#return-data
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
@@ -161,7 +161,7 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret = {"name": name, "changes": {}, "result": False, "comment": comment}
 
     # Following the docs as written here
-    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    # https://docs.saltproject.io/ref/states/writing.html#return-data
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
@@ -173,7 +173,14 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
-def configurable_test_state(name, changes=True, result=True, comment="", warnings=None):
+def configurable_test_state(
+    name,
+    changes=True,
+    result=True,
+    comment="",
+    warnings=None,
+    allow_test_mode_failure=False,
+):
     """
     .. versionadded:: 2014.7.0
 
@@ -221,6 +228,13 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         Default is None
 
         .. versionadded:: 3000
+
+    allow_test_mode_failure
+        When False, running this state in test mode can only return a True
+        or None result. When set to True and result is set to False, the
+        test mode result will be False. Default is False
+
+        .. versionadded:: 3007.0
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": comment}
     change_data = {
@@ -230,7 +244,7 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
     if changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
-        # http://docs.saltstack.com/ref/states/writing.html#return-data
+        # https://docs.saltproject.io/ref/states/writing.html#return-data
         ret["changes"] = change_data
     elif changes is False:
         # Don't modify changes from the "ret" dict set above
@@ -239,7 +253,7 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         if str(changes).lower() == "random":
             if random.choice((True, False)):
                 # Following the docs as written here
-                # http://docs.saltstack.com/ref/states/writing.html#return-data
+                # https://docs.saltproject.io/ref/states/writing.html#return-data
                 ret["changes"] = change_data
         else:
             err = (
@@ -276,7 +290,11 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         )
 
     if __opts__["test"]:
-        ret["result"] = True if changes is False else None
+        if allow_test_mode_failure and result is False:
+            test_result = result
+        else:
+            test_result = True if changes is False else None
+        ret["result"] = test_result
         ret["comment"] = "This is a test" if not comment else comment
 
     return ret

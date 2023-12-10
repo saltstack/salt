@@ -8,18 +8,16 @@ import os
 import subprocess
 import time
 
-import salt.utils.path
+import pytest
+
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
-)
-@skipIf(salt.utils.path.which("supervisorctl") is None, "supervisord not installed")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
+@pytest.mark.skip_if_binaries_missing("supervisorctl")
 class SupervisordTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the supervisord states.

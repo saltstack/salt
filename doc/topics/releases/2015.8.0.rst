@@ -16,11 +16,7 @@ New SaltStack Installation Repositories
 =======================================
 
 SaltStack now provides installation repositories for several platforms, with more to come.
-See the following links for instructions:
-
-- :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
-- :ref:`Debian 8 <installation-debian-repo>`
-- :ref:`Windows <windows-installer>`
+For instructions, see: `repo.saltstack.com <https://repo.saltproject.io/>`_.
 
 Send Event on State Completion
 ==============================
@@ -161,8 +157,7 @@ Windows Improvements
 ====================
 
 - Enhanced the windows minion silent installation with command line parameters
-  to configure the salt master and minion name. See :ref:`Silent Installer
-  Options <windows-installer-options>`.
+  to configure the salt master and minion name.
 - Improved user management with additional capabilities in the user module for Windows.
 - Improved patch management with a new module for managing windows updates (:mod:`win_wua <modules.win_wua>`).
 - Turned on multi-processing by default for windows in minion configuration.
@@ -175,8 +170,7 @@ later minions. When using this new repository, the repo cache is compiled on
 the Salt Minion, which enables pillar, grains and other things to be available
 during compilation time.
 
-See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
-documentation for more information.
+See the Windows Software Repository documentation for more information.
 
 Changes to legacy Windows repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -188,8 +182,7 @@ If you were previously using this repository and have customized settings, be
 aware that several config options have been renamed to make their naming more
 consistent.
 
-See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
-documentation for more information.
+See the Windows Software Repository documentation for more information.
 
 Win System Module
 -----------------

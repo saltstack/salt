@@ -2,8 +2,7 @@
 Jinja-specific decorators
 """
 
-# Ensure we're using the custom logging from Salt
-import salt.log.setup as logging
+import logging
 
 log = logging.getLogger(__name__)
 

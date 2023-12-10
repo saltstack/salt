@@ -38,7 +38,7 @@ except ImportError:
     HAS_NETADDR = False
 
 try:
-    import dns.resolver
+    import dns.resolver  # pylint: disable=no-name-in-module
 
     HAS_DNSRESOLVER = True
 except ImportError:

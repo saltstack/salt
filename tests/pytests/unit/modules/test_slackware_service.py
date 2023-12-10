@@ -4,6 +4,7 @@
 import os
 
 import pytest
+
 import salt.modules.slackware_service as slackware_service
 from tests.support.mock import MagicMock, patch
 

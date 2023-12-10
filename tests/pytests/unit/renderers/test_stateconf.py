@@ -4,6 +4,7 @@ import os.path
 
 import attr
 import pytest
+
 import salt.config
 import salt.loader
 from salt.exceptions import SaltRenderError

@@ -14,7 +14,17 @@ Statistics
 - Total Issue References: **110**
 - Total PR References: **264**
 
-- Contributors: **71** (`Ch3LL`_, `DmitryKuzmenko`_, `DylanFrese`_, `Ferbla`_, `Kurocon`_, `Lothiraldan`_, `RuriRyan`_, `Talkless`_, `The-Loeki`_, `UtahDave`_, `Xiami2012`_, `abednarik`_, `afletch`_, `ahammond`_, `ahus1`_, `aletourneau`_, `alxf`_, `amontalban`_, `anlutro`_, `arthurlogilab`_, `atengler`_, `basepi`_, `bdrung`_, `bradthurber`_, `cachedout`_, `captaininspiration`_, `cedwards`_, `clarkperkins`_, `clinta`_, `cro`_, `dmurphy18`_, `exowaucka`_, `garethgreenaway`_, `guettli`_, `idonin`_, `isbm`_, `jacobhammons`_, `jbonachera`_, `jfindlay`_, `jfray`_, `junster1`_, `justinta`_, `krak3n`_, `lalmeras`_, `lloydoliver`_, `lomeroe`_, `mcalmer`_, `mitar`_, `mrproper`_, `multani`_, `nmadhok`_, `notpeter`_, `onorua`_, `paclat`_, `papertigers`_, `rallytime`_, `rkgrunt`_, `sakateka`_, `sbreidba`_, `schancel`_, `sjorge`_, `stk0vrfl0w`_, `techhat`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `twellspring`_, `vutny`_, `whiteinge`_)
+- Contributors: **71** (`Ch3LL`_, `DmitryKuzmenko`_, `DylanFrese`_, `Ferbla`_, `Kurocon`_,
+  `Lothiraldan`_, `RuriRyan`_, `Talkless`_, `The-Loeki`_, `UtahDave`_, `Xiami2012`_, `abednarik`_,
+  `afletch`_, `ahammond`_, `ahus1`_, `aletourneau`_, `alxf`_, `amontalban`_, `anlutro`_,
+  `arthurlogilab`_, `atengler`_, `basepi`_, `bdrung`_, `bradthurber`_, `cachedout`_,
+  `captaininspiration`_, `cedwards`_, `clarkperkins`_, `clinta`_, `cro`_, `dmurphy18`_,
+  `exowaucka`_, `garethgreenaway`_, `guettli`_, `idonin`_, `isbm`_, `jacobhammons`_, `jbonachera`_,
+  `jfindlay`_, `jfray`_, `junster1`_, `justinta`_, `krak3n`_, `lalmeras`_, `lloydoliver`_,
+  `lomeroe`_, `mcalmer`_, `mitar`_, `mrproper`_, `multani`_, `nmadhok`_, `notpeter`_, `onorua`_,
+  `paclat`_, `papertigers`_, `rallytime`_, `rkgrunt`_, `sakateka`_, `sbreidba`_, `schancel`_,
+  `sjorge`_, `stk0vrfl0w`_, `techhat`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_,
+  `twangboy`_, `twellspring`_, `vutny`_, `whiteinge`_)
 
 
 Important Post-Upgrade Instructions for Linux Mint
@@ -114,7 +124,7 @@ Changelog for v2015.8.8.2..v2015.8.9
 
   * **PR** `#33224`_: (`rallytime`_) Make note of files that begin with '_' in master.d or minion.d dirs
 
-* **ISSUE** `#31975`_: (`rajvidhimar`_) Docstrings not reflected in the salt documenation. (refs: `#33150`_)
+* **ISSUE** `#31975`_: (`rajvidhimar`_) Docstrings not reflected in the salt documentation. (refs: `#33150`_)
 
   * **PR** `#33150`_: (`rallytime`_) Gate jnpr imports in salt.proxy.junos.py
 
@@ -194,7 +204,7 @@ Changelog for v2015.8.8.2..v2015.8.9
 
   * **PR** `#33142`_: (`cachedout`_) Hash fileclients by opts
 
-* **ISSUE** `#22142`_: (`multani`_) State `acl.present` doesn't allow to set "default" ACLs (refs: `#31769`_)
+* **ISSUE** `#22142`_: (`multani`_) State `acl.present` doesn't allow setting "default" ACLs (refs: `#31769`_)
 
   * **PR** `#33139`_: (`rallytime`_) Back-port `#31769`_ to 2015.8
 
@@ -677,7 +687,7 @@ Changelog for v2015.8.8.2..v2015.8.9
 
 * **ISSUE** `#32229`_: (`seanjnkns`_) 2015.8.8.2: pkg.installed fails to update packages with epoch (refs: `#32563`_)
 
-  * **PR** `#32563`_: (`terminalmage`_) yumpkg: Ignore epoch in version comparison for explict versions without an epoch
+  * **PR** `#32563`_: (`terminalmage`_) yumpkg: Ignore epoch in version comparison for explicit versions without an epoch
 
   * **PR** `#32640`_: (`nmadhok`_) [2015.8] - Fixing critical bug to remove only the specified Host instead of the entire Host cluster
 
@@ -902,12 +912,12 @@ Changelog for v2015.8.8.2..v2015.8.9
 
 * **ISSUE** `#31632`_: (`zieba88`_) salt-cloud map parallel provisioning -P option failed on 2015.8.5 (refs: `#32425`_)
 
-* **PR** `#32425`_: (`cachedout`_) Fix salt-cloud paralell provisioning
+* **PR** `#32425`_: (`cachedout`_) Fix salt-cloud parallel provisioning
   @ *2016-04-07 21:52:06 UTC*
 
   * c07e02bacb Merge pull request `#32425`_ from cachedout/issue_31632
 
-  * 127c0829ee Fix salt-cloud paralell provisioning
+  * 127c0829ee Fix salt-cloud parallel provisioning
 
 * **PR** `#32323`_: (`mcalmer`_) fix sorting by latest version when called with an attribute
   @ *2016-04-07 06:24:35 UTC*
@@ -1128,37 +1138,37 @@ Changelog for v2015.8.8.2..v2015.8.9
 
   * f16e332b3a Merge pull request `#32326`_ from bdrung/fix-typos
 
-  * a7db152333 Fix typo dont -> don't
+  * a7db152333 Fix typo of don't
 
-  * d4c037301b Fix typo missmatch -> mismatch
+  * d4c037301b Fix typo of mismatch
 
-  * 70dba70ff0 Fix typo additonal -> addition
+  * 70dba70ff0 Fix typo of addition
 
-  * 68c60903aa Fix typo mutliple -> multiple
+  * 68c60903aa Fix typo of multiple
 
-  * 0f2c779b90 Fix typo fucntion -> function
+  * 0f2c779b90 Fix typo of function
 
-  * 0c9e4c8c80 Fix typo avilable -> available
+  * 0c9e4c8c80 Fix typo of available
 
-  * 920abe2ec7 Fix typo formated -> formatted
+  * 920abe2ec7 Fix typo of formatted
 
-  * e56dd4bb23 Fix typo ommitted -> omitted
+  * e56dd4bb23 Fix typo of omitted
 
-  * f99e6f1f13 Fix typo ouptut -> output
+  * f99e6f1f13 Fix typo of output
 
-  * d3804094f2 Fix typo wether -> whether
+  * d3804094f2 Fix typo of whether
 
-  * 538fb6fae2 Fix typo perfomed -> performed
+  * 538fb6fae2 Fix typo of performed
 
-  * db7af998ee Fix typo santized -> sanitized
+  * db7af998ee Fix typo of sanitized
 
-  * d7af01da2b Fix typo coresponding -> corresponding
+  * d7af01da2b Fix typo of corresponding
 
-  * 301e78b5be Fix typo vaules -> values
+  * 301e78b5be Fix typo of values
 
   * 8cada9573f Fix typos of retrieve
 
-  * b484d6f9c9 Fix typo directorys -> directories
+  * b484d6f9c9 Fix typo of directories
 
 * **PR** `#32300`_: (`twangboy`_) Add documentation to disable winrepo/winrepo_ng
   @ *2016-04-01 21:23:09 UTC*
@@ -1328,7 +1338,7 @@ Changelog for v2015.8.8.2..v2015.8.9
 
   * bf59f06733 Merge pull request `#32217`_ from jacobhammons/dot8
 
-  * 596444e2b4 2015.8.8.2 release notes Adds banner notifiying user when they are viewing release notes for an old release
+  * 596444e2b4 2015.8.8.2 release notes Adds banner notifying user when they are viewing release notes for an old release
 
 * **ISSUE** `#31844`_: (`Talkless`_) slspath is not documented (refs: `#32197`_)
 
@@ -1534,9 +1544,9 @@ Changelog for v2015.8.8.2..v2015.8.9
 
       * d18b4be80b remove whitespace end of line 186:q
 
-      * d2b89c85ad fix formating
+      * d2b89c85ad fix formatting
 
-      * 103cee9e29 cleaned up formating
+      * 103cee9e29 cleaned up formatting
 
       * 7a4d7f0bff added whitespace
 

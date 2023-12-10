@@ -4,6 +4,7 @@ Test the win_wua state module
 from collections import namedtuple
 
 import pytest
+
 import salt.states.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update as win_update
@@ -39,7 +40,7 @@ def updates_list():
             "Title": "Blank",
         },
         "d931e99c-4dda-4d39-9905-0f6a73f7195f": {
-            "KBs": ["KB3193497"],
+            "KBs": ["KB3193498"],
             "Installed": False,
             "Title": "Blank",
         },
@@ -56,7 +57,7 @@ def updates_list():
         "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
             "KBs": ["KB4052623"],
             "Installed": False,
-            "Title": "Blank",
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
         },
         "0689e74b-54d1-4f55-a916-96e3c737db90": {
             "KBs": ["KB890830"],
@@ -171,14 +172,28 @@ def test_uptodate(updates_list):
         "name": "NA",
         "changes": {
             "failed": {
+                "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {
+                    "KBs": ["KB3193497"],
+                    "Title": "Blank",
+                },
+                "afda9e11-44a0-4602-9e9b-423af11ecaed": {
+                    "KBs": ["KB4541329"],
+                    "Title": "Blank",
+                },
                 "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
-                    "Title": "Blank...",
                     "KBs": ["KB4052623"],
+                    "Title": "KB4052623: Really long title that exceeds 40 characters",
+                },
+            },
+            "superseded": {
+                "eac02c07-d744-4892-b80f-312d045e4ccc": {
+                    "KBs": ["KB4052444"],
+                    "Title": "Superseded Update",
                 }
-            }
+            },
         },
         "result": False,
-        "comment": "Updates failed",
+        "comment": "Some updates failed to install\nSome updates were superseded",
     }
 
     updates_not_installed = {
@@ -195,36 +210,40 @@ def test_uptodate(updates_list):
         "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
             "KBs": ["KB4052623"],
             "Installed": False,
-            "Title": "Blank",
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
         },
         "eac02c07-d744-4892-b80f-312d045e4ccc": {
             "KBs": ["KB4052444"],
             "Installed": False,
-            "Title": "Blank",
+            "Title": "Superseded Update",
         },
     }
-    fake_wua = MagicMock()
+
     fake_updates = MagicMock()
     fake_updates.list.return_value = updates_not_installed
 
+    patch_win_wua_update = patch(
+        "salt.utils.win_update.Updates",
+        autospec=True,
+        return_value=fake_updates,
+    )
+
     fake_wua_updates = MagicMock()
     fake_wua_updates.list.return_value = updates_list
-    fake_wua.updates.return_value = fake_wua_updates
 
-    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
-    patch_win32 = patch("win32com.client.Dispatch", autospec=True)
+    fake_wua = MagicMock()
+    fake_wua.updates.return_value = fake_wua_updates
     patch_wua = patch(
         "salt.utils.win_update.WindowsUpdateAgent",
         autospec=True,
         return_value=fake_wua,
     )
-    patch_win_wua_update = patch(
-        "salt.utils.win_update.Updates", autospec=True, return_value=fake_updates
-    )
+
+    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+    patch_win32 = patch("win32com.client.Dispatch", autospec=True)
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
     with patch_winapi_com, patch_win32, patch_wua, patch_win_wua_update, patch_opts:
-        wua = win_update.WindowsUpdateAgent(online=False)
         result = win_wua.uptodate(name="NA")
         assert result == expected
 
@@ -243,7 +262,7 @@ def test_installed(update_records, update_records_identity):
             ),
             IsDownloaded=False,
             IsInstalled=False,
-            Title="Update 2",
+            Title="KB4052623: Really long title that exceeds 40 characters",
         ),
     }
 
@@ -253,7 +272,7 @@ def test_installed(update_records, update_records_identity):
             "KBs": ["KB4052623"],
             "Installed": True,
             "NeedsReboot": True,
-            "Title": "Update 2",
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
         },
     }
 
@@ -270,7 +289,7 @@ def test_installed(update_records, update_records_identity):
             "KBs": ["KB4052623"],
             "Installed": True,
             "NeedsReboot": True,
-            "Title": "Update 2",
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
         },
         "eac02c07-d744-4892-b80f-312d045e4ccc": {
             "Downloaded": True,
@@ -325,7 +344,7 @@ def test_installed(update_records, update_records_identity):
                     "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
                         "KBs": ["KB4052623"],
                         "NeedsReboot": True,
-                        "Title": "Update 2...",
+                        "Title": "KB4052623: Really long title that exceeds 40 characters",
                     }
                 }
             },
@@ -482,4 +501,172 @@ def test_installed_already_installed(update_records, update_records_identity):
             "result": True,
         }
         result = win_wua.installed(name="KB4062623")
+        assert result == expected
+
+
+@pytest.mark.skip_unless_on_windows
+def test_removed(update_records, update_records_identity):
+    """
+    Test removed function
+    """
+
+    update_search_obj = {
+        update_records(
+            KBArticleIDs=("4052623",),
+            Identity=update_records_identity(
+                UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+            ),
+            IsDownloaded=False,
+            IsInstalled=True,
+            Title="KB4052623: Really long title that exceeds 40 characters",
+        ),
+    }
+
+    update_search_dict = {
+        "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+            "Downloaded": True,
+            "KBs": ["KB4052623"],
+            "Installed": False,
+            "NeedsReboot": True,
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
+        },
+    }
+
+    updates_refresh = {
+        "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {
+            "Downloaded": False,
+            "KBs": ["KB3193497"],
+            "Installed": False,
+            "NeedsReboot": False,
+            "Title": "Update 1",
+        },
+        "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+            "Downloaded": True,
+            "KBs": ["KB4052623"],
+            "Installed": False,
+            "NeedsReboot": True,
+            "Title": "KB4052623: Really long title that exceeds 40 characters",
+        },
+        "eac02c07-d744-4892-b80f-312d045e4ccc": {
+            "Downloaded": True,
+            "KBs": ["KB4052444"],
+            "Installed": True,
+            "NeedsReboot": False,
+            "Title": "Update 3",
+        },
+    }
+
+    # Mocks the connection to the Windows Update Agent
+    mock_wua = MagicMock()
+    # Mocks the initial search
+    mock_wua.search = MagicMock()
+    # Mocks the number of updates found.
+    mock_wua.search().count.return_value = 1
+    # Mocks the the updates collection object
+    mock_wua.search().updates = update_search_obj
+
+    # This mocks the updates collection in the uninstall variable. This will
+    # get populated as matches are found with the Add method
+    mock_updates = MagicMock()
+    # Needs to return the number of updates that need to be installed
+    # (IsInstalled = False)
+    mock_updates.count.return_value = 1
+    # Returns the updates that need to be installed as a dict
+    mock_updates.list.return_value = update_search_dict
+
+    # This gives us post_info
+    mock_wua.updates = MagicMock()
+    # Mock a refresh of the updates recognized by the machine. This would
+    # occur post uninstall. This is compared with the updates on the machine
+    # to determine if the removal was successful
+    mock_wua.updates().list.return_value = updates_refresh
+
+    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+    patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+    patch_wua = patch(
+        "salt.utils.win_update.WindowsUpdateAgent",
+        autospec=True,
+        return_value=mock_wua,
+    )
+    patch_update_collection = patch(
+        "salt.utils.win_update.Updates", autospec=True, return_value=mock_updates
+    )
+    patch_opts = patch.dict(win_wua.__opts__, {"test": False})
+
+    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+        expected = {
+            "changes": {
+                "removed": {
+                    "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+                        "KBs": ["KB4052623"],
+                        "NeedsReboot": True,
+                        "Title": "KB4052623: Really long title that exceeds 40 characters",
+                    }
+                }
+            },
+            "comment": "Updates removed successfully",
+            "name": "KB4062623",
+            "result": True,
+        }
+        result = win_wua.removed(name="KB4062623")
+        assert result == expected
+
+
+@pytest.mark.skip_unless_on_windows
+def test_removed_test_mode(update_records, update_records_identity):
+    """
+    Test removed function in test mode
+    """
+
+    update_search_obj = {
+        update_records(
+            KBArticleIDs=("4052623",),
+            Identity=update_records_identity(
+                UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+            ),
+            IsDownloaded=False,
+            IsInstalled=True,
+            Title="KB4052623: Really long title that exceeds 40 characters",
+        ),
+    }
+
+    # Mocks the connection to the Windows Update Agent
+    mock_wua = MagicMock()
+    # Mocks the initial search
+    mock_wua.search = MagicMock()
+    # Mocks the number of updates found.
+    mock_wua.search().count.return_value = 1
+    # Mocks the the updates collection object
+    mock_wua.search().updates = update_search_obj
+
+    # This mocks the updates collection in the install variable. This will
+    # get populated to as matches are found with the Add method
+    mock_updates = MagicMock()
+    # Needs to return the number of updates that need to be installed
+    # (IsInstalled = False)
+    mock_updates.count.return_value = 1
+
+    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+    patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+    patch_wua = patch(
+        "salt.utils.win_update.WindowsUpdateAgent",
+        autospec=True,
+        return_value=mock_wua,
+    )
+    patch_update_collection = patch(
+        "salt.utils.win_update.Updates", autospec=True, return_value=mock_updates
+    )
+    patch_opts = patch.dict(win_wua.__opts__, {"test": True})
+
+    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+        expected = {
+            "changes": {},
+            "comment": "Updates will be removed:",
+            # I don't know how to mock this part so the list will show up.
+            # It's an update collection object populated using the Add
+            # method. But this works for now
+            "name": "KB4062623",
+            "result": None,
+        }
+        result = win_wua.removed(name="KB4062623")
         assert result == expected

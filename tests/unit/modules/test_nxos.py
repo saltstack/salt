@@ -2,6 +2,8 @@
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
 
+import pytest
+
 import salt.modules.cp as cp_module
 import salt.modules.file as file_module
 import salt.modules.nxos as nxos_module
@@ -10,7 +12,7 @@ import salt.utils.pycrypto
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.unit.modules.nxos.nxos_config import (
     config_input_file,
     config_result,
@@ -105,9 +107,9 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos_module.check_password(username, password, encrypted=False)
             self.assertFalse(result)
 
-    @skipIf(
+    @pytest.mark.skipif(
         "sha256" not in salt.utils.pycrypto.methods,
-        "compatible crypt method for fake data not available",
+        reason="compatible crypt method for fake data not available",
     )
     def test_check_password_password_encrypted_false(self):
 
@@ -251,7 +253,9 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch("salt.modules.nxos.get_user", return_value=username, autospec=True):
             for rv in [n9k_show_user_account, n9k_show_user_account_list]:
-                with patch("salt.modules.nxos.show", return_value=rv, autospec=True):
+                with patch(
+                    "salt.modules.nxos.sendline", return_value=rv, autospec=True
+                ):
                     result = nxos_module.get_roles(username)
                     self.assertEqual(result.sort(), expected_result.sort())
 
@@ -262,7 +266,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         username = "salt_test"
 
         with patch("salt.modules.nxos.get_user", return_value=username, autospec=True):
-            with patch("salt.modules.nxos.show", return_value="", autospec=True):
+            with patch("salt.modules.nxos.sendline", return_value="", autospec=True):
                 result = nxos_module.get_roles(username)
                 self.assertEqual(result, [])
 
@@ -277,7 +281,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             n9k_show_running_inc_username_list[0],
             n9k_show_running_inc_username_list,
         ]:
-            with patch("salt.modules.nxos.show", return_value=rv, autospec=True):
+            with patch("salt.modules.nxos.sendline", return_value=rv, autospec=True):
                 result = nxos_module.get_user(username)
                 self.assertEqual(result, expected_output)
 
@@ -509,7 +513,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         expected_output = n9k_show_running_config_list[0]
 
         for rv in [n9k_show_running_config_list[0], n9k_show_running_config_list]:
-            with patch("salt.modules.nxos.show", autospec=True, return_value=rv):
+            with patch("salt.modules.nxos.sendline", autospec=True, return_value=rv):
                 result = nxos_module.show_run()
                 self.assertEqual(result, expected_output)
 
@@ -520,7 +524,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         expected_output = n9k_show_ver_list[0]
 
         for rv in [n9k_show_ver_list[0], n9k_show_ver_list]:
-            with patch("salt.modules.nxos.show", autospec=True, return_value=rv):
+            with patch("salt.modules.nxos.sendline", autospec=True, return_value=rv):
                 result = nxos_module.show_ver()
                 self.assertEqual(result, expected_output)
 
@@ -549,7 +553,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         for cmd_set in commands:
             with patch(
-                "salt.modules.nxos.show",
+                "salt.modules.nxos.sendline",
                 autospec=True,
                 side_effect=[initial_config, modified_config],
             ):
@@ -581,7 +585,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         for cmd_set in commands:
             with patch(
-                "salt.modules.nxos.show",
+                "salt.modules.nxos.sendline",
                 autospec=True,
                 side_effect=[initial_config, modified_config],
             ):
@@ -612,7 +616,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config[0], modified_config[0]],
         ):
@@ -648,7 +652,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config_file, modified_config_file],
         ):
@@ -678,7 +682,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         config_file = "salt://bgp_config.txt"
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config_file, modified_config_file],
         ):
@@ -716,7 +720,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config[0], modified_config[0]],
         ):
@@ -742,7 +746,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         commands = None
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config_file, modified_config_file],
         ):
@@ -770,7 +774,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         config_file = None
 
         with patch(
-            "salt.modules.nxos.show",
+            "salt.modules.nxos.sendline",
             autospec=True,
             side_effect=[initial_config_file, modified_config_file],
         ):
@@ -826,7 +830,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value)
                     self.assertEqual(result["old"], ["feature bgp"])
@@ -848,7 +852,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value, full_match=True)
                     self.assertEqual(result["old"], ["feature bgp"])
@@ -870,7 +874,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value)
                     self.assertEqual(result["old"], [])

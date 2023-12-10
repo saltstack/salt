@@ -20,8 +20,9 @@ def __virtual__():
     if "haproxy.get_sessions" in __salt__:
         return __virtualname__
     else:
-        log.debug("Not loading haproxy beacon")
-        return False
+        err_msg = "haproxy.get_sessions is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):

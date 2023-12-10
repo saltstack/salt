@@ -28,11 +28,9 @@ else:
 
     # Import functions not in __all__
     # pylint: disable=unused-import,3rd-party-module-not-gated
-    from psutil import disk_partitions
-    from psutil import disk_usage
+    from psutil import disk_partitions, disk_usage
 
     # pylint: enable=unused-import,3rd-party-module-not-gated
-
     # Alias new module functions
     def boot_time():
         return psutil.BOOT_TIME

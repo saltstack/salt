@@ -3,10 +3,11 @@ import os
 import shutil
 import subprocess
 import tempfile
-from urllib.error import URLError
-from urllib.request import urlopen
+import urllib.error
+import urllib.request
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
@@ -16,7 +17,17 @@ import salt.utils.platform
 from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
+
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.skip_on_windows(
+        reason=(
+            "Special steps are required for proper SSL validation because "
+            "`easy_install` is too old(and deprecated)."
+        )
+    ),
+]
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
@@ -34,8 +45,13 @@ log = logging.getLogger(__name__)
 
 
 def download_to(url, dest):
+    req = urllib.request.Request(url)
+    req.add_header(
+        "User-Agent",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36",
+    )
     with salt.utils.files.fopen(dest, "wb") as fic:
-        fic.write(urlopen(url, timeout=10).read())
+        fic.write(urllib.request.urlopen(req, timeout=10).read())
 
 
 class Base(TestCase, LoaderModuleMockMixin):
@@ -60,11 +76,11 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.tdir = os.path.join(cls.rdir, "test")
         for idx, url in buildout._URL_VERSIONS.items():
             log.debug("Downloading bootstrap from %s", url)
-            dest = os.path.join(cls.rdir, "{}_bootstrap.py".format(idx))
+            dest = os.path.join(cls.rdir, f"{idx}_bootstrap.py")
             try:
                 download_to(url, dest)
-            except URLError:
-                log.debug("Failed to download %s", url)
+            except urllib.error.URLError as exc:
+                log.debug("Failed to download %s: %s", url, exc)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, "psetuptools")
         if salt.utils.platform.is_windows():
@@ -108,7 +124,7 @@ class Base(TestCase, LoaderModuleMockMixin):
         shutil.copytree(self.root, self.tdir)
 
         for idx in BOOT_INIT:
-            path = os.path.join(self.rdir, "{}_bootstrap.py".format(idx))
+            path = os.path.join(self.rdir, f"{idx}_bootstrap.py")
             for fname in BOOT_INIT[idx]:
                 shutil.copy2(path, os.path.join(self.tdir, fname))
 
@@ -121,10 +137,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             shutil.rmtree(self.tdir)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutTestCase(Base):
     @pytest.mark.slow_test
@@ -142,7 +155,7 @@ class BuildoutTestCase(Base):
         @buildout._salt_callback
         def callback1(a, b=1):
             for i in buildout.LOG.levels:
-                getattr(buildout.LOG, i)("{}bar".format(i[0]))
+                getattr(buildout.LOG, i)(f"{i[0]}bar")
             return "foo"
 
         def callback2(a, b=1):
@@ -194,45 +207,37 @@ class BuildoutTestCase(Base):
     def test_get_bootstrap_url(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
                 buildout._URL_VERSIONS[1],
                 buildout._get_bootstrap_url(path),
-                "b1 url for {}".format(path),
+                f"b1 url for {path}",
             )
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
                 buildout._URL_VERSIONS[2],
                 buildout._get_bootstrap_url(path),
-                "b2 url for {}".format(path),
+                f"b2 url for {path}",
             )
 
     @pytest.mark.slow_test
     def test_get_buildout_ver(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
-            self.assertEqual(
-                1, buildout._get_buildout_ver(path), "1 for {}".format(path)
-            )
+            self.assertEqual(1, buildout._get_buildout_ver(path), f"1 for {path}")
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
-            self.assertEqual(
-                2, buildout._get_buildout_ver(path), "2 for {}".format(path)
-            )
+            self.assertEqual(2, buildout._get_buildout_ver(path), f"2 for {path}")
 
     @pytest.mark.slow_test
     def test_get_bootstrap_content(self):
@@ -244,8 +249,16 @@ class BuildoutTestCase(Base):
             "",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "1")),
         )
+
+        if (
+            salt.utils.platform.is_windows()
+            and os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0"
+        ):
+            line_break = "\r\n"
+        else:
+            line_break = "\n"
         self.assertEqual(
-            "foo{}".format(os.linesep),
+            f"foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 
@@ -282,7 +295,7 @@ class BuildoutTestCase(Base):
     @pytest.mark.slow_test
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
+            a.replace(self.root, "") for a in buildout._find_cfgs(self.root)
         )
         assertlist = sorted(
             [
@@ -321,10 +334,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutOnlineTestCase(Base):
     @classmethod
@@ -348,7 +358,7 @@ class BuildoutOnlineTestCase(Base):
             )
         except subprocess.CalledProcessError:
             subprocess.check_call(
-                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy.dis]
+                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_dis]
             )
 
             url = (
@@ -366,14 +376,14 @@ class BuildoutOnlineTestCase(Base):
                     "-C",
                     cls.ppy_dis,
                     "-xzvf",
-                    "{}/distribute-0.6.43.tar.gz".format(cls.ppy_dis),
+                    f"{cls.ppy_dis}/distribute-0.6.43.tar.gz",
                 ]
             )
 
             subprocess.check_call(
                 [
-                    "{}/bin/python".format(cls.ppy_dis),
-                    "{}/distribute-0.6.43/setup.py".format(cls.ppy_dis),
+                    f"{cls.ppy_dis}/bin/python",
+                    f"{cls.ppy_dis}/distribute-0.6.43/setup.py",
                     "install",
                 ]
             )
@@ -396,7 +406,7 @@ class BuildoutOnlineTestCase(Base):
                 ]
             )
 
-    @skipIf(True, "TODO this test should probably be fixed")
+    @pytest.mark.skip(reason="TODO this test should probably be fixed")
     def test_buildout_bootstrap(self):
         b_dir = os.path.join(self.tdir, "b")
         bd_dir = os.path.join(self.tdir, "b", "bdistribute")
@@ -478,7 +488,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue(ret["status"])
         self.assertTrue("Creating directory" in out)
         self.assertTrue("Installing a." in out)
-        self.assertTrue("{} bootstrap.py".format(self.py_st) in comment)
+        self.assertTrue(f"{self.py_st} bootstrap.py" in comment)
         self.assertTrue("buildout -c buildout.cfg" in comment)
         ret = buildout.buildout(
             b_dir, parts=["a", "b", "c"], buildout_ver=2, python=self.py_st

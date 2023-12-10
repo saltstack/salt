@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.mysql_user as mysql_user
 import salt.utils.data
 from tests.support.mock import MagicMock, patch

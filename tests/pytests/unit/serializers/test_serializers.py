@@ -2,19 +2,21 @@ from textwrap import dedent
 
 import jinja2
 import pytest
+import yaml as _yaml
+
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
+import salt.serializers.keyvalue as keyvalue
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
 import salt.serializers.python as python
-import salt.serializers.toml as toml
+import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
-import yaml as _yaml
+import salt.utils.platform
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import ON_PY35
 
 SKIP_MESSAGE = "{} is unavailable, have prerequisites been met?"
 
@@ -106,7 +108,6 @@ def test_compare_sls_vs_yaml():
 
 @pytest.mark.skipif(yaml.available is False, reason=SKIP_MESSAGE.format("yaml"))
 @pytest.mark.skipif(yamlex.available is False, reason=SKIP_MESSAGE.format("sls"))
-@pytest.mark.skipif(ON_PY35 is True, reason="This test is unreliable under Py3.5")
 def test_compare_sls_vs_yaml_with_jinja():
     tpl = "{{ data }}"
     env = jinja2.Environment()
@@ -358,13 +359,13 @@ def test_configparser():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(toml.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
+@pytest.mark.skipif(tomlmod.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
 def test_serialize_toml():
     data = {"foo": "bar"}
-    serialized = toml.serialize(data)
+    serialized = tomlmod.serialize(data)
     assert serialized == 'foo = "bar"\n', serialized
 
-    deserialized = toml.deserialize(serialized)
+    deserialized = tomlmod.deserialize(serialized)
     assert deserialized == data, deserialized
 
 
@@ -396,3 +397,44 @@ def test_serialize_binary_plist():
 
     deserialized = plist.deserialize(serialized)
     assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data)
+    assert serialized == "foo=bar baz", serialized
+
+    deserialized = keyvalue.deserialize(serialized)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_quoting():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data, quoting=True)
+    assert serialized == "foo='bar baz'", serialized
+
+    deserialized = keyvalue.deserialize(serialized, quoting=False)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_separator():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data, separator=" = ")
+    assert serialized == "foo = bar baz", serialized
+
+    deserialized = keyvalue.deserialize(serialized, separator=" = ")
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_list_of_lists():
+    if salt.utils.platform.is_windows():
+        linend = "\r\n"
+    else:
+        linend = "\n"
+    data = [["foo", "bar baz"], ["salt", "rocks"]]
+    expected = {"foo": "bar baz", "salt": "rocks"}
+    serialized = keyvalue.serialize(data)
+    assert serialized == f"foo=bar baz{linend}salt=rocks", serialized
+
+    deserialized = keyvalue.deserialize(serialized)
+    assert deserialized == expected, deserialized

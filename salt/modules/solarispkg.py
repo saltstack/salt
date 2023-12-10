@@ -343,7 +343,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if not sources:
@@ -361,7 +361,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
 
         # Only makes sense in a global zone but works fine in non-globals.
         if kwargs.get("current_zone_only") in (True, "True"):
-            cmd_prefix += "-G "
+            cmd_prefix.append("-G ")
 
         errors = []
         for pkg in pkg_params:

@@ -3,7 +3,7 @@ import random
 import string
 
 import pytest
-import salt.config
+
 import salt.loader
 import salt.states.boto_cloudtrail as boto_cloudtrail
 from tests.support.mock import MagicMock, patch
@@ -57,27 +57,35 @@ class GlobalConfig:
 
 
 @pytest.fixture
+def session_instance():
+    with patch("boto3.session.Session") as patched_session:
+        yield patched_session()
+
+
+@pytest.fixture
 def global_config():
+    GlobalConfig.conn_parameters["key"] = "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
+    )
     params = GlobalConfig()
     return params
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
+def configure_loader_modules(minion_opts):
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts,
+        minion_opts,
         whitelist=["boto", "boto3", "args", "systemd", "path", "platform", "reg"],
         context=ctx,
     )
-    serializers = salt.loader.serializers(opts)
+    serializers = salt.loader.serializers(minion_opts)
     funcs = salt.loader.minion_mods(
-        opts, context=ctx, utils=utils, whitelist=["boto_cloudtrail"]
+        minion_opts, context=ctx, utils=utils, whitelist=["boto_cloudtrail"]
     )
     salt_states = salt.loader.states(
-        opts=opts,
+        opts=minion_opts,
         functions=funcs,
         utils=utils,
         whitelist=["boto_cloudtrail"],
@@ -85,7 +93,7 @@ def configure_loader_modules():
     )
     return {
         boto_cloudtrail: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": funcs,
             "__utils__": utils,
             "__states__": salt_states,
@@ -95,17 +103,10 @@ def configure_loader_modules():
 
 
 @pytest.mark.slow_test
-def test_present_when_trail_does_not_exist(global_config):
+def test_present_when_trail_does_not_exist(global_config, session_instance):
     """
     Tests present on a trail that does not exist.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -130,14 +131,7 @@ def test_present_when_trail_does_not_exist(global_config):
 
 
 @pytest.mark.slow_test
-def test_present_when_trail_exists(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
+def test_present_when_trail_exists(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -159,14 +153,7 @@ def test_present_when_trail_exists(global_config):
 
 
 @pytest.mark.slow_test
-def test_present_with_failure(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
+def test_present_with_failure(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -191,17 +178,10 @@ def test_present_with_failure(global_config):
     assert "An error occurred" in result["comment"]
 
 
-def test_absent_when_trail_does_not_exist(global_config):
+def test_absent_when_trail_does_not_exist(global_config, session_instance):
     """
     Tests absent on a trail that does not exist.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -211,14 +191,7 @@ def test_absent_when_trail_does_not_exist(global_config):
     assert result["changes"] == {}
 
 
-def test_absent_when_trail_exists(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
+def test_absent_when_trail_exists(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -230,14 +203,7 @@ def test_absent_when_trail_exists(global_config):
     assert result["changes"]["new"]["trail"] is None
 
 
-def test_absent_with_failure(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-
-    session_instance = mock_session.return_value
+def test_absent_with_failure(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 

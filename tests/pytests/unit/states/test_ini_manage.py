@@ -1,11 +1,17 @@
+"""
+    Test cases for salt.states.ini_manage
+"""
+
+
 import copy
 import os
 
 import pytest
+
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
 from salt.utils.odict import OrderedDict
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -31,12 +37,12 @@ def sections():
     return sections
 
 
-def test_options_present(tmpdir, sections):
+def test_options_present(tmp_path, sections):
     """
     Test to verify options present when
     file does not initially exist
     """
-    name = tmpdir.join("test.ini").strpath
+    name = str(tmp_path / "test.ini")
 
     exp_ret = {
         "name": name,
@@ -49,12 +55,12 @@ def test_options_present(tmpdir, sections):
     assert mod_ini_manage.get_ini(name) == sections
 
 
-def test_options_present_true_no_file(tmpdir, sections):
+def test_options_present_true_no_file(tmp_path, sections):
     """
     Test to verify options present when
     file does not initially exist and test=True
     """
-    name = tmpdir.join("test_true_no_file.ini").strpath
+    name = str(tmp_path / "test_true_no_file.ini")
 
     exp_ret = {
         "name": name,
@@ -73,12 +79,12 @@ def test_options_present_true_no_file(tmpdir, sections):
     assert not os.path.exists(name)
 
 
-def test_options_present_true_file(tmpdir, sections):
+def test_options_present_true_file(tmp_path, sections):
     """
     Test to verify options present when
     file does exist and test=True
     """
-    name = tmpdir.join("test_true_file.ini").strpath
+    name = str(tmp_path / "test_true_file.ini")
 
     exp_ret = {
         "name": name,
@@ -103,3 +109,84 @@ def test_options_present_true_file(tmpdir, sections):
 
     assert os.path.exists(name)
     assert mod_ini_manage.get_ini(name) == sections
+
+
+def test_options_absent():
+    """
+    Test to verify options absent in file.
+    """
+    name = "salt"
+
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+
+    with patch.dict(ini_manage.__opts__, {"test": True}):
+        comt = "No changes detected."
+        ret.update({"comment": comt, "result": True})
+        assert ini_manage.options_absent(name) == ret
+
+    with patch.dict(ini_manage.__opts__, {"test": False}):
+        comt = "No anomaly detected"
+        ret.update({"comment": comt, "result": True})
+        assert ini_manage.options_absent(name) == ret
+    sections = {"Tables": ["key2", "key3"]}
+    changes = {"Tables": {"key2": "2", "key3": "3"}}
+    with patch.dict(
+        ini_manage.__salt__,
+        {"ini.remove_option": MagicMock(side_effect=["2", "3"])},
+    ):
+        with patch.dict(ini_manage.__opts__, {"test": False}):
+            comt = "Changes take effect"
+            ret.update({"comment": comt, "result": True, "changes": changes})
+            assert ini_manage.options_absent(name, sections) == ret
+
+
+def test_sections_present():
+    """
+    Test to verify sections present in file.
+    """
+    name = "salt"
+
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+
+    with patch.dict(ini_manage.__opts__, {"test": True}):
+        with patch.dict(
+            ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
+        ):
+            comt = "No changes detected."
+            ret.update({"comment": comt, "result": True})
+            assert ini_manage.sections_present(name) == ret
+
+    changes = {
+        "first": "who is on",
+        "second": "what is on",
+        "third": "I don't know",
+    }
+    with patch.dict(
+        ini_manage.__salt__, {"ini.set_option": MagicMock(return_value=changes)}
+    ):
+        with patch.dict(ini_manage.__opts__, {"test": False}):
+            comt = "Changes take effect"
+            ret.update({"comment": comt, "result": True, "changes": changes})
+            assert ini_manage.sections_present(name) == ret
+
+
+def test_sections_absent():
+    """
+    Test to verify sections absent in file.
+    """
+    name = "salt"
+
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+
+    with patch.dict(ini_manage.__opts__, {"test": True}):
+        with patch.dict(
+            ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
+        ):
+            comt = "No changes detected."
+            ret.update({"comment": comt, "result": True})
+            assert ini_manage.sections_absent(name) == ret
+
+    with patch.dict(ini_manage.__opts__, {"test": False}):
+        comt = "No anomaly detected"
+        ret.update({"comment": comt, "result": True})
+        assert ini_manage.sections_absent(name) == ret

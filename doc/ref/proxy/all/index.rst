@@ -31,5 +31,6 @@ proxy modules
     panos
     philips_hue
     rest_sample
+    restconf
     ssh_sample
     vcenter

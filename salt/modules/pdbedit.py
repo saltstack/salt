@@ -98,19 +98,22 @@ def list_users(verbose=True, hashes=False):
             log.error(res["stderr"] if "stderr" in res else res["stdout"])
             return users
 
-        user_data = {}
-        for user in res["stdout"].splitlines():
-            if user.startswith("-"):
-                if "unix username" in user_data:
-                    users[user_data["unix username"]] = user_data
-                user_data = {}
-            elif ":" in user:
-                label = user[: user.index(":")].strip().lower()
-                data = user[(user.index(":") + 1) :].strip()
-                user_data[label] = data
-
-        if user_data:
-            users[user_data["unix username"]] = user_data
+        for batch in re.split("\n-+|-+\n", res["stdout"]):
+            user_data = {}
+            last_label = None
+            for line in batch.splitlines():
+                if not line.strip():
+                    continue
+                label, sep, data = line.partition(":")
+                label = label.strip().lower()
+                data = data.strip()
+                if not sep:
+                    user_data[last_label] += line.strip()
+                else:
+                    last_label = label
+                    user_data[label] = data
+            if user_data:
+                users[user_data["unix username"]] = user_data
     else:
         # list users
         res = __salt__["cmd.run_all"]("pdbedit --list")
@@ -162,7 +165,7 @@ def delete(login):
     """
     if login in list_users(False):
         res = __salt__["cmd.run_all"](
-            "pdbedit --delete {login}".format(login=shlex.quote(login)),
+            f"pdbedit --delete {shlex.quote(login)}",
         )
 
         if res["retcode"] > 0:
@@ -200,7 +203,7 @@ def create(login, password, password_hashed=False, machine_account=False):
         password_hash = password.upper()
         password = ""  # wipe password
     else:
-        password_hash = generate_nt_hash(password)
+        password_hash = generate_nt_hash(password).decode("ascii")
 
     # create user
     if login not in list_users(False):
@@ -403,6 +406,3 @@ def modify(
             ret = "updated"
 
     return {login: ret}
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

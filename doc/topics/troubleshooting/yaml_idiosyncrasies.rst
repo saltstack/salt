@@ -347,7 +347,7 @@ Python can also be used to discover the Unicode number for a character:
 
 .. code-block:: python
 
-    repr(u"Text with wrong characters i need to figure out")
+    repr("Text with wrong characters i need to figure out")
 
 This shell command can find wrong characters in your SLS files:
 

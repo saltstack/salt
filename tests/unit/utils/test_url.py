@@ -68,6 +68,32 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.create(path, saltenv), url)
 
+    def test_create_url_with_backslash_in_path(self):
+        """
+        Test creating a 'salt://' URL
+        """
+        src_path = r"? interesting\&path.filetype"
+        tgt_path = "? interesting/&path.filetype"
+        url = "salt://" + tgt_path
+        if salt.utils.platform.is_windows():
+            url = "salt://_ interesting/&path.filetype"
+
+        self.assertEqual(salt.utils.url.create(src_path), url)
+
+    def test_create_url_saltenv_with_backslash_in_path(self):
+        """
+        Test creating a 'salt://' URL with a saltenv
+        """
+        saltenv = "raumklang"
+        src_path = r"? interesting\&path.filetype"
+        tgt_path = "? interesting/&path.filetype"
+        if salt.utils.platform.is_windows():
+            tgt_path = "_ interesting/&path.filetype"
+
+        url = "salt://" + tgt_path + "?saltenv=" + saltenv
+
+        self.assertEqual(salt.utils.url.create(src_path, saltenv), url)
+
     # is_escaped tests
 
     def test_is_escaped_windows(self):

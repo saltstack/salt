@@ -20,8 +20,9 @@ from salt.exceptions import CommandExecutionError
 
 try:
     import winreg
-    import win32security
+
     import ntsecuritycon
+    import win32security
 
     HAS_WINDOWS_MODULES = True
 except ImportError:

@@ -73,13 +73,13 @@ def get_or_set_hash(
           mysql_user:
             - present
             - host: localhost
-            - password: '{{ salt['sdb.get_or_set_hash']('some_mysql_user_pass') }}'
+            - password: '{{ salt["sdb.get_or_set_hash"]("sdb://mymemcached/some_user_pass") }}'
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' sdb.get_or_set_hash 'SECRET_KEY' 50
+        salt '*' sdb.get_or_set_hash 'sdb://mymemcached/SECRET_KEY' 50
 
     .. warning::
 

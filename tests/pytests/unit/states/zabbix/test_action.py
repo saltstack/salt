@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.zabbix_action as zabbix_action
 from tests.support.mock import MagicMock, patch
 

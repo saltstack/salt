@@ -67,4 +67,3 @@ You will want to place the minion keys before starting the salt-minion daemon:
 
 Once in place, you should be able to start salt-minion and run ``salt-call
 state.apply`` or any other salt commands that require master authentication.
-

@@ -41,7 +41,7 @@ def validate(config):
 def beacon(config):
     """
     Called several times each second
-    https://docs.saltstack.com/en/latest/topics/beacons/#the-beacon-function
+    https://docs.saltproject.io/en/latest/topics/beacons/#the-beacon-function
 
     .. code-block:: yaml
 

@@ -18,7 +18,7 @@ import re
 
 import salt.utils.json
 from salt.exceptions import get_error_message as _get_error_message
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pymongo
@@ -92,6 +92,21 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
     """
     List all MongoDB databases
 
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -104,7 +119,7 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
 
     try:
         log.info("Listing databases")
-        return conn.database_names()
+        return conn.list_database_names()
     except pymongo.errors.PyMongoError as err:
         log.error(err)
         return str(err)
@@ -113,6 +128,24 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
 def db_exists(name, user=None, password=None, host=None, port=None, authdb=None):
     """
     Checks if a database exists in MongoDB
+
+    name
+        The name of the database to check for.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -131,6 +164,24 @@ def db_exists(name, user=None, password=None, host=None, port=None, authdb=None)
 def db_remove(name, user=None, password=None, host=None, port=None, authdb=None):
     """
     Remove a MongoDB database
+
+    name
+        The name of the database to remove.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -162,6 +213,21 @@ def version(
     """
     Get MongoDB instance version
 
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -187,6 +253,27 @@ def user_find(
 ):
     """
     Get single user from MongoDB
+
+    name
+        The name of the user to find.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    database
+        The MongoDB database to use when looking for the user. Default is ``admin``.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -214,6 +301,24 @@ def user_list(
     """
     List users of a MongoDB database
 
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    database
+        The MongoDB database to use when listing users. Default is ``admin``.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -231,7 +336,7 @@ def user_list(
         output = []
         mongodb_version = _version(mdb)
 
-        if _LooseVersion(mongodb_version) >= _LooseVersion("2.6"):
+        if Version(mongodb_version) >= Version("2.6"):
             for user in mdb.command("usersInfo")["users"]:
                 output.append({"user": user["user"], "roles": user["roles"]})
         else:
@@ -251,6 +356,24 @@ def user_exists(
 ):
     """
     Checks if a user exists in MongoDB
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    database
+        The MongoDB database to use when checking if the user exists. Default is ``admin``.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -284,6 +407,33 @@ def user_create(
     """
     Create a MongoDB user
 
+    name
+        The name of the user to create.
+
+    passwd
+        The password for the user that is being created.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    database
+        The MongoDB database to use when checking if the user exists. Default is ``admin``.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
+    roles
+        The roles that should be associated with the user. Default is None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -297,13 +447,15 @@ def user_create(
     if not roles:
         roles = []
 
+    _roles = [{"role": _role, "db": database} for _role in roles]
     try:
         log.info("Creating user %s", name)
         mdb = pymongo.database.Database(conn, database)
-        mdb.add_user(name, passwd, roles=roles)
+        mdb.command("createUser", name, pwd=passwd, roles=_roles)
+
     except pymongo.errors.PyMongoError as err:
-        log.error("Creating database %s failed with error: %s", name, err)
-        return str(err)
+        log.error("Creating user %s failed with error: %s", name, err)
+        return False
     return True
 
 
@@ -312,6 +464,24 @@ def user_remove(
 ):
     """
     Remove a MongoDB user
+
+    name
+        The name of the user that should be removed.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -326,11 +496,10 @@ def user_remove(
     try:
         log.info("Removing user %s", name)
         mdb = pymongo.database.Database(conn, database)
-        mdb.remove_user(name)
+        mdb.command("dropUser", name)
     except pymongo.errors.PyMongoError as err:
-        log.error("Creating database %s failed with error: %s", name, err)
-        return str(err)
-
+        log.error("Removing user %s failed with error: %s", name, err)
+        return False
     return True
 
 
@@ -339,6 +508,30 @@ def user_roles_exists(
 ):
     """
     Checks if a user of a MongoDB database has specified roles
+
+    name
+        The name of the user to check for the specified roles.
+
+    roles
+        The roles to check are associated with the specified user.
+
+    database
+        The database to check has the specified roles for the specified user.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Examples:
 
@@ -379,6 +572,30 @@ def user_grant_roles(
     """
     Grant one or many roles to a MongoDB user
 
+    name
+        The user to grant the specified roles to.
+
+    roles
+        The roles to grant to the specified user.
+
+    database
+        The database to great the roles against for the specified user.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -417,6 +634,27 @@ def user_revoke_roles(
     """
     Revoke one or many roles to a MongoDB user
 
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    roles
+        The roles to revoke from the specified user.
+
+    database
+        The database to revoke the roles from for the specified user.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -449,6 +687,164 @@ def user_revoke_roles(
     return True
 
 
+def collection_create(
+    collection,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    .. versionadded:: 3006.0
+
+    Create a collection in the specified database.
+
+    collection
+        The name of the collection to create.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.collection_create mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        log.info("Creating %s.%s", database, collection)
+        mdb = pymongo.database.Database(conn, database)
+        mdb.create_collection(collection)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            "Creating collection %r.%r failed with error %s", database, collection, err
+        )
+        return err
+    return True
+
+
+def collection_drop(
+    collection,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    .. versionadded:: 3006.0
+
+    Drop a collection in the specified database.
+
+    collection
+        The name of the collection to drop.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.collection_drop mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        log.info("Dropping %s.%s", database, collection)
+        mdb = pymongo.database.Database(conn, database)
+        mdb.drop_collection(collection)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            "Creating collection %r.%r failed with error %s", database, collection, err
+        )
+        return err
+    return True
+
+
+def collections_list(
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    .. versionadded:: 3006.0
+
+    List the collections available in the specified database.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.collections_list mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        mdb = pymongo.database.Database(conn, database)
+        ret = mdb.list_collection_names()
+    except pymongo.errors.PyMongoError as err:
+        log.error("Listing collections failed with error %s", err)
+        return err
+    return ret
+
+
 def insert(
     objects,
     collection,
@@ -461,6 +857,27 @@ def insert(
 ):
     """
     Insert an object or list of objects into a collection
+
+    objects
+        The objects to insert into the collection, should be provided as a list.
+
+    collection
+        The collection to insert the objects into.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -482,8 +899,8 @@ def insert(
         log.info("Inserting %r into %s.%s", objects, database, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ids = col.insert(objects)
-        return ids
+        ids = col.insert_many(objects)
+        return ids.acknowledged
     except pymongo.errors.PyMongoError as err:
         log.error("Inserting objects %r failed with error %s", objects, err)
         return err
@@ -504,6 +921,27 @@ def update_one(
     http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
     .. versionadded:: 2016.11.0
+
+    objects
+        The objects to update in the collection, should be provided as a list.
+
+    collection
+        The collection to insert the objects into.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -574,6 +1012,27 @@ def find(
     """
     Find an object or list of objects in a collection
 
+    collection
+        The collection to find the objects in.
+
+    query
+        The query to use when locating objects in the collection.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -594,8 +1053,16 @@ def find(
         log.info("Searching for %r in %s", query, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ret = col.find(query)
-        return list(ret)
+        if isinstance(query, list):
+            ret = []
+            for _query in query:
+                res = col.find(_query)
+                _ret = [_res for _res in res]
+                ret.extend(_ret)
+        else:
+            res = col.find(query)
+            ret = [_res for _res in res]
+        return ret
     except pymongo.errors.PyMongoError as err:
         log.error("Searching objects failed with error: %s", err)
         return err
@@ -613,7 +1080,34 @@ def remove(
     authdb=None,
 ):
     """
-    Remove an object or list of objects into a collection
+    Remove an object or list of objects from a collection
+
+    collection
+        The collection to remove objects from based on the query.
+
+    query
+        Query to determine which objects to remove.
+
+    user
+        The user to connect to MongoDB as. Default is None.
+
+    password
+        The password to use to connect to MongoDB as.  Default is None.
+
+    host
+        The host where MongoDB is running. Default is None.
+
+    port
+        The host where MongoDB is running. Default is None.
+
+    database
+        The database where the collection is.
+
+    w
+        The number of matches to remove from the collection.
+
+    authdb
+        The MongoDB database to use for authentication. Default is None.
 
     CLI Example:
 
@@ -635,8 +1129,17 @@ def remove(
         log.info("Removing %r from %s", query, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ret = col.remove(query, w=w)
-        return "{} objects removed".format(ret["n"])
+        deleted_count = 0
+        if isinstance(query, list):
+            for _query in query:
+                for count in range(0, w):
+                    res = col.delete_one(_query)
+                    deleted_count += res.deleted_count
+        else:
+            for count in range(0, w):
+                res = col.delete_one(query)
+                deleted_count += res.deleted_count
+        return "{} objects removed".format(deleted_count)
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", _get_error_message(err))
         return _get_error_message(err)

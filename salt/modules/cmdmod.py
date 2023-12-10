@@ -25,6 +25,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
+import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.stringutils
@@ -37,12 +38,12 @@ import salt.utils.vt
 import salt.utils.win_chcp
 import salt.utils.win_dacl
 import salt.utils.win_reg
+from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -127,13 +128,17 @@ def _chroot_pids(chroot):
     return pids
 
 
-def _render_cmd(
-    cmd, cwd, template, saltenv="base", pillarenv=None, pillar_override=None
-):
+def _render_cmd(cmd, cwd, template, saltenv=None, pillarenv=None, pillar_override=None):
     """
     If template is a valid template engine, process the cmd and cwd through
     that engine.
     """
+    if saltenv is None:
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
+
     if not template:
         return (cmd, cwd)
 
@@ -212,7 +217,7 @@ def _gather_pillar(pillarenv, pillar_override):
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         pillar_override=pillar_override,
@@ -251,6 +256,34 @@ def _check_avail(cmd):
     return bret and wret
 
 
+def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
+    """
+    Prep cmd when shell is powershell
+    """
+
+    # If this is running on Windows wrap
+    # the shell in quotes in case there are
+    # spaces in the paths.
+    if salt.utils.platform.is_windows():
+        shell = '"{}"'.format(shell)
+
+    # extract_stack() returns a list of tuples.
+    # The last item in the list [-1] is the current method.
+    # The third item[2] in each tuple is the name of that method.
+    if stack[-2][2] == "script":
+        cmd = (
+            "{} -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}".format(
+                shell, cmd
+            )
+        )
+    elif encoded_cmd:
+        cmd = "{} -NonInteractive -NoProfile -EncodedCommand {}".format(shell, cmd)
+    else:
+        cmd = '{} -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
+
+    return cmd
+
+
 def _run(
     cmd,
     cwd=None,
@@ -274,7 +307,7 @@ def _run(
     with_communicate=True,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     use_vt=False,
@@ -363,19 +396,7 @@ def _run(
         # Else just run a Powershell command.
         stack = traceback.extract_stack(limit=2)
 
-        # extract_stack() returns a list of tuples.
-        # The last item in the list [-1] is the current method.
-        # The third item[2] in each tuple is the name of that method.
-        if stack[-2][2] == "script":
-            cmd = '"{}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}'.format(
-                shell, cmd
-            )
-        elif encoded_cmd:
-            cmd = '"{}" -NonInteractive -NoProfile -EncodedCommand {}'.format(
-                shell, cmd
-            )
-        else:
-            cmd = '"{}" -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
+        cmd = _prep_powershell_cmd(shell, cmd, stack, encoded_cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -439,12 +460,13 @@ def _run(
         # Ensure environment is correct for a newly logged-in user by running
         # the command under bash as a login shell
         try:
-            user_shell = __salt__["user.info"](runas)["shell"]
+            # Do not rely on populated __salt__ dict (ie avoid __salt__['user.info'])
+            user_shell = [x for x in pwd.getpwall() if x.pw_name == runas][0].pw_shell
             if re.search("bash$", user_shell):
                 cmd = "{shell} -l -c {cmd}".format(
                     shell=user_shell, cmd=_cmd_quote(cmd)
                 )
-        except KeyError:
+        except (AttributeError, IndexError):
             pass
 
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
@@ -488,7 +510,7 @@ def _run(
             marker = "<<<" + str(uuid.uuid4()) + ">>>"
             marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
-                "import sys, os, itertools; sys.stdout.write('{0}''); "
+                "import sys, os, itertools; sys.stdout.write('{0}'); "
                 "sys.stdout.write('\\0'.join(itertools.chain(*os.environ.items()))); "
                 "sys.stdout.write('{0}');".format(marker)
             )
@@ -504,30 +526,50 @@ def _run(
                     env_cmd.extend(["-s", "--", shell, "-c"])
                 else:
                     env_cmd.extend(["-i", "--"])
-                env_cmd.extend([sys.executable])
             elif __grains__["os"] in ["FreeBSD"]:
-                env_cmd = (
+                env_cmd = [
                     "su",
                     "-",
                     runas,
                     "-c",
-                    "{} -c {}".format(shell, sys.executable),
-                )
+                ]
             elif __grains__["os_family"] in ["Solaris"]:
-                env_cmd = ("su", "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-", runas, "-c"]
             elif __grains__["os_family"] in ["AIX"]:
-                env_cmd = ("su", "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-", runas, "-c"]
             else:
-                env_cmd = ("su", "-s", shell, "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+
+            if not salt.utils.pkg.check_bundled():
+                if __grains__["os"] in ["FreeBSD"]:
+                    env_cmd.extend(["{} -c {}".format(shell, sys.executable)])
+                else:
+                    env_cmd.extend([sys.executable])
+            else:
+                with tempfile.NamedTemporaryFile("w", delete=False) as fp:
+                    if __grains__["os"] in ["FreeBSD"]:
+                        env_cmd.extend(
+                            [
+                                "{} -c {} python {}".format(
+                                    shell, sys.executable, fp.name
+                                )
+                            ]
+                        )
+                    else:
+                        env_cmd.extend(["{} python {}".format(sys.executable, fp.name)])
+                    fp.write(py_code)
+                    shutil.chown(fp.name, runas)
+
             msg = "env command: {}".format(env_cmd)
             log.debug(log_callback(msg))
-
             env_bytes, env_encoded_err = subprocess.Popen(
                 env_cmd,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
             ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            if salt.utils.pkg.check_bundled():
+                os.remove(fp.name)
             marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
@@ -611,6 +653,9 @@ def _run(
 
     if prepend_path:
         run_env["PATH"] = ":".join((prepend_path, run_env["PATH"]))
+
+    if "NOTIFY_SOCKET" not in env:
+        run_env.pop("NOTIFY_SOCKET", None)
 
     if python_shell is None:
         python_shell = False
@@ -809,6 +854,8 @@ def _run(
                 stream_stderr=True,
             )
             ret["pid"] = proc.pid
+            stdout = ""
+            stderr = ""
             while proc.has_unread_data:
                 try:
                     try:
@@ -819,12 +866,8 @@ def _run(
                             cstdout, cstderr = "", ""
                         if cstdout:
                             stdout += cstdout
-                        else:
-                            stdout = ""
                         if cstderr:
                             stderr += cstderr
-                        else:
-                            stderr = ""
                         if timeout and (time.time() > will_timeout):
                             ret["stderr"] = "SALT: Timeout after {}s\n{}".format(
                                 timeout, stderr
@@ -898,12 +941,13 @@ def _run_quiet(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
+    ignore_retcode=None,
 ):
     """
     Helper for running commands quietly for minion startup
@@ -930,6 +974,7 @@ def _run_quiet(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
+        ignore_retcode=ignore_retcode,
     )["stdout"]
 
 
@@ -945,13 +990,14 @@ def _run_all_quiet(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     output_encoding=None,
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
+    ignore_retcode=None,
 ):
 
     """
@@ -984,6 +1030,7 @@ def _run_all_quiet(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
+        ignore_retcode=ignore_retcode,
     )
 
 
@@ -1007,7 +1054,7 @@ def run(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -1325,7 +1372,7 @@ def shell(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -1585,7 +1632,7 @@ def run_stdout(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     prepend_path=None,
@@ -1819,7 +1866,7 @@ def run_stderr(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     prepend_path=None,
@@ -2053,7 +2100,7 @@ def run_all(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     redirect_stderr=False,
     password=None,
@@ -2333,7 +2380,7 @@ def retcode(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     success_retcodes=None,
@@ -2551,7 +2598,7 @@ def _retcode_quiet(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     success_retcodes=None,
@@ -2609,7 +2656,7 @@ def script(
     hide_output=False,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -2639,8 +2686,7 @@ def script(
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
 
     :param str cwd: The directory from which to execute the command. Defaults
-        to the home directory of the user specified by ``runas`` (or the user
-        under which Salt is running if ``runas`` is not specified).
+        to the directory returned from Python's tempfile.mkstemp.
 
     :param str stdin: A string of standard input can be specified for the
         command to be run using the ``stdin`` parameter. This can be useful in
@@ -2792,6 +2838,11 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
+    if saltenv is None:
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
     python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
 
     def _cleanup_tempfile(path):
@@ -2911,7 +2962,7 @@ def script_retcode(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     output_encoding=None,
     output_loglevel="debug",
     log_callback=None,
@@ -3264,7 +3315,7 @@ def run_chroot(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     success_retcodes=None,
@@ -3802,7 +3853,7 @@ def powershell(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     depth=None,
@@ -4090,7 +4141,7 @@ def powershell_all(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     depth=None,
@@ -4462,7 +4513,7 @@ def run_bg(
     log_callback=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     password=None,
     prepend_path=None,
     success_retcodes=None,

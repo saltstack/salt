@@ -36,7 +36,7 @@
 {% endif %}{% endfor %}{% endif %}{% if interface.bonding  %}{% for item in interface.bonding_keys  -%}
 {% if interface.bonding[item] is string      %}    bond-{{ item }} {{ interface.bonding[item] }}
 {% elif interface.bonding[item] is iterable  %}    bond-{{ item }} {{ interface.bonding[item]|join(' ') }}
-{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}.
+{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}
 {% if interface.bridging[item] is string     %}    bridge_{{ item }} {{ interface.bridging[item] }}
 {% elif interface.bridging[item] is iterable %}    bridge_{{ item }} {{ interface.bridging[item]|join(' ') }}
 {% endif %}{% endfor %}{% endif %}{% endif %}{% endif %}{% endfor %}

@@ -17,6 +17,7 @@
 # limitations under the License.
 
 import pytest
+
 import salt.states.nxos as nxos_state
 from tests.support.mock import MagicMock, patch
 
@@ -33,9 +34,13 @@ def test_user_present_create():
 
     roles = ["vdc-admin"]
 
-    side_effect = MagicMock(side_effect=[[], "", "set_role", roles, roles])
+    salt_mock = {
+        "nxos.get_roles": MagicMock(side_effect=[[], roles, roles]),
+        "nxos.get_user": MagicMock(side_effect=[""]),
+        "nxos.set_role": MagicMock(side_effect=["set_role"]),
+    }
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_present("daniel", roles=roles)
 
@@ -53,9 +58,13 @@ def test_user_present_create_opts_test():
 
     roles = ["vdc-admin"]
 
-    side_effect = MagicMock(side_effect=[[], "", "set_role", roles, roles])
+    salt_mock = {
+        "nxos.get_roles": MagicMock(side_effect=[[], roles, roles]),
+        "nxos.get_user": MagicMock(side_effect=[""]),
+        "nxos.set_role": MagicMock(side_effect=["set_role"]),
+    }
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_present("daniel", roles=roles)
 
@@ -78,23 +87,15 @@ def test_user_present_create_non_defaults():
     crypt_salt = "foobar123"
     algorithm = "md5"
 
-    # [change_password, cur_roles, old_user, new_user, set_role, set_role,
-    # get_roles, correct_password, cur_roles]
-    side_effect = MagicMock(
-        side_effect=[
-            False,
-            [],
-            "",
-            "new_user",
-            "set_role",
-            "set_role",
-            roles,
-            True,
-            roles,
-        ]
-    )
+    salt_mock = {
+        "nxos.check_password": MagicMock(side_effect=[False, True]),
+        "nxos.get_roles": MagicMock(side_effect=[[], roles, roles]),
+        "nxos.get_user": MagicMock(side_effect=[""]),
+        "nxos.set_password": MagicMock(side_effect=["new_user"]),
+        "nxos.set_role": MagicMock(side_effect=["set_role", "set_role"]),
+    }
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
             result = nxos_state.user_present(
                 username,
                 password=password,
@@ -124,10 +125,14 @@ def test_user_present_create_encrypted_password_no_roles_opts_test():
     crypt_salt = "foobar123"
     algorithm = "md5"
 
-    side_effect = MagicMock(side_effect=[False, "", "new_user", True])
+    salt_mock = {
+        "nxos.check_password": MagicMock(side_effect=[False, True]),
+        "nxos.get_user": MagicMock(side_effect=[""]),
+        "nxos.set_password": MagicMock(side_effect=["new_user"]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_present(
                 username,
@@ -154,10 +159,13 @@ def test_user_present_create_user_exists():
     crypt_salt = "foobar123"
     algorithm = "md5"
 
-    side_effect = MagicMock(side_effect=[True, "user_exists"])
+    salt_mock = {
+        "nxos.check_password": MagicMock(side_effect=[True]),
+        "nxos.get_user": MagicMock(side_effect=["user_exists"]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_present(
                 username,
@@ -186,10 +194,14 @@ def test_user_present_create_user_exists_opts_test():
     crypt_salt = "foobar123"
     algorithm = "md5"
 
-    side_effect = MagicMock(side_effect=[True, roles, "user_exists"])
+    salt_mock = {
+        "nxos.check_password": MagicMock(side_effect=[True]),
+        "nxos.get_roles": MagicMock(side_effect=[roles]),
+        "nxos.get_user": MagicMock(side_effect=["user_exists"]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_present(
                 username,
@@ -216,10 +228,13 @@ def test_user_absent():
 
     username = "daniel"
 
-    side_effect = MagicMock(side_effect=["daniel", "remove_user", ""])
+    salt_mock = {
+        "nxos.get_user": MagicMock(side_effect=["daniel", ""]),
+        "nxos.remove_user": MagicMock(side_effect=["remove_user"]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_absent(username)
 
@@ -240,7 +255,7 @@ def test_user_absent_user_does_not_exist():
     side_effect = MagicMock(side_effect=[""])
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, {"nxos.get_user": side_effect}):
 
             result = nxos_state.user_absent(username)
 
@@ -257,10 +272,13 @@ def test_user_absent_test_opts():
 
     username = "daniel"
 
-    side_effect = MagicMock(side_effect=["daniel", "remove_user", ""])
+    salt_mock = {
+        "nxos.get_user": MagicMock(side_effect=["daniel", ""]),
+        "nxos.remove_user": MagicMock(side_effect=["remove_user"]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.user_absent(username)
 
@@ -287,18 +305,13 @@ def test_config_present():
         ["snmp-server community AnotherRandomSNMPSTring group network-admin"]
     ]
 
-    side_effect = MagicMock(
-        side_effect=[
-            [],
-            "add_snmp_config1",
-            snmp_matches1,
-            "add_snmp_config2",
-            snmp_matches2,
-        ]
-    )
+    salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
+        "nxos.find": MagicMock(side_effect=[[], snmp_matches1, snmp_matches2]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.config_present(config_data)
 
@@ -321,7 +334,7 @@ def test_config_present_already_configured():
     side_effect = MagicMock(side_effect=[config_data[0], config_data[1]])
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, {"nxos.find": side_effect}):
 
             result = nxos_state.config_present(config_data)
 
@@ -347,18 +360,13 @@ def test_config_present_test_opts():
         ["snmp-server community AnotherRandomSNMPSTring group network-admin"]
     ]
 
-    side_effect = MagicMock(
-        side_effect=[
-            [],
-            "add_snmp_config1",
-            snmp_matches1,
-            "add_snmp_config2",
-            snmp_matches2,
-        ]
-    )
+    salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
+        "nxos.find": MagicMock(side_effect=[[], snmp_matches1, snmp_matches2]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.config_present(config_data)
 
@@ -384,12 +392,13 @@ def test_config_present_fail_to_add():
         ["snmp-server community AnotherRandomSNMPSTring group network-admin"]
     ]
 
-    side_effect = MagicMock(
-        side_effect=[[], "add_snmp_config1", "", "add_snmp_config2", ""]
-    )
+    salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
+        "nxos.find": MagicMock(side_effect=[[], "", ""]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.config_present(config_data)
 
@@ -418,10 +427,13 @@ def test_replace():
         "snmp-server community randomSNMPstringHERE group network-operator"
     ]
 
-    side_effect = MagicMock(side_effect=[matches_before, changes, match_after])
+    salt_mock = {
+        "nxos.find": MagicMock(side_effect=[matches_before, match_after]),
+        "nxos.replace": MagicMock(side_effect=[changes]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.replace(name, repl)
 
@@ -455,10 +467,13 @@ def test_replace_test_opts():
         "snmp-server community randomSNMPstringHERE group network-operator"
     ]
 
-    side_effect = MagicMock(side_effect=[matches_before, changes, match_after])
+    salt_mock = {
+        "nxos.find": MagicMock(side_effect=[matches_before, match_after]),
+        "nxos.replace": MagicMock(side_effect=[changes]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.replace(name, repl)
 
@@ -485,19 +500,13 @@ def test_config_absent():
         ["snmp-server community AnotherRandomSNMPSTring group network-admin"]
     ]
 
-    side_effect = MagicMock(
-        side_effect=[
-            snmp_matches1,
-            "remove_config",
-            [],
-            snmp_matches2,
-            "remove_config",
-            [],
-        ]
-    )
+    salt_mock = {
+        "nxos.delete_config": MagicMock(side_effect=["remove_config", "remove_config"]),
+        "nxos.find": MagicMock(side_effect=[snmp_matches1, [], snmp_matches2, []]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.config_absent(config_data)
 
@@ -520,7 +529,7 @@ def test_config_absent_already_configured():
     side_effect = MagicMock(side_effect=[[], []])
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, {"nxos.find": side_effect}):
 
             result = nxos_state.config_absent(config_data)
 
@@ -546,19 +555,13 @@ def test_config_absent_test_opts():
         ["snmp-server community AnotherRandomSNMPSTring group network-admin"]
     ]
 
-    side_effect = MagicMock(
-        side_effect=[
-            snmp_matches1,
-            "remove_config",
-            [],
-            snmp_matches2,
-            "remove_config",
-            [],
-        ]
-    )
+    salt_mock = {
+        "nxos.delete_config": MagicMock(side_effect=["remove_config", "remove_config"]),
+        "nxos.find": MagicMock(side_effect=[snmp_matches1, [], snmp_matches2, []]),
+    }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
-        with patch.dict(nxos_state.__salt__, {"nxos.cmd": side_effect}):
+        with patch.dict(nxos_state.__salt__, salt_mock):
 
             result = nxos_state.config_absent(config_data)
 

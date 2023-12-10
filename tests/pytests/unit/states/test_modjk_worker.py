@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.modjk_worker as modjk_worker
 from tests.support.mock import MagicMock, patch
 

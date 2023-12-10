@@ -71,14 +71,11 @@ def list_(return_yaml=True, include_pillar=True, include_opts=True, **kwargs):
         ret["comment"] = "Event module not available. Beacon list failed."
         return ret
 
-    if beacons:
-        if return_yaml:
-            tmp = {"beacons": beacons}
-            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
-        else:
-            return beacons
+    if return_yaml:
+        tmp = {"beacons": beacons}
+        return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
-        return {"beacons": {}}
+        return beacons
 
 
 def list_available(return_yaml=True, **kwargs):

@@ -1,1 +1,0 @@
-Fixing rabbitmq.list_user_permissions to ensure we are returning a permission list with three elements even when some values are empty.

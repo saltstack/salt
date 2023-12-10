@@ -10,6 +10,7 @@ import types
 from collections import deque
 
 import attr
+
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)

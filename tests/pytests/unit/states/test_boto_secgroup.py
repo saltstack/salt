@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.boto_secgroup as boto_secgroup
 from salt.utils.odict import OrderedDict
 

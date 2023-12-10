@@ -107,12 +107,13 @@ import datetime
 import logging
 
 import yaml
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.aggregation import Map, Sequence, aggregate
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
+from salt.utils.aggregation import Map, Sequence, aggregate
+from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 

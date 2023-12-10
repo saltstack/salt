@@ -143,4 +143,4 @@ def get(key, profile=None):
     res = res.fetchone()
     if not res:
         return None
-    return salt.utils.msgpack.unpackb(res[0])
+    return salt.utils.msgpack.unpackb(res[0], raw=False)

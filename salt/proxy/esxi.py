@@ -1,7 +1,15 @@
 """
 Proxy Minion interface module for managing VMware ESXi hosts.
 
-.. versionadded:: 2015.8.4
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESXi module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
 
 **Special Note: SaltStack thanks** `Adobe Corporation <http://adobe.com/>`_
 **for their support in creating this Proxy Minion integration.**

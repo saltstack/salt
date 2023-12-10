@@ -4,11 +4,13 @@ Unit Tests for functions located in salt/utils/files.py
 
 
 import copy
+import io
 import os
 
 import pytest
+
 import salt.utils.files
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 
 def test_safe_rm():
@@ -72,6 +74,16 @@ def test_fopen_with_disallowed_fds():
                 "fopen() should have been prevented from opening a file "
                 "using {} as the filename".format(invalid_fn)
             )
+
+
+def test_fopen_binary_line_buffering(tmp_path):
+    tmp_file = os.path.join(tmp_path, "foobar")
+    with patch("builtins.open") as open_mock, patch(
+        "salt.utils.files.is_fcntl_available", MagicMock(return_value=False)
+    ):
+        salt.utils.files.fopen(os.path.join(tmp_path, "foobar"), mode="b", buffering=1)
+        assert open_mock.called
+        assert open_mock.call_args[1]["buffering"] == io.DEFAULT_BUFFER_SIZE
 
 
 def _create_temp_structure(temp_directory, structure):

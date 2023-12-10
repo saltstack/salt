@@ -3,6 +3,7 @@ Unit tests for the docker state
 """
 
 import pytest
+
 import salt.modules.dockermod as docker_mod
 import salt.states.docker_volume as docker_state
 from tests.support.mock import Mock, patch

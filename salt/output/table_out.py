@@ -155,7 +155,7 @@ class TableDisplay:
 
         columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
-        max_widths = [max([len(str(item)) for item in column]) for column in columns]
+        max_widths = [max(len(str(item)) for item in column) for column in columns]
         row_separator = self.row_delimiter * (
             len(self.prefix)
             + len(self.suffix)

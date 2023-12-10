@@ -328,7 +328,6 @@ def wait(
     shell=None,
     env=(),
     stateful=False,
-    umask=None,
     output_loglevel="debug",
     hide_output=False,
     use_vt=False,
@@ -408,9 +407,6 @@ def wait(
             matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
-    umask
-         The umask (in octal) to use when running the command.
-
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
@@ -444,10 +440,11 @@ def wait(
         interactively to the console and the logs.
         This is experimental.
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -482,7 +479,6 @@ def wait_script(
     shell=None,
     env=None,
     stateful=False,
-    umask=None,
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
@@ -565,9 +561,6 @@ def wait_script(
             matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
-    umask
-         The umask (in octal) to use when running the command.
-
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
@@ -594,10 +587,11 @@ def wait_script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -628,7 +622,6 @@ def run(
     env=None,
     prepend_path=None,
     stateful=False,
-    umask=None,
     output_loglevel="debug",
     hide_output=False,
     timeout=None,
@@ -643,6 +636,17 @@ def run(
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
+    .. note::
+
+       The ``**kwargs`` of ``cmd.run`` are passed down to one of the following
+       exec modules:
+
+       * ``cmdmod.run_all``: If used with default ``runas``
+       * ``cmdmod.run_chroot``: If used with non-``root`` value for ``runas``
+
+       For more information on what args are available for either of these,
+       refer to the :ref:`cmdmod documentation <cmdmod-module>`.
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -656,7 +660,7 @@ def run(
         will run inside a chroot
 
     runas
-        The user name to run the command as
+        The user name (or uid) to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -716,9 +720,6 @@ def run(
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
 
-    umask
-        The umask (in octal) to use when running the command.
-
     output_loglevel : debug
         Control the loglevel at which the output from the command is logged to
         the minion log.
@@ -764,10 +765,11 @@ def run(
 
         .. versionadded:: 2016.3.6
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -836,7 +838,6 @@ def run(
             "shell": shell or __grains__["shell"],
             "env": env,
             "prepend_path": prepend_path,
-            "umask": umask,
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
@@ -848,6 +849,7 @@ def run(
     if __opts__["test"] and not test_name:
         ret["result"] = None
         ret["comment"] = 'Command "{}" would have been executed'.format(name)
+        ret["changes"] = {"cmd": name}
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
@@ -894,7 +896,6 @@ def script(
     shell=None,
     env=None,
     stateful=False,
-    umask=None,
     timeout=None,
     use_vt=False,
     output_loglevel="debug",
@@ -1007,9 +1008,6 @@ def script(
     saltenv : ``base``
         The Salt environment to use
 
-    umask
-         The umask (in octal) to use when running the command.
-
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
@@ -1063,10 +1061,11 @@ def script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -1128,7 +1127,6 @@ def script(
             "env": env,
             "cwd": cwd,
             "template": template,
-            "umask": umask,
             "timeout": timeout,
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
@@ -1234,7 +1232,6 @@ def call(
         "use_vt": use_vt,
         "output_loglevel": output_loglevel,
         "hide_output": hide_output,
-        "umask": kwargs.get("umask"),
     }
 
     if not kws:

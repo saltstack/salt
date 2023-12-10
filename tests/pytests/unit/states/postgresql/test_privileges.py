@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.postgres_privileges as postgres_privileges
 from tests.support.mock import MagicMock, patch
 

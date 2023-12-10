@@ -233,15 +233,9 @@ except ImportError:
 
 try:
     # pylint: disable=no-name-in-module
-    from pyVmomi import (
-        vim,
-        vmodl,
-        pbm,
-        VmomiSupport,
-    )
+    from pyVmomi import VmomiSupport, pbm, vim, vmodl
 
     # pylint: enable=no-name-in-module
-
     # We check the supported vim versions to infer the pyVmomi version
     if (
         "vim25/6.0" in VmomiSupport.versionMap
@@ -260,10 +254,13 @@ except ImportError:
 # vSphere SDK Automation
 # pylint: disable=unused-import
 try:
-    from com.vmware.cis.tagging_client import Category, CategoryModel
-    from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
-    from com.vmware.vcenter_client import Cluster
-    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.cis.tagging_client import (
+        Category,
+        CategoryModel,
+        Tag,
+        TagAssociation,
+        TagModel,
+    )
 
     # Error Handling
     from com.vmware.vapi.std.errors_client import (
@@ -273,6 +270,8 @@ try:
         Unauthenticated,
         Unauthorized,
     )
+    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.vcenter_client import Cluster
 
     vsphere_errors = (
         AlreadyExists,
@@ -301,6 +300,28 @@ def __virtual__():
     return __virtualname__
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3008,
+            "The 'vsphere' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def get_proxy_type():
     """
     Returns the proxy type retrieved either from the pillar of from the proxy
@@ -335,7 +356,7 @@ def _get_proxy_connection_details():
     elif proxytype == "esxvm":
         details = __salt__["esxvm.get_details"]()
     else:
-        raise CommandExecutionError("'{}' proxy is not supported".format(proxytype))
+        raise CommandExecutionError(f"'{proxytype}' proxy is not supported")
     proxy_details = [
         details.get("vcenter") if "vcenter" in details else details.get("host"),
         details.get("username"),
@@ -471,6 +492,7 @@ def _gets_service_instance_via_proxy(fn):
 
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
+@_deprecation_message
 def get_service_instance_via_proxy(service_instance=None):
     """
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -494,6 +516,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
+@_deprecation_message
 def disconnect(service_instance):
     """
     Disconnects from a vCenter or ESXi host
@@ -513,6 +536,7 @@ def disconnect(service_instance):
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def esxcli_cmd(
     cmd_str,
     host=None,
@@ -608,6 +632,7 @@ def esxcli_cmd(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def get_coredump_network_config(
     host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None
 ):
@@ -701,6 +726,7 @@ def get_coredump_network_config(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def coredump_network_enable(
     host,
     username,
@@ -758,7 +784,7 @@ def coredump_network_enable(
         enable_it = 1
     else:
         enable_it = 0
-    cmd = "system coredump network set -e {}".format(enable_it)
+    cmd = f"system coredump network set -e {enable_it}"
 
     ret = {}
     if esxi_hosts:
@@ -801,6 +827,7 @@ def coredump_network_enable(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def set_coredump_network_config(
     host,
     username,
@@ -913,6 +940,7 @@ def set_coredump_network_config(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def get_firewall_status(
     host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None
 ):
@@ -1019,6 +1047,7 @@ def get_firewall_status(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def enable_firewall_ruleset(
     host,
     username,
@@ -1114,6 +1143,7 @@ def enable_firewall_ruleset(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def syslog_service_reload(
     host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None
 ):
@@ -1194,6 +1224,7 @@ def syslog_service_reload(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def set_syslog_config(
     host,
     username,
@@ -1379,6 +1410,7 @@ def set_syslog_config(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def get_syslog_config(
     host, username, password, protocol=None, port=None, esxi_hosts=None, credstore=None
 ):
@@ -1461,6 +1493,7 @@ def get_syslog_config(
 
 
 @depends(HAS_ESX_CLI)
+@_deprecation_message
 def reset_syslog_config(
     host,
     username,
@@ -1510,9 +1543,11 @@ def reset_syslog_config(
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed, per host.
 
-    CLI Example:
+    .. note::
 
-    ``syslog_config`` can be passed as a quoted, comma-separated string, e.g.
+        ``syslog_config`` can be passed as a quoted, comma-separated string. See CLI Example for details.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1583,6 +1618,7 @@ def reset_syslog_config(
 
 
 @ignores_kwargs("credstore")
+@_deprecation_message
 def upload_ssh_key(
     host,
     username,
@@ -1627,7 +1663,7 @@ def upload_ssh_key(
     if certificate_verify is None:
         certificate_verify = True
 
-    url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
+    url = f"{protocol}://{host}:{port}/host/ssh_root_authorized_keys"
     ret = {}
     result = None
     try:
@@ -1667,6 +1703,7 @@ def upload_ssh_key(
 
 
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_ssh_key(
     host, username, password, protocol=None, port=None, certificate_verify=None
 ):
@@ -1697,7 +1734,7 @@ def get_ssh_key(
     if certificate_verify is None:
         certificate_verify = True
 
-    url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
+    url = f"{protocol}://{host}:{port}/host/ssh_root_authorized_keys"
     ret = {}
     try:
         result = salt.utils.http.query(
@@ -1724,6 +1761,7 @@ def get_ssh_key(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_host_datetime(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -1791,6 +1829,7 @@ def get_host_datetime(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_ntp_config(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -1857,6 +1896,7 @@ def get_ntp_config(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_service_policy(
     host,
     username,
@@ -1958,11 +1998,7 @@ def get_service_policy(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -1990,7 +2026,7 @@ def get_service_policy(
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = "'vsphere.get_service_policy' failed for host {}.".format(host_name)
+            msg = f"'vsphere.get_service_policy' failed for host {host_name}."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
 
@@ -1999,6 +2035,7 @@ def get_service_policy(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_service_running(
     host,
     username,
@@ -2100,11 +2137,7 @@ def get_service_running(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -2132,7 +2165,7 @@ def get_service_running(
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = "'vsphere.get_service_running' failed for host {}.".format(host_name)
+            msg = f"'vsphere.get_service_running' failed for host {host_name}."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
 
@@ -2141,6 +2174,7 @@ def get_service_running(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_vmotion_enabled(
     host,
     username,
@@ -2217,6 +2251,7 @@ def get_vmotion_enabled(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_vsan_enabled(
     host,
     username,
@@ -2287,7 +2322,7 @@ def get_vsan_enabled(
 
         # We must have a VSAN Config in place get information about VSAN state.
         if vsan_config is None:
-            msg = "VSAN System Config Manager is unset for host '{}'.".format(host_name)
+            msg = f"VSAN System Config Manager is unset for host '{host_name}'."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
         else:
@@ -2298,6 +2333,7 @@ def get_vsan_enabled(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def get_vsan_eligible_disks(
     host,
     username,
@@ -2388,6 +2424,7 @@ def get_vsan_eligible_disks(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def test_vcenter_connection(service_instance=None):
     """
     Checks if a connection is to a vCenter
@@ -2408,6 +2445,7 @@ def test_vcenter_connection(service_instance=None):
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def system_info(
     host,
     username,
@@ -2464,6 +2502,7 @@ def system_info(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_datacenters(
     host, username, password, protocol=None, port=None, verify_ssl=True
 ):
@@ -2510,6 +2549,7 @@ def list_datacenters(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_clusters(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of clusters for the specified host.
@@ -2554,6 +2594,7 @@ def list_clusters(host, username, password, protocol=None, port=None, verify_ssl
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_datastore_clusters(
     host, username, password, protocol=None, port=None, verify_ssl=True
 ):
@@ -2599,6 +2640,7 @@ def list_datastore_clusters(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_datastores(
     host, username, password, protocol=None, port=None, verify_ssl=True
 ):
@@ -2644,6 +2686,7 @@ def list_datastores(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_hosts(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of hosts for the specified VMware environment.
@@ -2687,6 +2730,7 @@ def list_hosts(host, username, password, protocol=None, port=None, verify_ssl=Tr
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_resourcepools(
     host, username, password, protocol=None, port=None, verify_ssl=True
 ):
@@ -2732,6 +2776,7 @@ def list_resourcepools(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_networks(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of networks for the specified host.
@@ -2775,6 +2820,7 @@ def list_networks(host, username, password, protocol=None, port=None, verify_ssl
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_vms(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of VMs for the specified host.
@@ -2818,6 +2864,7 @@ def list_vms(host, username, password, protocol=None, port=None, verify_ssl=True
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_folders(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of folders for the specified host.
@@ -2861,6 +2908,7 @@ def list_folders(host, username, password, protocol=None, port=None, verify_ssl=
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_dvs(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of distributed virtual switches for the specified host.
@@ -2904,6 +2952,7 @@ def list_dvs(host, username, password, protocol=None, port=None, verify_ssl=True
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_vapps(host, username, password, protocol=None, port=None, verify_ssl=True):
     """
     Returns a list of vApps for the specified host.
@@ -2948,6 +2997,7 @@ def list_vapps(host, username, password, protocol=None, port=None, verify_ssl=Tr
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_ssds(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -3017,6 +3067,7 @@ def list_ssds(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def list_non_ssds(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -3093,6 +3144,7 @@ def list_non_ssds(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def set_ntp_config(
     host,
     username,
@@ -3177,7 +3229,7 @@ def set_ntp_config(
         try:
             date_time_manager.UpdateDateTimeConfig(config=date_config)
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.ntp_configure_servers failed: {}".format(err)
+            msg = f"vsphere.ntp_configure_servers failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
             continue
@@ -3188,6 +3240,7 @@ def set_ntp_config(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def service_start(
     host,
     username,
@@ -3295,11 +3348,7 @@ def service_start(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3330,6 +3379,7 @@ def service_start(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def service_stop(
     host,
     username,
@@ -3437,11 +3487,7 @@ def service_stop(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3453,7 +3499,7 @@ def service_stop(
         try:
             service_manager.StopService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
-            msg = "'vsphere.service_stop' failed for host {}: {}".format(host_name, err)
+            msg = f"'vsphere.service_stop' failed for host {host_name}: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
             continue
@@ -3470,6 +3516,7 @@ def service_stop(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def service_restart(
     host,
     username,
@@ -3577,11 +3624,7 @@ def service_restart(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3612,6 +3655,7 @@ def service_restart(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def set_service_policy(
     host,
     username,
@@ -3717,11 +3761,7 @@ def set_service_policy(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3748,7 +3788,7 @@ def set_service_policy(
                         id=service_key, policy=service_policy
                     )
                 except vim.fault.NotFound:
-                    msg = "The service name '{}' was not found.".format(service_name)
+                    msg = f"The service name '{service_name}' was not found."
                     log.debug(msg)
                     ret.update({host_name: {"Error": msg}})
                     continue
@@ -3776,6 +3816,7 @@ def set_service_policy(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def update_host_datetime(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -3853,6 +3894,7 @@ def update_host_datetime(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def update_host_password(
     host, username, password, new_password, protocol=None, port=None, verify_ssl=True
 ):
@@ -3926,6 +3968,7 @@ def update_host_password(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def vmotion_disable(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -3990,7 +4033,7 @@ def vmotion_disable(
         try:
             vmotion_system.DeselectVnic()
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.vmotion_disable failed: {}".format(err)
+            msg = f"vsphere.vmotion_disable failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg, "VMotion Disabled": False}})
             continue
@@ -4002,6 +4045,7 @@ def vmotion_disable(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def vmotion_enable(
     host,
     username,
@@ -4077,7 +4121,7 @@ def vmotion_enable(
         try:
             vmotion_system.SelectVnic(device)
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.vmotion_disable failed: {}".format(err)
+            msg = f"vsphere.vmotion_disable failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg, "VMotion Enabled": False}})
             continue
@@ -4089,6 +4133,7 @@ def vmotion_enable(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def vsan_add_disks(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -4218,6 +4263,7 @@ def vsan_add_disks(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def vsan_disable(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -4317,6 +4363,7 @@ def vsan_disable(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def vsan_enable(
     host, username, password, protocol=None, port=None, host_names=None, verify_ssl=True
 ):
@@ -4528,6 +4575,7 @@ def _get_dvs_infrastructure_traffic_resources(dvs_name, dvs_infra_traffic_ress):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
     """
     Returns a list of distributed virtual switches (DVSs).
@@ -4540,6 +4588,8 @@ def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
     dvs_names
         List of DVS names to look for. If None, all DVSs are returned.
         Default value is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4735,6 +4785,7 @@ def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_dvs(dvs_dict, dvs_name, service_instance=None):
     """
     Creates a distributed virtual switch (DVS).
@@ -4750,6 +4801,8 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4795,7 +4848,7 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs_name])
         if not dvs_refs:
             raise VMwareObjectRetrievalError(
-                "DVS '{}' wasn't found in datacenter '{}'".format(dvs_name, datacenter)
+                f"DVS '{dvs_name}' wasn't found in datacenter '{datacenter}'"
             )
         dvs_ref = dvs_refs[0]
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
@@ -4807,6 +4860,7 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def update_dvs(dvs_dict, dvs, service_instance=None):
     """
     Updates a distributed virtual switch (DVS).
@@ -4825,6 +4879,8 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4845,7 +4901,7 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
         raise VMwareObjectRetrievalError(
-            "DVS '{}' wasn't found in datacenter '{}'".format(dvs, datacenter)
+            f"DVS '{dvs}' wasn't found in datacenter '{datacenter}'"
         )
     dvs_ref = dvs_refs[0]
     # Build the config spec from the input
@@ -4875,7 +4931,8 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
             dvs_config.infrastructureTrafficResourceConfig,
             dvs_dict["infrastructure_traffic_resource_pools"],
         )
-    log.trace("dvs_config= %s", dvs_config)
+    log.trace("dvs_config = %s", dvs_config)
+
     salt.utils.vmware.update_dvs(dvs_ref, dvs_config_spec=dvs_config)
     if "network_resource_management_enabled" in dvs_dict:
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
@@ -5033,6 +5090,7 @@ def _get_dvportgroup_dict(pg_ref):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
     """
     Returns a list of distributed virtual switch portgroups.
@@ -5051,9 +5109,11 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.list_dvporgroups
+        salt '*' vsphere.list_dvportgroups
 
         salt '*' vsphere.list_dvportgroups dvs=dvs1
 
@@ -5072,7 +5132,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
     if dvs:
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
         if not dvs_refs:
-            raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+            raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
         dvs_ref = dvs_refs[0]
     get_all_portgroups = True if not portgroup_names else False
     for pg_ref in salt.utils.vmware.get_dvportgroups(
@@ -5088,6 +5148,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_uplink_dvportgroup(dvs, service_instance=None):
     """
     Returns the uplink portgroup of a distributed virtual switch.
@@ -5098,6 +5159,8 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5112,7 +5175,7 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     uplink_pg_ref = salt.utils.vmware.get_uplink_dvportgroup(dvs_refs[0])
     return _get_dvportgroup_dict(uplink_pg_ref)
 
@@ -5303,6 +5366,7 @@ def _apply_dvportgroup_config(pg_name, pg_spec, pg_conf):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=None):
     """
     Creates a distributed virtual portgroup.
@@ -5324,6 +5388,8 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_dvportgroup portgroup_dict=<dict>
@@ -5344,7 +5410,7 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     # Make the name of the dvportgroup consistent with the parameter
     portgroup_dict["name"] = portgroup_name
     spec = vim.DVPortgroupConfigSpec()
@@ -5356,6 +5422,7 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
     """
     Updates a distributed virtual portgroup.
@@ -5373,6 +5440,8 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5397,14 +5466,12 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
-        raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not retrieved".format(portgroup)
-        )
+        raise VMwareObjectRetrievalError(f"Portgroup '{portgroup}' was not retrieved")
     pg_props = salt.utils.vmware.get_properties_of_managed_object(
         pg_refs[0], ["config"]
     )
@@ -5432,6 +5499,7 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def remove_dvportgroup(portgroup, dvs, service_instance=None):
     """
     Removes a distributed virtual portgroup.
@@ -5445,6 +5513,8 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5460,14 +5530,12 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
-        raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not retrieved".format(portgroup)
-        )
+        raise VMwareObjectRetrievalError(f"Portgroup '{portgroup}' was not retrieved")
     salt.utils.vmware.remove_dvportgroup(pg_refs[0])
     return True
 
@@ -5511,6 +5579,7 @@ def _get_policy_dict(policy):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_storage_policies(policy_names=None, service_instance=None):
     """
     Returns a list of storage policies.
@@ -5523,11 +5592,13 @@ def list_storage_policies(policy_names=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_storage_policies
 
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_storage_policies policy_names=[policy_name]
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     if not policy_names:
@@ -5542,6 +5613,7 @@ def list_storage_policies(policy_names=None, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_default_vsan_policy(service_instance=None):
     """
     Returns the default vsan storage policy.
@@ -5550,11 +5622,11 @@ def list_default_vsan_policy(service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.list_storage_policies
-
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_default_vsan_policy
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(
@@ -5584,6 +5656,7 @@ def _get_capability_definition_dict(cap_metadata):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_capability_definitions(service_instance=None):
     """
     Returns a list of the metadata of all capabilities in the vCenter.
@@ -5591,6 +5664,8 @@ def list_capability_definitions(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5657,6 +5732,7 @@ def _apply_policy_config(policy_spec, policy_dict):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_storage_policy(policy_name, policy_dict, service_instance=None):
     """
     Creates a storage policy.
@@ -5675,6 +5751,8 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5699,6 +5777,7 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def update_storage_policy(policy, policy_dict, service_instance=None):
     """
     Updates a storage policy.
@@ -5716,6 +5795,8 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.update_storage_policy policy='policy name'
@@ -5725,7 +5806,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
+        raise VMwareObjectRetrievalError(f"Policy '{policy}' was not found")
     policy_ref = policies[0]
     policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
     log.trace("Setting policy values in policy_update_spec")
@@ -5741,6 +5822,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxcluster", "esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     """
     Returns a list of datastores assign the storage policies.
@@ -5754,6 +5836,8 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_default_storage_policy_of_datastore datastore=ds1
@@ -5765,9 +5849,7 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
         service_instance, target_ref, datastore_names=[datastore]
     )
     if not ds_refs:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
         profile_manager, ds_refs[0]
@@ -5778,6 +5860,7 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxcluster", "esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def assign_default_storage_policy_to_datastore(
     policy, datastore, service_instance=None
 ):
@@ -5796,6 +5879,8 @@ def assign_default_storage_policy_to_datastore(
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.assign_storage_policy_to_datastore
@@ -5806,7 +5891,7 @@ def assign_default_storage_policy_to_datastore(
     # Find policy
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
+        raise VMwareObjectRetrievalError(f"Policy '{policy}' was not found")
     policy_ref = policies[0]
     # Find datastore
     target_ref = _get_proxy_target(service_instance)
@@ -5814,9 +5899,7 @@ def assign_default_storage_policy_to_datastore(
         service_instance, target_ref, datastore_names=[datastore]
     )
     if not ds_refs:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     ds_ref = ds_refs[0]
     salt.utils.pbm.assign_default_storage_policy_to_datastore(
         profile_manager, policy_ref, ds_ref
@@ -5827,6 +5910,7 @@ def assign_default_storage_policy_to_datastore(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "esxcluster", "vcenter", "esxvm")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     """
     Returns a list of dict representations of VMware datacenters.
@@ -5841,6 +5925,8 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5868,6 +5954,7 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_datacenter(datacenter_name, service_instance=None):
     """
     Creates a datacenter.
@@ -5880,6 +5967,8 @@ def create_datacenter(datacenter_name, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5980,6 +6069,7 @@ def _get_cluster_dict(cluster_name, cluster_ref):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_cluster(datacenter=None, cluster=None, service_instance=None):
     """
     Returns a dict representation of an ESX cluster.
@@ -5997,6 +6087,8 @@ def list_cluster(datacenter=None, cluster=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6157,6 +6249,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance=None):
     """
     Creates a cluster.
@@ -6179,6 +6272,8 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6254,6 +6349,7 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance=None):
     """
     Updates a cluster.
@@ -6274,6 +6370,8 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6368,6 +6466,7 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_datastores_via_proxy(
     datastore_names=None,
     backing_disk_ids=None,
@@ -6395,6 +6494,8 @@ def list_datastores_via_proxy(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6468,6 +6569,7 @@ def list_datastores_via_proxy(
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_vmfs_datastore(
     datastore_name,
     disk_id,
@@ -6495,6 +6597,8 @@ def create_vmfs_datastore(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_vmfs_datastore datastore_name=ds1 disk_id=
@@ -6521,7 +6625,7 @@ def create_vmfs_datastore(
         disks = salt.utils.vmware.get_disks(host_ref, disk_ids=[disk_id])
         if not disks:
             raise VMwareObjectRetrievalError(
-                "Disk '{}' was not found in host '{}'".format(disk_id, hostname)
+                f"Disk '{disk_id}' was not found in host '{hostname}'"
             )
     ds_ref = salt.utils.vmware.create_vmfs_datastore(
         host_ref, datastore_name, disks[0], vmfs_major_version
@@ -6532,6 +6636,7 @@ def create_vmfs_datastore(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
     """
     Renames a datastore. The datastore needs to be visible to the proxy.
@@ -6546,6 +6651,8 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.rename_datastore old_name new_name
@@ -6557,9 +6664,7 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
         service_instance, target, datastore_names=[datastore_name]
     )
     if not datastores:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore_name)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore_name}' was not found")
     ds = datastores[0]
     salt.utils.vmware.rename_datastore(ds, new_datastore_name)
     return True
@@ -6568,6 +6673,7 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def remove_datastore(datastore, service_instance=None):
     """
     Removes a datastore. If multiple datastores an error is raised.
@@ -6579,6 +6685,8 @@ def remove_datastore(datastore, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.remove_datastore ds_name
@@ -6589,12 +6697,10 @@ def remove_datastore(datastore, service_instance=None):
         service_instance, reference=target, datastore_names=[datastore]
     )
     if not datastores:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     if len(datastores) > 1:
         raise VMwareObjectRetrievalError(
-            "Multiple datastores '{}' were found".format(datastore)
+            f"Multiple datastores '{datastore}' were found"
         )
     salt.utils.vmware.remove_datastore(service_instance, datastores[0])
     return True
@@ -6603,6 +6709,7 @@ def remove_datastore(datastore, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_licenses(service_instance=None):
     """
     Lists all licenses on a vCenter.
@@ -6610,6 +6717,8 @@ def list_licenses(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6634,6 +6743,7 @@ def list_licenses(service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def add_license(key, description, safety_checks=True, service_instance=None):
     """
     Adds a license to the vCenter or ESXi host
@@ -6651,6 +6761,8 @@ def add_license(key, description, safety_checks=True, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6722,6 +6834,7 @@ def _validate_entity(entity):
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_assigned_licenses(
     entity, entity_display_name, license_keys=None, service_instance=None
 ):
@@ -6741,6 +6854,8 @@ def list_assigned_licenses(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6774,6 +6889,7 @@ def list_assigned_licenses(
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def assign_license(
     license_key,
     license_name,
@@ -6806,19 +6922,19 @@ def assign_license(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.assign_license license_key=00000:00000
-            license name=test entity={type:cluster,datacenter:dc,cluster:cl}
+        salt '*' vsphere.assign_license license_key=AAAAA-11111-AAAAA-11111-AAAAA
+            license_name=test entity={type:cluster,datacenter:dc,cluster:cl}
     """
     log.trace("Assigning license %s to entity %s", license_key, entity)
     _validate_entity(entity)
     if safety_checks:
         licenses = salt.utils.vmware.get_licenses(service_instance)
         if not [l for l in licenses if l.licenseKey == license_key]:
-            raise VMwareObjectRetrievalError(
-                "License '{}' wasn't found".format(license_name)
-            )
+            raise VMwareObjectRetrievalError(f"License '{license_name}' wasn't found")
     salt.utils.vmware.assign_license(
         service_instance,
         license_key,
@@ -6831,6 +6947,7 @@ def assign_license(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_hosts_via_proxy(
     hostnames=None, datacenter=None, cluster=None, service_instance=None
 ):
@@ -6885,6 +7002,7 @@ def list_hosts_via_proxy(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
     """
     Returns a list of dict representations of the disks in an ESXi host.
@@ -6901,6 +7019,8 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6943,6 +7063,7 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None):
     """
     Erases the partitions on a disk.
@@ -6962,6 +7083,8 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7001,6 +7124,7 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None):
     """
     Lists the partitions on a disk.
@@ -7020,6 +7144,8 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7077,6 +7203,7 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_diskgroups(cache_disk_ids=None, service_instance=None):
     """
     Returns a list of disk group dict representation on an ESXi host.
@@ -7094,6 +7221,8 @@ def list_diskgroups(cache_disk_ids=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7122,6 +7251,7 @@ def list_diskgroups(cache_disk_ids=None, service_instance=None):
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_diskgroup(
     cache_disk_id, capacity_disk_ids, safety_checks=True, service_instance=None
 ):
@@ -7144,6 +7274,8 @@ def create_diskgroup(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7178,7 +7310,7 @@ def create_diskgroup(
     for id in disk_ids:
         if not [d for d in disks if d.canonicalName == id]:
             raise VMwareObjectRetrievalError(
-                "No disk with id '{}' was found in ESXi host '{}'".format(id, hostname)
+                f"No disk with id '{id}' was found in ESXi host '{hostname}'"
             )
     cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
     capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
@@ -7195,6 +7327,7 @@ def create_diskgroup(
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def add_capacity_to_diskgroup(
     cache_disk_id, capacity_disk_ids, safety_checks=True, service_instance=None
 ):
@@ -7214,6 +7347,8 @@ def add_capacity_to_diskgroup(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7267,6 +7402,7 @@ def add_capacity_to_diskgroup(
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def remove_capacity_from_diskgroup(
     cache_disk_id,
     capacity_disk_ids,
@@ -7294,6 +7430,8 @@ def remove_capacity_from_diskgroup(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7349,6 +7487,7 @@ def remove_capacity_from_diskgroup(
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=None):
     """
     Remove the diskgroup with the specified cache disk.
@@ -7362,6 +7501,8 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=No
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7389,6 +7530,7 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=No
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def get_host_cache(service_instance=None):
     """
     Returns the host cache configuration on the proxy host.
@@ -7396,6 +7538,8 @@ def get_host_cache(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7415,7 +7559,7 @@ def get_host_cache(service_instance=None):
     return {
         "enabled": True,
         "datastore": {"name": hci.key.name},
-        "swap_size": "{}MiB".format(hci.swapSize),
+        "swap_size": f"{hci.swapSize}MiB",
     }
 
 
@@ -7423,6 +7567,7 @@ def get_host_cache(service_instance=None):
 @depends(HAS_JSONSCHEMA)
 @_supports_proxies("esxi")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def configure_host_cache(
     enabled, datastore=None, swap_size_MiB=None, service_instance=None
 ):
@@ -7443,6 +7588,8 @@ def configure_host_cache(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7476,7 +7623,7 @@ def configure_host_cache(
         )
         if not ds_refs:
             raise VMwareObjectRetrievalError(
-                "Datastore '{}' was not found on host '{}'".format(datastore, hostname)
+                f"Datastore '{datastore}' was not found on host '{hostname}'"
             )
         ds_ref = ds_refs[0]
     salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
@@ -7775,7 +7922,7 @@ def _set_syslog_config_helper(
     """
     Helper function for set_syslog_config that sets the config and populates the return dictionary.
     """
-    cmd = "system syslog config set --{} {}".format(syslog_config, config_value)
+    cmd = f"system syslog config set --{syslog_config} {config_value}"
     ret_dict = {}
 
     valid_resets = [
@@ -7790,7 +7937,7 @@ def _set_syslog_config_helper(
         ret_dict.update(
             {
                 "success": False,
-                "message": "'{}' is not a valid config variable.".format(syslog_config),
+                "message": f"'{syslog_config}' is not a valid config variable.",
             }
         )
         return ret_dict
@@ -7837,6 +7984,7 @@ def _set_syslog_config_helper(
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
+@_deprecation_message
 def add_host_to_dvs(
     host,
     username,
@@ -8032,14 +8180,14 @@ def add_host_to_dvs(
     dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
     if not dvs:
         ret["message"].append(
-            "No Distributed Virtual Switch found with name {}".format(dvs_name)
+            f"No Distributed Virtual Switch found with name {dvs_name}"
         )
         ret["success"] = False
 
     target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs, target_portgroup_name)
     if not target_portgroup:
         ret["message"].append(
-            "No target portgroup found with name {}".format(target_portgroup_name)
+            f"No target portgroup found with name {target_portgroup_name}"
         )
         ret["success"] = False
 
@@ -8048,18 +8196,18 @@ def add_host_to_dvs(
     )
     if not uplink_portgroup:
         ret["message"].append(
-            "No uplink portgroup found with name {}".format(uplink_portgroup_name)
+            f"No uplink portgroup found with name {uplink_portgroup_name}"
         )
         ret["success"] = False
 
-    if len(ret["message"]) > 0:
+    if ret["message"]:
         return ret
 
     dvs_uuid = dvs.config.uuid
     try:
         host_names = _check_hosts(service_instance, host, host_names)
     except CommandExecutionError as e:
-        ret["message"] = "Error retrieving hosts: {}".format(e.msg)
+        ret["message"] = f"Error retrieving hosts: {e.msg}"
         return ret
 
     for host_name in host_names:
@@ -8085,20 +8233,16 @@ def add_host_to_dvs(
         dvs_hostmember = vim.dvs.HostMember(config=dvs_hostmember_config)
         p_nics = salt.utils.vmware._get_pnics(host_ref)
         p_nic = [x for x in p_nics if x.device == vmnic_name]
-        if len(p_nic) == 0:
-            ret[host_name].update(
-                {"message": "Physical nic {} not found".format(vmknic_name)}
-            )
+        if not p_nic:
+            ret[host_name].update({"message": f"Physical nic {vmknic_name} not found"})
             ret["success"] = False
             continue
 
         v_nics = salt.utils.vmware._get_vnics(host_ref)
         v_nic = [x for x in v_nics if x.device == vmknic_name]
 
-        if len(v_nic) == 0:
-            ret[host_name].update(
-                {"message": "Virtual nic {} not found".format(vmnic_name)}
-            )
+        if not v_nic:
+            ret[host_name].update({"message": f"Virtual nic {vmnic_name} not found"})
             ret["success"] = False
             continue
 
@@ -8191,7 +8335,7 @@ def add_host_to_dvs(
         except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, "msg"):
                 ret[host_name].update(
-                    {"message": "Failed to migrate adapters ({})".format(e.msg)}
+                    {"message": f"Failed to migrate adapters ({e.msg})"}
                 )
                 continue
             else:
@@ -8333,6 +8477,7 @@ def _get_esxi_proxy_details():
 
 @depends(HAS_PYVMOMI)
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def get_vm(
     name,
     datacenter=None,
@@ -8376,6 +8521,7 @@ def get_vm(
 
 @depends(HAS_PYVMOMI)
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def get_vm_config_file(name, datacenter, placement, datastore, service_instance=None):
     """
     Queries the virtual machine config file and returns
@@ -8509,6 +8655,7 @@ def _apply_memory_config(config_spec, memory):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def get_advanced_configs(vm_name, datacenter, service_instance=None):
     """
     Returns extra config parameters from a virtual machine advanced config list
@@ -8560,6 +8707,7 @@ def _apply_advanced_config(config_spec, advanced_config, vm_extra_config=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def set_advanced_configs(vm_name, datacenter, advanced_configs, service_instance=None):
     """
     Appends extra config parameters to a virtual machine advanced config list
@@ -8632,6 +8780,7 @@ def _delete_advanced_config(config_spec, advanced_config, vm_extra_config):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def delete_advanced_configs(
     vm_name, datacenter, advanced_configs, service_instance=None
 ):
@@ -8685,7 +8834,7 @@ def _get_scsi_controller_key(bus_number, scsi_ctrls):
     ]
     if not keys:
         raise salt.exceptions.VMwareVmCreationError(
-            "SCSI controller number {} doesn't exist".format(bus_number)
+            f"SCSI controller number {bus_number} doesn't exist"
         )
     return keys[0]
 
@@ -8864,7 +9013,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The network '{}' could not be retrieved.".format(network_name)
+                    f"The network '{network_name}' could not be retrieved."
                 )
             network_ref = networks[0]
             backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
@@ -8876,7 +9025,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The port group '{}' could not be retrieved.".format(network_name)
+                    f"The port group '{network_name}' could not be retrieved."
                 )
             network_ref = networks[0]
             dvs_port_connection = vim.dvs.PortConnection(
@@ -9642,7 +9791,7 @@ def _get_device_by_key(devices, key):
         return device_keys[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with unique key {} does not exist".format(key)
+            f"Virtual machine device with unique key {key} does not exist"
         )
 
 
@@ -9662,7 +9811,7 @@ def _get_device_by_label(devices, label):
         return device_labels[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with label {} does not exist".format(label)
+            f"Virtual machine device with label {label} does not exist"
         )
 
 
@@ -9684,6 +9833,7 @@ def _convert_units(devices):
     return True
 
 
+@_deprecation_message
 def compare_vm_configs(new_config, current_config):
     """
     Compares virtual machine current and new configuration, the current is the
@@ -9780,6 +9930,7 @@ def compare_vm_configs(new_config, current_config):
 
 
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
     """
     Queries and converts the virtual machine properties to the available format
@@ -10336,6 +10487,7 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_tag_categories(
     server=None,
     username=None,
@@ -10381,6 +10533,7 @@ def list_tag_categories(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_tags(
     server=None,
     username=None,
@@ -10426,6 +10579,7 @@ def list_tags(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def attach_tag(
     object_id,
     tag_id,
@@ -10511,6 +10665,7 @@ def attach_tag(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def list_attached_tags(
     object_id,
     managed_obj="ClusterComputeResource",
@@ -10583,6 +10738,7 @@ def list_attached_tags(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_tag_category(
     name,
     description,
@@ -10664,6 +10820,7 @@ def create_tag_category(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def delete_tag_category(
     category_id,
     server=None,
@@ -10722,6 +10879,7 @@ def delete_tag_category(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_tag(
     name,
     description,
@@ -10795,6 +10953,7 @@ def create_tag(
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @_supports_proxies("vcenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def delete_tag(
     tag_id,
     server=None,
@@ -10854,6 +11013,7 @@ def delete_tag(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def create_vm(
     vm_name,
     cpu,
@@ -11005,7 +11165,7 @@ def create_vm(
     )[0]
     if not datastore_object:
         raise salt.exceptions.ArgumentValueError(
-            "Specified datastore: '{}' does not exist.".format(datastore)
+            f"Specified datastore: '{datastore}' does not exist."
         )
     try:
         ds_summary = salt.utils.vmware.get_properties_of_managed_object(
@@ -11016,7 +11176,7 @@ def create_vm(
                 "The vmPathName should be the datastore "
                 "name if the datastore type is vsan"
             )
-            config_spec.files.vmPathName = "[{}]".format(datastore)
+            config_spec.files.vmPathName = f"[{datastore}]"
         else:
             config_spec.files.vmPathName = "[{0}] {1}/{1}.vmx".format(
                 datastore, vm_name
@@ -11076,6 +11236,7 @@ def create_vm(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def update_vm(
     vm_name,
     cpu=None,
@@ -11288,6 +11449,7 @@ def update_vm(
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
     """
     Registers a virtual machine to the inventory with the given vmx file.
@@ -11371,6 +11533,7 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
     Powers on a virtual machine specified by its name.
@@ -11384,6 +11547,8 @@ def power_on_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11412,6 +11577,7 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
     Powers off a virtual machine specified by its name.
@@ -11425,6 +11591,8 @@ def power_off_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11497,6 +11665,7 @@ def _remove_vm(name, datacenter, service_instance, placement=None, power_off=Non
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def delete_vm(name, datacenter, placement=None, power_off=False, service_instance=None):
     """
     Deletes a virtual machine defined by name and placement
@@ -11512,6 +11681,8 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
 
     service_instance
         vCenter service instance for connection and configuration
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11541,6 +11712,7 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
 @depends(HAS_PYVMOMI)
 @_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
 @_gets_service_instance_via_proxy
+@_deprecation_message
 def unregister_vm(
     name, datacenter, placement=None, power_off=False, service_instance=None
 ):
@@ -11558,6 +11730,8 @@ def unregister_vm(
 
     service_instance
         vCenter service instance for connection and configuration
+
+    CLI Example:
 
     .. code-block:: bash
 

@@ -1,12 +1,8 @@
-"""
-Integration tests for Vultr
-"""
-
-
 import time
 
+import pytest
+
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 
 class VultrTest(CloudTest):
@@ -38,7 +34,7 @@ class VultrTest(CloudTest):
         """
         size_list = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
         self.assertIn(
-            "2048 MB RAM,64 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
+            "2048 MB RAM,55 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
         )
 
     # Commented for now, Vultr driver does not yet support key management
@@ -81,7 +77,7 @@ class VultrTest(CloudTest):
     #        # Delete public key
     #        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
 
-    @skipIf(True, "Skipped temporarily")
+    @pytest.mark.skip(reason="Skipped temporarily")
     def test_instance(self):
         """
         Test creating an instance on Vultr

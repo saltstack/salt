@@ -10,7 +10,7 @@ from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -391,7 +391,6 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                         {"comment": ret, "result": True},
                     )
 
-    @skipIf(not bool(ipaddress), "unable to import 'ipaddress'")
     def test_is_private(self):
         """
         Test for Check if the given IP address is a private address
@@ -401,7 +400,6 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ipaddress.IPv6Address, "is_private", return_value=True):
             self.assertTrue(network.is_private("::1"))
 
-    @skipIf(not bool(ipaddress), "unable to import 'ipaddress'")
     def test_is_loopback(self):
         """
         Test for Check if the given IP address is a loopback address
@@ -525,7 +523,7 @@ default via 192.168.0.1 dev wlp59s0 proto dhcp metric 600
 192.240.157.233 via 10.16.119.224 dev gpd0
 206.80.50.33 via 10.16.119.224 dev gpd0
 209.34.94.97 via 10.16.119.224 dev gpd0
-unreachable should ignore this 
+unreachable should ignore this
 """
         mock_iproute_ipv6 = """::1 dev lo proto kernel metric 256 pref medium
 2060:123:4069::10 dev enp5s0 proto kernel metric 100 pref medium
@@ -592,13 +590,13 @@ multicast ff00::/8 dev docker0 table local proto kernel metric 256 linkdown pref
 multicast ff00::/8 dev wlp3s0 table local proto kernel metric 256 pref medium
 multicast ff00::/8 dev vpn0 table local proto kernel metric 256 pref medium
 multicast ff00::/8 dev tun0 table local proto kernel metric 256 pref medium
-unicast should ignore this 
-broadcast cast should ignore this 
-throw should ignore this 
-unreachable should ignore this 
-prohibit should ignore this 
-blackhole should ignore this 
-nat should ignore this 
+unicast should ignore this
+broadcast cast should ignore this
+throw should ignore this
+unreachable should ignore this
+prohibit should ignore this
+blackhole should ignore this
+nat should ignore this
 """
 
         self.assertRaises(CommandExecutionError, network.default_route, "family")

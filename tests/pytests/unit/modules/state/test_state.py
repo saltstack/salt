@@ -5,10 +5,13 @@
 import datetime
 import logging
 import os
+from collections import namedtuple
 
 import pytest
+
 import salt.config
 import salt.loader
+import salt.loader.context
 import salt.modules.config as config
 import salt.modules.state as state
 import salt.state
@@ -230,37 +233,6 @@ class MockState:
 
         def __exit__(self, *_):
             pass
-
-
-class MockSerial:
-    """
-    Mock Class
-    """
-
-    def __init__(self):
-        pass
-
-    class Serial:
-        """
-        Mock Serial class
-        """
-
-        def __init__(self, data):
-            pass
-
-        @staticmethod
-        def load(data):
-            """
-            Mock load method
-            """
-            return {"A": "B"}
-
-        @staticmethod
-        def dump(data, data1):
-            """
-            Mock dump method
-            """
-            return True
 
 
 class MockTarFile:
@@ -788,7 +760,7 @@ def test_highstate():
         }
 
         mock = MagicMock(side_effect=["A", None, None])
-        with patch.object(state, "_check_queue", mock):
+        with patch.object(state, "running", mock):
             assert state.highstate("whitelist=sls1.sls") == "A"
 
             with patch.dict(state.__opts__, {"test": "A"}):
@@ -806,42 +778,39 @@ def test_highstate():
                         mock = MagicMock(return_value=True)
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.payload, "Serial", mock):
-                                with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set" "_retcode", mock):
-                                        assert state.highstate(arg)
+                            with patch.object(os.path, "join", mock):
+                                with patch.object(state, "_set" "_retcode", mock):
+                                    assert state.highstate(arg)
 
 
 def test_clear_request():
     """
     Test to clear out the state execution request without executing it
     """
-    mock = MagicMock(return_value=True)
-    with patch.object(salt.payload, "Serial", mock):
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, "isfile", mock):
-            assert state.clear_request("A")
+    mock = MagicMock(side_effect=[False, True, True])
+    with patch.object(os.path, "isfile", mock):
+        assert state.clear_request("A")
 
-            mock = MagicMock(return_value=True)
-            with patch.object(os, "remove", mock):
-                assert state.clear_request()
+        mock = MagicMock(return_value=True)
+        with patch.object(os, "remove", mock):
+            assert state.clear_request()
 
-            mock = MagicMock(return_value={})
-            with patch.object(state, "check_request", mock):
-                assert not state.clear_request("A")
+        mock = MagicMock(return_value={})
+        with patch.object(state, "check_request", mock):
+            assert not state.clear_request("A")
 
 
 def test_check_request():
     """
     Test to return the state request information
     """
-    with patch("salt.modules.state.salt.payload", MockSerial):
+    with patch("salt.payload.load", MagicMock(return_value={"A": "B"})):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open(b"")):
                 assert state.check_request() == {"A": "B"}
 
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open("")):
                 assert state.check_request("A") == "B"
 
             assert state.check_request() == {}
@@ -941,42 +910,42 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "blah"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is blah in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is blah in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "true"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is true in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is true in __opts__"
 
     with patch.dict(config.__opts__, {test_arg: False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(config.__opts__, {}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} does not exist in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} does not exist in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: None}):
         assert (
             state._get_test_value(test=None) is None
-        ), "Failure when {} is None in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is None in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in master __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in master __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
         with patch.dict(config.__pillar__, {test_arg: True}):
@@ -997,13 +966,13 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {"test": False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {"test": False}):
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             assert state._get_test_value(
                 test=None
-            ), "Failure when {} is False in __opts__".format(test_arg)
+            ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {}):
         assert state._get_test_value(test=True), "Failure when test is True as arg"
@@ -1211,85 +1180,39 @@ def test_lock_saltenv():
             )
 
 
-def test_get_pillar_errors_CC():
-    """
-    Test _get_pillar_errors function.
-    CC: External clean, Internal clean
-    :return:
-    """
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar"}, {"fred": "baz"}),
-        ({"foo": "bar"}, None),
-        ({}, {"fred": "baz"}),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, None),
-                ({}, None),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+PillarPair = namedtuple("PillarPair", ["in_memory", "fresh"])
+pillar_combinations = [
+    (PillarPair({"foo": "bar"}, {"fred": "baz"}), None),
+    (PillarPair({"foo": "bar"}, {"fred": "baz", "_errors": ["Failure"]}), ["Failure"]),
+    (PillarPair({"foo": "bar"}, None), None),
+    (PillarPair({"foo": "bar", "_errors": ["Failure"]}, None), ["Failure"]),
+    (PillarPair({"foo": "bar", "_errors": ["Failure"]}, {"fred": "baz"}), None),
+]
 
 
-def test_get_pillar_errors_EC():
+@pytest.mark.parametrize("pillar,expected_errors", pillar_combinations)
+def test_get_pillar_errors(pillar: PillarPair, expected_errors):
     """
-    Test _get_pillar_errors function.
-    EC: External erroneous, Internal clean
-    :return:
+    test _get_pillar_errors function
+
+    There are three cases to consider:
+    1. kwargs['force'] is True -> None, no matter what's in pillar/__pillar__
+    2. pillar kwarg is available -> only check pillar, no matter what's in __pillar__
+    3. pillar kwarg is not available -> check __pillar__
     """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar"}, {"fred": "baz", "_errors": errors}),
-        ({}, {"fred": "baz", "_errors": errors}),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+    ctx = salt.loader.context.LoaderContext()
+    named_ctx = ctx.named_context("__pillar__", pillar.in_memory)
+    with patch("salt.modules.state.__pillar__", named_ctx, create=True):
+        assert (
+            state._get_pillar_errors(kwargs={"force": True}, pillar=pillar.fresh)
+            is None
+        )
+        assert (
+            state._get_pillar_errors(kwargs={}, pillar=pillar.fresh) == expected_errors
+        )
 
 
-def test_get_pillar_errors_EE():
-    """
-    Test _get_pillar_errors function.
-    CC: External erroneous, Internal erroneous
-    :return:
-    """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar", "_errors": errors}, {"fred": "baz", "_errors": errors})
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
-
-
-def test_get_pillar_errors_CE():
-    """
-    Test _get_pillar_errors function.
-    CC: External clean, Internal erroneous
-    :return:
-    """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar", "_errors": errors}, {"fred": "baz"}),
-        ({"foo": "bar", "_errors": errors}, None),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
-
-
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_event():
     """
     test state.event runner
@@ -1319,7 +1242,7 @@ def test_event():
         "tag": "a_event_tag",
     }
 
-    _expected = '"date": "{}"'.format(now)
+    _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
         print_cli_mock = MagicMock()
         with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
@@ -1329,3 +1252,41 @@ def test_event():
                 if _expected in x.args[0]:
                     found = True
             assert found is True
+
+
+@pytest.mark.parametrize(
+    "max_queue,call_count,ret_value",
+    [(0, 2, True), (3, 2, True), (2, 0, False), (1, 0, False)],
+)
+def test__wait(max_queue, call_count, ret_value):
+    mock_jid = 8675309
+    mock_sleep = MagicMock()
+    mock_prior = MagicMock(
+        side_effect=[
+            ["one", "two"],
+            ["one"],
+            [],
+        ]
+    )
+    with patch("time.sleep", mock_sleep), patch(
+        "salt.modules.state._prior_running_states", mock_prior
+    ):
+        ret = state._wait(mock_jid, max_queue=max_queue)
+        assert mock_sleep.call_count == call_count
+        assert ret is ret_value
+
+
+@pytest.mark.parametrize(
+    "queue,wait_called,ret_value",
+    [(True, True, None), (False, False, True), (1, True, None)],
+)
+def test__check_queue(queue, wait_called, ret_value):
+    mock_wait = MagicMock()
+    with patch("salt.modules.state._wait", mock_wait), patch(
+        "salt.modules.state.running", MagicMock(return_value=True)
+    ), patch.dict(state.__context__, {"retcode": "banana"}):
+        ret = state._check_queue(queue, {})
+        assert mock_wait.called is wait_called
+        assert ret is ret_value
+        if ret_value is True:
+            assert state.__context__["retcode"] == 1
