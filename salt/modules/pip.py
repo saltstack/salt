@@ -500,7 +500,9 @@ def install(
         or one or more package names with commas between them
 
     log
-        Log file where a complete (maximum verbosity) record will be kept
+        Log file where a complete (maximum verbosity) record will be kept.
+        If this file doesn't exist and the parent directory is writeable,
+        it will be created.
 
     proxy
         Specify a proxy in the form ``user:passwd@proxy.server:port``. Note
@@ -755,6 +757,16 @@ def install(
     if log:
         if os.path.isdir(log):
             raise OSError(f"'{log}' is a directory. Use --log path_to_file")
+        if not os.path.exists(log):
+            parent = os.path.dirname(log)
+            if not os.path.exists(parent):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' does not exist."
+                )
+            elif not os.access(parent, os.W_OK):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' is not writeable."
+                )
         elif not os.access(log, os.W_OK):
             raise OSError(f"'{log}' is not writeable")
 

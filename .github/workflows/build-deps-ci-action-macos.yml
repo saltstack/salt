@@ -121,12 +121,12 @@ jobs:
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox -e "pre-archive-cleanup(pkg=False)"
+          nox --force-color -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
