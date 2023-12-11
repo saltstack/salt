@@ -303,7 +303,7 @@ Also a requested state file overrules a directory with an `init.sls`-file.
 For example:
 
 * A request for :strong:`state.apply shell` will be served from the
-  :strong:`https://github.com/example/second.git` git repo. 
+  :strong:`https://github.com/example/second.git` git repo.
 
 .. note::
 
