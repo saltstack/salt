@@ -7165,8 +7165,6 @@ def patch(
         )
         return ret
 
-    options = sanitized_options
-
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
     except CommandExecutionError as exc:
@@ -7265,6 +7263,10 @@ def patch(
 
         pre_check = _patch(patch_file, patch_opts)
         if pre_check["retcode"] != 0:
+            if not os.path.exists(patch_rejects) or os.path.getsize(patch_rejects) == 0:
+                ret["comment"] = pre_check["stderr"]
+                ret["result"] = False
+                return ret
             # Try to reverse-apply hunks from rejects file using a dry-run.
             # If this returns a retcode of 0, we know that the patch was
             # already applied. Rejects are written from the base of the
