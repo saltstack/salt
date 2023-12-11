@@ -1383,7 +1383,7 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
     return mount(name, device, mkmnt, fstype, opts, user=user)
 
 
-def umount(name, device=None, user=None, util="mount"):
+def umount(name, device=None, user=None, util="mount", lazy=False):
     """
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -1413,10 +1413,14 @@ def umount(name, device=None, user=None, util="mount"):
     if name not in mnts:
         return f"{name} does not have anything mounted"
 
+    cmd = "umount"
+    if lazy:
+        cmd = f"{cmd} -l"
     if not device:
-        cmd = f"umount '{name}'"
+        cmd = f"{cmd} '{name}'"
     else:
-        cmd = f"umount '{device}'"
+        cmd = f"{cmd}'{device}'"
+
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
