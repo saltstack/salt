@@ -1420,6 +1420,7 @@ def umount(name, device=None, user=None, util="mount", lazy=False):
         cmd = f"{cmd} '{name}'"
     else:
         cmd = f"{cmd}'{device}'"
+
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1923,7 +1924,7 @@ def set_filesystems(
         except OSError:
             raise CommandExecutionError(f"File not writable {config}")
         except Exception as exc:
-            raise CommandExecutionError("set_filesystems error exception {exc}")
+            raise CommandExecutionError(f"set_filesystems error exception {exc}")
 
     return ret
 
@@ -1972,7 +1973,7 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
         except OSError as exc:
             raise CommandExecutionError(f"Couldn't write to {config}: {exc}")
         except Exception as exc:
-            raise CommandExecutionError("rm_filesystems error exception {exc}")
+            raise CommandExecutionError(f"rm_filesystems error exception {exc}")
 
     return modified
 
