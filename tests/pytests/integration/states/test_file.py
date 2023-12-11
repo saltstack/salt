@@ -929,6 +929,7 @@ def test_patch_directory_template(
             - source: {all_patch_template}
             - template: "jinja"
             - context: {context}
+            - strip: 1
         """.format(
         base_dir=tmp_path, all_patch_template=all_patch_template, context=context
     )
@@ -945,7 +946,7 @@ def test_patch_directory_template(
         # Check to make sure the patch was applied okay
         state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
-        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.

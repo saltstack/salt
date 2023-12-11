@@ -1045,9 +1045,7 @@ class MasterPubServerChannel:
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
-            log.error("recieved event from peer %s %r", tag, data)
             if tag.startswith("cluster/peer"):
-                log.error("Got peer join %r", data)
                 peer = data["peer_id"]
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
