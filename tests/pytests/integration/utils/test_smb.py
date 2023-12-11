@@ -91,23 +91,45 @@ def smb_dict(tmp_path):
         )
 
     ## _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
+    ## _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
+    ## time.sleep(2)
+    ## pidfile = samba_dir / "smbd.pid"
+    ## conn_dict = {
+    ##     "tmpdir": tmp_path,
+    ##     "samba_dir": samba_dir,
+    ##     "public_dir": public_dir,
+    ##     "passwdb": passwdb,
+    ##     "username": username,
+    ##     "samba_conf": samba_conf,
+    ##     "smbd_path": smbd_path,
+    ##     "pidfile": pidfile,
+    ## }
+
+    ## assert pidfile.exists()
+
     smbd_path = shutil.which("smbd")
     pathlib.Path(smbd_path).exists()
-    _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
-    time.sleep(2)
-    pidfile = samba_dir / "smbd.pid"
-    conn_dict = {
-        "tmpdir": tmp_path,
-        "samba_dir": samba_dir,
-        "public_dir": public_dir,
-        "passwdb": passwdb,
-        "username": username,
-        "samba_conf": samba_conf,
-        "smbd_path": smbd_path,
-        "pidfile": pidfile,
-    }
+    try:
+        _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
+        assert _smbd != 0
+        time.sleep(2)
+        pidfile = samba_dir / "smbd.pid"
+        conn_dict = {
+            "tmpdir": tmp_path,
+            "samba_dir": samba_dir,
+            "public_dir": public_dir,
+            "passwdb": passwdb,
+            "username": username,
+            "samba_conf": samba_conf,
+            "smbd_path": smbd_path,
+            "pidfile": pidfile,
+        }
 
-    assert pidfile.exists()
+        assert pidfile.exists()
+
+    except (OSError, ValueError) as e:
+        assert f"exception occured, '{e}'" == ""
+
     with salt.utils.files.fopen(pidfile, "r") as fp:
         _pid = int(fp.read().strip())
     if not check_pid(_pid):
