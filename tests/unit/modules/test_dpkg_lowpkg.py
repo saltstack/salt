@@ -274,22 +274,18 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                 "stdout": os.linesep.join(
                     [
                         "package:bash",
-                        "revision:",
                         "architecture:amd64",
                         "maintainer:Ubuntu Developers"
                         " <ubuntu-devel-discuss@lists.ubuntu.com>",
-                        "summary:",
                         "source:bash",
                         "version:4.4.18-2ubuntu1",
                         "section:shells",
-                        "installed_size:1588",
                         "size:",
                         "MD5:",
-                        "SHA1:",
-                        "SHA256:",
                         "origin:",
                         "homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html",
                         "status:ii ",
+                        "install_date:1560199259",
                         "description:GNU Bourne Again SHell",
                         " Bash is an sh-compatible command language interpreter that"
                         " executes",
@@ -317,8 +313,6 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
             dpkg.__grains__, {"os": "Ubuntu", "osrelease_info": (18, 4)}
         ), patch("salt.utils.path.which", MagicMock(return_value=False)), patch(
             "os.path.exists", MagicMock(return_value=False)
-        ), patch(
-            "os.path.getmtime", MagicMock(return_value=1560199259.0)
         ):
             self.assertDictEqual(
                 dpkg.info("bash"),
@@ -346,6 +340,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                             ]
                         ),
                         "homepage": "http://tiswww.case.edu/php/chet/bash/bashtop.html",
+                        "install_date": "2019-06-10T20:40:59Z",
                         "maintainer": (
                             "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>"
                         ),
