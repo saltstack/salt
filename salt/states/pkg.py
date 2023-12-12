@@ -10,7 +10,7 @@ Installation of packages using OS package managers such as yum or apt-get
     Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
     manpage for more information). If desired, usage of `systemd-run(1)`_ can
     be suppressed by setting a :mod:`config option <salt.modules.config.get>`
-    called ``systemd.use_scope``, with a value of ``False`` (no quotes).
+    called ``systemd.scope``, with a value of ``False`` (no quotes).
 
 .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
