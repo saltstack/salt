@@ -43,7 +43,7 @@ class EchoServer:
         """
         context = zmq.Context()
         socket = context.socket(zmq.REP)
-        socket.bind("tcp://*:{}".format(port))
+        socket.bind(f"tcp://*:{port}")
         while event.is_set():
             try:
                 #  Wait for next request from client
@@ -77,7 +77,7 @@ def echo_server(echo_port):
 
 @pytest.fixture
 def sreq(echo_port):
-    yield salt.payload.SREQ("tcp://127.0.0.1:{}".format(echo_port))
+    yield salt.payload.SREQ(f"tcp://127.0.0.1:{echo_port}")
 
 
 @pytest.mark.slow_test
@@ -138,6 +138,19 @@ def test_destroy(sreq, echo_server):
     """
     Test the __del__ capabilities
     """
+    # ensure we actually have an open socket and not just testing against
+    # no actual sockets created.
+    assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
     # ensure no exceptions when we go to destroy the sreq, since __del__
     # swallows exceptions, we have to call destroy directly
     sreq.destroy()
+
+
+@pytest.mark.slow_test
+def test_clear_socket(sreq, echo_server):
+    # ensure we actually have an open socket and not just testing against
+    # no actual sockets created.
+    assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
+    assert hasattr(sreq, "_socket")
+    sreq.clear_socket()
+    assert hasattr(sreq, "_socket") is False

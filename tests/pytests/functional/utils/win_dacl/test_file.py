@@ -1,7 +1,6 @@
 import pytest
 
 import salt.utils.win_dacl as win_dacl
-from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -819,22 +818,22 @@ def test_check_perms(test_file):
 
 
 def test_check_perms_test_true(test_file):
-    with patch.dict(win_dacl.__opts__, {"test": True}):
-        result = win_dacl.check_perms(
-            obj_name=str(test_file),
-            obj_type="file",
-            ret=None,
-            owner="Users",
-            grant_perms={"Backup Operators": {"perms": "read"}},
-            deny_perms={
-                "NETWORK SERVICE": {
-                    "perms": ["delete", "set_value", "write_dac", "write_owner"]
-                },
-                "Backup Operators": {"perms": ["delete"]},
+    result = win_dacl.check_perms(
+        obj_name=str(test_file),
+        obj_type="file",
+        ret=None,
+        owner="Users",
+        grant_perms={"Backup Operators": {"perms": "read"}},
+        deny_perms={
+            "NETWORK SERVICE": {
+                "perms": ["delete", "set_value", "write_dac", "write_owner"]
             },
-            inheritance=True,
-            reset=False,
-        )
+            "Backup Operators": {"perms": ["delete"]},
+        },
+        inheritance=True,
+        reset=False,
+        test_mode=True,
+    )
 
     expected = {
         "changes": {

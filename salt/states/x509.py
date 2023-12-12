@@ -209,7 +209,7 @@ def __virtual__():
         return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "The x509 modules are deprecated. Please migrate to the replacement "
             "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
         )
@@ -287,7 +287,7 @@ def private_key_managed(
     new=False,
     overwrite=False,
     verbose=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Manage a private key's existence.
@@ -391,7 +391,7 @@ def csr_managed(name, **kwargs):
     try:
         old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
-        old = "{} is not a valid csr.".format(name)
+        old = f"{name} is not a valid csr."
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args["contents"] = __salt__["x509.create_csr"](text=True, **kwargs)
@@ -518,7 +518,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
     If False, also provide a message explaining why.
     """
     if not os.path.isfile(name):
-        return False, "{} does not exist".format(name), {}
+        return False, f"{name} does not exist", {}
 
     try:
         cert_info = __salt__["x509.read_certificate"](certificate=name)
@@ -570,7 +570,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
 
         return True, "", cert_info
     except salt.exceptions.SaltInvocationError as e:
-        return False, "{} is not a valid certificate: {}".format(name, str(e)), {}
+        return False, f"{name} is not a valid certificate: {str(e)}", {}
 
 
 def _certificate_file_managed(ret, file_args):
@@ -699,7 +699,7 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
         ret = _certificate_file_managed(ret, file_args)
 
         ret["result"] = None
-        ret["comment"] = "Certificate {} will be created".format(name)
+        ret["comment"] = f"Certificate {name} will be created"
         ret["changes"]["Status"] = {
             "Old": invalid_reason,
             "New": "Certificate will be valid and up to date",
@@ -764,7 +764,7 @@ def crl_managed(
     digest="",
     days_remaining=30,
     include_expired=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Manage a Certificate Revocation List
@@ -846,9 +846,9 @@ def crl_managed(
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
         except salt.exceptions.SaltInvocationError:
-            current = "{} is not a valid CRL.".format(name)
+            current = f"{name} is not a valid CRL."
     else:
-        current = "{} does not exist.".format(name)
+        current = f"{name} does not exist."
 
     new_crl = __salt__["x509.create_crl"](
         text=True,

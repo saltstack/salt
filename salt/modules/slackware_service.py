@@ -46,7 +46,7 @@ def start(name):
 
         salt '*' service.start <service name>
     """
-    cmd = "/bin/sh {}.{} start".format(prefix, name)
+    cmd = f"/bin/sh {prefix}.{name} start"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -62,7 +62,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     """
-    cmd = "/bin/sh {}.{} stop".format(prefix, name)
+    cmd = f"/bin/sh {prefix}.{name} stop"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -78,7 +78,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     """
-    cmd = "/bin/sh {}.{} restart".format(prefix, name)
+    cmd = f"/bin/sh {prefix}.{name} restart"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -94,7 +94,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     """
-    cmd = "/bin/sh {}.{} reload".format(prefix, name)
+    cmd = f"/bin/sh {prefix}.{name} reload"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -110,7 +110,7 @@ def force_reload(name):
 
         salt '*' service.force_reload <service name>
     """
-    cmd = "/bin/sh {}.{} forcereload".format(prefix, name)
+    cmd = f"/bin/sh {prefix}.{name} forcereload"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -146,7 +146,7 @@ def status(name, sig=None):
         services = [name]
     results = {}
     for service in services:
-        cmd = "/bin/sh {}.{} status".format(prefix, service)
+        cmd = f"/bin/sh {prefix}.{service} status"
         results[service] = not __salt__["cmd.retcode"](cmd, ignore_retcode=True)
     if contains_globbing:
         return results
@@ -179,7 +179,7 @@ def _get_svc_list(service_status):
         )
     )
     ret = set()
-    lines = glob.glob("{}.*".format(prefix))
+    lines = glob.glob(f"{prefix}.*")
     for line in lines:
         if not notservice.match(line):
             svc = _get_svc(line, service_status)
@@ -328,7 +328,7 @@ def enabled(name, **kwargs):
         salt '*' service.enabled <service name>
     """
     ret = True
-    if _get_svc("{}.{}".format(prefix, name), "ON") is None:
+    if _get_svc(f"{prefix}.{name}", "ON") is None:
         ret = False
     return ret
 
@@ -346,9 +346,6 @@ def disabled(name):
         salt '*' service.disabled <service name>
     """
     ret = True
-    if _get_svc("{}.{}".format(prefix, name), "OFF") is None:
+    if _get_svc(f"{prefix}.{name}", "OFF") is None:
         ret = False
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

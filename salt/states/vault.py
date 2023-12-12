@@ -18,6 +18,12 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/salt-extensions/saltext-vault",
+)
+
 
 def policy_present(name, rules):
     """

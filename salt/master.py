@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+import asyncio
 import collections
 import copy
 import ctypes
@@ -137,8 +138,9 @@ class SMaster:
             return cls.secrets["aes"]["serial"].value
 
     @classmethod
-    def rotate_secrets(cls, opts=None, event=None, use_lock=True):
-        log.info("Rotating master AES key")
+    def rotate_secrets(
+        cls, opts=None, event=None, use_lock=True, owner=False, publisher=None
+    ):
         if opts is None:
             opts = {}
 
@@ -147,18 +149,57 @@ class SMaster:
             if use_lock:
                 with secret_map["secret"].get_lock():
                     secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                        secret_map["reload"]()
+                        secret_map["reload"](remove=owner)
                     )
                     if "serial" in secret_map:
                         secret_map["serial"].value = 0
             else:
                 secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                    secret_map["reload"]()
+                    secret_map["reload"](remove=owner)
                 )
                 if "serial" in secret_map:
                     secret_map["serial"].value = 0
+
+            if publisher:
+                publisher.send_aes_key_event()
+
             if event:
                 event.fire_event({f"rotate_{secret_key}_key": True}, tag="key")
+
+        if opts.get("ping_on_rotate"):
+            # Ping all minions to get them to pick up the new key
+            log.debug("Pinging all connected minions due to key rotation")
+            salt.utils.master.ping_all_connected_minions(opts)
+
+    @classmethod
+    def rotate_cluster_secret(
+        cls, opts=None, event=None, use_lock=True, owner=False, publisher=None
+    ):
+        log.debug("Rotating cluster AES key")
+        if opts is None:
+            opts = {}
+
+        if use_lock:
+            with cls.secrets["cluster_aes"]["secret"].get_lock():
+                cls.secrets["cluster_aes"][
+                    "secret"
+                ].value = salt.utils.stringutils.to_bytes(
+                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                )
+        else:
+            cls.secrets["cluster_aes"][
+                "secret"
+            ].value = salt.utils.stringutils.to_bytes(
+                cls.secrets["cluster_aes"]["reload"](remove=owner)
+            )
+
+        if event:
+            event.fire_event(
+                {f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
+            )
+
+        if publisher:
+            publisher.send_aes_key_event()
 
         if opts.get("ping_on_rotate"):
             # Ping all minions to get them to pick up the new key
@@ -178,12 +219,11 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         :param dict opts: The salt options
         """
         self.master_secrets = kwargs.pop("master_secrets", None)
+        self.ipc_publisher = kwargs.pop("ipc_publisher", None)
         super().__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts["loop_interval"])
-        # Track key rotation intervals
-        self.rotate = int(time.time())
         # A serializer for general maint operations
         self.restart_interval = int(self.opts["maintenance_interval"])
 
@@ -289,17 +329,17 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 acc = "accepted"
 
-            for fn_ in os.listdir(os.path.join(self.opts["pki_dir"], acc)):
+            for fn_ in os.listdir(os.path.join(self.pki_dir, acc)):
                 if not fn_.startswith("."):
                     keys.append(fn_)
             log.debug("Writing master key cache")
             # Write a temporary file securely
             with salt.utils.atomicfile.atomic_open(
-                os.path.join(self.opts["pki_dir"], acc, ".key_cache"), mode="wb"
+                os.path.join(self.pki_dir, acc, ".key_cache"), mode="wb"
             ) as cache_file:
                 salt.payload.dump(keys, cache_file)
 
-    def handle_key_rotate(self, now):
+    def handle_key_rotate(self, now, drop_file_wait=5):
         """
         Rotate the AES key rotation
         """
@@ -310,24 +350,52 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             # Basic Windows permissions don't distinguish between
             # user/group/all. Check for read-only state instead.
             if salt.utils.platform.is_windows() and not os.access(dfn, os.W_OK):
-                to_rotate = True
+                to_rotate = (
+                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
+                )
                 # Cannot delete read-only files on Windows.
                 os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
             elif stats.st_mode == 0o100400:
-                to_rotate = True
+                to_rotate = (
+                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
+                )
             else:
                 log.error("Found dropfile with incorrect permissions, ignoring...")
-            os.remove(dfn)
+            if to_rotate:
+                os.remove(dfn)
         except os.error:
             pass
 
-        if self.opts.get("publish_session"):
-            if now - self.rotate >= self.opts["publish_session"]:
-                to_rotate = True
+        # There is no need to check key against publish_session if we're
+        # already rotating.
+        if not to_rotate and self.opts.get("publish_session"):
+            if self.opts.get("cluster_id", None):
+                keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
+                try:
+                    stats = os.stat(keyfile)
+                except os.error as exc:
+                    log.error("Unexpected condition while reading keyfile %s", exc)
+                    return
+                if now - stats.st_mtime >= self.opts["publish_session"]:
+                    salt.crypt.dropfile(
+                        self.opts["cachedir"], self.opts["user"], self.opts["id"]
+                    )
+                    # There is currently no concept of a leader in a master
+                    # cluster. Lets fake it till we make it with a little
+                    # waiting period.
+                    time.sleep(drop_file_wait)
+                    to_rotate = (
+                        salt.crypt.read_dropfile(self.opts["cachedir"])
+                        == self.opts["id"]
+                    )
 
         if to_rotate:
-            SMaster.rotate_secrets(self.opts, self.event)
-            self.rotate = now
+            if self.opts.get("cluster_id", None):
+                SMaster.rotate_cluster_secret(
+                    self.opts, self.event, owner=True, publisher=self.ipc_publisher
+                )
+            else:
+                SMaster.rotate_secrets(self.opts, self.event, owner=True)
 
     def handle_git_pillar(self):
         """
@@ -679,6 +747,20 @@ class Master(SMaster):
             log.critical("Master failed pre flight checks, exiting\n")
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
+    def read_or_generate_key(self, remove=False, fs_wait=0.1):
+        """
+        Used to manage a cluster aes session key file.
+        """
+        path = os.path.join(self.opts["cluster_pki_dir"], ".aes")
+        if remove:
+            os.remove(path)
+        key = salt.crypt.Crypticle.read_key(path)
+        if key:
+            return key
+        salt.crypt.Crypticle.write_key(path)
+        time.sleep(fs_wait)
+        return salt.crypt.Crypticle.read_key(path)
+
     def start(self):
         """
         Turn on the master server components
@@ -695,9 +777,21 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+            if self.opts["cluster_id"]:
+                # Setup the secrets here because the PubServerChannel may need
+                # them as well.
+                SMaster.secrets["cluster_aes"] = {
+                    "secret": multiprocessing.Array(
+                        ctypes.c_char,
+                        salt.utils.stringutils.to_bytes(self.read_or_generate_key()),
+                    ),
+                    "serial": multiprocessing.Value(
+                        ctypes.c_longlong,
+                        lock=False,  # We'll use the lock from 'secret'
+                    ),
+                    "reload": self.read_or_generate_key,
+                }
 
-            # Setup the secrets here because the PubServerChannel may need
-            # them as well.
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
                     ctypes.c_char,
@@ -722,10 +816,14 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
+            ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
+                self.opts
+            )
+            ipc_publisher.pre_fork(self.process_manager)
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher,
-                args=(self.opts,),
-                name="EventPublisher",
+                EventMonitor,
+                args=[self.opts, ipc_publisher],
+                name="EventMonitor",
             )
 
             if self.opts.get("reactor"):
@@ -749,7 +847,10 @@ class Master(SMaster):
             self.process_manager.add_process(
                 Maintenance,
                 args=(self.opts,),
-                kwargs={"master_secrets": SMaster.secrets},
+                kwargs={
+                    "master_secrets": SMaster.secrets,
+                    "ipc_publisher": ipc_publisher,
+                },
                 name="Maintenance",
             )
 
@@ -830,6 +931,9 @@ class Master(SMaster):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
+        if self.opts.get("cluster_id", None):
+            # Notify the rest of the cluster we're starting.
+            ipc_publisher.send_aes_key_event()
         self.process_manager.run()
 
     def _handle_signals(self, signum, sigframe):
@@ -837,6 +941,63 @@ class Master(SMaster):
         self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
+
+
+class EventMonitor(salt.utils.process.SignalHandlingProcess):
+    """
+    Monitor the master event bus.
+
+     - Forward publish events to minion event publisher.
+     - Handle key rotate events.
+    """
+
+    def __init__(self, opts, ipc_publisher, channels=None, name="EventMonitor"):
+        super().__init__(name=name)
+        self.opts = opts
+        if channels is None:
+            channels = []
+        self.channels = channels
+        self.ipc_publisher = ipc_publisher
+
+    async def handle_event(self, package):
+        """
+        Event handler for publish forwarder
+        """
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        if tag.startswith("salt/job") and tag.endswith("/publish"):
+            peer_id = data.pop("__peer_id", None)
+            if peer_id:
+                data.pop("_stamp", None)
+                log.debug(
+                    "Event monitor forward job to publish server: jid=%s",
+                    data.get("jid", "no jid"),
+                )
+                if not self.channels:
+                    for transport, opts in iter_transport_opts(self.opts):
+                        chan = salt.channel.server.PubServerChannel.factory(opts)
+                        self.channels.append(chan)
+                tasks = []
+                for chan in self.channels:
+                    tasks.append(asyncio.create_task(chan.publish(data)))
+                await asyncio.gather(*tasks)
+        elif tag == "rotate_cluster_aes_key":
+            peer_id = data.pop("__peer_id", None)
+            if peer_id:
+                log.debug("Rotating AES session key")
+                SMaster.rotate_cluster_secret(
+                    self.opts, owner=False, publisher=self.ipc_publisher
+                )
+        else:
+            log.trace("Ignore tag %s", tag)
+
+    def run(self):
+        io_loop = tornado.ioloop.IOLoop()
+        with salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
+        ) as event_bus:
+            event_bus.subscribe("")
+            event_bus.set_event_handler(self.handle_event)
+            io_loop.start()
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -1008,8 +1169,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             # Tornado knows what to do
             pass
 
-    @tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -1032,8 +1192,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         key = payload["enc"]
         load = payload["load"]
-        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
-        raise tornado.gen.Return(ret)
+        if key == "clear":
+            ret = await self._handle_clear(load)
+        else:
+            ret = self._handle_aes(load)
+        return ret
 
     def _post_stats(self, start, cmd):
         """
@@ -1057,7 +1220,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
 
-    def _handle_clear(self, load):
+    async def _handle_clear(self, load):
         """
         Process a cleartext command
 
@@ -1073,7 +1236,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = method(load), {"fun": "send_clear"}
+        if cmd in self.clear_funcs.async_methods:
+            reply = await method(load)
+            ret = reply, {"fun": "send_clear"}
+        else:
+            ret = method(load), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1138,7 +1305,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     self.opts["mworker_niceness"],
                 )
                 os.nice(self.opts["mworker_niceness"])
-
         self.clear_funcs = ClearFuncs(
             self.opts,
             self.key,
@@ -1229,6 +1395,10 @@ class AESFuncs(TransportMethods):
         )
         self.__setup_fileserver()
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
+        if "cluster_id" in self.opts and self.opts["cluster_id"]:
+            self.pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            self.pki_dir = self.opts.get("pki_dir", "")
 
     def __setup_fileserver(self):
         """
@@ -1261,8 +1431,7 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.opts["pki_dir"], "minions", id_)
-
+        pub_path = os.path.join(self.pki_dir, "minions", id_)
         try:
             pub = salt.crypt.get_rsa_pub_key(pub_path)
         except OSError:
@@ -1684,7 +1853,7 @@ class AESFuncs(TransportMethods):
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
             this_minion_pubkey = os.path.join(
-                self.opts["pki_dir"], "minions/{}".format(load["id"])
+                self.pki_dir, "minions/{}".format(load["id"])
             )
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(
@@ -1776,7 +1945,7 @@ class AESFuncs(TransportMethods):
     def pub_ret(self, load):
         """
         Request the return data from a specific jid, only allowed
-        if the requesting minion also initialted the execution.
+        if the requesting minion also initiated the execution.
 
         :param dict load: The minion payload
 
@@ -1958,6 +2127,7 @@ class ClearFuncs(TransportMethods):
         "wheel",
         "runner",
     )
+    async_methods = ("publish",)
 
     # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:
@@ -2147,7 +2317,7 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
-    def publish(self, clear_load):
+    async def publish(self, clear_load):
         """
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
@@ -2300,8 +2470,13 @@ class ClearFuncs(TransportMethods):
             payload["auth_list"] = auth_list
 
         # Send it!
+        # Copy the payload when firing event for now since it's adding a
+        # __pub_stamp field.
+        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        # An alternative to copy may be to pop it
+        # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        self._send_pub(payload)
+        await self._send_pub(payload)
 
         return {
             "enc": "clear",
@@ -2350,7 +2525,7 @@ class ClearFuncs(TransportMethods):
             return {"error": msg}
         return jid
 
-    def _send_pub(self, load):
+    async def _send_pub(self, load):
         """
         Take a load and send it across the network to connected minions
         """
@@ -2358,8 +2533,10 @@ class ClearFuncs(TransportMethods):
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 self.channels.append(chan)
+        tasks = set()
         for chan in self.channels:
-            chan.publish(load)
+            tasks.add(asyncio.create_task(chan.publish(load)))
+        await asyncio.gather(*tasks)
 
     @property
     def ssh_client(self):

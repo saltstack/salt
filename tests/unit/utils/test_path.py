@@ -4,6 +4,7 @@ import platform
 import posixpath
 import sys
 import tempfile
+import types
 
 import pytest
 
@@ -40,14 +41,14 @@ class PathJoinTestCase(TestCase):
     def test_nix_paths(self):
         for idx, (parts, expected) in enumerate(self.NIX_PATHS):
             path = salt.utils.path.join(*parts)
-            assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
+            assert f"{idx}: {path}" == f"{idx}: {expected}"
 
     @pytest.mark.skip(reason="Skipped until properly mocked")
     @pytest.mark.skip_unless_on_windows
     def test_windows_paths(self):
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
+            assert f"{idx}: {path}" == f"{idx}: {expected}"
 
     @pytest.mark.skip(reason="Skipped until properly mocked")
     @pytest.mark.skip_on_windows
@@ -57,7 +58,7 @@ class PathJoinTestCase(TestCase):
         try:
             for idx, (parts, expected) in enumerate(self.WIN_PATHS):
                 path = salt.utils.path.join(*parts)
-                assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
+                assert f"{idx}: {path}" == f"{idx}: {expected}"
         finally:
             self.__unpatch_path()
 
@@ -79,14 +80,12 @@ class PathJoinTestCase(TestCase):
         assert actual == expected
 
     def __patch_path(self):
-        import imp
-
         modules = list(self.BUILTIN_MODULES[:])
         modules.pop(modules.index("posix"))
         modules.append("nt")
 
         code = """'''Salt unittest loaded NT module'''"""
-        module = imp.new_module("nt")
+        module = types.ModuleType("nt")
         exec(code, module.__dict__)
         sys.modules["nt"] = module
 

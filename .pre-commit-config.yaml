@@ -46,34 +46,26 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.15.0"
+    rev: "0.18.6"
     hooks:
       - id: tools
         alias: check-changelog-entries
         name: Check Changelog Entries
         args:
+          - pre-commit
           - changelog
           - pre-commit-checks
-        additional_dependencies:
-          - boto3==1.21.46
-          - pyyaml==6.0
-          - jinja2==3.1.2
-          - packaging==23.0
-          - virustotal3==1.0.8
+
       - id: tools
         alias: generate-workflows
         name: Generate GitHub Workflow Templates
-        files: ^(cicd/shared-gh-workflows-context\.yml|tools/pre_commit\.py|.github/workflows/templates/.*)$
+        files: ^(cicd/shared-gh-workflows-context\.yml|tools/precommit/workflows\.py|.github/workflows/templates/.*)$
         pass_filenames: false
         args:
           - pre-commit
+          - workflows
           - generate-workflows
-        additional_dependencies:
-          - boto3==1.21.46
-          - pyyaml==6.0
-          - jinja2==3.1.2
-          - packaging==23.0
-          - virustotal3==1.0.8
+
       - id: tools
         alias: actionlint
         name: Lint GitHub Actions Workflows
@@ -82,18 +74,77 @@ repos:
           - yaml
         args:
           - pre-commit
+          - workflows
           - actionlint
-        additional_dependencies:
-          - boto3==1.21.46
-          - pyyaml==6.0
-          - jinja2==3.1.2
-          - packaging==23.0
+
+      - id: tools
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - pre-commit
+          - docs
+          - check
+
+      - id: tools
+        alias: check-docstrings
+        name: Check docstrings
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - pre-commit
+          - docstrings
+          - check
+
+      - id: tools
+        alias: check-known-missing-docstrings
+        name: Check Known Missing Docstrings
+        stages: [manual]
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - pre-commit
+          - docstrings
+          - check
+
+      - id: tools
+        alias: loader-check-virtual
+        name: Check loader modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - pre-commit
+          - salt-loaders
+          - check-virtual
+
+      - id: tools
+        alias: check-filemap
+        name: Check Filename Map Change Matching
+        files: ^tests/(filename_map\.yml|.*\.py)$
+        pass_filenames: false
+        args:
+          - pre-commit
+          - filemap
+          - check
+
+  # ----- Packaging Requirements ------------------------------------------------------------------------------------>
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: "4.8"
     hooks:
 
-  # ----- Packaging Requirements ------------------------------------------------------------------------------------>
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.8-zmq-requirements
         name: Linux Packaging Py3.8 ZeroMQ Requirements
@@ -102,7 +153,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --include=requirements/base.txt
@@ -118,7 +168,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --include=requirements/base.txt
@@ -134,7 +183,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --include=requirements/base.txt
@@ -149,12 +197,29 @@ repos:
         pass_filenames: false
         args:
           - -v
+          - --build-isolation
           - --py-version=3.11
           - --platform=linux
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --no-emit-index-url
           - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.12-zmq-requirements
+        name: Linux Packaging Py3.12 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.12/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --no-emit-index-url
+          - requirements/static/pkg/linux.in
+
 
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.8-zmq-requirements
@@ -164,7 +229,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -180,7 +244,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -196,7 +259,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -211,10 +273,27 @@ repos:
         pass_filenames: false
         args:
           - -v
+          - --build-isolation
           - --py-version=3.11
           - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --no-emit-index-url
+          - requirements/static/pkg/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-freebsd-3.12-zmq-requirements
+        name: FreeBSD Packaging Py3.12 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.12/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --no-emit-index-url
           - requirements/static/pkg/freebsd.in
 
       - id: pip-tools-compile
@@ -225,7 +304,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=darwin
           - --include=requirements/darwin.txt
@@ -240,7 +318,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=darwin
           - --include=requirements/darwin.txt
@@ -254,6 +331,7 @@ repos:
         pass_filenames: false
         args:
           - -v
+          - --build-isolation
           - --py-version=3.11
           - --platform=darwin
           - --include=requirements/darwin.txt
@@ -261,6 +339,19 @@ repos:
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.12-zmq-requirements
+        name: Darwin Packaging Py3.12 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.12/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --no-emit-index-url
+          - requirements/static/pkg/darwin.in
+
         alias: compile-pkg-windows-3.8-zmq-requirements
         name: Windows Packaging Py3.8 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
@@ -268,7 +359,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=windows
           - --include=requirements/windows.txt
@@ -283,7 +373,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=windows
           - --include=requirements/windows.txt
@@ -298,7 +387,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=windows
           - --include=requirements/windows.txt
@@ -312,9 +400,25 @@ repos:
         pass_filenames: false
         args:
           - -v
+          - --build-isolation
           - --py-version=3.11
           - --platform=windows
           - --include=requirements/windows.txt
+          - --no-emit-index-url
+          - requirements/static/pkg/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.12-zmq-requirements
+        name: Windows Packaging Py3.12 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.12/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --no-emit-index-url
           - requirements/static/pkg/windows.in
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
@@ -323,12 +427,11 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-3.8-zmq-requirements
         name: Linux CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|py3\.8/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --include=requirements/base.txt
@@ -342,12 +445,11 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-3.9-zmq-requirements
         name: Linux CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|py3\.9/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --include=requirements/base.txt
@@ -361,12 +463,11 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-3.10-zmq-requirements
         name: Linux CI Py3.10 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|py3\.10/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.10/linux\.txt))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --include=requirements/base.txt
@@ -380,13 +481,30 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-3.11-zmq-requirements
         name: Linux CI Py3.11 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|py3\.11/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.11/linux\.txt))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --no-emit-index-url
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-3.12-zmq-requirements
+        name: Linux CI Py3.12 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.12/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
           - --platform=linux
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -404,7 +522,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --out-prefix=linux
@@ -419,7 +536,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --out-prefix=linux
@@ -429,13 +545,11 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.10-requirements
         name: Linux CI Py3.10 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --out-prefix=linux
@@ -451,12 +565,27 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=linux
           - --out-prefix=linux
           - --no-emit-index-url
           - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-3.12-requirements
+        name: Linux CI Py3.12 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=linux
+          - --out-prefix=linux
+          - --no-emit-index-url
+          - requirements/static/ci/crypto.in
+
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-3.8-zmq-requirements
@@ -466,7 +595,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -485,7 +613,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -504,7 +631,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=freebsd
           - --include=requirements/base.txt
@@ -523,8 +649,25 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/freebsd.in
+          - --include=requirements/static/ci/common.in
+          - --no-emit-index-url
+          - requirements/static/ci/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-3.12-zmq-requirements
+        name: FreeBSD CI Py3.12 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.12/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
           - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -542,7 +685,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=freebsd
           - --out-prefix=freebsd
@@ -557,7 +699,7 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
+          - --build-isolation
           - --py-version=3.9
           - --platform=freebsd
           - --out-prefix=freebsd
@@ -573,7 +715,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=freebsd
           - --out-prefix=freebsd
@@ -589,10 +730,25 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=freebsd
           - --out-prefix=freebsd
+          - --no-emit-index-url
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-crypto-3.12-requirements
+        name: FreeBSD CI Py3.12 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/freebsd-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=freebsd
+          - --out-prefix=freebsd
+          - --no-emit-index-url
           - requirements/static/ci/crypto.in
 
       - id: pip-tools-compile
@@ -603,7 +759,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=darwin
           - --include=requirements/darwin.txt
@@ -621,7 +776,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=darwin
           - --include=requirements/darwin.txt
@@ -639,13 +793,30 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/darwin.in
           - --include=requirements/static/ci/common.in
+          - --no-emit-index-url
+          - requirements/static/ci/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-3.12-zmq-requirements
+        name: Darwin CI Py3.12 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.12/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/darwin.in
+          - --include=requirements/static/ci/common.in
+          - --no-emit-index-url
           - requirements/static/ci/darwin.in
 
       - id: pip-tools-compile
@@ -656,7 +827,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=darwin
           - --out-prefix=darwin
@@ -671,7 +841,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=darwin
           - --out-prefix=darwin
@@ -686,8 +855,21 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
+          - --platform=darwin
+          - --out-prefix=darwin
+          - --no-emit-index-url
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-crypto-3.12-requirements
+        name: Darwin CI Py3.12 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/darwin-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
           - --platform=darwin
           - --out-prefix=darwin
           - --no-emit-index-url
@@ -701,7 +883,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=windows
           - --include=requirements/windows.txt
@@ -719,7 +900,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=windows
           - --include=requirements/windows.txt
@@ -737,7 +917,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=windows
           - --include=requirements/windows.txt
@@ -755,7 +934,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=windows
           - --include=requirements/windows.txt
@@ -766,6 +944,22 @@ repos:
           - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
+        alias: compile-ci-windows-3.12-zmq-requirements
+        name: Windows CI Py3.12 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.12/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/windows.in
+          - --include=requirements/static/ci/common.in
+          - --no-emit-index-url
+          - requirements/static/ci/windows.in
+
         alias: compile-ci-windows-crypto-3.8-requirements
         name: Windows CI Py3.8 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/windows-crypto\.txt))$
@@ -773,7 +967,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=windows
           - --out-prefix=windows
@@ -788,7 +981,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=windows
           - --out-prefix=windows
@@ -803,7 +995,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=windows
           - --out-prefix=windows
@@ -818,14 +1009,27 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=windows
           - --out-prefix=windows
+          - --no-emit-index-url
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-3.12-requirements
+        name: Windows CI Py3.12 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=windows
+          - --out-prefix=windows
+          - --no-emit-index-url
           - requirements/static/ci/crypto.in
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
-
 
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
       - id: pip-tools-compile
@@ -836,7 +1040,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
@@ -849,7 +1052,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
@@ -862,7 +1064,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
@@ -875,8 +1076,24 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
+          - --no-emit-index-url
+          - requirements/static/ci/cloud.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-3.12-requirements
+        name: Cloud CI Py3.12 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.12/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
@@ -890,7 +1107,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --no-emit-index-url
@@ -904,7 +1120,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --no-emit-index-url
@@ -918,7 +1133,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --no-emit-index-url
@@ -932,10 +1146,26 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
+          - --no-emit-index-url
           - --platform=linux
           - requirements/static/ci/docs.in
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.12 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --no-emit-index-url
+          - requirements/static/ci/docs.in
+
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
 
   # ----- Lint CI Requirements -------------------------------------------------------------------------------------->
@@ -947,7 +1177,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --no-emit-index-url
@@ -961,7 +1190,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --no-emit-index-url
@@ -975,7 +1203,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --no-emit-index-url
@@ -989,9 +1216,26 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=linux
+          - --no-emit-index-url
+          - requirements/static/ci/lint.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-lint-3.12-requirements
+        name: Lint CI Py3.12 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.12/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/lint.in
 
@@ -1006,7 +1250,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
           - --no-emit-index-url
@@ -1020,7 +1263,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
           - --no-emit-index-url
@@ -1034,7 +1276,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
           - --no-emit-index-url
@@ -1048,83 +1289,24 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --platform=linux
           - --no-emit-index-url
           - requirements/static/ci/changelog.in
-  # <---- Changelog --------------------------------------------------------------------------------------------------
 
-  # ----- Invoke ---------------------------------------------------------------------------------------------------->
       - id: pip-tools-compile
-        alias: compile-ci-invoke-3.8-requirements
-        name: Linux CI Py3.8 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.8/(invoke|linux)\.txt)$
+        alias: compile-ci-changelog-3.12-requirements
+        name: Changelog CI Py3.12 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.12/(changelog|linux)\.txt)$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
-          - --py-version=3.8
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.9-requirements
-        name: Linux CI Py3.9 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.9/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-#          - --resolver=backtracking
-          - --py-version=3.9
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-invoke-3.10-requirements
-        name: Linux CI Py3.10 Invoke Requirements
-        files: ^requirements/static/ci/(invoke\.in|py3.10/(invoke|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-#          - --resolver=backtracking
-          - --py-version=3.10
-          - --no-emit-index-url
-          - requirements/static/ci/invoke.in
-  # <---- Invoke -----------------------------------------------------------------------------------------------------
-
-  # <---- PKG ci requirements-----------------------------------------------------------------------------------------
-      - id: pip-tools-compile
-        alias: compile-ci-pkg-3.10-requirements
-        name: PKG tests CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.10/pkgtests\.in)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.10
+          - --py-version=3.12
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/ci/pkgtests.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-windows-pkg-3.10-requirements
-        name: PKG tests Windows CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.10/pkgtests-windows\.in)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.10
-          - --platform=windows
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/ci/pkgtests-windows.in
-
-  # <---- PKG ci requirements-----------------------------------------------------------------------------------------
-
+          - --no-emit-index-url
+          - requirements/static/ci/changelog.in
+  # <---- Changelog --------------------------------------------------------------------------------------------------
 
   # ----- Tools ---------------------------------------------------------------------------------------------------->
       - id: pip-tools-compile
@@ -1135,7 +1317,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.9
           - --no-emit-index-url
           - requirements/static/ci/tools.in
@@ -1148,7 +1329,6 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.10
           - --no-emit-index-url
           - requirements/static/ci/tools.in
@@ -1161,10 +1341,61 @@ repos:
         args:
           - -v
           - --build-isolation
-#          - --resolver=backtracking
           - --py-version=3.11
           - --no-emit-index-url
           - requirements/static/ci/tools.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-3.12-requirements
+        name: Linux CI Py3.12 Tools Requirements
+        files: ^requirements/static/ci/(tools\.in|py3.12/(tools|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.12
+          - --no-emit-index-url
+          - requirements/static/ci/tools.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-virustotal-3.9-requirements
+        name: Linux CI Py3.9 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.9/(tools(-virustotal)?|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - requirements/static/ci/tools-virustotal.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-virustotal-3.10-requirements
+        name: Linux CI Py3.10 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.10/(tools(-virustotal)?|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - requirements/static/ci/tools-virustotal.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-virustotal-3.11-requirements
+        name: Linux CI Py3.11 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.11/(tools(-virustotal)?|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.11
+          - requirements/static/ci/tools-virustotal.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-virustotal-3.12-requirements
+        name: Linux CI Py3.12 Tools virustotal Requirements
+        files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.12/(tools(-virustotal)?|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.12
+          - requirements/static/ci/tools-virustotal.in
   # <---- Tools -----------------------------------------------------------------------------------------------------
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
@@ -1190,22 +1421,18 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 2.0.0
+    rev: 2.5.2
     hooks:
       - id: salt-rewrite
-        alias: rewrite-docstrings
-        name: Salt docstrings auto-fixes
+        alias: rewrite-salt
+        name: Salt code auto-fixes
         files: ^salt/.*\.py$
-        args: [--silent, -F, fix_docstrings]
+        args: [--silent, -F, fix_docstrings, -F, fix_warn_until]
         exclude: >
             (?x)^(
                 salt/ext/.*
             )$
 
-  - repo: https://github.com/s0undt3ch/salt-rewrite
-    # Automatically rewrite code with known rules
-    rev: 2.0.0
-    hooks:
       - id: salt-rewrite
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite
@@ -1278,132 +1505,25 @@ repos:
   # <---- Security ---------------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-docs
-        name: Check Docs
-        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
-        args:
-          - docs.check
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-          - tornado
-
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-filemap
-        name: Check Filename Map Change Matching
-        files: ^tests/(filename_map\.yml|.*\.py)$
-        pass_filenames: false
-        args:
-          - filemap.check
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-          - tornado
-
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: loader-check-virtual
-        name: Check loader modules __virtual__
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        args:
-          - loader.check-virtual
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-          - tornado
-
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-docstrings
-        name: Check docstrings
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        args:
-          - docstrings.check
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-          - tornado
-
-  - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.9.0
-    hooks:
-      - id: invoke
-        alias: check-known-missing-docstrings
-        name: Check Known Missing Docstrings
-        stages: [manual]
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        args:
-          - docstrings.check
-          - --error-on-known-failures
-        additional_dependencies:
-          - blessings==1.7
-          - pyyaml==6.0
-          - distro==1.7.0
-          - jinja2==3.0.3
-          - msgpack==1.0.3
-          - packaging
-          - looseversion
-
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.0
+    rev: v1.3.0
     hooks:
       - id: mypy
         alias: mypy-tools
         name: Run mypy against tools
         files: ^tools/.*\.py$
-        #args: [--strict]
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/.*|
+            )$
         additional_dependencies:
           - attrs
           - rich
           - types-attrs
           - types-pyyaml
           - types-requests
+          - python-tools-scripts>=0.18.6
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12

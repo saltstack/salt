@@ -151,7 +151,7 @@ def test_enable():
     ):
         assert win_ip.enable("Ethernet")
 
-    mock_cmd.called_once_with(
+    mock_cmd.assert_called_once_with(
         [
             "netsh",
             "interface",
@@ -180,7 +180,7 @@ def test_disable():
     ):
         assert win_ip.disable("Ethernet")
 
-    mock_cmd.called_once_with(
+    mock_cmd.assert_called_once_with(
         [
             "netsh",
             "interface",

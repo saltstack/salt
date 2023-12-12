@@ -71,6 +71,12 @@ NO_OVERRIDE_PARAMS = immutabletypes.freeze(
     }
 )
 
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/salt-extensions/saltext-vault",
+)
+
 
 def generate_token(
     minion_id,
@@ -125,7 +131,7 @@ def generate_token(
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "vault.generate_token endpoint is deprecated. Please update your minions.",
         )
 

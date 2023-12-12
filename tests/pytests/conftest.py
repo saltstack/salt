@@ -24,6 +24,7 @@ from saltfactories.utils import random_string
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
@@ -164,7 +165,7 @@ def salt_master_factory(
         "redundant_minions": "N@min or N@mins",
         "nodegroup_loop_a": "N@nodegroup_loop_b",
         "nodegroup_loop_b": "N@nodegroup_loop_a",
-        "missing_minion": "L@{},ghostminion".format(salt_minion_id),
+        "missing_minion": f"L@{salt_minion_id},ghostminion",
         "list_group": "N@multiline_nodegroup",
         "one_list_group": "N@one_minion_list",
         "list_group2": "N@list_nodegroup",
@@ -176,7 +177,7 @@ def salt_master_factory(
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": "http://127.0.0.1:{}".format(vault_port),
+        "url": f"http://127.0.0.1:{vault_port}",
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -187,7 +188,10 @@ def salt_master_factory(
         os.path.join(RUNTIME_VARS.FILES, "returners")
     )
     config_defaults["event_return"] = "runtests_noop"
-    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
+    config_overrides = {
+        "pytest-master": {"log": {"level": "DEBUG"}},
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -210,7 +214,7 @@ def salt_master_factory(
     config_overrides["external_auth"] = {
         "pam": {
             salt_auth_account_1_factory.username: ["test.*"],
-            "{}%".format(salt_auth_account_2_factory.group_name): [
+            f"{salt_auth_account_2_factory.group_name}%": [
                 "@wheel",
                 "@runner",
                 "test.*",
@@ -308,7 +312,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": "http://127.0.0.1:{}".format(vault_port),
+        "url": f"http://127.0.0.1:{vault_port}",
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -316,6 +320,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -346,6 +351,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -506,7 +512,7 @@ def tmp_path_world_rw(request):
     Temporary path which is world read/write for tests that run under a different account
     """
     tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
-    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path = tempdir_path / f"world-rw-{id(request.node)}"
     path.mkdir(exist_ok=True)
     path.chmod(0o777)
     try:
@@ -545,6 +551,15 @@ def ssl_webserver(integration_files_dir, this_txt_file):
     )
 
     with Webserver(root=str(integration_files_dir), ssl_opts=context) as webserver:
+        yield webserver
+
+
+@pytest.fixture(scope="module")
+def webserver(integration_files_dir, this_txt_file):
+    """
+    spins up an http webserver.
+    """
+    with Webserver(root=str(integration_files_dir)) as webserver:
         yield webserver
 
 
@@ -607,8 +622,11 @@ def pytest_pyfunc_call(pyfuncitem):
 
     __tracebackhide__ = True
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    loop.asyncio_loop.run_until_complete(
+        asyncio.wait_for(
+            CoroTestFunction(pyfuncitem.obj, testargs)(),
+            timeout=get_test_timeout(pyfuncitem),
+        )
     )
     return True
 
@@ -618,15 +636,14 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    asyncio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio_loop)
     loop = tornado.ioloop.IOLoop.current()
-    loop.make_current()
     try:
         yield loop
     finally:
-        loop.clear_current()
-        loop.close(all_fds=True)
+        loop.close(all_fds=True)  # Also closes asyncio_loop
+        asyncio.set_event_loop(None)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

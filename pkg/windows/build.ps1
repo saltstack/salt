@@ -38,17 +38,15 @@ param(
 
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
-    [ValidateSet(
-        "3.11.2",
-        "3.10.11"
-    )]
     [Alias("p")]
-    # The version of Python to be built. Pythonnet only supports up to Python
-    # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
-    # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
-    # We may have to drop support for pycurl.
-    # Default is: 3.8.16
-    [String] $PythonVersion = "3.10.11",
+    # The version of Python to build/fetch. This is tied to the version of
+    # Relenv
+    [String] $PythonVersion,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("r")]
+    # The version of Relenv to install
+    [String] $RelenvVersion,
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
@@ -62,7 +60,7 @@ param(
     [Switch] $CICD,
 
     [Parameter(Mandatory=$false)]
-    # Don't install. It should already be installed
+    # Don't install/build python. It should already be installed
     [Switch] $SkipInstall
 
 )
@@ -104,6 +102,31 @@ if ( [String]::IsNullOrEmpty($Version) ) {
 }
 
 #-------------------------------------------------------------------------------
+# Verify Python and Relenv Versions
+#-------------------------------------------------------------------------------
+
+$yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
+$dict_versions = @{}
+$dict_versions["python_version"]=($yaml | Select-String -Pattern "python_version: (.*)").matches.groups[1].Value.Trim("""")
+$dict_versions["relenv_version"]=($yaml | Select-String -Pattern "relenv_version: (.*)").matches.groups[1].Value.Trim("""")
+
+if ( [String]::IsNullOrEmpty($PythonVersion) ) {
+    $PythonVersion = $dict_versions["python_version"]
+    if ( [String]::IsNullOrEmpty($PythonVersion) ) {
+        Write-Host "Failed to load Python Version"
+        exit 1
+    }
+}
+
+if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+    $RelenvVersion = $dict_versions["relenv_version"]
+    if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+        Write-Host "Failed to load Relenv Version"
+        exit 1
+    }
+}
+
+#-------------------------------------------------------------------------------
 # Start the Script
 #-------------------------------------------------------------------------------
 
@@ -111,6 +134,7 @@ Write-Host $("#" * 80)
 Write-Host "Build Salt Installer Packages" -ForegroundColor Cyan
 Write-Host "- Salt Version:   $Version"
 Write-Host "- Python Version: $PythonVersion"
+Write-Host "- Relenv Version: $RelenvVersion"
 Write-Host "- Architecture:   $Architecture"
 Write-Host $("v" * 80)
 
@@ -165,6 +189,7 @@ if ( ! $SkipInstall ) {
   $KeywordArguments = @{
       Version = $PythonVersion
       Architecture = $Architecture
+      RelenvVersion = $RelenvVersion
   }
   if ( $Build ) {
       $KeywordArguments["Build"] = $false

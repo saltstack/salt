@@ -714,6 +714,12 @@ from salt.exceptions import CommandExecutionError, SaltException, SaltInvocation
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "vault",
+    "https://github.com/salt-extensions/saltext-vault",
+)
+
 
 def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """

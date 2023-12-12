@@ -197,7 +197,7 @@ def _active_mounts_openbsd(ret):
         comps = re.sub(r"\s+", " ", line).split()
         parens = re.findall(r"\((.*?)\)", line, re.DOTALL)
         if len(parens) > 1:
-            nod = __salt__["cmd.run_stdout"]("ls -l {}".format(comps[0]))
+            nod = __salt__["cmd.run_stdout"](f"ls -l {comps[0]}")
             nod = " ".join(nod.split()).split(" ")
             ret[comps[3]] = {
                 "device": comps[0],
@@ -306,7 +306,7 @@ class _fstab_entry:
     @classmethod
     def dict_from_line(cls, line, keys=fstab_keys):
         if len(keys) != 6:
-            raise ValueError("Invalid key array: {}".format(keys))
+            raise ValueError(f"Invalid key array: {keys}")
         if line.startswith("#"):
             raise cls.ParseError("Comment!")
 
@@ -523,12 +523,12 @@ class _FileSystemsEntry:
     @classmethod
     def dict_from_lines(cls, lines, keys=filesystems_keys):
         if len(lines) < 2:
-            raise ValueError("Invalid number of lines: {}".format(lines))
+            raise ValueError(f"Invalid number of lines: {lines}")
         if not keys:
             # if empty force default filesystems_keys
             keys = _FileSystemsEntry.filesystems_keys
         elif len(keys) < 6:
-            raise ValueError("Invalid key name array: {}".format(keys))
+            raise ValueError(f"Invalid key name array: {keys}")
 
         blk_lines = lines
         orddict = OrderedDict()
@@ -546,9 +546,7 @@ class _FileSystemsEntry:
             if key_name in keys:
                 orddict[key_name] = comps[1].strip()
             else:
-                raise ValueError(
-                    "Invalid name for use in filesystems: {}".format(key_name)
-                )
+                raise ValueError(f"Invalid name for use in filesystems: {key_name}")
 
         return orddict
 
@@ -575,7 +573,7 @@ class _FileSystemsEntry:
         strg_out = entry["name"] + ":" + os.linesep
         for k, v in entry.items():
             if "name" not in k:
-                strg_out += "\t{}\t\t= {}".format(k, v) + os.linesep
+                strg_out += f"\t{k}\t\t= {v}" + os.linesep
         strg_out += os.linesep
         return str(strg_out)
 
@@ -586,7 +584,7 @@ class _FileSystemsEntry:
         list_out.append(str(entry["name"] + ":" + os.linesep))
         for k, v in entry.items():
             if "name" not in k:
-                list_out.append(str("\t{}\t\t= {}".format(k, v) + os.linesep))
+                list_out.append(str(f"\t{k}\t\t= {v}" + os.linesep))
         list_out.append(str(os.linesep))
         return list_out
 
@@ -793,7 +791,7 @@ def set_fstab(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Verify that this mount is represented in the fstab, change the mount
@@ -869,12 +867,12 @@ def set_fstab(
         filterFn = lambda key: key not in _fstab_entry.fstab_keys
         invalid_keys = filter(filterFn, match_on)
 
-        msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
+        msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
         raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{}"'.format(config))
+        raise CommandExecutionError(f'Bad config file "{config}"')
 
     try:
         with salt.utils.files.fopen(config, "r") as ifile:
@@ -930,7 +928,7 @@ def set_vfstab(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2016.3.2
@@ -999,12 +997,12 @@ def set_vfstab(
         filterFn = lambda key: key not in _vfstab_entry.vfstab_keys
         invalid_keys = filter(filterFn, match_on)
 
-        msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
+        msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
         raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{}"'.format(config))
+        raise CommandExecutionError(f'Bad config file "{config}"')
 
     try:
         with salt.utils.files.fopen(config, "r") as ifile:
@@ -1117,7 +1115,7 @@ def set_automaster(
     config="/etc/auto_salt",
     test=False,
     not_change=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Verify that this mount is represented in the auto_salt, change the mount
@@ -1139,11 +1137,11 @@ def set_automaster(
 
     if not os.path.isfile(config):
         __salt__["file.touch"](config)
-        __salt__["file.append"](automaster_file, "/-\t\t\t{}".format(config))
+        __salt__["file.append"](automaster_file, f"/-\t\t\t{config}")
 
-    name = "/..{}".format(name)
-    device_fmt = "{}:{}".format(fstype, device)
-    type_opts = "-fstype={},{}".format(fstype, opts)
+    name = f"/..{name}"
+    device_fmt = f"{fstype}:{device}"
+    type_opts = f"-fstype={fstype},{opts}"
 
     if fstype == "smbfs":
         device_fmt = device_fmt.replace(fstype, "")
@@ -1185,7 +1183,7 @@ def set_automaster(
                             "auto_master entry for mount point %s needs to be updated",
                             name,
                         )
-                        newline = "{}\t{}\t{}\n".format(name, type_opts, device_fmt)
+                        newline = f"{name}\t{type_opts}\t{device_fmt}\n"
                         lines.append(newline)
                 else:
                     lines.append(line)
@@ -1212,14 +1210,14 @@ def set_automaster(
         else:
             if not salt.utils.args.test_mode(test=test, **kwargs):
                 # The entry is new, add it to the end of the fstab
-                newline = "{}\t{}\t{}\n".format(name, type_opts, device_fmt)
+                newline = f"{name}\t{type_opts}\t{device_fmt}\n"
                 lines.append(newline)
                 try:
                     with salt.utils.files.fopen(config, "wb") as ofile:
                         # The line was changed, commit it!
                         ofile.writelines(salt.utils.data.encode(lines))
                 except OSError:
-                    raise CommandExecutionError("File not writable {}".format(config))
+                    raise CommandExecutionError(f"File not writable {config}")
     return "new"
 
 
@@ -1280,7 +1278,7 @@ def mount(
             if not mnt:
                 return False
             first = next(iter(mnt.keys()))
-            __context__["img.mnt_{}".format(first)] = mnt
+            __context__[f"img.mnt_{first}"] = mnt
             return first
         return False
 
@@ -1297,24 +1295,24 @@ def mount(
     args = ""
     if opts is not None:
         lopts = ",".join(opts)
-        args = "-o {}".format(lopts)
+        args = f"-o {lopts}"
 
     if fstype:
         # use of fstype on AIX differs from typical Linux use of -t
         # functionality AIX uses -v vfsname, -t fstype mounts all with
         # fstype in /etc/filesystems
         if "AIX" in __grains__["os"]:
-            args += " -v {}".format(fstype)
+            args += f" -v {fstype}"
         elif "solaris" in __grains__["os"].lower():
-            args += " -F {}".format(fstype)
+            args += f" -F {fstype}"
         else:
-            args += " -t {}".format(fstype)
+            args += f" -t {fstype}"
 
     cmd = "mount "
     if device:
-        cmd += "{} '{}' '{}' ".format(args, device, name)
+        cmd += f"{args} '{device}' '{name}' "
     else:
-        cmd += "'{}' ".format(name)
+        cmd += f"'{name}' "
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1360,23 +1358,23 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
         args = ""
         if opts:
             lopts = ",".join(opts)
-            args = "-o {}".format(lopts)
+            args = f"-o {lopts}"
 
         if fstype:
             # use of fstype on AIX differs from typical Linux use of
             # -t functionality AIX uses -v vfsname, -t fstype mounts
             # all with fstype in /etc/filesystems
             if "AIX" in __grains__["os"]:
-                args += " -v {}".format(fstype)
+                args += f" -v {fstype}"
             elif "solaris" in __grains__["os"].lower():
-                args += " -F {}".format(fstype)
+                args += f" -F {fstype}"
             else:
-                args += " -t {}".format(fstype)
+                args += f" -t {fstype}"
 
         if __grains__["os"] not in ["OpenBSD", "MacOS", "Darwin"] or force_mount:
-            cmd = "mount {} '{}' '{}' ".format(args, device, name)
+            cmd = f"mount {args} '{device}' '{name}' "
         else:
-            cmd = "mount -u {} '{}' '{}' ".format(args, device, name)
+            cmd = f"mount -u {args} '{device}' '{name}' "
         out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
         if out["retcode"]:
             return out["stderr"]
@@ -1407,18 +1405,18 @@ def umount(name, device=None, user=None, util="mount"):
     elif util == "qemu_nbd":
         # This functionality used to live in img.umount_image
         if "qemu_nbd.clear" in __salt__:
-            if "img.mnt_{}".format(name) in __context__:
-                __salt__["qemu_nbd.clear"](__context__["img.mnt_{}".format(name)])
+            if f"img.mnt_{name}" in __context__:
+                __salt__["qemu_nbd.clear"](__context__[f"img.mnt_{name}"])
                 return
 
     mnts = active()
     if name not in mnts:
-        return "{} does not have anything mounted".format(name)
+        return f"{name} does not have anything mounted"
 
     if not device:
-        cmd = "umount '{}'".format(name)
+        cmd = f"umount '{name}'"
     else:
-        cmd = "umount '{}'".format(device)
+        cmd = f"umount '{device}'"
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1443,7 +1441,7 @@ def is_fuse_exec(cmd):
     elif not salt.utils.path.which("ldd"):
         raise CommandNotFoundError("ldd")
 
-    out = __salt__["cmd.run"]("ldd {}".format(cmd_path), python_shell=False)
+    out = __salt__["cmd.run"](f"ldd {cmd_path}", python_shell=False)
     return "libfuse" in out
 
 
@@ -1535,13 +1533,13 @@ def swapon(name, priority=None):
 
     if __grains__["kernel"] == "SunOS":
         if __grains__["virtual"] != "zone":
-            __salt__["cmd.run"]("swap -a '{}'".format(name), python_shell=False)
+            __salt__["cmd.run"](f"swap -a '{name}'", python_shell=False)
         else:
             return False
     else:
-        cmd = "swapon '{}'".format(name)
+        cmd = f"swapon '{name}'"
         if priority and "AIX" not in __grains__["kernel"]:
-            cmd += " -p {}".format(priority)
+            cmd += f" -p {priority}"
         __salt__["cmd.run"](cmd, python_shell=False)
 
     on_ = swaps()
@@ -1569,13 +1567,13 @@ def swapoff(name):
     if name in on_:
         if __grains__["kernel"] == "SunOS":
             if __grains__["virtual"] != "zone":
-                __salt__["cmd.run"]("swap -a '{}'".format(name), python_shell=False)
+                __salt__["cmd.run"](f"swap -a '{name}'", python_shell=False)
             else:
                 return False
         elif __grains__["os"] != "OpenBSD":
-            __salt__["cmd.run"]("swapoff '{}'".format(name), python_shell=False)
+            __salt__["cmd.run"](f"swapoff '{name}'", python_shell=False)
         else:
-            __salt__["cmd.run"]("swapctl -d '{}'".format(name), python_shell=False)
+            __salt__["cmd.run"](f"swapctl -d '{name}'", python_shell=False)
         on_ = swaps()
         if name in on_:
             return False
@@ -1779,7 +1777,7 @@ def set_filesystems(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2018.3.3
@@ -1880,13 +1878,11 @@ def set_filesystems(
     except KeyError:
         filterFn = lambda key: key not in _FileSystemsEntry.compatibility_keys
         invalid_keys = filter(filterFn, match_on)
-        raise CommandExecutionError(
-            'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
-        )
+        raise CommandExecutionError(f'Unrecognized keys in match_on: "{invalid_keys}"')
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{}"'.format(config))
+        raise CommandExecutionError(f'Bad config file "{config}"')
 
     # read in block of filesystem, block starts with '/' till empty line
     try:
@@ -1904,7 +1900,7 @@ def set_filesystems(
                 view_lines.append(fsys_view)
 
     except OSError as exc:
-        raise CommandExecutionError("Couldn't read from {}: {}".format(config, exc))
+        raise CommandExecutionError(f"Couldn't read from {config}: {exc}")
 
     # add line if not present or changed
     if ret is None:
@@ -1922,9 +1918,9 @@ def set_filesystems(
                     ofile.writelines(salt.utils.data.encode(list_strgs))
 
         except OSError:
-            raise CommandExecutionError("File not writable {}".format(config))
+            raise CommandExecutionError(f"File not writable {config}")
         except Exception as exc:
-            raise CommandExecutionError("set_filesystems error exception {exc}")
+            raise CommandExecutionError(f"set_filesystems error exception {exc}")
 
     return ret
 
@@ -1961,7 +1957,7 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
                 view_lines.append(fsys_view)
 
     except OSError as exc:
-        raise CommandExecutionError("Couldn't read from {}: {}".format(config, exc))
+        raise CommandExecutionError(f"Couldn't read from {config}: {exc}")
 
     if modified:
         try:
@@ -1971,9 +1967,9 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
                     list_strgs = _FileSystemsEntry.dict_to_list_lines(entry)
                     ofile.writelines(salt.utils.data.encode(list_strgs))
         except OSError as exc:
-            raise CommandExecutionError("Couldn't write to {}: {}".format(config, exc))
+            raise CommandExecutionError(f"Couldn't write to {config}: {exc}")
         except Exception as exc:
-            raise CommandExecutionError("rm_filesystems error exception {exc}")
+            raise CommandExecutionError(f"rm_filesystems error exception {exc}")
 
     return modified
 

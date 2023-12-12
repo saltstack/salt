@@ -12,6 +12,7 @@ import datetime
 import inspect
 import logging
 import numbers
+import os
 import sys
 import warnings
 
@@ -105,7 +106,7 @@ def _format_warning(message, category, filename, lineno, line=None):
     Replacement for warnings.formatwarning that disables the echoing of
     the 'line' parameter.
     """
-    return "{}:{}: {}: {}\n".format(filename, lineno, category.__name__, message)
+    return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 
 def warn_until(
@@ -183,7 +184,7 @@ def warn_until(
             ),
         )
 
-    if _dont_call_warnings is False:
+    if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
@@ -252,7 +253,7 @@ def warn_until_date(
             ),
         )
 
-    if _dont_call_warnings is False:
+    if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
             message.format(date=date.isoformat(), today=today.isoformat()),
             category,
@@ -317,7 +318,7 @@ def kwargs_warn_until(
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ", ".join("'{}'".format(key) for key in kwargs)
+        arg_names = ", ".join(f"'{key}'" for key in kwargs)
         warn_until(
             version,
             message=(
@@ -433,7 +434,7 @@ def check_boto_reqs(
             boto_ver = "2.0.0"
 
         if not has_boto or version_cmp(boto.__version__, boto_ver) == -1:
-            return False, "A minimum version of boto {} is required.".format(boto_ver)
+            return False, f"A minimum version of boto {boto_ver} is required."
 
     if check_boto3 is True:
         try:
@@ -455,12 +456,12 @@ def check_boto_reqs(
         if not has_boto3 or version_cmp(boto3.__version__, boto3_ver) == -1:
             return (
                 False,
-                "A minimum version of boto3 {} is required.".format(boto3_ver),
+                f"A minimum version of boto3 {boto3_ver} is required.",
             )
         elif version_cmp(botocore.__version__, botocore_ver) == -1:
             return (
                 False,
-                "A minimum version of botocore {} is required".format(botocore_ver),
+                f"A minimum version of botocore {botocore_ver} is required",
             )
 
     return True

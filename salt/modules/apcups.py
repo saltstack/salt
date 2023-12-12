@@ -113,6 +113,3 @@ def status_battery():
         return not data["TONBATT"] == "0 Seconds"
 
     return {"Error": "Battery status not available."}
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
