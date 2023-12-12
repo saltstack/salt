@@ -77,8 +77,8 @@ def set_(key, value, profile=None):
 
     if profile.get("patch"):
         try:
-            # Patching only works on existing secrets and requires the `patch`
-            # capability as well as KV v2. Save the current data if patching is enabled
+            # Patching only works on existing secrets.
+            # Save the current data if patching is enabled
             # to write it back later, if any errors happen in patch_kv.
             # This also checks that the path exists, otherwise patching fails as well.
             curr_data = vault.read_kv(path, __opts__, __context__)

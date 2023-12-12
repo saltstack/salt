@@ -206,7 +206,7 @@ def is_v2(path, opts=None, context=None):
         opts = globals().get("__opts__", {}) if opts is None else opts
         context = globals().get("__context__", {}) if context is None else context
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The __utils__ loader functionality will be removed. This will "
             "cause context/opts dunders to be unavailable in utility modules. "
             "Please pass opts and context from importing Salt modules explicitly.",
@@ -308,8 +308,7 @@ def destroy_kv(path, versions, opts, context):
 
 def list_kv(path, opts, context):
     """
-    List secrets at <path>. Returns ``{"keys": []}`` by default
-    for backwards-compatibility reasons, unless <keys_only> is True.
+    List secrets at <path>.
     """
     kv, config = get_kv(opts, context, get_config=True)
     try:
@@ -351,7 +350,7 @@ def get_vault_connection():
     it exists, or from the master otherwise
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "salt.utils.vault.get_vault_connection is deprecated, "
         "please use salt.utils.vault.get_authd_client.",
     )
@@ -394,7 +393,7 @@ def del_cache():
     Delete cache file
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "salt.utils.vault.del_cache is deprecated, please use salt.utils.vault.clear_cache.",
     )
     clear_cache(
@@ -409,7 +408,7 @@ def write_cache(connection):  # pylint: disable=unused-argument
     Write the vault token to cache
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "salt.utils.vault.write_cache is deprecated without replacement.",
     )
     # always return false since cache is managed internally
@@ -421,7 +420,7 @@ def get_cache():
     Return connection information from vault cache file
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "salt.utils.vault.get_cache is deprecated, please use salt.utils.vault.get_authd_client.",
     )
     return get_vault_connection()
@@ -441,7 +440,7 @@ def make_request(
     Make a request to Vault
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "salt.utils.vault.make_request is deprecated, please use "
         "salt.utils.vault.query or salt.utils.vault.query_raw."
         "To override token/url/namespace, please make use of the "

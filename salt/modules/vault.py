@@ -857,7 +857,16 @@ def write_raw(path, raw):
 def patch_secret(path, **kwargs):
     """
     Patch secret dataset at <path>. Fields are specified as arbitrary keyword arguments.
-    Requires KV v2 and "patch" capability.
+
+    .. note::
+
+        This works even for older Vault versions, KV v1 and with missing
+        ``patch`` capability, but will use more than one request to simulate
+        the functionality by issuing a read and update request.
+
+        For proper, single-request patching, requires versions of KV v2 that
+        support the ``patch`` capability and the ``patch`` capability to be available
+        for the path.
 
     .. note::
 
@@ -874,8 +883,21 @@ def patch_secret(path, **kwargs):
 
     .. code-block:: vaultpolicy
 
+        # Proper patching
         path "<mount>/data/<secret>" {
             capabilities = ["patch"]
+        }
+
+        # OR (!), for older KV v2 setups:
+
+        path "<mount>/data/<secret>" {
+            capabilities = ["read", "update"]
+        }
+
+        # OR (!), for KV v1 setups:
+
+        path "<mount>/<secret>" {
+            capabilities = ["read", "update"]
         }
 
     path

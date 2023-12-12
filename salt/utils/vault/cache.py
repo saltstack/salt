@@ -313,9 +313,15 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
         try:
             ret = self._check_validity(data, valid_for=valid_for)
         except VaultLeaseExpired:
-            self.expire_events(
-                tag=f"vault/lease/{ckey}/expire", data={"valid_for_less": valid_for}
-            )
+            if self.expire_events is not None:
+                self.expire_events(
+                    tag=f"vault/lease/{ckey}/expire",
+                    data={
+                        "valid_for_less": valid_for
+                        if valid_for is not None
+                        else data.get("min_ttl") or 0,
+                    },
+                )
             ret = None
         if ret is None and flush:
             log.debug("Cached lease not valid anymore. Flushing cache.")

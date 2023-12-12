@@ -864,7 +864,7 @@ def clear_cache(master=True, minions=True):
         Defaults to true. Set this to a list of minion IDs to only clear
         cached data pertaining to thse minions.
     """
-    config, _, _ = vault._get_connection_config(
+    config, _, _ = vfactory._get_connection_config(
         "vault", __opts__, __context__, force_local=True
     )
     cache = vcache._get_cache_backend(config, __opts__)

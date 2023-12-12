@@ -250,6 +250,8 @@ class VaultSecretId(UseCountMixin, AccessorMixin, BaseLease):
             kwargs["lease_duration"] = kwargs.pop("secret_id_ttl")
             kwargs["num_uses"] = kwargs.pop("secret_id_num_uses", 0)
             kwargs["accessor"] = kwargs.pop("secret_id_accessor", None)
+        if "expiration_time" in kwargs:
+            kwargs["expire_time"] = kwargs.pop("expiration_time")
         super().__init__(**kwargs)
 
     def is_valid(self, valid_for=0, uses=1):
