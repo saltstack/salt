@@ -88,11 +88,11 @@ def test_check_ip_ipv6_valid():
 
 
 def test_check_ip_neg():
-    assert not dig.check_ip("-127.0.0.1"), "Did not detect negative value as invalid"
+    assert not dig.check_ip("-127.0.0.1")
 
 
 def test_check_ip_empty():
-    assert not dig.check_ip(""), "Did not detect empty value as invalid"
+    assert not dig.check_ip("")
 
 
 def test_a():
