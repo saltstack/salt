@@ -1709,6 +1709,7 @@ _OS_NAME_MAP = {
     "poky": "Poky",
     "manjaro": "Manjaro",
     "manjarolin": "Manjaro",
+    "manjaro-ar": "Manjaro",
     "univention": "Univention",
     "antergos": "Antergos",
     "sles": "SUSE",
