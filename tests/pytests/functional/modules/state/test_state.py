@@ -1101,5 +1101,6 @@ def test_state_requires_missing(state, state_tree):
     """
     with pytest.helpers.temp_file("req_any_missing.sls", sls_contents, state_tree):
         ret = state.sls("req_any_missing")
-        expected = "test_|-always-passes_|-always-passes_|-succeed_without_changes"
-        assert expected in ret
+        state_id = "cmd_|-changing_state_|-echo \"Changed!\"_|-run"
+        assert state_id in ret
+        assert ret[state_id]["result"] is True
