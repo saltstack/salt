@@ -110,7 +110,9 @@ def smb_dict(tmp_path):
     smbd_path = shutil.which("smbd")
     pathlib.Path(smbd_path).exists()
     try:
-        _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
+        _smbd = subprocess.Popen(
+            [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
+        )
         assert _smbd != 0
         time.sleep(2)
         pidfile = samba_dir / "smbd.pid"
