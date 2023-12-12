@@ -74,13 +74,13 @@ def test_dig_cname_none_found():
 
 
 def test_check_ip():
-    assert dig.check_ip("127.0.0.1"), "Not a valid ip address"
+    assert dig.check_ip("127.0.0.1")
 
 
 def test_check_ip_ipv6():
     assert dig.check_ip(
         "1111:2222:3333:4444:5555:6666:7777:8888"
-    ), "Not a valid ip address"
+    )
 
 
 def test_check_ip_ipv6_valid():
