@@ -337,11 +337,14 @@ class TestBuildAuthdClient:
     @pytest.fixture(params=["token", "secret_id", "both", "none"])
     def cached(self, token_auth, secret_id_response, request):
         cached_what = request.param
+        # Save a reference to the original class since it will be
+        # mocked when _cache is called
+        vauth_cache = vcache.VaultAuthCache
 
         def _cache(context, cbank, ckey, *args, **kwargs):
-            token = Mock(spec=vcache.VaultAuthCache)
+            token = Mock(spec=vauth_cache)
             token.get.return_value = None
-            approle = Mock(spec=vcache.VaultAuthCache)
+            approle = Mock(spec=vauth_cache)
             approle.get.return_value = None
             if cached_what in ["token", "both"]:
                 token.get.return_value = vault.VaultToken(**token_auth["auth"])
@@ -1103,7 +1106,9 @@ class TestQueryMaster:
         }
 
     @pytest.fixture(params=["data"])
-    def unwrap_client(self, server_config, request):
+    def unwrap_client(self, server_config, request, unauthd_client_mock):
+        # We're requesting unauthd_client_mock here because if it's not requested
+        # first, its spec will be sourced from a MagicMock (and fail in Python >=3.11)
         with patch(
             "salt.utils.vault.client.VaultClient", autospec=True
         ) as unwrap_client:

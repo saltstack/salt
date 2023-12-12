@@ -1,10 +1,10 @@
 import pytest
+import requests.models
 
 import salt.utils.vault as vault
 import salt.utils.vault.cache as vcache
 import salt.utils.vault.client as vclient
 import salt.utils.vault.kv as vkv
-from tests.pytests.unit.utils.vault.conftest import _mock_json_response
 from tests.support.mock import MagicMock, Mock, patch
 
 
@@ -483,9 +483,12 @@ class TestKVV2:
         """
         Ensure unexpected responses are treated as not KV
         """
-        kvv2.client.get.return_value = MagicMock(
-            _mock_json_response({"wrap_info": {}}, status_code=200)
-        )
+        # _mock_json_response() returns a Mock, but we need MagicMock here
+        resp_mm = MagicMock(spec=requests.models.Response)
+        resp_mm.json.return_value = {"wrap_info": {}}
+        resp_mm.status_code = 200
+        resp_mm.reason = ""
+        kvv2.client.get.return_value = resp_mm
         res = kvv2._get_secret_path_metadata(path)
         assert res is None
         assert "Unexpected response to metadata query" in caplog.text
