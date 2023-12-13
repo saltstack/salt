@@ -648,34 +648,8 @@ def get_users():
 
         salt '*' ps.get_users
     """
-    try:
-        recs = psutil.users()
-        return [dict(x._asdict()) for x in recs]
-    except AttributeError:
-        # get_users is only present in psutil > v0.5.0
-        # try utmp
-        try:
-            import utmp  # pylint: disable=import-error
-
-            result = []
-            while True:
-                rec = utmp.utmpaccess.getutent()
-                if rec is None:
-                    return result
-                elif rec[0] == 7:
-                    started = rec[8]
-                    if isinstance(started, tuple):
-                        started = started[0]
-                    result.append(
-                        {
-                            "name": rec[4],
-                            "terminal": rec[2],
-                            "started": started,
-                            "host": rec[5],
-                        }
-                    )
-        except ImportError:
-            return False
+    recs = psutil.users()
+    return [dict(x._asdict()) for x in recs]
 
 
 def lsof(name):

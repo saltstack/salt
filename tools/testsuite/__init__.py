@@ -151,15 +151,6 @@ def setup_testsuite(
     if exitcode and exitcode != ExitCode.SOFT_FAIL:
         ctx.exit(exitcode)
     if pkg:
-        exitcode = tools.utils.gh.download_nox_artifact(
-            ctx,
-            run_id=run_id,
-            slug=slug,
-            nox_env=f"test-pkgs-onedir-{arch}",
-            repository=repository,
-        )
-        if exitcode and exitcode != ExitCode.SOFT_FAIL:
-            ctx.exit(exitcode)
         exitcode = tools.utils.gh.download_pkgs_artifact(
             ctx,
             run_id=run_id,

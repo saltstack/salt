@@ -122,7 +122,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
-          path: pkg/artifacts/
+          path: artifacts/pkg/
 
       - name: Install System Dependencies
         run: |
@@ -130,7 +130,7 @@ jobs:
 
       - name: List Packages
         run: |
-          tree pkg/artifacts
+          tree artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
@@ -214,6 +214,7 @@ jobs:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
             artifacts
+            !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 

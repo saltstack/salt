@@ -227,10 +227,9 @@ def xccdf(params):
         tempdir = tempfile.mkdtemp()
         proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
         (stdoutdata, error) = proc.communicate()
-        success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
             error += f"\nKilled by signal {proc.returncode}\n".encode("ascii")
-        returncode = proc.returncode
+        success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if success:
             if not __salt__["cp.push_dir"](tempdir):
                 success = False
@@ -239,5 +238,5 @@ def xccdf(params):
             upload_dir = tempdir
 
     return dict(
-        success=success, upload_dir=upload_dir, error=error, returncode=returncode
+        success=success, upload_dir=upload_dir, error=error, returncode=proc.returncode
     )
