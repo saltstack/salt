@@ -159,6 +159,3 @@ def persist(name, value, config="/etc/sysctl.conf"):
     assign(name, value)
 
     return "Updated"
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

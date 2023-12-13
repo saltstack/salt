@@ -1274,6 +1274,3 @@ def uninstalled(name):
         ret["comment"] = "zone {} is not configured!".format(name)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

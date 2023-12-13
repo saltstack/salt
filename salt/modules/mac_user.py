@@ -529,10 +529,10 @@ def _kcpassword(password):
     # The magic 11 bytes - these are just repeated
     # 0x7D 0x89 0x52 0x23 0xD2 0xBC 0xDD 0xEA 0xA3 0xB9 0x1F
     key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
-    key_len = len(key)
+    key_len = len(key) + 1  # macOS adds an extra byte for the trailing null
 
-    # Convert each character to a byte
-    password = list(map(ord, password))
+    # Convert each character to a byte and add a trailing null
+    password = list(map(ord, password)) + [0]
 
     # pad password length out to an even multiple of key length
     remainder = len(password) % key_len
@@ -554,9 +554,8 @@ def _kcpassword(password):
             password[password_index] = password[password_index] ^ key[key_index]
             key_index += 1
 
-    # Convert each byte back to a character
-    password = list(map(chr, password))
-    return b"".join(salt.utils.data.encode(password))
+    # Return the raw bytes
+    return bytes(password)
 
 
 def enable_auto_login(name, password):

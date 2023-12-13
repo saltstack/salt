@@ -673,6 +673,35 @@ def test_sign_remote_certificate_copypath(x509_salt_call_cli, cert_args, tmp_pat
     assert (tmp_path / f"{cert.serial_number:x}.crt").exists()
 
 
+def test_create_private_key(x509_salt_call_cli):
+    """
+    Ensure calling from the CLI works as expected and does not complain
+    about unknown internal kwargs (__pub_fun etc).
+    """
+    ret = x509_salt_call_cli.run("x509.create_private_key")
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data.startswith("-----BEGIN PRIVATE KEY-----")
+
+
+def test_create_crl(x509_salt_call_cli, ca_key, ca_cert, x509_pkidir):
+    """
+    Ensure calling from the CLI works as expected and does not complain
+    about unknown internal kwargs (__pub_fun etc).
+    """
+    with pytest.helpers.temp_file("key", ca_key, x509_pkidir) as ca_keyfile:
+        with pytest.helpers.temp_file("cert", ca_cert, x509_pkidir) as ca_certfile:
+            ret = x509_salt_call_cli.run(
+                "x509.create_crl",
+                revoked=[],
+                signing_private_key=str(ca_keyfile),
+                signing_cert=str(ca_certfile),
+            )
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data.startswith("-----BEGIN X509 CRL-----")
+
+
 def _belongs_to(cert_or_pubkey, privkey):
     if isinstance(cert_or_pubkey, cx509.Certificate):
         cert_or_pubkey = cert_or_pubkey.public_key()

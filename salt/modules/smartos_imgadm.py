@@ -508,6 +508,3 @@ def source_add(source, source_type="imgapi"):
         return ret
 
     return sources(False)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

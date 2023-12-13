@@ -310,6 +310,3 @@ def disabled(name):
         salt '*' service.disabled <service name>
     """
     return _get_svc("/etc/rc.d/{}".format(name), "NO")
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

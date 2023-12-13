@@ -119,11 +119,32 @@ _usage() {
      echo "usage: ${0}"
      echo "             [-h|--help] [-v|--version]"
      echo ""
-     echo "  -h, --help      this message"
-     echo "  -v, --version   version of Salt display in the package"
+     echo "  -h, --help             Display this message"
+     echo "  -v, --version          Version of Salt to display in the package"
+     echo "  -p, --python-version   Version of python to install using relenv."
+     echo "                         The python version is tied to the relenv"
+     echo "                         version"
+     echo "  -r, --relenv-version   Version of relenv to install"
      echo ""
      echo "  Build a Salt package:"
      echo "      example: $0 3006.1-1"
+}
+
+function _parse_yaml {
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
 }
 
 #-------------------------------------------------------------------------------
@@ -139,6 +160,16 @@ while true; do
         -v | --version )
             shift
             VERSION="$*"
+            shift
+            ;;
+        -p | --python-version )
+            shift
+            PY_VERSION="$1"
+            shift
+            ;;
+        -r | --relenv-version )
+            shift
+            RELENV_VERSION="$1"
             shift
             ;;
         -*)
@@ -158,6 +189,17 @@ if [ -z "$VERSION" ]; then
     VERSION=$(git describe)
 fi
 VERSION=${VERSION#"v"}
+
+# Get defaults from workflows. This defines $python_version and $relenv_version
+eval "$(_parse_yaml "$SRC_DIR/cicd/shared-gh-workflows-context.yml")"
+
+if [ -z "$PY_VERSION" ]; then
+    PY_VERSION=$python_version
+fi
+
+if [ -z "$RELENV_VERSION" ]; then
+    RELENV_VERSION=$relenv_version
+fi
 
 #-------------------------------------------------------------------------------
 # Quit on error
@@ -184,12 +226,14 @@ fi
 #-------------------------------------------------------------------------------
 printf "#%.0s" {1..80}; printf "\n"
 echo "Build Salt Package for macOS"
+echo "- Python Version: $PY_VERSION"
+echo "- Relenv Version: $RELENV_VERSION"
 printf "v%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
 # Build Python
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/build_python.sh"
+"$SCRIPT_DIR/build_python.sh" -v $PY_VERSION -r $RELENV_VERSION
 
 #-------------------------------------------------------------------------------
 # Install Salt
@@ -210,15 +254,15 @@ printf "v%.0s" {1..80}; printf "\n"
 # Build and Sign Package
 #-------------------------------------------------------------------------------
 if [ "$(id -un)" != "root" ]; then
-    sudo "$SCRIPT_DIR/package.sh" "$VERSION"
+    sudo "$SCRIPT_DIR/package.sh" "$VERSION" -s
 else
-    "$SCRIPT_DIR/package.sh" "$VERSION"
+    "$SCRIPT_DIR/package.sh" "$VERSION" -s
 fi
 
 #-------------------------------------------------------------------------------
 # Notarize Package
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/notarize.sh" "salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+"$SCRIPT_DIR/notarize.sh" "salt-$VERSION-py3-$CPU_ARCH.pkg"
 
 #-------------------------------------------------------------------------------
 # Script Completed

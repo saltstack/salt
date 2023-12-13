@@ -9,6 +9,7 @@ import logging
 import os
 import shutil
 import string
+import time
 import urllib.error
 import urllib.parse
 
@@ -31,7 +32,8 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.verify
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError, MinionError
+from salt.config import DEFAULT_HASH_TYPE
+from salt.exceptions import CommandExecutionError, MinionError, SaltClientError
 from salt.ext.tornado.httputil import (
     HTTPHeaders,
     HTTPInputError,
@@ -43,12 +45,16 @@ log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
 
 
-def get_file_client(opts, pillar=False):
+def get_file_client(opts, pillar=False, force_local=False):
     """
     Read in the ``file_client`` option and return the correct type of file
     server
     """
-    client = opts.get("file_client", "remote")
+    if force_local:
+        client = "local"
+    else:
+        client = opts.get("file_client", "remote")
+
     if pillar and client == "local":
         client = "pillar"
     return {"remote": RemoteClient, "local": FSClient, "pillar": PillarClient}.get(
@@ -793,7 +799,7 @@ class Client:
                 opts=self.opts,
                 verify_ssl=verify_ssl,
                 header_dict=header_dict,
-                **get_kwargs
+                **get_kwargs,
             )
 
             # 304 Not Modified is returned when If-None-Match header
@@ -822,7 +828,7 @@ class Client:
                 "HTTP error {0} reading {1}: {3}".format(
                     exc.code,
                     url,
-                    *http.server.BaseHTTPRequestHandler.responses[exc.code]
+                    *http.server.BaseHTTPRequestHandler.responses[exc.code],
                 )
             )
         except urllib.error.URLError as exc:
@@ -839,7 +845,7 @@ class Client:
         makedirs=False,
         saltenv="base",
         cachedir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Cache a file then process it as a template
@@ -849,7 +855,6 @@ class Client:
             kwargs.pop("env")
 
         kwargs["saltenv"] = saltenv
-        url_data = urllib.parse.urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
         if not sfn or not os.path.exists(sfn):
             return ""
@@ -892,6 +897,15 @@ class Client:
 
         # Strip user:pass from URLs
         netloc = netloc.split("@")[-1]
+        try:
+            if url_data.port:
+                # Remove : from path
+                netloc = netloc.replace(":", "")
+        except ValueError:
+            # On Windows urllib raises a ValueError
+            # when using a file:// source and trying
+            # to access the port attribute.
+            pass
 
         if cachedir is None:
             cachedir = self.opts["cachedir"]
@@ -1040,7 +1054,7 @@ class PillarClient(Client):
             # Local file path
             fnd_path = fnd
 
-        hash_type = self.opts.get("hash_type", "md5")
+        hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
         ret["hsum"] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret["hash_type"] = hash_type
         return ret
@@ -1071,7 +1085,7 @@ class PillarClient(Client):
             except Exception:  # pylint: disable=broad-except
                 fnd_stat = None
 
-        hash_type = self.opts.get("hash_type", "md5")
+        hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
         ret["hsum"] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret["hash_type"] = hash_type
         return ret, fnd_stat
@@ -1137,11 +1151,17 @@ class RemoteClient(Client):
         self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         return self.channel
 
-    # pylint: disable=no-dunder-del
-    def __del__(self):
-        self.destroy()
-
-    # pylint: enable=no-dunder-del
+    def _channel_send(self, load, raw=False):
+        start = time.monotonic()
+        try:
+            return self.channel.send(
+                load,
+                raw=raw,
+            )
+        except salt.exceptions.SaltReqTimeoutError:
+            raise SaltClientError(
+                f"File client timed out after {int(time.time() - start)}"
+            )
 
     def destroy(self):
         if self._closing:
@@ -1171,13 +1191,8 @@ class RemoteClient(Client):
 
         if not salt.utils.platform.is_windows():
             hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-            try:
-                mode_server = stat_server[0]
-            except (IndexError, TypeError):
-                mode_server = None
         else:
             hash_server = self.hash_file(path, saltenv)
-            mode_server = None
 
         # Check if file exists on server, before creating files and
         # directories
@@ -1220,13 +1235,8 @@ class RemoteClient(Client):
         if dest2check and os.path.isfile(dest2check):
             if not salt.utils.platform.is_windows():
                 hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
-                try:
-                    mode_local = stat_local[0]
-                except (IndexError, TypeError):
-                    mode_local = None
             else:
                 hash_local = self.hash_file(dest2check, saltenv)
-                mode_local = None
 
             if hash_local == hash_server:
                 return dest2check
@@ -1267,7 +1277,10 @@ class RemoteClient(Client):
                 load["loc"] = 0
             else:
                 load["loc"] = fn_.tell()
-            data = self.channel.send(load, raw=True)
+            data = self._channel_send(
+                load,
+                raw=True,
+            )
             # Sometimes the source is local (eg when using
             # 'salt.fileserver.FSChan'), in which case the keys are
             # already strings. Sometimes the source is remote, in which
@@ -1291,7 +1304,7 @@ class RemoteClient(Client):
                         hsum = salt.utils.hashutils.get_hash(
                             dest,
                             salt.utils.stringutils.to_str(
-                                data.get("hash_type", b"md5")
+                                data.get("hash_type", DEFAULT_HASH_TYPE)
                             ),
                         )
                         if hsum != data["hsum"]:
@@ -1360,28 +1373,36 @@ class RemoteClient(Client):
         List the files on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def file_list_emptydirs(self, saltenv="base", prefix=""):
         """
         List the empty dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list_emptydirs"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         List the dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_dir_list"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         List symlinked files and dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_symlink_list"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def __hash_and_stat_file(self, path, saltenv="base"):
         """
@@ -1397,12 +1418,14 @@ class RemoteClient(Client):
                 return {}, None
             else:
                 ret = {}
-                hash_type = self.opts.get("hash_type", "md5")
+                hash_type = self.opts.get("hash_type", DEFAULT_HASH_TYPE)
                 ret["hsum"] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret["hash_type"] = hash_type
                 return ret
         load = {"path": path, "saltenv": saltenv, "cmd": "_file_hash"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def hash_file(self, path, saltenv="base"):
         """
@@ -1429,7 +1452,9 @@ class RemoteClient(Client):
                 except Exception:  # pylint: disable=broad-except
                     return hash_result, None
         load = {"path": path, "saltenv": saltenv, "cmd": "_file_find"}
-        fnd = self.channel.send(load)
+        fnd = self._channel_send(
+            load,
+        )
         try:
             stat_result = fnd.get("stat")
         except AttributeError:
@@ -1441,21 +1466,27 @@ class RemoteClient(Client):
         Return a list of the files in the file server's specified environment
         """
         load = {"saltenv": saltenv, "cmd": "_file_list"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def envs(self):
         """
         Return a list of available environments
         """
         load = {"cmd": "_file_envs"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def master_opts(self):
         """
         Return the master opts data
         """
         load = {"cmd": "_master_opts"}
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
 
     def master_tops(self):
         """
@@ -1464,7 +1495,15 @@ class RemoteClient(Client):
         load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
         if self.auth:
             load["tok"] = self.auth.gen_token(b"salt")
-        return self.channel.send(load)
+        return self._channel_send(
+            load,
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FSClient(RemoteClient):
@@ -1493,3 +1532,17 @@ class DumbAuth:
 
     def gen_token(self, clear_tok):
         return clear_tok
+
+
+class ContextlessFileClient:
+    def __init__(self, file_client):
+        self.file_client = file_client
+
+    def __getattr__(self, key):
+        return getattr(self.file_client, key)
+
+    def __exit__(self, *_):
+        pass
+
+    def __enter__(self):
+        return self

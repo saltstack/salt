@@ -3,7 +3,7 @@ Minion data cache plugin for Consul key/value data store.
 
 .. versionadded:: 2016.11.2
 
-.. versionchanged:: 3005.0
+.. versionchanged:: 3005
 
     Timestamp/cache updated support added.
 

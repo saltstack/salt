@@ -620,6 +620,12 @@ def absent(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+    .. note::
+        On apt-based systems this must be the complete source entry. For
+        example, if you include ``[arch=amd64]``, and a repo matching the
+        specified URI, dist, etc. exists _without_ an architecture, then no
+        changes will be made and the state will report a ``True`` result.
+
     **FEDORA/REDHAT-SPECIFIC OPTIONS**
 
     copr
@@ -701,6 +707,23 @@ def absent(name, **kwargs):
         ret["result"] = False
         ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
         return ret
+
+    if repo and (
+        __grains__["os_family"].lower() == "debian"
+        or __opts__.get("providers", {}).get("pkg") == "aptpkg"
+    ):
+        # On Debian/Ubuntu, pkg.get_repo will return a match for the repo
+        # even if the architectures do not match. However, changing get_repo
+        # breaks idempotency for pkgrepo.managed states. So, compare the
+        # architectures of the matched repo to the architectures specified in
+        # the repo string passed to this state. If the architectures do not
+        # match, then invalidate the match by setting repo to an empty dict.
+        from salt.modules.aptpkg import _split_repo_str
+
+        if set(_split_repo_str(stripname)["architectures"]) != set(
+            repo["architectures"]
+        ):
+            repo = {}
 
     if not repo:
         ret["comment"] = "Package repo {} is absent".format(name)

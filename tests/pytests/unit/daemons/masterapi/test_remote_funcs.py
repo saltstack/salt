@@ -5,7 +5,9 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 class FakeCache:

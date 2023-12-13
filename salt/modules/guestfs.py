@@ -11,6 +11,7 @@ import tempfile
 import time
 
 import salt.utils.path
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ def mount(location, access="rw", root=None):
     while True:
         if os.listdir(root):
             # Stuff is in there, don't use it
-            hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+            hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
             rand = hash_type(os.urandom(32)).hexdigest()
             root = os.path.join(
                 tempfile.gettempdir(),

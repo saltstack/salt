@@ -1,0 +1,18 @@
+case "$1" in
+  install|upgrade)
+    [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
+    [ -z "$SALT_USER" ] && SALT_USER=salt
+    [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
+    [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
+    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+
+    # Reset permissions to fix previous installs
+    find ${SALT_HOME} /etc/salt /var/log/salt /var/cache/salt /var/run/salt \
+        \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
+        \( -user ${SALT_USER} -o -group ${SALT_GROUP} \) -exec chown root:root \{\} \;
+
+  # remove incorrectly installed ufw salt-master directory - issue 57712
+  test -d /etc/ufw/applications.d/salt-master && rm -rf /etc/ufw/applications.d/salt-master || /bin/true
+
+  ;;
+esac

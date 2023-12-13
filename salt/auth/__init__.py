@@ -323,6 +323,7 @@ class LoadAuth:
         failure.
         """
         error_msg = 'Authentication failure of type "user" occurred.'
+
         auth_key = load.pop("key", None)
         if auth_key is None:
             log.warning(error_msg)
@@ -331,27 +332,32 @@ class LoadAuth:
         if "user" in load:
             auth_user = AuthUser(load["user"])
             if auth_user.is_sudo():
-                # If someone sudos check to make sure there is no ACL's around their username
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(error_msg)
-                    return False
-                return auth_user.sudo_name()
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return auth_user.sudo_name()
+                return False
             elif (
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(
-                        "Master runs as %r, but user in payload is %r",
-                        self.opts.get("user", "root"),
-                        load["user"],
-                    )
-                    log.warning(error_msg)
-                    return False
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return True
+                log.warning(
+                    "Master runs as %r, but user in payload is %r",
+                    self.opts.get("user", "root"),
+                    load["user"],
+                )
+                log.warning(error_msg)
+                return False
+
             elif auth_user.is_running_user():
                 if auth_key != key.get(load["user"]):
                     log.warning(error_msg)
                     return False
             elif auth_key == key.get("root"):
+                pass
+            elif auth_key == key.get("salt"):
+                # there is nologin for salt
                 pass
             else:
                 if load["user"] in key:
@@ -364,9 +370,13 @@ class LoadAuth:
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.user.get_user()]:
-                log.warning(error_msg)
-                return False
+            for check_key in key:
+                if auth_key == key[check_key]:
+                    return True
+
+            log.warning(error_msg)
+            return False
+
         return True
 
     def get_auth_list(self, load, token=None):

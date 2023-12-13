@@ -6,6 +6,10 @@ import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
 
 def test_ipc_connect_in_async_methods():
     "The connect method is in IPCMessageSubscriber's async_methods property"

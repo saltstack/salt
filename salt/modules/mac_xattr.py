@@ -110,6 +110,9 @@ def read(path, attribute, **kwargs):
 
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except UnicodeDecodeError as exc:
+        # Mimic the builtin xattr tool by replacing undecodeable bytes.
+        return exc.object.decode(errors="replace")
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
             raise CommandExecutionError("File not found: {}".format(path))

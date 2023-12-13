@@ -146,7 +146,7 @@ def _query(method, params, url, auth=None):
 
     :return: Response from API with desired data in JSON format. In case of error returns more specific description.
 
-    .. versionchanged:: 2017.7
+    .. versionchanged:: 2017.7.0
     """
 
     unauthenticated_methods = [
@@ -311,7 +311,7 @@ def _map_to_list_of_dicts(source, key):
 
 def get_zabbix_id_mapper():
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Make ZABBIX_ID_MAPPER constant available to state modules.
 
@@ -328,7 +328,7 @@ def get_zabbix_id_mapper():
 
 def substitute_params(input_object, extend_params=None, filter_key="name", **kwargs):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Go through Zabbix object params specification and if needed get given object ID from Zabbix API and put it back
     as a value. Definition of the object is done via dict with keys "query_object" and "query_name".
@@ -385,7 +385,7 @@ def substitute_params(input_object, extend_params=None, filter_key="name", **kwa
 # pylint: disable=too-many-return-statements,too-many-nested-blocks
 def compare_params(defined, existing, return_old_value=False):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Compares Zabbix object definition against existing Zabbix object.
 
@@ -471,7 +471,7 @@ def compare_params(defined, existing, return_old_value=False):
 
 def get_object_id_by_params(obj, params=None, **connection_args):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Get ID of single Zabbix object specified by its name.
 
@@ -2703,7 +2703,7 @@ def run_query(method, params, **connection_args):
 
 def configuration_import(config_file, rules=None, file_format="xml", **connection_args):
     """
-    .. versionadded:: 2017.7
+    .. versionadded:: 2017.7.0
 
     Imports Zabbix configuration specified in file to Zabbix server.
 

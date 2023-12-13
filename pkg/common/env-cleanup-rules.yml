@@ -49,6 +49,44 @@ ci:
       # Help files
       - "**/*.chm"
       - "**/Scripts/wmitest*"
+
+pkg:
+  darwin:
+    dir_patterns:
+      - *ci_darwin_dir_patterns
+      - "**/pkgconfig"
+      - "**/share"
+      - "**/artifacts/salt/opt"
+      - "**/artifacts/salt/etc"
+      - "**/artifacts/salt/Lib"
+    file_patterns:
+      - *ci_darwin_file_patterns
+  linux:
+    dir_patterns:
+      - *ci_linux_dir_patterns
+    file_patterns:
+      - *ci_linux_file_patterns
+  windows:
+    dir_patterns:
+      - *ci_windows_dir_patterns
+      - "**/salt/share"
+      - "**/site-packages/pywin32_system32"
+    file_patterns:
+      - *ci_windows_file_patterns
+      - "**/Scripts/py.exe"
+      - "**/Scripts/pyw.exe"
+      - "**/Scripts/venvlauncher.exe"
+      - "**/Scripts/venvwlauncher.exe"
+      - "**/Scripts/wheel*"
+      - "**/doc"
+      - "**/readme"
+      - "**/salt/salt-api*"
+      - "**/salt/salt-key*"
+      - "**/salt/salt-run*"
+      - "**/salt/salt-syndic*"
+      - "**/salt/salt-unity*"
+      - "**/salt/spm*"
+      - "**/salt/wheel*"
       # Non Windows execution modules
       - "**/site-packages/salt/modules/aacme.py*"
       - "**/site-packages/salt/modules/aix.py*"
@@ -148,7 +186,6 @@ ci:
       - "**/site-packages/salt/modules/runit.py*"
       - "**/site-packages/salt/modules/s6.py*"
       - "**/site-packages/salt/modules/scsi.py*"
-      - "**/site-packages/salt/modules/seed.py*"
       - "**/site-packages/salt/modules/sensors.py*"
       - "**/site-packages/salt/modules/service.py*"
       - "**/site-packages/salt/modules/shadow.py*"
@@ -232,41 +269,3 @@ ci:
       - "**/site-packages/salt/states/virt.py.py*"
       - "**/site-packages/salt/states/zfs.py*"
       - "**/site-packages/salt/states/zpool.py*"
-
-pkg:
-  darwin:
-    dir_patterns:
-      - *ci_darwin_dir_patterns
-      - "**/pkgconfig"
-      - "**/share"
-      - "**/artifacts/salt/opt"
-      - "**/artifacts/salt/etc"
-      - "**/artifacts/salt/Lib"
-    file_patterns:
-      - *ci_darwin_file_patterns
-  linux:
-    dir_patterns:
-      - *ci_linux_dir_patterns
-    file_patterns:
-      - *ci_linux_file_patterns
-  windows:
-    dir_patterns:
-      - *ci_windows_dir_patterns
-      - "**/salt/share"
-      - "**/site-packages/pywin32_system32"
-    file_patterns:
-      - *ci_windows_file_patterns
-      - "**/Scripts/py.exe"
-      - "**/Scripts/pyw.exe"
-      - "**/Scripts/venvlauncher.exe"
-      - "**/Scripts/venvwlauncher.exe"
-      - "**/Scripts/wheel*"
-      - "**/doc"
-      - "**/readme"
-      - "**/salt/salt-api*"
-      - "**/salt/salt-key*"
-      - "**/salt/salt-run*"
-      - "**/salt/salt-syndic*"
-      - "**/salt/salt-unity*"
-      - "**/salt/spm*"
-      - "**/salt/wheel*"

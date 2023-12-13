@@ -1,9 +1,10 @@
 """
 Integration tests for DigitalOcean APIv2
 """
-
 import base64
 import hashlib
+
+import pytest
 
 import salt.crypt
 import salt.utils.stringutils
@@ -43,6 +44,7 @@ class DigitalOceanTest(CloudTest):
         _list_sizes = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
         self.assertIn("16gb", [i.strip() for i in _list_sizes])
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_key_management(self):
         """
         Test key management

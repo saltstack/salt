@@ -25,21 +25,22 @@ runs:
   steps:
 
     - name: Download Release Patch
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
       uses: actions/download-artifact@v3
       with:
         name: salt-${{ inputs.salt-version }}.patch
 
     - name: Configure Git
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
       shell: bash
       run: |
-        git config --global user.name "Salt Project Packaging"
-        git config --global user.email saltproject-packaging@vmware.com
+        tools pkg configure-git
 
     - name: Apply Release Patch
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
       shell: bash
       run: |
-        git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-        rm salt-${{ inputs.salt-version }}.patch
+        tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
     - name: Create Source Tarball
       shell: bash

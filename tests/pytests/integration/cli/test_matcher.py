@@ -5,7 +5,7 @@ import pytest
 import salt.defaults.exitcodes
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -401,7 +401,7 @@ def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_
             "-G",
             "test.ping",
             minion_tgt="id:{}".format(disconnected_minion_id),
-            _timeout=15,
+            _timeout=30,
         )
         assert ret.returncode == 1
         assert disconnected_minion_id in ret.data

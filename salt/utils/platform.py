@@ -1,16 +1,33 @@
 """
 Functions for identifying which platform a machine is
 """
-
+import contextlib
 import multiprocessing
 import os
 import platform
 import subprocess
 import sys
 
-from distro import linux_distribution
+import distro
 
 from salt.utils.decorators import memoize as real_memoize
+
+
+def linux_distribution(full_distribution_name=True):
+    """
+    Simple function to return information about the OS distribution (id_name, version, codename).
+    """
+    if full_distribution_name:
+        distro_name = distro.name()
+    else:
+        distro_name = distro.id()
+    # Empty string fallbacks
+    distro_version = distro_codename = ""
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_version = distro.version(best=True)
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_codename = distro.codename()
+    return distro_name, distro_version, distro_codename
 
 
 @real_memoize

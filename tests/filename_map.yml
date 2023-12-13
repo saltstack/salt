@@ -30,8 +30,8 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - pytests.unit.states.test_service
-  - integration.modules.test_service
-  - integration.states.test_service
+  - pytests.functional.modules.test_service
+  - pytests.functional.states.test_service
 
 
 salt/modules/ansiblegate.py:
@@ -323,6 +323,9 @@ salt/(minion\.py|channel/.+|transport/.+):
 tests/support/mock.py:
   - unit.test_mock
 
+tests/support/virt.py:
+  - pytests.integration.modules.test_virt
+
 tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
   - pytests.functional.modules.test_mysql
@@ -337,3 +340,8 @@ tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+tests/integration/files/ssh/.*:
+  - integration.modules.test_ssh
+  - integration.states.test_ssh_auth
+  - integration.states.test_ssh_known_hosts

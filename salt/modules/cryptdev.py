@@ -113,7 +113,7 @@ def active():
     ret = {}
     # TODO: This command should be extended to collect more information, such as UUID.
     devices = __salt__["cmd.run_stdout"]("dmsetup ls --target crypt")
-    out_regex = re.compile(r"(?P<devname>\w+)\W+\((?P<major>\d+), (?P<minor>\d+)\)")
+    out_regex = re.compile(r"(?P<devname>\S+)\s+\((?P<major>\d+), (?P<minor>\d+)\)")
 
     log.debug(devices)
     for line in devices.split("\n"):

@@ -263,6 +263,7 @@ def minion_mods(
     notify=False,
     static_modules=None,
     proxy=None,
+    file_client=None,
 ):
     """
     Load execution modules
@@ -314,6 +315,7 @@ def minion_mods(
             "__utils__": utils,
             "__proxy__": proxy,
             "__opts__": opts,
+            "__file_client__": file_client,
         },
         whitelist=whitelist,
         loaded_base_name=loaded_base_name,
@@ -778,6 +780,7 @@ def states(
     proxy=None,
     context=None,
     loaded_base_name=None,
+    file_client=None,
 ):
     """
     Returns the state modules
@@ -815,6 +818,7 @@ def states(
             "__utils__": utils,
             "__serializers__": serializers,
             "__context__": context,
+            "__file_client__": file_client,
         },
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,

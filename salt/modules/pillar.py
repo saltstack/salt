@@ -32,7 +32,7 @@ def get(
     saltenv=None,
 ):
     """
-    .. versionadded:: 0.14
+    .. versionadded:: 0.14.0
 
     Attempt to retrieve the named value from :ref:`in-memory pillar data
     <pillar-in-memory>`. If the pillar key is not present in the in-memory

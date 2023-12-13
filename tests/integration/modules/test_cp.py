@@ -89,12 +89,12 @@ class CPModuleTest(ModuleCase):
         """
         src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
         with salt.utils.files.fopen(src, "rb") as fp_:
-            hash_str = hashlib.md5(fp_.read()).hexdigest()
+            hash_str = hashlib.sha256(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
         with salt.utils.files.fopen(tgt, "rb") as scene:
             data = scene.read()
-        self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
+        self.assertEqual(hash_str, hashlib.sha256(data).hexdigest())
         data = salt.utils.stringutils.to_unicode(data)
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -234,9 +234,9 @@ class CPModuleTest(ModuleCase):
         self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -250,9 +250,9 @@ class CPModuleTest(ModuleCase):
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -273,9 +273,9 @@ class CPModuleTest(ModuleCase):
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
             raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -346,9 +346,9 @@ class CPModuleTest(ModuleCase):
         """
         src = "https://repo.saltproject.io/index.html"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test

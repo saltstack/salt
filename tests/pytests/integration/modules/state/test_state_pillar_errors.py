@@ -16,8 +16,8 @@ def reset_pillar(salt_call_cli):
     finally:
         # Refresh pillar once all tests are done.
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 @pytest.fixture
@@ -77,8 +77,8 @@ def test_state_apply_aborts_on_pillar_error(
         shell_result = salt_cli.run(
             "state.apply", "sls-id-test", minion_tgt=salt_minion.id
         )
-        assert shell_result.exitcode == 1
-        assert shell_result.json == expected_comment
+        assert shell_result.returncode == 1
+        assert shell_result.data == expected_comment
 
 
 @pytest.mark.usefixtures("testfile_path", "reset_pillar")
@@ -117,7 +117,7 @@ def test_state_apply_continues_after_pillar_error_is_fixed(
         shell_result = salt_cli.run(
             "saltutil.refresh_pillar", minion_tgt=salt_minion.id
         )
-        assert shell_result.exitcode == 0
+        assert shell_result.returncode == 0
 
     # run state.apply with fixed pillar render error
     with pytest.helpers.temp_file(
@@ -128,7 +128,7 @@ def test_state_apply_continues_after_pillar_error_is_fixed(
         shell_result = salt_cli.run(
             "state.apply", "sls-id-test", minion_tgt=salt_minion.id
         )
-        assert shell_result.exitcode == 0
-        state_result = StateResult(shell_result.json)
+        assert shell_result.returncode == 0
+        state_result = StateResult(shell_result.data)
         assert state_result.result is True
         assert state_result.changes == {"diff": "New file", "mode": "0644"}

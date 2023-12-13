@@ -334,6 +334,15 @@ __func_alias__ = {
 }
 
 
+def _http_ftp_check(source):
+    """
+    Check if source or sources is http, https or ftp.
+    """
+    if isinstance(source, str):
+        return source.lower().startswith(("http:", "https:", "ftp:"))
+    return any([s.lower().startswith(("http:", "https:", "ftp:")) for s in source])
+
+
 def _get_accumulator_filepath():
     """
     Return accumulator data path.
@@ -430,7 +439,7 @@ def _gen_recurse_managed_files(
     exclude_pat=None,
     maxdepth=None,
     include_empty=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Generate the list of files managed by a recurse state
@@ -712,6 +721,7 @@ def _check_directory(
     exclude_pat=None,
     max_depth=None,
     follow_symlinks=False,
+    children_only=False,
 ):
     """
     Check what changes need to be made on a directory
@@ -783,10 +793,12 @@ def _check_directory(
                     )
                     if fchange:
                         changes[path] = fchange
-    # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    # Recurse skips root (we always do dirs, not root), so check root unless
+    # children_only is specified:
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -1333,7 +1345,7 @@ def hardlink(
     user=None,
     group=None,
     dir_mode=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a hard link
@@ -1539,7 +1551,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a symbolic link (symlink, soft link)
@@ -1790,9 +1802,11 @@ def symlink(
 
     if __salt__["file.is_link"](name):
         # The link exists, verify that it matches the target
-        if os.path.normpath(__salt__["file.readlink"](name)) == os.path.normpath(
+        if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
             target
         ):
+            __salt__["file.remove"](name)
+        else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
@@ -1975,10 +1989,10 @@ def tidied(
     age_size_logical_operator="OR",
     age_size_only=None,
     rmlinks=True,
-    **kwargs
+    **kwargs,
 ):
     """
-    .. versionchanged:: 3006.0,3005
+    .. versionchanged:: 3005,3006.0
 
     Remove unwanted files based on specific criteria.
 
@@ -2294,7 +2308,7 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Manage a given file, this function allows for a file to be downloaded from
@@ -2413,6 +2427,8 @@ def managed(
                     - name: /tmp/tomdroid-src-0.7.3.tar.gz
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
+            source_hash is ignored if the file hosted is not on a HTTP, HTTPS or FTP server.
 
         Known issues:
             If the remote server URL has the hash file as an apparent
@@ -2946,6 +2962,9 @@ def managed(
             "'contents_grains' is permitted",
         )
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     # If no source is specified, set replace to False, as there is nothing
     # with which to replace the file.
     if not source and contents_count == 0 and replace:
@@ -3191,7 +3210,7 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
-                    **kwargs
+                    **kwargs,
                 )
 
                 if salt.utils.platform.is_windows():
@@ -3254,7 +3273,7 @@ def managed(
             skip_verify,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
-            **kwargs
+            **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["changes"] = {}
@@ -3309,7 +3328,7 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["changes"] = {}
@@ -3388,7 +3407,7 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["changes"] = {}
@@ -3476,7 +3495,7 @@ def directory(
     win_deny_perms=None,
     win_inheritance=True,
     win_perms_reset=False,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Ensure that a named directory is present and has the right perms
@@ -3938,6 +3957,7 @@ def directory(
             exclude_pat,
             max_depth,
             follow_symlinks,
+            children_only,
         )
 
     if tchanges:
@@ -4190,7 +4210,7 @@ def recurse(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -4479,10 +4499,8 @@ def recurse(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv)
-    if srcpath not in master_dirs and not any(
-        x for x in master_dirs if x.startswith(srcpath + "/")
-    ):
+    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv, prefix=srcpath + "/")
+    if srcpath not in master_dirs:
         ret["result"] = False
         ret["comment"] = (
             "The directory '{}' does not exist on the salt fileserver "
@@ -4563,7 +4581,7 @@ def recurse(
             context=context,
             defaults=defaults,
             backup=backup,
-            **pass_kwargs
+            **pass_kwargs,
         )
         merge_ret(path, _ret)
 
@@ -5998,6 +6016,9 @@ def blockreplace(
     if not name:
         return _error(ret, "Must provide name to file.blockreplace")
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     if sources is None:
         sources = []
     if source_hashes is None:
@@ -6141,7 +6162,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
+    uncomment_regex = rf"^(?!\s*{char})\s*" + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
@@ -6434,6 +6455,9 @@ def append(
     if not name:
         return _error(ret, "Must provide name to file.append")
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     name = os.path.expanduser(name)
 
     if sources is None:
@@ -6718,6 +6742,9 @@ def prepend(
     if not name:
         return _error(ret, "Must provide name to file.prepend")
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     if sources is None:
         sources = []
 
@@ -6879,7 +6906,7 @@ def patch(
     reject_file=None,
     strip=None,
     saltenv=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that a patch has been applied to the specified file or directory
@@ -7377,7 +7404,7 @@ def copy_(
     mode=None,
     dir_mode=None,
     subdir=False,
-    **kwargs
+    **kwargs,
 ):
     """
     If the file defined by the ``source`` option exists on the minion, copy it
@@ -7819,7 +7846,7 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Serializes dataset and store it into managed file. Useful for sharing
@@ -8155,7 +8182,7 @@ def serialize(
             saltenv=__env__,
             contents=contents,
             skip_verify=False,
-            **kwargs
+            **kwargs,
         )
 
         if ret["changes"]:
@@ -8536,7 +8563,7 @@ def shortcut(
     backupname=None,
     makedirs=False,
     user=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a Windows shortcut
@@ -8936,6 +8963,25 @@ def cached(
                 return ret
     else:
         source_sum = {}
+
+    if __opts__["test"]:
+        local_copy = __salt__["cp.is_cached"](name, saltenv=saltenv)
+        if local_copy:
+            if source_sum:
+                hash = __salt__["file.get_hash"](local_copy, __opts__["hash_type"])
+                if hash == source_sum["hsum"]:
+                    ret["comment"] = "File already cached: {}".format(name)
+                else:
+                    ret[
+                        "comment"
+                    ] = "Hashes don't match.\nFile will be cached: {}".format(name)
+            else:
+                ret["comment"] = "No hash found. File will be cached: {}".format(name)
+        else:
+            ret["comment"] = "File will be cached: {}".format(name)
+        ret["changes"] = {}
+        ret["result"] = None
+        return ret
 
     if parsed.scheme in salt.utils.files.LOCAL_PROTOS:
         # Source is a local file path

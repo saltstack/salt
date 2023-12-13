@@ -16,6 +16,7 @@ import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -121,7 +122,7 @@ def _get_zone_etc_localtime():
                 tzfile,
             )
             # Regular file. Try to match the hash.
-            hash_type = __opts__.get("hash_type", "md5")
+            hash_type = __opts__.get("hash_type", DEFAULT_HASH_TYPE)
             tzfile_hash = salt.utils.hashutils.get_hash(tzfile, hash_type)
             # Not a link, just a copy of the tzdata file
             for root, dirs, files in salt.utils.path.os_walk(tzdir):

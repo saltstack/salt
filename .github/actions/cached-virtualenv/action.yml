@@ -42,19 +42,29 @@ runs:
       run: |
         echo "cache-key=${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|cached-venv|${{ steps.get-python-version.outputs.version }}|${{ inputs.name }}" >> "${GITHUB_OUTPUT}"
 
+    - name: Define VirtualEnv path
+      shell: bash
+      id: virtualenv-path
+      run: |
+        cd ${{ github.workspace }} > /dev/null 2>&1 || true
+        VENVS_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+        echo "venvs-path=$VENVS_PATH" | tee -a "$GITHUB_OUTPUT"
+        VENV_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+        echo "venv-path=$VENV_PATH" | tee -a "$GITHUB_OUTPUT"
+
     - name: Cache VirtualEnv
       id: cache-virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         key: ${{ steps.setup-cache-key.outputs.cache-key }}
-        path: ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}
+        path: ${{ steps.virtualenv-path.outputs.venv-path }}
 
     - name: Create Virtualenv
       shell: bash
       if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
       run: |
-        mkdir -p ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}
-        python3 -m venv --upgrade ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}
+        mkdir -p ${{ steps.virtualenv-path.outputs.venvs-path }}
+        python3 -m venv --upgrade ${{ steps.virtualenv-path.outputs.venv-path }}
 
     - name: Define python executable output
       shell: bash
@@ -62,10 +72,22 @@ runs:
       run: |
         shopt -s nocasematch
         if [[ "${{ runner.os }}" =~ "win" ]]; then
-          BIN_DIR="${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}/Scripts"
+          BIN_DIR="${{ steps.virtualenv-path.outputs.venv-path }}/Scripts"
+          PY_EXE="$BIN_DIR/python.exe"
         else
-          BIN_DIR="${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}/bin"
+          BIN_DIR="${{ steps.virtualenv-path.outputs.venv-path }}/bin"
+          PY_EXE="$BIN_DIR/python3"
+          if [ ! -f "$PY_EXE" ]; then
+            echo "The '${PY_EXE}' binary does not exist. Setting it to '$BIN_DIR/python' ..."
+            PY_EXE="$BIN_DIR/python"
+          fi
+          if [ ! -f "$PY_EXE" ]; then
+            echo "The '${PY_EXE}' binary does not exist. Showing the tree output for '${BIN_DIR}' ..."
+            tree -a "$BIN_DIR"
+            exit 1
+          fi
         fi
         shopt -u nocasematch
-        echo "python-executable=$BIN_DIR/python" >> "${GITHUB_OUTPUT}"
-        echo "${BIN_DIR}" >> "${GITHUB_PATH}"
+        $PY_EXE --version
+        echo "python-executable=$PY_EXE" | tee -a "${GITHUB_OUTPUT}"
+        echo "${BIN_DIR}" | tee -a "${GITHUB_PATH}"

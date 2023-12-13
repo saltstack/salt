@@ -7,6 +7,8 @@ import pytest
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 
+pytestmark = [pytest.mark.skip_unless_on_linux]
+
 
 @pytest.fixture
 def configure_loader_modules():

@@ -12,7 +12,7 @@ import salt.utils.pycrypto
 import salt.utils.yaml
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -290,6 +290,13 @@ def test_keys_generation(salt_key_cli, tmp_path):
     finally:
         for filename in tmp_path.iterdir():
             filename.chmod(0o700)
+
+
+def test_gen_keys_dir_without_gen_keys(salt_key_cli, tmp_path):
+    gen_keys_path = tmp_path / "temp-gen-keys-path"
+    ret = salt_key_cli.run("--gen-keys-dir", str(gen_keys_path))
+    assert ret.returncode == 0
+    assert not gen_keys_path.exists()
 
 
 def test_keys_generation_keysize_min(salt_key_cli, tmp_path):

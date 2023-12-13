@@ -1,5 +1,5 @@
 """
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 Management of Zabbix Template object over Zabbix API.
 

@@ -19,6 +19,7 @@ from salt.exceptions import ArgumentValueError, CommandExecutionError
 
 try:
     import pythoncom
+    import pywintypes
     import win32com.client
 
     HAS_DEPENDENCIES = True
@@ -359,7 +360,13 @@ def list_tasks(location="\\"):
         task_service.Connect()
 
         # Get the folder to list tasks from
-        task_folder = task_service.GetFolder(location)
+        try:
+            task_folder = task_service.GetFolder(location)
+        except pywintypes.com_error:
+            msg = "Unable to load location: {}".format(location)
+            log.error(msg)
+            raise CommandExecutionError(msg)
+
         tasks = task_folder.GetTasks(0)
 
         ret = []
@@ -1129,12 +1136,13 @@ def edit_task(
             # TODO: Check triggers for end_boundary
             if delete_after is False:
                 task_definition.Settings.DeleteExpiredTaskAfter = ""
-            if delete_after in duration:
-                task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
-                    duration, delete_after
-                )
             else:
-                return 'Invalid value for "delete_after"'
+                if delete_after in duration:
+                    task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
+                        duration, delete_after
+                    )
+                else:
+                    return 'Invalid value for "delete_after"'
         if multiple_instances is not None:
             task_definition.Settings.MultipleInstances = instances[multiple_instances]
 
@@ -1567,6 +1575,16 @@ def info(name, location="\\"):
                     trigger["delay"] = _reverse_lookup(duration, triggerObj.Delay)
                 else:
                     trigger["delay"] = False
+            if hasattr(triggerObj, "Repetition"):
+                trigger["repeat_duration"] = _reverse_lookup(
+                    duration, triggerObj.Repetition.Duration
+                )
+                trigger["repeat_interval"] = _reverse_lookup(
+                    duration, triggerObj.Repetition.Interval
+                )
+                trigger[
+                    "repeat_stop_at_duration_end"
+                ] = triggerObj.Repetition.StopAtDurationEnd
             triggers.append(trigger)
 
         properties["settings"] = settings

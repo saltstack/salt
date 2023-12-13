@@ -701,6 +701,3 @@ def normalize_name(pkgs, **kwargs):
         with the pkg_resource provider.)
     """
     return pkgs
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -141,6 +141,33 @@ if ( Test-Path -Path "$RELENV_DIR" ) {
 }
 
 #-------------------------------------------------------------------------------
+# Remove MSI build files
+#-------------------------------------------------------------------------------
+$files = @(
+    "msi/CustomAction01/CustomAction01.CA.dll",
+    "msi/CustomAction01/CustomAction01.dll",
+    "msi/CustomAction01/CustomAction01.pdb",
+    "msi/Product-discovered-files-config.wixobj",
+    "msi/Product-discovered-files-config.wxs",
+    "msi/Product-discovered-files-x64.wixobj",
+    "msi/Product-discovered-files-x64.wxs",
+    "msi/Product.wixobj"
+)
+$files | ForEach-Object {
+    if ( Test-Path -Path "$SCRIPT_DIR\$_" ) {
+        # Use .net, the powershell function is asynchronous
+        Write-Host "Removing $_`: " -NoNewline
+        [System.IO.File]::Delete("$SCRIPT_DIR\$_")
+        if ( ! (Test-Path -Path "$SCRIPT_DIR\$_") ) {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+#-------------------------------------------------------------------------------
 # Script Completed
 #-------------------------------------------------------------------------------
 Write-Host $("-" * 80)

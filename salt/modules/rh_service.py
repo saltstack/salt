@@ -545,7 +545,7 @@ def delete(name, **kwargs):
     """
     Delete the named service
 
-    .. versionadded:: 2016.3
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

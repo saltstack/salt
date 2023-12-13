@@ -1,6 +1,7 @@
 import configparser
 import logging
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -63,6 +64,8 @@ def test_pkg(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             _pkg = "snoopy"
+        elif grains["osfinger"] == "Amazon Linux-2023":
+            return "dnf-utils"
         else:
             _pkg = "units"
     elif grains["os_family"] == "Debian":
@@ -535,3 +538,32 @@ def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
         result = modules.pkg.list_repos()
     assert "{}".format(exc_info.value) == expected
+
+
+@pytest.mark.destructive_test
+@pytest.mark.slow_test
+def test_pkg_install_port(grains, modules):
+    """
+    test install package with a port in the url
+    """
+    pkgs = modules.pkg.list_pkgs()
+    nano = pkgs.get("nano")
+    if nano:
+        modules.pkg.remove("nano")
+
+    if grains["os_family"] == "Debian":
+        url = modules.cmd.run("apt download --print-uris nano").split()[-4]
+        if url.startswith("'mirror+file"):
+            url = "http://ftp.debian.org/debian/pool/" + url.split("pool")[1].rstrip(
+                "'"
+            )
+        try:
+            ret = modules.pkg.install(sources=f'[{{"nano":{url}}}]')
+            version = re.compile(r"\d\.\d")
+            assert version.search(url).group(0) in ret["nano"]["new"]
+        finally:
+            modules.pkg.remove("nano")
+            if nano:
+                # If nano existed on the machine before the test ran
+                # re-install that version
+                modules.pkg.install(f"nano={nano}")

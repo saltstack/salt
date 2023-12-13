@@ -11,3 +11,4 @@ self-hosted-runner:
     - repo-release
     - medium
     - large
+    - macos-13-xlarge

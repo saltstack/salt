@@ -332,6 +332,7 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption("print", "path user")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, "hello.txt")
         with salt.utils.files.fopen(hello_file, "w") as fp_:

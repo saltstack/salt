@@ -31,13 +31,19 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
             if check_user(self.config["user"]):
                 pr = salt.utils.profile.activate_profile(profiling_enabled)
                 try:
-                    ret = runner.run()
+                    ret = runner.run(full_return=True)
                     # In older versions ret['data']['retcode'] was used
                     # for signaling the return code. This has been
                     # changed for the orchestrate runner, but external
                     # runners might still use it. For this reason, we
                     # also check ret['data']['retcode'] if
                     # ret['retcode'] is not available.
+                    if (
+                        isinstance(ret, dict)
+                        and "return" in ret
+                        and "retcode" not in ret
+                    ):
+                        ret = ret["return"]
                     if isinstance(ret, dict) and "retcode" in ret:
                         self.exit(ret["retcode"])
                     elif isinstance(ret, dict) and "retcode" in ret.get("data", {}):

@@ -1,0 +1,15 @@
+{
+  "repoOwner": "saltstack",
+  "repoName": "salt",
+  "targetBranchChoices": ["master", "3006.x", "3005.x", "freeze"],
+  "autoMerge": false,
+  "autoMergeMethod": "rebase",
+  "branchLabelMapping": {
+    "^backport:(.+)$": "$1"
+  },
+  "prTitle": "[BACKPORT] {commitMessages}",
+  "publishStatusCommentOnSuccess": true,
+  "sourcePRLabels": [
+    "backport:complete"
+  ]
+}

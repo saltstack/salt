@@ -19,6 +19,8 @@
         http://stackoverflow.com/questions/6190331/
 """
 
+# pragma: no cover  # essentially using Python's OrderDict
+
 
 from collections.abc import Callable
 

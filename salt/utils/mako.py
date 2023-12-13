@@ -97,3 +97,12 @@ if HAS_MAKO:
                 self.cache[fpath] = self.file_client().get_file(
                     fpath, "", True, self.saltenv
                 )
+
+        def destroy(self):
+            if self._file_client:
+                file_client = self._file_client
+                self._file_client = None
+                try:
+                    file_client.destroy()
+                except AttributeError:
+                    pass

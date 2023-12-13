@@ -55,6 +55,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_XML="$SCRIPT_DIR/distribution.xml"
 BUILD_DIR="$SCRIPT_DIR/build"
 CMD_OUTPUT=$(mktemp -t cmd_log.XXX)
+SCRIPTS_DIR="$SCRIPT_DIR/dist_scripts"
+# Get the python version from the relenv python
+BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
+PY_VER=$($BLD_PY_BIN -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -71,7 +75,7 @@ _usage() {
      echo ""
      echo "  -h, --help      this message"
      echo "  -v, --version   version of Salt display in the package"
-     echo "  -n, --nightly   don't sign the package"
+     echo "  -s, --sign   Sign the package"
      echo ""
      echo "  To build the Salt package:"
      echo "      example: $0 3006.1-1"
@@ -105,6 +109,7 @@ _failure() {
 #-------------------------------------------------------------------------------
 # Get Parameters
 #-------------------------------------------------------------------------------
+SIGN=0
 while true; do
     if [[ -z "$1" ]]; then break; fi
     case "$1" in
@@ -112,8 +117,8 @@ while true; do
             _usage
             exit 0
             ;;
-        -n | --nightly )
-            NIGHTLY=1
+        -s | --sign )
+            SIGN=1
             shift
             ;;
         -v | --version )
@@ -230,6 +235,35 @@ else
     _failure
 fi
 
+if [ -d "$SCRIPTS_DIR" ]; then
+    _msg "Removing existing scripts directory"
+    rm -f "$SCRIPTS_DIR"
+    if ! [ -d "$SCRIPTS_DIR" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
+
+_msg "Creating scripts directory"
+cp -r "$SCRIPT_DIR/pkg-scripts" "$SCRIPTS_DIR"
+if [ -d "$SCRIPTS_DIR" ]; then
+    _success
+else
+    CMD_OUTPUT="Failed to copy: $SCRIPTS_DIR"
+    _failure
+fi
+
+_msg "Setting python version for preinstall"
+SED_STR="s/@PY_VER@/$PY_VER/g"
+sed -i "" "$SED_STR" "$SCRIPTS_DIR/preinstall"
+if grep -q "$PY_VER" "$SCRIPTS_DIR/preinstall"; then
+    _success
+else
+    CMD_OUTPUT="Failed to set: $PY_VER"
+    _failure
+fi
+
 #-------------------------------------------------------------------------------
 # Build and Sign the Package
 #-------------------------------------------------------------------------------
@@ -238,7 +272,7 @@ _msg "Building the source package"
 # Build the src package
 FILE="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg"
 if pkgbuild --root="$BUILD_DIR" \
-            --scripts="$SCRIPT_DIR/pkg-scripts" \
+            --scripts="$SCRIPTS_DIR" \
             --identifier=com.saltstack.salt \
             --version="$VERSION" \
             --ownership=recommended \
@@ -249,17 +283,18 @@ else
 fi
 
 
-if [ -z "${NIGHTLY}" ]; then
+PKG_FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH.pkg"
+if [ "${SIGN}" -eq 1 ]; then
     _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
                     --version="$VERSION" \
                     --sign "$DEV_INSTALL_CERT" \
                     --timestamp \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$PKG_FILE" > "$CMD_OUTPUT" 2>&1; then
         _success
     else
         _failure
@@ -267,12 +302,11 @@ if [ -z "${NIGHTLY}" ]; then
 else
     _msg "Building the product package (unsigned)"
     # This is a nightly build, so we don't sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
                     --version="$VERSION" \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$PKG_FILE" > "$CMD_OUTPUT" 2>&1; then
         _success
     else
         _failure

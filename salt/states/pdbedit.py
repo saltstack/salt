@@ -141,6 +141,3 @@ def present(name, **kwargs):
     Alias for pdbedit.managed
     """
     return managed(name, **kwargs)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

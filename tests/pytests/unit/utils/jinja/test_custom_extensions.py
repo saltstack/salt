@@ -46,7 +46,6 @@ def minion_opts(tmp_path, minion_opts):
             "file_roots": {"test": [str(tmp_path / "templates")]},
             "pillar_roots": {"test": [str(tmp_path / "templates")]},
             "fileserver_backend": ["roots"],
-            "hash_type": "md5",
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
@@ -1041,6 +1040,7 @@ def test_method_call(minion_opts, local_salt):
     assert rendered == "None"
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_md5(minion_opts, local_salt):
     """
     Test the `md5` Jinja filter.

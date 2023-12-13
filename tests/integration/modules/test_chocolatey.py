@@ -9,6 +9,7 @@ from tests.support.sminion import create_sminion
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test
+@pytest.mark.slow_test
 class ChocolateyModuleTest(ModuleCase):
     """
     Validate Chocolatey module

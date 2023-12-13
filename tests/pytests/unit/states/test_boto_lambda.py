@@ -20,6 +20,11 @@ botocore = pytest.importorskip("botocore", "1.5.2")
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.slow_test,
+]
+
+
 class GlobalConfig:
     region = "us-east-1"
     access_key = "GKTADJGHEIQSXMKKRBJ08H"

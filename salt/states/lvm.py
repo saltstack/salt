@@ -274,7 +274,7 @@ def lv_present(
     force
         Assume yes to all prompts
 
-    .. versionadded:: 3002.0
+    .. versionadded:: 3002
 
     resizefs
         Use fsadm to resize the logical volume filesystem if needed

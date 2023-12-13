@@ -634,6 +634,3 @@ def auth_rm(user, auth):
             ret[a] = "Remove"
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

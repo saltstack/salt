@@ -32,7 +32,7 @@ def loader_context(loader):
 class NamedLoaderContext(collections.abc.MutableMapping):
     """
     A NamedLoaderContext object is injected by the loader providing access to
-    Salt's 'magic dunders' (__salt__, __utils__, ect).
+    Salt's 'magic dunders' (__salt__, __utils__, etc).
     """
 
     def __init__(self, name, loader_context, default=None):
@@ -84,11 +84,7 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.value()[item] = value
 
     def __bool__(self):
-        try:
-            self.loader
-        except LookupError:
-            return False
-        return True
+        return bool(self.value())
 
     def __len__(self):
         return self.value().__len__()

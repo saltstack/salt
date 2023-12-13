@@ -97,7 +97,7 @@ if ( ! $SkipInstall ) {
   Write-Host $("-" * 80)
 
   #-------------------------------------------------------------------------------
-  # Installing Salt
+  # Preparing to Install Salt
   #-------------------------------------------------------------------------------
   # We don't want to use an existing salt installation because we don't know what
   # it is

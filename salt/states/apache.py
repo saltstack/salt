@@ -36,7 +36,7 @@ the above word between angle brackets (<>).
                   - FollowSymlinks
                 AllowOverride: All
 
-.. versionchanged:: 2018.3
+.. versionchanged:: 2018.3.0
 
 Allows having the same section container multiple times (e.g. <Directory /path/to/dir>).
 

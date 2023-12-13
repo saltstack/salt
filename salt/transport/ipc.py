@@ -13,7 +13,6 @@ import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.netutil
-import salt.transport.client
 import salt.transport.frame
 import salt.utils.msgpack
 from salt.ext.tornado.ioloop import IOLoop

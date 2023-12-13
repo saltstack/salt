@@ -3,7 +3,7 @@ import time
 import pytest
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
 ]
 
 

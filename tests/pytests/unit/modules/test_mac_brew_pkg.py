@@ -440,8 +440,9 @@ def test_homebrew_bin(HOMEBREW_BIN):
     Tests the path to the homebrew binary
     """
     mock_path = MagicMock(return_value="/usr/local")
-    with patch.dict(mac_brew.__salt__, {"cmd.run": mock_path}):
-        assert mac_brew._homebrew_bin() == HOMEBREW_BIN
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+        with patch.dict(mac_brew.__salt__, {"cmd.run": mock_path}):
+            assert mac_brew._homebrew_bin() == HOMEBREW_BIN
 
 
 # 'list_pkgs' function tests: 2

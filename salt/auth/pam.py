@@ -24,15 +24,6 @@ authenticated against.  This defaults to `login`
 
     The Python interface to PAM does not support authenticating as ``root``.
 
-.. note:: Using PAM groups with SSSD groups on python2.
-
-    To use sssd with the PAM eauth module and groups the `pysss` module is
-    needed.  On RedHat/CentOS this is `python-sss`.
-
-    This should not be needed with python >= 3.3, because the `os` modules has the
-    `getgrouplist` function.
-
-
 .. note:: This module executes itself in a subprocess in order to user the system python
     and pam libraries. We do this to avoid openssl version conflicts when
     running under a salt onedir build.

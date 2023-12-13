@@ -17,6 +17,7 @@ SSH_SLS_FILE = "/tmp/salt_test_file"
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.slow_test
 class SSHStateTest(SSHCase):
     """
     testing the state system with salt-ssh

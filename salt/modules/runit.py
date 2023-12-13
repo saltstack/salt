@@ -726,6 +726,3 @@ def remove(name):
         log.error("Unable to remove symlink %s", svc_path)
         return False
     return True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

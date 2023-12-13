@@ -131,7 +131,7 @@ class SyncWrapper:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
             results.append(result)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
 

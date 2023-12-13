@@ -2,14 +2,13 @@
 virt execution module unit tests
 """
 
-# pylint: disable=3rd-party-module-not-gated
-
-
 import datetime
 import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
+
+import pytest
 
 import salt.config
 import salt.modules.config as config
@@ -17,17 +16,13 @@ import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# pylint: disable=import-error
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-# pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
 
-
-class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
+class LibvirtMock(MagicMock):
     """
     Libvirt library mock
     """
@@ -1882,6 +1877,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_init(self):
         """
         Test init() function

@@ -41,7 +41,7 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
             ) as reqfp:
                 return_data = reqfp.read()
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_data).hexdigest()
+                checksum = hashlib.sha256(return_data).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304
@@ -113,6 +113,7 @@ def web_root(tmp_path_factory):
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
 
+@pytest.mark.slow_test
 def test_archive_extracted_web_source_etag_operation(
     modules, states, free_port, web_root, minion_opts
 ):
@@ -146,7 +147,7 @@ def test_archive_extracted_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        "localhost:{free_port}".format(free_port=free_port),
+        "localhost{free_port}".format(free_port=free_port),
         "foo.tar.gz",
     )
     cached_etag = cached_file + ".etag"

@@ -22,6 +22,10 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 # pylint: enable=import-error,no-name-in-module,unused-import
 log = logging.getLogger(__name__)
 

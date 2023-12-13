@@ -349,6 +349,3 @@ def disabled(name):
     if _get_svc("{}.{}".format(prefix, name), "OFF") is None:
         ret = False
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -1,0 +1,99 @@
+(release-3006.0)=
+# Salt 3006.0 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add relase specific details below
+-->
+
+## Onedir packaging
+
+Going forward from the 3006.0 release, the Salt Project will only provide onedir
+packages to install or upgrade Salt. The classic, non-onedir packages will not
+be provided for supported operating systems. See [Upgrade to onedir](https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html)
+in the [Salt Install Guide](https://docs.saltproject.io/salt/install-guide/en/latest) for information about upgrading from the classic packages to the onedir
+packages.
+
+## Linux Packaging Salt Master Salt User and Group
+
+The linux Salt Master packages will now add a Salt user and group
+by default. The packages will add the ``user: salt`` config option
+to the Salt Master config. The Salt Master service will run as this
+user. If you do not want to run the Salt Master as a different user
+you can remove the ``user: salt`` config from /etc/salt/master or change
+the user to the desired user to run the Salt Master.
+
+Since the Salt Master is running as a different user, you will need
+to ensure you set the owner and group to ``salt`` for your file_roots
+and pillar_roots(commonly `/srv/salt` and `/srv/pillar`).
+
+If you are running a Salt Master, Salt-Api and a Salt Minion on the same
+host using the new ``salt`` user and you install a pip dependency into
+the onedir environment using ``salt-pip`` or the ``pip`` module, you
+need to to chown the directory ``/opt/saltstack/salt/lib/<python_version>/site-packages/``
+with the ``salt`` user and group.
+
+
+## Caveat of salt-pip
+
+Salt ships with a wrapper script around pip called ``salt-pip``. Users should
+use ``salt-pip`` to install any python packages needed to extend Salt.
+``salt-pip`` installs python packages into an `extras-3.10` directory located
+in the root of the ondir directory, by setting the ``--target`` argument for
+pip. This ensures those packages remain installed when upgrading Salt. There is
+a known bug in pip when using `--target` where scripts and other non-python
+assets may not be cleaned up properly when un-installing.  The Salt team is
+working to resolve this bug in the up-stream pip project.
+
+
+## Dropping support for Python 3.5 and 3.6
+
+Python 3.5 and 3.6 will no longer be supported by Salt since they
+are end of life. Going forward our policy will be to align with Python's
+supported versions. See [Salt support for Python versions](https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-python-version-support.html)
+for more information.
+
+
+## All salt-api functionality disabled by default
+
+All netapi clients, which provide the functionality to ``salt-api``, will now
+be disabled by default as a security precaution. If you use ``salt-api``, you
+must add the new ``netapi_enable_clients`` option to your salt master config.
+This is a breaking change and the ``salt-api`` will not function without this
+new configuration option. See [Enabling netapi client interfaces](https://docs.saltproject.io/en/3006.0/topics/netapi/netapi-enable-clients.html#netapi-enable-clients)
+for more information.
+
+
+## How do I migrate to the onedir packages?
+
+The migration path from the classic, non-onedir packages to the onedir packages
+will include:
+
+* Repo File: You need to update your repo file to point to the new repo paths
+  for your platform. After the repo file is updated, upgrade your Salt packages.
+* Pip packages: You need to ensure any 3rd party pip packages are installed in
+  the correct onedir path. This can be accomplished in two ways:
+
+  * ``salt-pip install <package name>``
+  * Using the ``pip.installed`` Salt state.
+
+To install python packages into the system python environment, user's must now
+provide the ``pip_bin`` or ``bin_env`` to the pip state module.
+
+For example:
+
+```yaml
+lib-foo:
+  pip.installed:
+    - pip_bin: /usr/bin/pip3
+lib-bar:
+  pip.installed:
+    - bin_env: /usr/bin/python3
+```
+
+<!--
+Do not edit the changelog below.
+This is auto generated
+-->
+## Changelog
+{{ changelog }}

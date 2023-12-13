@@ -570,6 +570,3 @@ def clone(zone, source, snapshot=None):
         del ret["message"]
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

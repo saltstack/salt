@@ -7,7 +7,7 @@
 <%- block name %>
 
 name: <{ workflow_name }>
-run-name: "<{ workflow_name }> (${{ format('Branch: {0}', github.ref_name) }})"
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
 
 <%- endblock name %>
 

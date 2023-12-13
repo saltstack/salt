@@ -255,8 +255,8 @@ def create_certificate(
         Instead of returning the certificate, write it to this file path.
 
     overwrite
-        If ``path`` is specified and the file exists, do not overwrite it.
-        Defaults to false.
+        If ``path`` is specified and the file exists, overwrite it.
+        Defaults to true.
 
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
@@ -614,7 +614,7 @@ def _create_certificate_local(
             path=os.path.join(copypath, f"{prepend}{cert.serial_number:x}.crt"),
             pem_type="CERTIFICATE",
         )
-    return builder.sign(signing_private_key, algorithm=algorithm), private_key_loaded
+    return cert, private_key_loaded
 
 
 def encode_certificate(
@@ -901,8 +901,11 @@ def create_crl(
             salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
             kwargs.pop("text")
 
-        if kwargs:
-            raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+        unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+        if unknown:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(unknown)}"
+            )
 
     if days_valid is None:
         try:
@@ -1193,7 +1196,7 @@ def create_private_key(
     keysize
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
-        Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
+        Irrelevant for Edwards-curve schemes (``ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
@@ -1235,13 +1238,15 @@ def create_private_key(
         for x in ignored_params:
             kwargs.pop(x)
 
-    if kwargs:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+    unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+    if unknown:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
 
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem, pkcs12"
         )
+
     out = encode_private_key(
         _generate_pk(algo=algo, keysize=keysize),
         encoding=encoding,
@@ -1254,7 +1259,9 @@ def create_private_key(
         return out
 
     if encoding == "pem":
-        return write_pem(out.decode(), path, pem_type="(?:RSA )?PRIVATE KEY")
+        return write_pem(
+            out.decode(), path, pem_type="(?:(RSA|ENCRYPTED) )?PRIVATE KEY"
+        )
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
     return
@@ -1264,6 +1271,7 @@ def encode_private_key(
     private_key,
     encoding="pem",
     passphrase=None,
+    private_key_passphrase=None,
     pkcs12_encryption_compat=False,
     raw=False,
 ):
@@ -1276,13 +1284,30 @@ def encode_private_key(
 
         salt '*' x509.encode_private_key /etc/pki/my.key der
 
-    csr
+    private_key
         The private key to encode.
 
     encoding
         Specify the encoding of the resulting private key. It can be returned
         as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
         Defaults to ``pem``.
+
+    passphrase
+        If this is specified, the private key will be encrypted using this
+        passphrase. The encryption algorithm cannot be selected, it will be
+        determined automatically as the best available one.
+
+    private_key_passphrase
+        .. versionadded:: 3006.2
+
+        If the current ``private_key`` is encrypted, the passphrase to
+        decrypt it.
+
+    pkcs12_encryption_compat
+        Some operating systems are incompatible with the encryption defaults
+        for PKCS12 used since OpenSSL v3. This switch triggers a fallback to
+        ``PBESv1SHA1And3KeyTripleDESCBC``.
+        Please consider the `notes on PKCS12 encryption <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
 
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
@@ -1291,6 +1316,7 @@ def encode_private_key(
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem, pkcs12"
         )
+    private_key = x509util.load_privkey(private_key, passphrase=private_key_passphrase)
     if passphrase is None:
         cipher = serialization.NoEncryption()
     else:
@@ -1549,7 +1575,7 @@ def get_public_key(key, passphrase=None, asObj=None):
     except SaltInvocationError:
         pass
     raise CommandExecutionError(
-        "Could not load key as certificate, public key, private key, CSR or CRL"
+        "Could not load key as certificate, public key, private key or CSR"
     )
 
 
@@ -1936,7 +1962,7 @@ def verify_private_key(private_key, public_key, passphrase=None):
     passphrase
         If ``private_key`` is encrypted, the passphrase to decrypt it.
     """
-    privkey = x509util.load_privkey(private_key, passphrase=None)
+    privkey = x509util.load_privkey(private_key, passphrase=passphrase)
     pubkey = x509util.load_pubkey(get_public_key(public_key))
     return x509util.is_pair(pubkey, privkey)
 

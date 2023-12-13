@@ -1,8 +1,8 @@
 #
 #   Proxy minion metaproxy modules
 #
-
 import concurrent.futures
+import copy
 import logging
 import os
 import signal
@@ -96,9 +96,11 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
+    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
-        self.opts["pillar"],
+        pillar,
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
@@ -231,10 +233,11 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
         log.info("Added mine.update to scheduler")
     else:
-        self.schedule.delete_job("__mine_interval", persist=True)
+        self.schedule.delete_job("__mine_interval", persist=True, fire_event=False)
 
     # add master_alive job if enabled
     if self.opts["transport"] != "tcp" and self.opts["master_alive_interval"] > 0:
@@ -250,6 +253,7 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
         if (
             self.opts["master_failback"]
@@ -268,18 +272,24 @@ def post_master_init(self, master):
                     }
                 },
                 persist=True,
+                fire_event=False,
             )
         else:
             self.schedule.delete_job(
-                salt.minion.master_event(type="failback"), persist=True
+                salt.minion.master_event(type="failback"),
+                persist=True,
+                fire_event=False,
             )
     else:
         self.schedule.delete_job(
             salt.minion.master_event(type="alive", master=self.opts["master"]),
             persist=True,
+            fire_event=False,
         )
         self.schedule.delete_job(
-            salt.minion.master_event(type="failback"), persist=True
+            salt.minion.master_event(type="failback"),
+            persist=True,
+            fire_event=False,
         )
 
     # proxy keepalive
@@ -304,10 +314,15 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
-        self.schedule.enable_schedule()
+        self.schedule.enable_schedule(fire_event=False)
     else:
-        self.schedule.delete_job("__proxy_keepalive", persist=True)
+        self.schedule.delete_job(
+            "__proxy_keepalive",
+            persist=True,
+            fire_event=False,
+        )
 
     #  Sync the grains here so the proxy can communicate them to the master
     self.functions["saltutil.sync_grains"](saltenv="base")
@@ -321,10 +336,11 @@ def post_master_init(self, master):
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
 
+    _failed = list()
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
+            futures = {
                 executor.submit(
                     subproxy_post_master_init,
                     _id,
@@ -332,12 +348,22 @@ def post_master_init(self, master):
                     self.opts,
                     self.proxy,
                     self.utils,
-                )
+                ): _id
                 for _id in self.opts["proxy"].get("ids", [])
-            ]
+            }
 
-        for f in concurrent.futures.as_completed(futures):
-            sub_proxy_data = f.result()
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                sub_proxy_data = future.result()
+            except Exception as exc:  # pylint: disable=broad-except
+                _id = futures[future]
+                log.info(
+                    "An exception occured during initialization for %s, skipping: %s",
+                    _id,
+                    exc,
+                )
+                _failed.append(_id)
+                continue
             minion_id = sub_proxy_data["proxy_opts"].get("id")
 
             if sub_proxy_data["proxy_minion"]:
@@ -347,16 +373,24 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
-            sub_proxy_data = subproxy_post_master_init(
-                _id, uid, self.opts, self.proxy, self.utils
-            )
-
+            try:
+                sub_proxy_data = subproxy_post_master_init(
+                    _id, uid, self.opts, self.proxy, self.utils
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info(
+                    "An exception occured during initialization for %s, skipping: %s",
+                    _id,
+                    exc,
+                )
+                _failed.append(_id)
+                continue
             minion_id = sub_proxy_data["proxy_opts"].get("id")
 
             if sub_proxy_data["proxy_minion"]:
@@ -366,10 +400,12 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
 
+    if _failed:
+        log.info("Following sub proxies failed %s", _failed)
     self.ready = True
 
 
@@ -535,15 +571,18 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
                 }
             },
             persist=True,
+            fire_event=False,
         )
-        _proxy_minion.schedule.enable_schedule()
+        _proxy_minion.schedule.enable_schedule(fire_event=False)
     else:
-        _proxy_minion.schedule.delete_job("__proxy_keepalive", persist=True)
+        _proxy_minion.schedule.delete_job(
+            "__proxy_keepalive", persist=True, fire_event=False
+        )
 
     return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
 
-def target(cls, minion_instance, opts, data, connected):
+def target(cls, minion_instance, opts, data, connected, creds_map):
     """
     Handle targeting of the minion.
 
@@ -556,6 +595,8 @@ def target(cls, minion_instance, opts, data, connected):
         minion_instance.opts["id"],
         opts["id"],
     )
+    if creds_map:
+        salt.crypt.AsyncAuth.creds_map = creds_map
 
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
@@ -1024,21 +1065,23 @@ def handle_decoded_payload(self, data):
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
     name = "ProcessPayload(jid={})".format(data["jid"])
+    creds_map = None
     if multiprocessing_enabled:
         if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we"re
             # running on spawning platforms
             instance = None
+            creds_map = salt.crypt.AsyncAuth.creds_map
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=target,
-                args=(self, instance, self.opts, data, self.connected),
+                args=(self, instance, self.opts, data, self.connected, creds_map),
                 name=name,
             )
     else:
         process = threading.Thread(
             target=target,
-            args=(self, instance, self.opts, data, self.connected),
+            args=(self, instance, self.opts, data, self.connected, creds_map),
             name=name,
         )
 

@@ -6,6 +6,7 @@ from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -56,7 +57,6 @@ def test_watch_in_failure(state, state_tree):
         )
 
 
-@pytest.mark.slow_test
 def test_requisites_watch_any(state, state_tree):
     """
     Call sls file containing several require_in and require.

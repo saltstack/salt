@@ -23,8 +23,6 @@ import time
 import uuid
 from errno import EACCES, EPERM
 
-import distro
-
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -41,6 +39,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
     # pylint: disable=no-name-in-module
@@ -88,15 +87,6 @@ except ImportError:  # Define freedesktop_os_release for Python < 3.10
 
     def _freedesktop_os_release():
         return _parse_os_release("/etc/os-release", "/usr/lib/os-release")
-
-
-# rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
-def _linux_distribution():
-    return (
-        distro.id(),
-        distro.version(best=True),
-        distro.codename(),
-    )
 
 
 def __init__(opts):
@@ -487,7 +477,7 @@ def _bsd_cpudata(osdata):
     return grains
 
 
-def _sunos_cpudata():
+def _sunos_cpudata():  # pragma: no cover
     """
     Return the CPU information for Solaris-like systems
     """
@@ -519,7 +509,7 @@ def _sunos_cpudata():
     return grains
 
 
-def _aix_cpudata():
+def _aix_cpudata():  # pragma: no cover
     """
     Return CPU information for AIX systems
     """
@@ -622,7 +612,7 @@ def _bsd_memdata(osdata):
     return grains
 
 
-def _sunos_memdata():
+def _sunos_memdata():  # pragma: no cover
     """
     Return the memory information for SunOS-like systems
     """
@@ -646,7 +636,7 @@ def _sunos_memdata():
     return grains
 
 
-def _aix_memdata():
+def _aix_memdata():  # pragma: no cover
     """
     Return the memory information for AIX systems
     """
@@ -700,16 +690,16 @@ def _memdata(osdata):
         grains.update(_bsd_memdata(osdata))
     elif osdata["kernel"] == "Darwin":
         grains.update(_osx_memdata())
-    elif osdata["kernel"] == "SunOS":
-        grains.update(_sunos_memdata())
-    elif osdata["kernel"] == "AIX":
-        grains.update(_aix_memdata())
+    elif osdata["kernel"] == "SunOS":  # pragma: no cover
+        grains.update(_sunos_memdata())  # pragma: no cover
+    elif osdata["kernel"] == "AIX":  # pragma: no cover
+        grains.update(_aix_memdata())  # pragma: no cover
     elif osdata["kernel"] == "Windows" and HAS_WMI:
         grains.update(_windows_memdata())
     return grains
 
 
-def _aix_get_machine_id():
+def _aix_get_machine_id():  # pragma: no cover
     """
     Parse the output of lsattr -El sys0 for os_uuid
     """
@@ -2116,9 +2106,11 @@ def _os_release_quirks_for_osrelease(os_release):
     if os_release["ID"] in ("mendel",):
         # Mendel sets VERSION_CODENAME but not VERSION_ID.
         # Only PRETTY_NAME mentions the version number.
-        match = _PRETTY_NAME_RE.match(os_release["PRETTY_NAME"])
-        if match:
-            return match.group("version")
+        # for example: Mendel GNU/Linux 5 (Eagle)
+        test_strg = os_release["PRETTY_NAME"].split()
+        if len(test_strg) >= 3:
+            return test_strg[2]
+
     return None
 
 
@@ -2185,8 +2177,9 @@ def _linux_distribution_data():
             "rocky",
             "ubuntu",
         ):
-            # Solely use os-release data. See description of the function.
-            return grains
+            if lsb_has_error is False:
+                # Solely use os-release data. See description of the function.
+                return grains
 
     except OSError:
         os_release = {}
@@ -2240,6 +2233,10 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
                             cpe.get("version") and cpe.get("vendor") == "opensuse"
                         ):  # Keep VERSION_ID for SLES
                             grains["lsb_distrib_release"] = cpe["version"]
+                if "ID" in os_release and os_release["ID"].strip() == "mendel":
+                    test_strg = os_release["PRETTY_NAME"].split()
+                    if len(test_strg) >= 3:
+                        grains["lsb_distrib_release"] = test_strg[2]
 
             elif os.path.isfile("/etc/SuSE-release"):
                 log.trace("Parsing distrib info from /etc/SuSE-release")
@@ -2357,6 +2354,20 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         ):
             grains.pop("lsb_distrib_release", None)
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
+
+    # allow for codename being within brackets on certain OS
+    if grains.get("lsb_distrib_codename", "") and (
+        any(os in grains.get("os", "") for os in ["Rocky", "AlmaLinux", "AstraLinuxSE"])
+    ):
+        test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
+        if len(test_strg) >= 2:
+            test_strg_2 = test_strg[1].split(")", maxsplit=1)
+            if grains["os"] == "AstraLinuxSE":
+                # AstraLinuxSE has version aka 'Smolensk 1.6'
+                grains["lsb_distrib_codename"] = test_strg_2[0].split()[0].lower()
+            else:
+                grains["lsb_distrib_codename"] = test_strg_2[0]
+
     grains["oscodename"] = grains.get("lsb_distrib_codename", "").strip() or oscodename
     if "Red Hat" in grains["oscodename"]:
         grains["oscodename"] = oscodename
@@ -2471,7 +2482,7 @@ def _smartos_os_data():
     return grains
 
 
-def _sunos_release():
+def _sunos_release():  # pragma: no cover
     grains = {}
     with salt.utils.files.fopen("/etc/release", "r") as fp_:
         rel_data = fp_.read()
@@ -2708,10 +2719,8 @@ def locale_info():
         (
             grains["locale_info"]["defaultlanguage"],
             grains["locale_info"]["defaultencoding"],
-        ) = locale.getdefaultlocale()
+        ) = locale.getlocale()
     except Exception:  # pylint: disable=broad-except
-        # locale.getdefaultlocale can ValueError!! Catch anything else it
-        # might do, per #2205
         grains["locale_info"]["defaultlanguage"] = "unknown"
         grains["locale_info"]["defaultencoding"] = "unknown"
     grains["locale_info"]["detectedencoding"] = __salt_system_encoding__

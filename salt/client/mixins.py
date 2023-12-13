@@ -246,6 +246,8 @@ class SyncClientMixin(ClientStateMixin):
             self.functions[fun], arglist, pub_data
         )
         low = {"fun": fun, "arg": args, "kwarg": kwargs}
+        if "user" in pub_data:
+            low["__user__"] = pub_data["user"]
         return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
@@ -410,6 +412,7 @@ class SyncClientMixin(ClientStateMixin):
                         traceback.format_exc(),
                     )
                 data["success"] = False
+                data["retcode"] = 1
 
             if self.store_job:
                 try:
@@ -510,7 +513,17 @@ class AsyncClientMixin(ClientStateMixin):
 
     @classmethod
     def _proc_function(
-        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+        cls,
+        *,
+        instance,
+        opts,
+        fun,
+        low,
+        user,
+        tag,
+        jid,
+        daemonize=True,
+        full_return=False
     ):
         """
         Run this method in a multiprocess target to execute the function
@@ -535,7 +548,7 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return instance.low(fun, low)
+        return instance.low(fun, low, full_return=full_return)
 
     def cmd_async(self, low):
         """

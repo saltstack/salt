@@ -245,6 +245,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         salt '*' at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
         salt '*' at.at '3:05am +3 days' 'bin/myscript' tag=nightly runas=jim
+        salt '*' at.at '"22:02"' 'bin/myscript' tag=nightly runas=jim
     """
 
     if len(args) < 2:

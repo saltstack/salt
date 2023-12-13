@@ -161,6 +161,3 @@ def remove(name, log_file=None):
         ret["comment"] = "No configuration for {} present.".format(log_file)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
