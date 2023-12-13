@@ -334,15 +334,15 @@ def test_read_value_non_existing_key(fake_key):
     Test the read_value function using a non existing registry key
     """
     expected = {
-        "comment": f"Cannot find key: HKLM\\{FAKE_KEY}",
+        "comment": f"Cannot find key: HKLM\\{fake_key}",
         "vdata": None,
         "vtype": None,
         "vname": "fake_name",
         "success": False,
         "hive": "HKLM",
-        "key": FAKE_KEY,
+        "key": fake_key,
     }
-    result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
+    result = reg.read_value(hive="HKLM", key=fake_key, vname="fake_name")
     assert result == expected
 
 
