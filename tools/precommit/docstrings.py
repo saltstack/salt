@@ -10,12 +10,13 @@ import ast
 import os
 import pathlib
 import re
+import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
 import tools.utils
-from salt.version import SaltStackVersion
 from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
 SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
@@ -1088,9 +1089,10 @@ def _check_valid_versions_on_docstrings(docstring):
         versions = [vs.strip() for vs in version.split(",")]
         bad_versions = []
         for vs in versions:
-            try:
-                SaltStackVersion.parse(vs)
-            except ValueError:
+            ret = subprocess.run(
+                [sys.executable, str(SALT_CODE_DIR / "version.py"), vs], check=False
+            )
+            if ret.returncode:
                 bad_versions.append(vs)
         if bad_versions:
             return vtype, ", ".join(bad_versions)
