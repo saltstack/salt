@@ -1,8 +1,6 @@
 """
 unit tests for the grains state
 """
-
-
 import contextlib
 import os
 
@@ -14,21 +12,14 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import SALT_CODE_DIR
 
 
 @pytest.fixture
-def configure_loader_modules():
-    grains_test_dir = "__salt_test_state_grains"
-    if not os.path.exists(os.path.join(SALT_CODE_DIR, grains_test_dir)):
-        os.makedirs(os.path.join(SALT_CODE_DIR, grains_test_dir))
+def configure_loader_modules(minion_opts):
+    minion_opts["local"] = True
+    minion_opts["test"] = False
     loader_globals = {
-        "__opts__": {
-            "test": False,
-            "conf_file": os.path.join(SALT_CODE_DIR, grains_test_dir, "minion"),
-            "cachedir": os.path.join(SALT_CODE_DIR, grains_test_dir),
-            "local": True,
-        },
+        "__opts__": minion_opts,
         "__salt__": {
             "cmd.run_all": MagicMock(
                 return_value={"pid": 5, "retcode": 0, "stderr": "", "stdout": ""}
