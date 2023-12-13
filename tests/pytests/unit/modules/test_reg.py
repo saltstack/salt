@@ -868,3 +868,4 @@ def test_delete_key_recursive_unicode(unicode_key, fake_key):
         )
     finally:
         reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        
