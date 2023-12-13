@@ -8,7 +8,7 @@ import salt.cache
 from salt.exceptions import SaltCacheError
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
-pytest.importorskip("redis")
+redis = pytest.importorskip("redis")
 docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
@@ -17,8 +17,6 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
-
-pytest.importorskip("redis")
 
 
 @pytest.fixture(scope="module")
