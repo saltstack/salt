@@ -3,6 +3,7 @@ Test utility methods that communicate with SMB shares.
 """
 import contextlib
 import getpass
+import logging
 import os
 import pathlib
 import shutil
@@ -20,6 +21,7 @@ import salt.utils.smb
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
 
+log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skipif(
@@ -126,6 +128,12 @@ def smb_dict(tmp_path):
             "smbd_path": smbd_path,
             "pidfile": pidfile,
         }
+
+        ## lets examine contents of samba_dir ditectory
+        for file_dgm in pathlib.Path(samba_dir).iterdir():
+            log.warning(f"DGM walking samba_dir, file '{file_dgm}'")
+            if os.path.basename(str(file_dgm)) == "smbd.pid":
+                assert "1" == "2"
 
         assert pidfile.exists()
 
