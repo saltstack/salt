@@ -56,10 +56,10 @@ def _remote_events_cleanup(system, grains):
 
 
 @pytest.fixture
-def _subnet_cleanup(system):
+def subnet_name(system):
     subnet_name = system.get_subnet_name()
     try:
-        yield
+        yield random_string("subnet-", lowercase=False)
     finally:
         if system.get_subnet_name() != subnet_name:
             system.set_subnet_name(subnet_name)
@@ -76,24 +76,13 @@ def _keyboard_cleanup(system):
 
 
 @pytest.fixture
-def _computer_name_cleanup(system):
+def computer_name(system):
     computer_name = system.get_computer_name()
     try:
-        yield
+        yield random_string("cmptr-", lowercase=False)
     finally:
         if system.get_computer_name() != computer_name:
             system.set_computer_name(computer_name)
-
-
-@pytest.fixture(autouse=True)
-def _setup_teardown_vars(service, system):
-    atrun_enabled = service.enabled("com.apple.atrun")
-    try:
-        yield
-    finally:
-        if not atrun_enabled:
-            atrun = "/System/Library/LaunchDaemons/com.apple.atrun.plist"
-            service.stop(atrun)
 
 
 @pytest.mark.usefixtures("_remote_login_cleanup")
@@ -197,19 +186,16 @@ def test_get_set_remote_events(system):
         assert "Invalid String Value for Enabled" in str(exc.value)
 
 
-@pytest.mark.usefixtures("_subnet_cleanup")
-def test_get_set_subnet_name(system):
+def test_get_set_subnet_name(system, subnet_name):
     """
     Test system.get_subnet_name
     Test system.set_subnet_name
     """
-    set_subnet_name = random_string("RS-", lowercase=False)
-
-    ret = system.set_subnet_name(set_subnet_name)
+    ret = system.set_subnet_name(subnet_name)
     assert ret
 
     ret = system.get_subnet_name()
-    assert ret == set_subnet_name
+    assert ret == subnet_name
 
 
 @pytest.mark.skip_initial_gh_actions_failure
@@ -336,21 +322,17 @@ def test_get_set_boot_arch(system):
 # investigate
 # @pytest.mark.skipif(salt.utils.platform.is_darwin() and six.PY3, reason='This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
 @pytest.mark.destructive_test
-@pytest.mark.usefixtures("_computer_name_cleanup")
-def test_get_set_computer_name(system):
+def test_get_set_computer_name(system, computer_name):
     """
     Test system.get_computer_name
     Test system.set_computer_name
     """
-    set_computer_name = random_string("RS-", lowercase=False)
+    current_computer_name = system.get_computer_name()
+    assert current_computer_name
+    assert current_computer_name != computer_name
 
-    computer_name = system.get_computer_name()
-
-    log.debug("set name is %s", set_computer_name)
-    ret = system.set_computer_name(set_computer_name)
+    ret = system.set_computer_name(computer_name)
     assert ret
 
     ret = system.get_computer_name()
-    assert ret == set_computer_name
-
-    system.set_computer_name(computer_name)
+    assert ret == computer_name
