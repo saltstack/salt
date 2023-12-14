@@ -25,6 +25,7 @@ import time
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
+import salt.utils.timeutil
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -172,7 +173,7 @@ def _config_logic(
     revert_in=None,
     revert_at=None,
     commit_jid=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Builds the config logic for `load_config` and `load_template` functions.
@@ -193,7 +194,7 @@ def _config_logic(
 
     current_jid = kwargs.get("__pub_jid")
     if not current_jid:
-        current_jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+        current_jid = f"{datetime.datetime.now():%Y%m%d%H%M%S%f}"
 
     loaded_result["already_configured"] = False
 
@@ -244,11 +245,11 @@ def _config_logic(
             # and also the user wants to commit (default)
             # and there are changes to commit
             if commit_in or commit_at:
-                commit_time = __utils__["timeutil.get_time_at"](
+                commit_time = salt.utils.timeutil.get_time_at(
                     time_in=commit_in, time_at=commit_in
                 )
                 # schedule job
-                scheduled_job_name = "__napalm_commit_{}".format(current_jid)
+                scheduled_job_name = f"__napalm_commit_{current_jid}"
                 temp_file = salt.utils.files.mkstemp()
                 with salt.utils.files.fopen(temp_file, "w") as fp_:
                     fp_.write(loaded_config)
@@ -291,7 +292,7 @@ def _config_logic(
             log.debug("About to commit:")
             log.debug(loaded_result["diff"])
             if revert_in or revert_at:
-                revert_time = __utils__["timeutil.get_time_at"](
+                revert_time = salt.utils.timeutil.get_time_at(
                     time_in=revert_in, time_at=revert_at
                 )
                 if __grains__["os"] == "junos":
@@ -303,7 +304,7 @@ def _config_logic(
                         )
                         loaded_result["result"] = False
                         return loaded_result
-                    timestamp_at = __utils__["timeutil.get_timestamp_at"](
+                    timestamp_at = salt.utils.timeutil.get_timestamp_at(
                         time_in=revert_in, time_at=revert_at
                     )
                     minutes = int((timestamp_at - time.time()) / 60)
@@ -331,7 +332,7 @@ def _config_logic(
                         # already done by the _safe_commit_config function), and
                         # return with the command and other details.
                         return loaded_result
-                    scheduled_job_name = "__napalm_commit_{}".format(current_jid)
+                    scheduled_job_name = f"__napalm_commit_{current_jid}"
                     scheduled = __salt__["schedule.add"](
                         scheduled_job_name,
                         function="net.load_config",
@@ -694,7 +695,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     raw_cli_outputs = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "cli",
-        **{"commands": list(commands)}
+        **{"commands": list(commands)},
     )
     # thus we can display the output as is
     # in case of errors, they'll be caught in the proxy
@@ -828,7 +829,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             processed_command_output = command_output
             processed_cli_outputs[
                 "comment"
-            ] += "\nUnable to process the output from {}.".format(command)
+            ] += f"\nUnable to process the output from {command}."
         processed_cli_outputs["out"][command] = processed_command_output
     processed_cli_outputs["comment"] = processed_cli_outputs["comment"].strip()
     return processed_cli_outputs
@@ -877,7 +878,7 @@ def traceroute(
             "ttl": ttl,
             "timeout": timeout,
             "vrf": vrf,
-        }
+        },
     )
 
 
@@ -890,7 +891,7 @@ def ping(
     size=None,
     count=None,
     vrf=None,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
 
     """
@@ -939,7 +940,7 @@ def ping(
             "size": size,
             "count": count,
             "vrf": vrf,
-        }
+        },
     )
 
 
@@ -1151,7 +1152,7 @@ def lldp(interface="", **kwargs):  # pylint: disable=unused-argument
     proxy_output = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_lldp_neighbors_detail",
-        **{}
+        **{},
     )
 
     if not proxy_output.get("result"):
@@ -1214,7 +1215,7 @@ def mac(address="", interface="", vlan=0, **kwargs):  # pylint: disable=unused-a
     proxy_output = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_mac_address_table",
-        **{}
+        **{},
     )
 
     if not proxy_output.get("result"):
@@ -1283,7 +1284,7 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_config",
-        **{"retrieve": source}
+        **{"retrieve": source},
     )
 
 
@@ -1350,7 +1351,7 @@ def load_config(
     commit_jid=None,
     inherit_napalm_device=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Applies configuration changes on the device. It can be loaded from a file or from inline string.
@@ -1591,7 +1592,7 @@ def load_config(
         revert_in=revert_in,
         revert_at=revert_at,
         commit_jid=commit_jid,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1615,7 +1616,7 @@ def load_template(
     revert_in=None,
     revert_at=None,
     inherit_napalm_device=None,  # pylint: disable=unused-argument
-    **template_vars
+    **template_vars,
 ):
     """
     Renders a configuration template (default: Jinja) and loads the result on the device.
@@ -2077,7 +2078,7 @@ def load_template(
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             fun,
-            **{"config": _rendered}
+            **{"config": _rendered},
         )
     return _config_logic(
         napalm_device,  # pylint: disable=undefined-variable
@@ -2091,7 +2092,7 @@ def load_template(
         commit_in=commit_in,
         revert_in=revert_in,
         revert_at=revert_at,
-        **template_vars
+        **template_vars,
     )
 
 
@@ -2270,13 +2271,13 @@ def cancel_commit(jid):
 
         salt '*' net.cancel_commit 20180726083540640360
     """
-    job_name = "__napalm_commit_{}".format(jid)
+    job_name = f"__napalm_commit_{jid}"
     removed = __salt__["schedule.delete"](job_name)
     if removed["result"]:
         saved = __salt__["schedule.save"]()
-        removed["comment"] = "Commit #{jid} cancelled.".format(jid=jid)
+        removed["comment"] = f"Commit #{jid} cancelled."
     else:
-        removed["comment"] = "Unable to find commit #{jid}.".format(jid=jid)
+        removed["comment"] = f"Unable to find commit #{jid}."
     return removed
 
 
@@ -2305,7 +2306,7 @@ def confirm_commit(jid):
     else:
         confirmed = cancel_commit(jid)
     if confirmed["result"]:
-        confirmed["comment"] = "Commit #{jid} confirmed.".format(jid=jid)
+        confirmed["comment"] = f"Commit #{jid} confirmed."
     return confirmed
 
 
@@ -2343,7 +2344,7 @@ def save_config(source=None, path=None):
     return {
         "result": True,
         "out": path,
-        "comment": "{source} config saved to {path}".format(source=source, path=path),
+        "comment": f"{source} config saved to {path}",
     }
 
 
@@ -2679,7 +2680,7 @@ def patch(
         return {
             "out": None,
             "result": False,
-            "comment": 'The file "{}" does not exist.'.format(patchfile),
+            "comment": f'The file "{patchfile}" does not exist.',
         }
     replace_pattern = __salt__["file.patch"](path, patchfile_cache, options=options)
     with salt.utils.files.fopen(path, "r") as fh_:

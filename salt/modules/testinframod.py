@@ -13,6 +13,7 @@ import operator
 import re
 import types
 
+import salt.utils.args
 from salt.utils.stringutils import camel_to_snake_case, snake_to_camel_case
 
 log = logging.getLogger(__name__)
@@ -150,7 +151,7 @@ def _apply_assertion(expected, result):
             raise
         return comparison(expected["expected"], result)
     else:
-        raise TypeError("Expected bool or dict but received {}".format(type(expected)))
+        raise TypeError(f"Expected bool or dict but received {type(expected)}")
 
 
 # This does not currently generate documentation from the underlying modules
@@ -221,9 +222,9 @@ def _copy_function(module_name, name=None):
             parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
-                mod_sig = __utils__["args.get_function_argspec"](mod.__init__)
+                mod_sig = salt.utils.args.get_function_argspec(mod.__init__)
             elif hasattr(mod, "__call__"):
-                mod_sig = __utils__["args.get_function_argspec"](mod.__call__)
+                mod_sig = salt.utils.args.get_function_argspec(mod.__call__)
             parameters = mod_sig.args
         log.debug("Parameters accepted by module %s: %s", module_name, parameters)
         additional_args = {}

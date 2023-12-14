@@ -50,6 +50,7 @@ import yaml  # pylint: disable=blacklisted-import
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
+import salt.utils.yaml
 
 try:
     import boto
@@ -103,7 +104,7 @@ def _safe_dump(data):
     work with the objects returned from
     boto.describe_alarms()
     """
-    custom_dumper = __utils__["yaml.get_dumper"]("SafeOrderedDumper")
+    custom_dumper = salt.utils.yaml.get_dumper("SafeOrderedDumper")
 
     def boto_listelement_presenter(dumper, data):
         return dumper.represent_list(list(data))
@@ -123,7 +124,7 @@ def _safe_dump(data):
         Dumper=custom_dumper,
     )
 
-    return __utils__["yaml.dump"](data, Dumper=custom_dumper)
+    return salt.utils.yaml.dump(data, Dumper=custom_dumper)
 
 
 def get_all_alarms(region=None, prefix=None, key=None, keyid=None, profile=None):

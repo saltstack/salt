@@ -53,6 +53,7 @@ Installation Prerequisites
 import os
 from datetime import datetime
 
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -150,7 +151,7 @@ def _get_snapshot(name, suffix, blade):
     or None
     """
     try:
-        filt = "source='{}' and suffix='{}'".format(name, suffix)
+        filt = f"source='{name}' and suffix='{suffix}'"
         res = blade.file_system_snapshots.list_file_system_snapshots(filter=filt)
         return res.items[0]
     except rest.ApiException:
@@ -329,9 +330,9 @@ def fs_create(
     print(proto)
     if _get_fs(name, blade) is None:
         if size is None:
-            size = __utils__["stringutils.human_to_bytes"]("32G")
+            size = salt.utils.stringutils.human_to_bytes("32G")
         else:
-            size = __utils__["stringutils.human_to_bytes"](size)
+            size = salt.utils.stringutils.human_to_bytes(size)
         if proto.lower() == "nfs":
             fs_obj = FileSystem(
                 name=name,
@@ -470,9 +471,9 @@ def fs_extend(name, size):
     blade = _get_blade()
     _fs = _get_fs(name, blade)
     if _fs is not None:
-        if __utils__["stringutils.human_to_bytes"](size) > _fs.provisioned:
+        if salt.utils.stringutils.human_to_bytes(size) > _fs.provisioned:
             try:
-                attr["provisioned"] = __utils__["stringutils.human_to_bytes"](size)
+                attr["provisioned"] = salt.utils.stringutils.human_to_bytes(size)
                 n_attr = FileSystem(**attr)
                 blade.file_systems.update_file_systems(name=name, attributes=n_attr)
                 return True

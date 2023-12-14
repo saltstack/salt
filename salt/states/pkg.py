@@ -75,6 +75,7 @@ import re
 import salt.utils.args
 import salt.utils.pkg
 import salt.utils.platform
+import salt.utils.state
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.modules.pkg_resource import _repack_pkgs
@@ -3607,7 +3608,7 @@ def mod_aggregate(low, chunks, running):
     if low.get("fun") not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = __utils__["state.gen_tag"](chunk)
+        tag = salt.utils.state.gen_tag(chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue

@@ -47,6 +47,9 @@ either passed in as a dict, or a string to pull from pillars or minion config:
 import difflib
 import logging
 
+import salt.utils.dictdiffer
+import salt.utils.yaml
+
 log = logging.getLogger(__name__)
 
 
@@ -132,7 +135,7 @@ def present(
     if old is None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Distribution {} set for creation.".format(name)
+            ret["comment"] = f"Distribution {name} set for creation."
             ret["changes"] = {"old": None, "new": name}
             return ret
 
@@ -154,7 +157,7 @@ def present(
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Created distribution {}.".format(name)
+        ret["comment"] = f"Created distribution {name}."
         ret["changes"] = {"old": None, "new": name}
         return ret
     else:
@@ -166,7 +169,7 @@ def present(
             "config": config,
             "tags": tags,
         }
-        diffed_config = __utils__["dictdiffer.deep_diff"](
+        diffed_config = salt.utils.dictdiffer.deep_diff(
             full_config_old,
             full_config_new,
         )
@@ -176,10 +179,8 @@ def present(
             Safely dump YAML using a readable flow style
             """
             dumper_name = "IndentedSafeOrderedDumper"
-            dumper = __utils__["yaml.get_dumper"](dumper_name)
-            return __utils__["yaml.dump"](
-                attrs, default_flow_style=False, Dumper=dumper
-            )
+            dumper = salt.utils.yaml.get_dumper(dumper_name)
+            return salt.utils.yaml.dump(attrs, default_flow_style=False, Dumper=dumper)
 
         changes_diff = "".join(
             difflib.unified_diff(
@@ -199,7 +200,7 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "\n".join(
-                ["Distribution {} set for new config:".format(name), changes_diff]
+                [f"Distribution {name} set for new config:", changes_diff]
             )
             ret["changes"] = {"diff": changes_diff}
             return ret
@@ -222,6 +223,6 @@ def present(
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Updated distribution {}.".format(name)
+        ret["comment"] = f"Updated distribution {name}."
         ret["changes"] = {"diff": changes_diff}
         return ret

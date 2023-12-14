@@ -4,6 +4,8 @@ Module for managing timezone on Windows systems.
 import logging
 from datetime import datetime
 
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -187,11 +189,11 @@ def __virtual__():
     """
     Only load on windows
     """
-    if not __utils__["platform.is_windows"]():
+    if not salt.utils.platform.is_windows():
         return False, "Module win_timezone: Not on Windows client"
     if not HAS_PYTZ:
         return False, "Module win_timezone: pytz not found"
-    if not __utils__["path.which"]("tzutil"):
+    if not salt.utils.path.which("tzutil"):
         return False, "Module win_timezone: tzutil not found"
     return __virtualname__
 
@@ -293,14 +295,14 @@ def set_zone(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     # Set the value
     cmd = ["tzutil", "/s", win_zone]
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     if res["retcode"]:
         raise CommandExecutionError(
-            "tzutil encountered an error setting timezone: {}".format(timezone),
+            f"tzutil encountered an error setting timezone: {timezone}",
             info=res,
         )
     return zone_compare(timezone)
@@ -335,7 +337,7 @@ def zone_compare(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     return get_zone() == mapper.get_unix(check_zone, "Unknown")
 

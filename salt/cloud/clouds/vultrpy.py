@@ -82,6 +82,7 @@ import time
 import urllib.parse
 
 import salt.config as config
+import salt.utils.http
 from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
@@ -633,7 +634,7 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
     if header_dict is None:
         header_dict = {}
 
-    result = __utils__["http.query"](
+    result = salt.utils.http.query(
         url,
         method=method,
         params=params,

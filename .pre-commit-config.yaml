@@ -1427,7 +1427,7 @@ repos:
         alias: rewrite-salt
         name: Salt code auto-fixes
         files: ^salt/.*\.py$
-        args: [--silent, -F, fix_docstrings, -F, fix_warn_until]
+        args: [--silent, -F, fix_docstrings, -F, fix_warn_until, -F, fix_dunder_utils]
         exclude: >
             (?x)^(
                 salt/ext/.*

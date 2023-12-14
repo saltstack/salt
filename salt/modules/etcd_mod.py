@@ -116,7 +116,7 @@ def get_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.get /path/to/key recurse=True profile=my_etcd_config
         salt myminion etcd.get /path/to/key host=127.0.0.1 port=2379
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.get(key, recurse=recurse)
 
 
@@ -137,7 +137,7 @@ def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
         salt myminion etcd.set /path/to/dir '' directory=True
         salt myminion etcd.set /path/to/key value ttl=5
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.set(key, value, ttl=ttl, directory=directory)
 
 
@@ -191,7 +191,7 @@ def update(fields, path="", profile=None, **kwargs):
         salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" host=127.0.0.1 port=2379
         salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" path='/some/root'
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.update(fields, path)
 
 
@@ -216,7 +216,7 @@ def watch(key, recurse=False, profile=None, timeout=0, index=None, **kwargs):
         salt myminion etcd.watch /patch/to/key host=127.0.0.1 port=2379
     """
 
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.watch(key, recurse=recurse, timeout=timeout, index=index)
 
 
@@ -235,7 +235,7 @@ def ls_(path="/", profile=None, **kwargs):
         salt myminion etcd.ls /path/to/dir/ profile=my_etcd_config
         salt myminion etcd.ls /path/to/dir/ host=127.0.0.1 port=2379
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.ls(path)
 
 
@@ -255,7 +255,7 @@ def rm_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.rm /path/to/key host=127.0.0.1 port=2379
         salt myminion etcd.rm /path/to/dir recurse=True profile=my_etcd_config
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.rm(key, recurse=recurse)
 
 
@@ -274,5 +274,5 @@ def tree(path="/", profile=None, **kwargs):
         salt myminion etcd.tree host=127.0.0.1 port=2379
         salt myminion etcd.tree /path/to/keys profile=my_etcd_config
     """
-    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile, **kwargs)
     return client.tree(path)

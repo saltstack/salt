@@ -53,7 +53,9 @@ import copy
 import difflib
 import logging
 
+import salt.utils.dictupdate
 import salt.utils.hashutils
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -171,13 +173,13 @@ def object_present(
     combined_extra_args = copy.deepcopy(
         __salt__["config.option"](extra_args_from_pillar, {})
     )
-    __utils__["dictupdate.update"](combined_extra_args, extra_args)
+    salt.utils.dictupdate.update(combined_extra_args, extra_args)
     if combined_extra_args:
         supported_args = STORED_EXTRA_ARGS | UPLOAD_ONLY_EXTRA_ARGS
         combined_extra_args_keys = frozenset(combined_extra_args.keys())
         extra_keys = combined_extra_args_keys - supported_args
         if extra_keys:
-            msg = "extra_args keys {} are not supported".format(extra_keys)
+            msg = f"extra_args keys {extra_keys} are not supported"
             return {"error": msg}
 
     # Get the hash of the local file
@@ -253,7 +255,7 @@ def object_present(
         }
         if s3_metadata == desired_metadata:
             ret["result"] = True
-            ret["comment"] = "S3 object {} is present.".format(name)
+            ret["comment"] = f"S3 object {name} is present."
             return ret
         action = "update"
     else:
@@ -265,8 +267,8 @@ def object_present(
         Safely dump YAML using a readable flow style
         """
         dumper_name = "IndentedSafeOrderedDumper"
-        dumper = __utils__["yaml.get_dumper"](dumper_name)
-        return __utils__["yaml.dump"](attrs, default_flow_style=False, Dumper=dumper)
+        dumper = salt.utils.yaml.get_dumper(dumper_name)
+        return salt.utils.yaml.dump(attrs, default_flow_style=False, Dumper=dumper)
 
     changes_diff = "".join(
         difflib.unified_diff(
@@ -277,8 +279,8 @@ def object_present(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "S3 object {} set to be {}d.".format(name, action)
-        ret["comment"] += "\nChanges:\n{}".format(changes_diff)
+        ret["comment"] = f"S3 object {name} set to be {action}d."
+        ret["comment"] += f"\nChanges:\n{changes_diff}"
         ret["changes"] = {"diff": changes_diff}
         return ret
 
@@ -301,7 +303,7 @@ def object_present(
         return ret
 
     ret["result"] = True
-    ret["comment"] = "S3 object {} {}d.".format(name, action)
-    ret["comment"] += "\nChanges:\n{}".format(changes_diff)
+    ret["comment"] = f"S3 object {name} {action}d."
+    ret["comment"] += f"\nChanges:\n{changes_diff}"
     ret["changes"] = {"diff": changes_diff}
     return ret
