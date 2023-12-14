@@ -112,8 +112,8 @@ def _binary_replace(old, new):
     This function should only be run AFTER it has been determined that the
     files differ.
     """
-    old_isbin = not __utils__["files.is_text"](old)
-    new_isbin = not __utils__["files.is_text"](new)
+    old_isbin = not salt.utils.files.is_text(old)
+    new_isbin = not salt.utils.files.is_text(new)
     if any((old_isbin, new_isbin)):
         if all((old_isbin, new_isbin)):
             return "Replace binary file"
@@ -1504,7 +1504,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
         raise SaltInvocationError(f"File not found: {path}")
 
     # Make sure it is a text file
-    if not __utils__["files.is_text"](path):
+    if not salt.utils.files.is_text(path):
         raise SaltInvocationError(
             f"Cannot perform string replacements on a binary file: {path}"
         )
@@ -1605,7 +1605,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
-    return __utils__["stringutils.get_diff"](orig_file, new_file)
+    return salt.utils.stringutils.get_diff(orig_file, new_file)
 
 
 def _get_flags(flags):
@@ -2312,7 +2312,7 @@ def line(
         if show_changes:
             with salt.utils.files.fopen(path, "r") as fp_:
                 path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = __utils__["stringutils.get_diff"](path_content, body)
+            changes_diff = salt.utils.stringutils.get_diff(path_content, body)
         if __opts__["test"] is False:
             fh_ = None
             try:
@@ -2484,7 +2484,7 @@ def replace(
         else:
             raise SaltInvocationError(f"File not found: {path}")
 
-    if not __utils__["files.is_text"](path):
+    if not salt.utils.files.is_text(path):
         raise SaltInvocationError(
             f"Cannot perform string replacements on a binary file: {path}"
         )
@@ -2701,7 +2701,7 @@ def replace(
     if not dry_run and not salt.utils.platform.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    differences = __utils__["stringutils.get_diff"](orig_file, new_file)
+    differences = salt.utils.stringutils.get_diff(orig_file, new_file)
 
     if show_changes:
         return differences
@@ -2837,11 +2837,11 @@ def blockreplace(
         raise SaltInvocationError(f"File not found: {path}")
 
     try:
-        file_encoding = __utils__["files.get_encoding"](path)
+        file_encoding = salt.utils.files.get_encoding(path)
     except CommandExecutionError:
         file_encoding = None
 
-    if __utils__["files.is_binary"](path):
+    if salt.utils.files.is_binary(path):
         if not file_encoding:
             raise SaltInvocationError(
                 f"Cannot perform string replacements on a binary file: {path}"
@@ -3009,7 +3009,7 @@ def blockreplace(
             )
 
     if block_found:
-        diff = __utils__["stringutils.get_diff"](orig_file, new_file)
+        diff = salt.utils.stringutils.get_diff(orig_file, new_file)
         has_changes = diff != ""
         if has_changes and not dry_run:
             # changes detected
@@ -3044,7 +3044,7 @@ def blockreplace(
             "Cannot edit marked block. Markers were not found in file."
         )
 
-    diff = __utils__["stringutils.get_diff"](orig_file, new_file)
+    diff = salt.utils.stringutils.get_diff(orig_file, new_file)
     has_changes = diff != ""
     if has_changes and not dry_run:
         # changes detected
@@ -5945,7 +5945,9 @@ def get_diff(
             else:
                 if show_filenames:
                     args.extend(paths)
-                ret = __utils__["stringutils.get_diff"](*args)
+                ret = salt.utils.stringutils.get_diff(  # pylint: disable=no-value-for-parameter
+                    *args
+                )
         return ret
     return ""
 
