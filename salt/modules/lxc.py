@@ -2478,7 +2478,7 @@ def start(name, **kwargs):
     )
 
 
-def stop(name, kill=False, path=None, use_vt=None):
+def stop(name, kill=False, path=None, use_vt=None, timeout=0):
     """
     Stop the named container
 
@@ -2501,6 +2501,11 @@ def stop(name, kill=False, path=None, use_vt=None):
 
         .. versionadded:: 2015.8.0
 
+    timeout: 0
+        wait timeout seconds before hard-stopping
+
+        .. versionadded:: 3007
+
     CLI Example:
 
     .. code-block:: bash
@@ -2517,6 +2522,8 @@ def stop(name, kill=False, path=None, use_vt=None):
     cmd = "lxc-stop"
     if kill:
         cmd += " -k"
+    if timeout:
+        cmd += f" -t {timeout}"
     ret = _change_state(cmd, name, "stopped", use_vt=use_vt, path=path)
     ret["state"]["old"] = orig_state
     return ret
