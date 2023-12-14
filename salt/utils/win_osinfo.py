@@ -21,18 +21,6 @@ if HAS_WIN32:
     )
 
 
-# Although utils are often directly imported, it is also possible to use the
-# loader.
-def __virtual__():
-    """
-    Only load if Win32 Libraries are installed
-    """
-    if not HAS_WIN32:
-        return False, "This utility requires pywin32"
-
-    return "win_osinfo"
-
-
 def os_version_info_ex():
     """
     Helper function to return the results of the GetVersionExW Windows API call.

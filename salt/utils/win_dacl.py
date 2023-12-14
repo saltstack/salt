@@ -157,21 +157,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "dacl"
-
-
-def __virtual__():
-    """
-    Only load if Win32 Libraries are installed
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "win_dacl: Requires Windows"
-
-    if not HAS_WIN32:
-        return False, "win_dacl: Requires pywin32"
-
-    return __virtualname__
-
 
 def flags(instantiated=True):
     """
@@ -2387,31 +2372,29 @@ def check_perms(
 
     .. code-block:: bash
 
-        # You have to use __utils__ in order for __opts__ to be available
-
         # To see changes to ``C:\\Temp`` if the 'Users' group is given 'read & execute' permissions.
-        __utils__['dacl.check_perms'](obj_name='C:\\Temp',
-                                      obj_type='file',
-                                      owner='Administrators',
-                                      grant_perms={
-                                          'Users': {
-                                              'perms': 'read_execute'
-                                          }
-                                      })
+        salt.utils.win_dacl.check_perms(obj_name='C:\\Temp',
+                                        obj_type='file',
+                                        owner='Administrators',
+                                        grant_perms={
+                                            'Users': {
+                                                'perms': 'read_execute'
+                                            }
+                                        })
 
         # Specify advanced attributes with a list
-        __utils__['dacl.check_perms'](obj_name='C:\\Temp',
-                                      obj_type='file',
-                                      owner='Administrators',
-                                      grant_perms={
-                                          'jsnuffy': {
-                                              'perms': [
-                                                  'read_attributes',
-                                                  'read_ea'
-                                              ],
-                                              'applies_to': 'files_only'
-                                          }
-                                      })
+        salt.utils.win_dacl.check_perms(obj_name='C:\\Temp',
+                                        obj_type='file',
+                                        owner='Administrators',
+                                        grant_perms={
+                                            'jsnuffy': {
+                                                'perms': [
+                                                    'read_attributes',
+                                                    'read_ea'
+                                                ],
+                                                'applies_to': 'files_only'
+                                            }
+                                        })
     """
     # Validate obj_type
     if obj_type.lower() not in flags().obj_type:

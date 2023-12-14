@@ -59,7 +59,9 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_auditpol
 import salt.utils.win_lgpo_netsh
+import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.serializers.configparser import deserialize
 from salt.utils.win_lgpo_reg import (
@@ -76,7 +78,7 @@ __virtualname__ = "lgpo"
 __func_alias__ = {"set_": "set"}
 
 UUID = uuid.uuid4().hex
-adm_policy_name_map = {True: {}, False: {}}
+ADM_POLICY_NAME_MAP = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
 # define some global XPATH variables that we'll set assuming all our imports are
 # good
@@ -5390,7 +5392,7 @@ def _get_advaudit_defaults(option=None):
         # Get available setting names and GUIDs
         # This is used to get the fieldnames and GUIDs for individual policies
         log.debug("Loading auditpol defaults into __context__")
-        dump = __utils__["auditpol.get_auditpol_dump"]()
+        dump = salt.utils.win_lgpo_auditpol.get_auditpol_dump()
         reader = csv.DictReader(dump)
         audit_defaults = {"fieldnames": reader.fieldnames}
         for row in reader:
@@ -5622,7 +5624,7 @@ def _set_advaudit_pol_data(option, value):
         "3": "Success and Failure",
     }
     defaults = _get_advaudit_defaults(option)
-    return __utils__["auditpol.set_setting"](
+    return salt.utils.win_lgpo_auditpol.set_setting(
         name=defaults["Auditpol Name"], value=auditpol_values[value]
     )
 
@@ -6005,20 +6007,20 @@ def _getFullPolicyName(
     """
     helper function to retrieve the full policy name if needed
     """
-    if policy_name in adm_policy_name_map[return_full_policy_names]:
-        return adm_policy_name_map[return_full_policy_names][policy_name]
+    if policy_name in ADM_POLICY_NAME_MAP[return_full_policy_names]:
+        return ADM_POLICY_NAME_MAP[return_full_policy_names][policy_name]
     adml_data = _get_policy_resources(language=adml_language)
     if return_full_policy_names and "displayName" in policy_item.attrib:
         fullPolicyName = _getAdmlDisplayName(
             adml_data, policy_item.attrib["displayName"]
         )
         if fullPolicyName:
-            adm_policy_name_map[return_full_policy_names][policy_name] = fullPolicyName
+            ADM_POLICY_NAME_MAP[return_full_policy_names][policy_name] = fullPolicyName
             policy_name = fullPolicyName
     elif return_full_policy_names and "id" in policy_item.attrib:
         fullPolicyName = _getAdmlPresentationRefId(adml_data, policy_item.attrib["id"])
         if fullPolicyName:
-            adm_policy_name_map[return_full_policy_names][policy_name] = fullPolicyName
+            ADM_POLICY_NAME_MAP[return_full_policy_names][policy_name] = fullPolicyName
             policy_name = fullPolicyName
     policy_name = policy_name.rstrip(":").rstrip()
     return policy_name
@@ -8901,7 +8903,7 @@ def _get_policy_info_setting(policy_definition):
     """
     if "Registry" in policy_definition:
         # Get value using the Registry mechanism
-        value = __utils__["reg.read_value"](
+        value = salt.utils.win_reg.read_value(
             policy_definition["Registry"]["Hive"],
             policy_definition["Registry"]["Path"],
             policy_definition["Registry"]["Value"],
@@ -10346,7 +10348,7 @@ def set_(
                             _regedits[regedit]["value"] is not None
                             and _regedits[regedit]["value"] != "(value not set)"
                         ):
-                            _ret = __utils__["reg.set_value"](
+                            _ret = salt.utils.win_reg.set_value(
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
@@ -10354,13 +10356,13 @@ def set_(
                                 _regedits[regedit]["policy"]["Registry"]["Type"],
                             )
                         else:
-                            _ret = __utils__["reg.read_value"](
+                            _ret = salt.utils.win_reg.read_value(
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
                             )
                             if _ret["success"] and _ret["vdata"] != "(value not set)":
-                                _ret = __utils__["reg.delete_value"](
+                                _ret = salt.utils.win_reg.delete_value(
                                     _regedits[regedit]["policy"]["Registry"]["Hive"],
                                     _regedits[regedit]["policy"]["Registry"]["Path"],
                                     _regedits[regedit]["policy"]["Registry"]["Value"],

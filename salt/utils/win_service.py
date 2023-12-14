@@ -1,4 +1,3 @@
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -76,21 +75,6 @@ SERVICE_ERROR_CONTROL = {
     "critical": 3,
 }
 
-__virtualname__ = "win_service"
-
-
-def __virtual__():
-    """
-    Only load if Win32 Libraries are installed
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "win_dacl: Requires Windows"
-
-    if not HAS_WIN32:
-        return False, "win_dacl: Requires pywin32"
-
-    return __virtualname__
-
 
 def info(name):
     """
@@ -114,9 +98,7 @@ def info(name):
             None, None, win32service.SC_MANAGER_CONNECT
         )
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed to connect to the SCM: {}".format(exc.strerror)
-        )
+        raise CommandExecutionError(f"Failed to connect to the SCM: {exc.strerror}")
 
     try:
         handle_svc = win32service.OpenService(
@@ -128,7 +110,7 @@ def info(name):
             | win32service.SERVICE_QUERY_STATUS,
         )
     except pywintypes.error as exc:
-        raise CommandExecutionError("Failed To Open {}: {}".format(name, exc.strerror))
+        raise CommandExecutionError(f"Failed To Open {name}: {exc.strerror}")
 
     try:
         config_info = win32service.QueryServiceConfig(handle_svc)
@@ -150,7 +132,7 @@ def info(name):
 
     ret = dict()
     try:
-        sid = win32security.LookupAccountName("", "NT Service\\{}".format(name))[0]
+        sid = win32security.LookupAccountName("", f"NT Service\\{name}")[0]
         ret["sid"] = win32security.ConvertSidToStringSid(sid)
     except pywintypes.error:
         ret["sid"] = "Failed to get SID"

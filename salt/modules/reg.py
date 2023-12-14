@@ -64,11 +64,10 @@ Value:
 
 :depends:   - salt.utils.win_reg
 """
-# When production windows installer is using Python 3, Python 2 code can be removed
-
 import logging
 
 import salt.utils.platform
+import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ def __virtual__():
             "The module will only run on Windows systems",
         )
 
-    if "reg.read_value" not in __utils__:
+    if not salt.utils.win_reg.HAS_WINDOWS_MODULES:
         return (
             False,
             "reg execution module failed to load: The reg salt util is unavailable",
@@ -119,7 +118,7 @@ def key_exists(hive, key, use_32bit_registry=False):
 
             salt '*' reg.key_exists HKLM SOFTWARE\Microsoft
     """
-    return __utils__["reg.key_exists"](
+    return salt.utils.win_reg.key_exists(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -149,7 +148,7 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
             salt '*' reg.value_exists HKLM SOFTWARE\Microsoft\Windows\CurrentVersion CommonFilesDir
     """
-    return __utils__["reg.value_exists"](
+    return salt.utils.win_reg.value_exists(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
@@ -206,7 +205,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
             salt '*' reg.list_keys HKLM 'SOFTWARE'
     """
-    return __utils__["reg.list_keys"](
+    return salt.utils.win_reg.list_keys(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -247,7 +246,7 @@ def list_values(hive, key=None, use_32bit_registry=False):
 
             salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
     """
-    return __utils__["reg.list_values"](
+    return salt.utils.win_reg.list_values(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -307,7 +306,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
             salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt'
     """
-    return __utils__["reg.read_value"](
+    return salt.utils.win_reg.read_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
@@ -431,7 +430,7 @@ def set_value(
 
             salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'list_data' vtype=REG_MULTI_SZ vdata='["Salt", "is", "great"]'
     """
-    return __utils__["reg.set_value"](
+    return salt.utils.win_reg.set_value(
         hive=hive,
         key=key,
         vname=vname,
@@ -479,7 +478,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
             salt '*' reg.delete_key_recursive HKLM SOFTWARE\\delete_me
     """
-    return __utils__["reg.delete_key_recursive"](
+    return salt.utils.win_reg.delete_key_recursive(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -519,7 +518,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
             salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     """
-    return __utils__["reg.delete_value"](
+    return salt.utils.win_reg.delete_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
@@ -558,13 +557,13 @@ def import_file(source, use_32bit_registry=False):
     """
     cache_path = __salt__["cp.cache_file"](source)
     if not cache_path:
-        error_msg = "File/URL '{}' probably invalid.".format(source)
+        error_msg = f"File/URL '{source}' probably invalid."
         raise ValueError(error_msg)
     if use_32bit_registry:
         word_sz_txt = "32"
     else:
         word_sz_txt = "64"
-    cmd = 'reg import "{}" /reg:{}'.format(cache_path, word_sz_txt)
+    cmd = f'reg import "{cache_path}" /reg:{word_sz_txt}'
     cmd_ret_dict = __salt__["cmd.run_all"](cmd, python_shell=True)
     retcode = cmd_ret_dict["retcode"]
     if retcode != 0:

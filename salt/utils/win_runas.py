@@ -39,18 +39,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-# Although utils are often directly imported, it is also possible to use the
-# loader.
-def __virtual__():
-    """
-    Only load if Win32 Libraries are installed
-    """
-    if not HAS_WIN32 or not HAS_PSUTIL:
-        return False, "This utility requires pywin32 and psutil"
-
-    return "win_runas"
-
-
 def split_username(username):
     domain = "."
     user_name = username

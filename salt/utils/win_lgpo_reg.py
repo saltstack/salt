@@ -47,18 +47,6 @@ GPT_INI_PATH = os.path.join(
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "lgpo_reg"
-
-
-def __virtual__():
-    """
-    Only works on Windows with the lgpo_reg module
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "LGPO_REG Util: Only available on Windows"
-
-    return __virtualname__
-
 
 def search_reg_pol(search_string, policy_data):
     """

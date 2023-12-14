@@ -30,7 +30,7 @@ def test_get_settings_firewallpolicy_lgpo_issue_57591():
     """
     Should not stacktrace when the hostname contains unicode characters
     """
-    with patch.object(win_lgpo_netsh, "__hostname__", return_value="kомпьютер"):
+    with patch("salt.utils.win_lgpo_netsh._hostname", return_value="kомпьютер"):
         ret = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="lgpo"
         )

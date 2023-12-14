@@ -21,18 +21,14 @@ depending on the version of Windows this is run on. Once support for Windows
 # https://docs.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface.getallnetworkinterfaces?view=netframework-4.7.2
 
 import logging
-import platform
+import sys
 
 import salt.utils.win_reg
 from salt._compat import ipaddress
 
-IS_WINDOWS = platform.system() == "Windows"
-
 log = logging.getLogger(__name__)
 
-__virtualname__ = "win_network"
-
-if IS_WINDOWS:
+if sys.platform.startswith("win"):
     # pythonnet 3.0.1 requires .NET 4.7.2 (461808). This isn't installed by
     # default until Windows Server 2019 / Windows 10 1809 (10.1.17763). But, it
     # can be installed on older versions of Windows. So, instead of checking
@@ -129,16 +125,6 @@ enum_prefix_suffix = {
 
 af_inet = 2
 af_inet6 = 23
-
-
-def __virtual__():
-    """
-    Only load if windows
-    """
-    if not IS_WINDOWS:
-        return False, "This utility will only run on Windows"
-
-    return __virtualname__
 
 
 def _get_base_properties(i_face):
