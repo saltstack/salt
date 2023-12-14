@@ -38,7 +38,8 @@ The following profile parameters are supported:
 - **location**: (required) The location of the VM. This should be a Linode region (e.g. ``us-east``). Run ``salt-cloud -f avail_locations my-linode-provider`` for options.
 - **image**: (required) The image to deploy the boot disk from. This should be an image ID (e.g. ``linode/ubuntu22.04``); official images start with ``linode/``. Run ``salt-cloud -f avail_images my-linode-provider`` for more options.
 - **password**: (\*required) The default password for the VM. Must be provided at the profile or provider level.
-- **assign_private_ip**: (optional) Whether or not to assign a private key to the VM. Defaults to ``False``.
+- **assign_private_ip**: (optional) Whether or not to assign a private IP to the VM. Defaults to ``False``.
+- **backups_enabled**: (optional) Whether or not to enable the backup for this VM. Backup can be configured in your Linode account Defaults to ``False``.
 - **ssh_interface**: (optional) The interface with which to connect over SSH. Valid options are ``private_ips`` or ``public_ips``. Defaults to ``public_ips``.
 - **ssh_pubkey**: (optional) The public key to authorize for SSH with the VM.
 - **swap**: (optional) The amount of disk space to allocate for the swap partition. Defaults to ``256``.
@@ -128,6 +129,18 @@ def _get_active_provider_name():
         return __active_provider_name__.value()
     except AttributeError:
         return __active_provider_name__
+
+
+def _get_backup_enabled(vm_):
+    """
+    Return True if a backup is set to enabled
+    """
+    return config.get_cloud_config_value(
+        "backups_enabled",
+        vm_,
+        __opts__,
+        default=False,
+    )
 
 
 def get_configured_provider():
@@ -615,6 +628,7 @@ class LinodeAPIv4(LinodeAPI):
         assign_private_ip = _get_private_ip(vm_) or use_private_ip
         password = _get_password(vm_)
         swap_size = _get_swap_size(vm_)
+        backups_enabled = _get_backup_enabled(vm_)
 
         clonefrom_name = vm_.get("clonefrom", None)
         instance_type = vm_.get("size", None)
@@ -645,6 +659,7 @@ class LinodeAPIv4(LinodeAPI):
                 "/linode/instances",
                 method="POST",
                 data={
+                    "backups_enabled": backups_enabled,
                     "label": name,
                     "type": instance_type,
                     "region": vm_.get("location", None),
@@ -1178,8 +1193,7 @@ def create(vm_):
                 vm_["profile"],
                 vm_=vm_,
             )
-            is False
-        ):
+        ) is False:
             return False
     except AttributeError:
         pass
