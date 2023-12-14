@@ -247,6 +247,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         pack_self=None,
         # Once we get rid of __utils__, the keyword arguments bellow should be removed
         _ast_dunder_virtual_inspect=False,
+        _ast_dunder_virtual_deprecate_only=True,
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
         """
@@ -278,6 +279,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
         self._ast_dunder_virtual_inspect = _ast_dunder_virtual_inspect
+        self._ast_dunder_virtual_deprecate_only = _ast_dunder_virtual_deprecate_only
         self._only_pack_properly_namespaced_functions = (
             _only_pack_properly_namespaced_functions
         )
@@ -700,18 +702,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             and not self._ast_dunder_virtual_defined(name, fpath)
         ):
             func_decorator = _deprecated_dunder_utils_usage
-            # On 3010, un-commend the code below
-            # log.debug(
-            #    "Not loading %r because it does not define a __virtual__ function",
-            #    name,
-            # )
-            # return False
-
-            # On 3010, remove this code below
-            log.debug(
-                "Loading %r into __utils__ but this will stop working in Salt 3010",
-                name,
-            )
+            if self._ast_dunder_virtual_deprecate_only is True:
+                # Pre 3010 behavior
+                log.debug(
+                    "Loading %r into __utils__ but this will stop working in Salt 3010",
+                    name,
+                )
+            else:
+                # Post 3010 behavior
+                log.debug(
+                    "Not loading %r because it does not define a __virtual__ function",
+                    name,
+                )
+                return False
 
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
