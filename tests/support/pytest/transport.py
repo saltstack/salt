@@ -42,7 +42,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     ):
         super().__init__()
         self.minion_config = minion_config
-        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.minion_config["id"])).hexdigest()
+        self.hexid = hashlib.sha1(
+            salt.utils.stringutils.to_bytes(self.minion_config["id"])
+        ).hexdigest()
         self.interface = interface
         self.port = port
         self.aes_key = aes_key
@@ -51,7 +53,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.hard_timeout = time.time() + timeout + 120
         self.manager = multiprocessing.Manager()
         self.results = self.manager.list()
-        self.zmq_filtering = minion_config['zmq_filtering']
+        self.zmq_filtering = minion_config["zmq_filtering"]
         self.stopped = multiprocessing.Event()
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
@@ -87,7 +89,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 if self.minion_config.get("__role") == "syndic":
                     self.sock.setsockopt(zmq.SUBSCRIBE, b"syndic")
                 else:
-                    self.sock.setsockopt(zmq.SUBSCRIBE, salt.utils.stringutils.to_bytes(self.hexid))
+                    self.sock.setsockopt(
+                        zmq.SUBSCRIBE, salt.utils.stringutils.to_bytes(self.hexid)
+                    )
             else:
                 self.sock.setsockopt(zmq.SUBSCRIBE, b"")
             pub_uri = "tcp://{}:{}".format(self.interface, self.port)
@@ -120,11 +124,12 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     message_target = salt.utils.stringutils.to_str(messages[0])
                     is_syndic = self.minion_config.get("__role") == "syndic"
                     if (
-                        not is_syndic and message_target not in ("broadcast", self.hexid)
-                    ) or (
-                        is_syndic and message_target not in ("broadcast", "syndic")
-                    ):
-                        log.debug("Publish received for not this minion: %s", message_target)
+                        not is_syndic
+                        and message_target not in ("broadcast", self.hexid)
+                    ) or (is_syndic and message_target not in ("broadcast", "syndic")):
+                        log.debug(
+                            "Publish received for not this minion: %s", message_target
+                        )
                         raise salt.ext.tornado.gen.Return(None)
                     serial_payload = salt.payload.loads(messages[1])
                 else:
