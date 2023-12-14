@@ -36,11 +36,11 @@ __virtualname__ = "pkg"
 
 def __virtual__():
     """
-    Confine this module to Mac OS with Homebrew.
+    Confine this module to macOS with Homebrew.
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not _homebrew_bin(quiet=False):
+    if not _homebrew_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -107,22 +107,21 @@ def _homebrew_os_bin():
     Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
     """
 
-    # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
-    # the PATH does not include "/opt/homebrew"
-    original_path = None
-    current_path = os.environ.get("PATH", "")
-    homebrew_path = "/opt/homebrew/bin"
-    if homebrew_path not in current_path.split(os.path.pathsep):
-        original_path = current_path
-        extended_path = os.path.pathsep.join([original_path, homebrew_path])
-        os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
+    original_path = os.environ.get("PATH")
+    try:
+        # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
+        # the PATH does not include "/opt/homebrew"
+        current_path = original_path or ""
+        homebrew_path = "/opt/homebrew/bin"
+        if homebrew_path not in current_path.split(os.path.pathsep):
+            extended_path = os.path.pathsep.join([current_path, homebrew_path])
+            os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
 
-    # Search for the brew executable in the current PATH
-    brew = salt.utils.path.which("brew")
-
-    # Restore the original PATH if needed
-    if original_path is not None:
-        if original_path == "":
+        # Search for the brew executable in the current PATH
+        brew = salt.utils.path.which("brew")
+    finally:
+        # Restore original PATH
+        if original_path is None:
             del os.environ["PATH"]
         else:
             os.environ["PATH"] = original_path
@@ -130,12 +129,9 @@ def _homebrew_os_bin():
     return brew
 
 
-def _homebrew_bin(quiet=False):
+def _homebrew_bin():
     """
     Returns the full path to the homebrew binary in the homebrew installation folder
-
-    quiet
-        When ``True``, does not log warnings when the homebrew prefix cannot be found.
     """
     ret = homebrew_prefix()
     if ret is not None:
@@ -150,7 +146,7 @@ def _call_brew(*cmd, failhard=True):
     """
     Calls the brew command with the user account of brew
     """
-    brew_exec = _homebrew_bin(quiet=True)
+    brew_exec = _homebrew_bin()
 
     user = __salt__["file.get_user"](brew_exec)
     runas = user if user != __opts__["user"] else None
@@ -195,13 +191,13 @@ def homebrew_prefix():
         salt '*' pkg.homebrew_prefix
     """
 
-    # Try HOMEBREW_PREFIX env variable
+    # If HOMEBREW_PREFIX env variable is present, use it
     env_homebrew_prefix = "HOMEBREW_PREFIX"
     if env_homebrew_prefix in os.environ:
         log.debug(f"{env_homebrew_prefix} is set. Using it for homebrew prefix.")
         return os.environ[env_homebrew_prefix]
 
-    # Try brew --prefix
+    # Try brew --prefix otherwise
     try:
         log.debug("Trying to find homebrew prefix by running 'brew --prefix'")
 

@@ -481,7 +481,7 @@ def test_homebrew_prefix_command(HOMEBREW_PREFIX, HOMEBREW_BIN):
 
 def test_homebrew_prefix_returns_none():
     """
-    Tets that homebrew_prefix returns None when
+    Tests that homebrew_prefix returns None when
     all attempts fail.
     """
 
@@ -489,7 +489,7 @@ def test_homebrew_prefix_returns_none():
     if "HOMEBREW_PREFIX" in mock_env:
         del mock_env["HOMEBREW_PREFIX"]
 
-    with patch.dict(os.environ, mock_env):
+    with patch.dict(os.environ, mock_env, clear=True):
         with patch(
             "salt.modules.mac_brew_pkg._homebrew_os_bin", MagicMock(return_value=None)
         ):
@@ -498,7 +498,7 @@ def test_homebrew_prefix_returns_none():
 
 def test_homebrew_prefix_returns_none_even_with_execution_errors():
     """
-    Tets that homebrew_prefix returns None when
+    Tests that homebrew_prefix returns None when
     all attempts fail even with command execution errors.
     """
 
@@ -506,7 +506,7 @@ def test_homebrew_prefix_returns_none_even_with_execution_errors():
     if "HOMEBREW_PREFIX" in mock_env:
         del mock_env["HOMEBREW_PREFIX"]
 
-    with patch.dict(os.environ, mock_env):
+    with patch.dict(os.environ, mock_env, clear=True):
         with patch(
             "salt.modules.cmdmod.run", MagicMock(side_effect=CommandExecutionError)
         ), patch(
@@ -523,7 +523,7 @@ def test_homebrew_os_bin_fallback_apple_silicon():
     """
     Test the path to the homebrew executable for Apple Silicon.
 
-    This test checks that even if the PATH does not contains
+    This test checks that even if the PATH does not contain
     the default Homebrew's prefix for the Apple Silicon
     architecture, it is appended.
     """
