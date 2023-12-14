@@ -14,8 +14,6 @@ import salt.grains.metadata as metadata
 import salt.utils.http as http
 from tests.support.mock import MagicMock, create_autospec, patch
 
-# from Exception import Exception, ValueError
-
 log = logging.getLogger(__name__)
 
 
