@@ -137,9 +137,11 @@ def _homebrew_bin(quiet=False):
     quiet
         When ``True``, does not log warnings when the homebrew prefix cannot be found.
     """
-    ret = homebrew_prefix(quiet=quiet)
+    ret = homebrew_prefix()
     if ret is not None:
         ret += "/bin/brew"
+    else:
+        log.warning("Failed to find homebrew prefix")
 
     return ret
 
@@ -182,12 +184,9 @@ def _list_pkgs_from_context(versions_as_list):
         return ret
 
 
-def homebrew_prefix(quiet=False):
+def homebrew_prefix():
     """
     Returns the full path to the homebrew prefix.
-
-    quiet
-        When ``True``, does not log warnings when the homebrew prefix cannot be found.
 
     CLI Example:
 
@@ -201,8 +200,6 @@ def homebrew_prefix(quiet=False):
     if env_homebrew_prefix in os.environ:
         log.debug(f"{env_homebrew_prefix} is set. Using it for homebrew prefix.")
         return os.environ[env_homebrew_prefix]
-    elif not quiet:
-        log.warning(f"{env_homebrew_prefix} is not set. Please, consider adding it.")
 
     # Try brew --prefix
     try:
@@ -221,15 +218,8 @@ def homebrew_prefix(quiet=False):
 
             return ret
     except CommandExecutionError as e:
-        if not quiet:
-            log.warning(
-                f"Unable to find homebrew prefix by running 'brew --prefix'. Error: {str(e)}"
-            )
-
-    # Unable to find brew prefix
-    if not quiet:
-        log.warning(
-            f"Failed to find homebrew prefix. Please, set {env_homebrew_prefix} env variable"
+        log.debug(
+            f"Unable to find homebrew prefix by running 'brew --prefix'. Error: {str(e)}"
         )
 
     return None
