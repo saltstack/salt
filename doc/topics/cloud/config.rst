@@ -401,7 +401,7 @@ Using the legacy shade module.
       region_name: RegionOne
       cloud: mycloud
 
-Or by just configuring the same auth block directly in the cloud provider config.
+Method 3
 
 .. code-block:: yaml
 
@@ -414,7 +414,7 @@ Or by just configuring the same auth block directly in the cloud provider config
         project_name: 'demo'
         auth_url: 'http://openstack/identity'
 
-Both of these methods support using the
+These methods support using the
 `vendor <https://docs.openstack.org/os-client-config/latest/user/vendor-support.html>`
 options.
 

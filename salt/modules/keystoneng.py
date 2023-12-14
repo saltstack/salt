@@ -27,6 +27,8 @@ Example configuration for shade
     keystone:
       cloud: default
 
+Method 3
+
 .. code-block:: yaml
 
     keystone:
