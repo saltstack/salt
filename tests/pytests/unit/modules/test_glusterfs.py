@@ -533,7 +533,7 @@ def test__get_version():
         "10.0": (10, 0),
     }
     for v in more_versions:
-        mock_version = MagicMock(return_value="glusterfs {}".format(v))
+        mock_version = MagicMock(return_value=f"glusterfs {v}")
         with patch.dict(glusterfs.__salt__, {"cmd.run": mock_version}):
             assert glusterfs._get_version() == more_versions[v]
 
