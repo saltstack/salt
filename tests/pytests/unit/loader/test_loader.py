@@ -10,8 +10,10 @@ import textwrap
 
 import pytest
 
+import salt.exceptions
 import salt.loader
 import salt.loader.lazy
+import tests.support.helpers
 
 
 @pytest.fixture
@@ -62,3 +64,25 @@ def test_raw_mod_functions():
     ret = salt.loader.raw_mod(opts, "grains", "get")
     for k, v in ret.items():
         assert isinstance(v, salt.loader.lazy.LoadedFunc)
+
+
+def test_named_loader_context_name_not_packed(tmp_path):
+    opts = {
+        "optimization_order": [0],
+    }
+    (tmp_path / "mymod.py").write_text(
+        tests.support.helpers.dedent(
+            """
+    from salt.loader.dunder import loader_context
+    __not_packed__ = loader_context.named_context("__not_packed__")
+    def foobar():
+        return __not_packed__["not.packed"]()
+    """
+        )
+    )
+    loader = salt.loader.LazyLoader([tmp_path], opts)
+    with pytest.raises(
+        salt.exceptions.LoaderError,
+        match="LazyLoader does not have a packed value for: __not_packed__",
+    ):
+        loader["mymod.foobar"]()
