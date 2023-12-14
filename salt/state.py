@@ -43,6 +43,7 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
+import salt.utils.verify
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -106,6 +107,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__env__",
         "__sls__",
         "__id__",
+        "__sls_included_from__",
         "__orchestration_jid__",
         "__pub_user",
         "__pub_arg",
@@ -668,6 +670,8 @@ class Compiler:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
                     chunk["__env__"] = body["__env__"]
+                if "__sls_included_from__" in body:
+                    chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = name
                 for arg in run:
                     if isinstance(arg, str):
@@ -758,6 +762,7 @@ class State:
         mocked=False,
         loader="states",
         initial_pillar=None,
+        file_client=None,
     ):
         self._init_kwargs = {
             "opts": opts,
@@ -774,6 +779,12 @@ class State:
         if "grains" not in opts:
             opts["grains"] = salt.loader.grains(opts)
         self.opts = opts
+        if file_client:
+            self.file_client = file_client
+            self.preserve_file_client = True
+        else:
+            self.file_client = salt.fileclient.get_file_client(self.opts)
+            self.preserve_file_client = False
         self.proxy = proxy
         self._pillar_override = pillar_override
         if pillar_enc is not None:
@@ -798,7 +809,11 @@ class State:
                     self.opts.get("pillar_merge_lists", False),
                 )
         log.debug("Finished gathering pillar data for state run")
-        self.state_con = context or {}
+        if context is None:
+            self.state_con = {}
+        else:
+            self.state_con = context
+        self.state_con["fileclient"] = self.file_client
         self.load_modules()
         self.active = set()
         self.mod_init = set()
@@ -1276,6 +1291,7 @@ class State:
                 self.serializers,
                 context=self.state_con,
                 proxy=self.proxy,
+                file_client=salt.fileclient.ContextlessFileClient(self.file_client),
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1285,7 +1301,11 @@ class State:
         log.info("Loading fresh modules for state activity")
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(
-            self.opts, self.state_con, utils=self.utils, proxy=self.proxy
+            self.opts,
+            self.state_con,
+            utils=self.utils,
+            proxy=self.proxy,
+            file_client=salt.fileclient.ContextlessFileClient(self.file_client),
         )
         if isinstance(data, dict):
             if data.get("provider", False):
@@ -1702,6 +1722,8 @@ class State:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
                     chunk["__env__"] = body["__env__"]
+                if "__sls_included_from__" in body:
+                    chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = name
                 for arg in run:
                     if isinstance(arg, str):
@@ -2911,7 +2933,9 @@ class State:
                     for chunk in chunks:
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk["__sls__"], req_val):
+                            if fnmatch.fnmatch(
+                                chunk["__sls__"], req_val
+                            ) or req_val in chunk.get("__sls_included_from__", []):
                                 found = True
                                 reqs[r_state].append(chunk)
                             continue
@@ -3126,7 +3150,9 @@ class State:
                             continue
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk["__sls__"], req_val):
+                            if fnmatch.fnmatch(
+                                chunk["__sls__"], req_val
+                            ) or req_val in chunk.get("__sls_included_from__", []):
                                 if requisite == "prereq":
                                     chunk["__prereq__"] = True
                                 reqs.append(chunk)
@@ -3669,6 +3695,16 @@ class State:
         if errors:
             return errors
         return self.call_high(high)
+
+    def destroy(self):
+        if not self.preserve_file_client:
+            self.file_client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
 
 
 class LazyAvailStates:
@@ -4243,7 +4279,42 @@ class BaseHighState:
         Get results from the master_tops system. Override this function if the
         execution of the master_tops needs customization.
         """
+        if self.opts.get("file_client", "remote") == "local":
+            return self._local_master_tops()
         return self.client.master_tops()
+
+    def _local_master_tops(self):
+        # return early if we got nothing to do
+        if "master_tops" not in self.opts:
+            return {}
+        if "id" not in self.opts:
+            log.error("Received call for external nodes without an id")
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
+            return {}
+        if getattr(self, "tops", None) is None:
+            self.tops = salt.loader.tops(self.opts)
+        grains = {}
+        ret = {}
+
+        if "grains" in self.opts:
+            grains = self.opts["grains"]
+        for fun in self.tops:
+            if fun not in self.opts["master_tops"]:
+                continue
+            try:
+                ret = salt.utils.dictupdate.merge(
+                    ret, self.tops[fun](opts=self.opts, grains=grains), merge_lists=True
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    "Top function %s failed with error %s for minion %s",
+                    fun,
+                    exc,
+                    self.opts["id"],
+                )
+        return ret
 
     def load_dynamic(self, matches):
         """
@@ -4424,6 +4495,16 @@ class BaseHighState:
                                     context=context,
                                 )
                                 if nstate:
+                                    for item in nstate:
+                                        # Skip existing state keywords
+                                        if item.startswith("__"):
+                                            continue
+                                        if "__sls_included_from__" not in nstate[item]:
+                                            nstate[item]["__sls_included_from__"] = []
+                                        nstate[item]["__sls_included_from__"].append(
+                                            sls
+                                        )
+
                                     self.merge_included_states(state, nstate, errors)
                                     state.update(nstate)
                                 if err:
@@ -4913,9 +4994,15 @@ class HighState(BaseHighState):
         mocked=False,
         loader="states",
         initial_pillar=None,
+        file_client=None,
     ):
         self.opts = opts
-        self.client = salt.fileclient.get_file_client(self.opts)
+        if file_client:
+            self.client = file_client
+            self.preserve_client = True
+        else:
+            self.client = salt.fileclient.get_file_client(self.opts)
+            self.preserve_client = False
         BaseHighState.__init__(self, opts)
         self.state = State(
             self.opts,
@@ -4927,6 +5014,7 @@ class HighState(BaseHighState):
             mocked=mocked,
             loader=loader,
             initial_pillar=initial_pillar,
+            file_client=self.client,
         )
         self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
@@ -4961,7 +5049,8 @@ class HighState(BaseHighState):
             return None
 
     def destroy(self):
-        self.client.destroy()
+        if not self.preserve_client:
+            self.client.destroy()
 
     def __enter__(self):
         return self

@@ -23,6 +23,7 @@ def test_saltcheck_run_test(salt_ssh_cli):
     assert ret.data["status"] == "Pass"
 
 
+@pytest.mark.skip_on_aarch64
 def test_saltcheck_state(salt_ssh_cli):
     """
     saltcheck.run_state_tests

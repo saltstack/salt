@@ -57,7 +57,10 @@ def configure_loader_modules():
         ret.update(
             {
                 win_dacl: {"__opts__": opts},
-                win_file: {"__utils__": {"dacl.check_perms": win_dacl.check_perms}},
+                win_file: {
+                    "__utils__": {"dacl.check_perms": win_dacl.check_perms},
+                    "__opts__": opts,
+                },
             }
         )
 
@@ -203,9 +206,7 @@ def test_replace_append(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -246,9 +247,7 @@ def test_replace_insert_after(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -325,9 +324,7 @@ def test_replace_prepend(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             not in fp.read()
         )
@@ -352,7 +349,7 @@ def test_replace_prepend(multiline_file):
                 os.linesep.join(
                     [
                         "#-- START BLOCK 2",
-                        "{}#-- END BLOCK 2".format(new_content),
+                        f"{new_content}#-- END BLOCK 2",
                     ]
                 )
             )
@@ -394,9 +391,7 @@ def test_replace_insert_before(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -428,7 +423,7 @@ def test_replace_partial_marked_lines(multiline_file):
 
 def test_backup(multiline_file):
     fext = ".bak"
-    bak_file = "{}{}".format(multiline_file, fext)
+    bak_file = f"{multiline_file}{fext}"
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -448,7 +443,7 @@ def test_backup(multiline_file):
     assert not os.path.exists(bak_file)
 
     fext = ".bak"
-    bak_file = "{}{}".format(multiline_file, fext)
+    bak_file = f"{multiline_file}{fext}"
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms

@@ -17,11 +17,11 @@ jinja2==3.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   towncrier
-looseversion==1.2.0
+looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/changelog.in
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   jinja2

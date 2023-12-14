@@ -1,10 +1,18 @@
+import logging
+
 import msgpack
 import pytest
-import tornado.concurrent
 
 import salt.config
+import salt.transport.base
 import salt.transport.zeromq
-from tests.support.mock import MagicMock
+
+log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 async def test_req_server_garbage_request(io_loop):
@@ -37,20 +45,51 @@ async def test_client_timeout_msg(minion_opts):
     client = salt.transport.zeromq.AsyncReqMessageClient(
         minion_opts, "tcp://127.0.0.1:4506"
     )
-    assert hasattr(client, "_future")
-    assert client._future is None
-    future = tornado.concurrent.Future()
-    client._future = future
-    client.timeout_message(future)
-    with pytest.raises(salt.exceptions.SaltReqTimeoutError):
-        await future
-    assert client._future is None
+    client.connect()
+    try:
+        with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+            await client.send({"meh": "bah"}, 1)
+    finally:
+        client.close()
 
-    future_a = tornado.concurrent.Future()
-    future_b = tornado.concurrent.Future()
-    future_b.set_exception = MagicMock()
-    client._future = future_a
-    client.timeout_message(future_b)
 
-    assert client._future == future_a
-    future_b.set_exception.assert_not_called()
+def test_pub_client_init(minion_opts, io_loop):
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "syndic"
+    minion_opts["master_ip"] = "127.0.0.1"
+    minion_opts["zmq_filtering"] = True
+    minion_opts["zmq_monitor"] = True
+    with salt.transport.zeromq.PublishClient(
+        minion_opts, io_loop, host=minion_opts["master_ip"], port=121212
+    ) as client:
+        client.send(b"asf")
+
+
+async def test_unclosed_request_client(minion_opts, io_loop):
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    await client.connect()
+    try:
+        assert client._closing is False
+        with pytest.warns(salt.transport.base.TransportWarning):
+            client.__del__()
+    finally:
+        client.close()
+
+
+async def test_unclosed_publish_client(minion_opts, io_loop):
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["master_ip"] = "127.0.0.1"
+    minion_opts["zmq_filtering"] = True
+    minion_opts["zmq_monitor"] = True
+    client = salt.transport.zeromq.PublishClient(
+        minion_opts, io_loop, host=minion_opts["master_ip"], port=121212
+    )
+    await client.connect()
+    try:
+        assert client._closing is False
+        with pytest.warns(salt.transport.base.TransportWarning):
+            client.__del__()
+    finally:
+        client.close()
