@@ -24,7 +24,7 @@ Example States
         - name: role1
         - description: 'my group'
 """
-
+import salt.utils.args
 
 __virtualname__ = "keystone_role"
 
@@ -51,7 +51,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["keystoneng.setup_clouds"](auth)
 

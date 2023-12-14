@@ -27,7 +27,7 @@ Example States
         - external: False
         - project: project1
 """
-
+import salt.utils.args
 
 __virtualname__ = "neutron_network"
 
@@ -69,7 +69,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 
@@ -99,7 +99,7 @@ def present(name, auth=None, **kwargs):
                 del kwargs["project"]
             else:
                 ret["result"] = False
-                ret["comment"] = "Project:{} not found.".format(projectname)
+                ret["comment"] = f"Project:{projectname} not found."
                 return ret
 
         network = __salt__["neutronng.network_create"](**kwargs)
@@ -136,7 +136,7 @@ def absent(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 

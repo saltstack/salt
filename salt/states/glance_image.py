@@ -21,7 +21,7 @@ Example States
       glance_image.absent:
         - name: cirros
 """
-
+import salt.utils.args
 
 __virtualname__ = "glance_image"
 
@@ -51,7 +51,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["glanceng.setup_clouds"](auth)
 
@@ -61,7 +61,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = kwargs
-            ret["comment"] = "Image {} will be created.".format(name)
+            ret["comment"] = f"Image {name} will be created."
             return ret
 
         kwargs["name"] = name
@@ -91,7 +91,7 @@ def absent(name, auth=None):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = {"name": name}
-            ret["comment"] = "Image {} will be deleted.".format(name)
+            ret["comment"] = f"Image {name} will be deleted."
             return ret
 
         __salt__["glanceng.image_delete"](name=image)

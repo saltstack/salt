@@ -25,6 +25,7 @@ Example configuration
       identity_api_version: 3
 """
 
+import salt.utils.args
 
 HAS_SHADE = False
 try:
@@ -69,7 +70,7 @@ def get_entity(ent_type, **kwargs):
     Attempt to query Keystone for more information about an entity
     """
     try:
-        func = "keystoneng.{}_get".format(ent_type)
+        func = f"keystoneng.{ent_type}_get"
         ent = __salt__[func](**kwargs)
     except OpenStackCloudException as e:
         # NOTE(SamYaple): If this error was something other than Forbidden we
@@ -93,7 +94,7 @@ def _clean_kwargs(keep_name=False, **kwargs):
     if "name" in kwargs and not keep_name:
         kwargs["name_or_id"] = kwargs.pop("name")
 
-    return __utils__["args.clean_kwargs"](**kwargs)
+    return salt.utils.args.clean_kwargs(**kwargs)
 
 
 def setup_clouds(auth=None):

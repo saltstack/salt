@@ -25,6 +25,8 @@ private key file:
 import logging
 import re
 
+import salt.utils.args
+import salt.utils.dictupdate
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -118,7 +120,7 @@ def _get(app, endpoint, id=None, auth_required=False, **kwargs):
     if id:
         item = getattr(getattr(nb, app), endpoint).get(id)
     else:
-        kwargs = __utils__["args.clean_kwargs"](**kwargs)
+        kwargs = salt.utils.args.clean_kwargs(**kwargs)
         item = getattr(getattr(nb, app), endpoint).get(**kwargs)
     return item
 
@@ -153,7 +155,7 @@ def filter_(app, endpoint, **kwargs):
     ret = []
     nb = _nb_obj(auth_required=True if app in AUTH_ENDPOINTS else False)
     nb_query = getattr(getattr(nb, app), endpoint).filter(
-        **__utils__["args.clean_kwargs"](**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
@@ -190,7 +192,7 @@ def get_(app, endpoint, id=None, **kwargs):
             endpoint,
             id=id,
             auth_required=True if app in AUTH_ENDPOINTS else False,
-            **kwargs
+            **kwargs,
         )
     )
 
@@ -411,7 +413,7 @@ def update_device(name, **kwargs):
 
         salt myminion netbox.update_device edge_router serial=JN2932920
     """
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     nb_device = _get("dcim", "devices", auth_required=True, name=name)
     for k, v in kwargs.items():
         setattr(nb_device, k, v)
@@ -604,7 +606,7 @@ def openconfig_interfaces(device_name=None):
                             }
                         }
                     }
-                    oc_if[if_name] = __utils__["dictupdate.update"](
+                    oc_if[if_name] = salt.utils.dictupdate.update(
                         oc_if[if_name], subif_descr
                     )
             if interface["mtu"]:
@@ -796,7 +798,7 @@ def update_interface(device_name, interface_name, **kwargs):
     if not nb_interface:
         return False
     else:
-        for k, v in __utils__["args.clean_kwargs"](**kwargs).items():
+        for k, v in salt.utils.args.clean_kwargs(**kwargs).items():
             setattr(nb_interface, k, v)
         try:
             nb_interface.save()
@@ -1014,7 +1016,7 @@ def create_circuit_provider(name, asn=None):
         else:
             log.error("Duplicate provider with different ASN: %s: %s", name, asn)
             raise CommandExecutionError(
-                "Duplicate provider with different ASN: {}: {}".format(name, asn)
+                f"Duplicate provider with different ASN: {name}: {asn}"
             )
     else:
         payload = {"name": name, "slug": slugify(name)}

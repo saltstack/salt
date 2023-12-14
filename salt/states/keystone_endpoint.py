@@ -35,7 +35,7 @@ Example States
         - region: RegionOne
         - service_name: glance
 """
-
+import salt.utils.args
 
 __virtualname__ = "keystone_endpoint"
 
@@ -100,7 +100,7 @@ def present(name, service_name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["keystoneng.setup_clouds"](auth)
 

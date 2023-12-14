@@ -25,7 +25,7 @@ Example States
       keystone_domain.absent:
         - name: domain1
 """
-
+import salt.utils.args
 
 __virtualname__ = "keystone_domain"
 
@@ -55,7 +55,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["keystoneng.setup_clouds"](auth)
 
@@ -65,7 +65,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = kwargs
-            ret["comment"] = "Domain {} will be created.".format(name)
+            ret["comment"] = f"Domain {name} will be created."
             return ret
 
         kwargs["name"] = name
@@ -79,7 +79,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = changes
-            ret["comment"] = "Domain {} will be updated.".format(name)
+            ret["comment"] = f"Domain {name} will be updated."
             return ret
 
         kwargs["domain_id"] = domain.id
@@ -107,7 +107,7 @@ def absent(name, auth=None):
         if __opts__["test"] is True:
             ret["result"] = None
             ret["changes"] = {"name": name}
-            ret["comment"] = "Domain {} will be deleted.".format(name)
+            ret["comment"] = f"Domain {name} will be deleted."
             return ret
 
         __salt__["keystoneng.domain_delete"](name=domain)
