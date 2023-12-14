@@ -13,7 +13,6 @@ import pytest
 import salt.exceptions
 import salt.loader
 import salt.loader.lazy
-import tests.support.helpers
 
 
 @pytest.fixture
@@ -70,19 +69,16 @@ def test_named_loader_context_name_not_packed(tmp_path):
     opts = {
         "optimization_order": [0],
     }
-    (tmp_path / "mymod.py").write_text(
-        tests.support.helpers.dedent(
-            """
+    contents = """
     from salt.loader.dunder import loader_context
     __not_packed__ = loader_context.named_context("__not_packed__")
     def foobar():
         return __not_packed__["not.packed"]()
     """
-        )
-    )
-    loader = salt.loader.LazyLoader([tmp_path], opts)
-    with pytest.raises(
-        salt.exceptions.LoaderError,
-        match="LazyLoader does not have a packed value for: __not_packed__",
-    ):
-        loader["mymod.foobar"]()
+    with pytest.helpers.temp_file("mymod.py", contents, directory=tmp_path):
+        loader = salt.loader.LazyLoader([tmp_path], opts)
+        with pytest.raises(
+            salt.exceptions.LoaderError,
+            match="LazyLoader does not have a packed value for: __not_packed__",
+        ):
+            loader["mymod.foobar"]()
