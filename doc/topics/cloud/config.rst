@@ -376,7 +376,7 @@ The ``clouds.yml`` can be located in any of these directories:
  - ~/.config/openstack
  - /etc/openstack
 
-Method 1 (Recomended)
+Using the openstacksdk module. (Recomended)
 
 .. code-block:: yaml
 
@@ -392,7 +392,7 @@ Method 1 (Recomended)
         identity_api_version: 3
         region_name: RegionOne
 
-Method 2
+Using the legacy shade module.
 
 .. code-block:: yaml
 

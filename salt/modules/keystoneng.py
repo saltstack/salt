@@ -7,8 +7,6 @@ Keystone module for interacting with OpenStack Keystone
 
 Example configuration for openstacksdk
 
-Method 1 (Recommended)
-
 .. code-block:: yaml
 
     clouds:
@@ -22,7 +20,7 @@ Method 1 (Recommended)
           auth_url: https://example.org:5000/v3
         identity_api_version: 3
 
-Method 2
+Example configuration for shade
 
 .. code-block:: yaml
 
