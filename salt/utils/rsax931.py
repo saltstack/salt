@@ -46,7 +46,7 @@ def _find_libcrypto():
         # Find library symlinks in Homebrew locations.
         import salt.modules.mac_brew_pkg as mac_brew
 
-        brew_prefix = mac_brew.homebrew_prefix(quiet=True)
+        brew_prefix = mac_brew.homebrew_prefix()
         if brew_prefix is not None:
             lib = lib or glob.glob(
                 os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
