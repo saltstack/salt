@@ -69,6 +69,10 @@ cachetools==4.2.2
     #   -c requirements/static/ci/py3.8/linux.txt
     #   google-auth
     #   python-telegram-bot
+cassandra-driver==3.23.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/static/ci/common.in
 certifi==2023.07.22
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
@@ -303,6 +307,12 @@ looseversion==1.0.2
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
+lxml==4.9.1
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   junos-eznc
+    #   napalm
+    #   ncclient
 mako==1.2.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt

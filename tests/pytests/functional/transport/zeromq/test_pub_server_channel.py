@@ -1,15 +1,16 @@
+from contextlib import contextmanager
 import copy
 import logging
 import random
-import threading
 import time
-from contextlib import contextmanager
+import threading
 
 import pytest
-from saltfactories.utils import random_string
 
+from saltfactories.utils import random_string
 import salt.transport.zeromq
 import salt.utils.process
+
 from tests.support.mock import MagicMock, patch
 from tests.support.pytest.transport import PubServerChannelProcess
 
@@ -41,13 +42,9 @@ def generate_msg_list(msg_cnt, minions_list, broadcast):
     for i in range(msg_cnt):
         for idx, minion_id in enumerate(minions_list):
             if broadcast:
-                msg_list.append(
-                    {"tgt_type": "grain", "tgt": "id:*", "jid": msg_cnt * idx + i}
-                )
+                msg_list.append({"tgt_type": "grain", "tgt": 'id:*', "jid": msg_cnt * idx + i})
             else:
-                msg_list.append(
-                    {"tgt_type": "list", "tgt": [minion_id], "jid": msg_cnt * idx + i}
-                )
+                msg_list.append({"tgt_type": "list", "tgt": [minion_id], "jid": msg_cnt * idx + i})
     return msg_list
 
 
@@ -57,9 +54,7 @@ def channel_publisher_manager(msg_list, p_cnt, pub_server_channel):
     msg_list = copy.deepcopy(msg_list)
     random.shuffle(msg_list)
     batch_size = len(msg_list) // p_cnt
-    list_batch = [
-        [x * batch_size, x * batch_size + batch_size] for x in range(0, p_cnt)
-    ]
+    list_batch = [[x * batch_size, x * batch_size + batch_size] for x in range(0, p_cnt)]
     list_batch[-1][1] = list_batch[-1][1] + 1
     try:
         for i, j in list_batch:
@@ -108,9 +103,7 @@ def test_zeromq_filtering_minion(salt_master, salt_minion):
         ),
     ):
         with PubServerChannelProcess(opts, minion_opts) as server_channel:
-            with channel_publisher_manager(
-                msg_list, workers, server_channel.pub_server_channel
-            ):
+            with channel_publisher_manager(msg_list, workers, server_channel.pub_server_channel):
                 cnt = 0
                 last_results_len = 0
                 while cnt < 20:
@@ -121,9 +114,8 @@ def test_zeromq_filtering_minion(salt_master, salt_minion):
                     last_results_len = results_len
                     cnt += 1
         results = set(server_channel.collector.results)
-        assert (
-            results == expect
-        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
+        assert results == expect, \
+            f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
 
 
 @pytest.mark.skip_on_windows
@@ -140,7 +132,7 @@ def test_zeromq_filtering_syndic(salt_master, salt_minion):
     minion_opts = dict(
         salt_minion.config.copy(),
         zmq_filtering=True,
-        __role="syndic",
+        __role='syndic',
     )
     messages = 200
     workers = 5
@@ -161,9 +153,7 @@ def test_zeromq_filtering_syndic(salt_master, salt_minion):
         ),
     ):
         with PubServerChannelProcess(opts, minion_opts) as server_channel:
-            with channel_publisher_manager(
-                msg_list, workers, server_channel.pub_server_channel
-            ):
+            with channel_publisher_manager(msg_list, workers, server_channel.pub_server_channel):
                 cnt = 0
                 last_results_len = 0
                 while cnt < 20:
@@ -174,9 +164,8 @@ def test_zeromq_filtering_syndic(salt_master, salt_minion):
                     last_results_len = results_len
                     cnt += 1
         results = set(server_channel.collector.results)
-        assert (
-            results == expect
-        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
+        assert results == expect, \
+            f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
 
 
 @pytest.mark.skip_on_windows
@@ -216,9 +205,7 @@ def test_zeromq_filtering_broadcast(salt_master, salt_minion):
         ),
     ):
         with PubServerChannelProcess(opts, minion_opts) as server_channel:
-            with channel_publisher_manager(
-                msg_list, workers, server_channel.pub_server_channel
-            ):
+            with channel_publisher_manager(msg_list, workers, server_channel.pub_server_channel):
                 cnt = 0
                 last_results_len = 0
                 while cnt < 20:
@@ -229,9 +216,8 @@ def test_zeromq_filtering_broadcast(salt_master, salt_minion):
                     last_results_len = results_len
                     cnt += 1
         results = set(server_channel.collector.results)
-        assert (
-            results == expect
-        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
+        assert results == expect, \
+            f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
 
 
 def test_pub_channel(master_opts):
