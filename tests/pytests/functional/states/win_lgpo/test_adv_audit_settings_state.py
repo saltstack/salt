@@ -1,6 +1,5 @@
 import pytest
 
-import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
 
@@ -14,20 +13,9 @@ pytestmark = [
 
 @pytest.fixture
 def configure_loader_modules(minion_opts, modules):
-    utils = salt.loader.utils(minion_opts)
     return {
-        win_lgpo_state: {
-            "__opts__": minion_opts,
-            "__salt__": modules,
-            "__utils__": utils,
-            "__context__": {},
-        },
-        win_lgpo_module: {
-            "__opts__": minion_opts,
-            "__salt__": modules,
-            "__utils__": utils,
-            "__context__": {},
-        },
+        win_lgpo_state: {},
+        win_lgpo_module: {},
     }
 
 
