@@ -115,7 +115,12 @@ def smb_dict(tmp_path):
         _smbd = subprocess.Popen(
             [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
         )
+        streamdata = _smbd.communicate()[0]
+        rc = _smbd.returncode
+        assert rc == 0
+
         assert _smbd != 0
+
         time.sleep(2)
         pidfile = samba_dir / "smbd.pid"
         conn_dict = {
