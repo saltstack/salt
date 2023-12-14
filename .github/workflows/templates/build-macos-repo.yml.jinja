@@ -10,6 +10,8 @@
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -21,6 +23,12 @@
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86_64-macos
+          path: artifacts/pkgs/incoming
+
+      - name: Download macOS Arch64 Packages
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-aarch64-macos
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG

@@ -29,3 +29,28 @@ def test_ssh_mine_get(salt_ssh_cli):
     assert "localhost" in ret.data
     assert "args" in ret.data["localhost"]
     assert ret.data["localhost"]["args"] == ["itworked"]
+
+
+@pytest.mark.parametrize("tgts", (("ssh",), ("regular",), ("ssh", "regular")))
+def test_mine_get(salt_ssh_cli, salt_minion, tgts):
+    """
+    Test mine returns with both regular and SSH minions
+    """
+    if len(tgts) > 1:
+        tgt = "*"
+        exp = {"localhost", salt_minion.id}
+    else:
+        tgt = "localhost" if "ssh" in tgts else salt_minion.id
+        exp = {tgt}
+    ret = salt_ssh_cli.run(
+        "mine.get",
+        "*",
+        "test.ping",
+        ssh_minions="ssh" in tgts,
+        regular_minions="regular" in tgts,
+    )
+    assert ret.returncode == 0
+    assert ret.data
+    assert set(ret.data) == exp
+    for id_ in exp:
+        assert ret.data[id_] is True

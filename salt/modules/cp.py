@@ -20,6 +20,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
+from salt.loader.dunder import __file_client__
 
 log = logging.getLogger(__name__)
 
@@ -159,8 +160,13 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
 
 def _client():
     """
-    Return a client, hashed by the list of masters
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
     """
+    if __file_client__:
+        return __file_client__.value()
     return salt.fileclient.get_file_client(__opts__)
 
 
@@ -176,7 +182,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine {}".format(template)
+            f"Attempted to render file paths with unavailable engine {template}"
         )
 
     kwargs = {}

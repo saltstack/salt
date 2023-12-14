@@ -2097,9 +2097,11 @@ def _os_release_quirks_for_osrelease(os_release):
     if os_release["ID"] in ("mendel",):
         # Mendel sets VERSION_CODENAME but not VERSION_ID.
         # Only PRETTY_NAME mentions the version number.
-        match = _PRETTY_NAME_RE.match(os_release["PRETTY_NAME"])
-        if match:
-            return match.group("version")
+        # for example: Mendel GNU/Linux 5 (Eagle)
+        test_strg = os_release["PRETTY_NAME"].split()
+        if len(test_strg) >= 3:
+            return test_strg[2]
+
     return None
 
 
@@ -2166,8 +2168,9 @@ def _linux_distribution_data():
             "rocky",
             "ubuntu",
         ):
-            # Solely use os-release data. See description of the function.
-            return grains
+            if lsb_has_error is False:
+                # Solely use os-release data. See description of the function.
+                return grains
 
     except OSError:
         os_release = {}
@@ -2221,6 +2224,10 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
                             cpe.get("version") and cpe.get("vendor") == "opensuse"
                         ):  # Keep VERSION_ID for SLES
                             grains["lsb_distrib_release"] = cpe["version"]
+                if "ID" in os_release and os_release["ID"].strip() == "mendel":
+                    test_strg = os_release["PRETTY_NAME"].split()
+                    if len(test_strg) >= 3:
+                        grains["lsb_distrib_release"] = test_strg[2]
 
             elif os.path.isfile("/etc/SuSE-release"):
                 log.trace("Parsing distrib info from /etc/SuSE-release")
@@ -2338,6 +2345,20 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         ):
             grains.pop("lsb_distrib_release", None)
         grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
+
+    # allow for codename being within brackets on certain OS
+    if grains.get("lsb_distrib_codename", "") and (
+        any(os in grains.get("os", "") for os in ["Rocky", "AlmaLinux", "AstraLinuxSE"])
+    ):
+        test_strg = grains["lsb_distrib_codename"].split("(", maxsplit=1)
+        if len(test_strg) >= 2:
+            test_strg_2 = test_strg[1].split(")", maxsplit=1)
+            if grains["os"] == "AstraLinuxSE":
+                # AstraLinuxSE has version aka 'Smolensk 1.6'
+                grains["lsb_distrib_codename"] = test_strg_2[0].split()[0].lower()
+            else:
+                grains["lsb_distrib_codename"] = test_strg_2[0]
+
     grains["oscodename"] = grains.get("lsb_distrib_codename", "").strip() or oscodename
     if "Red Hat" in grains["oscodename"]:
         grains["oscodename"] = oscodename

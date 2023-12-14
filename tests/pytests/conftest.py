@@ -24,6 +24,7 @@ from saltfactories.utils import random_string
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
@@ -187,7 +188,10 @@ def salt_master_factory(
         os.path.join(RUNTIME_VARS.FILES, "returners")
     )
     config_defaults["event_return"] = "runtests_noop"
-    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
+    config_overrides = {
+        "pytest-master": {"log": {"level": "DEBUG"}},
+        "fips_mode": FIPS_TESTRUN,
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -316,6 +320,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -346,6 +351,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
