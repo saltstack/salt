@@ -31,7 +31,7 @@ from saltfactories.utils import cli_scripts
 
 import salt.utils.files
 from tests.conftest import CODE_DIR
-from tests.support.pytest.helpers import TestAccount
+from tests.support.pytest.helpers import TestAccount, download_file
 
 ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 
@@ -1494,15 +1494,3 @@ class ApiRequest:
 
     def __exit__(self, *args):
         self.session.__exit__(*args)
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
