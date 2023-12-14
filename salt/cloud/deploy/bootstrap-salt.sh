@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2023.07.25"
+__ScriptVersion="2023.11.07"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -1523,7 +1523,7 @@ __check_dpkg_architecture() {
             else
                 # Saltstack official repository has arm64 metadata beginning with Debian 11,
                 # use amd64 repositories on arm64 for anything older, since all pkgs are arch-independent
-                if [ "$DISTRO_NAME_L" = "debian" ] || [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
+                if [ "$DISTRO_NAME_L" = "debian" ] && [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
                   __REPO_ARCH="amd64"
                 else
                   __REPO_ARCH="arm64"
@@ -1708,6 +1708,14 @@ __debian_codename_translation() {
             ;;
         "11")
             DISTRO_CODENAME="bullseye"
+            ;;
+        "12")
+            DISTRO_CODENAME="bookworm"
+            # FIXME - TEMPORARY
+            # use bullseye packages until bookworm packages are available
+            DISTRO_CODENAME="bullseye"
+            DISTRO_MAJOR_VERSION=11
+            rv=11
             ;;
         *)
             DISTRO_CODENAME="stretch"
@@ -2196,7 +2204,7 @@ __dnf_install_noinput() {
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __tdnf_install_noinput
-#   DESCRIPTION:  (DRY) dnf install with noinput options
+#   DESCRIPTION:  (DRY) tdnf install with noinput options
 #----------------------------------------------------------------------------------------------------------------------
 __tdnf_install_noinput() {
 
@@ -7033,15 +7041,17 @@ install_photon_git_deps() {
                 "${__python}" -m pip install "${dep}" || return 1
             done
     else
-        __PACKAGES="python${PY_PKG_VER}-devel python${PY_PKG_VER}-pip python${PY_PKG_VER}-setuptools gcc"
+        __PACKAGES="python${PY_PKG_VER}-devel python${PY_PKG_VER}-pip python${PY_PKG_VER}-setuptools gcc glibc-devel linux-devel.x86_64"
         # shellcheck disable=SC2086
         __tdnf_install_noinput ${__PACKAGES} || return 1
     fi
 
-    # Need newer version of setuptools on Photon
-    _setuptools_dep="setuptools>=${_MINIMUM_SETUPTOOLS_VERSION}"
-    echodebug "Running '${_PY_EXE} -m pip --upgrade install ${_setuptools_dep}'"
-    ${_PY_EXE} -m pip install --upgrade "${_setuptools_dep}"
+    if [ "${DISTRO_MAJOR_VERSION}" -gt 3 ]; then
+      # Need newer version of setuptools on Photon
+      _setuptools_dep="setuptools>=${_MINIMUM_SETUPTOOLS_VERSION}"
+      echodebug "Running '${_PY_EXE} -m pip --upgrade install ${_setuptools_dep}'"
+      ${_PY_EXE} -m pip install --upgrade "${_setuptools_dep}"
+    fi
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then

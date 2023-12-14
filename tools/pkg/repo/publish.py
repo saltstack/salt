@@ -10,12 +10,13 @@ import logging
 import os
 import pathlib
 import re
-import sys
 import tempfile
 import textwrap
 from typing import TYPE_CHECKING, Any
 
+import boto3
 import packaging.version
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.pkg
@@ -23,18 +24,6 @@ import tools.utils
 import tools.utils.repo
 from tools.utils import Version, get_salt_releases, parse_versions
 from tools.utils.repo import create_full_repo_path, get_repo_json_file_contents
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -467,7 +456,12 @@ def github(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
-    releases = get_salt_releases(ctx, repository)
+    try:
+        releases = get_salt_releases(ctx, repository)
+    except SystemExit:
+        ctx.warn(f"Failed to get salt releases from repository '{repository}'")
+        releases = get_salt_releases(ctx, "saltstack/salt")
+
     if Version(salt_version) >= releases[-1]:
         make_latest = True
     else:

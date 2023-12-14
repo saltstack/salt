@@ -14,6 +14,17 @@ Ensure a Linux ACL is present
          - acl_name: damian
          - perms: rwx
 
+Ensure a Linux ACL is present as a default for all new objects
+
+.. code-block:: yaml
+
+     root:
+       acl.present:
+         - name: /root
+         - acl_type: "default:user"
+         - acl_name: damian
+         - perms: rwx
+
 Ensure a Linux ACL does not exist
 
 .. code-block:: yaml

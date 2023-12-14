@@ -127,7 +127,7 @@ class SaltCacheLoader(BaseLoader):
         the importing file.
 
         """
-        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        # FIXME: somewhere do separator replacement: '\\' => '/'
         _template = template
         if template.split("/", 1)[0] in ("..", "."):
             is_relative = True
@@ -136,7 +136,6 @@ class SaltCacheLoader(BaseLoader):
         # checks for relative '..' paths that step-out of file_roots
         if is_relative:
             # Starts with a relative path indicator
-
             if not environment or "tpldir" not in environment.globals:
                 log.warning(
                     'Relative path "%s" cannot be resolved without an environment',

@@ -7,17 +7,13 @@ pytestmark = [
 ]
 
 
-def test_system_config(salt_cli, salt_minion):
+@pytest.mark.usefixtures("salt_minion")
+def test_system_config(grains):
     """
     Test system config
     """
-    get_family = salt_cli.run("grains.get", "os_family", minion_tgt=salt_minion.id)
-    assert get_family.returncode == 0
-    get_finger = salt_cli.run("grains.get", "osfinger", minion_tgt=salt_minion.id)
-    assert get_finger.returncode == 0
-
-    if get_family.data == "RedHat":
-        if get_finger.data in (
+    if grains["os_family"] == "RedHat":
+        if grains["osfinger"] in (
             "CentOS Stream-8",
             "CentOS Linux-8",
             "CentOS Stream-9",
@@ -25,25 +21,22 @@ def test_system_config(salt_cli, salt_minion):
             "VMware Photon OS-3",
             "VMware Photon OS-4",
             "VMware Photon OS-5",
+            "Amazon Linux-2023",
         ):
-            ret = subprocess.call(
-                "systemctl show -p ${config} salt-minion.service", shell=True
-            )
-            assert ret == 0
+            expected_retcode = 0
         else:
-            ret = subprocess.call(
-                "systemctl show -p ${config} salt-minion.service", shell=True
-            )
-            assert ret == 1
+            expected_retcode = 1
+        ret = subprocess.call(
+            "systemctl show -p ${config} salt-minion.service", shell=True
+        )
+        assert ret == expected_retcode
 
-    elif "Debian" in get_family.stdout:
-        if "Debian-9" in get_finger.stdout:
-            ret = subprocess.call(
-                "systemctl show -p ${config} salt-minion.service", shell=True
-            )
-            assert ret == 1
+    elif grains["os_family"] == "Debian":
+        if grains["osfinger"] == "Debian-9":
+            expected_retcode = 1
         else:
-            ret = subprocess.call(
-                "systemctl show -p ${config} salt-minion.service", shell=True
-            )
-            assert ret == 0
+            expected_retcode = 0
+        ret = subprocess.call(
+            "systemctl show -p ${config} salt-minion.service", shell=True
+        )
+        assert ret == expected_retcode
