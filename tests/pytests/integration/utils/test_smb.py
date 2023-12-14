@@ -133,6 +133,7 @@ def smb_dict(tmp_path):
         for file_dgm in pathlib.Path(samba_dir).iterdir():
             log.warning(f"DGM walking samba_dir, file '{file_dgm}'")
             if os.path.basename(str(file_dgm)) == "smbd.pid":
+                log.warning(f"DGM walking samba_dir found smbd.pid, file '{file_dgm}'")
                 assert "1" == "2"
 
         assert pidfile.exists()
