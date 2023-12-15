@@ -256,9 +256,6 @@ def setup_redhat_family(
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
 
-    if os_name == "photon":
-        os_version = f"{os_version}.0"
-
     if repo_subpath == "minor":
         repo_url_base = (
             f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
