@@ -139,6 +139,22 @@ repos:
           - filemap
           - check
 
+      - id: tools
+        alias: ast-checks
+        name: Run AST Checks On Code
+        types:
+          - python
+        exclude: >
+          (?x)^(
+            templates/.*|
+            salt/ext/.*|
+            tests/kitchen/.*
+          )$
+        args:
+          - pre-commit
+          - ast
+          - check
+
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
