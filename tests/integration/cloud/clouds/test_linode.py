@@ -30,3 +30,6 @@ class LinodeTest(CloudTest):
 
     def test_instance(self):
         return self._test_instance("linode-test")
+
+    def test_instance_with_backup(self):
+        return self._test_instance("linode-test-with-backup")
