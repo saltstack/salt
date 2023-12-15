@@ -526,6 +526,24 @@ class LinodeAPIv4(LinodeAPI):
             ret[instance_type["id"]] = instance_type
         return ret
 
+    def set_backup_schedule(self, label, linode_id, day, window, auto_enable=False):
+        instance = self.get_linode(kwargs={"linode_id": linode_id, "name": label})
+        linode_id = instance.get("id", None)
+
+        if auto_enable:
+            backups = instance.get("backups")
+            if backups and not backups.get("enabled"):
+                self._query(
+                    f"/linode/instances/{linode_id}/backups/enable",
+                    method="POST",
+                )
+
+        self._query(
+            f"/linode/instances/{linode_id}",
+            method="PUT",
+            data={"backups": {"schedule": {"day": day, "window": window}}},
+        )
+
     def boot(self, name=None, kwargs=None):
         instance = self.get_linode(
             kwargs={"linode_id": kwargs.get("linode_id", None), "name": name}
@@ -1099,6 +1117,96 @@ def avail_sizes(call=None):
             "The avail_locations function must be called with -f or --function."
         )
     return LinodeAPIv4.get_api_instance().avail_sizes()
+
+
+def set_backup_schedule(name=None, kwargs=None, call=None):
+    """
+    Set the backup schedule for a Linode.
+
+    name
+        The name (label) of the Linode. Can be used instead of
+        ``linode_id``.
+
+    linode_id
+        The ID of the Linode instance to set the backup schedule for.
+        If provided, will be used as an alternative to ``name`` and
+        reduces the number of API calls to Linode by one. Will be
+        preferred over ``name``.
+
+    auto_enable
+        If ``True``, automatically enable the backup feature for the Linode
+        if it wasn't already enabled. Optional parameter, default to ``False``.
+
+    day
+        Possible values:
+        ``Sunday``, ``Monday``, ``Tuesday``, ``Wednesday``,
+        ``Thursday``, ``Friday``, ``Saturday``
+
+        The day of the week that your Linode's weekly Backup is taken.
+        If not set manually, a day will be chosen for you. Backups are
+        taken every day, but backups taken on this day are preferred
+        when selecting backups to retain for a longer period.
+
+        If not set manually, then when backups are initially enabled,
+        this may come back as ``Scheduling`` until the day is automatically
+        selected.
+
+    window
+        Possible values:
+        ``W0``, ``W2``, ``W4``, ``W6``, ``W8``, ``W10``,
+        ``W12``, ``W14``, ``W16``, ``W18``, ``W20``, ``W22``
+
+        The window in which your backups will be taken, in UTC. A backups
+        window is a two-hour span of time in which the backup may occur.
+
+        For example, ``W10`` indicates that your backups should be taken
+        between 10:00 and 12:00. If you do not choose a backup window, one
+        will be selected for you automatically.
+
+        If not set manually, when backups are initially enabled this may come
+        back as ``Scheduling`` until the window is automatically selected.
+
+    Can be called as an action (which requires a name):
+
+    .. code-block:: bash
+
+        salt-cloud -a set_backup_schedule my-linode-instance day=Monday window=W20 auto_enable=True
+
+    ...or as a function (which requires either a name or linode_id):
+
+    .. code-block:: bash
+
+        salt-cloud -f set_backup_schedule my-linode-provider name=my-linode-instance day=Monday window=W20 auto_enable=True
+        salt-cloud -f set_backup_schedule my-linode-provider linode_id=1225876 day=Monday window=W20 auto_enable=True
+    """
+    if name is None and call == "action":
+        raise SaltCloudSystemExit(
+            "The set_backup_schedule backup schedule "
+            "action requires the name of the Linode.",
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    if call == "function":
+        name = kwargs.get("name", None)
+    linode_id = kwargs.get("linode_id")
+
+    auto_enable = str(kwargs.get("auto_enable")).lower() == "true"
+
+    if name is None and linode_id is None:
+        raise SaltCloudSystemExit(
+            "The set_backup_schedule function requires "
+            "either a 'name' or a 'linode_id'."
+        )
+
+    return LinodeAPIv4.get_api_instance().set_backup_schedule(
+        day=kwargs.get("day"),
+        window=kwargs.get("window"),
+        label=name,
+        linode_id=linode_id,
+        auto_enable=auto_enable,
+    )
 
 
 def boot(name=None, kwargs=None, call=None):
