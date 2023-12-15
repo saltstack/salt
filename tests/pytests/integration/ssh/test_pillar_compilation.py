@@ -214,15 +214,19 @@ def test_gpg_pillar(salt_ssh_cli):
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
-    assert "secrets" in ret.data
-    assert "foo" in ret.data["secrets"]
-    assert "BEGIN PGP MESSAGE" not in ret.data["secrets"]["foo"]
-    assert ret.data["secrets"]["foo"] == "supersecret"
-    assert "_errors" not in ret.data
+    _assert_gpg_pillar(ret.data)
+
+
+def _assert_gpg_pillar(ret):
+    assert "secrets" in ret
+    assert "foo" in ret["secrets"]
+    assert "BEGIN PGP MESSAGE" not in ret["secrets"]["foo"]
+    assert ret["secrets"]["foo"] == "supersecret"
+    assert "_errors" not in ret
 
 
 @pytest.mark.usefixtures("pillar_setup")
-def test_saltutil_runner(salt_ssh_cli, salt_minion, salt_run_cli):
+def test_saltutil_runner(salt_ssh_cli, salt_minion):
     """
     Ensure that during pillar compilation, the cache dir is not
     overridden. For a history, see PR #50489 and issue #36796,
@@ -233,9 +237,66 @@ def test_saltutil_runner(salt_ssh_cli, salt_minion, salt_run_cli):
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
-    assert "saltutil" in ret.data
-    assert isinstance(ret.data["saltutil"], dict)
-    assert ret.data["saltutil"]
-    assert salt_minion.id in ret.data["saltutil"]
-    assert ret.data["saltutil"][salt_minion.id] is True
-    assert "_errors" not in ret.data
+    _assert_saltutil_runner_pillar(ret.data, salt_minion.id)
+
+
+def _assert_saltutil_runner_pillar(ret, salt_minion_id):
+    assert "saltutil" in ret
+    assert isinstance(ret["saltutil"], dict)
+    assert ret["saltutil"]
+    assert salt_minion_id in ret["saltutil"]
+    assert ret["saltutil"][salt_minion_id] is True
+    assert "_errors" not in ret
+
+
+@pytest.mark.skip_if_binaries_missing("gpg")
+@pytest.mark.usefixtures("pillar_setup", "gpg_homedir")
+def test_gpg_pillar_orch(salt_ssh_cli, salt_run_cli, gpg_homedir):
+    """
+    Ensure that GPG-encrypted pillars can be decrypted when Salt-SSH is
+    called during an orchestration or via saltutil.cmd.
+    This is issue #65670.
+    """
+    # Use salt_run_cli since the config paths are different between
+    # test master and test minion.
+    ret = salt_run_cli.run(
+        "salt.cmd",
+        "saltutil.cmd",
+        salt_ssh_cli.target_host,
+        "pillar.items",
+        ssh=True,
+        ignore_host_keys=True,
+        roster_file=str(salt_ssh_cli.roster_file),
+        ssh_priv=str(salt_ssh_cli.client_key),
+    )
+    assert ret.returncode == 0
+    assert isinstance(ret.data, dict)
+    assert ret.data
+    _assert_gpg_pillar(ret.data[salt_ssh_cli.target_host]["return"])
+
+
+@pytest.mark.usefixtures("pillar_setup")
+def test_saltutil_runner_orch(salt_ssh_cli, salt_run_cli, salt_minion):
+    """
+    Ensure that runner calls in the pillar succeed when Salt-SSH is
+    called during an orchestration or via saltutil.cmd.
+    This is a variant of issue #65670.
+    """
+    # Use salt_run_cli since the config paths are different between
+    # test master and test minion.
+    ret = salt_run_cli.run(
+        "salt.cmd",
+        "saltutil.cmd",
+        salt_ssh_cli.target_host,
+        "pillar.items",
+        ssh=True,
+        ignore_host_keys=True,
+        roster_file=str(salt_ssh_cli.roster_file),
+        ssh_priv=str(salt_ssh_cli.client_key),
+    )
+    assert ret.returncode == 0
+    assert isinstance(ret.data, dict)
+    assert ret.data
+    _assert_saltutil_runner_pillar(
+        ret.data[salt_ssh_cli.target_host]["return"], salt_minion.id
+    )
