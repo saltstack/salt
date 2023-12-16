@@ -22,7 +22,7 @@ the ext_pillar section in the Salt master configuration.
       - vault: path=secret/salt
 
 Each key needs to have all the key-value pairs with the names you
-require. Avoid naming every key 'password' as you they will collide:
+require. Avoid naming every key 'password' as they will collide.
 
 If you want to nest results under a nesting_key name use the following format:
 
@@ -56,7 +56,7 @@ Multiple Vault sources may also be used:
       - vault: path=secret/minions/{minion}/pass
       - vault: path=secret/roles/{pillar[roles]}/pass
 
-You can also use nesting here as well.  Identical nesting keys will get merged.
+You can also use nesting here as well. Identical nesting keys will get merged.
 
 .. code-block:: yaml
 
@@ -131,6 +131,7 @@ This example takes the key value pairs returned from vault as follows:
 Using pillar values to template vault pillar paths requires them to be defined
 before the vault ext_pillar is called. Especially consider the significancy
 of :conf_master:`ext_pillar_first <ext_pillar_first>` master config setting.
+You cannot use pillar values sourced from Vault in pillar-templated policies.
 
 If a pillar pattern matches multiple paths, the results are merged according to
 the master configuration values :conf_master:`pillar_source_merging_strategy <pillar_source_merging_strategy>`
@@ -153,18 +154,12 @@ You can override the merging behavior per defined ext_pillar:
 
 import logging
 
-from requests.exceptions import HTTPError
-
 import salt.utils.dictupdate
+import salt.utils.vault as vault
+import salt.utils.vault.helpers as vhelpers
+from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
-
-
-def __virtual__():
-    """
-    This module has no external dependencies
-    """
-    return True
 
 
 def ext_pillar(
@@ -183,7 +178,6 @@ def ext_pillar(
     if extra_minion_data.get("_vault_runner_is_compiling_pillar_templates"):
         # Disable vault ext_pillar while compiling pillar for vault policy templates
         return {}
-
     comps = conf.split()
 
     paths = [comp for comp in comps if comp.startswith("path=")]
@@ -195,30 +189,20 @@ def ext_pillar(
         "pillar_source_merging_strategy", "smart"
     )
     merge_lists = merge_lists or __opts__.get("pillar_merge_lists", False)
+
     vault_pillar = {}
 
     path_pattern = paths[0].replace("path=", "")
     for path in _get_paths(path_pattern, minion_id, pillar):
         try:
-            version2 = __utils__["vault.is_v2"](path)
-            if version2["v2"]:
-                path = version2["data"]
-
-            url = "v1/{}".format(path)
-            response = __utils__["vault.make_request"]("GET", url)
-            response.raise_for_status()
-            vault_pillar_single = response.json().get("data", {})
-
-            if vault_pillar_single and version2["v2"]:
-                vault_pillar_single = vault_pillar_single["data"]
-
+            vault_pillar_single = vault.read_kv(path, __opts__, __context__)
             vault_pillar = salt.utils.dictupdate.merge(
                 vault_pillar,
                 vault_pillar_single,
                 strategy=merge_strategy,
                 merge_lists=merge_lists,
             )
-        except HTTPError:
+        except SaltException:
             log.info("Vault secret not found for: %s", path)
 
     if nesting_key:
@@ -234,12 +218,10 @@ def _get_paths(path_pattern, minion_id, pillar):
 
     paths = []
     try:
-        for expanded_pattern in __utils__["vault.expand_pattern_lists"](
-            path_pattern, **mappings
-        ):
+        for expanded_pattern in vhelpers.expand_pattern_lists(path_pattern, **mappings):
             paths.append(expanded_pattern.format(**mappings))
     except KeyError:
         log.warning("Could not resolve pillar path pattern %s", path_pattern)
 
-    log.debug(f"{minion_id} vault pillar paths: {paths}")
+    log.debug("%s vault pillar paths: %s", minion_id, paths)
     return paths
