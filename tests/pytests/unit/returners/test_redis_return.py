@@ -1,4 +1,5 @@
 import pytest
+
 import salt.returners.redis_return as redis_return
 from tests.support.helpers import patch
 
