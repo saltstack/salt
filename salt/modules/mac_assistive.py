@@ -175,22 +175,21 @@ class TccDB:
     def _check_table_digest(self):
         # This logic comes from https://github.com/jacobsalmela/tccutil which is
         # Licensed under GPL-2.0
-        with self.connection as conn:
-            cursor = conn.execute(
-                "SELECT sql FROM sqlite_master WHERE name='access' and type='table'"
-            )
-            for row in cursor.fetchall():
-                digest = hashlib.sha1(row["sql"].encode()).hexdigest()[:10]
-                if digest in ("ecc443615f", "80a4bb6912"):
-                    # Mojave and Catalina
-                    self.ge_mojave_and_catalina = True
-                elif digest in ("3d1c2a0e97", "cef70648de"):
-                    # BigSur and later
-                    self.ge_bigsur_and_later = True
-                else:
-                    raise CommandExecutionError(
-                        "TCC Database structure unknown for digest '{}'".format(digest)
-                    )
+        cursor = self.connection.execute(
+            "SELECT sql FROM sqlite_master WHERE name='access' and type='table'"
+        )
+        for row in cursor.fetchall():
+            digest = hashlib.sha1(row["sql"].encode()).hexdigest()[:10]
+            if digest in ("ecc443615f", "80a4bb6912"):
+                # Mojave and Catalina
+                self.ge_mojave_and_catalina = True
+            elif digest in ("3d1c2a0e97", "cef70648de"):
+                # BigSur and later
+                self.ge_bigsur_and_later = True
+            else:
+                raise CommandExecutionError(
+                    "TCC Database structure unknown for digest '{}'".format(digest)
+                )
 
     def _get_client_type(self, app_id):
         if app_id[0] == "/":
@@ -200,14 +199,13 @@ class TccDB:
         return 0
 
     def installed(self, app_id):
-        with self.connection as conn:
-            cursor = conn.execute(
-                "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
-                (app_id,),
-            )
-            for row in cursor.fetchall():
-                if row:
-                    return True
+        cursor = self.connection.execute(
+            "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
+            (app_id,),
+        )
+        for row in cursor.fetchall():
+            if row:
+                return True
         return False
 
     def install(self, app_id, enable=True):
@@ -234,9 +232,8 @@ class TccDB:
             #       indirect_object_identifier
             #   ),
             #   FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE ON UPDATE CASCADE);
-            with self.connection as conn:
-                conn.execute(
-                    """
+            self.connection.execute(
+                """
                     INSERT or REPLACE INTO access VALUES (
                         'kTCCServiceAccessibility',
                         ?,
@@ -253,8 +250,9 @@ class TccDB:
                         0
                     )
                     """,
-                    (app_id, client_type, auth_value),
-                )
+                (app_id, client_type, auth_value),
+            )
+            self.connection.commit()
         elif self.ge_mojave_and_catalina:
             # CREATE TABLE IF NOT EXISTS "access" (
             #   service        TEXT        NOT NULL,
@@ -276,9 +274,8 @@ class TccDB:
             #       indirect_object_identifier
             #   ),
             #   FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE ON UPDATE CASCADE);
-            with self.connection as conn:
-                conn.execute(
-                    """
+            self.connection.execute(
+                """
                     INSERT or REPLACE INTO access VALUES(
                         'kTCCServiceAccessibility',
                         ?,
@@ -294,8 +291,9 @@ class TccDB:
                         0
                     )
                     """,
-                    (app_id, client_type, auth_value),
-                )
+                (app_id, client_type, auth_value),
+            )
+            self.connection.commit()
         return True
 
     def enabled(self, app_id):
@@ -303,14 +301,13 @@ class TccDB:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"
-        with self.connection as conn:
-            cursor = conn.execute(
-                "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
-                (app_id,),
-            )
-            for row in cursor.fetchall():
-                if row[column]:
-                    return True
+        cursor = self.connection.execute(
+            "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
+            (app_id,),
+        )
+        for row in cursor.fetchall():
+            if row[column]:
+                return True
         return False
 
     def enable(self, app_id):
@@ -320,13 +317,13 @@ class TccDB:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"
-        with self.connection as conn:
-            conn.execute(
-                "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
-                    column
-                ),
-                (1, app_id),
-            )
+        self.connection.execute(
+            "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
+                column
+            ),
+            (1, app_id),
+        )
+        self.connection.commit()
         return True
 
     def disable(self, app_id):
@@ -336,23 +333,23 @@ class TccDB:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"
-        with self.connection as conn:
-            conn.execute(
-                "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
-                    column
-                ),
-                (0, app_id),
-            )
+        self.connection.execute(
+            "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
+                column
+            ),
+            (0, app_id),
+        )
+        self.connection.commit()
         return True
 
     def remove(self, app_id):
         if not self.installed(app_id):
             return False
-        with self.connection as conn:
-            conn.execute(
-                "DELETE from access where client IS ? AND service IS 'kTCCServiceAccessibility'",
-                (app_id,),
-            )
+        self.connection.execute(
+            "DELETE from access where client IS ? AND service IS 'kTCCServiceAccessibility'",
+            (app_id,),
+        )
+        self.connection.commit()
         return True
 
     def __enter__(self):
