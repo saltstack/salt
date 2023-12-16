@@ -159,6 +159,7 @@ extensions = [
     "saltrepo",
     "myst_parser",
     "sphinxcontrib.spelling",
+    "vaultpolicylexer",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
