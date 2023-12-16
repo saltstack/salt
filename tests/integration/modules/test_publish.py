@@ -44,7 +44,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(name in ret)
 
         self.assertEqual(ret["cheese"], "spam")
-        self.assertEqual(ret["__pub_arg"], [{"cheese": "spam"}])
+        self.assertEqual(ret["__pub_arg"], [{"__kwarg__": True, "cheese": "spam"}])
         self.assertEqual(ret["__pub_id"], "minion")
         self.assertEqual(ret["__pub_fun"], "test.kwarg")
 
@@ -125,7 +125,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(name in ret)
 
         self.assertEqual(ret["cheese"], "spam")
-        self.assertEqual(ret["__pub_arg"], [{"cheese": "spam"}])
+        self.assertEqual(ret["__pub_arg"], [{"__kwarg__": True, "cheese": "spam"}])
         self.assertEqual(ret["__pub_id"], "minion")
         self.assertEqual(ret["__pub_fun"], "test.kwarg")
 

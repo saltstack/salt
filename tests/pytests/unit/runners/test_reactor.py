@@ -14,6 +14,10 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 class MockEvent:
     """

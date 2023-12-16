@@ -1212,6 +1212,7 @@ def test_get_pillar_errors(pillar: PillarPair, expected_errors):
         )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_event():
     """
     test state.event runner

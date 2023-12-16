@@ -721,6 +721,7 @@ def _check_directory(
     exclude_pat=None,
     max_depth=None,
     follow_symlinks=False,
+    children_only=False,
 ):
     """
     Check what changes need to be made on a directory
@@ -792,10 +793,12 @@ def _check_directory(
                     )
                     if fchange:
                         changes[path] = fchange
-    # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    # Recurse skips root (we always do dirs, not root), so check root unless
+    # children_only is specified:
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -1542,6 +1545,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
+    follow_symlinks=True,
     **kwargs,
 ):
     """
@@ -1647,12 +1651,24 @@ def symlink(
         override this behavior.
 
         .. versionadded:: 3006.0
+
+    follow_symlinks (bool):
+        If set to ``False``, the underlying ``file.symlink`` execution module
+        and any checks in this state will use ``os.path.lexists()`` for
+        existence checks instead of ``os.path.exists()``.
+
+        .. versionadded:: 3007.0
     """
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not name:
         return _error(ret, "Must provide name to file.symlink")
+
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
@@ -1834,7 +1850,7 @@ def symlink(
                         )
             return ret
 
-    elif os.path.exists(name):
+    elif exists(name):
         # It is not a link, but a file, dir, socket, FIFO etc.
         if backupname is not None:
             if not os.path.isabs(backupname):
@@ -1892,7 +1908,9 @@ def symlink(
             )
 
     try:
-        __salt__["file.symlink"](target, name, force=force, atomic=atomic)
+        __salt__["file.symlink"](
+            target, name, force=force, atomic=atomic, follow_symlinks=follow_symlinks
+        )
     except (CommandExecutionError, OSError) as exc:
         ret["result"] = False
         ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
@@ -2297,6 +2315,12 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
     **kwargs,
 ):
     r"""
@@ -2650,6 +2674,11 @@ def managed(
             be used instead. However, this will not work for binary files in
             Salt releases before 2015.8.4.
 
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
+
     contents_grains
         .. versionadded:: 2014.7.0
 
@@ -2888,6 +2917,68 @@ def managed(
         the ``source_hash`` parameter.
 
         .. versionadded:: 3005
+
+    signature
+        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Set this to true for inline signatures, or to a file URI retrievable
+        by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature is only enforced directly after caching the file,
+            before it is moved to its final destination. Existing target files
+            (with the correct checksum) will neither be checked nor deleted.
+
+            It will be enforced regardless of source type and will be
+            required on the final output, therefore this does not lend itself
+            well when templates are rendered.
+            The file will not be modified, meaning inline signatures are not
+            removed.
+
+        .. versionadded:: 3007.0
+
+    source_hash_sig
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -2908,6 +2999,15 @@ def managed(
 
     if selinux is not None and not salt.utils.platform.is_linux():
         return _error(ret, "The 'selinux' option is only supported on Linux")
+
+    if signature or source_hash_sig:
+        # Fail early in case the gpg module is not present
+        try:
+            __salt__["gpg.verify"]
+        except KeyError:
+            _error(
+                ret, "Cannot verify signatures because the gpg module was not loaded"
+            )
 
     if selinux:
         seuser = selinux.get("seuser", None)
@@ -3197,6 +3297,11 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
                     **kwargs,
                 )
 
@@ -3260,6 +3365,11 @@ def managed(
             skip_verify,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            source_hash_sig=source_hash_sig,
+            signed_by_any=signed_by_any,
+            signed_by_all=signed_by_all,
+            keyring=keyring,
+            gnupghome=gnupghome,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3315,6 +3425,11 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3394,6 +3509,11 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3940,6 +4060,7 @@ def directory(
             exclude_pat,
             max_depth,
             follow_symlinks,
+            children_only,
         )
 
     if tchanges:
@@ -6156,7 +6277,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = rf"^(?!\s*{char}).*" + unanchor_regex
+    uncomment_regex = rf"^(?!\s*{char})\s*" + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
@@ -7146,8 +7267,6 @@ def patch(
         )
         return ret
 
-    options = sanitized_options
-
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
     except CommandExecutionError as exc:
@@ -7246,6 +7365,10 @@ def patch(
 
         pre_check = _patch(patch_file, patch_opts)
         if pre_check["retcode"] != 0:
+            if not os.path.exists(patch_rejects) or os.path.getsize(patch_rejects) == 0:
+                ret["comment"] = pre_check["stderr"]
+                ret["result"] = False
+                return ret
             # Try to reverse-apply hunks from rejects file using a dry-run.
             # If this returns a retcode of 0, we know that the patch was
             # already applied. Rejects are written from the base of the
@@ -7838,6 +7961,9 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
+    check_cmd=None,
+    tmp_dir="",
+    tmp_ext="",
     **kwargs,
 ):
     """
@@ -7859,6 +7985,11 @@ def serialize(
         causing indentation mismatches.
 
         .. versionadded:: 2015.8.0
+
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
 
     serializer (or formatter)
         Write the data as this format. See the list of
@@ -7987,6 +8118,52 @@ def serialize(
         which accept a callable object cannot be handled in an SLS file.
 
         .. versionadded:: 2019.2.0
+
+    check_cmd
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new file contents.  If the command
+        exits with a zero status the new file contents will be written to
+        the state output destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/consul.d/my_config.json:
+              file.serialize:
+                - dataset:
+                    datacenter: "east-aws"
+                    data_dir: "/opt/consul"
+                    log_level: "INFO"
+                    node_name: "foobar"
+                    server: true
+                    watches:
+                      - type: checks
+                        handler: "/usr/bin/health-check-handler.sh"
+                    telemetry:
+                      statsite_address: "127.0.0.1:2180"
+                - serializer: json
+                - check_cmd: consul validate
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
+
+        .. versionadded:: 3007.0
+
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. versionadded:: 3007.0
+
+    tmp_ext
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file extension.
+
+        .. versionadded:: 3007.0
 
     For example, this state:
 
@@ -8187,6 +8364,58 @@ def serialize(
             ret["result"] = True
             ret["comment"] = f"The file {name} is in the correct state"
     else:
+        if check_cmd:
+            tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
+
+            # if exists copy existing file to tmp to compare
+            if __salt__["file.file_exists"](name):
+                try:
+                    __salt__["file.copy"](name, tmp_filename)
+                except Exception as exc:  # pylint: disable=broad-except
+                    return _error(
+                        ret,
+                        f"Unable to copy file {name} to {tmp_filename}: {exc}",
+                    )
+
+            try:
+                check_ret = __salt__["file.manage_file"](
+                    name=tmp_filename,
+                    sfn="",
+                    ret=ret,
+                    source=None,
+                    source_sum={},
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    attrs=None,
+                    saltenv=__env__,
+                    backup=backup,
+                    makedirs=makedirs,
+                    template=None,
+                    show_changes=show_changes,
+                    encoding=encoding,
+                    encoding_errors=encoding_errors,
+                    contents=contents,
+                )
+
+                if check_ret["changes"]:
+                    check_cmd_opts = {}
+                    if "shell" in __grains__:
+                        check_cmd_opts["shell"] = __grains__["shell"]
+
+                    cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
+
+                    # dict return indicates check_cmd failure
+                    if isinstance(cret, dict):
+                        ret.update(cret)
+                        return ret
+
+            except Exception as exc:  # pylint: disable=broad-except
+                return _error(ret, f"Unable to check_cmd file: {exc}")
+
+            finally:
+                salt.utils.files.remove(tmp_filename)
+
         ret = __salt__["file.manage_file"](
             name=name,
             sfn="",
@@ -8398,8 +8627,8 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     """
     Execute the check_cmd logic.
 
-    Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
-    otherwise return True
+    Return True if ``check_cmd`` succeeds (check_cmd == 0)
+    otherwise return a result dict
     """
 
     log.debug("running our check_cmd")
@@ -8807,6 +9036,11 @@ def cached(
     skip_verify=False,
     saltenv="base",
     use_etag=False,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
 ):
     """
     .. versionadded:: 2017.7.3
@@ -8864,6 +9098,45 @@ def cached(
 
         .. versionadded:: 3005
 
+    source_hash_sig
+        When ``name`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying ``source_hash_sig``, require at least one valid signature
+        from one of a list of key fingerprints. This is passed to
+        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying ``source_hash_sig``, require a valid signature from each
+        of the key fingerprints in this list. This is passed to
+        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
@@ -8930,6 +9203,11 @@ def cached(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=saltenv,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror

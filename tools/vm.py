@@ -21,32 +21,21 @@ from datetime import datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
+import attr
+import boto3
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 from requests.exceptions import ConnectTimeout
+from rich.progress import (
+    BarColumn,
+    Column,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 import tools.utils
-
-try:
-    import attr
-    import boto3
-    from botocore.exceptions import ClientError
-    from rich.progress import (
-        BarColumn,
-        Column,
-        Progress,
-        TaskProgressColumn,
-        TextColumn,
-        TimeRemainingColumn,
-    )
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
-
 
 if TYPE_CHECKING:
     # pylint: disable=no-name-in-module
@@ -222,14 +211,18 @@ def ssh(ctx: Context, name: str, command: list[str], sudo: bool = False):
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "download": {
+            "help": "Rsync from the remote target to local salt checkout",
+            "action": "store_true",
+        },
     }
 )
-def rsync(ctx: Context, name: str):
+def rsync(ctx: Context, name: str, download: bool = False):
     """
     Sync local checkout to VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.upload_checkout()
+    vm.upload_checkout(download=download)
 
 
 @vm.command(
@@ -302,6 +295,7 @@ def test(
     print_system_info: bool = False,
     skip_code_coverage: bool = False,
     envvars: list[str] = None,
+    fips: bool = False,
 ):
     """
     Run test in the VM.
@@ -337,6 +331,9 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+        if fips:
+            env["FIPS_TESTRUN"] = "1"
+            vm.run(["tdnf", "install", "-y", "openssl-fips-provider"], sudo=True)
     if envvars:
         for key in envvars:
             if key not in os.environ:
@@ -544,6 +541,24 @@ def combine_coverage(ctx: Context, name: str):
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     returncode = vm.combine_coverage()
+    ctx.exit(returncode)
+
+
+@vm.command(
+    name="create-xml-coverage-reports",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+    },
+)
+def create_xml_coverage_reports(ctx: Context, name: str):
+    """
+    Create XML code coverage reports in the VM.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.create_xml_coverage_reports()
     ctx.exit(returncode)
 
 
@@ -821,11 +836,19 @@ class VM:
 
     def write_ssh_config(self):
         if self.ssh_config_file.exists():
-            return
+            if (
+                f"Hostname {self.instance.private_ip_address}"
+                in self.ssh_config_file.read_text()
+            ):
+                # If what's on config matches, then we're good
+                return
         if os.environ.get("CI") is not None:
             forward_agent = "no"
         else:
             forward_agent = "yes"
+        ciphers = ""
+        if "photonos" in self.name:
+            ciphers = "Ciphers=aes256-gcm@openssh.com,aes256-cbc,aes256-ctr,chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes128-gcm@openssh.com"
         ssh_config = textwrap.dedent(
             f"""\
             Host {self.name}
@@ -837,6 +860,8 @@ class VM:
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
               ForwardAgent={forward_agent}
+              PasswordAuthentication=no
+              {ciphers}
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -959,8 +984,7 @@ class VM:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
-            log.info("Starting Developer configured VM")
-            # Get the develpers security group
+            log.info(f"Starting Developer configured VM In Environment '{environment}'")
             security_group_filters = [
                 {
                     "Name": "vpc-id",
@@ -969,10 +993,6 @@ class VM:
                 {
                     "Name": "tag:spb:project",
                     "Values": ["salt-project"],
-                },
-                {
-                    "Name": "tag:spb:developer",
-                    "Values": ["true"],
                 },
             ]
             response = client.describe_security_groups(Filters=security_group_filters)
@@ -984,6 +1004,26 @@ class VM:
                 self.ctx.exit(1)
             # Override the launch template network interfaces config
             security_group_ids = [sg["GroupId"] for sg in response["SecurityGroups"]]
+            security_group_filters = [
+                {
+                    "Name": "vpc-id",
+                    "Values": [vpc.id],
+                },
+                {
+                    "Name": "tag:Name",
+                    "Values": [f"saltproject-{environment}-client-vpn-remote-access"],
+                },
+            ]
+            response = client.describe_security_groups(Filters=security_group_filters)
+            if not response.get("SecurityGroups"):
+                self.ctx.error(
+                    "Could not find the right VPN access security group. "
+                    f"Filters:\n{pprint.pformat(security_group_filters)}"
+                )
+                self.ctx.exit(1)
+            security_group_ids.extend(
+                [sg["GroupId"] for sg in response["SecurityGroups"]]
+            )
 
         progress = create_progress_bar()
         create_task = progress.add_task(
@@ -1128,6 +1168,7 @@ class VM:
             proc = None
             checks = 0
             last_error = None
+            connection_refused_or_reset = False
             while ssh_connection_timeout_progress <= ssh_connection_timeout:
                 start = time.time()
                 if proc is None:
@@ -1167,6 +1208,11 @@ class VM:
                         break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
+                    if connection_refused_or_reset is False and (
+                        "connection refused" in stderr.lower()
+                        or "connection reset" in stderr.lower()
+                    ):
+                        connection_refused_or_reset = True
                     if stderr:
                         stderr = f" Last Error: {stderr}"
                         last_error = stderr
@@ -1185,6 +1231,12 @@ class VM:
                     completed=ssh_connection_timeout_progress,
                     description=f"Waiting for SSH to become available at {host} ...{stderr or ''}",
                 )
+
+                if connection_refused_or_reset:
+                    # Since ssh is now running, and we're actually getting a connection
+                    # refused error message, let's try to ssh a little slower in order not
+                    # to get blocked
+                    time.sleep(10)
 
                 if checks >= 10 and proc is not None:
                     proc.kill()
@@ -1242,13 +1294,15 @@ class VM:
             shutil.rmtree(self.state_dir, ignore_errors=True)
             self.instance = None
 
-    def upload_checkout(self, verbose=True):
+    def upload_checkout(self, verbose=True, download=False):
         rsync_flags = [
             "--delete",
             "--no-group",
             "--no-owner",
             "--exclude",
             ".nox/",
+            "--exclude",
+            ".tools-venvs/",
             "--exclude",
             ".pytest_cache/",
             "--exclude",
@@ -1261,7 +1315,7 @@ class VM:
             "--include",
             "artifacts/salt",
             "--include",
-            "pkg/artifacts/*",
+            "artifacts/pkg",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
@@ -1275,14 +1329,19 @@ class VM:
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         rsync_remote_path = remote_path
-        if self.is_windows:
+        if sys.platform == "win32":
             for drive in ("c:", "C:"):
                 source = source.replace(drive, "/cygdrive/c")
-                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
             source = source.replace("\\", "/")
+        if self.is_windows:
+            for drive in ("c:", "C:"):
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
-        self.rsync(source, destination, description, rsync_flags)
+        if download:
+            self.rsync(f"{destination}/*", source, description, rsync_flags)
+        else:
+            self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
             # rsync sets very strict file permissions and disables inheritance
             # we only need to reset permissions so they inherit from the parent
@@ -1295,6 +1354,7 @@ class VM:
         if not env:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
+        write_env["TOOLS_DISTRO_SLUG"] = self.name
         write_env_filename = ".ci-env"
         write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
@@ -1396,7 +1456,13 @@ class VM:
         """
         Combine the code coverage databases
         """
-        return self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage-onedir")
+
+    def create_xml_coverage_reports(self):
+        """
+        Create XML coverage reports
+        """
+        return self.run_nox("create-xml-coverage-reports-onedir")
 
     def compress_dependencies(self):
         """
@@ -1462,16 +1528,17 @@ class VM:
             self.ctx.exit(1, "Could find the 'rsync' binary")
         if TYPE_CHECKING:
             assert rsync
+        ssh_cmd = " ".join(
+            self.ssh_command_args(
+                include_vm_target=False, log_command_level=logging.NOTSET
+            )
+        )
         cmd: list[str] = [
-            rsync,
+            f'"{rsync}"' if sys.platform == "win32" else rsync,
             "-az",
             "--info=none,progress2",
             "-e",
-            " ".join(
-                self.ssh_command_args(
-                    include_vm_target=False, log_command_level=logging.NOTSET
-                )
-            ),
+            f'"{ssh_cmd}"' if sys.platform == "win32" else ssh_cmd,
         ]
         if rsync_flags:
             cmd.extend(rsync_flags)
@@ -1484,6 +1551,8 @@ class VM:
         log.info(f"Running {' '.join(cmd)!r}")  # type: ignore[arg-type]
         progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
+        if sys.platform == "win32":
+            cmd = [" ".join(cmd)]
         with progress:
             proc = subprocess.Popen(cmd, bufsize=1, stdout=subprocess.PIPE, text=True)
             completed = 0

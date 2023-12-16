@@ -578,6 +578,9 @@ commit message, it's usually a good idea to add other information, such as
 This will also help you out, because when you go to create the PR it
 will automatically insert the body of your commit messages.
 
+See the `changelog <https://docs.saltproject.io/en/latest/topics/development/changelog.html>`__
+docs for more information.
+
 
 Pull request time!
 ------------------

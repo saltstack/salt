@@ -839,6 +839,13 @@ def installed(
             ret["comment"] = "\n".join(comments)
             return ret
 
+    # If the user does not exist, stop here with error:
+    if user and "user.info" in __salt__ and not __salt__["user.info"](user):
+        # The user does not exists, exit with result set to False
+        ret["result"] = False
+        ret["comment"] = f"User {user} does not exist"
+        return ret
+
     # If a requirements file is specified, only install the contents of the
     # requirements file. Similarly, using the --editable flag with pip should
     # also ignore the "name" and "pkgs" parameters.

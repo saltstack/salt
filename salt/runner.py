@@ -288,6 +288,9 @@ class Runner(RunnerClient):
                     return async_pub["jid"]  # return the jid
 
                 # otherwise run it in the main process
+                if self.opts.get("show_jid"):
+                    print(f"jid: {self.jid}")
+
                 if self.opts.get("eauth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:

@@ -12,7 +12,7 @@ import warnings
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-if sys.version_info < (3,):
+if sys.version_info < (3,):  # pragma: no cover
     sys.stderr.write(
         "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
     )
@@ -94,6 +94,17 @@ warnings.filterwarnings(
 warnings.filterwarnings(
     "ignore",
     message="invalid escape sequence.*",
+    category=DeprecationWarning,
+)
+
+warnings.filterwarnings(
+    "ignore",
+    "Deprecated call to `pkg_resources.declare_namespace.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    ".*pkg_resources is deprecated as an API.*",
     category=DeprecationWarning,
 )
 

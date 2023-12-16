@@ -323,6 +323,9 @@ salt/(minion\.py|channel/.+|transport/.+):
 tests/support/mock.py:
   - unit.test_mock
 
+tests/support/virt.py:
+  - pytests.integration.modules.test_virt
+
 tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
   - pytests.functional.modules.test_mysql

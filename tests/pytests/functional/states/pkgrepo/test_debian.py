@@ -673,6 +673,10 @@ class Repo:
         if (
             self.grains["osfullname"] == "Ubuntu"
             and self.grains["osrelease"] == "22.04"
+            or "Debian" in self.grains["osfullname"]
+            and self.grains["osrelease"] == "12"
+            # only need to use alt repo until
+            # we release Debian 12 salt packages
         ):
             return True
         return False
