@@ -16,13 +16,13 @@ function for backwards compatability.
 .. versionadded:: 3007.0
 
 The ``ssl`` option accepts ``verify_locations`` and ``verify_flags``. The
-``verify_locations`` option is a list of strings or ditionaries. Strings are
+``verify_locations`` option is a list of strings or dictionaries. Strings are
 passed as a single argument to the SSL context's ``load_verify_locations``
 method. Dictionaries keys are expected to be one of ``cafile``, ``capath``,
-``cadata``. For each correspoding key the key and value will be passed as a
+``cadata``. For each corresponding key, the key and value will be passed as a
 keyword argument to ``load_verify_locations``. The ``verify_flags`` options is
 a list of string names of verification flags which will be set on the SSL
-context.
+context. All paths are assumed to be the full path to the file or directory.
 
 A simple setup looks like this, on the Salt Master add the ``ssl`` option to the
 master configuration file:
