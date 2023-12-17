@@ -2476,8 +2476,8 @@ class ClearFuncs(TransportMethods):
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        await self._send_pub(payload)
 
+        await self._send_pub(payload)
         return {
             "enc": "clear",
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},

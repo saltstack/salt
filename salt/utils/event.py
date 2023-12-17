@@ -706,8 +706,7 @@ class SaltEvent:
                 continue
             yield data
 
-    @tornado.gen.coroutine
-    def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
