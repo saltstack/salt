@@ -37,7 +37,7 @@ def __virtual__():
     return __virtualname__
 
 
-def install(app_id, enable=True):
+def install(app_id, enable=True, tries=3, wait=10):
     """
     Install a bundle ID or command as being allowed to use
     assistive access.
@@ -48,6 +48,12 @@ def install(app_id, enable=True):
     enabled
         Sets enabled or disabled status. Default is ``True``.
 
+    tries
+        How many times to try and write to a read-only tcc. Default is ``True``.
+
+    wait
+        Number of seconds to wait between tries. Default is ``10``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -55,15 +61,19 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     """
-    tries = 1
+    num_tries = 1
     while True:
         with TccDB() as db:
             try:
                 return db.install(app_id, enable=enable)
             except sqlite3.Error as exc:
-                if tries <= 2:
-                    time.sleep(10)
-                    tries += 1
+                if "attempt to write a readonly database" not in str(exc):
+                    raise CommandExecutionError(
+                        "Error installing app({}): {}".format(app_id, exc)
+                    )
+                elif num_tries < tries:
+                    time.sleep(wait)
+                    num_tries += 1
                 else:
                     raise CommandExecutionError(
                         "Error installing app({}): {}".format(app_id, exc)
