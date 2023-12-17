@@ -11,6 +11,7 @@ This module allows you to manage assistive access on macOS minions with 10.9+
 import hashlib
 import logging
 import sqlite3
+import time
 
 import salt.utils.platform
 import salt.utils.stringutils
@@ -54,7 +55,7 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     """
-    tires = 1
+    tries = 1
     while True:
         with TccDB() as db:
             try:
@@ -62,6 +63,7 @@ def install(app_id, enable=True):
             except sqlite3.Error as exc:
                 if tries <= 2:
                     time.sleep(10)
+                    tries += 1
                 else:
                     raise CommandExecutionError(
                         "Error installing app({}): {}".format(app_id, exc)
