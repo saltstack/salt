@@ -54,13 +54,18 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     """
-    with TccDB() as db:
-        try:
-            return db.install(app_id, enable=enable)
-        except sqlite3.Error as exc:
-            raise CommandExecutionError(
-                "Error installing app({}): {}".format(app_id, exc)
-            )
+    tires = 1
+    while True:
+        with TccDB() as db:
+            try:
+                return db.install(app_id, enable=enable)
+            except sqlite3.Error as exc:
+                if tries <= 2:
+                    time.sleep(10)
+                else:
+                    raise CommandExecutionError(
+                        "Error installing app({}): {}".format(app_id, exc)
+                    )
 
 
 def installed(app_id):
