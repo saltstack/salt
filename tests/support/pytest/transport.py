@@ -312,6 +312,8 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             if self.collector.stop_running.wait(1) is True:
                 break
             attempts -= 1
+        else:
+            pytest.fail("Failed to confirm the collector has stopped")
         # Now trigger the collector to also exit
         self.collector.__exit__(*args)
         # We can safely wait here without a timeout because the Collector instance has a
