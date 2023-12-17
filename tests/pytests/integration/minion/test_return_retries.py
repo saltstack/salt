@@ -64,6 +64,7 @@ def test_pillar_timeout(salt_master_factory):
         "auto_accept": True,
         "worker_threads": 2,
         "peer": True,
+        "minion_data_cache": False,
     }
     minion_overrides = {
         "auth_timeout": 20,
@@ -77,7 +78,7 @@ def test_pillar_timeout(salt_master_factory):
         - name: example
         - changes: True
         - result: True
-        - comment: "Nothing has actually been changed"
+        - comment: "Nothing has actually been changed {{ pillar['foo'] }}"
     """
     master = salt_master_factory.salt_master_daemon(
         "pillar-timeout-master",
@@ -105,6 +106,7 @@ def test_pillar_timeout(salt_master_factory):
     )
     with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
         proc = cli.run("state.sls", sls_name, minion_tgt="*")
+        print(proc)
         # At least one minion should have a Pillar timeout
         assert proc.returncode == 1
         minion_timed_out = False
