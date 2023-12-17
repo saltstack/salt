@@ -165,7 +165,7 @@ def delete(login):
     """
     if login in list_users(False):
         res = __salt__["cmd.run_all"](
-            "pdbedit --delete {login}".format(login=shlex.quote(login)),
+            f"pdbedit --delete {shlex.quote(login)}",
         )
 
         if res["retcode"] > 0:
@@ -406,6 +406,3 @@ def modify(
             ret = "updated"
 
     return {login: ret}
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

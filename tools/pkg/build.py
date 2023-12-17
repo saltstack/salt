@@ -94,8 +94,13 @@ def debian(
             os.environ[key] = value
             env_args.extend(["-e", key])
 
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", *env_args, "-uc", "-us")
+    ctx.run("debuild", *env_args, "-uc", "-us", env=env)
 
     ctx.info("Done")
 
@@ -160,8 +165,14 @@ def rpm(
         for key, value in new_env.items():
             os.environ[key] = value
 
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
-    ctx.run("rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file))
+    ctx.run(
+        "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
+    )
 
     ctx.info("Done")
 
@@ -472,6 +483,9 @@ def onedir_dependencies(
         assert package_name is not None
         assert platform is not None
 
+    if platform in ("macos", "darwin") and arch == "aarch64":
+        arch = "arm64"
+
     shared_constants = _get_shared_constants()
     if not python_version:
         python_version = shared_constants["python_version"]
@@ -549,29 +563,19 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
     ctx.run(
         str(python_bin),
         "-m",
         "pip",
         "install",
         "-U",
+        "setuptools",
+        "pip",
         "wheel",
-    )
-    ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
-        "install",
-        "-U",
-        "pip>=22.3.1,<23.0",
-    )
-    ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
-        "install",
-        "-U",
-        "setuptools>=65.6.3,<66",
+        env=env,
     )
     ctx.run(
         str(python_bin),
@@ -747,6 +751,10 @@ def salt_onedir(
         dst = pathlib.Path(site_packages) / fname
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
+
+    # Add package type file for package grain
+    with open(pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w") as fp:
+        fp.write("onedir")
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):

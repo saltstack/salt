@@ -16,6 +16,13 @@ Docker Containers
 The Salt Project uses docker containers to build our deb and rpm packages. If you are building your own packages you can use
 the same containers we build with in the Github piplines. These containers are documented `here <https://github.com/saltstack/salt-ci-containers/tree/main/custom/packaging>`_.
 
+Package Grain
+=============
+In the 3007.0 release a new package grain was added. This detects how Salt was installed using the `_pkg.txt`
+in the root of the Salt repo. By default this is set to ``pip``, but it is set to ``onedir`` when ``tools pkg build salt-onedir``
+is run in our pipelines when building our onedir packages. If you are building your own custom packages, please ensure you set
+``_pkg.txt`` contents to be the type of package you are creating. The options are ``pip``, ``onedir`` or ``system``.
+
 
 How to build onedir only
 ========================
@@ -190,3 +197,12 @@ How to access python binary
 
 The python library is available in the install directory of the onedir package. For example
 on linux the default location would be ``/opt/saltstack/salt/bin/python3``.
+
+Testing the packages
+====================
+
+If you want to test your built packages, or any other collection of salt packages post 3006.0, follow :ref:`this guide <pkging-testing>`
+
+.. toctree::
+
+     testing

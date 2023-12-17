@@ -37,6 +37,7 @@ def test_saltutil_sync_all_nochange():
         "matchers": [],
         "serializers": [],
         "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {
@@ -73,6 +74,7 @@ def test_saltutil_sync_all_test():
         "matchers": [],
         "serializers": [],
         "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {
@@ -110,6 +112,7 @@ def test_saltutil_sync_all_change():
         "matchers": [],
         "serializers": [],
         "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {

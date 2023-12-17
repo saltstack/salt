@@ -4,6 +4,7 @@ case "$1" in
     [ -z "$SALT_USER" ] && SALT_USER=salt
     [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
     [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
+    [ -z "$SALT_SHELL" ] && SALT_SHELL=/usr/sbin/nologin
 
     # create user to avoid running server as root
     # 1. create group if not existing
@@ -19,7 +20,7 @@ case "$1" in
       echo -n "Adding system user $SALT_USER.."
       useradd --system \
               --no-create-home \
-              -s /sbin/nologin \
+              -s $SALT_SHELL \
               -g $SALT_GROUP \
               $SALT_USER 2>/dev/null || true
       echo "..done"
@@ -27,13 +28,12 @@ case "$1" in
     # 4. adjust passwd entry
     usermod -c "$SALT_NAME" \
             -d $SALT_HOME   \
+            -s $SALT_SHELL  \
             -g $SALT_GROUP  \
              $SALT_USER
-    # 5. adjust file and directory permissions
-    if ! dpkg-statoverride --list $SALT_HOME >/dev/null
-    then
-        chown -R $SALT_USER:$SALT_GROUP $SALT_HOME
-        chmod u=rwx,g=rwx,o=rx $SALT_HOME
-    fi
+
+    # Remove incorrectly installed logrotate config - issue 65231
+    test -d /etc/logrotate.d/salt && rm -r /etc/logrotate.d/salt || /bin/true
+
   ;;
 esac

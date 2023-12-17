@@ -35,7 +35,6 @@ will set the desired branch method. Possible values are: ``branches``,
             - python bindings for mercurial (``python-hglib``)
 """
 
-
 import copy
 import errno
 import fnmatch
@@ -54,6 +53,7 @@ import salt.utils.hashutils
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
@@ -239,7 +239,7 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_OVERRIDES:
-        per_remote_defaults[param] = str(__opts__["hgfs_{}".format(param)])
+        per_remote_defaults[param] = str(__opts__[f"hgfs_{param}"])
 
     for remote in __opts__["hgfs_remotes"]:
         repo_conf = copy.deepcopy(per_remote_defaults)
@@ -308,7 +308,7 @@ def init():
             # mountpoint not specified
             pass
 
-        hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
+        hash_type = getattr(hashlib, __opts__.get("hash_type", DEFAULT_HASH_TYPE))
         repo_hash = hash_type(repo_url.encode("utf-8")).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
@@ -355,7 +355,7 @@ def init():
                 with salt.utils.files.fopen(hgconfpath, "w+") as hgconfig:
                     hgconfig.write("[paths]\n")
                     hgconfig.write(
-                        salt.utils.stringutils.to_str("default = {}\n".format(repo_url))
+                        salt.utils.stringutils.to_str(f"default = {repo_url}\n")
                     )
 
             repo_conf.update(
@@ -365,7 +365,7 @@ def init():
                     "hash": repo_hash,
                     "cachedir": rp_,
                     "lockfile": os.path.join(
-                        __opts__["cachedir"], "hgfs", "{}.update.lk".format(repo_hash)
+                        __opts__["cachedir"], "hgfs", f"{repo_hash}.update.lk"
                     ),
                 }
             )
@@ -379,7 +379,7 @@ def init():
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# hgfs_remote map as of {}\n".format(timestamp))
+                fp_.write(f"# hgfs_remote map as of {timestamp}\n")
                 for repo in repos:
                     fp_.write(
                         salt.utils.stringutils.to_str(
@@ -444,7 +444,7 @@ def clear_cache():
             try:
                 shutil.rmtree(rdir)
             except OSError as exc:
-                errors.append("Unable to delete {}: {}".format(rdir, exc))
+                errors.append(f"Unable to delete {rdir}: {exc}")
     return errors
 
 
@@ -694,14 +694,12 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
 
     dest = os.path.join(__opts__["cachedir"], "hgfs/refs", tgt_env, path)
     hashes_glob = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.hash.*".format(path)
+        __opts__["cachedir"], "hgfs/hash", tgt_env, f"{path}.hash.*"
     )
     blobshadest = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.hash.blob_sha1".format(path)
+        __opts__["cachedir"], "hgfs/hash", tgt_env, f"{path}.hash.blob_sha1"
     )
-    lk_fn = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.lk".format(path)
-    )
+    lk_fn = os.path.join(__opts__["cachedir"], "hgfs/hash", tgt_env, f"{path}.lk")
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
     if not os.path.isdir(destdir):
@@ -746,7 +744,7 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
                         return fnd
             try:
                 repo["repo"].cat(
-                    [salt.utils.stringutils.to_bytes("path:{}".format(repo_path))],
+                    [salt.utils.stringutils.to_bytes(f"path:{repo_path}")],
                     rev=ref[2],
                     output=dest,
                 )

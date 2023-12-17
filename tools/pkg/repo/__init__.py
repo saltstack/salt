@@ -8,26 +8,15 @@ import logging
 import os
 import pathlib
 import shutil
-import sys
 from typing import TYPE_CHECKING
 
+import boto3
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
 from tools.utils import Version, get_salt_releases
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +80,7 @@ def _rclone(ctx: Context, src: str, dst: str):
         "--transfers=50",
         "--fast-list",
         "--verbose",
+        "--exclude=salt-dev/*",
     ]
     if src == tools.utils.RELEASE_BUCKET_NAME:
         cmdline.append("--s3-storage-class=INTELLIGENT_TIERING")

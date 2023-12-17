@@ -11,7 +11,6 @@ def pillar_tree(salt_master, salt_minion):
         salt_minion.id
     )
     sdb_pillar_file = """
-    test_vault_pillar_sdb: sdb://sdbvault/secret/test/test_pillar_sdb/foo
     test_etcd_pillar_sdb: sdb://sdbetcd/secret/test/test_pillar_sdb/foo
     """
     top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)

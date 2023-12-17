@@ -49,7 +49,7 @@ def get(**kwargs):
     else:
         cmd += " -a"
 
-    sysrcs = __salt__["cmd.run"](cmd)
+    sysrcs = __salt__["cmd.run"](cmd, output_loglevel="quiet")
     if "sysrc: unknown variable" in sysrcs:
         # raise CommandExecutionError(sysrcs)
         return None

@@ -685,6 +685,16 @@ def salt_information():
     yield "Salt", __version__
 
 
+def package_information():
+
+    """
+    Report package type
+    """
+    import salt.utils.package
+
+    yield "Package Type", salt.utils.package.pkg_type()
+
+
 def dependency_information(include_salt_cloud=False):
     """
     Report versions of library dependencies.
@@ -867,12 +877,14 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
+    package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
         "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
+        "Salt Package Information": dict(package_info),
     }
     if include_extensions:
         extensions_info = extensions_information()
@@ -905,6 +917,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
         "Python Version",
         "Dependency Versions",
         "Salt Extensions",
+        "Salt Package Information",
         "System Versions",
     ):
         if ver_type == "Salt Extensions" and ver_type not in ver_info:
@@ -927,6 +940,7 @@ def _parser():
     parser.add_argument(
         "--next-release", help="Return the next release", action="store_true"
     )
+    parser.add_argument("--parse", help="Parse the passed string as a salt version")
     # When pip installing we pass in other args to this script.
     # This allows us to catch those args but not use them
     parser.add_argument("unknown", nargs=argparse.REMAINDER)
@@ -937,5 +951,11 @@ if __name__ == "__main__":
     args = _parser()
     if args.next_release:
         print(__saltstack_version__.next_release())
+    elif args.parse:
+        try:
+            print(SaltStackVersion.parse(args.parse))
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"Failed to parse '{args.parse}' as a salt version: {exc}")
+            sys.exit(1)
     else:
         print(__version__)

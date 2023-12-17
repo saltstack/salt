@@ -25,9 +25,13 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
 
 def _win_user_where(username, password, program):
-    cmd = "cmd.exe /c where {}".format(program)
+    cmd = f"cmd.exe /c where {program}"
     ret = salt.utils.win_runas.runas(cmd, username, password)
     assert ret["retcode"] == 0, "{} returned {}".format(cmd, ret["retcode"])
     return ret["stdout"].strip().split("\n")[-1].strip()
@@ -86,7 +90,7 @@ def test_pip_installed_removed(modules, states):
     """
     name = "pudb"
     if name in modules.pip.list():
-        pytest.skip("{} is already installed, uninstall to run this test".format(name))
+        pytest.skip(f"{name} is already installed, uninstall to run this test")
     ret = states.pip.installed(name=name)
     assert ret.result is True
     ret = states.pip.removed(name=name)
@@ -306,9 +310,7 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
             str(venv_dir), user=account.username, password="PassWord1!", **venv_kwargs
         )
         if venv_create.get("retcode", 1) > 0:
-            pytest.skip(
-                "Failed to create testcase virtual environment: {}".format(venv_create)
-            )
+            pytest.skip(f"Failed to create testcase virtual environment: {venv_create}")
 
         # pip install passing the package name in `name`
         ret = states.pip.installed(
@@ -375,9 +377,7 @@ def test_issue_6912_wrong_owner_requirements_file(
             str(venv_dir), user=account.username, password="PassWord1!", **venv_kwargs
         )
         if venv_create.get("retcode", 1) > 0:
-            pytest.skip(
-                "failed to create testcase virtual environment: {}".format(venv_create)
-            )
+            pytest.skip(f"failed to create testcase virtual environment: {venv_create}")
 
         # pip install using a requirements file
         contents = "pep8\n"
@@ -522,9 +522,7 @@ def test_22359_pip_installed_unless_does_not_trigger_warnings(
     venv_dir = str(tmp_path / "pip-installed-unless")
     venv_create = create_virtualenv(venv_dir)
     if venv_create["retcode"] > 0:
-        pytest.skip(
-            "Failed to create testcase virtual environment: {}".format(venv_create)
-        )
+        pytest.skip(f"Failed to create testcase virtual environment: {venv_create}")
 
     false_cmd = salt.utils.path.which("false")
     if salt.utils.platform.is_windows():
@@ -570,7 +568,7 @@ def test_issue_54755(tmp_path, state_tree, modules):
 
     with pytest.helpers.temp_file("issue-54755.sls", sls_contents, state_tree):
         ret = modules.state.sls(mods="issue-54755", pillar={"file_path": file_path})
-        key = "file_|-issue-54755_|-{}_|-managed".format(file_path)
+        key = f"file_|-issue-54755_|-{file_path}_|-managed"
         assert key in ret.raw
         assert ret.raw[key]["result"] is True
         with salt.utils.files.fopen(str(file_path), "r") as fp:
