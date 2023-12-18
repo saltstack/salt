@@ -7,7 +7,7 @@ import salt.loader
 import salt.pillar
 import salt.utils.cache
 from salt.utils.odict import OrderedDict
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.mark.parametrize(
