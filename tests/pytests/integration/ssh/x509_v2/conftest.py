@@ -22,6 +22,13 @@ def _check_cryptography(salt_ssh_cli):
             break
     else:
         pytest.skip("The host Python does not have cryptography")
+    if version < (3, 1):
+        # 3.1 introduces cryptography.hazmat.primitives.serialization.pkcs7,
+        # before that there is an ImportError in salt.utils.x509.
+        pytest.skip(
+            "The x509_v2 modules require at least cryptography v3.1 on the host. "
+            f"Installed: {'.'.join(str(x) for x in version)}"
+        )
     return version
 
 
