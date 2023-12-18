@@ -55,7 +55,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
 @pytest.mark.slow_test
 def test_pillar_timeout(salt_master_factory):
     cmd = """
-    python -c "import time; time.sleep(3.0); print('{\\"foo\\": \\"bar\\"}');\"
+    python -c "import time; time.sleep(5); print('{\\"foo\\": \\"bar\\"}');\"
     """.strip()
     master_overrides = {
         "ext_pillar": [
