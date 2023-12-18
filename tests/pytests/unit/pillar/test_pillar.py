@@ -7,7 +7,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.mark.parametrize(
