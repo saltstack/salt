@@ -354,19 +354,17 @@ def create_certificate(
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
 
     if not ca_server:
-        return _check_ret(
-            __salt__["x509.create_certificate_ssh"](
-                signing_policy=signing_policy,
-                encoding=encoding,
-                append_certs=append_certs,
-                pkcs12_passphrase=pkcs12_passphrase,
-                pkcs12_encryption_compat=pkcs12_encryption_compat,
-                pkcs12_friendlyname=pkcs12_friendlyname,
-                path=path,
-                overwrite=overwrite,
-                raw=raw,
-                **kwargs,
-            )
+        return __salt__["x509.create_certificate_ssh"](
+            signing_policy=signing_policy,
+            encoding=encoding,
+            append_certs=append_certs,
+            pkcs12_passphrase=pkcs12_passphrase,
+            pkcs12_encryption_compat=pkcs12_encryption_compat,
+            pkcs12_friendlyname=pkcs12_friendlyname,
+            path=path,
+            overwrite=overwrite,
+            raw=raw,
+            **kwargs,
         )
 
     # Deprecation checks vs the old x509 module
@@ -427,7 +425,7 @@ def create_certificate(
             "is unsupported"
         )
 
-    if path and not overwrite and _check_ret(__salt__["file.file_exists"](path)):
+    if path and not overwrite and __salt__["file.file_exists"](path):
         return f"The file at {path} exists and overwrite was set to false"
     if signing_policy is None:
         raise SaltInvocationError(
@@ -439,38 +437,32 @@ def create_certificate(
     )
 
     if encoding == "pkcs12":
-        out = _check_ret(
-            __salt__["x509.encode_certificate"](
-                x509util.to_pem(cert).decode(),
-                append_certs=append_certs,
-                encoding=encoding,
-                private_key=private_key_loaded,
-                pkcs12_passphrase=pkcs12_passphrase,
-                pkcs12_encryption_compat=pkcs12_encryption_compat,
-                pkcs12_friendlyname=pkcs12_friendlyname,
-                raw=False,
-            )
+        out = __salt__["x509.encode_certificate"](
+            x509util.to_pem(cert).decode(),
+            append_certs=append_certs,
+            encoding=encoding,
+            private_key=private_key_loaded,
+            pkcs12_passphrase=pkcs12_passphrase,
+            pkcs12_encryption_compat=pkcs12_encryption_compat,
+            pkcs12_friendlyname=pkcs12_friendlyname,
+            raw=False,
         )
     else:
-        out = _check_ret(
-            __salt__["x509.encode_certificate"](
-                x509util.to_pem(cert).decode(),
-                append_certs=append_certs,
-                encoding=encoding,
-                raw=False,
-            )
+        out = __salt__["x509.encode_certificate"](
+            x509util.to_pem(cert).decode(),
+            append_certs=append_certs,
+            encoding=encoding,
+            raw=False,
         )
 
     if path is None:
         return out
 
     if encoding == "pem":
-        return _check_ret(
-            __salt__["x509.write_pem"](
-                out, path, overwrite=overwrite, pem_type="CERTIFICATE"
-            )
+        return __salt__["x509.write_pem"](
+            out, path, overwrite=overwrite, pem_type="CERTIFICATE"
         )
-    _check_ret(__salt__["hashutil.base64_decodefile"](out, path))
+    __salt__["hashutil.base64_decodefile"](out, path)
     return f"Certificate written to {path}"
 
 
@@ -506,15 +498,11 @@ def _create_certificate_remote(
 ):
     private_key_loaded = None
     if private_key:
-        kwargs["public_key"] = _check_ret(
-            __salt__["x509.get_public_key"](
-                private_key, passphrase=private_key_passphrase
-            )
+        kwargs["public_key"] = __salt__["x509.get_public_key"](
+            private_key, passphrase=private_key_passphrase
         )
     elif kwargs.get("public_key"):
-        kwargs["public_key"] = _check_ret(
-            __salt__["x509.get_public_key"](kwargs["public_key"])
-        )
+        kwargs["public_key"] = __salt__["x509.get_public_key"](kwargs["public_key"])
 
     if kwargs.get("csr"):
         try:
@@ -523,10 +511,8 @@ def _create_certificate_remote(
         except TypeError:
             pass
         else:
-            if _check_ret(__salt__["file.file_exists"](kwargs["csr"])):
-                kwargs["csr"] = _check_ret(
-                    __salt__["hashutil.base64_encodefile"](kwargs["csr"])
-                )
+            if __salt__["file.file_exists"](kwargs["csr"]):
+                kwargs["csr"] = __salt__["hashutil.base64_encodefile"](kwargs["csr"])
 
     result = _query_remote(ca_server, signing_policy, kwargs)
     try:
@@ -609,14 +595,6 @@ def _get_signing_policy(name):
             dict_.update(item)
         policies = dict_
     return policies or {}
-
-
-def _check_ret(ret):
-    # Failing unwrapped calls to the minion always return a result dict
-    # and do not throw exceptions currently.
-    if isinstance(ret, dict) and ret.get("stderr"):
-        raise CommandExecutionError(ret["stderr"])
-    return ret
 
 
 def certificate_managed_wrapper(
@@ -780,7 +758,7 @@ def certificate_managed_wrapper(
         # Check if we have a source for a public key
         if pk_args:
             private_key = pk_args["name"]
-            if not _check_ret(__salt__["file.file_exists"](private_key)):
+            if not __salt__["file.file_exists"](private_key):
                 create_private_key = True
             elif __salt__["file.is_link"](private_key):
                 if not pk_args.get("overwrite"):
@@ -802,28 +780,28 @@ def certificate_managed_wrapper(
                     pk_args.get("overwrite", False),
                 )
         elif private_key:
-            if not _check_ret(__salt__["file.file_exists"](private_key)):
+            if not __salt__["file.file_exists"](private_key):
                 raise SaltInvocationError("Specified private key does not exist")
             public_key, _ = _load_privkey(private_key, private_key_passphrase)
         elif public_key:
             # todo usually can be specified as the key itself
-            if not _check_ret(__salt__["file.file_exists"](public_key)):
+            if not __salt__["file.file_exists"](public_key):
                 raise SaltInvocationError("Specified public key does not exist")
-            public_key = _check_ret(__salt__["x509.get_public_key"](public_key))
+            public_key = __salt__["x509.get_public_key"](public_key)
         elif csr:
             # todo usually can be specified as the csr itself
-            if not _check_ret(__salt__["file.file_exists"](csr)):
+            if not __salt__["file.file_exists"](csr):
                 raise SaltInvocationError("Specified csr does not exist")
-            csr = _check_ret(__salt__["hashutil.base64_encodefile"](csr))
+            csr = __salt__["hashutil.base64_encodefile"](csr)
 
         if create_private_key:
             # A missing private key means we need to create a certificate regardless
             new_certificate = True
-        elif not _check_ret(__salt__["file.file_exists"](name)):
+        elif not __salt__["file.file_exists"](name):
             new_certificate = True
         else:
             # We check the certificate the same way the state does
-            crt = _check_ret(__salt__["hashutil.base64_encodefile"](name))
+            crt = __salt__["hashutil.base64_encodefile"](name)
             signing_policy_contents = get_signing_policy(
                 signing_policy, ca_server=ca_server
             )
@@ -900,8 +878,8 @@ def certificate_managed_wrapper(
             return ret
 
         if create_private_key or recreate_private_key:
-            pk_temp_file = _check_ret(__salt__["temp.file"]())
-            _check_ret(__salt__["file.set_mode"](pk_temp_file, "0600"))
+            pk_temp_file = __salt__["temp.file"]()
+            __salt__["file.set_mode"](pk_temp_file, "0600")
             cpk_args = {"path": pk_temp_file}
             for arg in (
                 "algo",
@@ -912,9 +890,9 @@ def certificate_managed_wrapper(
             ):
                 if arg in pk_args:
                     cpk_args[arg] = pk_args[arg]
-            _check_ret(__salt__["x509.create_private_key"](**cpk_args))
-            public_key = _check_ret(
-                __salt__["x509.get_public_key"](pk_temp_file, pk_args.get("passphrase"))
+            __salt__["x509.create_private_key"](**cpk_args)
+            public_key = __salt__["x509.get_public_key"](
+                pk_temp_file, pk_args.get("passphrase")
             )
         if pk_args:
             pk_ret = {
@@ -948,22 +926,20 @@ def certificate_managed_wrapper(
             "encoding": certificate_managed["encoding"],
         }
         if reencode_certificate:
-            cert_ret["contents"] = _check_ret(
-                __salt__["x509.encode_certificate"](
-                    x509util.to_pem(current),
-                    encoding=certificate_managed["encoding"],
-                    append_certs=certificate_managed["append_certs"],
-                    private_key=pk_args["name"] if pk_args else private_key,
-                    private_key_passphrase=pk_args.get("passphrase")
-                    if pk_args
-                    else private_key,
-                    pkcs12_passphrase=certificate_managed.get("pkcs12_passphrase"),
-                    pkcs12_encryption_compat=certificate_managed.get(
-                        "pkcs12_encryption_compat"
-                    ),
-                    pkcs12_friendlyname=certificate_managed.get("pkcs12_friendlyname"),
-                    raw=False,
-                )
+            cert_ret["contents"] = __salt__["x509.encode_certificate"](
+                x509util.to_pem(current),
+                encoding=certificate_managed["encoding"],
+                append_certs=certificate_managed["append_certs"],
+                private_key=pk_args["name"] if pk_args else private_key,
+                private_key_passphrase=pk_args.get("passphrase")
+                if pk_args
+                else private_key,
+                pkcs12_passphrase=certificate_managed.get("pkcs12_passphrase"),
+                pkcs12_encryption_compat=certificate_managed.get(
+                    "pkcs12_encryption_compat"
+                ),
+                pkcs12_friendlyname=certificate_managed.get("pkcs12_friendlyname"),
+                raw=False,
             )
             cert_ret["comment"] = "The certificate has been reencoded"
             cert_ret["changes"] = cert_changes
@@ -993,10 +969,10 @@ def certificate_managed_wrapper(
         )
     except (CommandExecutionError, SaltInvocationError) as err:
         if pk_temp_file:
-            if _check_ret(__salt__["file.file_exists"](pk_temp_file)):
+            if __salt__["file.file_exists"](pk_temp_file):
                 try:
                     # otherwise, get rid of it
-                    _check_ret(__salt__["file.remove"](pk_temp_file))
+                    __salt__["file.remove"](pk_temp_file)
                 except Exception as err:  # pylint: disable=broad-except
                     log.error(str(err), exc_info_on_loglevel=logging.DEBUG)
         ret = {
@@ -1030,11 +1006,9 @@ def _load_privkey(pk, passphrase, overwrite=False):
     public_key = None
     create_private_key = False
     try:
-        public_key = _check_ret(
-            __salt__["x509.get_public_key"](
-                pk,
-                passphrase,
-            )
+        public_key = __salt__["x509.get_public_key"](
+            pk,
+            passphrase,
         )
     except CommandExecutionError as err:
         # All errors currently get mangled into this one.
