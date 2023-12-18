@@ -225,15 +225,9 @@ def script(
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
 
-    def _check_ret(ret):
-        # Failing unwrapped calls to the minion always return a result dict
-        # and do not throw exceptions currently.
-        if isinstance(ret, dict) and ret.get("stderr"):
-            raise CommandExecutionError(ret["stderr"])
-
     def _cleanup_tempfile(path):
         try:
-            _check_ret(__salt__["file.remove"](path))
+            __salt__["file.remove"](path)
         except (SaltInvocationError, CommandExecutionError) as exc:
             log.error(
                 "cmd.script: Unable to clean tempfile '%s': %s",
@@ -253,7 +247,6 @@ def script(
     path = __salt__["temp.file"](
         suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1], parent=cwd
     )
-    _check_ret(path)
     try:
         if template:
             if "pillarenv" in kwargs or "pillar" in kwargs:
@@ -280,11 +273,9 @@ def script(
                     "stderr": "",
                     "cache_error": True,
                 }
-            _check_ret(__salt__["file.copy"](fn_, path))
-        _check_ret(__salt__["file.set_mode"](path, "0500"))
-        uid = __salt__["file.user_to_uid"](runas)
-        _check_ret(uid)
-        _check_ret(__salt__["file.chown"](path, runas, -1))
+            __salt__["file.copy"](fn_, path)
+        __salt__["file.set_mode"](path, "0500")
+        __salt__["file.chown"](path, runas, -1)
 
         cmd_path = shlex.quote(path)
         # We should remove the pillar from kwargs (cmd.run_all ignores it anyways)
