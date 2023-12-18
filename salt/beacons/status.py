@@ -87,7 +87,7 @@ markers for specific list items:
     to check the minion log for errors after configuring this beacon.
 
 """
-import datetime
+from datetime import datetime, timezone
 import logging
 
 import salt.exceptions
@@ -117,7 +117,7 @@ def beacon(config):
     Return status for requested information
     """
     log.debug(config)
-    ctime = datetime.datetime.utcnow().isoformat()
+    ctime = datetime.now(tz=timezone.utc).isoformat()
 
     whitelist = []
     config = salt.utils.beacons.remove_hidden_options(config, whitelist)

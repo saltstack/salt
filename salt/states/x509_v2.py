@@ -182,7 +182,7 @@ according to the www policy.
 """
 import base64
 import copy
-import datetime
+from datetime import datetime, timedelta, timezone
 import logging
 import os.path
 
@@ -490,8 +490,8 @@ def certificate_managed(
 
                 if (
                     current.not_valid_after
-                    < datetime.datetime.utcnow()
-                    + datetime.timedelta(days=days_remaining)
+                    < datetime.now(tz=timezone.utc)
+                    + timedelta(days=days_remaining)
                 ):
                     changes["expiration"] = True
 
@@ -898,8 +898,8 @@ def crl_managed(
                     changes["encoding"] = encoding
                 if days_remaining and (
                     current.next_update
-                    < datetime.datetime.utcnow()
-                    + datetime.timedelta(days=days_remaining)
+                    < datetime.now(tz=timezone.utc)
+                    + timedelta(days=days_remaining)
                 ):
                     changes["expiration"] = True
 

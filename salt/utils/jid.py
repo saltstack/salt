@@ -2,7 +2,7 @@
 Functions for creating and working with job IDs
 """
 
-import datetime
+from datetime import datetime, timezone
 import hashlib
 import os
 from calendar import month_abbr as months
@@ -16,7 +16,7 @@ def _utc_now():
     """
     Helper method so tests do not have to patch the built-in method.
     """
-    return datetime.datetime.utcnow()
+    return datetime.now(tz=timezone.utc)
 
 
 def gen_jid(opts):

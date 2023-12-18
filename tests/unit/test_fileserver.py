@@ -3,7 +3,7 @@
 """
 
 
-import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import time
 
@@ -66,8 +66,8 @@ class VCSBackendWhitelistCase(TestCase, LoaderModuleMockMixin):
                     _f.write(b"\x80")
 
         # Set modification time to file list cache file to 1 year in the future
-        now = datetime.datetime.utcnow()
-        future = now + datetime.timedelta(days=365)
+        now = datetime.now(tz=timezone.utc)
+        future = now + timedelta(days=365)
         mod_time = time.mktime(future.timetuple())
         os.utime(os.path.join(back_cachedir, "base.p"), (mod_time, mod_time))
 

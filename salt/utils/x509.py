@@ -1,6 +1,6 @@
 import base64
 import copy
-import datetime
+from datetime import datetime, timezone
 import ipaddress
 import logging
 import os.path
@@ -313,14 +313,14 @@ def build_crt(
     )
 
     not_before = (
-        datetime.datetime.strptime(not_before, TIME_FMT)
+        datetime.strptime(not_before, TIME_FMT)
         if not_before
-        else datetime.datetime.utcnow()
+        else datetime.now(tz=timezone.utc)
     )
     not_after = (
-        datetime.datetime.strptime(not_after, TIME_FMT)
+        datetime.strptime(not_after, TIME_FMT)
         if not_after
-        else datetime.datetime.utcnow() + datetime.timedelta(days=days_valid)
+        else datetime.now(tz=timezone.utc) + datetime.timedelta(days=days_valid)
     )
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
@@ -422,14 +422,14 @@ def build_crl(
     builder = cx509.CertificateRevocationListBuilder()
     if signing_cert:
         builder = builder.issuer_name(signing_cert.subject)
-    builder = builder.last_update(datetime.datetime.today())
+    builder = builder.last_update(datetime.today())
     builder = builder.next_update(
-        datetime.datetime.today() + datetime.timedelta(days=days_valid)
+        datetime.today() + datetime.timedelta(days=days_valid)
     )
     for rev in revoked:
         serial_number = not_after = revocation_date = None
         if "not_after" in rev:
-            not_after = datetime.datetime.strptime(rev["not_after"], TIME_FMT)
+            not_after = datetime.strptime(rev["not_after"], TIME_FMT)
         if "serial_number" in rev:
             serial_number = rev["serial_number"]
         if "certificate" in rev:
@@ -440,14 +440,14 @@ def build_crl(
             raise SaltInvocationError("Need serial_number or certificate")
         serial_number = _get_serial_number(serial_number)
         if not_after and not include_expired:
-            if datetime.datetime.utcnow() > not_after:
+            if datetime.now(tz=timezone.utc) > not_after:
                 continue
         if "revocation_date" in rev:
-            revocation_date = datetime.datetime.strptime(
+            revocation_date = datetime.strptime(
                 rev["revocation_date"], TIME_FMT
             )
         else:
-            revocation_date = datetime.datetime.utcnow()
+            revocation_date = datetime.now(tz=timezone.utc)
 
         revoked_cert = cx509.RevokedCertificateBuilder(
             serial_number=serial_number, revocation_date=revocation_date
@@ -1621,7 +1621,7 @@ def _create_invalidity_date(val, **kwargs):
         val = val.split(" ", maxsplit=1)[1]
     try:
         return (
-            cx509.InvalidityDate(datetime.datetime.strptime(val, TIME_FMT)),
+            cx509.InvalidityDate(datetime.strptime(val, TIME_FMT)),
             critical,
         )
     except ValueError as err:

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 import logging
 import os
 import signal
@@ -49,7 +49,7 @@ def fmt_str():
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(file, service, system):
-    _orig_time = datetime.datetime.utcnow()
+    _orig_time = datetime.now(tz=timezone.utc)
 
     if os.path.isfile("/etc/machine-info"):
         with salt.utils.files.fopen("/etc/machine-info", "r") as mach_info:
@@ -175,9 +175,9 @@ def test_get_system_date_time(setup_teardown_vars, system, fmt_str):
     """
     Test we are able to get the correct time
     """
-    t1 = datetime.datetime.now()
+    t1 = datetime.now()
     res = system.get_system_date_time()
-    t2 = datetime.datetime.strptime(res, fmt_str)
+    t2 = datetime.strptime(res, fmt_str)
     msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
     assert _same_times(t1, t2, seconds_diff=3), msg
 
@@ -186,9 +186,9 @@ def test_get_system_date_time_utc(setup_teardown_vars, system, fmt_str):
     """
     Test we are able to get the correct time with utc
     """
-    t1 = datetime.datetime.utcnow()
+    t1 = datetime.now(tz=timezone.utc)
     res = system.get_system_date_time("+0000")
-    t2 = datetime.datetime.strptime(res, fmt_str)
+    t2 = datetime.strptime(res, fmt_str)
     msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
     assert _same_times(t1, t2, seconds_diff=3), msg
 
@@ -201,10 +201,10 @@ def test_set_system_date_time(setup_teardown_vars, system, hwclock_has_compare):
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.now() - datetime.timedelta(days=7)
+    cmp_time = datetime.now() - datetime.timedelta(days=7)
     result = _set_time(system, cmp_time)
 
-    time_now = datetime.datetime.now()
+    time_now = datetime.now()
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -222,10 +222,10 @@ def test_set_system_date_time_utc(setup_teardown_vars, system, hwclock_has_compa
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = datetime.now(tz=timezone.utc) - datetime.timedelta(days=7)
     result = _set_time(system, cmp_time, offset="+0000")
 
-    time_now = datetime.datetime.utcnow()
+    time_now = datetime.now(tz=timezone.utc)
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -245,11 +245,11 @@ def test_set_system_date_time_utcoffset_east(
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = datetime.now(tz=timezone.utc) - datetime.timedelta(days=7)
     # 25200 seconds = 7 hours
     time_to_set = cmp_time - datetime.timedelta(seconds=25200)
     result = _set_time(system, time_to_set, offset="-0700")
-    time_now = datetime.datetime.utcnow()
+    time_now = datetime.now(tz=timezone.utc)
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -269,11 +269,11 @@ def test_set_system_date_time_utcoffset_west(
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = datetime.now(tz=timezone.utc) - datetime.timedelta(days=7)
     # 7200 seconds = 2 hours
     time_to_set = cmp_time + datetime.timedelta(seconds=7200)
     result = _set_time(system, time_to_set, offset="+0200")
-    time_now = datetime.datetime.utcnow()
+    time_now = datetime.now(tz=timezone.utc)
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -291,11 +291,11 @@ def test_set_system_time(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test setting the system time without adjusting the date.
     """
-    cmp_time = datetime.datetime.now().replace(hour=10, minute=5, second=0)
+    cmp_time = datetime.now().replace(hour=10, minute=5, second=0)
 
     result = system.set_system_time("10:05:00")
 
-    time_now = datetime.datetime.now()
+    time_now = datetime.now()
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
     )
@@ -312,11 +312,11 @@ def test_set_system_date(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test setting the system date without adjusting the time.
     """
-    cmp_time = datetime.datetime.now() - datetime.timedelta(days=7)
+    cmp_time = datetime.now() - datetime.timedelta(days=7)
 
     result = system.set_system_date(cmp_time.strftime("%Y-%m-%d"))
 
-    time_now = datetime.datetime.now()
+    time_now = datetime.now()
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time

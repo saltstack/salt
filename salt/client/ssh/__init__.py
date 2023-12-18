@@ -5,7 +5,7 @@ Create ssh executor system
 import base64
 import binascii
 import copy
-import datetime
+from datetime import datetime, timezone
 import getpass
 import hashlib
 import logging
@@ -408,7 +408,7 @@ class SSH(MultiprocessingStateMixin):
                         '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n'
                         "    host: {hostname}\n    user: {user}\n    passwd: {passwd}\n".format(
                             s_user=getpass.getuser(),
-                            s_time=datetime.datetime.utcnow().isoformat(),
+                            s_time=datetime.now(tz=timezone.utc).isoformat(),
                             hostname=self.opts.get("tgt", ""),
                             user=self.opts.get("ssh_user", ""),
                             passwd=self.opts.get("ssh_passwd", ""),

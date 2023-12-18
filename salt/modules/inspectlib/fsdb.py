@@ -19,7 +19,7 @@
 
 
 import csv
-import datetime
+from datetime import datetime, timezone
 import gzip
 import os
 import re
@@ -72,7 +72,7 @@ class CsvDB:
 
         :return:
         """
-        return datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        return datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
 
     def new(self):
         """

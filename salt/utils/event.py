@@ -52,7 +52,7 @@ Namespaced tag
 import asyncio
 import atexit
 import contextlib
-import datetime
+from datetime import datetime, timezone
 import errno
 import fnmatch
 import hashlib
@@ -730,7 +730,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.utcnow().isoformat()
+        data["_stamp"] = datetime.now(tz=timezone.utc).isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
@@ -765,7 +765,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.utcnow().isoformat()
+        data["_stamp"] = datetime.now(tz=timezone.utc).isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
@@ -1312,7 +1312,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 # every event_return_queue_max_seconds seconds,  If it's 0, don't
                 # apply any of this logic
                 if self.event_return_queue_max_seconds > 0:
-                    rightnow = datetime.datetime.now()
+                    rightnow = datetime.now()
                     if not oldestevent:
                         oldestevent = rightnow
                     age_in_seconds = (rightnow - oldestevent).seconds

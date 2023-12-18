@@ -155,7 +155,7 @@ Setting the alarms in a pillar:
 """
 
 import copy
-import datetime
+from datetime import datetime, timezone
 import logging
 import math
 import sys
@@ -821,7 +821,7 @@ def _next_datetime_with_utc_hour(table_name, utc_hour):
 
     # The minute and second values generated are deterministic, as we do not want
     # pipeline definition to change for every run.
-    start_date_time = datetime.datetime(
+    start_date_time = datetime(
         year=today.year,
         month=today.month,
         day=today.day,
@@ -830,7 +830,7 @@ def _next_datetime_with_utc_hour(table_name, utc_hour):
         second=_get_deterministic_value_for_table_name(table_name, 60),
     )
 
-    if start_date_time < datetime.datetime.utcnow():
+    if start_date_time < datetime.now(tz=timezone.utc):
         one_day = datetime.timedelta(days=1)
         start_date_time += one_day
 
