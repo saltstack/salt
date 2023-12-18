@@ -201,7 +201,9 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
 
 .. versionadded:: 3007
 
-When defined the master will operate in cluster mode. The master will send the cluster key and id to minions instead of it's own key and id. The master will also forward it's local event bus to other master defined by ``cluster_peers``
+When defined, the master will operate in cluster mode. The master will send the
+cluster key and id to minions instead of it's own key and id. The master will
+also forward it's local event bus to other masters defined by ``cluster_peers``
 
 
 .. code-block:: yaml
@@ -215,7 +217,8 @@ When defined the master will operate in cluster mode. The master will send the c
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined. This setting is a list of other master (hostnames or ips) that will be in the cluster.
+When ``cluster_id`` is defined. this setting is a list of other master
+(hostnames or ips) that will be in the cluster.
 
 .. code-block:: yaml
 
