@@ -28,7 +28,7 @@ Each master in a cluster maintains its own public and private key, and an in
 memory aes key. Each cluster peer also has access to the `cluster_pki_dir`
 where a cluster wide public and private key are stored. In addition, the cluster
 wide aes key is generated and stored in the `cluster_pki_dir`. Further,
-when operation as a cluster, minion keys are stored in the `cluster_pki_dir`
+when operating as a cluster, minion keys are stored in the `cluster_pki_dir`
 instead of the master's `pki_dir`.
 
 

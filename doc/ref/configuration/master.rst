@@ -202,8 +202,8 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
 .. versionadded:: 3007
 
 When defined, the master will operate in cluster mode. The master will send the
-cluster key and id to minions instead of it's own key and id. The master will
-also forward it's local event bus to other masters defined by ``cluster_peers``
+cluster key and id to minions instead of its own key and id. The master will
+also forward its local event bus to other masters defined by ``cluster_peers``
 
 
 .. code-block:: yaml
