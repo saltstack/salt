@@ -18,7 +18,7 @@ Salt masters can be configured to act as a cluster. All masters in a cluster
 are peers. Job workloads are shared accross the cluster. Master clusters
 provide a way to scale masters horizontally. They do not require changes to
 the minions' configuration to add more resources. Cluster implementations are
-expected to use a load balancer, shared filesystem, and run on areliable
+expected to use a load balancer, shared filesystem, and run on a reliable
 network.
 
 :ref:`Master Cluster Tutorial <tutorial-master-cluster>`
