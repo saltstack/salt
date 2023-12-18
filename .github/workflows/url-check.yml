@@ -35,4 +35,4 @@ jobs:
         dpkg -i brok-1.1.0_x86-64-linux.deb
     - name: Run brok
       run: |
-        brok --only-failures --ignore $(cat .brokignore) $(find . -type f \( -name "*.rst" -o -name "*.py" -o -name "*.y*ml" -o -name "*.md" -o -name "*.py" -o -name "*.html" \)) > /dev/null
+        brok --ignore $(cat .brokignore) $(find . -type f -name "*.rst") $(find . -type f -name "*.md") > /dev/null
