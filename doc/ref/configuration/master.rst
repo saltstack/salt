@@ -217,7 +217,7 @@ also forward it's local event bus to other masters defined by ``cluster_peers``
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined. this setting is a list of other master
+When ``cluster_id`` is defined, this setting is a list of other master
 (hostnames or ips) that will be in the cluster.
 
 .. code-block:: yaml
@@ -233,7 +233,10 @@ When ``cluster_id`` is defined. this setting is a list of other master
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined. This sets the location of where this cluster will store it's cluster publich and private key as well as any minion keys. This setting will default to the value of ``pki_dir``, but should be changed filesystem location shared between peers in the cluster.
+When ``cluster_id`` is defined, this sets the location of where this cluster
+will store its cluster public and private key as well as any minion keys. This
+setting will default to the value of ``pki_dir``, but should be changed
+to the filesystem location shared between peers in the cluster.
 
 .. code-block:: yaml
 
