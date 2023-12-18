@@ -135,7 +135,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
     _octal_lookup = {0: "-", 1: "r", 2: "w", 4: "x"}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -250,7 +250,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     )
                     ret.update(
                         {
-                            "comment": "Updated permissions for {}".format(acl_name),
+                            "comment": f"Updated permissions for {acl_name}",
                             "result": True,
                             "changes": changes,
                         }
@@ -291,7 +291,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 )
                 ret.update(
                     {
-                        "comment": "Applied new permissions for {}".format(acl_name),
+                        "comment": f"Applied new permissions for {acl_name}",
                         "result": True,
                         "changes": changes,
                     }
@@ -335,7 +335,7 @@ def absent(name, acl_type, acl_name="", perms="", recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -433,7 +433,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum(_octal.get(i, i) for i in perms)
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -722,7 +722,7 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 

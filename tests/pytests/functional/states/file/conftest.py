@@ -43,8 +43,18 @@ def grail_scene33_file(grail):
 
 
 @pytest.fixture
+def grail_scene33_clearsign_file(grail_scene33_file):
+    return grail_scene33_file.with_suffix(".clearsign.asc")
+
+
+@pytest.fixture
 def grail_scene33_file_hash(grail_scene33_file):
     return hashlib.sha256(grail_scene33_file.read_bytes()).hexdigest()
+
+
+@pytest.fixture
+def grail_scene33_clearsign_file_hash(grail_scene33_clearsign_file):
+    return hashlib.sha256(grail_scene33_clearsign_file.read_bytes()).hexdigest()
 
 
 @pytest.fixture(scope="module")

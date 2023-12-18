@@ -1,11 +1,10 @@
-import copy
 import logging
 
 import pytest
-from requests.exceptions import HTTPError
 
 import salt.pillar.vault as vault
-from tests.support.mock import Mock, patch
+import salt.utils.vault as vaultutil
+from tests.support.mock import ANY, Mock, patch
 
 
 @pytest.fixture
@@ -22,93 +21,69 @@ def configure_loader_modules():
 
 
 @pytest.fixture
-def vault_kvv1():
-    res = Mock(status_code=200)
-    res.json.return_value = {"data": {"foo": "bar"}}
-    return Mock(return_value=res)
+def data():
+    return {"foo": "bar"}
 
 
 @pytest.fixture
-def vault_kvv2():
-    res = Mock(status_code=200)
-    res.json.return_value = {"data": {"data": {"foo": "bar"}}, "metadata": {}}
-    return Mock(return_value=res)
+def read_kv(data):
+    with patch("salt.utils.vault.read_kv", autospec=True) as read:
+        read.return_value = data
+        yield read
 
 
 @pytest.fixture
-def is_v2_false():
-    path = "secret/path"
-    return {"v2": False, "data": path, "metadata": path, "delete": path, "type": "kv"}
+def read_kv_not_found(read_kv):
+    read_kv.side_effect = vaultutil.VaultNotFoundError
 
 
 @pytest.fixture
-def is_v2_true():
+def role_a():
     return {
-        "v2": True,
-        "data": "secret/data/path",
-        "metadata": "secret/metadata/path",
-        "type": "kv",
+        "from_db": True,
+        "pass": "hunter2",
+        "list": ["a", "b"],
     }
 
 
-@pytest.mark.parametrize(
-    "is_v2,vaultkv", [("is_v2_false", "vault_kvv1"), ("is_v2_true", "vault_kvv2")]
-)
-def test_ext_pillar(is_v2, vaultkv, request):
-    """
-    Test ext_pillar functionality for KV v1/2
-    """
-    is_v2 = request.getfixturevalue(is_v2)
-    vaultkv = request.getfixturevalue(vaultkv)
-    with patch.dict(
-        vault.__utils__,
-        {"vault.is_v2": Mock(return_value=is_v2), "vault.make_request": vaultkv},
-    ):
-        ext_pillar = vault.ext_pillar("testminion", {}, "path=secret/path")
-        vaultkv.assert_called_once_with("GET", "v1/" + is_v2["data"])
-        assert "foo" in ext_pillar
-        assert "metadata" not in ext_pillar
-        assert "data" not in ext_pillar
-        assert ext_pillar["foo"] == "bar"
+@pytest.fixture
+def role_b():
+    return {
+        "from_web": True,
+        "pass": "hunter1",
+        "list": ["c", "d"],
+    }
 
 
-def test_ext_pillar_not_found(is_v2_false, caplog):
+def test_ext_pillar(read_kv, data):
+    """
+    Test ext_pillar functionality. KV v1/2 is handled by the utils module.
+    """
+    ext_pillar = vault.ext_pillar("testminion", {}, "path=secret/path")
+    read_kv.assert_called_once_with("secret/path", opts=ANY, context=ANY)
+    assert ext_pillar == data
+
+
+@pytest.mark.usefixtures("read_kv_not_found")
+def test_ext_pillar_not_found(caplog):
     """
     Test that HTTP 404 is handled correctly
     """
-    res = Mock(status_code=404, ok=False)
-    res.raise_for_status.side_effect = HTTPError()
     with caplog.at_level(logging.INFO):
-        with patch.dict(
-            vault.__utils__,
-            {
-                "vault.is_v2": Mock(return_value=is_v2_false),
-                "vault.make_request": Mock(return_value=res),
-            },
-        ):
-            ext_pillar = vault.ext_pillar("testminion", {}, "path=secret/path")
-            assert ext_pillar == {}
-            assert "Vault secret not found for: secret/path" in caplog.messages
+        ext_pillar = vault.ext_pillar("testminion", {}, "path=secret/path")
+        assert ext_pillar == {}
+        assert "Vault secret not found for: secret/path" in caplog.messages
 
 
-def test_ext_pillar_nesting_key(is_v2_false, vault_kvv1):
+@pytest.mark.usefixtures("read_kv")
+def test_ext_pillar_nesting_key(data):
     """
     Test that nesting_key is honored as expected
     """
-    with patch.dict(
-        vault.__utils__,
-        {
-            "vault.is_v2": Mock(return_value=is_v2_false),
-            "vault.make_request": vault_kvv1,
-        },
-    ):
-        ext_pillar = vault.ext_pillar(
-            "testminion", {}, "path=secret/path", nesting_key="baz"
-        )
-        assert "foo" not in ext_pillar
-        assert "baz" in ext_pillar
-        assert "foo" in ext_pillar["baz"]
-        assert ext_pillar["baz"]["foo"] == "bar"
+    ext_pillar = vault.ext_pillar(
+        "testminion", {}, "path=secret/path", nesting_key="baz"
+    )
+    assert ext_pillar == {"baz": data}
 
 
 @pytest.mark.parametrize(
@@ -132,78 +107,52 @@ def test_get_paths(pattern, expected):
     assert result == expected
 
 
-def test_ext_pillar_merging(is_v2_false):
-    """
-    Test that patterns that result in multiple paths are merged as expected.
-    """
-
-    def make_request(method, resource, *args, **kwargs):
-        vault_data = {
-            "v1/salt/roles/db": {
-                "from_db": True,
-                "pass": "hunter2",
-                "list": ["a", "b"],
-            },
-            "v1/salt/roles/web": {
-                "from_web": True,
-                "pass": "hunter1",
-                "list": ["c", "d"],
-            },
-        }
-        res = Mock(status_code=200, ok=True)
-        res.json.return_value = {"data": copy.deepcopy(vault_data[resource])}
-        return res
-
-    cases = [
+@pytest.mark.parametrize(
+    "first,second,expected",
+    [
         (
-            ["salt/roles/db", "salt/roles/web"],
+            "role_a",
+            "role_b",
             {"from_db": True, "from_web": True, "list": ["c", "d"], "pass": "hunter1"},
         ),
         (
-            ["salt/roles/web", "salt/roles/db"],
+            "role_b",
+            "role_a",
             {"from_db": True, "from_web": True, "list": ["a", "b"], "pass": "hunter2"},
         ),
-    ]
-    vaultkv = Mock(side_effect=make_request)
-
-    for expanded_patterns, expected in cases:
-        with patch.dict(
-            vault.__utils__,
-            {
-                "vault.make_request": vaultkv,
-                "vault.expand_pattern_lists": Mock(return_value=expanded_patterns),
-                "vault.is_v2": Mock(return_value=is_v2_false),
-            },
-        ):
-            ext_pillar = vault.ext_pillar(
-                "test-minion",
-                {"roles": ["db", "web"]},
-                conf="path=salt/roles/{pillar[roles]}",
-                merge_strategy="smart",
-                merge_lists=False,
-            )
-            assert ext_pillar == expected
+    ],
+)
+def test_ext_pillar_merging(read_kv, first, second, expected, request):
+    """
+    Test that patterns that result in multiple paths are merged as expected.
+    """
+    first = request.getfixturevalue(first)
+    second = request.getfixturevalue(second)
+    read_kv.side_effect = (first, second)
+    ext_pillar = vault.ext_pillar(
+        "test-minion",
+        {"roles": ["db", "web"]},
+        conf="path=salt/roles/{pillar[roles]}",
+        merge_strategy="smart",
+        merge_lists=False,
+    )
+    assert ext_pillar == expected
 
 
-def test_ext_pillar_disabled_during_policy_pillar_rendering():
+def test_ext_pillar_disabled_during_pillar_rendering(read_kv):
     """
     Ensure ext_pillar returns an empty dict when called during pillar
     template rendering to prevent a cyclic dependency.
     """
-    mock_version = Mock()
-    mock_vault = Mock()
     extra = {"_vault_runner_is_compiling_pillar_templates": True}
-
-    with patch.dict(
-        vault.__utils__, {"vault.make_request": mock_vault, "vault.is_v2": mock_version}
-    ):
-        assert {} == vault.ext_pillar(
-            "test-minion", {}, conf="path=secret/path", extra_minion_data=extra
-        )
-        assert mock_version.call_count == 0
-        assert mock_vault.call_count == 0
+    res = vault.ext_pillar(
+        "test-minion", {}, conf="path=secret/path", extra_minion_data=extra
+    )
+    assert res == {}
+    read_kv.assert_not_called()
 
 
+@pytest.mark.usefixtures("read_kv")
 def test_invalid_config(caplog):
     """
     Ensure an empty dict is returned and an error is logged in case

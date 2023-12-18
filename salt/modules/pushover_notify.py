@@ -28,7 +28,7 @@ __virtualname__ = "pushover"
 __deprecated__ = (
     3009,
     "pushover",
-    "https://github.com/saltstack/saltext-pushover",
+    "https://github.com/salt-extensions/saltext-pushover",
 )
 
 
