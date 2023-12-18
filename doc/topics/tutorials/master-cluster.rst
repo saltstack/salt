@@ -19,15 +19,15 @@ Minimum Requirements
 
 Running a cluster master requires all nodes in the cluster to have a shared
 filesystem. The `cluster_pki_dir`, `cache_dir`, `file_roots` and `pillar_roots`
-must all be on a shared filesystem. Most implimentations will also server the
+must all be on a shared filesystem. Most implementations will also serve the
 masters publish and request server ports via a tcp load balancer. All of the
 masters in a cluster are assumed to be running on a reliable local area
 network.
 
-Each master in a cluster maintains it's own public and private key, and an in
+Each master in a cluster maintains its own public and private key, and an in
 memory aes key. Each cluster peer also has access to the `cluster_pki_dir`
-where a cluster wide public and private key are stored. In addition the cluster
-wide aes key is generated and stored in the `cluster_pki_dir`. In addition,
+where a cluster wide public and private key are stored. In addition, the cluster
+wide aes key is generated and stored in the `cluster_pki_dir`. Further,
 when operation as a cluster, minion keys are stored in the `cluster_pki_dir`
 instead of the master's `pki_dir`.
 
