@@ -87,18 +87,18 @@ For SDB sub-keys, ie users['user1']['id']
       user1:
         id: 12345
 
-To get SDB sub-keys from the CLI, use a colon to separate sub key values. For example: 
+To get SDB sub-keys from the CLI, use a colon to separate sub key values. For example:
 
 .. code-block:: bash
 
-    salt-call sdb.get sdb://users:user1:id 
+    salt-call sdb.get sdb://users:user1:id
 
-To get SDB sub-keys in a state file, use this syntax: 
+To get SDB sub-keys in a state file, use this syntax:
 
-.. code-block:: yaml 
+.. code-block:: yaml
 
-    users: 
-      user1: 
+    users:
+      user1:
         id: sdb.get sdb://users:user1:id
 
 .. warning::
