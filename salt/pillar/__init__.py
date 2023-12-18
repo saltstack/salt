@@ -1260,6 +1260,8 @@ class Pillar:
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get("ext_pillar_first", False):
+                # matchers needs pillar in opts
+                self.opts["pillar"] = self.pillar_data
                 pillar, errors = self.ext_pillar(self.pillar_override)
                 self.pillar_data.update(pillar)
                 self.rend = salt.loader.render(
