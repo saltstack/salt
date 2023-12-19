@@ -18,9 +18,9 @@ function for backwards compatability.
 The ``ssl`` option accepts ``verify_locations`` and ``verify_flags``. The
 ``verify_locations`` option is a list of strings or dictionaries. Strings are
 passed as a single argument to the SSL context's ``load_verify_locations``
-method. Dictionaries keys are expected to be one of ``cafile``, ``capath``,
+method. Dictionary keys are expected to be one of ``cafile``, ``capath``,
 ``cadata``. For each corresponding key, the key and value will be passed as a
-keyword argument to ``load_verify_locations``. The ``verify_flags`` options is
+keyword argument to ``load_verify_locations``. The ``verify_flags`` option is
 a list of string names of verification flags which will be set on the SSL
 context. All paths are assumed to be the full path to the file or directory.
 
@@ -33,7 +33,7 @@ master configuration file:
       keyfile: <path_to_keyfile>
       certfile: <path_to_certfile>
 
-A more complex  setup looks like this, on the Salt Master add the ``ssl``
+A more complex setup looks like this, on the Salt Master add the ``ssl``
 option to the master's configuration file. In this example the Salt Master will
 require valid client side certificates from Minions by setting ``cert_reqs`` to
 ``CERT_REQUIRED``. The Salt Master will also check a certificate revocation list
@@ -61,7 +61,7 @@ The minimal `ssl` option in the minion configuration file looks like this:
     # Versions below 2016.11.4:
     ssl: {}
 
-A Minion can be configured to present a client certificat to the master like this:
+A Minion can be configured to present a client certificate to the master like this:
 
 .. code-block:: yaml
 

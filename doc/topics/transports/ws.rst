@@ -9,7 +9,7 @@ to ``ws`` on each Salt minion and Salt master.
 TLS Support
 ===========
 
-The Websocket transport support full encryption and verification using both server
+The Websocket transport supports full encryption and verification using both server
 and client certificates. See :doc:`ssl` for more details.
 
 Publish Server and Client
