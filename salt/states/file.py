@@ -2982,7 +2982,7 @@ def managed(
         When verifying signatures, use this GnuPG home.
 
         .. versionadded:: 3007.0
-        
+
     ignore_ordering
         If ``True``, changes in line order will be ignored **ONLY** for the
         purposes of triggering watch/onchanges requisites. Changes will still
@@ -3013,7 +3013,7 @@ def managed(
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
         Implies ``ignore_ordering=True``
-        
+
         .. versionadded:: 3007.0
     """
     if "env" in kwargs:

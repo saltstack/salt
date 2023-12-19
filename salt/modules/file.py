@@ -4832,7 +4832,7 @@ def get_managed(
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
         Implies ``ignore_ordering=True``
-        
+
         .. versionadded:: 3007.0
 
     CLI Example:
@@ -6542,7 +6542,7 @@ def manage_file(
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
         Implies ``ignore_ordering=True``
-        
+
         .. versionadded:: 3007.0
 
     CLI Example:
