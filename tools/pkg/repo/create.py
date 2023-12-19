@@ -285,7 +285,11 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if not nightly_build_from:
+    if nightly_build_from:
+        nightly_link = create_repo_path.parent / "minor/latest"
+        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
+        nightly_link.symlink_to(f"minor/{salt_version}")
+    else:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -380,6 +384,9 @@ def rpm(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
+
+    if distro == "photon":
+        distro_version = f"{distro_version}.0"
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
@@ -474,10 +481,12 @@ def rpm(
     if salt_repo_user and salt_repo_pass:
         repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
 
-    def _create_repo_file(create_repo_path, url_suffix):
+    def _create_repo_file(create_repo_path, url_suffix, nightly_path=None):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            base_url = f"salt-dev/{nightly_build_from}/{datetime.utcnow().strftime('%Y-%m-%d')}/"
+            if nightly_path is None:
+                nightly_path = datetime.utcnow().strftime("%Y-%m-%d")
+            base_url = f"salt-dev/{nightly_build_from}/{nightly_path}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -519,7 +528,14 @@ def rpm(
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if not nightly_build_from:
+    if nightly_build_from:
+        nightly_latest_repo_file_path = create_repo_path.parent / "nightly_latest.repo"
+        _create_repo_file(nightly_latest_repo_file_path, "minor/latest", "latest")
+
+        nightly_link = create_repo_path.parent / "minor/latest"
+        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
+        nightly_link.symlink_to(f"minor/{salt_version}")
+    else:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),

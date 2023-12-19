@@ -356,6 +356,7 @@ def test_key_deploy_permission_denied_scp(tmp_path, opts):
 
     ssh_ret = {
         host: {
+            "_error": "Permission denied",
             "stdout": "\rroot@192.168.1.187's password: \n\rroot@192.168.1.187's password: \n\rroot@192.168.1.187's password: \n",
             "stderr": "Permission denied, please try again.\nPermission denied, please try again.\nroot@192.168.1.187: Permission denied (publickey,gssapi-keyex,gssapi-with-micimport pudb; pu.dbassword).\nscp: Connection closed\n",
             "retcode": 255,
@@ -370,7 +371,7 @@ def test_key_deploy_permission_denied_scp(tmp_path, opts):
             "fun": "cmd.run",
             "fun_args": ["echo test"],
         }
-    }
+    }, 0
     patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
     with patch_roster_file:
         client = ssh.SSH(opts)
@@ -407,6 +408,7 @@ def test_key_deploy_permission_denied_file_scp(tmp_path, opts):
 
     ssh_ret = {
         "localhost": {
+            "_error": "The command resulted in a non-zero exit code",
             "stdout": "",
             "stderr": 'scp: dest open "/tmp/preflight.sh": Permission denied\nscp: failed to upload file /etc/salt/preflight.sh to /tmp/preflight.sh\n',
             "retcode": 1,
@@ -415,8 +417,9 @@ def test_key_deploy_permission_denied_file_scp(tmp_path, opts):
     patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
     with patch_roster_file:
         client = ssh.SSH(opts)
-    ret = client.key_deploy(host, ssh_ret)
+    ret, retcode = client.key_deploy(host, ssh_ret)
     assert ret == ssh_ret
+    assert retcode is None
     assert mock_key_run.call_count == 0
 
 
@@ -446,8 +449,9 @@ def test_key_deploy_no_permission_denied(tmp_path, opts):
     patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
     with patch_roster_file:
         client = ssh.SSH(opts)
-    ret = client.key_deploy(host, ssh_ret)
+    ret, retcode = client.key_deploy(host, ssh_ret)
     assert ret == ssh_ret
+    assert retcode is None
     assert mock_key_run.call_count == 0
 
 
@@ -472,7 +476,7 @@ def test_handle_routine_remote_invalid_retcode(opts, target, retcode, expected, 
     que.put.assert_called_once_with(
         ({"id": "localhost", "ret": {"retcode": expected, "return": "foo"}}, 1)
     )
-    assert f"Host 'localhost' reported an invalid retcode: '{expected}'" in caplog.text
+    assert f"Host reported an invalid retcode: '{expected}'" in caplog.text
 
 
 def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
@@ -496,11 +500,7 @@ def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
         (
             {
                 "id": "localhost",
-                "ret": {
-                    "stdout": "",
-                    "stderr": "Something went seriously wrong",
-                    "retcode": 1,
-                },
+                "ret": "Something went seriously wrong",
             },
             1,
         )
