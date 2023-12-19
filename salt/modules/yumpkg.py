@@ -3012,7 +3012,7 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            f"One and only one of {', '.join(link_types)} must be specified and is required"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False

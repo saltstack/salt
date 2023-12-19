@@ -3234,7 +3234,3 @@ def test_59705_version_as_accidental_float_should_become_text(
         yumpkg.install("fnord", version=new)
         call = cmd_mock.mock_calls[0][1][0]
         assert call == expected_cmd
-
-
-def test_mod_repo():
-    pass
