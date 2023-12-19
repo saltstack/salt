@@ -64,7 +64,7 @@ def profile(name):
         )
         ret["changes"] = {
             "old": current_state_dict["stdout"],
-            "new": "Profile will be set to {}".format(profile),
+            "new": f"Profile will be set to {profile}",
         }
         # return None when testing
         ret["result"] = None
@@ -78,7 +78,7 @@ def profile(name):
         ret["comment"] = new_state_dict["stderr"]
     else:
         # create the comment data structure
-        ret["comment"] = 'Tunings changed to "{}"'.format(profile)
+        ret["comment"] = f'Tunings changed to "{profile}"'
         # add the changes specifics
         ret["changes"] = {
             "old": current_state_dict["stdout"],

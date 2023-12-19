@@ -113,7 +113,7 @@ def profile(profile_name):
 
     # run tuned-adm with the profile specified, upon success replace stdout with the profile_name
     result = __salt__["cmd.run_all"](
-        "tuned-adm profile {}".format(profile_name), ignore_retcode=True
+        f"tuned-adm profile {profile_name}", ignore_retcode=True
     )
     if result["retcode"] == 0:
         result["stdout"] = profile_name
