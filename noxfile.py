@@ -44,7 +44,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -329,7 +329,7 @@ def _install_coverage_requirement(session):
                     "photonos-3",
                 ):
                     # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
+                    # Plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
