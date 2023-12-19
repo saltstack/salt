@@ -309,10 +309,11 @@ class PublishClient(salt.transport.base.PublishClient):
                     _connect_to = f"{self.host}:{self.port}"
                 log.warning(
                     "TCP Publish Client encountered an exception while connecting to"
-                    " %s: %r, will reconnect in %d seconds",
+                    " %s: %r, will reconnect in %d seconds - %s",
                     _connect_to,
                     exc,
                     self.backoff,
+                    self._trace,
                 )
                 if timeout and time.monotonic() - start > timeout:
                     break
