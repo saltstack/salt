@@ -1286,6 +1286,7 @@ class Minion(MinionBase):
         self.ready = False
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
+        self.req_channel = None
 
         if io_loop is None:
             self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
@@ -1396,6 +1397,16 @@ class Minion(MinionBase):
         """
         Return a future which will complete when you are connected to a master
         """
+        if hasattr(self, "pub_channel") and self.pub_channel:
+            self.pub_channel.on_recv(None)
+            if hasattr(self.pub_channel, "auth"):
+                self.pub_channel.auth.invalidate()
+            if hasattr(self.pub_channel, "close"):
+                self.pub_channel.close()
+        if hasattr(self, "req_channel") and self.req_channel:
+            self.req_channel.close()
+            self.req_channel = None
+
         # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
         master, self.pub_channel = yield self.eval_master(
             self.opts, self.timeout, self.safe, failed
@@ -2870,7 +2881,9 @@ class Minion(MinionBase):
                             self.pub_channel.auth.invalidate()
                         if hasattr(self.pub_channel, "close"):
                             self.pub_channel.close()
-                        del self.pub_channel
+                    if hasattr(self, "req_channel") and self.req_channel:
+                        self.req_channel.close()
+                        self.req_channel = None
 
                     # if eval_master finds a new master for us, self.connected
                     # will be True again on successful master authentication
@@ -3303,6 +3316,9 @@ class Minion(MinionBase):
             if hasattr(self.pub_channel, "close"):
                 self.pub_channel.close()
             del self.pub_channel
+        if hasattr(self, "req_channel") and self.req_channel:
+            self.req_channel.close()
+            self.req_channel = None
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()
