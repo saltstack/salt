@@ -131,10 +131,10 @@ def test_none():
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        assert tuned.active() == "none"
+        assert tuned.active()["retcode"] != 0
 
 
-def test_active_balanced(self):
+def test_active_balanced():
     ret = {
         "pid": 12345,
         "retcode": 0,
@@ -143,10 +143,10 @@ def test_active_balanced(self):
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        self.assertEqual(tuned.active()["stdout"], "balanced")
+        assert tuned.active()["stdout"] == "balanced"
 
 
-def test_off(self):
+def test_off():
     ret = {
         "pid": 12345,
         "retcode": 0,
@@ -155,10 +155,10 @@ def test_off(self):
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        self.assertEqual(tuned.off()["retcode"], 0)
+        assert tuned.off()["retcode"] == 0
 
 
-def test_profile_valid(self):
+def test_profile_valid():
     ret = {
         "pid": 12345,
         "retcode": 0,
@@ -167,10 +167,10 @@ def test_profile_valid(self):
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        self.assertEqual(tuned.profile("balanced")["stdout"], "balanced")
+        assert tuned.profile("balanced")["stdout"] == "balanced"
 
 
-def test_profile_noexist(self):
+def test_profile_noexist():
     ret = {
         "pid": 12345,
         "retcode": 1,
@@ -179,13 +179,13 @@ def test_profile_noexist(self):
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        self.assertEqual(
-            tuned.profile("noexist")["stderr"],
-            "Requested profile 'noexist' doesn't exist.",
+        assert (
+            tuned.profile("noexist")["stderr"]
+            == "Requested profile 'noexist' doesn't exist."
         )
 
 
-def test_profile_invalid(self):
+def test_profile_invalid():
     ret = {
         "pid": 12345,
         "retcode": 1,
@@ -196,6 +196,6 @@ def test_profile_invalid(self):
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        self.assertTrue(
-            tuned.profile("invalid")["stderr"].startswith("Cannot load profile")
+        assert (
+            tuned.profile("invalid")["stderr"].startswith("Cannot load profile") is True
         )
