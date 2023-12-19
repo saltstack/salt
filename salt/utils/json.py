@@ -16,13 +16,10 @@ log = logging.getLogger(__name__)
 JSONEncoder = json.JSONEncoder
 
 
-class DatetimeEncoder(JSONEncoder):
-    """Datetime encoder to handle json serialization"""
-
-    def default(self, o):
-        if isinstance(o, (datetime.date, datetime.datetime)):
-            return o.isoformat()
-        return super().default(o)
+def default(o):
+    if isinstance(o, (datetime.date, datetime.datetime)):
+        return o.isoformat()
+    raise TypeError(f'Object of type {o.__class__.__name__} is not JSON serializable')
 
 
 def __split(raw):
@@ -143,4 +140,4 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
-    return json_module.dumps(obj, cls=DatetimeEncoder, **kwargs)
+    return json_module.dumps(obj, default=default, **kwargs)
