@@ -10,11 +10,11 @@ import logging
 import os
 import pathlib
 import shutil
-import sys
 import textwrap
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+import boto3
 from ptscripts import Context, command_group
 
 import tools.pkg
@@ -25,17 +25,6 @@ from tools.utils.repo import (
     create_top_level_repo_path,
     get_repo_json_file_contents,
 )
-
-try:
-    import boto3
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -157,7 +146,7 @@ def debian(
     distro_details = _deb_distro_info[distro][distro_version]
 
     ctx.info("Distribution Details:")
-    ctx.info(distro_details)
+    ctx.print(distro_details, soft_wrap=True)
     if TYPE_CHECKING:
         assert isinstance(distro_details["label"], str)
         assert isinstance(distro_details["codename"], str)
@@ -296,7 +285,11 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if not nightly_build_from:
+    if nightly_build_from:
+        nightly_link = create_repo_path.parent / "minor/latest"
+        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
+        nightly_link.symlink_to(f"minor/{salt_version}")
+    else:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -320,7 +313,7 @@ def debian(
 
 
 _rpm_distro_info = {
-    "amazon": ["2"],
+    "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
     "photon": ["3", "4", "5"],
@@ -391,14 +384,13 @@ def rpm(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
+
+    if distro == "photon":
+        distro_version = f"{distro_version}.0"
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
-
-    if distro_arch == "aarch64":
-        ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
-        distro_arch = "arm64"
 
     ctx.info("Creating repository directory structure ...")
     create_repo_path = create_top_level_repo_path(
@@ -489,10 +481,12 @@ def rpm(
     if salt_repo_user and salt_repo_pass:
         repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
 
-    def _create_repo_file(create_repo_path, url_suffix):
+    def _create_repo_file(create_repo_path, url_suffix, nightly_path=None):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            base_url = f"salt-dev/{nightly_build_from}/{datetime.utcnow().strftime('%Y-%m-%d')}/"
+            if nightly_path is None:
+                nightly_path = datetime.utcnow().strftime("%Y-%m-%d")
+            base_url = f"salt-dev/{nightly_build_from}/{nightly_path}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -534,7 +528,14 @@ def rpm(
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if not nightly_build_from:
+    if nightly_build_from:
+        nightly_latest_repo_file_path = create_repo_path.parent / "nightly_latest.repo"
+        _create_repo_file(nightly_latest_repo_file_path, "minor/latest", "latest")
+
+        nightly_link = create_repo_path.parent / "minor/latest"
+        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
+        nightly_link.symlink_to(f"minor/{salt_version}")
+    else:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -905,6 +906,8 @@ def _create_onedir_based_repo(
             arch = "x86"
         elif "-aarch64" in dpath.name.lower():
             arch = "aarch64"
+        elif "-arm64" in dpath.name.lower():
+            arch = "arm64"
         else:
             ctx.error(
                 f"Cannot pickup the right architecture from the filename '{dpath.name}'."

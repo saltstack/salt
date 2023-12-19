@@ -249,13 +249,15 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         session.error(f"Could not find a linux requirements file for {pydir}")
 
 
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return False
 
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
     install_command = [
         "python",
         "-m",
@@ -265,20 +267,8 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
     ]
     if upgrade:
         install_command.append("-U")
-    if onedir:
-        requirements = [
-            "pip>=22.3.1,<23.0",
-            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
-            "setuptools>=65.6.3,<66",
-            "wheel",
-        ]
-    else:
-        requirements = [
-            "pip>=20.2.4,<21.2",
-            "setuptools!=50.*,!=51.*,!=52.*,<59",
-        ]
-    install_command.extend(requirements)
-    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
+    install_command.extend(["setuptools", "pip", "wheel"])
+    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT, env=env)
     return True
 
 
@@ -291,20 +281,23 @@ def _install_requirements(
     if onedir and IS_LINUX:
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
-    if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
+    if not _upgrade_pip_setuptools_and_wheel(session):
         return False
 
     # Install requirements
+    env = os.environ.copy()
+    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if extra_requirements:
         install_command = ["--progress-bar=off"]
         install_command += list(extra_requirements)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
@@ -316,13 +309,15 @@ def _install_requirements(
         # we're already using, we want to maintain the locked version
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     return True
 
 
 def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
+        env = os.environ.copy()
+        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"
@@ -339,7 +334,10 @@ def _install_coverage_requirement(session):
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
         session.install(
-            "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
+            "--progress-bar=off",
+            coverage_requirement,
+            silent=PIP_INSTALL_SILENT,
+            env=env,
         )
 
 
@@ -463,7 +461,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "salt.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "salt"
         cmd_args = [
-            "--omit=tests/*,pkg/tests/*",
+            "--omit=tests/*,tests/pytests/pkg/*",
             "--include=salt/*",
         ]
 
@@ -475,7 +473,7 @@ def _report_coverage(
         )
         cmd_args = [
             "--omit=salt/*",
-            "--include=tests/*,pkg/tests/*",
+            "--include=tests/*,tests/pytests/pkg/*",
         ]
     else:
         json_coverage_file = (
@@ -484,7 +482,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "full"
         cmd_args = [
-            "--include=salt/*,tests/*,pkg/tests/*",
+            "--include=salt/*,tests/*,tests/pytests/pkg/*",
         ]
 
     if cli_report:
@@ -1065,6 +1063,9 @@ def _ci_test(session, transport, onedir=False):
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
     chunks = {
+        "pkg": [
+            "tests/pytests/pkg",
+        ],
         "unit": [
             "tests/unit",
             "tests/pytests/unit",
@@ -1072,7 +1073,9 @@ def _ci_test(session, transport, onedir=False):
         "functional": [
             "tests/pytests/functional",
         ],
-        "scenarios": ["tests/pytests/scenarios"],
+        "scenarios": [
+            "tests/pytests/scenarios",
+        ],
     }
 
     test_group_number = os.environ.get("TEST_GROUP") or "1"
@@ -1552,7 +1555,7 @@ def lint_salt(session):
         paths = session.posargs
     else:
         # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
+        paths = ["setup.py", "noxfile.py", "salt/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
@@ -1692,37 +1695,6 @@ def docs_man(session, compress, update, clean):
     if compress:
         session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
     os.chdir("..")
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run invoke tasks
-    """
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session)
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
-    cmd = ["inv"]
-    files = []
-
-    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
-    # Let's make it behave properly
-    for idx, posarg in enumerate(session.posargs):
-        if idx == 0:
-            cmd.append(posarg)
-            continue
-        if posarg.startswith("--"):
-            cmd.append(posarg)
-            continue
-        files.append(posarg)
-    if files:
-        cmd.append("--files={}".format(" ".join(files)))
-    session.run(*cmd)
 
 
 @nox.session(name="changelog", python="3")
@@ -1890,31 +1862,41 @@ def ci_test_onedir_pkgs(session):
             )
         )
 
+    common_pytest_args = [
+        "--color=yes",
+        "--sys-stats",
+        "--run-destructive",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
+        "--pkg-system-service",
+    ]
+
     chunks = {
-        "install": ["pkg/tests/"],
+        "install": [
+            "tests/pytests/pkg/",
+        ],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "upgrade-classic": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "downgrade-classic": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "pkg/tests/download/",
+            "tests/pytests/pkg/download/",
         ],
     }
 
@@ -1925,17 +1907,13 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
-    junit_report_filename = f"test-results-{chunk}"
-    runtests_log_filename = f"runtests-{chunk}"
-
-    pydir = _get_pydir(session)
 
     if IS_LINUX:
         # Fetch the toolchain
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
     # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
+    if _upgrade_pip_setuptools_and_wheel(session):
         _install_requirements(session, "pyzmq")
     env = {
         "ONEDIR_TESTRUN": "1",
@@ -1946,27 +1924,54 @@ def ci_test_onedir_pkgs(session):
         cmd_args.append("--classic")
 
     pytest_args = (
-        cmd_args[:]
+        common_pytest_args[:]
+        + cmd_args[:]
         + [
-            "-c",
-            str(REPO_ROOT / "pkg-tests-pytest.ini"),
-            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
+            f"--log-file=artifacts/logs/runtests-{chunk}.log",
         ]
         + session.posargs
     )
-    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    try:
+        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    except CommandFailed:
+        if os.environ.get("RERUN_FAILURES", "0") == "0":
+            # Don't rerun on failures
+            return
+
+        # Don't print the system information, not the test selection on reruns
+        global PRINT_TEST_SELECTION
+        global PRINT_SYSTEM_INFO
+        PRINT_TEST_SELECTION = False
+        PRINT_SYSTEM_INFO = False
+
+        pytest_args = (
+            common_pytest_args[:]
+            + cmd_args[:]
+            + [
+                f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
+                f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
+                "--lf",
+            ]
+            + session.posargs
+        )
+        _pytest(
+            session,
+            coverage=False,
+            cmd_args=pytest_args,
+            env=env,
+            on_rerun=True,
+        )
 
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
-            cmd_args[:]
+            common_pytest_args[:]
+            + cmd_args[:]
             + [
-                "-c",
-                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
-                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                f"--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
@@ -1974,5 +1979,30 @@ def ci_test_onedir_pkgs(session):
             pytest_args.append("--use-prev-version")
         if chunk in ("upgrade-classic", "downgrade-classic"):
             pytest_args.append("--classic")
-        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        try:
+            _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+        except CommandFailed:
+            cmd_args = chunks["install"]
+            pytest_args = (
+                common_pytest_args[:]
+                + cmd_args[:]
+                + [
+                    "--no-install",
+                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--lf",
+                ]
+                + session.posargs
+            )
+            if "downgrade" in chunk:
+                pytest_args.append("--use-prev-version")
+            if chunk in ("upgrade-classic", "downgrade-classic"):
+                pytest_args.append("--classic")
+            _pytest(
+                session,
+                coverage=False,
+                cmd_args=pytest_args,
+                env=env,
+                on_rerun=True,
+            )
     sys.exit(0)

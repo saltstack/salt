@@ -26,6 +26,7 @@ from salt.modules.file import (
     _add_flags,
     _assert_occurrence,
     _binary_replace,
+    _check_sig,
     _error,
     _get_bkroot,
     _get_eol,
@@ -125,6 +126,7 @@ if salt.utils.platform.is_windows():
         search = namespaced_function(search, globals())
         _get_flags = namespaced_function(_get_flags, globals())
         _binary_replace = namespaced_function(_binary_replace, globals())
+        _check_sig = namespaced_function(_check_sig, globals())
         _splitlines_preserving_trailing_newline = namespaced_function(
             _splitlines_preserving_trailing_newline, globals()
         )

@@ -985,7 +985,7 @@ def destroy_dns_records(fqdn):
     records = response["domain_records"]
 
     if records:
-        record_ids = [r["id"] for r in records if r["name"].decode() == hostname]
+        record_ids = [r["id"] for r in records if r["name"] == hostname]
         log.debug("deleting DNS record IDs: %s", record_ids)
         for id_ in record_ids:
             try:

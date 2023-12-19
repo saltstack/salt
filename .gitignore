@@ -119,7 +119,6 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
-/pkg/artifacts/
 requirements/static/*/py*/*.log
 
 # Vim's default session file
@@ -147,3 +146,5 @@ nox.*.tar.xz
 /pkg/debian/salt-ssh
 /pkg/debian/salt-syndic
 /pkg/debian/debhelper-build-stamp
+
+.tools-venvs
