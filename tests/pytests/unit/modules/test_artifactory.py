@@ -271,8 +271,7 @@ def test_get_latest_snapshot_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/snapshot",
-            "/path/to/file"
+            "http://artifactory.example.com/artifactory/snapshot", "/path/to/file"
         )
 
 
@@ -297,8 +296,7 @@ def test_get_snapshot_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/snapshot",
-            "/path/to/file"
+            "http://artifactory.example.com/artifactory/snapshot", "/path/to/file"
         )
 
 
@@ -325,8 +323,7 @@ def test_get_latest_release_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/release",
-            "/path/to/file"
+            "http://artifactory.example.com/artifactory/release", "/path/to/file"
         )
 
 
@@ -351,8 +348,7 @@ def test_get_release_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/release",
-            "/path/to/file"
+            "http://artifactory.example.com/artifactory/release", "/path/to/file"
         )
 
 
