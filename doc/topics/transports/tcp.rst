@@ -23,7 +23,7 @@ to ``tcp`` on each Salt minion and Salt master.
 TLS Support
 ===========
 
-The TLS transport support full encryption and verification using both server
+The TLS transport supports full encryption and verification using both server
 and client certificates. See :doc:`ssl` for more details.
 
 
