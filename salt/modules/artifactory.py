@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "artifactory"
 
+
 def __virtual__():
     """
     Only load if elementtree xml library is available.
@@ -26,6 +27,12 @@ def __virtual__():
 
 
 def set_basic_auth(url, username, password):
+    """
+    Sets the username and password for a specific url. Helper method.
+
+    CLI Example:
+
+    """
     pw_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     pw_mgr.add_password(None, url, username, password)
     basic_auth_handler = urllib.request.HTTPBasicAuthHandler(pw_mgr)
@@ -89,7 +96,7 @@ def get_latest_snapshot(
         repository=repository,
         group_id=group_id,
         artifact_id=artifact_id,
-        use_literal_group_id=use_literal_group_id
+        use_literal_group_id=use_literal_group_id,
     )
     version = artifact_metadata["latest_version"]
     snapshot_url, file_name = _get_snapshot_url(
@@ -506,18 +513,14 @@ def _get_artifact_metadata_xml(
 
 
 def _get_artifact_metadata(
-    artifactory_url,
-    repository,
-    group_id,
-    artifact_id,
-    use_literal_group_id=False
+    artifactory_url, repository, group_id, artifact_id, use_literal_group_id=False
 ):
     metadata_xml = _get_artifact_metadata_xml(
         artifactory_url=artifactory_url,
         repository=repository,
         group_id=group_id,
         artifact_id=artifact_id,
-        use_literal_group_id=use_literal_group_id
+        use_literal_group_id=use_literal_group_id,
     )
     root = ET.fromstring(metadata_xml)
 
@@ -568,7 +571,9 @@ def _get_snapshot_version_metadata_xml(
     )
 
     try:
-        snapshot_version_metadata_xml = urllib.request.urlopen(snapshot_version_metadata_url).read()
+        snapshot_version_metadata_xml = urllib.request.urlopen(
+            snapshot_version_metadata_url
+        ).read()
     except (HTTPError, URLError) as err:
         message = "Could not fetch data from url: {}. ERROR: {}".format(
             snapshot_version_metadata_url, err
@@ -587,7 +592,7 @@ def _get_snapshot_version_metadata(
         repository=repository,
         group_id=group_id,
         artifact_id=artifact_id,
-        version=version
+        version=version,
     )
     metadata = ET.fromstring(metadata_xml)
 
@@ -664,9 +669,7 @@ def __save_artifact(artifact_url, target_file):
         log.debug("File %s already exists, checking checksum...", target_file)
         checksum_url = artifact_url + ".sha1"
 
-        checksum_success, artifact_sum, checksum_comment = __download(
-            checksum_url
-        )
+        checksum_success, artifact_sum, checksum_comment = __download(checksum_url)
         if checksum_success:
             artifact_sum = salt.utils.stringutils.to_unicode(artifact_sum)
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
@@ -700,7 +703,7 @@ def __save_artifact(artifact_url, target_file):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            "Artifact downloaded from URL: {}".format(artifact_url),
+            f"Artifact downloaded from URL: {artifact_url}",
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file
@@ -759,6 +762,7 @@ def __get_error_comment(http_error, request_url):
 
 def __append_comment(new_comment, current_comment=""):
     return current_comment + "\n" + new_comment
+
 
 class ArtifactoryError(Exception):
     def __init__(self, value):
