@@ -2504,7 +2504,7 @@ def stop(name, kill=False, path=None, use_vt=None, timeout=0):
     timeout: 0
         wait timeout seconds before hard-stopping
 
-        .. versionadded:: 3007
+        .. versionadded:: 3007.0
 
     CLI Example:
 
