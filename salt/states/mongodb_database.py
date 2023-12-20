@@ -53,12 +53,12 @@ def absent(
     ssl
         Whether or not to use SSL to connect to mongodb. Default False.
 
-        .. versionadded:: 3005.0
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3005.0
+        .. versionadded:: 3008.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
@@ -88,9 +88,9 @@ def absent(
             ssl=ssl,
             verify_ssl=verify_ssl,
         ):
-            ret["comment"] = "Database {} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
 
-    ret["comment"] = "Database {} is not present".format(name)
+    ret["comment"] = f"Database {name} is not present"
     return ret

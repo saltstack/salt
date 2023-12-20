@@ -32,7 +32,7 @@ def test_mongo_returner_should_correctly_pass_ssl_to_MongoClient_when_ret_is_set
     ) as fake_mongo, patch.object(
         mongo_return,
         "PYMONGO_VERSION",
-        mongo_return._LooseVersion("99999"),
+        mongo_return.Version("99999"),
         create=True,
     ), patch.dict(
         "salt.returners.mongo_return.__opts__",
@@ -63,7 +63,7 @@ def test_mongo_returner_should_correctly_pass_ssl_to_MongoClient(expected_ssl, u
     ) as fake_mongo, patch.object(
         mongo_return,
         "PYMONGO_VERSION",
-        mongo_return._LooseVersion("99999"),
+        mongo_return.Version("99999"),
         create=True,
     ), patch.dict(
         "salt.returners.mongo_return.__opts__",
