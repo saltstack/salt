@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pytest
 
@@ -24,6 +25,7 @@ def minion_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/minion.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "minion")
     return opts
 
 
@@ -41,6 +43,7 @@ def master_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/master.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "master")
     return opts
 
 
@@ -59,6 +62,7 @@ def syndic_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/syndic.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "syndic")
     return opts
 
 

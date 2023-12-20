@@ -68,9 +68,8 @@ peer_run:
 Please see the [Vault execution module docs](https://docs.saltproject.io/en/3007.0/ref/modules/all/salt.modules.vault.html) for
 details and setup instructions regarding AppRole issuance.
 
-.. note::
-  The Vault modules are being moved to a [Salt extension](https://github.com/salt-extensions/saltext-vault), but this improvement
-  has still been merged into core for a smoother transition.
+Note: The Vault modules are being moved to a [Salt extension](https://github.com/salt-extensions/saltext-vault),
+but this improvement has still been merged into core for a smoother transition.
 
 <!--
 Do not edit the changelog below.
