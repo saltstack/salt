@@ -560,7 +560,7 @@ def list_upgrades(refresh=True, root=None, **kwargs):
         salt '*' pkg.list_upgrades
     """
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     ret = dict()
     cmd = ["list-updates"]
@@ -674,7 +674,7 @@ def info_available(*names, **kwargs):
 
     # Refresh db before extracting the latest package
     if kwargs.get("refresh", True):
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     pkg_info = []
     batch = names[:]
@@ -1374,7 +1374,6 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append(kwargs.get("name"))
 
     if kwargs.get("gpgautoimport") is True:
-        global_cmd_opt.append("--gpg-auto-import-keys")
         call_refresh = True
 
     if cmd_opt:
@@ -1386,8 +1385,8 @@ def mod_repo(repo, **kwargs):
         # when used with "zypper ar --refresh" or "zypper mr --refresh"
         # --gpg-auto-import-keys is not doing anything
         # so we need to specifically refresh here with --gpg-auto-import-keys
-        refresh_opts = global_cmd_opt + ["refresh"] + [repo]
-        __zypper__(root=root).xml.call(*refresh_opts)
+        kwargs.update({"repos": repo})
+        refresh_db(root=root, **kwargs)
     elif not added and not cmd_opt:
         comment = "Specified arguments did not result in modification of repo"
 
@@ -1398,7 +1397,7 @@ def mod_repo(repo, **kwargs):
     return repo
 
 
-def refresh_db(force=None, root=None):
+def refresh_db(force=None, root=None, gpgautoimport=False, **kwargs):
     """
     Trigger a repository refresh by calling ``zypper refresh``. Refresh will run
     with ``--force`` if the "force=True" flag is passed on the CLI or
@@ -1408,6 +1407,17 @@ def refresh_db(force=None, root=None):
     It will return a dict::
 
         {'<database name>': Bool}
+
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
+
+        .. versionadded:: 3007.0
+
+    repos
+        Refresh just the specified repos
+
+        .. versionadded:: 3007.0
 
     root
         operate on a different root directory.
@@ -1429,11 +1439,22 @@ def refresh_db(force=None, root=None):
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
     refresh_opts = ["refresh"]
+    global_opts = []
     if force is None:
         force = __pillar__.get("zypper", {}).get("refreshdb_force", True)
     if force:
         refresh_opts.append("--force")
-    out = __zypper__(root=root).refreshable.call(*refresh_opts)
+    repos = kwargs.get("repos", [])
+    refresh_opts.extend([repos] if not isinstance(repos, list) else repos)
+
+    if gpgautoimport:
+        global_opts.append("--gpg-auto-import-keys")
+
+    # We do the actual call to zypper refresh.
+    # We ignore retcode 6 which is returned when there are no repositories defined.
+    out = __zypper__(root=root).refreshable.call(
+        *global_opts, *refresh_opts, success_retcodes=[0, 6]
+    )
 
     for line in out.splitlines():
         if not line:
@@ -1603,7 +1624,7 @@ def install(
                 'arch': '<new-arch>'}}}
     """
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
@@ -1888,7 +1909,7 @@ def upgrade(
         cmd_update.insert(0, "--no-gpg-checks")
 
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     if dryrun:
         cmd_update.append("--dry-run")
@@ -1968,17 +1989,21 @@ def _uninstall(name=None, pkgs=None, root=None):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
+    ptfpackages = _find_ptf_packages(pkg_params.keys(), root=root)
     includes = _find_types(pkg_params.keys())
     old = list_pkgs(root=root, includes=includes)
     targets = []
     for target in pkg_params:
+        if target in ptfpackages:
+            # ptfpackages needs special handling
+            continue
         # Check if package version set to be removed is actually installed:
         # old[target] contains a comma-separated list of installed versions
         if target in old and pkg_params[target] in old[target].split(","):
             targets.append(target + "-" + pkg_params[target])
         elif target in old and not pkg_params[target]:
             targets.append(target)
-    if not targets:
+    if not targets and not ptfpackages:
         return {}
 
     systemd_scope = _systemd_scope()
@@ -1989,6 +2014,13 @@ def _uninstall(name=None, pkgs=None, root=None):
             "remove", *targets[:500]
         )
         targets = targets[500:]
+
+    # handle ptf packages
+    while ptfpackages:
+        __zypper__(systemd_scope=systemd_scope, root=root).call(
+            "removeptf", "--allow-downgrade", *ptfpackages[:500]
+        )
+        ptfpackages = ptfpackages[500:]
 
     _clean_cache()
     new = list_pkgs(root=root, includes=includes)
@@ -2075,6 +2107,11 @@ def remove(
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+
+    .. versionchanged:: 3007.0
+        Can now remove also PTF packages which require a different handling in the backend.
+
+    Can now remove also PTF packages which require a different handling in the backend.
     """
     return _uninstall(name=name, pkgs=pkgs, root=root)
 
@@ -2540,6 +2577,28 @@ def _get_visible_patterns(root=None):
     return patterns
 
 
+def _find_ptf_packages(pkgs, root=None):
+    """
+    Find ptf packages in "pkgs" and return them as list
+    """
+    ptfs = []
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["-q", "--qf", "%{NAME}: [%{PROVIDES} ]\n"])
+    cmd.extend(pkgs)
+    output = __salt__["cmd.run"](cmd)
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        if ":" not in line:
+            continue
+        pkg, provides = line.split(":", 1)
+        if "ptf()" in provides:
+            ptfs.append(pkg)
+    return ptfs
+
+
 def _get_installed_patterns(root=None):
     """
     List all installed patterns.
@@ -2711,7 +2770,7 @@ def search(criteria, refresh=False, **kwargs):
     root = kwargs.get("root", None)
 
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     cmd = ["search"]
     if kwargs.get("match") == "exact":
@@ -2862,7 +2921,7 @@ def download(*packages, **kwargs):
 
     refresh = kwargs.get("refresh", False)
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     pkg_ret = {}
     for dld_result in (
@@ -3014,7 +3073,7 @@ def list_patches(refresh=False, root=None, **kwargs):
         salt '*' pkg.list_patches
     """
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     return _get_patches(root=root)
 
@@ -3108,7 +3167,7 @@ def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
         salt '*' pkg.resolve_capabilities resolve_capabilities=True w3m_ssl
     """
     if refresh:
-        refresh_db(root)
+        refresh_db(root, **kwargs)
 
     ret = list()
     for pkg in pkgs:

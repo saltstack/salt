@@ -8,6 +8,31 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module", autouse=True)
+def pillar_tree(base_env_pillar_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - mine
+      '127.0.0.1':
+        - mine
+    """
+    mine_pillar_file = """
+    mine_functions:
+      disk.usage:
+        - c
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_pillar_tree_root_dir
+    )
+    mine_tempfile = pytest.helpers.temp_file(
+        "mine.sls", mine_pillar_file, base_env_pillar_tree_root_dir
+    )
+
+    with top_tempfile, mine_tempfile:
+        yield
+
+
 @pytest.fixture(autouse=True)
 def thin_dir(salt_ssh_cli):
     try:
@@ -54,3 +79,14 @@ def test_mine_get(salt_ssh_cli, salt_minion, tgts):
     assert set(ret.data) == exp
     for id_ in exp:
         assert ret.data[id_] is True
+
+
+def test_ssh_mine_get_error(salt_ssh_cli, caplog):
+    """
+    Test that a mine function returning an error is not
+    included in the output.
+    """
+    ret = salt_ssh_cli.run("mine.get", "localhost", "disk.usage")
+    assert ret.returncode == 0
+    assert not ret.data
+    assert "Error executing mine func disk.usage" in caplog.text

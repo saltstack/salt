@@ -3,25 +3,14 @@ Module for OpenSCAP Management
 
 """
 
-
+import argparse
 import os.path
 import shlex
 import shutil
+import subprocess
 import tempfile
-from subprocess import PIPE, Popen
 
 import salt.utils.versions
-
-ArgumentParser = object
-
-try:
-    import argparse  # pylint: disable=minimum-python-version
-
-    ArgumentParser = argparse.ArgumentParser
-    HAS_ARGPARSE = True
-except ImportError:  # python 2.6
-    HAS_ARGPARSE = False
-
 
 _XCCDF_MAP = {
     "eval": {
@@ -35,11 +24,7 @@ _XCCDF_MAP = {
 }
 
 
-def __virtual__():
-    return HAS_ARGPARSE, "argparse module is required."
-
-
-class _ArgumentParser(ArgumentParser):
+class _ArgumentParser(argparse.ArgumentParser):
     def __init__(self, action=None, *args, **kwargs):
         super().__init__(*args, prog="oscap", **kwargs)
         self.add_argument("action", choices=["eval"])
@@ -47,7 +32,7 @@ class _ArgumentParser(ArgumentParser):
         for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
             self.add_argument(*params, **kwparams)
 
-    def error(self, message, *args, **kwargs):
+    def error(self, message, *args, **kwargs):  # pylint: disable=arguments-differ
         raise Exception(message)
 
 
@@ -168,7 +153,9 @@ def xccdf_eval(
 
     if success:
         tempdir = tempfile.mkdtemp()
-        proc = Popen(cmd_opts, stdout=PIPE, stderr=PIPE, cwd=tempdir)
+        proc = subprocess.Popen(
+            cmd_opts, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tempdir
+        )
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
@@ -225,12 +212,18 @@ def xccdf(params):
     if success:
         cmd = _XCCDF_MAP[action]["cmd_pattern"].format(args.profile, policy)
         tempdir = tempfile.mkdtemp()
-        proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
+        proc = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=tempdir,
+        )
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
             error += f"\nKilled by signal {proc.returncode}\n".encode("ascii")
         returncode = proc.returncode
+        success = _OSCAP_EXIT_CODES_MAP.get(returncode, False)
         if success:
             if not __salt__["cp.push_dir"](tempdir):
                 success = False

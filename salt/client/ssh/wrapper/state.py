@@ -58,7 +58,7 @@ def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
         **st_kwargs,
     )
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
-    stdout, stderr, _ = single.cmd_block()
+    stdout, stderr, retcode = single.cmd_block()
 
     # Clean up our tar
     try:
@@ -66,33 +66,7 @@ def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
     except OSError:
         pass
 
-    # Read in the JSON data and return the data structure
-    try:
-        return salt.utils.data.decode(
-            salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict)
-        )
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
-
-    # If for some reason the json load fails, return the stdout
-    return salt.utils.data.decode(stdout)
-
-
-def _set_retcode(ret, highstate=None):
-    """
-    Set the return code based on the data back from the state system
-    """
-
-    # Set default retcode to 0
-    __context__["retcode"] = salt.defaults.exitcodes.EX_OK
-
-    if isinstance(ret, list):
-        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-        return
-    if not salt.utils.state.check_result(ret, highstate=highstate):
-
-        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
+    return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def _check_pillar(kwargs, pillar=None):
@@ -256,7 +230,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, _ = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block()
 
         # Clean up our tar
         try:
@@ -264,15 +238,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         except OSError:
             pass
 
-        # Read in the JSON data and return the data structure
-        try:
-            return salt.utils.json.loads(stdout)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-            log.error(str(e))
-
-        # If for some reason the json load fails, return the stdout
-        return stdout
+        return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def running(concurrent=False):
@@ -400,7 +366,7 @@ def low(data, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
-        stdout, stderr, _ = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block()
 
         # Clean up our tar
         try:
@@ -408,15 +374,7 @@ def low(data, **kwargs):
         except OSError:
             pass
 
-        # Read in the JSON data and return the data structure
-        try:
-            return salt.utils.json.loads(stdout)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-            log.error(str(e))
-
-        # If for some reason the json load fails, return the stdout
-        return stdout
+        return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def _get_test_value(test=None, **kwargs):
@@ -499,7 +457,7 @@ def high(data, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, _ = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block()
 
         # Clean up our tar
         try:
@@ -507,15 +465,7 @@ def high(data, **kwargs):
         except OSError:
             pass
 
-        # Read in the JSON data and return the data structure
-        try:
-            return salt.utils.json.loads(stdout)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-            log.error(str(e))
-
-        # If for some reason the json load fails, return the stdout
-        return stdout
+        return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def apply_(mods=None, **kwargs):
@@ -756,7 +706,7 @@ def highstate(test=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, _ = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block()
 
         # Clean up our tar
         try:
@@ -764,15 +714,7 @@ def highstate(test=None, **kwargs):
         except OSError:
             pass
 
-        # Read in the JSON data and return the data structure
-        try:
-            return salt.utils.json.loads(stdout)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-            log.error(str(e))
-
-        # If for some reason the json load fails, return the stdout
-        return stdout
+        return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def top(topfn, test=None, **kwargs):
@@ -853,7 +795,7 @@ def top(topfn, test=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, _ = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block()
 
         # Clean up our tar
         try:
@@ -861,15 +803,7 @@ def top(topfn, test=None, **kwargs):
         except OSError:
             pass
 
-        # Read in the JSON data and return the data structure
-        try:
-            return salt.utils.json.loads(stdout)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-            log.error(str(e))
-
-        # If for some reason the json load fails, return the stdout
-        return stdout
+        return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}
 
 
 def show_highstate(**kwargs):
@@ -1042,7 +976,6 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             )
 
         ret = _ssh_state(chunk, st_kwargs, kwargs, pillar, test=test)
-        _set_retcode(ret, highstate=highstate)
         # Work around Windows multiprocessing bug, set __opts__['test'] back to
         # value from before this function was run.
         __opts__["test"] = orig_test
@@ -1300,7 +1233,7 @@ def single(fun, name, test=None, **kwargs):
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
 
     # Run the state.pkg command on the target
-    stdout, stderr, _ = single.cmd_block()
+    stdout, stderr, retcode = single.cmd_block()
 
     # Clean up our tar
     try:
@@ -1308,12 +1241,4 @@ def single(fun, name, test=None, **kwargs):
     except OSError:
         pass
 
-    # Read in the JSON data and return the data structure
-    try:
-        return salt.utils.json.loads(stdout)
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
-
-    # If for some reason the json load fails, return the stdout
-    return stdout
+    return {"local": salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)}

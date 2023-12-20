@@ -163,13 +163,16 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     if not path and not string:
         raise salt.exceptions.SaltInvocationError("Must pass either path or string")
 
+    if path and string:
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string")
+
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
         path_or_string = __salt__["cp.get_url"](
             path, saltenv=kwargs.get("saltenv", "base")
         )
-    elif string:
+    if string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
 
@@ -179,7 +182,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         default_renderer,
         __opts__["renderer_blacklist"],
         __opts__["renderer_whitelist"],
-        **kwargs
+        **kwargs,
     )
     return ret.read() if __utils__["stringio.is_readable"](ret) else ret
 
@@ -191,12 +194,12 @@ def _get_serialize_fn(serializer, fn_name):
 
     if not fns:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{}' not found.".format(serializer)
+            f"Serializer '{serializer}' not found."
         )
 
     if not fn:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{}' does not implement {}.".format(serializer, fn_name)
+            f"Serializer '{serializer}' does not implement {fn_name}."
         )
 
     return fn
@@ -568,7 +571,7 @@ def findup(startpath, filenames, saltenv="base"):
     # Verify the cwd is a valid path in the state tree
     if startpath and not path_exists(startpath, saltenv):
         raise salt.exceptions.SaltInvocationError(
-            "Starting path not found in the state tree: {}".format(startpath)
+            f"Starting path not found in the state tree: {startpath}"
         )
 
     # Ensure that patterns is a string or list of strings

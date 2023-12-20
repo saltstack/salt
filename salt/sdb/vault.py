@@ -9,7 +9,7 @@ Vault SDB Module
 
 This module allows access to Hashicorp Vault using an ``sdb://`` URI.
 
-Base configuration instructions are documented in the execution module docs.
+Base configuration instructions are documented in the :ref:`execution module docs <vault-setup>`.
 Below are noted extra configuration required for the sdb module, but the base
 configuration must also be completed.
 
@@ -37,12 +37,26 @@ The above URI is analogous to running the following vault command:
 .. code-block:: bash
 
     $ vault read -field=mypassword secret/passwords
+
+
+Further configuration
+---------------------
+The following options can be set in the profile:
+
+patch
+    When writing data, partially update the secret instead of overwriting it completely.
+    This is usually the expected behavior, since without this option,
+    each secret path can only contain a single mapping key safely.
+    Defaults to ``False`` for backwards-compatibility reasons.
+
+    .. versionadded:: 3007.0
 """
 
 
 import logging
 
 import salt.exceptions
+import salt.utils.vault as vault
 
 log = logging.getLogger(__name__)
 
@@ -58,62 +72,50 @@ def set_(key, value, profile=None):
     else:
         path, key = key.rsplit("/", 1)
     data = {key: value}
+    curr_data = {}
+    profile = profile or {}
 
-    version2 = __utils__["vault.is_v2"](path)
-    if version2["v2"]:
-        path = version2["data"]
-        data = {"data": data}
+    if profile.get("patch"):
+        try:
+            # Patching only works on existing secrets.
+            # Save the current data if patching is enabled
+            # to write it back later, if any errors happen in patch_kv.
+            # This also checks that the path exists, otherwise patching fails as well.
+            curr_data = vault.read_kv(path, __opts__, __context__)
+            vault.patch_kv(path, data, __opts__, __context__)
+            return True
+        except (vault.VaultNotFoundError, vault.VaultPermissionDeniedError):
+            pass
 
+    curr_data.update(data)
     try:
-        url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("POST", url, json=data)
-
-        if response.status_code != 204:
-            response.raise_for_status()
+        vault.write_kv(path, data, __opts__, __context__)
         return True
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Failed to write secret! %s: %s", type(e).__name__, e)
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:  # pylint: disable=broad-except
+        log.error("Failed to write secret! %s: %s", type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err) from err
 
 
 def get(key, profile=None):
     """
     Get a value from the vault service
     """
+    full_path = key
     if "?" in key:
         path, key = key.split("?")
     else:
         path, key = key.rsplit("/", 1)
 
-    version2 = __utils__["vault.is_v2"](path)
-    if version2["v2"]:
-        path = version2["data"]
-
     try:
-        url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("GET", url)
-        if response.status_code == 404:
-            if version2["v2"]:
-                path = version2["data"] + "/" + key
-                url = "v1/{}".format(path)
-                response = __utils__["vault.make_request"]("GET", url)
-                if response.status_code == 404:
-                    return None
-            else:
-                return None
-        if response.status_code != 200:
-            response.raise_for_status()
-        data = response.json()["data"]
-
-        if version2["v2"]:
-            if key in data["data"]:
-                return data["data"][key]
-            else:
-                return data["data"]
-        else:
-            if key in data:
-                return data[key]
+        try:
+            res = vault.read_kv(path, __opts__, __context__)
+            if key in res:
+                return res[key]
+            return None
+        except vault.VaultNotFoundError:
+            return vault.read_kv(full_path, __opts__, __context__)
+    except vault.VaultNotFoundError:
         return None
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Failed to read secret! %s: %s", type(e).__name__, e)
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:  # pylint: disable=broad-except
+        log.error("Failed to read secret! %s: %s", type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err) from err
