@@ -4,8 +4,8 @@
 
 import pytest
 
-import salt.modules.mongodb as mongodb
 import salt.modules.mongodb
+import salt.modules.mongodb as mongodb
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -721,6 +721,7 @@ def test_remove():
             ret = mongodb.remove("test_collection", {"foo": "FOO", "bar": "BAR"})
             expected = "1 objects removed"
             assert ret == expected
+
 
 @pytest.fixture(autouse=True)
 def fake_pymongo():

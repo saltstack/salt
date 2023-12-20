@@ -180,7 +180,9 @@ def _get_conn(ret):
         mdb = conn.get_database()
     else:
         if PYMONGO_VERSION > Version("2.3"):
-            conn = pymongo.MongoClient(host, port, username=user, password=password, ssl=ssl)
+            conn = pymongo.MongoClient(
+                host, port, username=user, password=password, ssl=ssl
+            )
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(

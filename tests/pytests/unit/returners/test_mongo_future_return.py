@@ -33,6 +33,7 @@ def test_config_exception():
         with pytest.raises(salt.exceptions.SaltConfigurationError):
             mongo_future_return.returner({})
 
+
 @pytest.mark.parametrize(
     "expected_ssl, use_ssl",
     [

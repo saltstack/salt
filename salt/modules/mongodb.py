@@ -127,21 +127,6 @@ def db_list(
     List all MongoDB databases.
 
     user
-        The user to authenticate with, if necessary.
-
-    password
-        The password to authenticate with, if necessary.
-
-    host
-        The host running MongoDB.
-
-    port
-        The port MongoDB is listening on.
-
-    authdb
-        The database to authenticate against, if not "admin".
-
-    user
         The user to connect to MongoDB as. Default is None.
 
     password
@@ -159,12 +144,12 @@ def db_list(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -201,24 +186,6 @@ def db_exists(
     Checks if a database exists in MongoDB.
 
     name
-        The name of the database to check.
-
-    user
-        The user to authenticate with, if necessary.
-
-    password
-        The password to authenticate with, if necessary.
-
-    host
-        The host running MongoDB.
-
-    port
-        The port MongoDB is listening on.
-
-    authdb
-        The database to authenticate against, if not "admin".
-
-    name
         The name of the database to check for.
 
     user
@@ -239,12 +206,12 @@ def db_exists(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -276,24 +243,6 @@ def db_remove(
     Remove a MongoDB database.
 
     name
-        Name of the MongoDB database to remove.
-
-    user
-        The user to authenticate with, if necessary.
-
-    password
-        The password to authenticate with, if necessary.
-
-    host
-        The host running MongoDB.
-
-    port
-        The port MongoDB is listening on.
-
-    authdb
-        The database to authenticate against, if not "admin".
-
-    name
         The name of the database to remove.
 
     user
@@ -314,12 +263,12 @@ def db_remove(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -378,12 +327,12 @@ def version(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -397,7 +346,7 @@ def version(
         user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
     )
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -447,12 +396,12 @@ def user_find(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -464,7 +413,7 @@ def user_find(
         user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
     )
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -510,12 +459,12 @@ def user_list(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -586,12 +535,12 @@ def user_exists(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -659,12 +608,12 @@ def user_create(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -728,12 +677,12 @@ def user_remove(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -741,7 +690,9 @@ def user_remove(
 
         salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
-    conn = _connect(user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -800,12 +751,12 @@ def user_roles_exists(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -888,12 +839,12 @@ def user_grant_roles(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -973,12 +924,12 @@ def user_revoke_roles(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -1051,8 +1002,12 @@ def collection_create(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
+        .. versionadded:: 3008.0
+
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1061,7 +1016,9 @@ def collection_create(
         salt '*' mongodb.collection_create mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -1114,8 +1071,12 @@ def collection_drop(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
+        .. versionadded:: 3008.0
+
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1124,7 +1085,9 @@ def collection_drop(
         salt '*' mongodb.collection_drop mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -1173,8 +1136,12 @@ def collections_list(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
+        .. versionadded:: 3008.0
+
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1183,7 +1150,9 @@ def collections_list(
         salt '*' mongodb.collections_list mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -1239,12 +1208,12 @@ def insert(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1323,12 +1292,12 @@ def update_one(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1368,7 +1337,9 @@ def update_one(
     _update_doc = document[1]
 
     # need a string to perform the test, so using objs[0]
-    test_f = find(collection, objs[0], user, password, host, port, database, authdb, ssl)
+    test_f = find(
+        collection, objs[0], user, password, host, port, database, authdb, ssl
+    )
     if not isinstance(test_f, list):
         return "The find result is not well formatted. An error appears; cannot update."
     elif not test_f:
@@ -1382,7 +1353,7 @@ def update_one(
             col = getattr(mdb, collection)
             ids = col.update_one(_id_field, {"$set": _update_doc})
             nb_mod = ids.modified_count
-            return "{} objects updated".format(nb_mod)
+            return f"{nb_mod} objects updated"
         except pymongo.errors.PyMongoError as err:
             log.error("Updating object %s failed with error %s", objects, err)
             return err
@@ -1430,12 +1401,12 @@ def find(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1520,12 +1491,12 @@ def remove(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     verify_ssl
         Whether or not to verify the server cert when connecting. Default True.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -1559,7 +1530,7 @@ def remove(
             for count in range(0, w):
                 res = col.delete_one(query)
                 deleted_count += res.deleted_count
-        return "{} objects removed".format(deleted_count)
+        return f"{deleted_count} objects removed"
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", _get_error_message(err))
         return _get_error_message(err)
