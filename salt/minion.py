@@ -115,27 +115,21 @@ log = logging.getLogger(__name__)
 
 
 def _sync_grains(opts):
-    # need sync of custom grains as may be used in pillar compilation
-    # if coming up initially and local client (masterless minion)
-    # if local client (masterless minion), the first sync _grains
-    # doesn't have opts["master_uri"] set yet during the sync, so need
-    # to force local, otherwise will throw an exception when attempting
-    # to retrieve opts["master_uri"] when retrieving key for remote communication
-    # in addition opts sometimes does not contain extmod_whitelist and extmod_blacklist
-    # hence set those to defaults, empty dict, if not part of opts, as ref'd in
+    # if local client (masterless minion), need sync of custom grains
+    # as they may be used in pillar compilation
+    # in addition, with masterless minion some opts may not be filled
+    # at this point of syncing,for example sometimes does not contain
+    # extmod_whitelist and extmod_blacklist hence set those to defaults,
+    # empty dict, if not part of opts, as ref'd in
     # salt.utils.extmod sync function
-    if opts.get("extmod_whitelist", None) is None:
-        opts["extmod_whitelist"] = {}
+    if "local" == opts.get("file_client", "remote"):
+        if opts.get("extmod_whitelist", None) is None:
+            opts["extmod_whitelist"] = {}
 
-    if opts.get("extmod_blacklist", None) is None:
-        opts["extmod_blacklist"] = {}
+        if opts.get("extmod_blacklist", None) is None:
+            opts["extmod_blacklist"] = {}
 
-    if opts.get("file_client", "remote") == "local" and not opts.get(
-        "master_uri", None
-    ):
         salt.utils.extmods.sync(opts, "grains", force_local=True)
-    else:
-        salt.utils.extmods.sync(opts, "grains")
 
 
 def resolve_dns(opts, fallback=True):
