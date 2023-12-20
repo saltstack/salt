@@ -430,6 +430,7 @@ def needs_renewal(name, window=None):
 
 def revoke(name, reason=None):
     """
+    .. versionadded:: 3007.0
     Revoke certificate
     The revoked certificate will also be deleted due to the `--non-interactive` flag.
     :param str name: Name of certificate
@@ -474,6 +475,7 @@ def revoke(name, reason=None):
 
 def delete(name):
     """
+    .. versionadded:: 3007.0
     Delete certificate
     :param str name: Name of certificate
     :rtype: bool
