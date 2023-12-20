@@ -79,7 +79,7 @@ def get_latest_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            salt.utils.hashutils.base64_encodestring(
+            salt.utils.hashutils.base64_encode(
                 "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
             )
         )
@@ -165,7 +165,7 @@ def get_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            salt.utils.hashutils.base64_encodestring(
+            salt.utils.hashutils.base64_encode(
                 "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
             )
         )
@@ -238,7 +238,7 @@ def get_latest_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            salt.utils.hashutils.base64_encodestring(
+            salt.utils.hashutils.base64_encode(
                 "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
             )
         )
@@ -320,8 +320,9 @@ def get_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            salt.utils.hashutils.base64_encodestring(
+            salt.utils.hashutils.base64_encode(
                 "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
+                ## f"{username.replace("\n", "")}:{password.replace("\n", "")}")
             )
         )
     release_url, file_name = _get_release_url(
