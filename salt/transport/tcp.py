@@ -275,16 +275,17 @@ class PublishClient(salt.transport.base.PublishClient):
                     self._tcp_client = TCPClientKeepAlive(
                         self.opts, resolver=self.resolver
                     )
-                    ctx = None
-                    if self.ssl is not None:
-                        ctx = salt.transport.base.ssl_context(
-                            self.ssl, server_side=False
-                        )
+                    # ctx = None
+                    # if self.ssl is not None:
+                    #     ctx = salt.transport.base.ssl_context(
+                    #         self.ssl, server_side=False
+                    #     )
                     stream = await asyncio.wait_for(
                         self._tcp_client.connect(
                             ip_bracket(self.host, strip=True),
                             self.port,
-                            ssl_options=ctx,
+                            # ssl_options=ctx,
+                            ssl_options=self.opts.get("ssl"),
                             **kwargs,
                         ),
                         1,
