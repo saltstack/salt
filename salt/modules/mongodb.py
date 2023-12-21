@@ -71,7 +71,9 @@ def _connect(
 
     If connection fails for any reason, log error and return False.
     """
+
     verify_ssl = True if verify_ssl is None else verify_ssl
+
     if not user:
         user = __salt__["config.option"]("mongodb.user")
     if not password:
@@ -87,13 +89,13 @@ def _connect(
         conn = pymongo.MongoClient(
             host=host,
             port=port,
+            username=user,
+            password=password,
+            authSource=authdb,
             ssl=bool(ssl),
             tlsAllowInvalidCertificates=not verify_ssl,
         )
-        mdb = pymongo.database.Database(conn, database)
-        if user and password:
-            mdb.authenticate(user, password, source=authdb)
-    except pymongo.errors.PyMongoError as e:
+    except pymongo.errors.PyMongoError:
         log.error("Error connecting to database %s", database)
         return False
 
