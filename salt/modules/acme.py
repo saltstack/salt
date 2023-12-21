@@ -472,6 +472,7 @@ def revoke(name, reason=None):
                 "result": False,
                 "comment": f"Certificate {name} revocation failed with:\n{res['stderr']}",
             }
+    return True
 
 
 def delete(name):
@@ -514,3 +515,4 @@ def delete(name):
                 "result": False,
                 "comment": f"Certificate {name} deletion failed with:\n{res['stderr']}",
             }
+    return True
