@@ -1,3 +1,6 @@
+"""
+Cluster scinarios.
+"""
 import os
 import pathlib
 import time
@@ -51,6 +54,8 @@ def test_cluster_key_rotation(
             break
         if time.monotonic() - start > timeout:
             assert False, f"Drop file never removed {dfpath}"
+
+    time.sleep(30)
 
     keys = set()
 
