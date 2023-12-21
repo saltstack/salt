@@ -78,7 +78,7 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
     expected_ssl, expected_allow_invalid, absent_kwargs
 ):
     # database from params needs to be in this return_value
-    salt.modules.mongodb.pymongo.MongoClient.return_value.database_names.return_value = [
+    salt.modules.mongodb.pymongo.MongoClient.return_value.list_database_names.return_value = [
         "foo",
         "bar",
         "some_database",
@@ -98,7 +98,7 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
             # from the mock call list, but it didn't. There's probably some
             # other way to ensure that database_names/drop_database is out of
             # the MongoClient mock call list, but it was taking too long.
-            call().database_names(),
+            call().list_database_names(),
             call(
                 host="mongodb.example.net",
                 port=1982,

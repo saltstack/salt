@@ -62,7 +62,11 @@ def test_mongo_future_returner_should_correctly_pass_ssl_to_MongoClient_when_ret
     ):
         mongo_future_return._get_conn(ret={"ret_config": "fnord"})
         fake_mongo.MongoClient.assert_called_with(
-            host="fnordfnord", port="fnordfnordport", ssl=expected_ssl
+            "fnordfnord",
+            "fnordfnordport",
+            username=None,
+            password=None,
+            ssl=expected_ssl,
         )
 
 
@@ -95,5 +99,5 @@ def test_mongo_future_returner_should_correctly_pass_ssl_to_MongoClient(
     ):
         mongo_future_return._get_conn(ret=None)
         fake_mongo.MongoClient.assert_called_with(
-            host="fnord", port="fnordport", ssl=expected_ssl
+            "fnord", "fnordport", username=None, password=None, ssl=expected_ssl
         )
