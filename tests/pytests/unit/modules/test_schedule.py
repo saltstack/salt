@@ -52,11 +52,14 @@ def test_purge(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_list = patch.object(
         schedule, "list_", MagicMock(return_value=_schedule_data)
     )
 
-    with patch_makedirs, patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event, patch_schedule_list:
+    with patch_makedirs, patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event, patch_schedule_connect_pub, patch_schedule_list:
         assert schedule.purge() == {
             "comment": ["Deleted job: job1 from schedule."],
             "changes": {"job1": "removed"},
