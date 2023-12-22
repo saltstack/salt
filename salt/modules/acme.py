@@ -212,7 +212,7 @@ def cert(
         cmd.append("--authenticator webroot")
         if webroot is not True:
             cmd.append(f"--webroot-path {webroot}")
-    elif dns_plugin in supported_dns_plugins:
+    elif dns_plugin:
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
             cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
