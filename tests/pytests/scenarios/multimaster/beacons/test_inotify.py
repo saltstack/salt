@@ -46,6 +46,7 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
             "inotify",
             beacon_data=[{"files": {str(inotify_test_path): {"mask": ["create"]}}}],
             minion_tgt=salt_mm_minion_1.id,
+            timeout=60,
         )
         assert ret.returncode == 0
         log.debug("Inotify beacon add returned: %s", ret.data or ret.stdout)
