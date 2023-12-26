@@ -28,7 +28,7 @@ attrs==23.1.0
     #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
-bcrypt==3.1.6
+bcrypt==4.1.2
     # via -r requirements/static/ci/common.in
 boto3==1.21.46
     # via

@@ -30,7 +30,7 @@ attrs==23.1.0
     #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
-bcrypt==3.1.6
+bcrypt==4.1.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
@@ -258,7 +258,7 @@ packaging==22.0
     #   -r requirements/base.txt
     #   docker
     #   pytest
-paramiko==2.10.1
+paramiko==3.4.0
     # via
     #   junos-eznc
     #   ncclient

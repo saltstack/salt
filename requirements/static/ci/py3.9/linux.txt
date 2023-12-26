@@ -33,7 +33,7 @@ attrs==23.1.0
     #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
-bcrypt==3.1.6
+bcrypt==4.1.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
@@ -284,7 +284,7 @@ packaging==22.0
     #   ansible-core
     #   docker
     #   pytest
-paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==3.4.0
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
