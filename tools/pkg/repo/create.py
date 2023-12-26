@@ -381,12 +381,13 @@ def rpm(
         assert repo_path is not None
         assert key_id is not None
 
-    if distro == "photon":
-        distro_version = f"{distro_version}.0"
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
+
+    if distro == "photon":
+        distro_version = f"{distro_version}.0"
 
     ctx.info("Creating repository directory structure ...")
     create_repo_path = create_top_level_repo_path(
