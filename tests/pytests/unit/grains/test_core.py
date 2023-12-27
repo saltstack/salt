@@ -1177,7 +1177,7 @@ def test_virtuozzo_7_os_grains():
         "osfullname": "Virtuozzo",
         "oscodename": "Virtuozzo release 7.5.4",
         "osrelease": "7",
-        "osrelease_info": (7),
+        "osrelease_info": (7,),
         "osmajorrelease": 7,
         "osfinger": "Virtuozzo-7",
     }
