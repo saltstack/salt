@@ -319,3 +319,37 @@ def test_wrapper_unwrapped_command_invalid_return(salt_ssh_cli):
     assert ret.data["parsed"] == {
         "local": {"no_return_key_present": "Chaos is a ladder though"}
     }
+
+
+@pytest.fixture(scope="module")
+def utils_dependent_module(salt_run_cli, salt_master):
+    module_contents = r"""
+import customutilsmodule
+
+
+def __virtual__():
+    return "utilsync"
+
+
+def test():
+    return customutilsmodule.test()
+"""
+    utils_contents = r"""
+def test():
+    return "success"
+"""
+    module_tempfile = salt_master.state_tree.base.temp_file(
+        "_modules/utilsync.py", contents=module_contents
+    )
+    util_tempfile = salt_master.state_tree.base.temp_file(
+        "_utils/customutilsmodule.py", contents=utils_contents
+    )
+    with module_tempfile, util_tempfile:
+        yield
+
+
+@pytest.mark.usefixtures("utils_dependent_module")
+def test_custom_utils_are_present_on_target(salt_ssh_cli):
+    ret = salt_ssh_cli.run("utilsync.test")
+    assert ret.returncode == 0
+    assert ret.data == "success"
