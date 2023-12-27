@@ -211,7 +211,10 @@ def test_shell_inject_ssh_options(
     }
     ret = client.run(low)
     assert path.exists() is False
-    assert "bad configuration option" in ret["127.0.0.1"]
+    assert (
+        "Bad configuration option" in ret["127.0.0.1"]
+        or "no argument after keyword" in ret["127.0.0.1"]
+    )
 
 
 def test_shell_inject_ssh_port(
