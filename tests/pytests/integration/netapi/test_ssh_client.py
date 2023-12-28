@@ -90,7 +90,7 @@ def test_ssh_unauthenticated(client):
 
 def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_handler):
 
-    fun = "-o ProxyCommand curl {}".format(webserver_root)
+    fun = f"-o ProxyCommand curl {webserver_root}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with pytest.raises(EauthAuthenticationError):
@@ -102,7 +102,7 @@ def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_ha
 def test_ssh_unauthenticated_raw_shell_touch(client, tmp_path):
 
     badfile = tmp_path / "badfile.txt"
-    fun = "-o ProxyCommand touch {}".format(badfile)
+    fun = f"-o ProxyCommand touch {badfile}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with pytest.raises(EauthAuthenticationError):
@@ -114,7 +114,7 @@ def test_ssh_unauthenticated_raw_shell_touch(client, tmp_path):
 def test_ssh_authenticated_raw_shell_disabled(client, tmp_path):
 
     badfile = tmp_path / "badfile.txt"
-    fun = "-o ProxyCommand touch {}".format(badfile)
+    fun = f"-o ProxyCommand touch {badfile}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with patch.dict(client.opts, {"netapi_allow_raw_shell": False}):
@@ -149,7 +149,7 @@ def test_shell_inject_ssh_priv(
             "roster": "cache",
             "client": "ssh",
             "tgt": tgt,
-            "ssh_priv": "aaa|id>{} #".format(path),
+            "ssh_priv": f"aaa|id>{path} #",
             "fun": "test.ping",
             "eauth": "auto",
             "username": salt_auto_account.username,
@@ -161,8 +161,7 @@ def test_shell_inject_ssh_priv(
         if ret:
             break
     assert path.exists() is False
-    assert not ret[tgt]["stdout"]
-    assert ret[tgt]["stderr"]
+    assert "Network is unreachable" in ret[tgt]
 
 
 def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_account):
@@ -174,7 +173,7 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_acco
     low = {
         "roster": "cache",
         "client": "ssh",
-        "tgt": "root|id>{} #@127.0.0.1".format(path),
+        "tgt": f"root|id>{path} #@127.0.0.1",
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "fun": "test.ping",
@@ -208,12 +207,14 @@ def test_shell_inject_ssh_options(
         "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_options": ["|id>{} #".format(path), "lol"],
+        "ssh_options": [f"|id>{path} #", "lol"],
     }
     ret = client.run(low)
     assert path.exists() is False
-    assert not ret["127.0.0.1"]["stdout"]
-    assert ret["127.0.0.1"]["stderr"]
+    assert (
+        "Bad configuration option" in ret["127.0.0.1"]
+        or "no argument after keyword" in ret["127.0.0.1"]
+    )
 
 
 def test_shell_inject_ssh_port(
@@ -235,7 +236,7 @@ def test_shell_inject_ssh_port(
         "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_port": "hhhhh|id>{} #".format(path),
+        "ssh_port": f"hhhhh|id>{path} #",
         "ignore_host_keys": True,
     }
     ret = client.run(low)
@@ -260,7 +261,7 @@ def test_shell_inject_remote_port_forwards(
         "fun": "test.ping",
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
+        "ssh_remote_port_forwards": f"hhhhh|id>{path} #, lol",
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
@@ -288,7 +289,7 @@ def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, salt_auth_accou
         "username": salt_auth_account_1.username,
         "password": salt_auth_account_1.password,
         "regen_thin": True,
-        "thin_extra_mods": "';touch {};'".format(path),
+        "thin_extra_mods": f"';touch {path};'",
     }
 
     ret = client.run(low)
@@ -417,7 +418,7 @@ def test_ssh_cve_2021_3197_a(
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
-        "ssh_port": '22 -o ProxyCommand="touch {}"'.format(exploited_path),
+        "ssh_port": f'22 -o ProxyCommand="touch {exploited_path}"',
         "ssh_priv": ssh_priv_key,
         "roster_file": "roster",
         "rosters": [rosters_dir],
@@ -441,7 +442,7 @@ def test_ssh_cve_2021_3197_b(
         "tgt": "localhost",
         "fun": "test.ping",
         "ssh_port": 22,
-        "ssh_options": ['ProxyCommand="touch {}"'.format(exploited_path)],
+        "ssh_options": [f'ProxyCommand="touch {exploited_path}"'],
         "ssh_priv": ssh_priv_key,
         "roster_file": "roster",
         "rosters": [rosters_dir],
