@@ -161,7 +161,8 @@ def test_shell_inject_ssh_priv(
         if ret:
             break
     assert path.exists() is False
-    assert "Network is unreachable" in ret[tgt]
+    assert not ret[tgt]["stdout"]
+    assert ret[tgt]["stderr"]
 
 
 def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_account):
@@ -211,10 +212,8 @@ def test_shell_inject_ssh_options(
     }
     ret = client.run(low)
     assert path.exists() is False
-    assert (
-        "Bad configuration option" in ret["127.0.0.1"]
-        or "no argument after keyword" in ret["127.0.0.1"]
-    )
+    assert not ret["127.0.0.1"]["stdout"]
+    assert ret["127.0.0.1"]["stderr"]
 
 
 def test_shell_inject_ssh_port(

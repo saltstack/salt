@@ -85,9 +85,6 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
         if self.parsed and "local" in self.parsed:
             # Wrapped commands that indicate a non-zero retcode
             return self.parsed["local"]
-        elif self.stderr:
-            # Remote executions that indicate a non-zero retcode
-            return self.stderr
         return super().to_ret()
 
     def __str__(self):
