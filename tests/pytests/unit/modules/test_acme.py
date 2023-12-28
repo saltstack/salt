@@ -338,3 +338,83 @@ def test_cert():
     ):
         assert acme.cert("test") == result_renew
         assert acme.cert("testing.example.com", certname="test") == result_renew
+
+
+def test_revoke():
+    """
+    Test certificate revocation
+    """
+    # Test successful revocation
+    with patch.dict(
+        acme.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+    ):
+        assert acme.revoke("test_cert") is True
+
+    # Test failure with non-zero retcode and without 'expand' in stderr
+    with patch.dict(
+        acme.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"retcode": 1, "stderr": "Error message"}
+            )
+        },
+    ):
+        result = acme.revoke("test_cert")
+        assert result["result"] is False
+        assert "revocation failed" in result["comment"]
+
+    # Test failure with non-zero retcode and 'expand' in stderr
+    with patch.dict(
+        acme.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                side_effect=[
+                    {"retcode": 1, "stderr": "Error message with expand"},
+                    {"retcode": 1, "stderr": "Final error message"},
+                ]
+            )
+        },
+    ):
+        result = acme.revoke("test_cert")
+        assert result["result"] is False
+        assert "Final error message" in result["comment"]
+
+    # Test with reason parameter
+    with patch.dict(
+        acme.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+    ):
+        assert acme.revoke("test_cert", reason="keyCompromise") is True
+
+
+def test_delete():
+    """
+    Test certificate deletion.
+    """
+    # Mocking successful deletion
+    mock_successful_delete = MagicMock(return_value={"retcode": 0})
+    with patch.dict(acme.__salt__, {"cmd.run_all": mock_successful_delete}):
+        assert acme.delete("test_cert") is True
+
+    # Mocking failed deletion with non-zero return code
+    mock_failed_delete = MagicMock(
+        return_value={"retcode": 1, "stderr": "Error message"}
+    )
+    with patch.dict(acme.__salt__, {"cmd.run_all": mock_failed_delete}):
+        result = acme.delete("test_cert")
+        assert not result["result"]
+        assert (
+            "Certificate test_cert deletion failed with:\nError message"
+            in result["comment"]
+        )
+
+    # Mocking failed deletion with 'expand' in stderr
+    mock_failed_delete_expand = MagicMock(
+        return_value={"retcode": 1, "stderr": "Error message with expand"}
+    )
+    with patch.dict(acme.__salt__, {"cmd.run_all": mock_failed_delete_expand}):
+        result = acme.delete("test_cert")
+        assert not result["result"]
+        assert (
+            "Certificate test_cert deletion failed with:\nError message with expand"
+            in result["comment"]
+        )
