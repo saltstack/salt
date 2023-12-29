@@ -89,8 +89,8 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
 
     def __str__(self):
         ret = self.to_ret()
-        if isinstance(ret, str):
-            return f"{self._error}: {ret}"
+        if self.retcode > 0:
+            return f"{self._error}: {self.stderr or self.stdout}"
         return self._error
 
 
