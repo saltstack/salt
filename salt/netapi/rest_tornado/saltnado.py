@@ -396,6 +396,9 @@ class EventListener:
                     )
                     del self.timeout_map[future]
 
+    def destroy(self):
+        self.event.destroy()
+
 
 class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
@@ -510,6 +513,7 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         self.timeout_futures()
         # clear local_client objects to disconnect event publisher's IOStream connections
         del self.saltclients
+        self.application.event_listener.destroy()
 
     def on_connection_close(self):
         """
