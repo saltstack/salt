@@ -88,10 +88,7 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
         return super().to_ret()
 
     def __str__(self):
-        ret = self.to_ret()
-        if self.retcode > 0:
-            return f"{self._error}: {self.stderr or self.stdout}"
-        return self._error
+        return f"{self._error}: {self.stderr or self.stdout}"
 
 
 class SSHPermissionDeniedError(SSHException):
