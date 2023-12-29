@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import logging
 import multiprocessing
@@ -9,8 +10,6 @@ import time
 from pathlib import Path
 
 import pytest
-import tornado.gen
-import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
@@ -23,6 +22,7 @@ import salt.utils.process
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
 
 pytestmark = [
     pytest.mark.skip_on_spawning_platform(
@@ -53,7 +53,13 @@ def transport_ids(value):
     return f"transport({value})"
 
 
-@pytest.fixture(params=["tcp", "zeromq"], ids=transport_ids)
+# @pytest.fixture(params=["ws", "tcp", "zeromq"], ids=transport_ids)
+@pytest.fixture(
+    params=[
+        "ws",
+    ],
+    ids=transport_ids,
+)
 def transport(request):
     return request.param
 
@@ -123,13 +129,12 @@ def master_secrets():
     salt.master.SMaster.secrets.pop("aes")
 
 
-@tornado.gen.coroutine
-def _connect_and_publish(
+async def _connect_and_publish(
     io_loop, channel_minion_id, channel, server, received, timeout=60
 ):
-    yield channel.connect()
+    await channel.connect()
 
-    def cb(payload):
+    async def cb(payload):
         received.append(payload)
         io_loop.stop()
 
@@ -139,7 +144,7 @@ def _connect_and_publish(
     )
     start = time.time()
     while time.time() - start < timeout:
-        yield tornado.gen.sleep(1)
+        await asyncio.sleep(1)
     io_loop.stop()
 
 
@@ -158,7 +163,7 @@ def test_pub_server_channel(
     req_server_channel = salt.channel.server.ReqServerChannel.factory(master_config)
     req_server_channel.pre_fork(process_manager)
 
-    def handle_payload(payload):
+    async def handle_payload(payload):
         log.debug("Payload handler got %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)

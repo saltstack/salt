@@ -55,8 +55,6 @@ def test_cluster_key_rotation(
         if time.monotonic() - start > timeout:
             assert False, f"Drop file never removed {dfpath}"
 
-    time.sleep(30)
-
     keys = set()
 
     # Validate the aes session key for all masters match
