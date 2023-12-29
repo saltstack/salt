@@ -500,7 +500,13 @@ def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
         (
             {
                 "id": "localhost",
-                "ret": "Something went seriously wrong",
+                "ret": {
+                    "stdout": "",
+                    "stderr": "Something went seriously wrong",
+                    "retcode": 1,
+                    "parsed": None,
+                    "_error": "The command resulted in a non-zero exit code",
+                },
             },
             1,
         )
