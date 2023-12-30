@@ -276,7 +276,7 @@ packaging==23.1
     #   -r requirements/base.txt
     #   docker
     #   pytest
-paramiko==3.3.1
+paramiko==3.4.0
     # via
     #   junos-eznc
     #   napalm

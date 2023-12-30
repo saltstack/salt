@@ -423,7 +423,7 @@ packaging==23.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
-paramiko==3.3.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
