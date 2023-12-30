@@ -513,7 +513,6 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         self.timeout_futures()
         # clear local_client objects to disconnect event publisher's IOStream connections
         del self.saltclients
-        self.application.event_listener.destroy()
 
     def on_connection_close(self):
         """
