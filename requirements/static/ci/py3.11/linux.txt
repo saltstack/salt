@@ -65,7 +65,6 @@ cffi==1.14.6
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-    #   bcrypt
     #   cryptography
     #   pygit2
     #   pynacl
@@ -246,7 +245,7 @@ packaging==22.0
     #   ansible-core
     #   docker
     #   pytest
-paramiko==3.4.0
+paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
@@ -429,7 +428,6 @@ six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   apscheduler
-    #   bcrypt
     #   cassandra-driver
     #   cheroot
     #   etcd3-py
@@ -439,7 +437,6 @@ six==1.16.0
     #   kazoo
     #   kubernetes
     #   more-itertools
-    #   paramiko
     #   python-consul
     #   python-dateutil
     #   pyvmomi
