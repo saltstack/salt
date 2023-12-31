@@ -4422,6 +4422,18 @@ class BaseHighState:
                         errors.append(msg)
                         continue
 
+                    if not hasattr(inc_sls, "startswith"):
+                        if inc_sls is None:
+                            msg = (
+                                "Empty include found in include "
+                                "in SLS '{}:{}'".format(saltenv, sls)
+                            )
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        else:
+                            inc_sls = str(inc_sls)
+
                     if inc_sls.startswith("."):
                         match = re.match(r"^(\.+)(.*)$", inc_sls)
                         if match:
