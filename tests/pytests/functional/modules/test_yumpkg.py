@@ -12,7 +12,6 @@ from salt.exceptions import SaltInvocationError
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("rpm", "yum"),
-    pytest.mark.slow_test,
 ]
 
 
@@ -67,6 +66,7 @@ def repo_basedir(tmp_path):
         shutil.rmtree(str(basedir))
 
 
+@pytest.mark.slow_test
 def test_yum_list_pkgs(grains):
     """
     compare the output of rpm -qa vs the return of yumpkg.list_pkgs,
@@ -86,6 +86,7 @@ def test_yum_list_pkgs(grains):
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 def test_yumpkg_remove_wildcard():
     salt.modules.yumpkg.install(pkgs=["httpd-devel", "httpd-tools"])
     ret = salt.modules.yumpkg.remove(name="httpd-*")
