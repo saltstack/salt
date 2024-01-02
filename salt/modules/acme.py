@@ -132,6 +132,8 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    manual_auth_hook=None,
+    manual_cleanup_hook=None,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -168,6 +170,8 @@ def cert(
         the specified DNS plugin
     :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations
         before asking ACME servers to verify the DNS record. (default 10)
+    :param manual_auth_hook: Path to the manual authentication hook script.
+    :param manual_cleanup_hook: Path to the manual cleanup or post-authentication hook script.
     :rtype: dict
     :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
         expiry date ('not_after')
@@ -212,7 +216,7 @@ def cert(
         cmd.append("--authenticator webroot")
         if webroot is not True:
             cmd.append(f"--webroot-path {webroot}")
-    elif dns_plugin in supported_dns_plugins:
+    elif dns_plugin:
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
             cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
@@ -221,6 +225,11 @@ def cert(
                 "result": False,
                 "comment": f"DNS plugin '{dns_plugin}' is not supported",
             }
+    elif manual_auth_hook:
+        cmd.append("--manual")
+        cmd.append(f"--manual-auth-hook '{manual_auth_hook}'")
+        if manual_cleanup_hook:
+            cmd.append(f"--manual-cleanup-hook '{manual_cleanup_hook}'")
     else:
         cmd.append("--authenticator standalone")
 

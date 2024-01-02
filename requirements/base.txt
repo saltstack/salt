@@ -11,6 +11,7 @@ psutil>=5.0.0
 packaging>=21.3
 looseversion
 tornado>=6.3.3
+aiohttp>=3.9.0
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
