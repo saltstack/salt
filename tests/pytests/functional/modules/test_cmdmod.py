@@ -1,7 +1,6 @@
 import os
 import random
 import sys
-from contextlib import contextmanager
 
 import pytest
 
@@ -11,7 +10,9 @@ import salt.utils.platform
 import salt.utils.user
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, dedent
 
-pytestmark = [pytest.mark.windows_whitelisted]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture(scope="module")
@@ -33,10 +34,11 @@ def available_python_executable():
 
 @pytest.fixture
 def runas_usr():
-    runas_usr = "nobody"
     if salt.utils.platform.is_darwin():
-        runas_usr = "macsalttest"
-    yield runas_usr
+        with pytest.helpers.create_account() as account:
+            yield account.username
+    else:
+        yield "nobody"
 
 
 @pytest.fixture
@@ -72,20 +74,6 @@ def issue_56195_test_ps1(state_tree):
 
     with pytest.helpers.temp_file("issue_56195_test.ps1", _contents, state_tree):
         yield
-
-
-@contextmanager
-def _ensure_user_exists(name, usermod):
-    if name in usermod.info(name).values():
-        # User already exists; don't touch
-        yield
-    else:
-        # Need to create user for test
-        usermod.add(name)
-        try:
-            yield
-        finally:
-            usermod.delete(name, remove=True)
 
 
 @pytest.mark.slow_test
@@ -420,8 +408,7 @@ def test_cwd_runas(cmdmod, usermod, runas_usr, tmp_path):
     cwd_normal = cmdmod.run_stdout(cmd, cwd=tmp_cwd).rstrip("\n")
     assert tmp_cwd == cwd_normal
 
-    with _ensure_user_exists(runas_usr, usermod):
-        cwd_runas = cmdmod.run_stdout(cmd, cwd=tmp_cwd, runas=runas_usr).rstrip("\n")
+    cwd_runas = cmdmod.run_stdout(cmd, cwd=tmp_cwd, runas=runas_usr).rstrip("\n")
     assert tmp_cwd == cwd_runas
 
 
@@ -434,8 +421,7 @@ def test_runas_env(cmdmod, usermod, runas_usr):
     cmd.run should be able to change working directory correctly, whether
     or not runas is in use.
     """
-    with _ensure_user_exists(runas_usr, usermod):
-        user_path = cmdmod.run_stdout('printf %s "$PATH"', runas=runas_usr)
+    user_path = cmdmod.run_stdout('printf %s "$PATH"', runas=runas_usr)
     # XXX: Not sure of a better way. Environment starts out with
     # /bin:/usr/bin and should be populated by path helper and the bash
     # profile.
@@ -458,14 +444,11 @@ def test_runas_complex_command_bad_cwd(cmdmod, usermod, runas_usr, tmp_path):
     """
     tmp_cwd = str(tmp_path)
     os.chmod(tmp_cwd, 0o700)
-
-    with _ensure_user_exists(runas_usr, usermod):
-        cmd_result = cmdmod.run_all(
-            'pwd; pwd; : $(echo "You have failed the test" >&2)',
-            cwd=tmp_cwd,
-            runas=runas_usr,
-        )
-
+    cmd_result = cmdmod.run_all(
+        'pwd; pwd; : $(echo "You have failed the test" >&2)',
+        cwd=tmp_cwd,
+        runas=runas_usr,
+    )
     assert "" == cmd_result["stdout"]
     assert "You have failed the test" not in cmd_result["stderr"]
     assert 0 != cmd_result["retcode"]
@@ -480,8 +463,7 @@ def test_runas(cmdmod, usermod, runas_usr):
     """
     Ensure that the env is the runas user's
     """
-    with _ensure_user_exists(runas_usr, usermod):
-        out = cmdmod.run("env", runas=runas_usr).splitlines()
+    out = cmdmod.run("env", runas=runas_usr).splitlines()
     assert f"USER={runas_usr}" in out
 
 
@@ -518,7 +500,7 @@ def test_cmd_run_whoami(cmdmod, running_username):
     assert user.lower() == cmd.lower()
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.slow_test
 def test_windows_env_handling(cmdmod):
     """
