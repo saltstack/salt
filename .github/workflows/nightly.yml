@@ -2267,7 +2267,7 @@ jobs:
           - pkg-type: deb
             distro: debian
             version: "10"
-            arch: aarch64
+            arch: arm64
           - pkg-type: deb
             distro: debian
             version: "11"
@@ -2275,7 +2275,7 @@ jobs:
           - pkg-type: deb
             distro: debian
             version: "11"
-            arch: aarch64
+            arch: arm64
           - pkg-type: deb
             distro: debian
             version: "12"
@@ -2283,7 +2283,7 @@ jobs:
           - pkg-type: deb
             distro: debian
             version: "12"
-            arch: aarch64
+            arch: arm64
           - pkg-type: deb
             distro: ubuntu
             version: "20.04"
@@ -2291,7 +2291,7 @@ jobs:
           - pkg-type: deb
             distro: ubuntu
             version: "20.04"
-            arch: aarch64
+            arch: arm64
           - pkg-type: deb
             distro: ubuntu
             version: "22.04"
@@ -2299,7 +2299,7 @@ jobs:
           - pkg-type: deb
             distro: ubuntu
             version: "22.04"
-            arch: aarch64
+            arch: arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -2544,7 +2544,7 @@ jobs:
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -2740,7 +2740,7 @@ jobs:
       - name: Download macOS Arch64 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-aarch64-macos
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -2827,10 +2827,10 @@ jobs:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
-      - name: Download Linux aarch64 Onedir Archive
+      - name: Download Linux arm64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-aarch64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS x86_64 Onedir Archive
@@ -2842,7 +2842,7 @@ jobs:
       - name: Download macOS arm64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-aarch64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive

@@ -52,12 +52,12 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
+          - arm64
         source:
           - ${{ inputs.source }}
 
     runs-on:
-      - ${{ matrix.arch == 'aarch64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
 
     steps:
       - name: Check Package Signing Enabled
@@ -172,7 +172,7 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
+          - arm64
         source:
           - ${{ inputs.source }}
 
@@ -270,7 +270,7 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
+          - arm64
         source:
           - ${{ inputs.source }}
 
@@ -335,7 +335,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
-          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+          path: ~/rpmbuild/RPMS/*/*.rpm
           retention-days: 7
           if-no-files-found: error
 
