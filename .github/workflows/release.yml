@@ -35,7 +35,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     environment: release-check
     steps:
       - name: Check For Admin Permission
@@ -1114,7 +1114,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs:
       - check-requirements
       - prepare-workflow

@@ -220,7 +220,7 @@ jobs:
 
   report:
     name: Report
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test

@@ -75,7 +75,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
@@ -337,7 +337,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>
     <%- endif %>

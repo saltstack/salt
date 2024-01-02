@@ -52,7 +52,7 @@ permissions:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
