@@ -166,82 +166,14 @@ jobs:
           path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
           retention-days: 7
           if-no-files-found: error
-
-  windows-amd64-ci-deps:
-    name: Windows amd64 CI Deps
+  build-ci-deps:
+    name: CI Deps
     needs:
       - prepare-workflow
       - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action-windows.yml
+    uses: ./.github/workflows/build-deps-ci-action.yml
     with:
-      distro-slug: windows-2022
       nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  macos-x86_64-ci-deps:
-    name: MacOS x86_64 CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action-macos.yml
-    with:
-      distro-slug: macos-12
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: x86_64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  macos-arm64-ci-deps:
-    name: MacOS arm64 CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action-macos.yml
-    with:
-      distro-slug: macos-13-xlarge
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: arm64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  linux-x86_64-ci-deps:
-    name: Linux x86_64 CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action-linux.yml
-    with:
-      distro-slug: centos-7
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  linux-arm64-ci-deps:
-    name: Linux arm64 CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action-linux.yml
-    with:
-      distro-slug: centos-7-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: arm64
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -318,11 +250,7 @@ jobs:
     needs:
       - prepare-workflow
       - publish-repositories
-      - linux-arm64-ci-deps
-      - linux-x86_64-ci-deps
-      - macos-arm64-ci-deps
-      - macos-x86_64-ci-deps
-      - windows-amd64-ci-deps
+      - build-ci-deps
       - download-onedir-artifact
     uses: ./.github/workflows/test-package-downloads-action.yml
     with:
@@ -514,11 +442,7 @@ jobs:
       - pkg-download-tests
       - release
       - publish-pypi
-      - windows-amd64-ci-deps
-      - macos-x86_64-ci-deps
-      - macos-arm64-ci-deps
-      - linux-x86_64-ci-deps
-      - linux-arm64-ci-deps
+      - build-ci-deps
     steps:
       - name: Get workflow information
         id: get-workflow-info

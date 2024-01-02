@@ -235,16 +235,14 @@
 
   <%- set job_name = "build-deps-onedir" %>
   <%- if includes.get(job_name, True) %>
-  <%- for platform in ("linux", "windows", "macos") %>
-    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ platform_job_name }>:
-    <%- do conclusion_needs.append(platform_job_name) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir-<{ platform }>.yml
+    uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -253,24 +251,21 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
-  <%- endfor %>
   <%- endif %>
 
 
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
-  <%- for platform in ("linux", "windows", "macos") %>
-    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ platform_job_name }>:
-    <%- do conclusion_needs.append(platform_job_name) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-<{ platform }>
+      - build-deps-onedir
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir-<{ platform }>.yml
+    uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -279,7 +274,6 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
-  <%- endfor %>
   <%- endif %>
 
 
