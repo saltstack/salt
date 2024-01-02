@@ -28,7 +28,7 @@
       - name: Download macOS Arch64 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-aarch64-macos
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG

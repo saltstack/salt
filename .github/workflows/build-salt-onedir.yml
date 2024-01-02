@@ -45,7 +45,7 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
+          - arm64
     runs-on:
       - self-hosted
       - linux
@@ -75,7 +75,7 @@ jobs:
         id: setup-relenv
         with:
           platform: linux
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version }}
@@ -98,9 +98,9 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
+          - arm64
     runs-on:
-      - ${{ matrix.arch == 'aarch64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
 
     steps:
       - name: "Throttle Builds"
@@ -119,7 +119,7 @@ jobs:
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
-          arch: ${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}
+          arch: ${{ matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version }}
