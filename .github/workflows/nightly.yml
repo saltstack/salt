@@ -1062,7 +1062,7 @@ jobs:
     with:
       distro-slug: macos-12
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
@@ -1084,7 +1084,7 @@ jobs:
     with:
       distro-slug: macos-13
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
@@ -1106,7 +1106,7 @@ jobs:
     with:
       distro-slug: macos-13-xlarge
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
@@ -1325,7 +1325,7 @@ jobs:
     with:
       distro-slug: macos-12
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1347,7 +1347,7 @@ jobs:
     with:
       distro-slug: macos-13
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1369,7 +1369,7 @@ jobs:
     with:
       distro-slug: macos-13-xlarge
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -2836,13 +2836,13 @@ jobs:
       - name: Download macOS x86_64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-x86_64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-arm64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive

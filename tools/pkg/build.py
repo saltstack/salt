@@ -562,7 +562,7 @@ def onedir_dependencies(
         / "static"
         / "pkg"
         / f"py{requirements_version}"
-        / f"{platform}.txt"
+        / f"{platform if platform != 'macos' else 'darwin'}.txt"
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 

@@ -118,7 +118,7 @@ jobs:
         id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
-          platform: darwin
+          platform: macos
           arch: ${{ matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
@@ -127,7 +127,7 @@ jobs:
       - name: Install Salt Packaging Dependencies into Relenv Onedir
         uses: ./.github/actions/build-onedir-deps
         with:
-          platform: darwin
+          platform: macos
           arch: ${{ matrix.arch }}
           python-version: "${{ inputs.python-version }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
