@@ -10,6 +10,7 @@ config, these are the defaults:
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
+    redis.password: ''
 
 .. versionadded:: 2018.3.1
 
@@ -42,6 +43,7 @@ the default location:
     alternative.redis.db: '0'
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
+    alternative.redis.password: ''
 
 To use the redis returner, append '--return redis' to the salt command.
 
@@ -152,6 +154,7 @@ def _get_options(ret=None):
         "port": "port",
         "unix_socket_path": "unix_socket_path",
         "db": "db",
+        "password": "password",
         "cluster_mode": "cluster_mode",
         "startup_nodes": "cluster.startup_nodes",
         "skip_full_coverage_check": "cluster.skip_full_coverage_check",
@@ -163,6 +166,7 @@ def _get_options(ret=None):
             "port": __opts__.get("redis.port", 6379),
             "unix_socket_path": __opts__.get("redis.unix_socket_path", None),
             "db": __opts__.get("redis.db", "0"),
+            "password": __opts__.get("redis.password", None),
             "cluster_mode": __opts__.get("redis.cluster_mode", False),
             "startup_nodes": __opts__.get("redis.cluster.startup_nodes", {}),
             "skip_full_coverage_check": __opts__.get(
@@ -196,6 +200,7 @@ def _get_serv(ret=None):
             port=_options.get("port"),
             unix_socket_path=_options.get("unix_socket_path", None),
             db=_options.get("db"),
+            password=_options.get("password"),
             decode_responses=True,
         )
     return REDIS_POOL
@@ -212,8 +217,8 @@ def returner(ret):
     serv = _get_serv(ret)
     pipeline = serv.pipeline(transaction=False)
     minion, jid = ret["id"], ret["jid"]
-    pipeline.hset("ret:{}".format(jid), minion, salt.utils.json.dumps(ret))
-    pipeline.expire("ret:{}".format(jid), _get_ttl())
+    pipeline.hset(f"ret:{jid}", minion, salt.utils.json.dumps(ret))
+    pipeline.expire(f"ret:{jid}", _get_ttl())
     pipeline.set("{}:{}".format(minion, ret["fun"]), jid)
     pipeline.sadd("minions", minion)
     pipeline.execute()
@@ -224,7 +229,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid
     """
     serv = _get_serv(ret=None)
-    serv.setex("load:{}".format(jid), _get_ttl(), salt.utils.json.dumps(load))
+    serv.setex(f"load:{jid}", _get_ttl(), salt.utils.json.dumps(load))
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -238,7 +243,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     """
     serv = _get_serv(ret=None)
-    data = serv.get("load:{}".format(jid))
+    data = serv.get(f"load:{jid}")
     if data:
         return salt.utils.json.loads(data)
     return {}
@@ -250,7 +255,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
     ret = {}
-    for minion, data in serv.hgetall("ret:{}".format(jid)).items():
+    for minion, data in serv.hgetall(f"ret:{jid}").items():
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret
@@ -263,14 +268,14 @@ def get_fun(fun):
     serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers("minions"):
-        ind_str = "{}:{}".format(minion, fun)
+        ind_str = f"{minion}:{fun}"
         try:
             jid = serv.get(ind_str)
         except Exception:  # pylint: disable=broad-except
             continue
         if not jid:
             continue
-        data = serv.get("{}:{}".format(minion, jid))
+        data = serv.get(f"{minion}:{jid}")
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret

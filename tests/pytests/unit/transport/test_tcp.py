@@ -152,7 +152,7 @@ async def test_async_tcp_pub_channel_connect_publish_port(
     future.set_result(True)
     with patch("salt.crypt.AsyncAuth.gen_token", patch_auth), patch(
         "salt.crypt.AsyncAuth.authenticated", patch_auth
-    ), patch("salt.transport.tcp.TCPPubClient", transport):
+    ), patch("salt.transport.tcp.PublishClient", transport):
         channel = salt.channel.client.AsyncPubChannel.factory(opts)
         with channel:
             # We won't be able to succeed the connection because we're not mocking the tornado coroutine

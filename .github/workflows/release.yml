@@ -21,7 +21,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -139,6 +139,8 @@ jobs:
             arch: x86
           - platform: darwin
             arch: x86_64
+          - platform: darwin
+            arch: aarch64
     steps:
       - uses: actions/checkout@v4
 

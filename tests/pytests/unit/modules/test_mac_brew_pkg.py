@@ -1,6 +1,7 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
+import os
 import textwrap
 
 import pytest
@@ -22,8 +23,13 @@ def TAPS_LIST():
 
 
 @pytest.fixture
-def HOMEBREW_BIN():
-    return "/usr/local/bin/brew"
+def HOMEBREW_PREFIX():
+    return "/opt/homebrew"
+
+
+@pytest.fixture
+def HOMEBREW_BIN(HOMEBREW_PREFIX):
+    return HOMEBREW_PREFIX + "/bin/brew"
 
 
 @pytest.fixture
@@ -371,7 +377,9 @@ def test_list_taps(TAPS_STRING, TAPS_LIST, HOMEBREW_BIN):
     mock_taps = MagicMock(return_value={"stdout": TAPS_STRING, "retcode": 0})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch.dict(
             mac_brew.__salt__,
             {"file.get_user": mock_user, "cmd.run_all": mock_taps, "cmd.run": mock_cmd},
@@ -399,7 +407,9 @@ def test_tap_failure(HOMEBREW_BIN):
     mock_failure = MagicMock(return_value={"stdout": "", "stderr": "", "retcode": 1})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch.dict(
             mac_brew.__salt__,
             {
@@ -418,7 +428,9 @@ def test_tap(TAPS_LIST, HOMEBREW_BIN):
     mock_failure = MagicMock(return_value={"retcode": 0})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch.dict(
             mac_brew.__salt__,
             {
@@ -432,17 +444,118 @@ def test_tap(TAPS_LIST, HOMEBREW_BIN):
             assert mac_brew._tap("homebrew/test")
 
 
+# 'homebrew_prefix' function tests: 4
+
+
+def test_homebrew_prefix_env(HOMEBREW_PREFIX):
+    """
+    Test the path to the homebrew prefix by looking
+    at the HOMEBREW_PREFIX environment variable.
+    """
+    mock_env = os.environ.copy()
+    mock_env["HOMEBREW_PREFIX"] = HOMEBREW_PREFIX
+
+    with patch.dict(os.environ, mock_env):
+        assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+
+def test_homebrew_prefix_command(HOMEBREW_PREFIX, HOMEBREW_BIN):
+    """
+    Test the path to the homebrew prefix by running
+    the brew --prefix command when the HOMEBREW_PREFIX
+    environment variable is not set.
+    """
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env):
+        with patch(
+            "salt.modules.cmdmod.run", MagicMock(return_value=HOMEBREW_PREFIX)
+        ), patch("salt.modules.file.get_user", MagicMock(return_value="foo")), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=HOMEBREW_BIN),
+        ):
+            assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+
+def test_homebrew_prefix_returns_none():
+    """
+    Tests that homebrew_prefix returns None when
+    all attempts fail.
+    """
+
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin", MagicMock(return_value=None)
+        ):
+            assert mac_brew.homebrew_prefix() is None
+
+
+def test_homebrew_prefix_returns_none_even_with_execution_errors():
+    """
+    Tests that homebrew_prefix returns None when
+    all attempts fail even with command execution errors.
+    """
+
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch(
+            "salt.modules.cmdmod.run", MagicMock(side_effect=CommandExecutionError)
+        ), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=None),
+        ):
+            assert mac_brew.homebrew_prefix() is None
+
+
+# '_homebrew_os_bin' function tests: 1
+
+
+def test_homebrew_os_bin_fallback_apple_silicon():
+    """
+    Test the path to the homebrew executable for Apple Silicon.
+
+    This test checks that even if the PATH does not contain
+    the default Homebrew's prefix for the Apple Silicon
+    architecture, it is appended.
+    """
+
+    # Ensure Homebrew's prefix for Apple Silicon is not present in the PATH
+    mock_env = os.environ.copy()
+    mock_env["PATH"] = "/usr/local/bin:/usr/bin"
+
+    apple_silicon_homebrew_path = "/opt/homebrew/bin"
+    apple_silicon_homebrew_bin = f"{apple_silicon_homebrew_path}/brew"
+
+    def mock_utils_path_which(*args):
+        if apple_silicon_homebrew_path in os.environ.get("PATH", "").split(
+            os.path.pathsep
+        ):
+            return apple_silicon_homebrew_bin
+        return None
+
+    with patch("salt.utils.path.which", mock_utils_path_which):
+        assert mac_brew._homebrew_os_bin() == apple_silicon_homebrew_bin
+
+
 # '_homebrew_bin' function tests: 1
 
 
-def test_homebrew_bin(HOMEBREW_BIN):
+def test_homebrew_bin(HOMEBREW_PREFIX, HOMEBREW_BIN):
     """
     Tests the path to the homebrew binary
     """
-    mock_path = MagicMock(return_value="/usr/local")
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
-        with patch.dict(mac_brew.__salt__, {"cmd.run": mock_path}):
-            assert mac_brew._homebrew_bin() == HOMEBREW_BIN
+    mock_path = MagicMock(return_value=HOMEBREW_PREFIX)
+    with patch("salt.modules.mac_brew_pkg.homebrew_prefix", mock_path):
+        assert mac_brew._homebrew_bin() == HOMEBREW_BIN
 
 
 # 'list_pkgs' function tests: 2
@@ -624,7 +737,9 @@ def test_hold(HOMEBREW_BIN):
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch(
             "salt.modules.mac_brew_pkg.list_pkgs", return_value={"foo": "0.1.5"}
         ), patch.dict(
@@ -658,7 +773,9 @@ def test_hold_not_installed(HOMEBREW_BIN):
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch.dict(
             mac_brew.__salt__,
             {
@@ -728,7 +845,9 @@ def test_unhold(HOMEBREW_BIN):
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch(
             "salt.modules.mac_brew_pkg.list_pkgs", return_value={"foo": "0.1.5"}
         ), patch(
@@ -876,7 +995,9 @@ def test_info_installed(HOMEBREW_BIN):
         },
     }
 
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
             "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
         ), patch.dict(
@@ -943,7 +1064,9 @@ def test_list_upgrades(HOMEBREW_BIN):
         "ksdiff": "2.3.6,123-jan-18-2021",
     }
 
-    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
+    with patch(
+        "salt.modules.mac_brew_pkg._homebrew_bin", MagicMock(return_value=HOMEBREW_BIN)
+    ):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
             "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
         ), patch.dict(

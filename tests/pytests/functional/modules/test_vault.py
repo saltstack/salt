@@ -1,18 +1,23 @@
-import json
 import logging
-import time
 
 import pytest
 
-import salt.utils.path
-from tests.support.runtests import RUNTIME_VARS
+# pylint: disable=unused-import
+from tests.support.pytest.vault import (
+    vault_container_version,
+    vault_delete_policy,
+    vault_delete_secret,
+    vault_environ,
+    vault_list_policies,
+    vault_list_secrets,
+    vault_read_policy,
+    vault_write_policy,
+)
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd", "vault", "getent"),
 ]
-
-VAULT_BINARY = salt.utils.path.which("vault")
 
 log = logging.getLogger(__name__)
 
@@ -21,83 +26,15 @@ log = logging.getLogger(__name__)
 def minion_config_overrides(vault_port):
     return {
         "vault": {
-            "url": "http://127.0.0.1:{}".format(vault_port),
             "auth": {
                 "method": "token",
                 "token": "testsecret",
-                "uses": 0,
-                "policies": [
-                    "testpolicy",
-                ],
+            },
+            "server": {
+                "url": f"http://127.0.0.1:{vault_port}",
             },
         }
     }
-
-
-def vault_container_version_id(value):
-    return "vault=={}".format(value)
-
-
-@pytest.fixture(
-    scope="module",
-    params=["0.9.6", "1.3.1", "latest"],
-    ids=vault_container_version_id,
-)
-def vault_container_version(request, salt_factories, vault_port, shell):
-    vault_version = request.param
-    config = {
-        "backend": {"file": {"path": "/vault/file"}},
-        "default_lease_ttl": "168h",
-        "max_lease_ttl": "720h",
-        "disable_mlock": False,
-    }
-
-    factory = salt_factories.get_container(
-        "vault",
-        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
-        check_ports=[vault_port],
-        container_run_kwargs={
-            "ports": {"8200/tcp": vault_port},
-            "environment": {
-                "VAULT_DEV_ROOT_TOKEN_ID": "testsecret",
-                "VAULT_LOCAL_CONFIG": json.dumps(config),
-            },
-            "cap_add": "IPC_LOCK",
-        },
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-    )
-    with factory.started() as factory:
-        attempts = 0
-        while attempts < 3:
-            attempts += 1
-            time.sleep(1)
-            ret = shell.run(
-                VAULT_BINARY,
-                "login",
-                "token=testsecret",
-                env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-            )
-            if ret.returncode == 0:
-                break
-            log.debug("Failed to authenticate against vault:\n%s", ret)
-            time.sleep(4)
-        else:
-            pytest.fail("Failed to login to vault")
-
-        ret = shell.run(
-            VAULT_BINARY,
-            "policy",
-            "write",
-            "testpolicy",
-            "{}/vault.hcl".format(RUNTIME_VARS.FILES),
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-        )
-        if ret.returncode != 0:
-            log.debug("Failed to assign policy to vault:\n%s", ret)
-            pytest.fail("unable to assign policy to vault")
-        yield vault_version
 
 
 @pytest.fixture(scope="module")
@@ -106,38 +43,18 @@ def sys_mod(modules):
 
 
 @pytest.fixture
-def vault(loaders, modules, vault_container_version, shell, vault_port):
+def vault(loaders, modules, vault_container_version):
     try:
         yield modules.vault
     finally:
         # We're explicitly using the vault CLI and not the salt vault module
         secret_path = "secret/my"
-        ret = shell.run(
-            VAULT_BINARY,
-            "kv",
-            "list",
-            "--format=json",
-            secret_path,
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-        )
-        if ret.returncode == 0:
-            for secret in ret.data:
-                secret_path = "secret/my/{}".format(secret)
-                ret = shell.run(
-                    VAULT_BINARY,
-                    "kv",
-                    "delete",
-                    secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-                )
-                ret = shell.run(
-                    VAULT_BINARY,
-                    "kv",
-                    "metadata",
-                    "delete",
-                    secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-                )
+        for secret in vault_list_secrets(secret_path):
+            vault_delete_secret(f"{secret_path}/{secret}", metadata=True)
+        policies = vault_list_policies()
+        for policy in ["functional_test_policy", "policy_write_test"]:
+            if policy in policies:
+                vault_delete_policy(policy)
 
 
 @pytest.mark.windows_whitelisted
@@ -253,10 +170,34 @@ def existing_secret(vault, vault_container_version):
         assert ret == expected_write
 
 
+@pytest.fixture
+def existing_secret_version(existing_secret, vault, vault_container_version):
+    ret = vault.write_secret("secret/my/secret", user="foo", password="hunter1")
+    assert ret
+    assert ret["version"] == 2
+    ret = vault.read_secret("secret/my/secret")
+    assert ret
+    assert ret["password"] == "hunter1"
+
+
 @pytest.mark.usefixtures("existing_secret")
 def test_delete_secret(vault):
     ret = vault.delete_secret("secret/my/secret")
     assert ret is True
+
+
+@pytest.mark.usefixtures("existing_secret_version")
+@pytest.mark.parametrize("vault_container_version", ["1.3.1", "latest"], indirect=True)
+def test_delete_secret_versions(vault, vault_container_version):
+    ret = vault.delete_secret("secret/my/secret", 1)
+    assert ret is True
+    ret = vault.read_secret("secret/my/secret")
+    assert ret
+    assert ret["password"] == "hunter1"
+    ret = vault.delete_secret("secret/my/secret", 2)
+    assert ret is True
+    ret = vault.read_secret("secret/my/secret", default="__was_deleted__")
+    assert ret == "__was_deleted__"
 
 
 @pytest.mark.usefixtures("existing_secret")
@@ -268,8 +209,66 @@ def test_list_secrets(vault):
 
 
 @pytest.mark.usefixtures("existing_secret")
+@pytest.mark.parametrize("vault_container_version", ["1.3.1", "latest"], indirect=True)
 def test_destroy_secret_kv2(vault, vault_container_version):
-    if vault_container_version == "0.9.6":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
     ret = vault.destroy_secret("secret/my/secret", "1")
     assert ret is True
+
+
+@pytest.mark.usefixtures("existing_secret")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+def test_patch_secret(vault, vault_container_version):
+    ret = vault.patch_secret("secret/my/secret", password="baz")
+    assert ret
+    expected_write = {"destroyed": False, "deletion_time": ""}
+    for key in list(ret):
+        if key not in expected_write:
+            ret.pop(key)
+    assert ret == expected_write
+    ret = vault.read_secret("secret/my/secret")
+    assert ret == {"user": "foo", "password": "baz"}
+
+
+@pytest.fixture
+def policy_rules():
+    return """\
+path "secret/some/thing" {
+    capabilities = ["read"]
+}
+    """
+
+
+@pytest.fixture
+def existing_policy(policy_rules, vault_container_version):
+    vault_write_policy("functional_test_policy", policy_rules)
+    try:
+        yield
+    finally:
+        vault_delete_policy("functional_test_policy")
+
+
+@pytest.mark.usefixtures("existing_policy")
+def test_policy_fetch(vault, policy_rules):
+    ret = vault.policy_fetch("functional_test_policy")
+    assert ret == policy_rules
+    ret = vault.policy_fetch("__does_not_exist__")
+    assert ret is None
+
+
+def test_policy_write(vault, policy_rules):
+    ret = vault.policy_write("policy_write_test", policy_rules)
+    assert ret is True
+    assert vault_read_policy("policy_write_test") == policy_rules
+
+
+@pytest.mark.usefixtures("existing_policy")
+def test_policy_delete(vault):
+    ret = vault.policy_delete("functional_test_policy")
+    assert ret is True
+    assert "functional_test_policy" not in vault_list_policies()
+
+
+@pytest.mark.usefixtures("existing_policy")
+def test_policies_list(vault):
+    ret = vault.policies_list()
+    assert "functional_test_policy" in ret

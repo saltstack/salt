@@ -122,14 +122,14 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
         salt '*' keychain.list_certs
     """
     cmd = (
-        'security find-certificate -a {} | grep -o "alis".*\\" | '
+        'security find-certificate -a {} | grep -o "alis.*" | '
         "grep -o '\\\"[-A-Za-z0-9.:() ]*\\\"'".format(shlex.quote(keychain))
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
     return out.replace('"', "").split("\n")
 
 
-def get_friendly_name(cert, password):
+def get_friendly_name(cert, password, legacy=False):
     """
     Get the friendly name of the given certificate
 
@@ -143,15 +143,26 @@ def get_friendly_name(cert, password):
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    legacy
+        Assume legacy format for certificate.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' keychain.get_friendly_name /tmp/test.p12 test123
+
+        salt '*' keychain.get_friendly_name /tmp/test.p12 test123 legacy=True
     """
+    openssl_cmd = "openssl pkcs12"
+    if legacy:
+        openssl_cmd = f"{openssl_cmd} -legacy"
+
     cmd = (
-        "openssl pkcs12 -in {} -passin pass:{} -info -nodes -nokeys 2> /dev/null | "
-        "grep friendlyName:".format(shlex.quote(cert), shlex.quote(password))
+        "{} -in {} -passin pass:{} -info -nodes -nokeys 2> /dev/null | "
+        "grep friendlyName:".format(
+            openssl_cmd, shlex.quote(cert), shlex.quote(password)
+        )
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
     return out.replace("friendlyName: ", "").strip()

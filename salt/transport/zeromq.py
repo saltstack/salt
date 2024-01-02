@@ -223,6 +223,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif self.host and self.port:
             if self.path:
                 raise Exception("A host and port or a path must be provided, not both")
+        self.on_recv_task = None
 
     def close(self):
         if self._closing is True:
@@ -340,6 +341,28 @@ class PublishClient(salt.transport.base.PublishClient):
         return
         # raise Exception("Send not supported")
         # await self._socket.send(msg)
+
+    # async def on_recv_handler(self, callback):
+    #    while not self._socket:
+    #        # Retry quickly, we may want to increase this if it's hogging cpu.
+    #        await asyncio.sleep(0.003)
+    #    while True:
+    #        msg = await self.recv()
+    #        if msg:
+    #            await callback(msg)
+
+    # def on_recv(self, callback):
+    #    """
+    #    Register a callback for received messages (that we didn't initiate)
+    #    """
+    #    if self.on_recv_task:
+    #        # XXX: We are not awaiting this canceled task. This still needs to
+    #        # be addressed.
+    #        self.on_recv_task.cancel()
+    #    if callback is None:
+    #        self.on_recv_task = None
+    #    else:
+    #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
 

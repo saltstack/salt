@@ -24,7 +24,7 @@ import salt.utils.stringutils
 
 # metadata server information
 IP = "169.254.169.254"
-HOST = "http://{}/".format(IP)
+HOST = f"http://{IP}/"
 
 
 def __virtual__():
@@ -36,8 +36,28 @@ def __virtual__():
     if result != 0:
         return False
     if http.query(os.path.join(HOST, "latest/"), status=True).get("status") != 200:
-        return False
+        # Initial connection failed, might need a token
+        _refresh_token()
+        if (
+            http.query(
+                os.path.join(HOST, "latest/"),
+                status=True,
+                header_dict={
+                    "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
+                },
+            ).get("status")
+            != 200
+        ):
+            return False
     return True
+
+
+def _refresh_token():
+    __context__["metadata_aws_token"] = http.query(
+        os.path.join(HOST, "latest/api/token"),
+        method="PUT",
+        header_dict={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+    ).get("body")
 
 
 def _search(prefix="latest/"):
@@ -45,7 +65,26 @@ def _search(prefix="latest/"):
     Recursively look up all grains in the metadata server
     """
     ret = {}
-    linedata = http.query(os.path.join(HOST, prefix), headers=True)
+    if "metadata_aws_token" in __context__:
+        if (
+            http.query(
+                os.path.join(HOST, "latest/"),
+                status=True,
+                header_dict={
+                    "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
+                },
+            ).get("status")
+            != 200
+        ):
+            _refresh_token()
+
+        linedata = http.query(
+            os.path.join(HOST, prefix),
+            header_dict={"X-aws-ec2-metadata-token": __context__["metadata_aws_token"]},
+            headers=True,
+        )
+    else:
+        linedata = http.query(os.path.join(HOST, prefix), headers=True)
     if "body" not in linedata:
         return ret
     body = salt.utils.stringutils.to_unicode(linedata["body"])
@@ -68,7 +107,15 @@ def _search(prefix="latest/"):
             key, value = line.split("=")
             ret[value] = _search(prefix=os.path.join(prefix, key))
         else:
-            retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
+            if "metadata_aws_token" in __context__:
+                retdata = http.query(
+                    os.path.join(HOST, prefix, line),
+                    header_dict={
+                        "X-aws-ec2-metadata-token": __context__["metadata_aws_token"]
+                    },
+                ).get("body", None)
+            else:
+                retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
             if isinstance(retdata, bytes):

@@ -193,6 +193,56 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
 
     pki_dir: /etc/salt/pki/master
 
+
+.. conf_master:: cluster_id
+
+``cluster_id``
+--------------
+
+.. versionadded:: 3007
+
+When defined, the master will operate in cluster mode. The master will send the
+cluster key and id to minions instead of its own key and id. The master will
+also forward its local event bus to other masters defined by ``cluster_peers``
+
+
+.. code-block:: yaml
+
+    cluster_id: master
+
+.. conf_master:: cluster_peers
+
+``cluster_peers``
+-----------------
+
+.. versionadded:: 3007
+
+When ``cluster_id`` is defined, this setting is a list of other master
+(hostnames or ips) that will be in the cluster.
+
+.. code-block:: yaml
+
+    cluster_peers:
+       - master2
+       - master3
+
+.. conf_master:: cluster_pki_dir
+
+``cluster_pki_dir``
+-------------------
+
+.. versionadded:: 3007
+
+When ``cluster_id`` is defined, this sets the location of where this cluster
+will store its cluster public and private key as well as any minion keys. This
+setting will default to the value of ``pki_dir``, but should be changed
+to the filesystem location shared between peers in the cluster.
+
+.. code-block:: yaml
+
+    cluster_pki: /my/gluster/share/pki
+
+
 .. conf_master:: extension_modules
 
 ``extension_modules``

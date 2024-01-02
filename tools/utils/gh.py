@@ -195,7 +195,7 @@ def download_pkgs_artifact(
             ctx.error(f"We do not build packages for {slug}")
             return ExitCode.FAIL
 
-    artifacts_path = tools.utils.REPO_ROOT / "pkg" / "artifacts"
+    artifacts_path = tools.utils.REPO_ROOT / "artifacts" / "pkg"
     artifacts_path.mkdir(exist_ok=True)
 
     ctx.info(
