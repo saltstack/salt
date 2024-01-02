@@ -88,41 +88,41 @@ def generate_workflows(ctx: Context):
             "template": "test-package-downloads-action.yml",
         },
     }
-    test_salt_listing = {
+    test_salt_listing: dict[str, list[tuple[str, ...]]] = {
         "linux": [
             ("almalinux-8", "Alma Linux 8", "x86_64", "no-fips"),
             ("almalinux-9", "Alma Linux 9", "x86_64", "no-fips"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "no-fips"),
-            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64", "no-fips"),
+            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "arm64", "no-fips"),
             ("amazonlinux-2023", "Amazon Linux 2023", "x86_64", "no-fips"),
-            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "aarch64", "no-fips"),
+            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "arm64", "no-fips"),
             ("archlinux-lts", "Arch Linux LTS", "x86_64", "no-fips"),
             ("centos-7", "CentOS 7", "x86_64", "no-fips"),
             ("centosstream-8", "CentOS Stream 8", "x86_64", "no-fips"),
             ("centosstream-9", "CentOS Stream 9", "x86_64", "no-fips"),
             ("debian-10", "Debian 10", "x86_64", "no-fips"),
             ("debian-11", "Debian 11", "x86_64", "no-fips"),
-            ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "no-fips"),
+            ("debian-11-arm64", "Debian 11 Arm64", "arm64", "no-fips"),
             ("debian-12", "Debian 12", "x86_64", "no-fips"),
-            ("debian-12-arm64", "Debian 12 Arm64", "aarch64", "no-fips"),
+            ("debian-12-arm64", "Debian 12 Arm64", "arm64", "no-fips"),
             ("fedora-37", "Fedora 37", "x86_64", "no-fips"),
             ("fedora-38", "Fedora 38", "x86_64", "no-fips"),
             ("opensuse-15", "Opensuse 15", "x86_64", "no-fips"),
             ("photonos-3", "Photon OS 3", "x86_64", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64", "no-fips"),
+            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "no-fips"),
             ("photonos-4", "Photon OS 4", "x86_64", "fips"),
-            ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64", "fips"),
+            ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "fips"),
             ("photonos-5", "Photon OS 5", "x86_64", "fips"),
-            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64", "fips"),
+            ("photonos-5-arm64", "Photon OS 5 Arm64", "arm64", "fips"),
             ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "no-fips"),
-            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "no-fips"),
+            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "arm64", "no-fips"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "no-fips"),
-            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "no-fips"),
+            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "arm64", "no-fips"),
         ],
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
             ("macos-13", "macOS 13", "x86_64"),
-            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
+            ("macos-13-xlarge", "macOS 13 Arm64", "arm64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
@@ -137,7 +137,7 @@ def generate_workflows(ctx: Context):
             (
                 "amazonlinux-2-arm64",
                 "Amazon Linux 2 Arm64",
-                "aarch64",
+                "arm64",
                 "rpm",
                 "no-fips",
             ),
@@ -145,7 +145,7 @@ def generate_workflows(ctx: Context):
             (
                 "amazonlinux-2023-arm64",
                 "Amazon Linux 2023 Arm64",
-                "aarch64",
+                "arm64",
                 "rpm",
                 "no-fips",
             ),
@@ -155,30 +155,30 @@ def generate_workflows(ctx: Context):
             (
                 "centosstream-9-arm64",
                 "CentOS Stream 9 Arm64",
-                "aarch64",
+                "arm64",
                 "rpm",
                 "no-fips",
             ),
             ("debian-10", "Debian 10", "x86_64", "deb", "no-fips"),
             ("debian-11", "Debian 11", "x86_64", "deb", "no-fips"),
-            ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "deb", "no-fips"),
+            ("debian-11-arm64", "Debian 11 Arm64", "arm64", "deb", "no-fips"),
             ("debian-12", "Debian 12", "x86_64", "deb", "no-fips"),
-            ("debian-12-arm64", "Debian 12 Arm64", "aarch64", "deb", "no-fips"),
+            ("debian-12-arm64", "Debian 12 Arm64", "arm64", "deb", "no-fips"),
             ("photonos-3", "Photon OS 3", "x86_64", "rpm", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64", "rpm", "no-fips"),
+            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "rpm", "no-fips"),
             ("photonos-4", "Photon OS 4", "x86_64", "rpm", "fips"),
-            ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64", "rpm", "fips"),
+            ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "rpm", "fips"),
             ("photonos-5", "Photon OS 5", "x86_64", "rpm", "fips"),
-            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64", "rpm", "fips"),
+            ("photonos-5-arm64", "Photon OS 5 Arm64", "arm64", "rpm", "fips"),
             ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "deb", "no-fips"),
-            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "deb", "no-fips"),
+            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "arm64", "deb", "no-fips"),
             ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "deb", "no-fips"),
-            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "deb", "no-fips"),
+            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "arm64", "deb", "no-fips"),
         ],
         "macos": [
             ("macos-12", "macOS 12", "x86_64"),
             ("macos-13", "macOS 13", "x86_64"),
-            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
+            ("macos-13-xlarge", "macOS 13 Arm64", "arm64"),
         ],
         "windows": [
             ("windows-2016", "Windows 2016", "amd64"),
@@ -189,51 +189,15 @@ def generate_workflows(ctx: Context):
 
     build_ci_deps_listing = {
         "linux": [
-            ("almalinux-8", "Alma Linux 8", "x86_64"),
-            ("almalinux-8-arm64", "Alma Linux 8 Arm64", "aarch64"),
-            ("almalinux-9", "Alma Linux 9", "x86_64"),
-            ("almalinux-9-arm64", "Alma Linux 9 Arm64", "aarch64"),
-            ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
-            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64"),
-            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64"),
-            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "aarch64"),
-            ("archlinux-lts", "Arch Linux LTS", "x86_64"),
-            ("centos-7", "CentOS 7", "x86_64"),
-            ("centos-7-arm64", "CentOS 7 Arm64", "aarch64"),
-            ("centosstream-8", "CentOS Stream 8", "x86_64"),
-            ("centosstream-8-arm64", "CentOS Stream 8 Arm64", "aarch64"),
-            ("centosstream-9", "CentOS Stream 9", "x86_64"),
-            ("centosstream-9-arm64", "CentOS Stream 9 Arm64", "aarch64"),
-            ("debian-10", "Debian 10", "x86_64"),
-            ("debian-11", "Debian 11", "x86_64"),
-            ("debian-11-arm64", "Debian 11 Arm64", "aarch64"),
-            ("debian-12", "Debian 12", "x86_64"),
-            ("debian-12-arm64", "Debian 12 Arm64", "aarch64"),
-            ("fedora-37", "Fedora 37", "x86_64"),
-            ("fedora-37-arm64", "Fedora 37 Arm64", "aarch64"),
-            ("fedora-38", "Fedora 38", "x86_64"),
-            ("fedora-38-arm64", "Fedora 38 Arm64", "aarch64"),
-            ("opensuse-15", "Opensuse 15", "x86_64"),
-            ("photonos-3", "Photon OS 3", "x86_64"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "aarch64"),
-            ("photonos-4", "Photon OS 4", "x86_64"),
-            ("photonos-4-arm64", "Photon OS 4 Arm64", "aarch64"),
-            ("photonos-5", "Photon OS 5", "x86_64"),
-            ("photonos-5-arm64", "Photon OS 5 Arm64", "aarch64"),
-            ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
-            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
-            ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
-            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64"),
+            ("x86_64", "centos-7"),
+            ("arm64", "centos-7-arm64"),
         ],
         "macos": [
-            ("macos-12", "macOS 12", "x86_64"),
-            ("macos-13", "macOS 13", "x86_64"),
-            ("macos-13-xlarge", "macOS 13 Arm64", "aarch64"),
+            ("x86_64", "macos-12"),
+            ("arm64", "macos-13-xlarge"),
         ],
         "windows": [
-            ("windows-2016", "Windows 2016", "amd64"),
-            ("windows-2019", "Windows 2019", "amd64"),
-            ("windows-2022", "Windows 2022", "amd64"),
+            ("amd64", "windows-2022"),
         ],
     }
     test_salt_pkg_downloads_listing: dict[str, list[tuple[str, str, str]]] = {
@@ -249,36 +213,26 @@ def generate_workflows(ctx: Context):
         "fedora",
         "photon",
     ]
-    for slug, display_name, arch in build_ci_deps_listing["linux"]:
+    for slug, display_name, arch, fips in test_salt_listing["linux"]:
         if slug in ("archlinux-lts", "opensuse-15"):
             continue
         test_salt_pkg_downloads_listing["linux"].append((slug, arch, "package"))
-        # Account for old arm64 repo paths
-        if arch == "aarch64":
-            for test_slug in rpm_slugs:
-                if slug.startswith(test_slug):
-                    test_salt_pkg_downloads_listing["linux"].append(
-                        (slug, "arm64", "package")
-                    )
-                    break
-    for slug, display_name, arch in build_ci_deps_listing["linux"][-2:]:
+    for slug, display_name, arch, fips in test_salt_listing["linux"][-2:]:
         if slug in ("archlinux-lts", "opensuse-15"):
             continue
         test_salt_pkg_downloads_listing["linux"].append((slug, arch, "onedir"))
-    for slug, display_name, arch in build_ci_deps_listing["macos"]:
-        if arch == "aarch64":
-            arch = "arm64"
+    for slug, display_name, arch in test_salt_listing["macos"]:
         test_salt_pkg_downloads_listing["macos"].append((slug, arch, "package"))
-    for slug, display_name, arch in build_ci_deps_listing["macos"][-1:]:
+    for slug, display_name, arch in test_salt_listing["macos"][-1:]:
         test_salt_pkg_downloads_listing["macos"].append((slug, arch, "onedir"))
-    for slug, display_name, arch in build_ci_deps_listing["windows"][-1:]:
+    for slug, display_name, arch in test_salt_listing["windows"][-1:]:
         for pkg_type in ("nsis", "msi", "onedir"):
             test_salt_pkg_downloads_listing["windows"].append((slug, arch, pkg_type))
 
     test_salt_pkg_downloads_needs_slugs = set()
     for platform in test_salt_pkg_downloads_listing:
-        for slug, _, _ in test_salt_pkg_downloads_listing[platform]:
-            test_salt_pkg_downloads_needs_slugs.add(f"{slug.replace('.', '')}-ci-deps")
+        for _, arch, _ in test_salt_pkg_downloads_listing[platform]:
+            test_salt_pkg_downloads_needs_slugs.add(f"{platform}-{arch}-ci-deps")
 
     env = Environment(
         block_start_string="<%",

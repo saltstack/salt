@@ -8,8 +8,8 @@
     needs:
       - prepare-workflow
       - build-<{ pkg_type }>-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action.yml
+      - linux-<{ arch }>-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
@@ -41,7 +41,7 @@
     needs:
       - prepare-workflow
       - build-macos-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
+      - macos-<{ arch }>-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -71,8 +71,8 @@
     needs:
       - prepare-workflow
       - build-windows-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action.yml
+      - windows-<{ arch }>-ci-deps
+    uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
