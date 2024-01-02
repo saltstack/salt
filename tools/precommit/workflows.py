@@ -87,6 +87,9 @@ def generate_workflows(ctx: Context):
         "Test Package Downloads": {
             "template": "test-package-downloads-action.yml",
         },
+        "Build CI Deps": {
+            "template": "build-deps-ci-action.yml",
+        },
     }
     test_salt_listing: dict[str, list[tuple[str, ...]]] = {
         "linux": [
@@ -232,7 +235,7 @@ def generate_workflows(ctx: Context):
     test_salt_pkg_downloads_needs_slugs = set()
     for platform in test_salt_pkg_downloads_listing:
         for _, arch, _ in test_salt_pkg_downloads_listing[platform]:
-            test_salt_pkg_downloads_needs_slugs.add(f"{platform}-{arch}-ci-deps")
+            test_salt_pkg_downloads_needs_slugs.add("build-ci-deps")
 
     env = Environment(
         block_start_string="<%",
