@@ -47,7 +47,6 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.modules.cmdmod import _parse_env
-from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -3111,39 +3110,6 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
             sanitized["line"] = " ".join(line)
 
     return sanitized
-
-
-def expand_repo_def(**kwargs):
-    """
-    Take a repository definition and expand it to the full pkg repository dict
-    that can be used for comparison.  This is a helper function to make
-    the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
-
-    This is designed to be called from pkgrepo states and will have little use
-    being called on the CLI.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        NOT USABLE IN THE CLI
-    """
-    warn_until_date(
-        "20240101",
-        "The pkg.expand_repo_def function is deprecated and set for removal "
-        "after {date}. This is only unsed internally by the apt pkg state "
-        "module. If that's not the case, please file an new issue requesting "
-        "the removal of this deprecation warning",
-        stacklevel=3,
-    )
-    if "os_name" not in kwargs:
-        kwargs["os_name"] = __grains__["os"]
-    if "os_codename" not in kwargs:
-        if "lsb_distrib_codename" in kwargs:
-            kwargs["os_codename"] = kwargs["lsb_distrib_codename"]
-        else:
-            kwargs["os_codename"] = __grains__.get("oscodename")
-    return _expand_repo_def(**kwargs)
 
 
 def _parse_selections(dpkgselection):
