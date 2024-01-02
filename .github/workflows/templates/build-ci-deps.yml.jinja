@@ -1,9 +1,9 @@
 
-  <%- for slug, display_name, arch in build_ci_deps_listing["windows"] %>
+  <%- for arch, build_distro_slug in build_ci_deps_listing["windows"] %>
 
-  <{ slug.replace(".", "") }>-ci-deps:
-    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }> Deps
+  windows-<{ arch }>-ci-deps:
+    <%- do test_salt_needs.append("windows-" + arch + "-ci-deps") %>
+    name: Windows <{ arch }> CI Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
@@ -14,12 +14,12 @@
     <%- else %>
       - download-onedir-artifact
     <%- endif %>
-    uses: ./.github/workflows/build-deps-ci-action.yml
+    uses: ./.github/workflows/build-deps-ci-action-windows.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ build_distro_slug }>
       nox-session: ci-test-onedir
       platform: windows
-      arch: amd64
+      arch: <{ arch }>
       nox-version: <{ nox_version  }>
       python-version: "<{ gh_actions_workflows_python_version }>"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -28,11 +28,11 @@
   <%- endfor %>
 
 
-  <%- for slug, display_name, arch in build_ci_deps_listing["macos"] %>
+  <%- for arch, build_distro_slug in build_ci_deps_listing["macos"] %>
 
-  <{ slug.replace(".", "") }>-ci-deps:
-    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }> Deps
+  macos-<{ arch }>-ci-deps:
+    <%- do test_salt_needs.append("macos-" + arch + "-ci-deps") %>
+    name: MacOS <{ arch }> CI Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     <%- endif %>
@@ -45,7 +45,7 @@
     <%- endif %>
     uses: ./.github/workflows/build-deps-ci-action-macos.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ build_distro_slug }>
       nox-session: ci-test-onedir
       platform: darwin
       arch: <{ arch }>
@@ -57,11 +57,11 @@
   <%- endfor %>
 
 
-  <%- for slug, display_name, arch in build_ci_deps_listing["linux"] %>
+  <%- for arch, build_distro_slug in build_ci_deps_listing["linux"] %>
 
-  <{ slug.replace(".", "") }>-ci-deps:
-    <%- do test_salt_needs.append(slug.replace(".", "") + "-ci-deps") %>
-    name: <{ display_name }> Deps
+  linux-<{ arch }>-ci-deps:
+    <%- do test_salt_needs.append("linux-" + arch + "-ci-deps") %>
+    name: Linux <{ arch }> CI Deps
     <%- if workflow_slug != 'release' %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
@@ -72,9 +72,9 @@
     <%- else %>
       - download-onedir-artifact
     <%- endif %>
-    uses: ./.github/workflows/build-deps-ci-action.yml
+    uses: ./.github/workflows/build-deps-ci-action-linux.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ build_distro_slug }>
       nox-session: ci-test-onedir
       platform: linux
       arch: <{ arch }>

@@ -259,3 +259,24 @@ def download_file(
                     if chunk:
                         f.write(chunk)
     return dest
+
+
+def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
+    if "windows" in slug:
+        platform = "windows"
+        arch = "amd64"
+    elif "macos" in slug:
+        platform = "macos"
+        if "macos-13" in slug and "xlarge" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+    else:
+        platform = "linux"
+        if "arm64" in slug:
+            arch = "arm64"
+        elif "aarch64" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+    return platform, arch

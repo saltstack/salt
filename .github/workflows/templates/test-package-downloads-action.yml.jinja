@@ -94,11 +94,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          path: nox.linux.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
@@ -342,11 +342,11 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          path: nox.macos.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
@@ -354,7 +354,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- ${{ matrix.distro-slug }}
+          nox --force-color -e decompress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Show System Info & Test Plan
         env:
@@ -545,11 +545,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          path: nox.windows.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
