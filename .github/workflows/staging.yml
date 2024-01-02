@@ -452,12 +452,12 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-  build-deps-onedir-linux:
+  build-deps-onedir:
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir-linux.yml
+    uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -466,42 +466,14 @@ jobs:
       relenv-version: "0.14.2"
       python-version: "3.10.13"
 
-  build-deps-onedir-windows:
-    name: Build Dependencies Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir-windows.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-
-  build-deps-onedir-macos:
-    name: Build Dependencies Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir-macos.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-
-  build-salt-onedir-linux:
+  build-salt-onedir:
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-linux
+      - build-deps-onedir
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir-linux.yml
+    uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -510,101 +482,13 @@ jobs:
       relenv-version: "0.14.2"
       python-version: "3.10.13"
 
-  build-salt-onedir-windows:
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir-windows
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir-windows.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-
-  build-salt-onedir-macos:
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir-macos
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir-macos.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-
-  build-rpm-pkgs-onedir:
+  build-pkgs-onedir:
     name: Build Packages
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-rpm-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "onedir"
-
-  build-rpm-pkgs-src:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-rpm-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "src"
-
-  build-deb-pkgs-onedir:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-deb-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "onedir"
-
-  build-deb-pkgs-src:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-deb-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "src"
-
-  build-windows-pkgs-onedir:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-windows
-    uses: ./.github/workflows/build-windows-packages.yml
+      - build-salt-onedir
+    uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -612,16 +496,17 @@ jobs:
       python-version: "3.10.13"
       source: "onedir"
       environment: staging
-      sign-packages: ${{ inputs.sign-windows-packages }}
+      sign-macos-packages: true
+      sign-windows-packages: ${{ inputs.sign-windows-packages }}
     secrets: inherit
 
-  build-windows-pkgs-src:
+  build-pkgs-src:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
-    uses: ./.github/workflows/build-windows-packages.yml
+      - build-salt-onedir
+    uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -629,123 +514,18 @@ jobs:
       python-version: "3.10.13"
       source: "src"
       environment: staging
-      sign-packages: ${{ inputs.sign-windows-packages }}
+      sign-macos-packages: true
+      sign-windows-packages: ${{ inputs.sign-windows-packages }}
     secrets: inherit
-
-  build-macos-pkgs-onedir:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-macos
-    uses: ./.github/workflows/build-macos-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "onedir"
-      environment: staging
-      sign-packages: true
-    secrets: inherit
-
-  build-macos-pkgs-src:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-macos
-    uses: ./.github/workflows/build-macos-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.14.2"
-      python-version: "3.10.13"
-      source: "src"
-      environment: staging
-      sign-packages: true
-    secrets: inherit
-
-  windows-amd64-ci-deps:
-    name: Windows amd64 CI Deps
+  build-ci-deps:
+    name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
-    uses: ./.github/workflows/build-deps-ci-action-windows.yml
+      - build-salt-onedir
+    uses: ./.github/workflows/build-deps-ci-action.yml
     with:
-      distro-slug: windows-2022
       nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  macos-x86_64-ci-deps:
-    name: MacOS x86_64 CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-macos
-    uses: ./.github/workflows/build-deps-ci-action-macos.yml
-    with:
-      distro-slug: macos-12
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: x86_64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  macos-arm64-ci-deps:
-    name: MacOS arm64 CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-macos
-    uses: ./.github/workflows/build-deps-ci-action-macos.yml
-    with:
-      distro-slug: macos-13-xlarge
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: arm64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  linux-x86_64-ci-deps:
-    name: Linux x86_64 CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-deps-ci-action-linux.yml
-    with:
-      distro-slug: centos-7
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-
-  linux-arm64-ci-deps:
-    name: Linux arm64 CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir-linux
-    uses: ./.github/workflows/build-deps-ci-action-linux.yml
-    with:
-      distro-slug: centos-7-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: arm64
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -756,8 +536,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2
@@ -778,8 +558,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2-arm64
@@ -800,8 +580,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2023
@@ -822,8 +602,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2023-arm64
@@ -844,8 +624,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: centos-7
@@ -866,8 +646,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: centosstream-8
@@ -888,8 +668,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: centosstream-9
@@ -910,8 +690,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: centosstream-9-arm64
@@ -932,8 +712,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-10
@@ -954,8 +734,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-11
@@ -976,8 +756,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-11-arm64
@@ -998,8 +778,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-12
@@ -1020,8 +800,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-12-arm64
@@ -1042,8 +822,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-3
@@ -1064,8 +844,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-3-arm64
@@ -1086,8 +866,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -1109,8 +889,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -1132,8 +912,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -1155,8 +935,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -1178,8 +958,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-20.04
@@ -1200,8 +980,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -1222,8 +1002,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
@@ -1244,8 +1024,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
-      - linux-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -1266,8 +1046,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-macos-pkgs-onedir
-      - macos-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
@@ -1288,8 +1068,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-macos-pkgs-onedir
-      - macos-x86_64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-13
@@ -1310,8 +1090,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-macos-pkgs-onedir
-      - macos-arm64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-13-xlarge
@@ -1332,8 +1112,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2016
@@ -1354,8 +1134,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2016
@@ -1376,8 +1156,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1398,8 +1178,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1420,8 +1200,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1442,8 +1222,8 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - windows-amd64-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1464,7 +1244,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - windows-amd64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: windows-2016
@@ -1486,7 +1266,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - windows-amd64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1508,7 +1288,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - windows-amd64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1530,7 +1310,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - macos-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
@@ -1552,7 +1332,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - macos-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13
@@ -1574,7 +1354,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - macos-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13-xlarge
@@ -1596,7 +1376,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: almalinux-8
@@ -1618,7 +1398,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: almalinux-9
@@ -1640,7 +1420,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2
@@ -1662,7 +1442,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2-arm64
@@ -1684,7 +1464,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2023
@@ -1706,7 +1486,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2023-arm64
@@ -1728,7 +1508,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: archlinux-lts
@@ -1750,7 +1530,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: centos-7
@@ -1772,7 +1552,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: centosstream-8
@@ -1794,7 +1574,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: centosstream-9
@@ -1816,7 +1596,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-10
@@ -1838,7 +1618,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-11
@@ -1860,7 +1640,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-11-arm64
@@ -1882,7 +1662,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-12
@@ -1904,7 +1684,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-12-arm64
@@ -1926,7 +1706,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: fedora-37
@@ -1948,7 +1728,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: fedora-38
@@ -1970,7 +1750,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: opensuse-15
@@ -1992,7 +1772,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-3
@@ -2014,7 +1794,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-3-arm64
@@ -2036,7 +1816,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -2059,7 +1839,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -2082,7 +1862,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -2105,7 +1885,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -2128,7 +1908,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-20.04
@@ -2150,7 +1930,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -2172,7 +1952,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-x86_64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
@@ -2194,7 +1974,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - linux-arm64-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -2320,7 +2100,7 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-deb-pkgs-onedir
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2449,7 +2229,7 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-rpm-pkgs-onedir
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2675,7 +2455,7 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2777,7 +2557,7 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-macos-pkgs-onedir
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2867,9 +2647,7 @@ jobs:
       - repo-staging
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
-      - build-salt-onedir-macos
-      - build-salt-onedir-windows
+      - build-salt-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -3112,14 +2890,8 @@ jobs:
     needs:
       - prepare-workflow
       - publish-repositories
-      - linux-arm64-ci-deps
-      - linux-x86_64-ci-deps
-      - macos-arm64-ci-deps
-      - macos-x86_64-ci-deps
-      - windows-amd64-ci-deps
-      - build-salt-onedir-linux
-      - build-salt-onedir-macos
-      - build-salt-onedir-windows
+      - build-ci-deps
+      - build-salt-onedir
     uses: ./.github/workflows/test-package-downloads-action.yml
     with:
       nox-session: ci-test-onedir
@@ -3138,11 +2910,7 @@ jobs:
     needs:
       - prepare-workflow
       - upload-release-artifacts
-      - windows-amd64-ci-deps
-      - macos-x86_64-ci-deps
-      - macos-arm64-ci-deps
-      - linux-x86_64-ci-deps
-      - linux-arm64-ci-deps
+      - build-ci-deps
       - windows-2016
       - windows-2019
       - windows-2022
@@ -3271,16 +3039,9 @@ jobs:
       - pre-commit
       - lint
       - build-docs
-      - build-deps-onedir-linux
-      - build-deps-onedir-windows
-      - build-deps-onedir-macos
-      - build-salt-onedir-linux
-      - build-salt-onedir-windows
-      - build-salt-onedir-macos
-      - build-rpm-pkgs-src
-      - build-deb-pkgs-src
-      - build-windows-pkgs-src
-      - build-macos-pkgs-src
+      - build-deps-onedir
+      - build-salt-onedir
+      - build-pkgs-src
       - publish-repositories
       - upload-release-artifacts
       - pkg-download-tests
