@@ -132,7 +132,7 @@ jobs:
           - platform: linux
             arch: x86_64
           - platform: linux
-            arch: aarch64
+            arch: arm64
           - platform: windows
             arch: amd64
           - platform: windows
@@ -140,7 +140,7 @@ jobs:
           - platform: darwin
             arch: x86_64
           - platform: darwin
-            arch: aarch64
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 
