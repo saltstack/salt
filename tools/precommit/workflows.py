@@ -4,6 +4,7 @@ These commands are used for our GitHub Actions workflows.
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 from typing import TYPE_CHECKING, cast
@@ -18,6 +19,8 @@ log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+    AMIS = json.load(rfh)
 
 
 # Define the command group
@@ -208,22 +211,34 @@ def generate_workflows(ctx: Context):
         "macos": [],
         "windows": [],
     }
-    rpm_slugs = [
+    rpm_slugs = (
         "almalinux",
         "amazonlinux",
         "centos",
         "centosstream",
         "fedora",
         "photon",
-    ]
-    for slug, display_name, arch, fips in test_salt_listing["linux"]:
-        if slug in ("archlinux-lts", "opensuse-15"):
+    )
+    linux_skip_pkg_download_tests = (
+        "archlinux-lts",
+        "opensuse-15",
+        "windows",
+    )
+    for slug in sorted(AMIS):
+        if slug.startswith(linux_skip_pkg_download_tests):
             continue
+        if "arm64" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+        if slug.startswith(rpm_slugs) and arch == "arm64":
+            # While we maintain backwards compatible urls
+            test_salt_pkg_downloads_listing["linux"].append(
+                (slug, "aarch64", "package")
+            )
         test_salt_pkg_downloads_listing["linux"].append((slug, arch, "package"))
-    for slug, display_name, arch, fips in test_salt_listing["linux"][-2:]:
-        if slug in ("archlinux-lts", "opensuse-15"):
-            continue
-        test_salt_pkg_downloads_listing["linux"].append((slug, arch, "onedir"))
+        if slug.startswith("ubuntu-22"):
+            test_salt_pkg_downloads_listing["linux"].append((slug, arch, "onedir"))
     for slug, display_name, arch in test_salt_listing["macos"]:
         test_salt_pkg_downloads_listing["macos"].append((slug, arch, "package"))
     for slug, display_name, arch in test_salt_listing["macos"][-1:]:
