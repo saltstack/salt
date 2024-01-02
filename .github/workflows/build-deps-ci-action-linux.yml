@@ -46,32 +46,36 @@ on:
 
 env:
   COLUMNS: 190
-  PIP_INDEX_URL: "https://pypi-proxy.saltstack.net/root/local/+simple/"
-  PIP_EXTRA_INDEX_URL: "https://pypi.org/simple"
-  GITHUB_ACTIONS_PIPELINE: "1"
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
 
   dependencies:
     name: Install
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
     timeout-minutes: 90
     steps:
 
       - name: "Throttle Builds"
         shell: bash
         run: |
-          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Cache nox.macos.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Cache nox.linux.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
         uses: actions/cache@v3.3.1
         with:
-          path: nox.macos.${{ inputs.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          path: nox.linux.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
 
@@ -90,46 +94,67 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v4
+        run: |
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+      - name: Setup Python Tools Scripts
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-python-tools-scripts
         with:
-          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
 
-      - name: Install System Dependencies
+      - name: Get Salt Project GitHub Actions Bot Environment
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          brew install openssl@3
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
-      - name: Install Nox
+      - name: Start VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
+
+      - name: List Free Space
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        env:
-          PRINT_TEST_SELECTION: "0"
-          PRINT_SYSTEM_INFO: "0"
         run: |
-          export PYCURL_SSL_LIBRARY=openssl
-          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
-          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
-          export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
-          nox --install-only -e ${{ inputs.nox-session }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e "pre-archive-cleanup(pkg=False)"
+          tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e compress-dependencies -- macos ${{ inputs.arch }}
+          tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
+
+      - name: Download Compressed .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
+
+      - name: Destroy VM
+        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-macos-${{ inputs.arch }}-${{ inputs.nox-session }}
-          path: nox.macos.${{ inputs.arch }}.tar.*
+          name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
+          path: nox.linux.${{ inputs.arch }}.tar.*

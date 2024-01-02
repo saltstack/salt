@@ -70,12 +70,12 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Cache nox.windows.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
+          path: nox.windows.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
               hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
             }}
 
@@ -156,5 +156,5 @@ jobs:
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          path: nox.${{ inputs.distro-slug }}.tar.*
+          name: nox-windows-${{ inputs.arch }}-${{ inputs.nox-session }}
+          path: nox.windows.${{ inputs.arch }}.tar.*
