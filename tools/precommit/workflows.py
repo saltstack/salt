@@ -326,7 +326,7 @@ def generate_workflows(ctx: Context):
             tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
         )
         for key, value in shared_context.items():
-            context[key] = value
+            context[key.replace("-", "_")] = value
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")

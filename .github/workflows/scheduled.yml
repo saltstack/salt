@@ -58,12 +58,20 @@ jobs:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - workflow-requirements
+
     steps:
+
       - name: Trigger 3006.x branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3006.x
+
+      - name: Trigger 3007.x branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3007.x
 
   prepare-workflow:
     name: Prepare Workflow Run
