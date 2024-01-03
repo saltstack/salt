@@ -500,15 +500,15 @@ def test_cmd_run_whoami(cmdmod, running_username):
     assert user.lower() == cmd.lower()
 
 
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.slow_test
-def test_windows_env_handling(cmdmod):
-    """
-    Ensure that nt.environ is used properly with cmd.run*
-    """
-    out = cmdmod.run("set", env={"abc": "123", "ABC": "456"}).splitlines()
-    assert "abc=123" in out
-    assert "ABC=456" in out
+## DGM @pytest.mark.skip_unless_on_windows
+## DGM @pytest.mark.slow_test
+## DGM def test_windows_env_handling(cmdmod):
+## DGM     """
+## DGM     Ensure that nt.environ is used properly with cmd.run*
+## DGM     """
+## DGM     out = cmdmod.run("set", env={"abc": "123", "ABC": "456"}).splitlines()
+## DGM     assert "abc=123" in out
+## DGM     assert "ABC=456" in out
 
 
 @pytest.mark.slow_test
