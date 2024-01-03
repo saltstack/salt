@@ -23,6 +23,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>
@@ -56,6 +57,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -86,6 +88,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
     <%- endfor %>
   <%- endfor %>

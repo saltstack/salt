@@ -31,4 +31,5 @@
       python-version: "<{ gh_actions_workflows_python_version }>"
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     secrets: inherit

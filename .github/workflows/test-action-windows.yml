@@ -36,6 +36,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       gh-actions-python-version:
         required: false
         type: string
@@ -159,9 +163,7 @@ jobs:
         uses: actions/cache@v3.3.1
         with:
           path: nox.windows.${{ inputs.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 

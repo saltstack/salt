@@ -23,6 +23,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -98,9 +102,7 @@ jobs:
         uses: actions/cache@v3.3.1
         with:
           path: nox.linux.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -346,9 +348,7 @@ jobs:
         uses: actions/cache@v3.3.1
         with:
           path: nox.macos.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -549,9 +549,7 @@ jobs:
         uses: actions/cache@v3.3.1
         with:
           path: nox.windows.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
