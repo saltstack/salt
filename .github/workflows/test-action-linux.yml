@@ -87,10 +87,7 @@ jobs:
 
   generate-matrix:
     name: Test Matrix
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
+    runs-on: ubuntu-latest
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
     steps:

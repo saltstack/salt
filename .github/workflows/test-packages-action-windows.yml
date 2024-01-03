@@ -81,10 +81,7 @@ jobs:
 
   generate-matrix:
     name: Generate Matrix
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
+    runs-on: ubuntu-latest
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
