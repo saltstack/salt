@@ -1232,11 +1232,11 @@ def test_state_requires_missing(state, state_tree):
             assert any("Referenced state does not exist" in err for err in ret)
         else:
             # If it returns results with errors in comments (runtime discovery)
-            state_id = "cmd_|-changing_state_|-echo \"Changed!\"_|-run"
+            state_id = 'cmd_|-changing_state_|-echo "Changed!"_|-run'
             assert state_id in ret
             assert ret[state_id]["result"] is True
 
-            tag = "cmd_|-missing_prereq_|-echo \"Changed!\"_|-run"
+            tag = 'cmd_|-missing_prereq_|-echo "Changed!"_|-run'
             assert tag in ret
             assert "The following requisites were not found" in ret[tag]["comment"]
             assert "onchanges_any" in ret[tag]["comment"]
