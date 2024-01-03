@@ -28,6 +28,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -56,6 +57,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -83,6 +85,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>

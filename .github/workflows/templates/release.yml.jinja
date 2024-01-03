@@ -86,6 +86,7 @@ permissions:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,6 +144,11 @@ permissions:
         id: set-cache-seed
         run: |
           tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}" | tee -a "$GITHUB_OUTPUT"
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>

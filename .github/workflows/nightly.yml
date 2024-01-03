@@ -92,6 +92,7 @@ jobs:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -207,6 +208,11 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools ci get-pr-test-labels --repository ${{ github.repository }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -540,6 +546,7 @@ jobs:
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Test
@@ -562,6 +569,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2-arm64-pkg-tests:
     name: Amazon Linux 2 Arm64 Package Test
@@ -584,6 +592,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-pkg-tests:
     name: Amazon Linux 2023 Package Test
@@ -606,6 +615,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-arm64-pkg-tests:
     name: Amazon Linux 2023 Arm64 Package Test
@@ -628,6 +638,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Test
@@ -650,6 +661,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-8-pkg-tests:
     name: CentOS Stream 8 Package Test
@@ -672,6 +684,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9-pkg-tests:
     name: CentOS Stream 9 Package Test
@@ -694,6 +707,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9-arm64-pkg-tests:
     name: CentOS Stream 9 Arm64 Package Test
@@ -716,6 +730,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-10-pkg-tests:
     name: Debian 10 Package Test
@@ -738,6 +753,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-pkg-tests:
     name: Debian 11 Package Test
@@ -760,6 +776,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Test
@@ -782,6 +799,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-pkg-tests:
     name: Debian 12 Package Test
@@ -804,6 +822,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-arm64-pkg-tests:
     name: Debian 12 Arm64 Package Test
@@ -826,6 +845,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-pkg-tests:
     name: Photon OS 3 Package Test
@@ -848,6 +868,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-arm64-pkg-tests:
     name: Photon OS 3 Arm64 Package Test
@@ -870,6 +891,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Test
@@ -892,6 +914,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-4-arm64-pkg-tests:
@@ -915,6 +938,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-pkg-tests:
@@ -938,6 +962,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-arm64-pkg-tests:
@@ -961,6 +986,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   ubuntu-2004-pkg-tests:
@@ -984,6 +1010,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Test
@@ -1006,6 +1033,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Test
@@ -1028,6 +1056,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Test
@@ -1050,6 +1079,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-12-pkg-tests:
     name: macOS 12 Package Test
@@ -1072,6 +1102,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-pkg-tests:
     name: macOS 13 Package Test
@@ -1094,6 +1125,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-xlarge-pkg-tests:
     name: macOS 13 Arm64 Package Test
@@ -1116,6 +1148,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Test
@@ -1138,6 +1171,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Test
@@ -1160,6 +1194,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Test
@@ -1182,6 +1217,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Test
@@ -1204,6 +1240,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Test
@@ -1226,6 +1263,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Test
@@ -1248,6 +1286,7 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016:
     name: Windows 2016 Test
@@ -1270,6 +1309,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019:
     name: Windows 2019 Test
@@ -1292,6 +1332,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022:
     name: Windows 2022 Test
@@ -1314,6 +1355,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-12:
     name: macOS 12 Test
@@ -1336,6 +1378,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13:
     name: macOS 13 Test
@@ -1358,6 +1401,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-xlarge:
     name: macOS 13 Arm64 Test
@@ -1380,6 +1424,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   almalinux-8:
     name: Alma Linux 8 Test
@@ -1402,6 +1447,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   almalinux-9:
     name: Alma Linux 9 Test
@@ -1424,6 +1470,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2:
     name: Amazon Linux 2 Test
@@ -1446,6 +1493,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2-arm64:
     name: Amazon Linux 2 Arm64 Test
@@ -1468,6 +1516,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023:
     name: Amazon Linux 2023 Test
@@ -1490,6 +1539,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
@@ -1512,6 +1562,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   archlinux-lts:
     name: Arch Linux LTS Test
@@ -1534,6 +1585,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centos-7:
     name: CentOS 7 Test
@@ -1556,6 +1608,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-8:
     name: CentOS Stream 8 Test
@@ -1578,6 +1631,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9:
     name: CentOS Stream 9 Test
@@ -1600,6 +1654,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-10:
     name: Debian 10 Test
@@ -1622,6 +1677,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11:
     name: Debian 11 Test
@@ -1644,6 +1700,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-arm64:
     name: Debian 11 Arm64 Test
@@ -1666,6 +1723,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12:
     name: Debian 12 Test
@@ -1688,6 +1746,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-arm64:
     name: Debian 12 Arm64 Test
@@ -1710,6 +1769,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   fedora-37:
     name: Fedora 37 Test
@@ -1732,6 +1792,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   fedora-38:
     name: Fedora 38 Test
@@ -1754,6 +1815,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   opensuse-15:
     name: Opensuse 15 Test
@@ -1776,6 +1838,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3:
     name: Photon OS 3 Test
@@ -1798,6 +1861,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-arm64:
     name: Photon OS 3 Arm64 Test
@@ -1820,6 +1884,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-4:
     name: Photon OS 4 Test
@@ -1842,6 +1907,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-4-arm64:
@@ -1865,6 +1931,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5:
@@ -1888,6 +1955,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-arm64:
@@ -1911,6 +1979,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   ubuntu-2004:
@@ -1934,6 +2003,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
@@ -1956,6 +2026,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204:
     name: Ubuntu 22.04 Test
@@ -1978,6 +2049,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
@@ -2000,6 +2072,7 @@ jobs:
       skip-junit-reports: false
       workflow-slug: nightly
       default-timeout: 360
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   combine-all-code-coverage:
     name: Combine Code Coverage
