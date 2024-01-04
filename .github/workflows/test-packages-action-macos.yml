@@ -74,7 +74,12 @@ jobs:
 
   generate-matrix:
     name: Generate Matrix
-    runs-on: ubuntu-latest
+    runs-on:
+      # We need to run on our self-hosted runners because we need proper credentials
+      # for boto3 to scan through our repositories.
+      - self-hosted
+      - linux
+      - x86_64
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
