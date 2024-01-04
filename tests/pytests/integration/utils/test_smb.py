@@ -122,10 +122,15 @@ def smb_dict(tmp_path):
         ## streamdata = _smbd.communicate()[0]
         ## rc = _smbd.returncode
         ## assert rc == 0
-
+        time.sleep(2)
         assert _smbd != 0
 
-        time.sleep(2)
+        out, err = _smbd.communicate()
+        if err:
+            print("--Error--\n", err.decode())
+        else:
+            print("--No errors--\n", out.decode())
+
         pidfile = samba_dir / "smbd.pid"
         conn_dict = {
             "tmpdir": tmp_path,
