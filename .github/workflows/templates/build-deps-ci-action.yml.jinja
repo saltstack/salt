@@ -247,7 +247,10 @@ jobs:
 
   windows-dependencies:
     name: Windows
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -262,7 +265,7 @@ jobs:
       - name: "Throttle Builds"
         shell: bash
         run: |
-          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -289,34 +292,64 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v4
-        with:
-          python-version: "${{ inputs.python-version }}"
-
-      - name: Install Nox
+      - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+      - name: Setup Python Tools Scripts
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Start VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+
+      - name: List Free Space
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm rsync ${{ matrix.distro-slug }}
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        env:
-          PRINT_TEST_SELECTION: "0"
-          PRINT_SYSTEM_INFO: "0"
         run: |
-          nox --install-only -e ${{ inputs.nox-session }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ matrix.distro-slug }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e "pre-archive-cleanup(pkg=False)"
+          tools --timestamps vm pre-archive-cleanup ${{ matrix.distro-slug }}
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e compress-dependencies -- windows ${{ matrix.arch }}
+          tools --timestamps vm compress-dependencies ${{ matrix.distro-slug }}
+
+      - name: Download Compressed .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm download-dependencies ${{ matrix.distro-slug }}
+
+      - name: Destroy VM
+        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
