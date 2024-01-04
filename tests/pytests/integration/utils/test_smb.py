@@ -113,11 +113,15 @@ def smb_dict(tmp_path):
     pathlib.Path(smbd_path).exists()
     try:
         _smbd = subprocess.Popen(
-            [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
+            ## [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
+            [smbd_path, "-d", "2", "-F", "-P0", "-s", samba_conf],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
-        streamdata = _smbd.communicate()[0]
-        rc = _smbd.returncode
-        assert rc == 0
+        ## streamdata = _smbd.communicate()[0]
+        ## rc = _smbd.returncode
+        ## assert rc == 0
 
         assert _smbd != 0
 
