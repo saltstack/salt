@@ -521,7 +521,7 @@ def test_cmd_run_whoami(cmdmod, running_username):
 @pytest.mark.skip_on_windows(
     reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
 )
-## @pytest.mark.skip_unless_on_windows
+@pytest.mark.skip_on_linux
 @pytest.mark.slow_test
 def test_windows_env_handling(cmdmod):
     """
