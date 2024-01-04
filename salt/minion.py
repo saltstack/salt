@@ -938,6 +938,7 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
+        _sync_grains(opts)
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
