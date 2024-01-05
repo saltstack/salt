@@ -128,9 +128,9 @@ def smb_dict(tmp_path):
 
         out, err = _smbd.communicate()
         if err:
-            print("--Error--\n", err.decode(), flush=True)
+            print(f"--Error--\nerr '{err}'", flush=True)
         else:
-            print("--No errors--\n", out.decode(), flush=True)
+            print("--No errors--\nout '{out}'", flush=True)
 
         pidfile = samba_dir / "smbd.pid"
         conn_dict = {
