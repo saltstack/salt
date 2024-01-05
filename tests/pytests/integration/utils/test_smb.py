@@ -153,10 +153,17 @@ def smb_dict(tmp_path, salt_call_cli):
                 assert "1" == "2"
 
         ## DGM try finding the smbd.pid file in the system
-        mypidfile = salt_call_cli.run("--local", "cmd.run", "find / -name smbd.pid")
-        print(f"PID file is '{mypidfile}'")
-        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
-        print(f"ps -ef output for smbd '{mypsout}'")
+        mypsout = salt_call_cli.run(
+            "--local", "-l", "debug", "cmd.run", "ps -ef | grep smbd"
+        )
+        print(f"ps -ef output for smbd '{mypsout}'", flush=True)
+        assert mypsout == ""
+
+        mypidfile = salt_call_cli.run(
+            "--local", "-l", "debug", "cmd.run", "find / -name smbd.pid"
+        )
+        print(f"PID file is '{mypidfile}'", flush=True)
+        assert mypidfile == ""
 
         assert pidfile.exists()
 
