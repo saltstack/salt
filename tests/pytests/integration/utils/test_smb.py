@@ -115,6 +115,7 @@ def smb_dict(tmp_path):
         _smbd = subprocess.Popen(
             ## [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
             [smbd_path, "-d", "2", "-F", "-P0", "-s", samba_conf],
+            shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -127,9 +128,9 @@ def smb_dict(tmp_path):
 
         out, err = _smbd.communicate()
         if err:
-            print("--Error--\n", err.decode())
+            print("--Error--\n", err.decode(), flush=True)
         else:
-            print("--No errors--\n", out.decode())
+            print("--No errors--\n", out.decode(), flush=True)
 
         pidfile = samba_dir / "smbd.pid"
         conn_dict = {
