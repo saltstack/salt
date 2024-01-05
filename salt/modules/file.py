@@ -6472,7 +6472,6 @@ def manage_file(
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
-            # TADY
             salt.utils.files.copyfile(
                 sfn,
                 name,
