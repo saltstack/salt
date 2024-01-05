@@ -56,10 +56,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro-slug: centos-7
-            arch: x86_64
-          - distro-slug: centos-7-arm64
-            arch: arm64
+        <%- for arch, build_distro_slug in build_ci_deps_listing["linux"] %>
+          - distro-slug: <{ build_distro_slug }>
+            arch: <{ arch }>
+        <%- endfor %>
     steps:
 
       - name: "Throttle Builds"
@@ -165,10 +165,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro-slug: macos-12
-            arch: x86_64
-          - distro-slug: macos-13-xlarge
-            arch: arm64
+        <%- for arch, build_distro_slug in build_ci_deps_listing["macos"] %>
+          - distro-slug: <{ build_distro_slug }>
+            arch: <{ arch }>
+        <%- endfor %>
     steps:
 
       - name: "Throttle Builds"
@@ -256,8 +256,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro-slug: windows-2022
-            arch: amd64
+        <%- for arch, build_distro_slug in build_ci_deps_listing["windows"] %>
+          - distro-slug: <{ build_distro_slug }>
+            arch: <{ arch }>
+        <%- endfor %>
     steps:
 
       - name: "Throttle Builds"

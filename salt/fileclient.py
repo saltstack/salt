@@ -1150,7 +1150,7 @@ class RemoteClient(Client):
             )
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
-                f"File client timed out after {int(time.time() - start)}"
+                f"File client timed out after {int(time.monotonic() - start)} seconds"
             )
 
     def destroy(self):
