@@ -43,7 +43,8 @@ def check_pid(pid):
 
 
 @pytest.fixture
-def smb_dict(tmp_path):
+## def smb_dict(tmp_path):
+def smb_dict(tmp_path, salt_call_cli):
     samba_dir = tmp_path / "samba"
     samba_dir.mkdir(parents=True)
     assert samba_dir.exists()
@@ -150,6 +151,12 @@ def smb_dict(tmp_path):
             if os.path.basename(str(file_dgm)) == "smbd.pid":
                 log.warning(f"DGM walking samba_dir found smbd.pid, file '{file_dgm}'")
                 assert "1" == "2"
+
+        ## DGM try finding the smbd.pid file in the system
+        mypidfile = salt_call_cli.run("--local", "cmd.run", "find / -name smbd.pid")
+        print(f"PID file is '{mypidfile}'")
+        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
+        print(f"ps -ef output for smbd '{mypsout}'")
 
         assert pidfile.exists()
 
