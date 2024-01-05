@@ -338,10 +338,7 @@ jobs:
   report:
     name: Test Reports
     if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
+    runs-on: ubuntu-latest
     needs:
       - test
 
