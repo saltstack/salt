@@ -148,6 +148,7 @@ def smb_dict(tmp_path, salt_call_cli):
         ## lets examine contents of samba_dir ditectory
         for file_dgm in pathlib.Path(samba_dir).iterdir():
             log.warning(f"DGM walking samba_dir, file '{file_dgm}'")
+            print(f"DGM walking samba_dir, file '{file_dgm}'", flush=True)
             if os.path.basename(str(file_dgm)) == "smbd.pid":
                 log.warning(f"DGM walking samba_dir found smbd.pid, file '{file_dgm}'")
                 assert "1" == "2"
