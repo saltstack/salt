@@ -947,7 +947,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append("Failed to authenticate")
                 break
             except Exception as ex:  # pylint: disable=broad-except
-                ret.append("Unexpected exception while handling request: {}".format(ex))
+                ret.append(f"Unexpected exception while handling request: {ex}")
                 log.error("Unexpected exception while handling request:", exc_info=True)
 
         try:
@@ -1100,7 +1100,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             minions,
             is_finished,
         )
-
         result = yield self.get_minion_returns(
             events=events,
             is_finished=is_finished,
@@ -1610,7 +1609,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header("Cache-Control", "no-cache")
         self.set_header("Connection", "keep-alive")
 
-        self.write("retry: {}\n".format(400))
+        self.write(f"retry: {400}\n")
         self.flush()
 
         while True:
@@ -1621,7 +1620,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
-                self.write("data: {}\n\n".format(_json_dumps(event)))
+                self.write(f"data: {_json_dumps(event)}\n\n")
                 self.flush()
             except TimeoutException:
                 break

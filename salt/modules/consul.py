@@ -47,6 +47,8 @@ def _query(
     api_version="v1",
     data=None,
     query_params=None,
+    decode=True,
+    text=False,
 ):
     """
     Consul object method function to construct and execute on the API URL.
@@ -68,7 +70,7 @@ def _query(
         token = _get_token()
 
     headers = {"X-Consul-Token": token, "Content-Type": "application/json"}
-    base_url = urllib.parse.urljoin(consul_url, "{}/".format(api_version))
+    base_url = urllib.parse.urljoin(consul_url, f"{api_version}/")
     url = urllib.parse.urljoin(base_url, function, False)
 
     if method == "GET":
@@ -85,7 +87,8 @@ def _query(
         method=method,
         params=query_params,
         data=data,
-        decode=True,
+        decode=decode,
+        text=text,
         status=True,
         header_dict=headers,
         opts=__opts__,
@@ -149,7 +152,7 @@ def list_(consul_url=None, token=None, key=None, **kwargs):
         query_params["recurse"] = "True"
         function = "kv/"
     else:
-        function = "kv/{}".format(key)
+        function = f"kv/{key}"
 
     query_params["keys"] = "True"
     query_params["separator"] = "/"
@@ -203,7 +206,7 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
         raise SaltInvocationError('Required argument "key" is missing.')
 
     query_params = {}
-    function = "kv/{}".format(key)
+    function = f"kv/{key}"
     if recurse:
         query_params["recurse"] = "True"
     if raw:
@@ -286,19 +289,17 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     if "cas" in kwargs:
         if _current["res"]:
             if kwargs["cas"] == 0:
-                ret["message"] = "Key {} exists, index must be non-zero.".format(key)
+                ret["message"] = f"Key {key} exists, index must be non-zero."
                 ret["res"] = False
                 return ret
 
             if kwargs["cas"] != _current["data"]["ModifyIndex"]:
-                ret["message"] = "Key {} exists, but indexes do not match.".format(key)
+                ret["message"] = f"Key {key} exists, but indexes do not match."
                 ret["res"] = False
                 return ret
             query_params["cas"] = kwargs["cas"]
         else:
-            ret[
-                "message"
-            ] = "Key {} does not exists, CAS argument can not be used.".format(key)
+            ret["message"] = f"Key {key} does not exists, CAS argument can not be used."
             ret["res"] = False
             return ret
 
@@ -316,7 +317,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
                 if _current["data"]["Session"] == kwargs["release"]:
                     query_params["release"] = kwargs["release"]
                 else:
-                    ret["message"] = "{} locked by another session.".format(key)
+                    ret["message"] = f"{key} locked by another session."
                     ret["res"] = False
                     return ret
 
@@ -327,7 +328,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
             log.error("Key {0} does not exist. Skipping release.")
 
     data = value
-    function = "kv/{}".format(key)
+    function = f"kv/{key}"
     method = "PUT"
     res = _query(
         consul_url=consul_url,
@@ -340,10 +341,10 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
 
     if res["res"]:
         ret["res"] = True
-        ret["data"] = "Added key {} with value {}.".format(key, value)
+        ret["data"] = f"Added key {key} with value {value}."
     else:
         ret["res"] = False
-        ret["data"] = "Unable to add key {} with value {}.".format(key, value)
+        ret["data"] = f"Unable to add key {key} with value {value}."
         if "error" in res:
             ret["error"] = res["error"]
     return ret
@@ -396,7 +397,7 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
             ret["res"] = False
             return ret
 
-    function = "kv/{}".format(key)
+    function = f"kv/{key}"
     res = _query(
         consul_url=consul_url,
         token=token,
@@ -407,10 +408,10 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
 
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Deleted key {}.".format(key)
+        ret["message"] = f"Deleted key {key}."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to delete key {}.".format(key)
+        ret["message"] = f"Unable to delete key {key}."
         if "error" in res:
             ret["error"] = res["error"]
     return ret
@@ -635,7 +636,7 @@ def agent_join(consul_url=None, token=None, address=None, **kwargs):
     if "wan" in kwargs:
         query_params["wan"] = kwargs["wan"]
 
-    function = "agent/join/{}".format(address)
+    function = f"agent/join/{address}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -680,7 +681,7 @@ def agent_leave(consul_url=None, token=None, node=None):
     if not node:
         raise SaltInvocationError('Required argument "node" is missing.')
 
-    function = "agent/force-leave/{}".format(node)
+    function = f"agent/force-leave/{node}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -690,10 +691,10 @@ def agent_leave(consul_url=None, token=None, node=None):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Node {} put in leave state.".format(node)
+        ret["message"] = f"Node {node} put in leave state."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to change state for {}.".format(node)
+        ret["message"] = f"Unable to change state for {node}."
     return ret
 
 
@@ -810,11 +811,11 @@ def agent_check_deregister(consul_url=None, token=None, checkid=None):
     if not checkid:
         raise SaltInvocationError('Required argument "checkid" is missing.')
 
-    function = "agent/check/deregister/{}".format(checkid)
+    function = f"agent/check/deregister/{checkid}"
     res = _query(consul_url=consul_url, function=function, token=token, method="GET")
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Check {} removed from agent.".format(checkid)
+        ret["message"] = f"Check {checkid} removed from agent."
     else:
         ret["res"] = False
         ret["message"] = "Unable to remove check from agent."
@@ -855,7 +856,7 @@ def agent_check_pass(consul_url=None, token=None, checkid=None, **kwargs):
     if "note" in kwargs:
         query_params["note"] = kwargs["note"]
 
-    function = "agent/check/pass/{}".format(checkid)
+    function = f"agent/check/pass/{checkid}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -865,10 +866,10 @@ def agent_check_pass(consul_url=None, token=None, checkid=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Check {} marked as passing.".format(checkid)
+        ret["message"] = f"Check {checkid} marked as passing."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to update check {}.".format(checkid)
+        ret["message"] = f"Unable to update check {checkid}."
     return ret
 
 
@@ -906,7 +907,7 @@ def agent_check_warn(consul_url=None, token=None, checkid=None, **kwargs):
     if "note" in kwargs:
         query_params["note"] = kwargs["note"]
 
-    function = "agent/check/warn/{}".format(checkid)
+    function = f"agent/check/warn/{checkid}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -916,10 +917,10 @@ def agent_check_warn(consul_url=None, token=None, checkid=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Check {} marked as warning.".format(checkid)
+        ret["message"] = f"Check {checkid} marked as warning."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to update check {}.".format(checkid)
+        ret["message"] = f"Unable to update check {checkid}."
     return ret
 
 
@@ -957,7 +958,7 @@ def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
     if "note" in kwargs:
         query_params["note"] = kwargs["note"]
 
-    function = "agent/check/fail/{}".format(checkid)
+    function = f"agent/check/fail/{checkid}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -967,14 +968,16 @@ def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Check {} marked as critical.".format(checkid)
+        ret["message"] = f"Check {checkid} marked as critical."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to update check {}.".format(checkid)
+        ret["message"] = f"Unable to update check {checkid}."
     return ret
 
 
-def agent_service_register(consul_url=None, token=None, **kwargs):
+def agent_service_register(
+    consul_url=None, token=None, decode=False, text=True, **kwargs
+):
     """
     The used to add a new service, with an optional
     health check, to the local agent.
@@ -1070,12 +1073,18 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if "Interval" in check_dd:
                 del check_dd["Interval"]  # not required, so ignore it
 
-        if check_dd:
+        if len(check_dd.keys()) > 0:
             data["Check"] = check_dd  # if empty, ignore it
 
     function = "agent/service/register"
     res = _query(
-        consul_url=consul_url, function=function, token=token, method="PUT", data=data
+        consul_url=consul_url,
+        function=function,
+        token=token,
+        method="PUT",
+        data=data,
+        decode=decode,
+        text=text,
     )
     if res["res"]:
         ret["res"] = True
@@ -1086,7 +1095,9 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
     return ret
 
 
-def agent_service_deregister(consul_url=None, token=None, serviceid=None):
+def agent_service_deregister(
+    consul_url=None, token=None, serviceid=None, decode=False, text=True
+):
     """
     Used to remove a service.
 
@@ -1114,16 +1125,22 @@ def agent_service_deregister(consul_url=None, token=None, serviceid=None):
     if not serviceid:
         raise SaltInvocationError('Required argument "serviceid" is missing.')
 
-    function = "agent/service/deregister/{}".format(serviceid)
+    function = f"agent/service/deregister/{serviceid}"
     res = _query(
-        consul_url=consul_url, function=function, token=token, method="PUT", data=data
+        consul_url=consul_url,
+        function=function,
+        token=token,
+        method="PUT",
+        data=data,
+        decode=decode,
+        text=text,
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Service {} removed from agent.".format(serviceid)
+        ret["message"] = f"Service {serviceid} removed from agent."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to remove service {}.".format(serviceid)
+        ret["message"] = f"Unable to remove service {serviceid}."
     return ret
 
 
@@ -1168,14 +1185,14 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
     if "reason" in kwargs:
         query_params["reason"] = kwargs["reason"]
 
-    function = "agent/service/maintenance/{}".format(serviceid)
+    function = f"agent/service/maintenance/{serviceid}"
     res = _query(
         consul_url=consul_url, token=token, function=function, query_params=query_params
     )
 
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Service {} set in maintenance mode.".format(serviceid)
+        ret["message"] = f"Service {serviceid} set in maintenance mode."
     else:
         ret["res"] = False
         ret["message"] = "Unable to set service {} to maintenance mode.".format(
@@ -1255,7 +1272,7 @@ def session_create(consul_url=None, token=None, **kwargs):
             ret["message"] = ("TTL must be ", "between 0 and 3600.")
             ret["res"] = False
             return ret
-        data["TTL"] = "{}s".format(_ttl)
+        data["TTL"] = f"{_ttl}s"
 
     function = "session/create"
     res = _query(
@@ -1351,7 +1368,7 @@ def session_destroy(consul_url=None, token=None, session=None, **kwargs):
     if "dc" in kwargs:
         query_params["dc"] = kwargs["dc"]
 
-    function = "session/destroy/{}".format(session)
+    function = f"session/destroy/{session}"
     res = _query(
         consul_url=consul_url,
         function=function,
@@ -1361,10 +1378,10 @@ def session_destroy(consul_url=None, token=None, session=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Destroyed Session {}.".format(session)
+        ret["message"] = f"Destroyed Session {session}."
     else:
         ret["res"] = False
-        ret["message"] = "Unable to destroy session {}.".format(session)
+        ret["message"] = f"Unable to destroy session {session}."
     return ret
 
 
@@ -1402,7 +1419,7 @@ def session_info(consul_url=None, token=None, session=None, **kwargs):
     if "dc" in kwargs:
         query_params["dc"] = kwargs["dc"]
 
-    function = "session/info/{}".format(session)
+    function = f"session/info/{session}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1770,7 +1787,7 @@ def catalog_service(consul_url=None, token=None, service=None, **kwargs):
     if "tag" in kwargs:
         query_params["tag"] = kwargs["tag"]
 
-    function = "catalog/service/{}".format(service)
+    function = f"catalog/service/{service}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1810,7 +1827,7 @@ def catalog_node(consul_url=None, token=None, node=None, **kwargs):
     if "dc" in kwargs:
         query_params["dc"] = kwargs["dc"]
 
-    function = "catalog/node/{}".format(node)
+    function = f"catalog/node/{node}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1850,7 +1867,7 @@ def health_node(consul_url=None, token=None, node=None, **kwargs):
     if "dc" in kwargs:
         query_params["dc"] = kwargs["dc"]
 
-    function = "health/node/{}".format(node)
+    function = f"health/node/{node}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1890,7 +1907,7 @@ def health_checks(consul_url=None, token=None, service=None, **kwargs):
     if "dc" in kwargs:
         query_params["dc"] = kwargs["dc"]
 
-    function = "health/checks/{}".format(service)
+    function = f"health/checks/{service}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1941,7 +1958,7 @@ def health_service(consul_url=None, token=None, service=None, **kwargs):
     if "passing" in kwargs:
         query_params["passing"] = kwargs["passing"]
 
-    function = "health/service/{}".format(service)
+    function = f"health/service/{service}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -1991,7 +2008,7 @@ def health_state(consul_url=None, token=None, state=None, **kwargs):
         ret["res"] = False
         return ret
 
-    function = "health/state/{}".format(state)
+    function = f"health/state/{state}"
     ret = _query(
         consul_url=consul_url, function=function, token=token, query_params=query_params
     )
@@ -2061,6 +2078,7 @@ def acl_create(consul_url=None, token=None, **kwargs):
 
     :param consul_url: The Consul server URL.
     :param name: Meaningful indicator of the ACL's purpose.
+    :param token: Authentication token
     :param type: Type is either client or management. A management
                  token is comparable to a root user and has the
                  ability to perform any action including creating,
@@ -2085,9 +2103,6 @@ def acl_create(consul_url=None, token=None, **kwargs):
             ret["res"] = False
             return ret
 
-    if "id" in kwargs:
-        data["id"] = kwargs["id"]
-
     if "name" in kwargs:
         data["Name"] = kwargs["name"]
     else:
@@ -2097,7 +2112,16 @@ def acl_create(consul_url=None, token=None, **kwargs):
         data["Type"] = kwargs["type"]
 
     if "rules" in kwargs:
-        data["Rules"] = kwargs["rules"]
+        rules_str = ""
+        rules = kwargs["rules"]
+        for item in rules:
+            for k, v in item.items():
+                if k != "policy":
+                    rules_str += f'{k} "{v}" {{\n'
+                else:
+                    rules_str += f'  {k} = "{v}"\n}}\n'
+
+        data["Rules"] = rules_str
 
     function = "acl/create"
     res = _query(
@@ -2218,6 +2242,7 @@ def acl_delete(consul_url=None, token=None, **kwargs):
     else:
         ret["res"] = False
         ret["message"] = "Removing ACL {} failed.".format(kwargs["id"])
+        ret["changes"] = res
 
     return ret
 
@@ -2378,7 +2403,7 @@ def event_fire(consul_url=None, token=None, name=None, **kwargs):
     if "tag" in kwargs:
         query_params = kwargs["tag"]
 
-    function = "event/fire/{}".format(name)
+    function = f"event/fire/{name}"
     res = _query(
         consul_url=consul_url,
         token=token,
@@ -2389,7 +2414,7 @@ def event_fire(consul_url=None, token=None, name=None, **kwargs):
 
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Event {} fired.".format(name)
+        ret["message"] = f"Event {name} fired."
         ret["data"] = res["data"]
     else:
         ret["res"] = False

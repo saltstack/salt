@@ -56,7 +56,7 @@ def server(config):
 
 @pytest.fixture
 def client(io_loop, config):
-    client = salt.transport.tcp.TCPPubClient(
+    client = salt.transport.tcp.PublishClient(
         config.copy(), io_loop, host=config["master_ip"], port=config["publish_port"]
     )
     try:
@@ -76,7 +76,7 @@ async def test_message_client_reconnect(config, client, server):
 
     received = []
 
-    def handler(msg):
+    async def handler(msg):
         received.append(msg)
 
     client.on_recv(handler)
@@ -119,5 +119,6 @@ async def test_message_client_reconnect(config, client, server):
 
     # Close the client
     client.close()
+
     # Provide time for the on_recv task to complete
-    await tornado.gen.sleep(1)
+    await asyncio.sleep(0.3)

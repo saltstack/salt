@@ -965,10 +965,13 @@ class MasterPubServerChannel:
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         ) as event:
-            event.fire_event(
+            success = event.fire_event(
                 data,
                 salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
+                timeout=30000,  # 30 second timeout
             )
+            if not success:
+                log.error("Unable to send aes key event")
 
     def __getstate__(self):
         return {
