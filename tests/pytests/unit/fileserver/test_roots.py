@@ -53,6 +53,11 @@ def tmp_state_tree(tmp_path, testfile, unicode_filename, unicode_dirname):
     return dirname
 
 
+@pytest.fixture(autouse=True)
+def testfilepath(tmp_state_tree, testfile):
+    return tmp_state_tree / testfile.name
+
+
 @pytest.fixture
 def configure_loader_modules(tmp_state_tree, temp_salt_master):
     opts = temp_salt_master.config.copy()
@@ -75,17 +80,17 @@ def test_find_file(tmp_state_tree):
     assert full_path_to_file == ret["path"]
 
 
-def test_serve_file(testfile):
+def test_serve_file(testfilepath):
     with patch.dict(roots.__opts__, {"file_buffer_size": 262144}):
         load = {
             "saltenv": "base",
-            "path": str(testfile),
+            "path": str(testfilepath),
             "loc": 0,
         }
-        fnd = {"path": str(testfile), "rel": "testfile"}
+        fnd = {"path": str(testfilepath), "rel": "testfile"}
         ret = roots.serve_file(load, fnd)
 
-        with salt.utils.files.fopen(str(testfile), "rb") as fp_:
+        with salt.utils.files.fopen(str(testfilepath), "rb") as fp_:
             data = fp_.read()
 
         assert ret == {"data": data, "dest": "testfile"}
@@ -236,7 +241,7 @@ def test_update_mtime_map():
     # between Python releases.
     lines_written = sorted(mtime_map_mock.write_calls())
     expected = sorted(
-        salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
+        salt.utils.stringutils.to_bytes(f"{key}:{val}\n")
         for key, val in new_mtime_map.items()
     )
     assert lines_written == expected, lines_written
@@ -277,3 +282,33 @@ def test_update_mtime_map_unicode_error(tmp_path):
         },
         "backend": "roots",
     }
+
+
+def test_find_file_not_in_root(tmp_state_tree):
+    """
+    Fileroots should never 'find' a file that is outside of it's root.
+    """
+    badfile = pathlib.Path(tmp_state_tree).parent / "bar"
+    badfile.write_text("Bad file")
+    badpath = f"../bar"
+    ret = roots.find_file(badpath)
+    assert ret == {"path": "", "rel": ""}
+    badpath = f"{tmp_state_tree / '..' / 'bar'}"
+    ret = roots.find_file(badpath)
+    assert ret == {"path": "", "rel": ""}
+
+
+def test_serve_file_not_in_root(tmp_state_tree):
+    """
+    Fileroots should never 'serve' a file that is outside of it's root.
+    """
+    badfile = pathlib.Path(tmp_state_tree).parent / "bar"
+    badfile.write_text("Bad file")
+    badpath = f"../bar"
+    load = {"path": "salt://|..\\bar", "saltenv": "base", "loc": 0}
+    fnd = {
+        "path": f"{tmp_state_tree / '..' / 'bar'}",
+        "rel": f"{pathlib.Path('..') / 'bar'}",
+    }
+    ret = roots.serve_file(load, fnd)
+    assert ret == {"data": "", "dest": "../bar"}
