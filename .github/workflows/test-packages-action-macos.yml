@@ -152,7 +152,7 @@ jobs:
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
 
@@ -251,7 +251,7 @@ jobs:
           tree -a artifacts
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
 

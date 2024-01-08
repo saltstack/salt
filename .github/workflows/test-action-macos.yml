@@ -158,7 +158,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.gh-actions-python-version }}"
 
@@ -406,7 +406,7 @@ jobs:
           tree -a artifacts
 
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.gh-actions-python-version }}"
 
