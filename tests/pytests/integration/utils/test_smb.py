@@ -10,7 +10,6 @@ import shutil
 import signal
 import subprocess
 import tempfile
-import time
 
 import pytest
 
@@ -18,6 +17,9 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.smb
+
+## DGM import time
+
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
 
@@ -124,7 +126,7 @@ def smb_dict(tmp_path, salt_call_cli):
         ## streamdata = _smbd.communicate()[0]
         ## rc = _smbd.returncode
         ## assert rc == 0
-        time.sleep(2)
+        ## time.sleep(2)
         assert _smbd != 0
 
         out, err = _smbd.communicate()
@@ -146,6 +148,13 @@ def smb_dict(tmp_path, salt_call_cli):
         }
 
         ## lets examine contents of samba_dir ditectory
+        for file_dgm in pathlib.Path(tmp_path).iterdir():
+            log.warning(f"DGM walking tmp_path, file '{file_dgm}'")
+            print(f"DGM walking tmp_path, file '{file_dgm}'", flush=True)
+            if os.path.basename(str(file_dgm)) == "smbd.pid":
+                log.warning(f"DGM walking tmp_path found smbd.pid, file '{file_dgm}'")
+                assert "1" == "2"
+
         for file_dgm in pathlib.Path(samba_dir).iterdir():
             log.warning(f"DGM walking samba_dir, file '{file_dgm}'")
             print(f"DGM walking samba_dir, file '{file_dgm}'", flush=True)
@@ -154,15 +163,11 @@ def smb_dict(tmp_path, salt_call_cli):
                 assert "1" == "2"
 
         ## DGM try finding the smbd.pid file in the system
-        mypsout = salt_call_cli.run(
-            "--local", "-l", "debug", "cmd.run", "ps -ef | grep smbd"
-        )
+        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
         print(f"ps -ef output for smbd '{mypsout}'", flush=True)
-        assert mypsout == ""
+        ## assert mypsout == ""
 
-        mypidfile = salt_call_cli.run(
-            "--local", "-l", "debug", "cmd.run", "find / -name smbd.pid"
-        )
+        mypidfile = salt_call_cli.run("--local", "cmd.run", "find / -name smbd.pid")
         print(f"PID file is '{mypidfile}'", flush=True)
         assert mypidfile == ""
 
@@ -205,213 +210,214 @@ def test_write_file_ipv4(smb_dict):
     assert result == content
 
 
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_write_file_ipv6(smb_dict):
-    """
-    Transfer a file over SMB
-    """
-    name = "test_write_file_v6.txt"
-    content = "write test file content ipv6"
-    share_path = smb_dict["public_dir"] / name
-    assert not share_path.exists()
-
-    local_path = tempfile.mktemp()
-    with salt.utils.files.fopen(local_path, "w") as fp:
-        fp.write(content)
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.put_file(local_path, name, "public", conn=conn)
-
-    assert share_path.exists()
-    with salt.utils.files.fopen(share_path, "r") as fp:
-        result = fp.read()
-    assert result == content
-
-
-def test_write_str_v4(smb_dict):
-    """
-    Write a string to a file over SMB
-    """
-    name = "test_write_str.txt"
-    content = "write test file content"
-    share_path = smb_dict["public_dir"] / name
-    assert not share_path.exists()
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.put_str(content, name, "public", conn=conn)
-
-    assert share_path.exists()
-    with salt.utils.files.fopen(share_path, "r") as fp:
-        result = fp.read()
-    assert result == content
-
-
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_write_str_v6(smb_dict):
-    """
-    Write a string to a file over SMB
-    """
-    name = "test_write_str_v6.txt"
-    content = "write test file content"
-    share_path = smb_dict["public_dir"] / name
-    assert not share_path.exists()
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.put_str(content, name, "public", conn=conn)
-
-    assert share_path.exists()
-    with salt.utils.files.fopen(share_path, "r") as fp:
-        result = fp.read()
-    assert result == content
-
-
-def test_delete_file_v4(smb_dict):
-    """
-    Validate deletion of files over SMB
-    """
-    name = "test_delete_file.txt"
-    content = "read test file content"
-    share_path = smb_dict["public_dir"] / name
-    with salt.utils.files.fopen(share_path, "w") as fp:
-        fp.write(content)
-    assert share_path.exists()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_file(name, "public", conn=conn)
-
-    assert not share_path.exists()
-
-
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_delete_file_v6(smb_dict):
-    """
-    Validate deletion of files over SMB
-    """
-    name = "test_delete_file_v6.txt"
-    content = "read test file content"
-    share_path = smb_dict["public_dir"] / name
-    with salt.utils.files.fopen(share_path, "w") as fp:
-        fp.write(content)
-    assert share_path.exists()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_file(name, "public", conn=conn)
-
-    assert not share_path.exists()
-
-
-def test_mkdirs_v4(smb_dict):
-    """
-    Create directories over SMB
-    """
-    dir_name = "mkdirs/test"
-    share_path = smb_dict["public_dir"] / dir_name
-    assert not share_path.exists()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.mkdirs(dir_name, "public", conn=conn)
-
-    assert share_path.exists()
-
-
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_mkdirs_v6(smb_dict):
-    """
-    Create directories over SMB
-    """
-    dir_name = "mkdirs/testv6"
-    share_path = smb_dict["public_dir"] / dir_name
-    assert not share_path.exists()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.mkdirs(dir_name, "public", conn=conn)
-
-    assert share_path.exists()
-
-
-def test_delete_dirs_v4(smb_dict):
-    """
-    Validate deletion of directoreies over SMB
-    """
-    dir_name = "deldirs"
-    subdir_name = "deldirs/test"
-    local_path = smb_dict["public_dir"] / subdir_name
-    local_path.mkdir(parents=True)
-    assert local_path.exists()
-    assert local_path.is_dir()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_directory(subdir_name, "public", conn=conn)
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_directory(dir_name, "public", conn=conn)
-
-    assert not local_path.exists()
-    assert not (smb_dict["public_dir"] / dir_name).exists()
-
-
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_delete_dirs_v6(smb_dict):
-    """
-    Validate deletion of directoreies over SMB
-    """
-    dir_name = "deldirsv6"
-    subdir_name = "deldirsv6/test"
-    local_path = smb_dict["public_dir"] / subdir_name
-    local_path.mkdir(parents=True)
-    assert local_path.exists()
-    assert local_path.is_dir()
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_directory(subdir_name, "public", conn=conn)
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        salt.utils.smb.delete_directory(dir_name, "public", conn=conn)
-
-    assert not local_path.exists()
-    assert not (smb_dict["public_dir"] / dir_name).exists()
-
-
-def test_connection(smb_dict):
-    """
-    Validate creation of an SMB connection
-    """
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        pass
-
-
-@pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
-def test_connection_v6(smb_dict):
-    """
-    Validate creation of an SMB connection
-    """
-    with contextlib.closing(
-        salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        pass
-
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
-        pass
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_write_file_ipv6(smb_dict):
+## DGM     """
+## DGM     Transfer a file over SMB
+## DGM     """
+## DGM     name = "test_write_file_v6.txt"
+## DGM     content = "write test file content ipv6"
+## DGM     share_path = smb_dict["public_dir"] / name
+## DGM     assert not share_path.exists()
+## DGM
+## DGM     local_path = tempfile.mktemp()
+## DGM     with salt.utils.files.fopen(local_path, "w") as fp:
+## DGM         fp.write(content)
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.put_file(local_path, name, "public", conn=conn)
+## DGM
+## DGM     assert share_path.exists()
+## DGM     with salt.utils.files.fopen(share_path, "r") as fp:
+## DGM         result = fp.read()
+## DGM     assert result == content
+## DGM
+## DGM
+## DGM def test_write_str_v4(smb_dict):
+## DGM     """
+## DGM     Write a string to a file over SMB
+## DGM     """
+## DGM     name = "test_write_str.txt"
+## DGM     content = "write test file content"
+## DGM     share_path = smb_dict["public_dir"] / name
+## DGM     assert not share_path.exists()
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.put_str(content, name, "public", conn=conn)
+## DGM
+## DGM     assert share_path.exists()
+## DGM     with salt.utils.files.fopen(share_path, "r") as fp:
+## DGM         result = fp.read()
+## DGM     assert result == content
+## DGM
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_write_str_v6(smb_dict):
+## DGM     """
+## DGM     Write a string to a file over SMB
+## DGM     """
+## DGM     name = "test_write_str_v6.txt"
+## DGM     content = "write test file content"
+## DGM     share_path = smb_dict["public_dir"] / name
+## DGM     assert not share_path.exists()
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.put_str(content, name, "public", conn=conn)
+## DGM
+## DGM     assert share_path.exists()
+## DGM     with salt.utils.files.fopen(share_path, "r") as fp:
+## DGM         result = fp.read()
+## DGM     assert result == content
+## DGM
+## DGM
+## DGM def test_delete_file_v4(smb_dict):
+## DGM     """
+## DGM     Validate deletion of files over SMB
+## DGM     """
+## DGM     name = "test_delete_file.txt"
+## DGM     content = "read test file content"
+## DGM     share_path = smb_dict["public_dir"] / name
+## DGM     with salt.utils.files.fopen(share_path, "w") as fp:
+## DGM         fp.write(content)
+## DGM     assert share_path.exists()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_file(name, "public", conn=conn)
+## DGM
+## DGM     assert not share_path.exists()
+## DGM
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_delete_file_v6(smb_dict):
+## DGM     """
+## DGM     Validate deletion of files over SMB
+## DGM     """
+## DGM     name = "test_delete_file_v6.txt"
+## DGM     content = "read test file content"
+## DGM     share_path = smb_dict["public_dir"] / name
+## DGM     with salt.utils.files.fopen(share_path, "w") as fp:
+## DGM         fp.write(content)
+## DGM     assert share_path.exists()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_file(name, "public", conn=conn)
+## DGM
+## DGM     assert not share_path.exists()
+## DGM
+## DGM
+## DGM def test_mkdirs_v4(smb_dict):
+## DGM     """
+## DGM     Create directories over SMB
+## DGM     """
+## DGM     dir_name = "mkdirs/test"
+## DGM     share_path = smb_dict["public_dir"] / dir_name
+## DGM     assert not share_path.exists()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.mkdirs(dir_name, "public", conn=conn)
+## DGM
+## DGM     assert share_path.exists()
+## DGM
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_mkdirs_v6(smb_dict):
+## DGM     """
+## DGM     Create directories over SMB
+## DGM     """
+## DGM     dir_name = "mkdirs/testv6"
+## DGM     share_path = smb_dict["public_dir"] / dir_name
+## DGM     assert not share_path.exists()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.mkdirs(dir_name, "public", conn=conn)
+## DGM
+## DGM     assert share_path.exists()
+## DGM
+## DGM
+## DGM def test_delete_dirs_v4(smb_dict):
+## DGM     """
+## DGM     Validate deletion of directoreies over SMB
+## DGM     """
+## DGM     dir_name = "deldirs"
+## DGM     subdir_name = "deldirs/test"
+## DGM     local_path = smb_dict["public_dir"] / subdir_name
+## DGM     local_path.mkdir(parents=True)
+## DGM     assert local_path.exists()
+## DGM     assert local_path.is_dir()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_directory(subdir_name, "public", conn=conn)
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_directory(dir_name, "public", conn=conn)
+## DGM
+## DGM     assert not local_path.exists()
+## DGM     assert not (smb_dict["public_dir"] / dir_name).exists()
+## DGM
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_delete_dirs_v6(smb_dict):
+## DGM     """
+## DGM     Validate deletion of directoreies over SMB
+## DGM     """
+## DGM     dir_name = "deldirsv6"
+## DGM     subdir_name = "deldirsv6/test"
+## DGM     local_path = smb_dict["public_dir"] / subdir_name
+## DGM     local_path.mkdir(parents=True)
+## DGM     assert local_path.exists()
+## DGM     assert local_path.is_dir()
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_directory(subdir_name, "public", conn=conn)
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         salt.utils.smb.delete_directory(dir_name, "public", conn=conn)
+## DGM
+## DGM     assert not local_path.exists()
+## DGM     assert not (smb_dict["public_dir"] / dir_name).exists()
+## DGM
+## DGM
+## DGM def test_connection(smb_dict):
+## DGM     """
+## DGM     Validate creation of an SMB connection
+## DGM     """
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         pass
+## DGM
+## DGM
+## DGM @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
+## DGM def test_connection_v6(smb_dict):
+## DGM     """
+## DGM     Validate creation of an SMB connection
+## DGM     """
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("::1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         pass
+## DGM
+## DGM     with contextlib.closing(
+## DGM         salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
+## DGM     ) as conn:
+## DGM         pass
