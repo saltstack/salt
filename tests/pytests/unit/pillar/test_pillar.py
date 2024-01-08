@@ -173,5 +173,6 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     mock = MagicMock()
     mock.side_effect = salt.exceptions.SaltReqTimeoutError()
     pillar.channel.crypted_transfer_decode_dictentry = mock
+    msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()

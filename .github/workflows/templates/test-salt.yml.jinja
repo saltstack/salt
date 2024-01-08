@@ -14,8 +14,8 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-action.yml
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
@@ -30,6 +30,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ windows_full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -42,12 +43,12 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: <{ arch }>
       nox-version: <{ nox_version  }>
       gh-actions-python-version: "<{ gh_actions_workflows_python_version }>"
@@ -58,6 +59,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -69,8 +71,8 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-action.yml
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
@@ -85,6 +87,7 @@
       skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>

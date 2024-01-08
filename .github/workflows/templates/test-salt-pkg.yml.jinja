@@ -7,9 +7,9 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-<{ pkg_type }>-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action.yml
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
@@ -23,6 +23,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>
@@ -40,13 +41,13 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-macos-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
-      platform: darwin
+      platform: macos
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
@@ -56,6 +57,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -70,9 +72,9 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-windows-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action.yml
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: <{ slug }>
       nox-session: ci-test-onedir
@@ -86,6 +88,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
     <%- endfor %>
   <%- endfor %>
