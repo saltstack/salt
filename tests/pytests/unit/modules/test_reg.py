@@ -66,23 +66,19 @@ def test_key_exists_existing():
     assert reg.key_exists(hive="HKLM", key="SOFTWARE\\Microsoft")
 
 
-def test_key_exists_non_existing(fake_key):
+def test_key_exists_non_existing(FAKE_KEY):
     """
     Tests the key_exists function using a non existing registry key
     """
-    assert not reg.key_exists(hive="HKLM", key=fake_key)
+    assert not reg.key_exists(hive="HKLM", key=FAKE_KEY)
 
 
 def test_key_exists_invalid_hive():
     """
     Tests the key_exists function using an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.key_exists,
-        hive="BADHIVE",
-        key="SOFTWARE\\Microsoft",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.key_exists(hive="BADHIVE", key="SOFTWARE\\Microsoft")
 
 
 def test_key_exists_unknown_key_error():
@@ -93,44 +89,44 @@ def test_key_exists_unknown_key_error():
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error, reg.key_exists, hive="HKLM", key="SOFTWARE\\Microsoft"
-        )
+        with pytest.raises(win32api.error):
+            reg.key_exists(hive="HKLM", key="SOFTWARE\\Microsoft")
 
 
 def test_value_exists_existing():
     """
     Tests the value_exists function using a well known registry key
     """
-    assert reg.value_exists(
+    result = reg.value_exists(
         hive="HKLM",
         key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
         vname="CommonFilesDir",
     )
+    assert result
 
 
 def test_value_exists_non_existing():
     """
     Tests the value_exists function using a non existing registry key
     """
-    assert not reg.value_exists(
+    result = reg.value_exists(
         hive="HKLM",
         key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
         vname="NonExistingValueName",
     )
+    assert not result
 
 
 def test_value_exists_invalid_hive():
     """
     Tests the value_exists function using an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.value_exists,
-        hive="BADHIVE",
-        key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
-        vname="CommonFilesDir",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.value_exists(
+            hive="BADHIVE",
+            key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
+            vname="CommonFilesDir",
+        )
 
 
 def test_value_exists_key_not_exist():
@@ -141,11 +137,12 @@ def test_value_exists_key_not_exist():
         side_effect=win32api.error(2, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        assert not reg.value_exists(
+        result = reg.value_exists(
             hive="HKLM",
             key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
             vname="CommonFilesDir",
         )
+    assert not result
 
 
 def test_value_exists_unknown_key_error():
@@ -157,13 +154,12 @@ def test_value_exists_unknown_key_error():
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error,
-            reg.value_exists,
-            hive="HKLM",
-            key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
-            vname="CommonFilesDir",
-        )
+        with pytest.raises(win32api.error):
+            reg.value_exists(
+                hive="HKLM",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
+                vname="CommonFilesDir",
+            )
 
 
 def test_value_exists_empty_default_value():
@@ -174,11 +170,12 @@ def test_value_exists_empty_default_value():
         side_effect=win32api.error(2, "RegQueryValueEx", "Empty Value")
     )
     with patch("salt.utils.win_reg.win32api.RegQueryValueEx", mock_error):
-        assert reg.value_exists(
+        result = reg.value_exists(
             hive="HKLM",
             key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
             vname=None,
         )
+    assert result
 
 
 def test_value_exists_no_vname():
@@ -189,11 +186,12 @@ def test_value_exists_no_vname():
         side_effect=win32api.error(123, "RegQueryValueEx", "Empty Value")
     )
     with patch("salt.utils.win_reg.win32api.RegQueryValueEx", mock_error):
-        assert not reg.value_exists(
+        result = reg.value_exists(
             hive="HKLM",
             key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
             vname="NonExistingValuePair",
         )
+    assert not result
 
 
 def test_list_keys_existing():
@@ -203,7 +201,7 @@ def test_list_keys_existing():
     assert "Microsoft" in reg.list_keys(hive="HKLM", key="SOFTWARE")
 
 
-def test_list_keys_non_existing(fake_key):
+def test_list_keys_non_existing(FAKE_KEY):
     """
     Test the list_keys function using a non existing registry key
     """
@@ -215,12 +213,8 @@ def test_list_keys_invalid_hive():
     """
     Test the list_keys function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.list_keys,
-        hive="BADHIVE",
-        key="SOFTWARE\\Microsoft",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.list_keys(hive="BADHIVE", key="SOFTWARE\\Microsoft")
 
 
 def test_list_keys_unknown_key_error():
@@ -231,9 +225,8 @@ def test_list_keys_unknown_key_error():
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error, reg.list_keys, hive="HKLM", key="SOFTWARE\\Microsoft"
-        )
+        with pytest.raises(win32api.error):
+            reg.list_keys(hive="HKLM", key="SOFTWARE\\Microsoft")
 
 
 def test_list_values_existing():
@@ -249,7 +242,7 @@ def test_list_values_existing():
     assert "ProgramFilesDir" in keys
 
 
-def test_list_values_non_existing(fake_key):
+def test_list_values_non_existing(FAKE_KEY):
     """
     Test the list_values function using a non existing registry key
     """
@@ -261,12 +254,8 @@ def test_list_values_invalid_hive():
     """
     Test the list_values function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.list_values,
-        hive="BADHIVE",
-        key="SOFTWARE\\Microsoft",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.list_values(hive="BADHIVE", key="SOFTWARE\\Microsoft")
 
 
 def test_list_values_unknown_key_error():
@@ -277,9 +266,8 @@ def test_list_values_unknown_key_error():
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error, reg.list_values, hive="HKLM", key="SOFTWARE\\Microsoft"
-        )
+        with pytest.raises(win32api.error):
+            reg.list_values(hive="HKLM", key="SOFTWARE\\Microsoft")
 
 
 def test_read_value_existing():
@@ -329,7 +317,7 @@ def test_read_value_non_existing():
     assert result == expected
 
 
-def test_read_value_non_existing_key(fake_key):
+def test_read_value_non_existing_key(FAKE_KEY):
     """
     Test the read_value function using a non existing registry key
     """
@@ -340,7 +328,7 @@ def test_read_value_non_existing_key(fake_key):
         "vname": "fake_name",
         "success": False,
         "hive": "HKLM",
-        "key": fake_key,
+        "key": FAKE_KEY,
     }
     result = reg.read_value(hive="HKLM", key=fake_key, vname="fake_name")
     assert result == expected
@@ -350,13 +338,12 @@ def test_read_value_invalid_hive():
     """
     Test the read_value function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.read_value,
-        hive="BADHIVE",
-        key="SOFTWARE\\Microsoft",
-        vname="ProgramFilesPath",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.read_value(
+            hive="BADHIVE",
+            key="SOFTWARE\\Microsoft",
+            vname="ProgramFilesPath",
+        )
 
 
 def test_read_value_unknown_key_error():
@@ -367,13 +354,12 @@ def test_read_value_unknown_key_error():
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error,
-            reg.read_value,
-            hive="HKLM",
-            key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
-            vname="ProgramFilesPath",
-        )
+        with pytest.raises(win32api.error):
+            reg.read_value(
+                hive="HKLM",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
+                vname="ProgramFilesPath",
+            )
 
 
 def test_read_value_unknown_value_error():
@@ -384,217 +370,206 @@ def test_read_value_unknown_value_error():
         side_effect=win32api.error(123, "RegQueryValueEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegQueryValueEx", mock_error):
-        pytest.raises(
-            win32api.error,
-            reg.read_value,
-            hive="HKLM",
-            key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
-            vname="ProgramFilesPath",
-        )
+        with pytest.raises(win32api.error):
+            reg.read_value(
+                hive="HKLM",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
+                vname="ProgramFilesPath",
+            )
 
 
 @pytest.mark.destructive_test
-def test_read_value_multi_sz_empty_list(fake_key):
+def test_read_value_multi_sz_empty_list(FAKE_KEY):
     """
     An empty REG_MULTI_SZ value should return an empty list, not None
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key=fake_key,
+            key=FAKE_KEY,
             vname="empty_list",
             vdata=[],
             vtype="REG_MULTI_SZ",
         )
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
             "vdata": [],
             "vname": "empty_list",
             "vtype": "REG_MULTI_SZ",
         }
-        assert (
-            reg.read_value(
-                hive="HKLM",
-                key=fake_key,
-                vname="empty_list",
-            )
-            == expected
-        )
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="empty_list")
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value(fake_key):
+def test_set_value(FAKE_KEY):
     """
     Test the set_value function
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
             "vdata": "fake_data",
             "vname": "fake_name",
             "vtype": "REG_SZ",
         }
-        assert reg.read_value(hive="HKLM", key=fake_key, vname="fake_name") == expected
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value_default(fake_key):
+def test_set_value_default(FAKE_KEY):
     """
     Test the set_value function on the default value
     """
     try:
-        assert reg.set_value(hive="HKLM", key=fake_key, vdata="fake_default_data")
+        assert reg.set_value(hive="HKLM", key=FAKE_KEY, vdata="fake_default_data")
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
             "vdata": "fake_default_data",
             "vname": "(Default)",
             "vtype": "REG_SZ",
         }
-        assert reg.read_value(hive="HKLM", key=fake_key) == expected
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY)
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value_unicode_key(unicode_key, fake_key):
+def test_set_value_unicode_key(FAKE_KEY, UNICODE_KEY):
     """
     Test the set_value function on a unicode key
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key="\\".join([fake_key, unicode_key]),
+            key="\\".join([FAKE_KEY, UNICODE_KEY]),
             vname="fake_name",
             vdata="fake_value",
         )
         expected = {
             "hive": "HKLM",
-            "key": "\\".join([fake_key, unicode_key]),
+            "key": "\\".join([FAKE_KEY, UNICODE_KEY]),
             "success": True,
             "vdata": "fake_value",
             "vname": "fake_name",
             "vtype": "REG_SZ",
         }
-        assert (
-            reg.read_value(
-                hive="HKLM",
-                key="\\".join([fake_key, unicode_key]),
-                vname="fake_name",
-            )
-            == expected
+        result = reg.read_value(
+            hive="HKLM",
+            key="\\".join([FAKE_KEY, UNICODE_KEY]),
+            vname="fake_name",
         )
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value_unicode_value(unicode_value, fake_key):
+def test_set_value_unicode_value(FAKE_KEY, UNICODE_VALUE):
     """
     Test the set_value function on a unicode value
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_unicode", vdata=unicode_value
+            hive="HKLM", key=FAKE_KEY, vname="fake_unicode", vdata=UNICODE_VALUE
         )
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
-            "vdata": unicode_value,
+            "vdata": UNICODE_VALUE,
             "vname": "fake_unicode",
             "vtype": "REG_SZ",
         }
-        assert (
-            reg.read_value(hive="HKLM", key=fake_key, vname="fake_unicode") == expected
-        )
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_unicode")
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value_reg_dword(fake_key):
+def test_set_value_reg_dword(FAKE_KEY):
     """
     Test the set_value function on a REG_DWORD value
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key=fake_key,
+            key=FAKE_KEY,
             vname="dword_value",
             vdata=123,
             vtype="REG_DWORD",
         )
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
             "vdata": 123,
             "vname": "dword_value",
             "vtype": "REG_DWORD",
         }
-        assert (
-            reg.read_value(hive="HKLM", key=fake_key, vname="dword_value") == expected
-        )
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="dword_value")
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_set_value_reg_qword(fake_key):
+def test_set_value_reg_qword(FAKE_KEY):
     """
     Test the set_value function on a REG_QWORD value
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key=fake_key,
+            key=FAKE_KEY,
             vname="qword_value",
             vdata=123,
             vtype="REG_QWORD",
         )
         expected = {
             "hive": "HKLM",
-            "key": fake_key,
+            "key": FAKE_KEY,
             "success": True,
             "vdata": 123,
             "vname": "qword_value",
             "vtype": "REG_QWORD",
         }
-        assert (
-            reg.read_value(hive="HKLM", key=fake_key, vname="qword_value") == expected
-        )
+        result = reg.read_value(hive="HKLM", key=FAKE_KEY, vname="qword_value")
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
-def test_set_value_invalid_hive(fake_key):
+def test_set_value_invalid_hive(FAKE_KEY):
     """
     Test the set_value function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.set_value,
-        hive="BADHIVE",
-        key=fake_key,
-        vname="fake_name",
-        vdata="fake_data",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.set_value(
+            hive="BADHIVE",
+            key=FAKE_KEY,
+            vname="fake_name",
+            vdata="fake_data",
+        )
 
 
-def test_set_value_open_create_failure(fake_key):
+def test_set_value_open_create_failure(FAKE_KEY):
     """
     Test the set_value function when there is a problem opening/creating
     the key
@@ -603,23 +578,24 @@ def test_set_value_open_create_failure(fake_key):
         side_effect=win32api.error(123, "RegCreateKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegCreateKeyEx", mock_error):
-        assert not reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+        result = reg.set_value(
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
+    assert not result
 
 
-def test_set_value_type_error(fake_key):
+def test_set_value_type_error(FAKE_KEY):
     """
     Test the set_value function when the wrong type of data is passed
     """
     mock_error = MagicMock(side_effect=TypeError("Mocked TypeError"))
     with patch("salt.utils.win_reg.win32api.RegSetValueEx", mock_error):
         assert not reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
 
 
-def test_set_value_system_error(fake_key):
+def test_set_value_system_error(FAKE_KEY):
     """
     Test the set_value function when a SystemError occurs while setting the
     value
@@ -627,11 +603,11 @@ def test_set_value_system_error(fake_key):
     mock_error = MagicMock(side_effect=SystemError("Mocked SystemError"))
     with patch("salt.utils.win_reg.win32api.RegSetValueEx", mock_error):
         assert not reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
 
 
-def test_set_value_value_error(fake_key):
+def test_set_value_value_error(FAKE_KEY):
     """
     Test the set_value function when a ValueError occurs while setting the
     value
@@ -639,25 +615,25 @@ def test_set_value_value_error(fake_key):
     mock_error = MagicMock(side_effect=ValueError("Mocked ValueError"))
     with patch("salt.utils.win_reg.win32api.RegSetValueEx", mock_error):
         assert not reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
 
 
 @pytest.mark.destructive_test
-def test_delete_value(fake_key):
+def test_delete_value(FAKE_KEY):
     """
     Test the delete_value function
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_data"
         )
-        assert reg.delete_value(hive="HKLM", key=fake_key, vname="fake_name")
+        assert reg.delete_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
-def test_delete_value_non_existing(fake_key):
+def test_delete_value_non_existing(FAKE_KEY):
     """
     Test the delete_value function on non existing value
     """
@@ -665,23 +641,19 @@ def test_delete_value_non_existing(fake_key):
         side_effect=win32api.error(2, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        assert reg.delete_value(hive="HKLM", key=fake_key, vname="fake_name") is None
+        result = reg.delete_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
+    assert result is None
 
 
-def test_delete_value_invalid_hive(fake_key):
+def test_delete_value_invalid_hive(FAKE_KEY):
     """
     Test the delete_value function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.delete_value,
-        hive="BADHIVE",
-        key=fake_key,
-        vname="fake_name",
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.delete_value(hive="BADHIVE", key=FAKE_KEY, vname="fake_name")
 
 
-def test_delete_value_unknown_error(fake_key):
+def test_delete_value_unknown_error(FAKE_KEY):
     """
     Test the delete_value function when there is a problem opening the key
     """
@@ -689,122 +661,118 @@ def test_delete_value_unknown_error(fake_key):
         side_effect=win32api.error(123, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        pytest.raises(
-            win32api.error,
-            reg.delete_value,
-            hive="HKLM",
-            key=fake_key,
-            vname="fake_name",
-        )
+        with pytest.raises(win32api.error):
+            reg.delete_value(
+                hive="HKLM",
+                key=FAKE_KEY,
+                vname="fake_name",
+            )
 
 
 @pytest.mark.destructive_test
-def test_delete_value_unicode(unicode_value, fake_key):
+def test_delete_value_unicode(FAKE_KEY, UNICODE_VALUE):
     """
     Test the delete_value function on a unicode value
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_unicode", vdata=unicode_value
+            hive="HKLM", key=FAKE_KEY, vname="fake_unicode", vdata=UNICODE_VALUE
         )
-        assert reg.delete_value(hive="HKLM", key=fake_key, vname="fake_unicode")
+        assert reg.delete_value(hive="HKLM", key=FAKE_KEY, vname="fake_unicode")
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_delete_value_unicode_vname(unicode_key, fake_key):
+def test_delete_value_unicode_vname(FAKE_KEY, UNICODE_KEY):
     """
     Test the delete_value function on a unicode vname
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname=unicode_key, vdata="junk data"
+            hive="HKLM", key=FAKE_KEY, vname=UNICODE_KEY, vdata="junk data"
         )
-        assert reg.delete_value(hive="HKLM", key=fake_key, vname=unicode_key)
+        assert reg.delete_value(hive="HKLM", key=FAKE_KEY, vname=UNICODE_KEY)
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_delete_value_unicode_key(unicode_key, fake_key):
+def test_delete_value_unicode_key(FAKE_KEY, UNICODE_KEY, UNICODE_VALUE):
     """
     Test the delete_value function on a unicode key
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key="\\".join([fake_key, unicode_key]),
+            key="\\".join([FAKE_KEY, UNICODE_KEY]),
             vname="fake_name",
             vdata="junk data",
         )
         assert reg.delete_value(
             hive="HKLM",
-            key="\\".join([fake_key, unicode_key]),
+            key="\\".join([FAKE_KEY, UNICODE_KEY]),
             vname="fake_name",
         )
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
-def test_delete_key_recursive_invalid_hive(fake_key):
+def test_delete_key_recursive_invalid_hive(FAKE_KEY):
     """
     Test the delete_key_recursive function when passing an invalid hive
     """
-    pytest.raises(
-        CommandExecutionError,
-        reg.delete_key_recursive,
-        hive="BADHIVE",
-        key=fake_key,
-    )
+    with pytest.raises(CommandExecutionError):
+        reg.delete_key_recursive(hive="BADHIVE", key=FAKE_KEY)
 
 
-def test_delete_key_recursive_key_not_found(fake_key):
+def test_delete_key_recursive_key_not_found(FAKE_KEY):
     """
     Test the delete_key_recursive function when the passed key to delete is
     not found.
     """
-    assert not reg.key_exists(hive="HKLM", key=fake_key)
-    assert not reg.delete_key_recursive(hive="HKLM", key=fake_key)
+    assert not reg.key_exists(hive="HKLM", key=FAKE_KEY)
+    assert not reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
-def test_delete_key_recursive_too_close(fake_key):
+def test_delete_key_recursive_too_close():
     """
     Test the delete_key_recursive function when the passed key to delete is
     too close to root, such as
     """
     mock_true = MagicMock(return_value=True)
     with patch("salt.utils.win_reg.key_exists", mock_true):
-        assert not reg.delete_key_recursive(hive="HKLM", key="fake_key")
+        assert not reg.delete_key_recursive(hive="HKLM", key="FAKE_KEY")
 
 
 @pytest.mark.destructive_test
-def test_delete_key_recursive(fake_key):
+def test_delete_key_recursive(FAKE_KEY):
     """
     Test the delete_key_recursive function
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_value"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_value"
         )
-        expected = {"Deleted": ["\\".join(["HKLM", fake_key])], "Failed": []}
-        assert reg.delete_key_recursive(hive="HKLM", key=fake_key) == expected
+        expected = {"Deleted": ["\\".join(["HKLM", FAKE_KEY])], "Failed": []}
+        result = reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_delete_key_recursive_failed_to_open_key(fake_key):
+def test_delete_key_recursive_failed_to_open_key(FAKE_KEY):
     """
     Test the delete_key_recursive function on failure to open the key
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_value"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_value"
         )
         expected = {
             "Deleted": [],
-            "Failed": ["\\".join(["HKLM", fake_key]) + " Failed to connect to key"],
+            "Failed": ["\\".join(["HKLM", FAKE_KEY]) + " Failed to connect to key"],
         }
         mock_true = MagicMock(return_value=True)
         mock_error = MagicMock(
@@ -816,54 +784,54 @@ def test_delete_key_recursive_failed_to_open_key(fake_key):
         with patch("salt.utils.win_reg.key_exists", mock_true), patch(
             "salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error
         ):
-            assert reg.delete_key_recursive(hive="HKLM", key=fake_key) == expected
+            result = reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_delete_key_recursive_failed_to_delete(fake_key):
+def test_delete_key_recursive_failed_to_delete(FAKE_KEY):
     """
     Test the delete_key_recursive function on failure to delete a key
     """
     try:
         assert reg.set_value(
-            hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_value"
+            hive="HKLM", key=FAKE_KEY, vname="fake_name", vdata="fake_value"
         )
         expected = {
             "Deleted": [],
-            "Failed": ["\\".join(["HKLM", fake_key]) + " Unknown error"],
+            "Failed": ["\\".join(["HKLM", FAKE_KEY]) + " Unknown error"],
         }
         # pylint: disable=undefined-variable
         mock_error = MagicMock(side_effect=WindowsError("Unknown error"))
         # pylint: enable=undefined-variable
         with patch("salt.utils.win_reg.win32api.RegDeleteKey", mock_error):
-            assert reg.delete_key_recursive(hive="HKLM", key=fake_key) == expected
+            result = reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
 
 @pytest.mark.destructive_test
-def test_delete_key_recursive_unicode(unicode_key, fake_key):
+def test_delete_key_recursive_unicode(FAKE_KEY, UNICODE_KEY):
     """
     Test the delete_key_recursive function on value within a unicode key
     """
     try:
         assert reg.set_value(
             hive="HKLM",
-            key="\\".join([fake_key, unicode_key]),
+            key="\\".join([FAKE_KEY, UNICODE_KEY]),
             vname="fake_name",
             vdata="fake_value",
         )
         expected = {
-            "Deleted": ["\\".join(["HKLM", fake_key, unicode_key])],
+            "Deleted": ["\\".join(["HKLM", FAKE_KEY, UNICODE_KEY])],
             "Failed": [],
         }
-        assert (
-            reg.delete_key_recursive(
-                hive="HKLM", key="\\".join([fake_key, unicode_key])
-            )
-            == expected
+        result = reg.delete_key_recursive(
+            hive="HKLM", key="\\".join([FAKE_KEY, UNICODE_KEY])
         )
+        assert result == expected
     finally:
-        reg.delete_key_recursive(hive="HKLM", key=fake_key)
+        reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
