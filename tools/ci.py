@@ -944,7 +944,7 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     shared_context = yaml.safe_load(
         tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
     )
-    release_branches = shared_context["release-branches"]
+    release_branches = shared_context["release_branches"]
 
     release_changelog_target = "next-major-release"
     if event_name == "pull_request":
