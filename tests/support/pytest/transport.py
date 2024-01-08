@@ -116,7 +116,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             # test_zeromq_filtering requires catching the
             # SaltDeserializationError in order to pass.
             try:
-                messages = self.sock.recv_multipart(zmq.NOBLOCK)
+                messages = self.sock.recv_multipart(flags=zmq.NOBLOCK, copy=True)
                 messages_len = len(messages)
                 if messages_len == 1:
                     serial_payload = salt.payload.loads(messages[0])
