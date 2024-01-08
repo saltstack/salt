@@ -23,6 +23,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -131,17 +135,20 @@ jobs:
           - distro-slug: debian-10
             arch: x86_64
             pkg-type: package
+          - distro-slug: debian-10-arm64
+            arch: arm64
+            pkg-type: package
           - distro-slug: debian-11
             arch: x86_64
             pkg-type: package
           - distro-slug: debian-11-arm64
-            arch: aarch64
+            arch: arm64
             pkg-type: package
           - distro-slug: debian-12
             arch: x86_64
             pkg-type: package
           - distro-slug: debian-12-arm64
-            arch: aarch64
+            arch: arm64
             pkg-type: package
           - distro-slug: fedora-37
             arch: x86_64
@@ -192,20 +199,26 @@ jobs:
             arch: x86_64
             pkg-type: package
           - distro-slug: ubuntu-20.04-arm64
-            arch: aarch64
+            arch: arm64
             pkg-type: package
           - distro-slug: ubuntu-22.04
             arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04-arm64
-            arch: aarch64
             pkg-type: package
           - distro-slug: ubuntu-22.04
             arch: x86_64
             pkg-type: onedir
           - distro-slug: ubuntu-22.04-arm64
-            arch: aarch64
+            arch: arm64
+            pkg-type: package
+          - distro-slug: ubuntu-22.04-arm64
+            arch: arm64
             pkg-type: onedir
+          - distro-slug: ubuntu-23.04
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: ubuntu-23.04-arm64
+            arch: arm64
+            pkg-type: package
 
     steps:
 
@@ -220,7 +233,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -228,15 +241,13 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.linux.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -445,7 +456,7 @@ jobs:
             arch: arm64
             pkg-type: package
           - distro-slug: macos-13-xlarge
-            arch: aarch64
+            arch: arm64
             pkg-type: onedir
 
     steps:
@@ -461,7 +472,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Install System Dependencies
@@ -473,7 +484,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
@@ -485,19 +496,17 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.macos.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- ${{ matrix.distro-slug }}
+          nox --force-color -e decompress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Show System Info & Test Plan
         env:
@@ -692,13 +701,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.${{ matrix.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ matrix.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|${{ matrix.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.windows.${{ matrix.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 

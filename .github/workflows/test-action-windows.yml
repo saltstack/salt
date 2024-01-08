@@ -40,6 +40,10 @@ on:
         required: true
         type: number
         description: Timeout, in minutes, for the test job
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       gh-actions-python-version:
         required: false
         type: string
@@ -82,10 +86,7 @@ jobs:
 
   generate-matrix:
     name: Test Matrix
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
+    runs-on: ubuntu-latest
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
@@ -152,13 +153,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.windows.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.windows.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 

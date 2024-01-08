@@ -25,22 +25,22 @@
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
-      - name: Download Linux aarch64 Onedir Archive
+      - name: Download Linux arm64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-aarch64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS x86_64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-x86_64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-darwin-aarch64.tar.xz
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive

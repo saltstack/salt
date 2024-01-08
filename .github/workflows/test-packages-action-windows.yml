@@ -35,6 +35,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -78,6 +82,8 @@ jobs:
   generate-matrix:
     name: Generate Matrix
     runs-on:
+      # We need to run on our self-hosted runners because we need proper credentials
+      # for boto3 to scan through our repositories.
       - self-hosted
       - linux
       - x86_64
@@ -152,13 +158,11 @@ jobs:
         run: |
           tree artifacts/pkg/
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.windows.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.windows.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
