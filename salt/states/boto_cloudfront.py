@@ -49,6 +49,12 @@ import logging
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -132,7 +138,7 @@ def present(
     if old is None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Distribution {} set for creation.".format(name)
+            ret["comment"] = f"Distribution {name} set for creation."
             ret["changes"] = {"old": None, "new": name}
             return ret
 
@@ -154,7 +160,7 @@ def present(
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Created distribution {}.".format(name)
+        ret["comment"] = f"Created distribution {name}."
         ret["changes"] = {"old": None, "new": name}
         return ret
     else:
@@ -199,7 +205,7 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "\n".join(
-                ["Distribution {} set for new config:".format(name), changes_diff]
+                [f"Distribution {name} set for new config:", changes_diff]
             )
             ret["changes"] = {"diff": changes_diff}
             return ret
@@ -222,6 +228,6 @@ def present(
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Updated distribution {}.".format(name)
+        ret["comment"] = f"Updated distribution {name}."
         ret["changes"] = {"diff": changes_diff}
         return ret

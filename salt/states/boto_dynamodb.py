@@ -162,6 +162,11 @@ import sys
 
 import salt.utils.dictupdate as dictupdate
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -284,7 +289,7 @@ def present(
     if not table_exists:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "DynamoDB table {} would be created.".format(name)
+            ret["comment"] = f"DynamoDB table {name} would be created."
             return ret
         else:
             is_created = __salt__["boto_dynamodb.create_table"](
@@ -304,11 +309,11 @@ def present(
             )
             if not is_created:
                 ret["result"] = False
-                ret["comment"] = "Failed to create table {}".format(name)
+                ret["comment"] = f"Failed to create table {name}"
                 _add_changes(ret, changes_old, changes_new)
                 return ret
 
-            comments.append("DynamoDB table {} was successfully created".format(name))
+            comments.append(f"DynamoDB table {name} was successfully created")
             changes_new["table"] = name
             changes_new["read_capacity_units"] = read_capacity_units
             changes_new["write_capacity_units"] = write_capacity_units
@@ -319,7 +324,7 @@ def present(
             changes_new["local_indexes"] = local_indexes
             changes_new["global_indexes"] = global_indexes
     else:
-        comments.append("DynamoDB table {} exists".format(name))
+        comments.append(f"DynamoDB table {name} exists")
 
     # Ensure DynamoDB table provisioned throughput matches
     description = __salt__["boto_dynamodb.describe"](name, region, key, keyid, profile)
@@ -335,7 +340,7 @@ def present(
     if not throughput_matches:
         if __opts__["test"]:
             ret["result"] = None
-            comments.append("DynamoDB table {} is set to be updated.".format(name))
+            comments.append(f"DynamoDB table {name} is set to be updated.")
         else:
             is_updated = __salt__["boto_dynamodb.update"](
                 name,
@@ -350,17 +355,17 @@ def present(
             )
             if not is_updated:
                 ret["result"] = False
-                ret["comment"] = "Failed to update table {}".format(name)
+                ret["comment"] = f"Failed to update table {name}"
                 _add_changes(ret, changes_old, changes_new)
                 return ret
 
-            comments.append("DynamoDB table {} was successfully updated".format(name))
+            comments.append(f"DynamoDB table {name} was successfully updated")
             changes_old["read_capacity_units"] = (current_read_capacity_units,)
             changes_old["write_capacity_units"] = (current_write_capacity_units,)
             changes_new["read_capacity_units"] = (read_capacity_units,)
             changes_new["write_capacity_units"] = (write_capacity_units,)
     else:
-        comments.append("DynamoDB table {} throughput matches".format(name))
+        comments.append(f"DynamoDB table {name} throughput matches")
 
     provisioned_indexes = description.get("Table", {}).get("GlobalSecondaryIndexes", [])
 
@@ -478,7 +483,7 @@ def _global_indexes_present(
                     index_name = next(iter(entry.values()))
             if not index_name:
                 ret["result"] = False
-                ret["comment"] = "Index name not found for table {}".format(name)
+                ret["comment"] = f"Index name not found for table {name}"
                 return ret
             gsi_config[index_name] = index
 
@@ -591,11 +596,11 @@ def _add_global_secondary_index(
     )
 
     if success:
-        comments.append("Created GSI {}".format(index_name))
+        comments.append(f"Created GSI {index_name}")
         changes_new["global_indexes"][index_name] = gsi_config[index_name]
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to create GSI {}".format(index_name)
+        ret["comment"] = f"Failed to create GSI {index_name}"
 
 
 def _update_global_secondary_indexes(
@@ -641,9 +646,7 @@ def _update_global_secondary_indexes(
         )
 
         if success:
-            comments.append(
-                "Updated GSIs with new throughputs {}".format(index_updates)
-            )
+            comments.append(f"Updated GSIs with new throughputs {index_updates}")
             for index_name in index_updates:
                 changes_old["global_indexes"][index_name] = provisioned_throughputs[
                     index_name
@@ -651,7 +654,7 @@ def _update_global_secondary_indexes(
                 changes_new["global_indexes"][index_name] = index_updates[index_name]
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to update GSI throughputs {}".format(index_updates)
+            ret["comment"] = f"Failed to update GSI throughputs {index_updates}"
 
 
 def _determine_gsi_updates(existing_index_names, provisioned_gsi_config, gsi_config):
@@ -779,7 +782,7 @@ def _ensure_backup_datapipeline_present(
 ):
 
     kwargs = {
-        "name": "{}-{}-backup".format(name, schedule_name),
+        "name": f"{name}-{schedule_name}-backup",
         "pipeline_objects": {
             "DefaultSchedule": {
                 "name": schedule_name,
@@ -794,7 +797,7 @@ def _ensure_backup_datapipeline_present(
         },
         "parameter_values": {
             "myDDBTableName": name,
-            "myOutputS3Loc": "{}/{}/".format(s3_base_location, name),
+            "myOutputS3Loc": f"{s3_base_location}/{name}/",
         },
     }
     return __states__["boto_datapipeline.present"](**kwargs)
@@ -860,20 +863,20 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     exists = __salt__["boto_dynamodb.exists"](name, region, key, keyid, profile)
     if not exists:
-        ret["comment"] = "DynamoDB table {} does not exist".format(name)
+        ret["comment"] = f"DynamoDB table {name} does not exist"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "DynamoDB table {} is set to be deleted".format(name)
+        ret["comment"] = f"DynamoDB table {name} is set to be deleted"
         ret["result"] = None
         return ret
 
     is_deleted = __salt__["boto_dynamodb.delete"](name, region, key, keyid, profile)
     if is_deleted:
-        ret["comment"] = "Deleted DynamoDB table {}".format(name)
-        ret["changes"].setdefault("old", "Table {} exists".format(name))
-        ret["changes"].setdefault("new", "Table {} deleted".format(name))
+        ret["comment"] = f"Deleted DynamoDB table {name}"
+        ret["changes"].setdefault("old", f"Table {name} exists")
+        ret["changes"].setdefault("new", f"Table {name} deleted")
     else:
-        ret["comment"] = "Failed to delete DynamoDB table {}".format(name)
+        ret["comment"] = f"Failed to delete DynamoDB table {name}"
         ret["result"] = False
     return ret

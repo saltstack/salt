@@ -76,6 +76,12 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -773,7 +779,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{}:role/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:role/{name}"
 
 
 def put_replication(

@@ -59,6 +59,12 @@ config:
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -174,7 +180,7 @@ def _key_present(
     profile,
 ):
     ret = {"result": True, "comment": "", "changes": {}}
-    alias = "alias/{}".format(name)
+    alias = f"alias/{name}"
     r = __salt__["boto_kms.key_exists"](alias, region, key, keyid, profile)
     if "error" in r:
         ret["result"] = False
@@ -212,7 +218,7 @@ def _key_present(
             return ret
         ret["changes"]["old"] = {"key": None}
         ret["changes"]["new"] = {"key": name}
-        ret["comment"] = "Key {} created.".format(name)
+        ret["comment"] = f"Key {name} created."
     else:
         rd = __salt__["boto_kms.describe_key"](alias, region, key, keyid, profile)
         if "error" in rd:
@@ -271,7 +277,7 @@ def _key_enabled(key_metadata, enabled, region, key, keyid, profile):
             re["error"]["message"]
         )
     else:
-        ret["comment"] = "{} key.".format(event)
+        ret["comment"] = f"{event} key."
     return ret
 
 
@@ -339,7 +345,7 @@ def _key_rotation(key_metadata, key_rotation, region, key, keyid, profile):
             "old": {"key_rotation": not key_rotation},
             "new": {"key_rotation": key_rotation},
         }
-        ret["comment"] = "Set key rotation policy to {}.".format(key_rotation)
+        ret["comment"] = f"Set key rotation policy to {key_rotation}."
     return ret
 
 
