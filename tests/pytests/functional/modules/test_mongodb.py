@@ -111,7 +111,8 @@ def test_when_mongo_requires_tls_and_module_ssl_is_False_connection_should_fail(
         ssl=False,
         verify_ssl=False,
     )
-    assert result == "Failed to connect to mongo database"
+    assert isinstance(result, str)
+    assert "connection closed" in result
 
 
 def test_when_mongo_requires_tls_and_module_ssl_is_True_connection_should_succeed(
@@ -158,4 +159,5 @@ def test_when_mongo_not_requires_tls_and_module_ssl_is_True_connection_should_fa
         ssl=True,
         verify_ssl=False,
     )
-    assert result == "Failed to connect to mongo database"
+    assert isinstance(result, str)
+    assert "SSL handshake failed" in result
