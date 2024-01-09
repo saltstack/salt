@@ -538,7 +538,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -561,7 +560,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -584,7 +582,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -607,7 +604,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -630,7 +626,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -653,7 +648,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -676,7 +670,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -699,7 +692,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -722,7 +714,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -745,7 +736,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -768,7 +758,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -791,7 +780,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -814,7 +802,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -837,7 +824,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -860,7 +846,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -883,7 +868,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -907,7 +891,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -931,7 +914,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -955,7 +937,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -979,7 +960,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1002,7 +982,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1025,7 +1004,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1048,7 +1026,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1071,7 +1048,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1094,7 +1070,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1117,7 +1092,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1140,7 +1114,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1163,7 +1136,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1186,7 +1158,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1209,7 +1180,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1232,7 +1202,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1255,7 +1224,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1277,7 +1245,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1300,7 +1267,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1323,7 +1289,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1346,7 +1311,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1369,7 +1333,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1392,7 +1355,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1415,7 +1377,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1438,7 +1399,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1461,7 +1421,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1484,7 +1443,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1507,7 +1465,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1530,7 +1487,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1553,7 +1509,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1576,7 +1531,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1599,7 +1553,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1622,7 +1575,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1645,7 +1597,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1668,7 +1619,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1691,7 +1641,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1714,7 +1663,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1737,7 +1685,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1760,7 +1707,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1783,7 +1729,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1806,7 +1751,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1829,7 +1773,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1852,7 +1795,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1875,7 +1817,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1899,7 +1840,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1923,7 +1863,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1947,7 +1886,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1971,7 +1909,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1994,7 +1931,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -2017,7 +1953,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -2040,7 +1975,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
-      skip-junit-reports: false
       workflow-slug: scheduled
       default-timeout: 360
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
