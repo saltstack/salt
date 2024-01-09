@@ -109,7 +109,7 @@ jobs:
 
       - name: Check Salt Releases
         run: |
-          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '"${{ steps.get-salt-releases.outputs.latest-release }}"' | jq -C '.'
           echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
 
       - name: Set Cache Seed Output
