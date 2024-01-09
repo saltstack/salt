@@ -113,7 +113,7 @@ def smb_dict(tmp_path, salt_call_cli):
     ## assert pidfile.exists()
 
     smbd_path = shutil.which("smbd")
-    pathlib.Path(smbd_path).exists()
+    assert pathlib.Path(smbd_path).exists()
     try:
         _smbd = subprocess.Popen(
             ## [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
@@ -131,9 +131,9 @@ def smb_dict(tmp_path, salt_call_cli):
 
         out, err = _smbd.communicate()
         if err:
-            print(f"--Error--\nerr '{err}'", flush=True)
+            print(f"DGM --Error--\nerr '{err}'", flush=True)
         else:
-            print("--No errors--\nout '{out}'", flush=True)
+            print("DGM --No errors--\nout '{out}'", flush=True)
 
         pidfile = samba_dir / "smbd.pid"
         conn_dict = {
@@ -163,12 +163,13 @@ def smb_dict(tmp_path, salt_call_cli):
                 assert "1" == "2"
 
         ## DGM try finding the smbd.pid file in the system
-        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
-        print(f"ps -ef output for smbd '{mypsout}'", flush=True)
+        # DGM mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
+        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef")
+        print(f"DGM ps -ef output for smbd '{mypsout}'", flush=True)
         ## assert mypsout == ""
 
         mypidfile = salt_call_cli.run("--local", "cmd.run", "find / -name smbd.pid")
-        print(f"PID file is '{mypidfile}'", flush=True)
+        print(f"DGM PID file is '{mypidfile}'", flush=True)
         assert mypidfile == ""
 
         assert pidfile.exists()
