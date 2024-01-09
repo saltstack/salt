@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -106,11 +106,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools ci get-releases
-
-      - name: Check Salt Releases
-        run: |
-          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
-          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
 
       - name: Set Cache Seed Output
         id: set-cache-seed
