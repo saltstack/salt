@@ -131,6 +131,9 @@ def test_when_absent_is_called_it_should_pass_the_correct_ssl_argument_to_MongoC
                 call(
                     host="example.com",
                     port=42,
+                    username=None,
+                    password=None,
+                    authSource="admin",
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
@@ -138,6 +141,9 @@ def test_when_absent_is_called_it_should_pass_the_correct_ssl_argument_to_MongoC
                 call(
                     host="example.com",
                     port=42,
+                    username=None,
+                    password=None,
+                    authSource="admin",
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
@@ -179,6 +185,9 @@ def test_when_present_is_called_it_should_pass_the_correct_ssl_argument_to_Mongo
                 call(
                     host="example.com",
                     port=42,
+                    username=None,
+                    password=None,
+                    authSource="admin",
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
@@ -186,6 +195,9 @@ def test_when_present_is_called_it_should_pass_the_correct_ssl_argument_to_Mongo
                 call(
                     host="example.com",
                     port=42,
+                    username=None,
+                    password=None,
+                    authSource="admin",
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),

@@ -89,6 +89,9 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
             call(
                 host="mongodb.example.net",
                 port=1982,
+                username=None,
+                password=None,
+                authSource="admin",
                 ssl=expected_ssl,
                 tlsAllowInvalidCertificates=expected_allow_invalid,
             ),
@@ -102,6 +105,9 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
             call(
                 host="mongodb.example.net",
                 port=1982,
+                username=None,
+                password=None,
+                authSource="admin",
                 ssl=expected_ssl,
                 tlsAllowInvalidCertificates=expected_allow_invalid,
             ),
