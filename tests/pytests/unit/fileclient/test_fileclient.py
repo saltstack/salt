@@ -126,7 +126,8 @@ def test_fileclient_timeout(minion_opts, master_opts):
             # Crypticle must return bytes to pass to transport.RequestClient.send
             client.auth._crypticle = Mock()
             client.auth._crypticle.dumps = mock_dumps
-            with pytest.raises(salt.exceptions.SaltClientError):
+            msg = r"^File client timed out after \d{1,4} seconds$"
+            with pytest.raises(salt.exceptions.SaltClientError, match=msg):
                 client.file_list()
 
 

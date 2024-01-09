@@ -19,7 +19,7 @@ attrs==23.1.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
-bcrypt==4.0.1
+bcrypt==4.1.2
     # via -r requirements/static/ci/common.in
 boto3==1.21.46
     # via

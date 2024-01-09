@@ -506,7 +506,9 @@ def test_salt_documentation(salt_cli, salt_minion):
     """
     Test to see if we're supporting --doc
     """
-    ret = salt_cli.run("-d", "test", minion_tgt=salt_minion.id)
+    # Setting an explicity long timeout otherwise this test may fail when the
+    # system is under load.
+    ret = salt_cli.run("-d", "test", minion_tgt=salt_minion.id, _timeout=90)
     assert ret.returncode == 0
     assert "test.ping" in ret.data
 

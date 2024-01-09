@@ -21,7 +21,7 @@ jobs:
   Pre-Commit:
     name: Run Pre-Commit Against Salt
 
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10

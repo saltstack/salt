@@ -18,9 +18,13 @@ def client_config(client_config, netapi_port):
 
 @pytest.fixture
 def app(app_urls, load_auth, client_config, minion_config, salt_sub_minion):
-    return netapi.build_tornado_app(
+    app = netapi.build_tornado_app(
         app_urls, load_auth, client_config, minion_config, setup_event_listener=True
     )
+    try:
+        yield app
+    finally:
+        app.event_listener.destroy()
 
 
 @pytest.fixture

@@ -35,6 +35,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -71,6 +75,8 @@ jobs:
   generate-matrix:
     name: Generate Matrix
     runs-on:
+      # We need to run on our self-hosted runners because we need proper credentials
+      # for boto3 to scan through our repositories.
       - self-hosted
       - linux
       - x86_64
@@ -146,7 +152,7 @@ jobs:
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
 
@@ -154,19 +160,17 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.macos.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.macos.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- macos ${{ inputs.arch }}
 
       - name: Show System Info & Test Plan
         env:
@@ -220,7 +224,7 @@ jobs:
 
   report:
     name: Report
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
@@ -247,7 +251,7 @@ jobs:
           tree -a artifacts
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
 

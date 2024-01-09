@@ -36,8 +36,9 @@ def __virtual__():
             logging.getLogger("requests").setLevel(logging.WARNING)
             return True
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Could not load __salt__: %s", e)
+        log.error("Could not load __salt__: %s", e, exc_info=True)
         return False
+    return True
 
 
 def _get_token_and_url_from_master():

@@ -163,13 +163,16 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     if not path and not string:
         raise salt.exceptions.SaltInvocationError("Must pass either path or string")
 
+    if path and string:
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string")
+
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
         path_or_string = __salt__["cp.get_url"](
             path, saltenv=kwargs.get("saltenv", "base")
         )
-    elif string:
+    if string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
 

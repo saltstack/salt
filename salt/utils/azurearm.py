@@ -47,8 +47,6 @@ try:
 except ImportError:
     HAS_AZURE = False
 
-__opts__ = salt.config.minion_config("/etc/salt/minion")
-__salt__ = salt.loader.minion_mods(__opts__)
 
 log = logging.getLogger(__name__)
 

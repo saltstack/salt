@@ -24,10 +24,7 @@ jobs:
   build:
     name: Build
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
+      - ubuntu-latest
     strategy:
       fail-fast: false
       matrix:

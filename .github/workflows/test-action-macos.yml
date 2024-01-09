@@ -41,6 +41,10 @@ on:
         required: true
         type: string
         description: The nox version to install
+      nox-archive-hash:
+        required: true
+        type: string
+        description: Nox Tarball Cache Hash
       package-name:
         required: false
         type: string
@@ -76,7 +80,7 @@ jobs:
 
   generate-matrix:
     name: Test Matrix
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
@@ -145,18 +149,16 @@ jobs:
         run: |
           brew install tree
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      - name: Download cached nox.macos.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3.3.1
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{
-              hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py')
-            }}
+          path: nox.macos.${{ inputs.arch }}.tar.*
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{ inputs.nox-archive-hash }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.gh-actions-python-version }}"
 
@@ -166,7 +168,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- macos ${{ inputs.arch }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -383,7 +385,7 @@ jobs:
   report:
     name: Test Reports
     if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs:
       - test
 
@@ -404,7 +406,7 @@ jobs:
           tree -a artifacts
 
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.gh-actions-python-version }}"
 

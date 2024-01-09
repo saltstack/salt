@@ -40,7 +40,7 @@ backports.entry-points-selectable==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   virtualenv
-bcrypt==3.1.6
+bcrypt==4.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -84,7 +84,6 @@ cffi==1.14.6
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-    #   bcrypt
     #   cryptography
     #   pynacl
 charset-normalizer==3.2.0
@@ -360,7 +359,7 @@ packaging==22.0
     #   -r requirements/base.txt
     #   docker
     #   pytest
-paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -612,7 +611,6 @@ six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
-    #   bcrypt
     #   cassandra-driver
     #   cheroot
     #   etcd3-py
@@ -624,7 +622,6 @@ six==1.16.0
     #   kubernetes
     #   more-itertools
     #   ncclient
-    #   paramiko
     #   profitbricks
     #   pypsexec
     #   python-dateutil

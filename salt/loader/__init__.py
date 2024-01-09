@@ -324,6 +324,10 @@ def minion_mods(
         pack_self="__salt__",
     )
 
+    # Allow the usage of salt dunder in utils modules.
+    if utils and isinstance(utils, LazyLoader):
+        utils.pack["__salt__"] = ret
+
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
     #        with cloud providers.
