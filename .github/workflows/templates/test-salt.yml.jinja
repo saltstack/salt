@@ -25,7 +25,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -54,7 +53,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -82,7 +80,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
