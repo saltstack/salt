@@ -891,15 +891,15 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
     """
     Generate the latest salt release.
     """
+    releases = tools.utils.get_salt_releases(ctx, repository)
+    str_releases = [str(version) for version in releases]
+    latest = str_releases[-1]
+
+    ctx.info("Releases:", sorted(str_releases))
+    ctx.info(f"Latest Release: '{latest}'")
+
     github_output = os.environ.get("GITHUB_OUTPUT")
-
-    if github_output is None:
-        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
-    else:
-        releases = tools.utils.get_salt_releases(ctx, repository)
-        str_releases = [str(version) for version in releases]
-        latest = str_releases[-1]
-
+    if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"latest-release={latest}\n")
             wfh.write(f"releases={json.dumps(str_releases)}\n")
@@ -1035,40 +1035,34 @@ def get_testing_releases(
     """
     Get a list of releases to use for the upgrade and downgrade tests.
     """
+    # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
+    threshold_major = 3005
+    parsed_salt_version = tools.utils.Version(salt_version)
+    # We want the latest 4 major versions, removing the oldest if this version is a new major
+    num_major_versions = 4
+    if parsed_salt_version.minor == 0:
+        num_major_versions = 3
+    majors = sorted(
+        list(
+            {version.major for version in releases if version.major >= threshold_major}
+        )
+    )[-num_major_versions:]
+    testing_releases = []
+    # Append the latest minor for each major
+    for major in majors:
+        minors_of_major = [version for version in releases if version.major == major]
+        testing_releases.append(minors_of_major[-1])
+
+    str_releases = [str(version) for version in testing_releases]
+
+    ctx.info("Testing Releases:", sorted(str_releases))
+
     github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
-    else:
-        # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-        threshold_major = 3005
-        parsed_salt_version = tools.utils.Version(salt_version)
-        # We want the latest 4 major versions, removing the oldest if this version is a new major
-        num_major_versions = 4
-        if parsed_salt_version.minor == 0:
-            num_major_versions = 3
-        majors = sorted(
-            list(
-                {
-                    version.major
-                    for version in releases
-                    if version.major >= threshold_major
-                }
-            )
-        )[-num_major_versions:]
-        testing_releases = []
-        # Append the latest minor for each major
-        for major in majors:
-            minors_of_major = [
-                version for version in releases if version.major == major
-            ]
-            testing_releases.append(minors_of_major[-1])
-
-        str_releases = [str(version) for version in testing_releases]
-
+    if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testing-releases={json.dumps(str_releases)}\n")
 
-        ctx.exit(0)
+    ctx.exit(0)
 
 
 @ci.command(
