@@ -258,6 +258,9 @@ def runner_types(ctx: Context, event_name: str):
                 "from the 'dorny/paths-filter' GitHub action."
             ),
         },
+        "full_testrun": {
+            "help": "Define jobs for a full test run or not",
+        },
     },
 )
 def define_jobs(
@@ -267,6 +270,7 @@ def define_jobs(
     skip_tests: bool = False,
     skip_pkg_tests: bool = False,
     skip_pkg_download_tests: bool = False,
+    full_testrun: bool = False,
 ):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
@@ -376,7 +380,7 @@ def define_jobs(
         changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
-    if jobs["test"] and required_test_changes == {"false"}:
+    if jobs["test"] and required_test_changes == {"false"} and not full_testrun:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("De-selecting the 'test' job.\n")
         jobs["test"] = False

@@ -260,12 +260,21 @@ jobs:
         run: |
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
 
+      - name: Define Testrun
+        id: define-testrun
+        run: |
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Test Run
+        run: |
+          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+
       - name: Define Jobs
         id: define-jobs
         run: |
           tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
             prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
-          }> ${{ github.event_name }} changed-files.json
+          }>${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] == 'full' && ' --full-testrun' || '' }} ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
@@ -290,15 +299,6 @@ jobs:
           echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
           echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
           echo '${{ steps.get-testing-releases.outputs.testing-releases }}' | jq -C '.'
-
-      - name: Define Testrun
-        id: define-testrun
-        run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Test Run
-        run: |
-          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
