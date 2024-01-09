@@ -154,6 +154,15 @@ def test_copy(ddict, base_dict, dyn_func):
     )
 
 
+def test_static_dict(ddict, base_dict, dyn_func):
+    ddict.add_dyn("foo", dyn_func)
+    static_dict = ddict.static_dict()
+    assert not isinstance(static_dict, DynamicDict)
+    assert set(static_dict.keys()) == set(ddict.keys())
+    for key, val in static_dict.items():
+        assert val == ddict[key]
+
+
 def test_copy_iterator(base_dict, ddict, dyn_func):
     ddict.add_dyn("foo", dyn_func)
     copied_dict = base_dict.copy()

@@ -12,6 +12,8 @@ def _formula(saltstack_formula):
 
 @pytest.fixture(scope="module")
 def modules(loaders, _formula):
+    # Convert the file roots to a static dict before appending any roots
+    loaders.opts["file_roots"] = loaders.opts["file_roots"].static_dict()
     loaders.opts["file_roots"]["base"].append(
         str(_formula.state_tree_path / f"{_formula.name}-{_formula.tag}")
     )
