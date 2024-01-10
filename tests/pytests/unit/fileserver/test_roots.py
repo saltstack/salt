@@ -28,14 +28,14 @@ def unicode_dirname():
     return "соль"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def testfile(tmp_path):
     fp = tmp_path / "testfile"
     fp.write_text("This is a testfile")
     return fp
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def tmp_state_tree(tmp_path, testfile, unicode_filename, unicode_dirname):
     dirname = tmp_path / "roots_tmp_state_tree"
     dirname.mkdir(parents=True, exist_ok=True)
@@ -53,17 +53,16 @@ def tmp_state_tree(tmp_path, testfile, unicode_filename, unicode_dirname):
     return dirname
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def testfilepath(tmp_state_tree, testfile):
     return tmp_state_tree / testfile.name
 
 
 @pytest.fixture
-def configure_loader_modules(tmp_state_tree, temp_salt_master):
-    opts = temp_salt_master.config.copy()
+def configure_loader_modules(tmp_state_tree, master_config):
     overrides = {"file_roots": {"base": [str(tmp_state_tree)]}}
-    opts.update(overrides)
-    return {roots: {"__opts__": opts}}
+    master_config.update(overrides)
+    return {roots: {"__opts__": master_config}}
 
 
 def test_file_list(unicode_filename):
