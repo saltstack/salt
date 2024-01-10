@@ -14,6 +14,7 @@ from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
+    import boto
     import boto3
     from botocore.exceptions import ClientError
 

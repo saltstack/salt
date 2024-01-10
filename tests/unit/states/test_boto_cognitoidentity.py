@@ -18,6 +18,7 @@ from tests.unit.modules.test_boto_cognitoidentity import (
 )
 
 try:
+    import boto
     import boto3
     from botocore.exceptions import ClientError
 

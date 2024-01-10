@@ -20,6 +20,7 @@ from tests.support.unit import TestCase
 from tests.unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 try:
+    import boto
     import boto3
     import botocore
     from botocore.exceptions import ClientError
