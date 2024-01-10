@@ -385,7 +385,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt

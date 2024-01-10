@@ -79,7 +79,7 @@ pycparser==2.21
     # via
     #   -r requirements/darwin.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
 pyopenssl==23.2.0
     # via -r requirements/darwin.txt
