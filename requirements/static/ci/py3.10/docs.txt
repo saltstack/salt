@@ -117,7 +117,7 @@ psutil==5.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/crypto.txt
