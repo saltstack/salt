@@ -1,5 +1,5 @@
-import datetime
 import ipaddress
+from datetime import datetime
 
 import pytest
 
@@ -1019,12 +1019,12 @@ class TestCreateExtension:
         [
             (
                 "critical, 2022-10-11 13:37:42",
-                datetime.datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
+                datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
                 True,
             ),
             (
                 "2022-10-11 13:37:42",
-                datetime.datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
+                datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
                 False,
             ),
         ],
@@ -1875,9 +1875,7 @@ def test_get_dn(inpt, expected):
             cx509.Extension(
                 cx509.InvalidityDate.oid,
                 value=cx509.InvalidityDate(
-                    datetime.datetime.strptime(
-                        "2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"
-                    )
+                    datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S")
                 ),
                 critical=False,
             ),
