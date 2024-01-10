@@ -320,7 +320,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/crypto.txt
