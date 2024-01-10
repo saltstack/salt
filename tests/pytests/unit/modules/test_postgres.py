@@ -2007,6 +2007,147 @@ def test_privileges_grant_table():
         )
 
 
+def test_privileges_grant_function():
+    """
+    Test granting privileges on function
+    """
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        with patch("salt.modules.postgres.has_privileges", Mock(return_value=False)):
+            ret = postgres.privileges_grant(
+                "baruwa",
+                "fawl",
+                "function",
+                "ALL",
+                grant_option=True,
+                maintenance_db="db_name",
+                runas="user",
+                host="testhost",
+                port="testport",
+                user="testuser",
+                password="testpassword",
+            )
+
+            query = 'GRANT ALL ON FUNCTION public."fawl" TO "baruwa" WITH GRANT OPTION'
+
+            postgres._run_psql.assert_called_once_with(
+                [
+                    "/usr/bin/pgsql",
+                    "--no-align",
+                    "--no-readline",
+                    "--no-psqlrc",
+                    "--no-password",
+                    "--username",
+                    "testuser",
+                    "--host",
+                    "testhost",
+                    "--port",
+                    "testport",
+                    "--dbname",
+                    "db_name",
+                    "-c",
+                    query,
+                ],
+                host="testhost",
+                port="testport",
+                password="testpassword",
+                user="testuser",
+                runas="user",
+            )
+
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=False)
+    ):
+        ret = postgres.privileges_grant(
+            "baruwa",
+            "fawl",
+            "function",
+            "ALL",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'GRANT ALL ON TABLE public."fawl" TO "baruwa"'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+    # Test grant on all tables
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=False)
+    ):
+        ret = postgres.privileges_grant(
+            "baruwa",
+            "ALL",
+            "function",
+            "SELECT",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'GRANT SELECT ON ALL FUNCTIONS IN SCHEMA public TO "baruwa"'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+
 def test_privileges_grant_group():
     """
     Test granting privileges on group
