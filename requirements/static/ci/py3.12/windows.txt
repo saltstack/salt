@@ -282,7 +282,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   cffi
-pycryptodomex==3.10.1
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   -r requirements/crypto.txt
