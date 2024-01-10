@@ -12,14 +12,6 @@ aiosignal==1.2.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   aiohttp
-ansible-core==2.11.7
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   ansible
-ansible==4.4.0 ; python_version < "3.9"
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -153,7 +145,6 @@ cryptography==41.0.7
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/pkg/linux.in
-    #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
@@ -270,7 +261,6 @@ jinja2==3.1.2
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -398,7 +388,6 @@ packaging==22.0
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
     #   docker
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -554,7 +543,6 @@ pyyaml==6.0.1
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -591,10 +579,6 @@ requests==2.31.0
     #   responses
     #   twilio
     #   vcert
-resolvelib==0.5.4
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   ansible-core
 responses==0.10.6
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
