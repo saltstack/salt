@@ -1517,7 +1517,7 @@ ARGS = {arguments}\n'''.format(
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         stdout, stderr, retcode = self.shell.send(
-            shim_tmp_file.name, target_shim_file, makedirs=True
+            shim_tmp_file.name, target_shim_file, makedirs=self.winrm
         )
         if retcode != 0:
             log.error("Could not copy the shim script to target")

@@ -395,6 +395,9 @@ class EventListener:
                     )
                     del self.timeout_map[future]
 
+    def destroy(self):
+        self.event.destroy()
+
 
 class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
