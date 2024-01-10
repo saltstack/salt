@@ -37,7 +37,7 @@ COM_REGX = re.compile(r"^\s*(#|;)\s*(.*)")
 INDENTED_REGX = re.compile(r"(\s+)(.*)")
 
 
-def set_option(file_name, sections=None, separator="="):
+def set_option(file_name, sections=None, separator="=", encoding=None):
     """
     Edit an ini file, replacing one or more sections. Returns a dictionary
     containing the changes made.
@@ -77,13 +77,13 @@ def set_option(file_name, sections=None, separator="="):
     """
     sections = sections or {}
     changes = {}
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     changes = inifile.update(sections)
     inifile.flush()
     return changes
 
 
-def get_option(file_name, section, option, separator="="):
+def get_option(file_name, section, option, separator="=", encoding=None):
     """
     Get value of a key from a section in an ini file. Returns ``None`` if
     no matching key was found.
@@ -103,7 +103,7 @@ def get_option(file_name, section, option, separator="="):
 
         salt '*' ini.get_option /path/to/ini section_name option_name
     """
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if section:
         try:
             return inifile.get(section, {}).get(option, None)
@@ -113,7 +113,7 @@ def get_option(file_name, section, option, separator="="):
         return inifile.get(option, None)
 
 
-def remove_option(file_name, section, option, separator="="):
+def remove_option(file_name, section, option, separator="=", encoding=None):
     """
     Remove a key/value pair from a section in an ini file. Returns the value of
     the removed key, or ``None`` if nothing was removed.
@@ -133,7 +133,7 @@ def remove_option(file_name, section, option, separator="="):
 
         salt '*' ini.remove_option /path/to/ini section_name option_name
     """
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if isinstance(inifile.get(section), (dict, OrderedDict)):
         value = inifile.get(section, {}).pop(option, None)
     else:
@@ -142,7 +142,7 @@ def remove_option(file_name, section, option, separator="="):
     return value
 
 
-def get_section(file_name, section, separator="="):
+def get_section(file_name, section, separator="=", encoding=None):
     """
     Retrieve a section from an ini file. Returns the section as dictionary. If
     the section is not found, an empty dictionary is returned.
@@ -162,7 +162,7 @@ def get_section(file_name, section, separator="="):
 
         salt '*' ini.get_section /path/to/ini section_name
     """
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     ret = {}
     for key, value in inifile.get(section, {}).items():
         if key[0] != "#":
@@ -170,7 +170,7 @@ def get_section(file_name, section, separator="="):
     return ret
 
 
-def remove_section(file_name, section, separator="="):
+def remove_section(file_name, section, separator="=", encoding=None):
     """
     Remove a section in an ini file. Returns the removed section as dictionary,
     or ``None`` if nothing was removed.
@@ -190,7 +190,7 @@ def remove_section(file_name, section, separator="="):
 
         salt '*' ini.remove_section /path/to/ini section_name
     """
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if section in inifile:
         section = inifile.pop(section)
         inifile.flush()
@@ -201,7 +201,7 @@ def remove_section(file_name, section, separator="="):
         return ret
 
 
-def get_ini(file_name, separator="="):
+def get_ini(file_name, separator="=", encoding=None):
     """
     Retrieve whole structure from an ini file and return it as dictionary.
 
@@ -236,7 +236,7 @@ def get_ini(file_name, separator="="):
                     ret.update({key: val})
         return ret
 
-    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     return ini_odict2dict(inifile)
 
 
@@ -409,13 +409,24 @@ class _Section(OrderedDict):
 
 
 class _Ini(_Section):
+    def __init__(
+        self, name, inicontents="", separator="=", commenter="#", encoding=None
+    ):
+        super().__init__(
+            self, inicontents=inicontents, separator=separator, commenter=commenter
+        )
+        self.name = name
+        if encoding is None:
+            encoding = __salt_system_encoding__
+        self.encoding = encoding
+
     def refresh(self, inicontents=None):
         if inicontents is None:
             if not os.path.exists(self.name):
                 log.trace("File %s does not exist and will be created", self.name)
                 return
             try:
-                with salt.utils.files.fopen(self.name) as rfh:
+                with salt.utils.files.fopen(self.name, encoding=self.encoding) as rfh:
                     inicontents = salt.utils.stringutils.to_unicode(rfh.read())
                     inicontents = os.linesep.join(inicontents.splitlines())
             except OSError as exc:
@@ -443,7 +454,9 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.files.fopen(self.name, "wb") as outfile:
+            with salt.utils.files.fopen(
+                self.name, "wb", encoding=self.encoding
+            ) as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 ini_gen_list = list(ini_gen)
@@ -457,8 +470,8 @@ class _Ini(_Section):
             )
 
     @staticmethod
-    def get_ini_file(file_name, separator="="):
-        inifile = _Ini(file_name, separator=separator)
+    def get_ini_file(file_name, separator="=", encoding=None):
+        inifile = _Ini(file_name, separator=separator, encoding=encoding)
         inifile.refresh()
         return inifile
 
