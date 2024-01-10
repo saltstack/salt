@@ -23,7 +23,7 @@ annotated-types==0.6.0
     #   pydantic
 ansible-core==2.15.0
     # via ansible
-ansible==8.0.0 ; python_version >= "3.9"
+ansible==8.5.0 ; python_version >= "3.9"
     # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
