@@ -21,7 +21,7 @@ annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   pydantic
-ansible-core==2.15.0
+ansible-core==2.15.8
     # via ansible
 ansible==8.0.0 ; python_version >= "3.9"
     # via -r requirements/static/ci/linux.in
