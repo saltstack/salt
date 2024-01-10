@@ -603,7 +603,7 @@ def test_default_version_getter_tuple():
 
 
 @pytest.fixture
-def test_module(tmp_path):
+def module(tmp_path):
     mod_path = tmp_path / "test_module.py"
     with salt.utils.files.fopen(mod_path, "w") as fp:
         fp.write(TEST_MOD)
@@ -615,49 +615,49 @@ def test_module(tmp_path):
         sys.path = orig_path
 
 
-def test_depenency_exists(test_module):
+def test_depenency_exists(module):
     dep = Requirement("test_module")
     assert dep.has_depend is True
     assert dep
 
 
-def test_depenency_does_not_exist(test_module):
+def test_depenency_does_not_exist(module):
     dep = Requirement("test_module_does_not_exit")
     assert dep.has_depend is False
     assert not dep
 
 
-def test_depenency_version_eq(test_module):
+def test_depenency_version_eq(module):
     dep = Requirement("test_module")
     assert dep
     assert dep == "1.2.3"
 
 
-def test_depenency_version_ne(test_module):
+def test_depenency_version_ne(module):
     dep = Requirement("test_module")
     assert bool(dep != "1.2.3") is False
     assert dep != "1.2.3.1"
 
 
-def test_depenency_version_lt(test_module):
+def test_depenency_version_lt(module):
     dep = Requirement("test_module")
     assert dep < "1.2.3.1"
 
 
-def test_depenency_version_le(test_module):
+def test_depenency_version_le(module):
     dep = Requirement("test_module")
     assert dep <= "1.2.3"
     assert dep <= "1.2.3.1"
 
 
-def test_depenency_version_gt(test_module):
+def test_depenency_version_gt(module):
     dep = Requirement("test_module")
     assert bool(dep > "1.2.3") is False
     assert dep > "1.2.2"
     assert dep > "1.2.2.1"
 
 
-def test_depenency_version_ge(test_module):
+def test_depenency_version_ge(module):
     dep = Requirement("test_module")
     assert dep >= "1.2.3"
     assert bool(dep >= "1.2.3.1") is False
