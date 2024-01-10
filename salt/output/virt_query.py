@@ -32,7 +32,8 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
                 if "disks" in vm_data:
                     for disk, d_data in vm_data["disks"].items():
                         out += "    Disk - {}:\n".format(disk)
-                        out += "      Size: {}\n".format(d_data["disk size"])
+                        if "disk size" in d_data:
+                            out += "      Size: {}\n".format(d_data["disk size"])
                         out += "      File: {}\n".format(d_data["file"])
                         out += "      File Format: {}\n".format(d_data["file format"])
                 if "nics" in vm_data:
