@@ -12,11 +12,11 @@ aiosignal==1.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
-ansible-core==2.14.1
+ansible-core==2.16.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   ansible
-ansible==7.1.0 ; python_version >= "3.9"
+ansible==9.1.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/linux.in
