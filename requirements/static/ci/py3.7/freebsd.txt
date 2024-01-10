@@ -327,7 +327,7 @@ pycparser==2.17
     # via
     #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -r requirements/crypto.txt
