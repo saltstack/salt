@@ -1,0 +1,2 @@
+CVE-2024-22231 Prevent directory traversal when creating syndic cache directory on the master
+CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
