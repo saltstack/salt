@@ -525,7 +525,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -548,7 +547,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -571,7 +569,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -594,7 +591,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -617,7 +613,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -640,7 +635,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -663,7 +657,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -686,7 +679,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -709,7 +701,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -732,7 +723,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -755,7 +745,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -778,7 +767,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -801,7 +789,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -824,7 +811,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -847,7 +833,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -870,7 +855,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -894,7 +878,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -918,7 +901,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -942,7 +924,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
@@ -966,7 +947,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -989,7 +969,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1012,7 +991,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1035,7 +1013,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1058,7 +1035,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1081,7 +1057,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1104,7 +1079,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1127,7 +1101,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1150,7 +1123,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1173,7 +1145,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1196,7 +1167,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1219,7 +1189,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1242,7 +1211,6 @@ jobs:
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -1264,7 +1232,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1287,7 +1254,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1310,7 +1276,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1333,7 +1298,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1356,7 +1320,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1379,7 +1342,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1402,7 +1364,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1425,7 +1386,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1448,7 +1408,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1471,7 +1430,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1494,7 +1452,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1517,7 +1474,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1540,7 +1496,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1563,7 +1518,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1586,7 +1540,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1609,7 +1562,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1632,7 +1584,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1655,7 +1606,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1678,7 +1628,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1701,7 +1650,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1724,7 +1672,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1747,7 +1694,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1770,7 +1716,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1793,7 +1738,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1816,7 +1760,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1839,7 +1782,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1862,7 +1804,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1886,7 +1827,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1910,7 +1850,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1934,7 +1873,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1958,7 +1896,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -1981,7 +1918,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -2004,7 +1940,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -2027,7 +1962,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
