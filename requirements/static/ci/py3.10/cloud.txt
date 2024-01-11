@@ -188,7 +188,7 @@ gitdb==4.0.7
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   gitpython
-gitpython==3.1.37
+gitpython==3.1.41
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
