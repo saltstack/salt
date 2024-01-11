@@ -12,8 +12,6 @@ from functools import total_ordering
 
 from packaging.version import Version
 
-from salt.exceptions import SaltException
-
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -939,7 +937,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     yield from info
 
 
-class RequirementNotRegistered(SaltException, AttributeError):
+class RequirementNotRegistered(AttributeError):
     pass
 
 
