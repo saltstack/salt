@@ -14,6 +14,9 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        not mongo_mod.HAS_MONGODB, reason="No pymongo client installed."
+    ),
 ]
 
 
