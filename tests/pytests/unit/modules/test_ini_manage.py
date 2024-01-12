@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 
@@ -43,7 +44,33 @@ def ini_file(tmp_path, ini_content):
     yield file_path
 
 
-# def ini_file_linesep(ini_file, linesep):
+@pytest.fixture
+def unicode_content():
+    return [
+        "# An ini file with some unicode characters",
+        "",
+        "[Ascii]",
+        "de = Deutsch",
+        "en_GB = English (UK)",
+        "en_US = English (US)",
+        "fi = Suomi",
+        "hu = Magyar",
+        "it = Italiano",
+        "nl = Dutch",
+        "pt = Portuguese",
+        "sv = Svenska",
+        "",
+        "[Юникод]",
+        "# This means unicode in Russian",
+        "es = Español",
+        "es_ES = Español (ES)",
+        "fr = Français",
+        "hi = हिंदी",
+        "ja = 日本語",
+        "ko = :한국어",
+        "zh = 简体中文",
+        "繁體中文 = zh_TW",
+    ]
 
 
 def test_section_req():
@@ -55,63 +82,104 @@ def test_section_req():
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_get_option(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_get_option(encoding, linesep, ini_file, ini_content):
     """
     Test get_option method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
-    assert ini.get_option(str(ini_file), "main", "test1") == "value 1"
-    assert ini.get_option(str(ini_file), "main", "test2") == "value 2"
-    assert ini.get_option(str(ini_file), "SectionB", "test1") == "value 1B"
-    assert ini.get_option(str(ini_file), "SectionB", "test3") == "value 3B"
-    assert ini.get_option(str(ini_file), "SectionC", "empty_option") == ""
+    assert (
+        ini.get_option(str(ini_file), "main", "test1", encoding=encoding) == "value 1"
+    )
+    assert (
+        ini.get_option(str(ini_file), "main", "test2", encoding=encoding) == "value 2"
+    )
+    assert (
+        ini.get_option(str(ini_file), "SectionB", "test1", encoding=encoding)
+        == "value 1B"
+    )
+    assert (
+        ini.get_option(str(ini_file), "SectionB", "test3", encoding=encoding)
+        == "value 3B"
+    )
+    assert (
+        ini.get_option(str(ini_file), "SectionC", "empty_option", encoding=encoding)
+        == ""
+    )
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_get_section(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_get_section(encoding, linesep, ini_file, ini_content):
     """
     Test get_section method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
     expected = {"test1": "value 1B", "test3": "value 3B"}
-    assert ini.get_section(str(ini_file), "SectionB") == expected
+    assert ini.get_section(str(ini_file), "SectionB", encoding=encoding) == expected
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_remove_option(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_remove_option(encoding, linesep, ini_file, ini_content):
     """
     Test remove_option method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
-    assert ini.remove_option(str(ini_file), "SectionB", "test1") == "value 1B"
-    assert ini.get_option(str(ini_file), "SectionB", "test1") is None
+    assert (
+        ini.remove_option(str(ini_file), "SectionB", "test1", encoding=encoding)
+        == "value 1B"
+    )
+    assert ini.get_option(str(ini_file), "SectionB", "test1", encoding=encoding) is None
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_remove_section(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_remove_section(encoding, linesep, ini_file, ini_content):
     """
     Test remove_section method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
     expected = {"test1": "value 1B", "test3": "value 3B"}
-    assert ini.remove_section(str(ini_file), "SectionB") == expected
-    assert ini.get_section(str(ini_file), "SectionB") == {}
+    assert ini.remove_section(str(ini_file), "SectionB", encoding=encoding) == expected
+    assert ini.get_section(str(ini_file), "SectionB", encoding=encoding) == {}
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_get_ini(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_get_ini(encoding, linesep, ini_file, ini_content):
     """
     Test get_ini method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
     expected = {
@@ -129,15 +197,20 @@ def test_get_ini(linesep, ini_file, ini_content):
         "option2": "main2",
         "option1": "main1",
     }
-    assert dict(ini.get_ini(str(ini_file))) == expected
+    assert dict(ini.get_ini(str(ini_file), encoding=encoding)) == expected
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_set_option(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_set_option(encoding, linesep, ini_file, ini_content):
     """
     Test set_option method.
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
     result = ini.set_option(
@@ -149,6 +222,7 @@ def test_set_option(linesep, ini_file, ini_content):
             },
             "SectionD": {"test_set_option2": "test_set_value1"},
         },
+        encoding=encoding,
     )
     expected = {
         "SectionB": {
@@ -163,36 +237,51 @@ def test_set_option(linesep, ini_file, ini_content):
     assert result == expected
 
     # Check existing option updated
-    assert ini.get_option(str(ini_file), "SectionB", "test3") == "new value 3B"
+    assert (
+        ini.get_option(str(ini_file), "SectionB", "test3", encoding=encoding)
+        == "new value 3B"
+    )
 
     # Check new section and option added
     assert (
-        ini.get_option(str(ini_file), "SectionD", "test_set_option2")
+        ini.get_option(str(ini_file), "SectionD", "test_set_option2", encoding=encoding)
         == "test_set_value1"
     )
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_empty_value(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_empty_value(encoding, linesep, ini_file, ini_content):
     """
     Test empty value preserved after edit
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
-    ini.set_option(str(ini_file), {"SectionB": {"test3": "new value 3B"}})
+    ini.set_option(
+        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+    )
     with salt.utils.files.fopen(str(ini_file), "r") as fp_:
-        file_content = salt.utils.stringutils.to_unicode(fp_.read())
+        file_content = salt.utils.stringutils.to_unicode(fp_.read(), encoding=encoding)
     expected = "{0}{1}{0}".format(os.linesep, "empty_option = ")
     assert expected in file_content, "empty_option was not preserved"
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_empty_lines(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_empty_lines(encoding, linesep, ini_file, ini_content):
     """
     Test empty lines preserved after edit
     """
-    content = salt.utils.stringutils.to_bytes(linesep.join(ini_content))
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
     ini_file.write_bytes(content)
 
     expected = os.linesep.join(
@@ -223,27 +312,197 @@ def test_empty_lines(linesep, ini_file, ini_content):
             "",
         ]
     )
-    ini.set_option(str(ini_file), {"SectionB": {"test3": "new value 3B"}})
+    ini.set_option(
+        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+    )
     with salt.utils.files.fopen(str(ini_file), "r") as fp_:
         file_content = fp_.read()
     assert expected == file_content
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_empty_lines_multiple_edits(linesep, ini_file, ini_content):
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_empty_lines_multiple_edits(encoding, linesep, ini_file, ini_content):
     """
     Test empty lines preserved after multiple edits
     """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
     ini.set_option(
         str(ini_file),
         {"SectionB": {"test3": "this value will be edited two times"}},
+        encoding=encoding,
     )
-    test_empty_lines(linesep, ini_file, ini_content)
+
+    expected = os.linesep.join(
+        [
+            "# Comment on the first line",
+            "",
+            "# First main option",
+            "option1 = main1",
+            "",
+            "# Second main option",
+            "option2 = main2",
+            "",
+            "[main]",
+            "# Another comment",
+            "test1 = value 1",
+            "",
+            "test2 = value 2",
+            "",
+            "[SectionB]",
+            "test1 = value 1B",
+            "",
+            "# Blank line should be above",
+            "test3 = new value 3B",
+            "",
+            "[SectionC]",
+            "# The following option is empty",
+            "empty_option = ",
+            "",
+        ]
+    )
+    ini.set_option(
+        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+    )
+    with salt.utils.files.fopen(str(ini_file), "r") as fp_:
+        file_content = fp_.read()
+    assert expected == file_content
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
-def test_different_encoding(linesep, ini_file, ini_content):
+@pytest.mark.parametrize("encoding", [None, "utf-16", "utf-32-le"])
+def test_unicode_get_option(encoding, linesep, ini_file, unicode_content):
     """
-    Test ability to read a different encoding
+    Test ability to get an option from a file that contains unicode characters
+    We can't encode the file with something that doesn't support unicode
+    Ie: cp1252
     """
-    assert True
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(unicode_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    # Get a non-unicode value
+    assert ini.get_option(str(ini_file), "Ascii", "de", encoding=encoding) == "Deutsch"
+
+    # Get a unicode value
+    assert ini.get_option(str(ini_file), "Юникод", "hi", encoding=encoding) == "हिंदी"
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize("encoding", [None, "utf-16", "utf-16-le", "utf-32-le"])
+def test_unicode_set_option(encoding, linesep, ini_file, unicode_content):
+    """
+    Test ability to set an option in a file that contains unicode characters.
+    The option itself may be unicode
+    We can't encode the file with something that doesn't support unicode
+    Ie: cp1252
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(unicode_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    result = ini.set_option(
+        str(ini_file),
+        {
+            "Ascii": {"ay": "Aymar"},
+            "Юникод": {"dv": "ދިވެހިބަސް"},
+        },
+        encoding=encoding,
+    )
+    expected = {
+        "Ascii": {
+            "ay": {
+                "before": None,
+                "after": "Aymar",
+            },
+        },
+        "Юникод": {
+            "dv": {
+                "before": None,
+                "after": "ދިވެހިބަސް",
+            },
+        },
+    }
+    assert result == expected
+
+    # Check existing option updated
+    assert ini.get_option(str(ini_file), "Ascii", "ay", encoding=encoding) == "Aymar"
+
+    # Check new section and option added
+    assert (
+        ini.get_option(str(ini_file), "Юникод", "dv", encoding=encoding) == "ދިވެހިބަސް"
+    )
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize("encoding", [None, "utf-16", "utf-16-le", "utf-32-le"])
+def test_unicode_get_section(encoding, linesep, ini_file, unicode_content):
+    """
+    Test get_section method.
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(unicode_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    expected = {
+        "es": "Español",
+        "es_ES": "Español (ES)",
+        "fr": "Français",
+        "hi": "हिंदी",
+        "ja": "日本語",
+        "ko": ":한국어",
+        "zh": "简体中文",
+        "繁體中文": "zh_TW",
+    }
+    assert ini.get_section(str(ini_file), "Юникод", encoding=encoding) == expected
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize("encoding", [None, "utf-16", "utf-16-le", "utf-32-le"])
+def test_unicode_remove_option(encoding, linesep, ini_file, unicode_content):
+    """
+    Test remove_option method.
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(unicode_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    assert (
+        ini.remove_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding) == "zh_TW"
+    )
+    assert ini.get_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding) is None
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize("encoding", [None, "utf-16", "utf-16-le", "utf-32-le"])
+def test_unicode_remove_section(encoding, linesep, ini_file, unicode_content):
+    """
+    Test remove_section method.
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(unicode_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    expected = {
+        "es": "Español",
+        "es_ES": "Español (ES)",
+        "fr": "Français",
+        "hi": "हिंदी",
+        "ja": "日本語",
+        "ko": ":한국어",
+        "zh": "简体中文",
+        "繁體中文": "zh_TW",
+    }
+    assert ini.remove_section(str(ini_file), "Юникод", encoding=encoding) == expected
+    assert ini.get_section(str(ini_file), "Юникод", encoding=encoding) == {}
