@@ -76,7 +76,6 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     """
     sections = sections or {}
-    changes = {}
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     changes = inifile.update(sections)
     inifile.flush()
@@ -426,8 +425,10 @@ class _Ini(_Section):
                 log.trace("File %s does not exist and will be created", self.name)
                 return
             try:
-                with salt.utils.files.fopen(self.name, encoding=self.encoding) as rfh:
-                    inicontents = salt.utils.stringutils.to_unicode(rfh.read())
+                with salt.utils.files.fopen(
+                    self.name, "r", encoding=self.encoding
+                ) as rfh:
+                    inicontents = rfh.read()
                     inicontents = os.linesep.join(inicontents.splitlines())
             except OSError as exc:
                 if __opts__["test"] is False:
@@ -454,16 +455,16 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.files.fopen(self.name, "wb") as outfile:
+            with salt.utils.files.fopen(
+                self.name, "w", encoding=self.encoding
+            ) as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 ini_gen_list = list(ini_gen)
                 # Avoid writing an initial line separator.
                 if ini_gen_list:
                     ini_gen_list[0] = ini_gen_list[0].lstrip(os.linesep)
-                outfile.writelines(
-                    salt.utils.data.encode(ini_gen_list, encoding=self.encoding)
-                )
+                outfile.writelines(ini_gen_list)
         except OSError as exc:
             raise CommandExecutionError(
                 "Unable to write file '{}'. Exception: {}".format(self.name, exc)
