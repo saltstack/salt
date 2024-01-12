@@ -42,21 +42,32 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
     Edit an ini file, replacing one or more sections. Returns a dictionary
     containing the changes made.
 
-    file_name
-        path of ini_file
+    Args:
 
-    sections : None
-        A dictionary representing the sections to be edited ini file
-        The keys are the section names and the values are the dictionary
-        containing the options
-        If the ini file does not contain sections the keys and values represent
-        the options
+        file_name (str):
+            The full path to the ini file.
 
-    separator : =
-        A character used to separate keys and values. Standard ini files use
-        the "=" character.
+        sections (dict):
+            A dictionary representing the sections to be edited in the ini file.
+            The keys are the section names and the values are a dictionary
+            containing the options. If the ini file does not contain sections
+            the keys and values represent the options. The default is ``None``.
 
-        .. versionadded:: 2016.11.0
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        dict: A dictionary representing the changes made to the ini file
 
     API Example:
 
@@ -65,8 +76,7 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
         import salt.client
         with salt.client.get_local_client() as sc:
             sc.cmd(
-                'target', 'ini.set_option',
-                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}']
+                'target', 'ini.set_option', ['path_to_ini_file', '{"section_to_change": {"key": "value"}}']
             )
 
     CLI Example:
@@ -74,7 +84,9 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
     .. code-block:: bash
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
+
     """
+
     sections = sections or {}
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     changes = inifile.update(sections)
@@ -87,21 +99,51 @@ def get_option(file_name, section, option, separator="=", encoding=None):
     Get value of a key from a section in an ini file. Returns ``None`` if
     no matching key was found.
 
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        section (str):
+            A string value representing the section of the ini that the option
+            is in. If the option is not in a section, leave this empty.
+
+        option (str):
+            A string value representing the option to search for.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        str: The value as defined in the ini file, or ``None`` if empty or not
+            found
+
     API Example:
 
     .. code-block:: python
 
         import salt.client
         with salt.client.get_local_client() as sc:
-            sc.cmd('target', 'ini.get_option',
-                   [path_to_ini_file, section_name, option])
+            sc.cmd('target', 'ini.get_option', [path_to_ini_file, section_name, option])
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ini.get_option /path/to/ini section_name option_name
+
     """
+
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if section:
         try:
@@ -117,21 +159,51 @@ def remove_option(file_name, section, option, separator="=", encoding=None):
     Remove a key/value pair from a section in an ini file. Returns the value of
     the removed key, or ``None`` if nothing was removed.
 
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        section (str):
+            A string value representing the section of the ini that the option
+            is in. If the option is not in a section, leave this empty.
+
+        option (str):
+            A string value representing the option to search for.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        str: A string value representing the option that was removed or ``None``
+            if nothing was removed
+
     API Example:
 
     .. code-block:: python
 
         import salt
         sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.remove_option',
-               [path_to_ini_file, section_name, option])
+        sc.cmd('target', 'ini.remove_option', [path_to_ini_file, section_name, option])
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ini.remove_option /path/to/ini section_name option_name
+
     """
+
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if isinstance(inifile.get(section), (dict, OrderedDict)):
         value = inifile.get(section, {}).pop(option, None)
@@ -143,8 +215,34 @@ def remove_option(file_name, section, option, separator="=", encoding=None):
 
 def get_section(file_name, section, separator="=", encoding=None):
     """
-    Retrieve a section from an ini file. Returns the section as dictionary. If
+    Retrieve a section from an ini file. Returns the section as a dictionary. If
     the section is not found, an empty dictionary is returned.
+
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        section (str):
+            A string value representing name of the section to search for.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        dict: A dictionary containing the names and values of all items in the
+            section of the ini file. If the section is not found, an empty
+            dictionary is returned
 
     API Example:
 
@@ -152,15 +250,16 @@ def get_section(file_name, section, separator="=", encoding=None):
 
         import salt.client
         with salt.client.get_local_client() as sc:
-            sc.cmd('target', 'ini.get_section',
-                   [path_to_ini_file, section_name])
+            sc.cmd('target', 'ini.get_section', [path_to_ini_file, section_name])
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ini.get_section /path/to/ini section_name
+
     """
+
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     ret = {}
     for key, value in inifile.get(section, {}).items():
@@ -171,8 +270,33 @@ def get_section(file_name, section, separator="=", encoding=None):
 
 def remove_section(file_name, section, separator="=", encoding=None):
     """
-    Remove a section in an ini file. Returns the removed section as dictionary,
-    or ``None`` if nothing was removed.
+    Remove a section in an ini file. Returns the removed section as a
+    dictionary, or ``None`` if nothing is removed.
+
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        section (str):
+            A string value representing the name of the section search for.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        dict: A dictionary containing the names and values of all items in the
+            section that was removed or ``None`` if nothing was removed
 
     API Example:
 
@@ -180,15 +304,16 @@ def remove_section(file_name, section, separator="=", encoding=None):
 
         import salt.client
         with  salt.client.get_local_client() as sc:
-            sc.cmd('target', 'ini.remove_section',
-                   [path_to_ini_file, section_name])
+            sc.cmd('target', 'ini.remove_section', [path_to_ini_file, section_name])
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ini.remove_section /path/to/ini section_name
+
     """
+
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
     if section in inifile:
         section = inifile.pop(section)
@@ -202,22 +327,44 @@ def remove_section(file_name, section, separator="=", encoding=None):
 
 def get_ini(file_name, separator="=", encoding=None):
     """
-    Retrieve whole structure from an ini file and return it as dictionary.
+    Retrieve the whole structure from an ini file and return it as a dictionary.
+
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+            .. versionadded:: 2016.11.0
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+            .. versionadded:: 3006.6
+
+    Returns:
+        dict: A dictionary containing the sections along with the values and
+            names contained in each section
 
     API Example:
 
     .. code-block:: python
 
         import salt.client
-        with salt.client.giet_local_client() as sc:
-            sc.cmd('target', 'ini.get_ini',
-                   [path_to_ini_file])
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_ini', [path_to_ini_file])
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ini.get_ini /path/to/ini
+
     """
 
     def ini_odict2dict(odict):
@@ -226,6 +373,7 @@ def get_ini(file_name, separator="=", encoding=None):
         :param odict: OrderedDict
         :return: regular dict
         """
+
         ret = {}
         for key, val in odict.items():
             if key[0] != "#":
@@ -425,6 +573,8 @@ class _Ini(_Section):
                 log.trace("File %s does not exist and will be created", self.name)
                 return
             try:
+                # We need to set decode on open and not try to do it later with
+                # stringutils
                 with salt.utils.files.fopen(
                     self.name, "r", encoding=self.encoding
                 ) as rfh:
@@ -455,6 +605,9 @@ class _Ini(_Section):
 
     def flush(self):
         try:
+            # We need to encode in the fopen command instead of using
+            # data.encode in the writelines command. Using data.encode will
+            # cause a BoM to be placed on every line of the file
             with salt.utils.files.fopen(
                 self.name, "w", encoding=self.encoding
             ) as outfile:
