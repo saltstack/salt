@@ -105,8 +105,9 @@ def download_onedir_artifact(
 
 def download_nox_artifact(
     ctx: Context,
+    platform: str,
+    arch: str,
     run_id: int = None,
-    slug: str = None,
     nox_env: str = "ci-test-onedir",
     repository: str = "saltstack/salt",
 ) -> ExitCode:
@@ -115,7 +116,8 @@ def download_nox_artifact(
     """
     if TYPE_CHECKING:
         assert run_id is not None
-        assert slug is not None
+        assert arch is not None
+        assert platform is not None
 
     artifacts_path = tools.utils.REPO_ROOT / ".nox" / nox_env
     if artifacts_path.exists():
@@ -123,7 +125,7 @@ def download_nox_artifact(
             f"The '.nox/{nox_env}' directory already exists ... Stopped processing."
         )
         return ExitCode.SOFT_FAIL
-    artifact_name = f"nox-{slug}-{nox_env}"
+    artifact_name = f"nox-{platform}-{arch}-{nox_env}"
     ctx.info(
         f"Searching for artifact {artifact_name} from run_id {run_id} in repository {repository} ..."
     )
@@ -139,7 +141,14 @@ def download_nox_artifact(
         ctx.error("Could not find the 'nox' binary in $PATH")
         return ExitCode.FAIL
     ret = ctx.run(
-        nox, "--force-color", "-e", "decompress-dependencies", "--", slug, check=False
+        nox,
+        "--force-color",
+        "-e",
+        "decompress-dependencies",
+        "--",
+        platform,
+        arch,
+        check=False,
     )
     if ret.returncode:
         ctx.error("Failed to decompress the nox dependencies")
