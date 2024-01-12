@@ -2264,7 +2264,57 @@ def test_privileges_revoke_table():
             password="testpassword",
         )
 
-        query = "REVOKE ALL ON TABLE public.awl FROM baruwa"
+        query = 'REVOKE ALL ON TABLE public."awl" FROM baruwa'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+
+def test_privileges_revoke_function():
+    """
+    Test revoking privileges on function
+    """
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=True)
+    ):
+        ret = postgres.privileges_revoke(
+            "baruwa",
+            "f-awl",
+            "function",
+            "EXECUTE",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'REVOKE EXECUTE ON FUNCTION public."f-awl" FROM baruwa'
 
         postgres._run_psql.assert_called_once_with(
             [
