@@ -5,6 +5,7 @@
 import copy
 import os
 import pathlib
+import re
 import shutil
 import sys
 import textwrap
@@ -351,3 +352,9 @@ def test_relative_file_roots(tmp_state_tree):
     with patch.dict(roots.__opts__, opts), pytest.helpers.change_cwd(str(parent)):
         ret = roots.find_file("testfile")
         assert "testfile" == ret["rel"]
+
+
+def test_update_unexpected_kwargs():
+    with pytest.raises(ValueError) as exc_info:
+        ret = roots.update(foo="bar")
+    assert re.match(r"Unexpected keyword arguments received:", str(exc_info.value))
