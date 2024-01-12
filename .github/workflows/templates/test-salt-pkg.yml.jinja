@@ -21,7 +21,6 @@
       python-version: "<{ gh_actions_workflows_python_version }>"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
@@ -55,7 +54,6 @@
       python-version: "<{ gh_actions_workflows_python_version }>"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
@@ -86,7 +84,6 @@
       python-version: "<{ gh_actions_workflows_python_version }>"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
