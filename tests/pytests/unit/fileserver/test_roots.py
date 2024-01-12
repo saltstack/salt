@@ -4,6 +4,7 @@
 
 import copy
 import pathlib
+import re
 import shutil
 import textwrap
 
@@ -236,7 +237,7 @@ def test_update_mtime_map():
     # between Python releases.
     lines_written = sorted(mtime_map_mock.write_calls())
     expected = sorted(
-        salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
+        salt.utils.stringutils.to_bytes(f"{key}:{val}\n")
         for key, val in new_mtime_map.items()
     )
     assert lines_written == expected, lines_written
@@ -277,3 +278,9 @@ def test_update_mtime_map_unicode_error(tmp_path):
         },
         "backend": "roots",
     }
+
+
+def test_update_unexpected_kwargs():
+    with pytest.raises(ValueError) as exc_info:
+        ret = roots.update(foo="bar")
+    assert re.match(r"Unexpected keyword arguments received:", str(exc_info.value))

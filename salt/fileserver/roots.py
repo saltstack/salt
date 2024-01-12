@@ -138,10 +138,16 @@ def serve_file(load, fnd):
     return ret
 
 
-def update():
+def update(**kwargs):
     """
     When we are asked to update (regular interval) lets reap the cache
     """
+    # __pub_user responsible for the runner can be passed but we don't do anything with it
+    if "__pub_user" in kwargs:
+        del kwargs["__pub_user"]
+    if kwargs:
+        raise ValueError("Unexpected keyword arguments received: %s" % kwargs)
+
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__["cachedir"], "roots", "hash"), find_file
@@ -193,9 +199,7 @@ def update():
         os.makedirs(mtime_map_path_dir)
     with salt.utils.files.fopen(mtime_map_path, "wb") as fp_:
         for file_path, mtime in new_mtime_map.items():
-            fp_.write(
-                salt.utils.stringutils.to_bytes("{}:{}\n".format(file_path, mtime))
-            )
+            fp_.write(salt.utils.stringutils.to_bytes(f"{file_path}:{mtime}\n"))
 
     if __opts__.get("fileserver_events", False):
         # if there is a change, fire an event
@@ -326,11 +330,11 @@ def _file_lists(load, form):
             return []
     list_cache = os.path.join(
         list_cachedir,
-        "{}.p".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
+        f"{salt.utils.files.safe_filename_leaf(actual_saltenv)}.p",
     )
     w_lock = os.path.join(
         list_cachedir,
-        ".{}.w".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
+        f".{salt.utils.files.safe_filename_leaf(actual_saltenv)}.w",
     )
     cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
         __opts__, form, list_cache, w_lock
