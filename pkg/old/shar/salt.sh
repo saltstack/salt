@@ -16,7 +16,7 @@ if test -z "$pyver"; then
     # Detect RHEL 5 and Arch, operating systems for which "/usr/bin/env python"
     # refers to a python version <2.6 or >=3.0.
     if test -f /etc/redhat-release; then
-        osmajor=`egrep -o '[0-9]+\.[0-9]+' /etc/redhat-release | cut -f1 -d.`
+        osmajor=`grep -Eo '[0-9]+\.[0-9]+' /etc/redhat-release | cut -f1 -d.`
         test "$osmajor" -eq 5 && pyver=2.6
     elif test -f /etc/arch-release; then
         python=python2

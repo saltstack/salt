@@ -71,7 +71,7 @@ def exists(
             ip, port, proto, direction, port_origin, ip_origin, comment
         )
         return _exists_with_port(method, rule)
-    exists = __salt__["cmd.run_all"]("egrep ^'{} +' /etc/csf/csf.{}".format(ip, method))
+    exists = __salt__["cmd.run_all"]("grep -E ^'{} +' /etc/csf/csf.{}".format(ip, method))
     return not bool(exists["retcode"])
 
 
