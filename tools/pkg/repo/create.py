@@ -917,7 +917,7 @@ def _create_onedir_based_repo(
         if distro == "onedir":
             if "-onedir-linux-" in dpath.name.lower():
                 release_os = "linux"
-            elif "-onedir-darwin-" in dpath.name.lower():
+            elif "-onedir-macos-" in dpath.name.lower():
                 release_os = "macos"
             elif "-onedir-windows-" in dpath.name.lower():
                 release_os = "windows"
