@@ -483,7 +483,10 @@ def onedir_dependencies(
         assert package_name is not None
         assert platform is not None
 
-    if platform not in ("macos", "darwin") and arch == "arm64":
+    if platform == "darwin":
+        platform = "macos"
+
+    if platform != "macos" and arch == "arm64":
         arch = "aarch64"
 
     shared_constants = _get_shared_constants()
@@ -622,6 +625,9 @@ def salt_onedir(
         assert platform is not None
         assert package_name is not None
 
+    if platform == "darwin":
+        platform = "macos"
+
     shared_constants = _get_shared_constants()
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
@@ -703,7 +709,7 @@ def salt_onedir(
             str(salt_archive),
             env=env,
         )
-        if platform == "darwin":
+        if platform == "macos":
 
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
