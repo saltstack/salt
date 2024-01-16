@@ -1058,6 +1058,7 @@ def uninstall(
     cwd=None,
     saltenv="base",
     use_vt=False,
+    extra_args=None,
 ):
     """
     Uninstall packages individually or from a pip requirements file
@@ -1099,6 +1100,24 @@ def uninstall(
 
     use_vt
         Use VT terminal emulation (see output while installing)
+
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        Will be translated into the following pip command:
+
+        .. code-block:: bash
+
+            pip install pandas --latest-pip-kwarg param --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
 
     CLI Example:
 
@@ -1169,6 +1188,24 @@ def uninstall(
                         except ValueError:
                             pass
         cmd.extend(pkgs)
+
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError(f"Too many levels in: {key}")
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
 
     cmd_kwargs = dict(
         python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt
