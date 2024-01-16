@@ -335,7 +335,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
-          path: ~/rpmbuild/RPMS/*/*.rpm
+          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error
 
