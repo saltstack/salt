@@ -38,7 +38,7 @@ download = command_group(
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "darwin", "windows"),
+            "choices": ("linux", "macos", "windows"),
             "required": True,
         },
         "arch": {
