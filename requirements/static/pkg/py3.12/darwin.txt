@@ -26,8 +26,28 @@ cryptography==41.0.7
     #   pyopenssl
 distro==1.8.0
     # via -r requirements/base.txt
+
 idna==3.4
     # via requests
+
+gitdb==4.0.10
+    # via gitpython
+gitpython==3.1.41
+    # via -r requirements/darwin.txt
+idna==3.4
+    # via
+    #   -r requirements/darwin.txt
+    #   requests
+
+gitdb==4.0.10
+    # via gitpython
+gitpython==3.1.41
+    # via -r requirements/darwin.txt
+idna==3.4
+    # via
+    #   -r requirements/darwin.txt
+    #   requests
+
 immutables==0.15
     # via contextvars
 importlib-metadata==6.6.0
@@ -45,7 +65,7 @@ jaraco.functools==3.7.0
     #   tempora
 jaraco.text==3.11.1
     # via jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.3
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -70,8 +90,20 @@ portend==3.1.0
 psutil==5.9.6
     # via -r requirements/base.txt
 pycparser==2.21
+
     # via cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
+
+    # via
+    #   -r requirements/darwin.txt
+    #   cffi
+pycryptodomex==3.19.1
+
+    # via
+    #   -r requirements/darwin.txt
+    #   cffi
+pycryptodomex==3.19.1
+
     # via -r requirements/crypto.txt
 pydantic-core==2.14.5
     # via pydantic
