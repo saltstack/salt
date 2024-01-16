@@ -46,7 +46,8 @@ master to allow :term:`Peer Communication`:
         - x509.sign_remote_certificate
 
 In order for the :term:`Compound Matcher` to work with restricting signing
-policies to a subset of minions, in addition calls to :py:func:`match.compound <salt.modules.match.compound>`
+policies to a subset of minions, in addition calls to
+:py:func:`match.compound_matches <salt.runners.match.compound_matches>`
 by the minion acting as the CA must be permitted:
 
 .. code-block:: yaml
@@ -57,14 +58,32 @@ by the minion acting as the CA must be permitted:
       .*:
         - x509.sign_remote_certificate
 
+    peer_run:
       ca_server:
-        - match.compound
+        - match.compound_matches
 
 .. note::
 
-    Compound matching in signing policies currently has security tradeoffs since the
-    CA server queries the requesting minion itself if it matches, not the Salt master.
-    It is recommended to rely on glob matching only.
+    When compound match expressions are employed, pillar values can only be matched
+    literally. This is a barrier to enumeration attacks by the CA server.
+
+    Also note that compound matching requires a minion data cache on the master.
+    Any certificate signing request will be denied if :conf_master:`minion_data_cache` is
+    disabled (it is enabled by default).
+
+.. note::
+
+    Since grain values are controlled by minions, you should avoid using them
+    to restrict certificate issuance.
+
+    See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>`.
+
+.. versionchanged:: 3007.0
+
+    Previously, a compound expression match was validated by the requesting minion
+    itself via peer publishing, which did not protect from compromised minions.
+    The new match validation takes place on the master using peer running.
+
 
 Signing policies
 ~~~~~~~~~~~~~~~~
@@ -127,6 +146,20 @@ Breaking changes versus the previous ``x509`` modules
 * For ``x509.private_key_managed``, the file mode defaults to ``0400``. This should
   be considered a bug fix because writing private keys with world-readable
   permissions by default is a security issue.
+* Restricting signing policies using compound match expressions requires peer run
+  permissions instead of peer publishing permissions:
+
+.. code-block:: yaml
+
+    # x509, x509_v2 in 3006.*
+    peer:
+      ca_server:
+        - match.compound
+
+    # x509_v2 from 3007.0 onwards
+    peer_run:
+      ca_server:
+        - match.compound_matches
 
 Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
@@ -2201,17 +2234,19 @@ def _parse_crl_entry_extensions(extensions):
 
 def _match_minions(test, minion):
     if "@" in test:
-        # This essentially asks the minion if it is allowed to receive
-        # certificates with the signing policy. Implementing a match runner
-        # would plug that security hole somewhat, and fully if only pillars
-        # are used.
-        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
-        if minion not in match:
+        # Ask the master if the requesting minion matches a compound expression.
+        match = __salt__["publish.runner"]("match.compound_matches", arg=[test, minion])
+        if match is None:
             raise CommandExecutionError(
-                "Could not verify if minion matches compound matching expression. "
-                "Make sure the ca_server is allowed to run `match.compound` on "
-                "the requesting minion"
+                "Could not check minion match for compound expression. "
+                "Is this minion allowed to run `match.compound_matches` on the master?"
             )
-        return match[minion]
-    else:
-        return __salt__["match.glob"](test, minion)
+        try:
+            return match["res"] == minion
+        except (KeyError, TypeError) as err:
+            raise CommandExecutionError(
+                "Invalid return value of match.compound_matches."
+            ) from err
+        # The following line should never be reached.
+        return False
+    return __salt__["match.glob"](test, minion)

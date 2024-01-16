@@ -52,7 +52,7 @@ permissions:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -86,13 +86,14 @@ permissions:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -134,15 +135,15 @@ permissions:
         run: |
           tools ci get-releases
 
-      - name: Check Salt Releases
-        run: |
-          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
-          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
-
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
           tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}" | tee -a "$GITHUB_OUTPUT"
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>
@@ -166,13 +167,15 @@ permissions:
           - platform: linux
             arch: x86_64
           - platform: linux
-            arch: aarch64
+            arch: arm64
           - platform: windows
             arch: amd64
           - platform: windows
             arch: x86
-          - platform: darwin
+          - platform: macos
             arch: x86_64
+          - platform: macos
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 

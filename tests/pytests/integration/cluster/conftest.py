@@ -45,6 +45,12 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         ],
         "cluster_pki_dir": str(cluster_pki_path),
         "cache_dir": str(cluster_cache_path),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
     factory = salt_factories.salt_master_daemon(
         "127.0.0.1",
@@ -74,6 +80,12 @@ def cluster_master_2(salt_factories, cluster_master_1):
         ],
         "cluster_pki_dir": cluster_master_1.config["cluster_pki_dir"],
         "cache_dir": cluster_master_1.config["cache_dir"],
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -110,6 +122,12 @@ def cluster_master_3(salt_factories, cluster_master_1):
         ],
         "cluster_pki_dir": cluster_master_1.config["cluster_pki_dir"],
         "cache_dir": cluster_master_1.config["cache_dir"],
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -139,6 +157,12 @@ def cluster_minion_1(cluster_master_1):
     config_overrides = {
         "master": f"{addr}:{port}",
         "test.foo": "baz",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
     factory = cluster_master_1.salt_minion_daemon(
         "cluster-minion-1",

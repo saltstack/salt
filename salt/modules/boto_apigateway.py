@@ -106,6 +106,13 @@ except ImportError:
 # pylint: enable=import-error
 
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
+
 def __virtual__():
     """
     Only load if boto libraries exist and if boto libraries are greater than
@@ -131,7 +138,7 @@ def _convert_datetime_str(response):
     if response:
         return dict(
             [
-                (k, "{}".format(v)) if isinstance(v, datetime.date) else (k, v)
+                (k, f"{v}") if isinstance(v, datetime.date) else (k, v)
                 for k, v in response.items()
             ]
         )
@@ -378,9 +385,9 @@ def create_api_resources(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for path_part in path_parts:
             if current_path == "/":
-                current_path = "{}{}".format(current_path, path_part)
+                current_path = f"{current_path}{path_part}"
             else:
-                current_path = "{}/{}".format(current_path, path_part)
+                current_path = f"{current_path}/{path_part}"
             r = describe_api_resource(
                 restApiId,
                 current_path,
@@ -431,7 +438,7 @@ def delete_api_resources(
             conn.delete_resource(restApiId=restApiId, resourceId=resource["id"])
             return {"deleted": True}
         else:
-            return {"deleted": False, "error": "no resource found by {}".format(path)}
+            return {"deleted": False, "error": f"no resource found by {path}"}
     except ClientError as e:
         return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
@@ -895,12 +902,12 @@ def overwrite_api_stage_variables(
         for old_var in old_vars:
             if old_var not in variables:
                 patch_ops.append(
-                    dict(op="remove", path="/variables/{}".format(old_var), value="")
+                    dict(op="remove", path=f"/variables/{old_var}", value="")
                 )
         for var, val in variables.items():
             if var not in old_vars or old_vars[var] != val:
                 patch_ops.append(
-                    dict(op="replace", path="/variables/{}".format(var), value=val)
+                    dict(op="replace", path=f"/variables/{var}", value=val)
                 )
 
         if patch_ops:
@@ -1622,7 +1629,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
 
-    return "arn:aws:iam::{}:role/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:role/{name}"
 
 
 def create_api_integration(
@@ -1799,7 +1806,7 @@ def _validate_throttle(throttle):
     if throttle is not None:
         if not isinstance(throttle, dict):
             raise TypeError(
-                "throttle must be a dictionary, provided value: {}".format(throttle)
+                f"throttle must be a dictionary, provided value: {throttle}"
             )
 
 
@@ -1809,9 +1816,7 @@ def _validate_quota(quota):
     """
     if quota is not None:
         if not isinstance(quota, dict):
-            raise TypeError(
-                "quota must be a dictionary, provided value: {}".format(quota)
-            )
+            raise TypeError(f"quota must be a dictionary, provided value: {quota}")
         periods = ["DAY", "WEEK", "MONTH"]
         if "period" not in quota or quota["period"] not in periods:
             raise ValueError(

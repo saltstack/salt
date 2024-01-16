@@ -7,10 +7,11 @@ Interface to Red Hat tuned-adm module
 :platform:      Linux
 """
 
-
 import re
 
 import salt.utils.path
+
+TUNED_OFF_RETURN_NAME = "No current active profile."
 
 __func_alias__ = {
     "list_": "list",
@@ -63,7 +64,7 @@ def list_():
 
 def active():
     """
-    Return current active profile
+    Return current active profile in stdout key if retcode is 0, otherwise raw result
 
     CLI Example:
 
@@ -72,13 +73,16 @@ def active():
         salt '*' tuned.active
     """
 
-    # turn off all profiles
+    # determine the active profile
     result = __salt__["cmd.run_all"]("tuned-adm active", ignore_retcode=True)
-    if result["retcode"] != 0:
-        return "none"
-    pattern = re.compile(r"""(?P<stmt>Current active profile:) (?P<profile>\w+.*)""")
-    match = re.match(pattern, result["stdout"])
-    return "{}".format(match.group("profile"))
+    if result["retcode"] == 0:
+        pattern = re.compile(
+            r"""(?P<stmt>Current active profile:) (?P<profile>\w+.*)"""
+        )
+        match = re.match(pattern, result["stdout"])
+        if match:
+            result["stdout"] = "{}".format(match.group("profile"))
+    return result
 
 
 def off():
@@ -93,10 +97,7 @@ def off():
     """
 
     # turn off all profiles
-    result = __salt__["cmd.retcode"]("tuned-adm off")
-    if int(result) != 0:
-        return False
-    return True
+    return __salt__["cmd.run_all"]("tuned-adm off")
 
 
 def profile(profile_name):
@@ -110,8 +111,10 @@ def profile(profile_name):
         salt '*' tuned.profile virtual-guest
     """
 
-    # run tuned-adm with the profile specified
-    result = __salt__["cmd.retcode"]("tuned-adm profile {}".format(profile_name))
-    if int(result) != 0:
-        return False
-    return "{}".format(profile_name)
+    # run tuned-adm with the profile specified, upon success replace stdout with the profile_name
+    result = __salt__["cmd.run_all"](
+        f"tuned-adm profile {profile_name}", ignore_retcode=True
+    )
+    if result["retcode"] == 0:
+        result["stdout"] = profile_name
+    return result

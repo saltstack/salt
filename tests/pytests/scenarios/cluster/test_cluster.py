@@ -1,3 +1,6 @@
+"""
+Cluster scinarios.
+"""
 import os
 import pathlib
 import time

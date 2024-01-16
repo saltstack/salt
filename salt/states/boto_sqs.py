@@ -65,6 +65,13 @@ import salt.utils.json
 log = logging.getLogger(__name__)
 
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
+
 def __virtual__():
     """
     Only load if boto is available.
@@ -124,12 +131,12 @@ def present(
         return ret
 
     if r["result"]:
-        ret["comment"].append("SQS queue {} present.".format(name))
+        ret["comment"].append(f"SQS queue {name} present.")
     else:
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                "SQS queue {} is set to be created.".format(name),
+                f"SQS queue {name} is set to be created.",
             )
             ret["changes"] = {"old": None, "new": name}
             return ret
@@ -149,7 +156,7 @@ def present(
             )
             return ret
 
-        ret["comment"].append("SQS queue {} created.".format(name))
+        ret["comment"].append(f"SQS queue {name} created.")
         ret["changes"]["old"] = None
         ret["changes"]["new"] = name
         # Return immediately, as the create call also set all attributes
@@ -238,7 +245,7 @@ def present(
         return ret
 
     ret["comment"].append(
-        "Updated SQS queue attribute(s) {}.".format(attr_names),
+        f"Updated SQS queue attribute(s) {attr_names}.",
     )
     ret["changes"]["attributes"] = {"diff": attributes_diff}
     return ret
@@ -293,7 +300,7 @@ def absent(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "SQS queue {} is set to be removed.".format(name)
+        ret["comment"] = f"SQS queue {name} is set to be removed."
         ret["changes"] = {"old": name, "new": None}
         return ret
 
@@ -309,7 +316,7 @@ def absent(
         ret["comment"] = str(r["error"])
         return ret
 
-    ret["comment"] = "SQS queue {} was deleted.".format(name)
+    ret["comment"] = f"SQS queue {name} was deleted."
     ret["changes"]["old"] = name
     ret["changes"]["new"] = None
     return ret

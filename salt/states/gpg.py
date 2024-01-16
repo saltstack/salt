@@ -1,6 +1,6 @@
 """
-Management of the GPG keychains
-===============================
+Manage GPG keychains
+====================
 
 .. versionadded:: 2016.3.0
 
@@ -9,30 +9,32 @@ Management of the GPG keychains
 import logging
 
 import salt.utils.dictupdate
+import salt.utils.immutabletypes as immutabletypes
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-_VALID_TRUST_VALUES = [
-    "expired",
-    "unknown",
-    "not_trusted",
-    "marginally",
-    "fully",
-    "ultimately",
-]
-
-TRUST_MAP = {
-    "expired": "Expired",
-    "unknown": "Unknown",
-    "not_trusted": "Not Trusted",
-    "marginally": "Marginally",
-    "fully": "Fully Trusted",
-    "ultimately": "Ultimately Trusted",
-}
+TRUST_MAP = immutabletypes.freeze(
+    {
+        "expired": "Expired",
+        "unknown": "Unknown",
+        "not_trusted": "Not Trusted",
+        "marginally": "Marginally",
+        "fully": "Fully Trusted",
+        "ultimately": "Ultimately Trusted",
+    }
+)
 
 
 def present(
-    name, keys=None, user=None, keyserver=None, gnupghome=None, trust=None, **kwargs
+    name,
+    keys=None,
+    user=None,
+    keyserver=None,
+    gnupghome=None,
+    trust=None,
+    keyring=None,
+    **kwargs,
 ):
     """
     Ensure a GPG public key is present in the GPG keychain.
@@ -57,11 +59,19 @@ def present(
         ignored by default. Valid trust levels:
         expired, unknown, not_trusted, marginally,
         fully, ultimately
+
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3007.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
+    _current_keys = __salt__["gpg.list_keys"](
+        user=user, gnupghome=gnupghome, keyring=keyring
+    )
 
     current_keys = {}
     for key in _current_keys:
@@ -76,9 +86,9 @@ def present(
         keys = [keys]
 
     for key in keys:
-        if key in current_keys.keys():
+        if key in current_keys:
             if trust:
-                if trust in _VALID_TRUST_VALUES:
+                if trust in TRUST_MAP:
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
                         if __opts__["test"]:
                             ret["result"] = None
@@ -89,12 +99,17 @@ def present(
                                 ret, f"changes:{key}:trust", trust
                             )
                             continue
-                        # update trust level
-                        result = __salt__["gpg.trust_key"](
-                            keyid=key,
-                            trust_level=trust,
-                            user=user,
-                        )
+                        try:
+                            # update trust level
+                            result = __salt__["gpg.trust_key"](
+                                keyid=key,
+                                trust_level=trust,
+                                user=user,
+                                gnupghome=gnupghome,
+                                keyring=keyring,
+                            )
+                        except SaltInvocationError as err:
+                            result = {"res": False, "message": str(err)}
                         if result["res"] is False:
                             ret["result"] = result["res"]
                             ret["comment"].append(result["message"])
@@ -123,10 +138,11 @@ def present(
                 )
                 continue
             result = __salt__["gpg.receive_keys"](
-                keyserver,
-                key,
-                user,
-                gnupghome,
+                keyserver=keyserver,
+                keys=key,
+                user=user,
+                gnupghome=gnupghome,
+                keyring=keyring,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
@@ -138,12 +154,18 @@ def present(
                 )
 
             if trust:
-                if trust in _VALID_TRUST_VALUES:
-                    result = __salt__["gpg.trust_key"](
-                        keyid=key,
-                        trust_level=trust,
-                        user=user,
-                    )
+                if trust in TRUST_MAP:
+                    try:
+                        # update trust level
+                        result = __salt__["gpg.trust_key"](
+                            keyid=key,
+                            trust_level=trust,
+                            user=user,
+                            gnupghome=gnupghome,
+                            keyring=keyring,
+                        )
+                    except SaltInvocationError as err:
+                        result = {"res": False, "message": str(err)}
                     if result["res"] is False:
                         ret["result"] = result["res"]
                         ret["comment"].append(result["message"])
@@ -156,7 +178,15 @@ def present(
     return ret
 
 
-def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
+def absent(
+    name,
+    keys=None,
+    user=None,
+    gnupghome=None,
+    keyring=None,
+    keyring_absent_if_empty=False,
+    **kwargs,
+):
     """
     Ensure a GPG public key is absent from the keychain.
 
@@ -171,11 +201,25 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     gnupghome
         Override GnuPG home directory.
+
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3007.0
+
+    keyring_absent_if_empty
+        Make sure to not leave behind an empty keyring file
+        if ``keyring`` was specified. Defaults to false.
+
+        .. versionadded:: 3007.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
+    _current_keys = __salt__["gpg.list_keys"](
+        user=user, gnupghome=gnupghome, keyring=keyring
+    )
 
     current_keys = []
     for key in _current_keys:
@@ -198,6 +242,7 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 keyid=key,
                 user=user,
                 gnupghome=gnupghome,
+                keyring=keyring,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
@@ -207,5 +252,37 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
         else:
             ret["comment"].append(f"{key} not found in GPG keychain")
+
+    if __opts__["test"] or not ret["result"]:
+        return ret
+
+    _new_keys = [
+        x["keyid"]
+        for x in __salt__["gpg.list_keys"](
+            user=user, gnupghome=gnupghome, keyring=keyring
+        )
+    ]
+
+    if set(keys) & set(_new_keys):
+        remaining = set(keys) & set(_new_keys)
+        ret["result"] = False
+        ret["comment"].append(
+            "State check revealed the following keys could not be deleted: "
+            + ", ".join(remaining)
+        )
+        ret["changes"]["deleted"] = list(
+            set(ret["changes"]["deleted"]) - set(_new_keys)
+        )
+
+    elif (
+        not _new_keys
+        and keyring
+        and keyring_absent_if_empty
+        and __salt__["file.file_exists"](keyring)
+    ):
+        __salt__["file.remove"](keyring)
+        ret["comment"].append(f"Removed empty keyring file {keyring}")
+        ret["changes"]["removed"] = keyring
+
     ret["comment"] = "\n".join(ret["comment"])
     return ret

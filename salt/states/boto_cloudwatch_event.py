@@ -59,6 +59,12 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -183,7 +189,7 @@ def present(
             return ret
         ret["changes"]["old"] = {"rule": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "CloudTrail {} created.".format(Name)
+        ret["comment"] = f"CloudTrail {Name} created."
 
         if bool(Targets):
             r = __salt__["boto_cloudwatch_event.put_targets"](
@@ -205,7 +211,7 @@ def present(
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "CloudWatch event rule {} is present.".format(Name)]
+        [ret["comment"], f"CloudWatch event rule {Name} is present."]
     )
     ret["changes"] = {}
     # trail exists, ensure config matches
@@ -250,7 +256,7 @@ def present(
 
     if need_update:
         if __opts__["test"]:
-            msg = "CloudWatch event rule {} set to be modified.".format(Name)
+            msg = f"CloudWatch event rule {Name} set to be modified."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -361,11 +367,11 @@ def absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "CloudWatch event rule {} does not exist.".format(Name)
+        ret["comment"] = f"CloudWatch event rule {Name} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "CloudWatch event rule {} is set to be removed.".format(Name)
+        ret["comment"] = f"CloudWatch event rule {Name} is set to be removed."
         ret["result"] = None
         return ret
 
@@ -406,5 +412,5 @@ def absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
         return ret
     ret["changes"]["old"] = {"rule": Name}
     ret["changes"]["new"] = {"rule": None}
-    ret["comment"] = "CloudWatch event rule {} deleted.".format(Name)
+    ret["comment"] = f"CloudWatch event rule {Name} deleted."
     return ret

@@ -18,10 +18,19 @@ def __virtual__():
     return (False, "mongodb module could not be loaded")
 
 
-def absent(name, user=None, password=None, host=None, port=None, authdb=None):
+def absent(
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=None,
+    verify_ssl=True,
+):
     """
     Ensure that the named database is absent. Note that creation doesn't make
-    sense in MongoDB.
+    sense in MongoDB, since a database doesn't exist if it's empty.
 
     name
         The name of the database to remove
@@ -40,10 +49,29 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None):
 
     authdb
         The database in which to authenticate
+
+    ssl
+        Whether or not to use SSL to connect to mongodb. Default False.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    if __salt__["mongodb.db_exists"](name, user, password, host, port, authdb=authdb):
+    if __salt__["mongodb.db_exists"](
+        name,
+        user,
+        password,
+        host,
+        port,
+        authdb=authdb,
+        ssl=ssl,
+        verify_ssl=verify_ssl,
+    ):
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Database {} is present and needs to be removed".format(
@@ -51,11 +79,18 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None):
             )
             return ret
         if __salt__["mongodb.db_remove"](
-            name, user, password, host, port, authdb=authdb
+            name,
+            user,
+            password,
+            host,
+            port,
+            authdb=authdb,
+            ssl=ssl,
+            verify_ssl=verify_ssl,
         ):
-            ret["comment"] = "Database {} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
 
-    ret["comment"] = "Database {} is not present".format(name)
+    ret["comment"] = f"Database {name} is not present"
     return ret

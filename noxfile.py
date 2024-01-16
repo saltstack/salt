@@ -44,7 +44,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -329,7 +329,7 @@ def _install_coverage_requirement(session):
                     "photonos-3",
                 ):
                     # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
+                    # Plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
@@ -461,7 +461,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "salt.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "salt"
         cmd_args = [
-            "--omit=tests/*,pkg/tests/*",
+            "--omit=tests/*,tests/pytests/pkg/*",
             "--include=salt/*",
         ]
 
@@ -473,7 +473,7 @@ def _report_coverage(
         )
         cmd_args = [
             "--omit=salt/*",
-            "--include=tests/*,pkg/tests/*",
+            "--include=tests/*,tests/pytests/pkg/*",
         ]
     else:
         json_coverage_file = (
@@ -482,7 +482,7 @@ def _report_coverage(
         xml_coverage_file = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.xml"
         html_coverage_dir = COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "html" / "full"
         cmd_args = [
-            "--include=salt/*,tests/*,pkg/tests/*",
+            "--include=salt/*,tests/*,tests/pytests/pkg/*",
         ]
 
     if cli_report:
@@ -1063,6 +1063,9 @@ def _ci_test(session, transport, onedir=False):
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
     chunks = {
+        "pkg": [
+            "tests/pytests/pkg",
+        ],
         "unit": [
             "tests/unit",
             "tests/pytests/unit",
@@ -1070,7 +1073,9 @@ def _ci_test(session, transport, onedir=False):
         "functional": [
             "tests/pytests/functional",
         ],
-        "scenarios": ["tests/pytests/scenarios"],
+        "scenarios": [
+            "tests/pytests/scenarios",
+        ],
     }
 
     test_group_number = os.environ.get("TEST_GROUP") or "1"
@@ -1225,14 +1230,29 @@ def coverage_report(session):
 def decompress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if "windows" in distro_slug:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'decompress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
+        scripts_dir_name = "Scripts"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+        scripts_dir_name = "bin"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if not nox_dependencies_tarball_path.exists():
         session.error(
@@ -1246,10 +1266,7 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
-        if "windows" not in distro_slug:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
-        else:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
+        scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
         for key in sorted(script_paths):
@@ -1280,7 +1297,7 @@ def decompress_dependencies(session):
                 continue
             if not path.is_file():
                 continue
-            if "windows" not in distro_slug:
+            if platform != "windows":
                 # Let's try to fix shebang's
                 try:
                     fpath = pathlib.Path(path)
@@ -1303,14 +1320,27 @@ def decompress_dependencies(session):
 def compress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if IS_WINDOWS:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'compress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if nox_dependencies_tarball_path.exists():
         session_warn(
@@ -1857,31 +1887,41 @@ def ci_test_onedir_pkgs(session):
             )
         )
 
+    common_pytest_args = [
+        "--color=yes",
+        "--sys-stats",
+        "--run-destructive",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
+        "--pkg-system-service",
+    ]
+
     chunks = {
-        "install": ["pkg/tests/"],
+        "install": [
+            "tests/pytests/pkg/",
+        ],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "upgrade-classic": [
             "--upgrade",
             "--no-uninstall",
-            "pkg/tests/upgrade/",
+            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "downgrade-classic": [
             "--downgrade",
             "--no-uninstall",
-            "pkg/tests/downgrade/",
+            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "pkg/tests/download/",
+            "tests/pytests/pkg/download/",
         ],
     }
 
@@ -1909,10 +1949,9 @@ def ci_test_onedir_pkgs(session):
         cmd_args.append("--classic")
 
     pytest_args = (
-        cmd_args[:]
+        common_pytest_args[:]
+        + cmd_args[:]
         + [
-            "-c",
-            str(REPO_ROOT / "pkg-tests-pytest.ini"),
             f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}.xml",
             f"--log-file=artifacts/logs/runtests-{chunk}.log",
         ]
@@ -1921,6 +1960,9 @@ def ci_test_onedir_pkgs(session):
     try:
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     except CommandFailed:
+        if os.environ.get("RERUN_FAILURES", "0") == "0":
+            # Don't rerun on failures
+            return
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
@@ -1929,10 +1971,9 @@ def ci_test_onedir_pkgs(session):
         PRINT_SYSTEM_INFO = False
 
         pytest_args = (
-            cmd_args[:]
+            common_pytest_args[:]
+            + cmd_args[:]
             + [
-                "-c",
-                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 f"--junitxml=artifacts/xml-unittests-output/test-results-{chunk}-rerun.xml",
                 f"--log-file=artifacts/logs/runtests-{chunk}-rerun.log",
                 "--lf",
@@ -1950,10 +1991,9 @@ def ci_test_onedir_pkgs(session):
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
-            cmd_args[:]
+            common_pytest_args[:]
+            + cmd_args[:]
             + [
-                "-c",
-                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
                 f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 f"--log-file=artifacts/logs/runtests-install.log",
@@ -1969,10 +2009,9 @@ def ci_test_onedir_pkgs(session):
         except CommandFailed:
             cmd_args = chunks["install"]
             pytest_args = (
-                cmd_args[:]
+                common_pytest_args[:]
+                + cmd_args[:]
                 + [
-                    "-c",
-                    str(REPO_ROOT / "pkg-tests-pytest.ini"),
                     "--no-install",
                     f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
                     f"--log-file=artifacts/logs/runtests-install-rerun.log",

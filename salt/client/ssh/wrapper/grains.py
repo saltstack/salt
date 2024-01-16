@@ -66,9 +66,7 @@ def get(key, default="", delimiter=DEFAULT_TARGET_DELIM, ordered=True):
         grains = __grains__.value()
     else:
         grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__.value()))
-    return salt.utils.data.traverse_dict_and_list(
-        __grains__.value(), key, default, delimiter
-    )
+    return salt.utils.data.traverse_dict_and_list(grains, key, default, delimiter)
 
 
 def has_value(key):

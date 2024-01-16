@@ -12,6 +12,8 @@ except ImportError:
     # Py<3.7
     import contextvars
 
+import salt.exceptions
+
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
 loader_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
@@ -69,7 +71,12 @@ class NamedLoaderContext(collections.abc.MutableMapping):
             return loader.pack[self.name]
         if self.name == loader.pack_self:
             return loader
-        return loader.pack[self.name]
+        try:
+            return loader.pack[self.name]
+        except KeyError:
+            raise salt.exceptions.LoaderError(
+                f"LazyLoader does not have a packed value for: {self.name}"
+            )
 
     def get(self, key, default=None):
         return self.value().get(key, default)

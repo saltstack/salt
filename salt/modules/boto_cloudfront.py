@@ -68,6 +68,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -255,7 +261,7 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
                 {"config": config},
                 {"tags": tags},
             ]
-            results["Manage CloudFront distribution {}".format(name)] = {
+            results[f"Manage CloudFront distribution {name}"] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
     except botocore.exceptions.ClientError as exc:

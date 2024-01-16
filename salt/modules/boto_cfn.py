@@ -52,6 +52,12 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -184,7 +190,7 @@ def create(
             stack_policy_url,
         )
     except BotoServerError as e:
-        msg = "Failed to create stack {}.\n{}".format(name, e)
+        msg = f"Failed to create stack {name}.\n{e}"
         log.error(msg)
         log.debug(e)
         return False
@@ -244,7 +250,7 @@ def update_stack(
         log.debug("Updated result is : %s.", update)
         return update
     except BotoServerError as e:
-        msg = "Failed to update stack {}.".format(name)
+        msg = f"Failed to update stack {name}."
         log.debug(e)
         log.error(msg)
         return str(e)
@@ -265,7 +271,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     try:
         return conn.delete_stack(name)
     except BotoServerError as e:
-        msg = "Failed to create stack {}.".format(name)
+        msg = f"Failed to create stack {name}."
         log.error(msg)
         log.debug(e)
         return str(e)
@@ -289,7 +295,7 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         return template
     except BotoServerError as e:
         log.debug(e)
-        msg = "Template {} does not exist".format(name)
+        msg = f"Template {name} does not exist"
         log.error(msg)
         return str(e)
 
@@ -320,6 +326,6 @@ def validate_template(
         return conn.validate_template(template_body, template_url)
     except BotoServerError as e:
         log.debug(e)
-        msg = "Error while trying to validate template {}.".format(template_body)
+        msg = f"Error while trying to validate template {template_body}."
         log.error(msg)
         return str(e)

@@ -1315,7 +1315,7 @@ class VM:
             "--include",
             "artifacts/salt",
             "--include",
-            "pkg/artifacts/*",
+            "artifacts/pkg",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
@@ -1468,15 +1468,17 @@ class VM:
         """
         Compress .nox/ into nox.<vm-name>.tar.* in the VM
         """
-        return self.run_nox("compress-dependencies", session_args=[self.name])
+        platform, arch = tools.utils.get_platform_and_arch_from_slug(self.name)
+        return self.run_nox("compress-dependencies", session_args=[platform, arch])
 
     def decompress_dependencies(self):
         """
         Decompress nox.<vm-name>.tar.* if it exists in the VM
         """
         env = {"DELETE_NOX_ARCHIVE": "1"}
+        platform, arch = tools.utils.get_platform_and_arch_from_slug(self.name)
         return self.run_nox(
-            "decompress-dependencies", session_args=[self.name], env=env
+            "decompress-dependencies", session_args=[platform, arch], env=env
         )
 
     def download_dependencies(self):
@@ -1484,9 +1486,11 @@ class VM:
         Download nox.<vm-name>.tar.* from VM
         """
         if self.is_windows:
-            dependencies_filename = f"nox.{self.name}.tar.gz"
+            extension = "tar.gz"
         else:
-            dependencies_filename = f"nox.{self.name}.tar.xz"
+            extension = "tar.xz"
+        platform, arch = tools.utils.get_platform_and_arch_from_slug(self.name)
+        dependencies_filename = f"nox.{platform}.{arch}.{extension}"
         remote_path = self.upload_path.joinpath(dependencies_filename).as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):

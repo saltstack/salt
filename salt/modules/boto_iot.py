@@ -76,6 +76,13 @@ except ImportError:
 # pylint: enable=import-error
 
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
+
 def __virtual__():
     """
     Only load if boto libraries exist and if boto libraries are greater than
@@ -148,7 +155,7 @@ def describe_thing_type(thingTypeName, region=None, key=None, keyid=None, profil
                 for dtype in ("creationDate", "deprecationDate"):
                     dval = thingTypeMetadata.get(dtype)
                     if dval and isinstance(dval, datetime.date):
-                        thingTypeMetadata[dtype] = "{}".format(dval)
+                        thingTypeMetadata[dtype] = f"{dval}"
             return {"thing_type": res}
         else:
             return {"thing_type": None}
@@ -915,7 +922,7 @@ def list_topic_rules(
             conn.list_topic_rules,
             marker_flag="nextToken",
             marker_arg="nextToken",
-            **kwargs
+            **kwargs,
         ):
             rules.extend(ret["rules"])
         if not bool(rules):

@@ -107,6 +107,7 @@ def _get_options(ret):
     attrs = {
         "host": "host",
         "port": "port",
+        "ssl": "ssl",
         "db": "db",
         "user": "user",
         "password": "password",
@@ -127,6 +128,7 @@ def _get_conn(ret):
 
     host = _options.get("host")
     port = _options.get("port")
+    ssl = _options.get("ssl") or False
     db_ = _options.get("db")
     user = _options.get("user")
     password = _options.get("password")
@@ -137,7 +139,7 @@ def _get_conn(ret):
     # a bunch of these sections that need to be supported
 
     if PYMONGO_VERSION > Version("2.3"):
-        conn = pymongo.MongoClient(host, port)
+        conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
     else:
         conn = pymongo.Connection(host, port)
     mdb = conn[db_]

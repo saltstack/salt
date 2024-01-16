@@ -202,6 +202,12 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -450,7 +456,7 @@ def present(
                 ret["result"] = False
                 return ret
             if "id" not in r:
-                ret["comment"] = "Subnet {} does not exist.".format(i)
+                ret["comment"] = f"Subnet {i} does not exist."
                 ret["result"] = False
                 return ret
             vpc_zone_identifier.append(r["id"])
@@ -830,7 +836,7 @@ def _alarms_present(
                     if "scaling_policy" not in action:
                         scaling_policy_actions_only = False
                     if ":self:" in action:
-                        action = action.replace(":self:", ":{}:".format(name))
+                        action = action.replace(":self:", f":{name}:")
                     new_actions.append(action)
                 info["attributes"][action_type] = new_actions
         # skip alarms that only have actions for scaling policy, if min_size == max_size for this ASG

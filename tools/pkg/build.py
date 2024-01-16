@@ -444,7 +444,7 @@ def windows(
     arguments={
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("x86_64", "aarch64", "x86", "amd64"),
+            "choices": ("x86_64", "arm64", "x86", "amd64"),
             "required": True,
         },
         "python_version": {
@@ -483,8 +483,8 @@ def onedir_dependencies(
         assert package_name is not None
         assert platform is not None
 
-    if platform in ("macos", "darwin") and arch == "aarch64":
-        arch = "arm64"
+    if platform not in ("macos", "darwin") and arch == "arm64":
+        arch = "aarch64"
 
     shared_constants = _get_shared_constants()
     if not python_version:
@@ -559,7 +559,7 @@ def onedir_dependencies(
         / "static"
         / "pkg"
         / f"py{requirements_version}"
-        / f"{platform}.txt"
+        / f"{platform if platform != 'macos' else 'darwin'}.txt"
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 

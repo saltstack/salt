@@ -9,22 +9,6 @@ This state requires the ``augeas`` Python module.
 
 Augeas_ can be used to manage configuration files.
 
-.. warning::
-
-    Minimal installations of Debian and Ubuntu have been seen to have packaging
-    bugs with python-augeas, causing the augeas module to fail to import. If
-    the minion has the augeas module installed, and the state fails with a
-    comment saying that the state is unavailable, first restart the salt-minion
-    service. If the problem persists past that, the following command can be
-    run from the master to determine what is causing the import to fail:
-
-    .. code-block:: bash
-
-        salt minion-id cmd.run 'python -c "from augeas import Augeas"'
-
-    For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
-    known to resolve the issue.
-
 """
 
 import difflib
@@ -70,7 +54,7 @@ def _check_filepath(changes):
             cmd, arg = change_.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                error = "Command {} is not supported (yet)".format(cmd)
+                error = f"Command {cmd} is not supported (yet)"
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
             parts = salt.utils.args.shlex_split(arg)
@@ -237,7 +221,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
               - set "service-name[. = 'zabbix-agent']/protocol" tcp
               - set "service-name[. = 'zabbix-agent']/#comment" "Zabbix Agent service"
               - rm "service-name[. = 'im-obsolete']"
-            - unless: grep "zabbix-agent" /etc/services
+            - unless: grep '^zabbix-agent\\s' /etc/services
 
     .. warning::
 
@@ -276,7 +260,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret["comment"] = "Error: {}".format(err)
+            ret["comment"] = f"Error: {err}"
             return ret
     else:
         filename = re.sub("^/files|/$", "", context)
@@ -285,7 +269,7 @@ def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs
         ret["result"] = True
         ret["comment"] = "Executing commands"
         if context:
-            ret["comment"] += ' in file "{}":\n'.format(context)
+            ret["comment"] += f' in file "{context}":\n'
         ret["comment"] += "\n".join(changes)
         return ret
 

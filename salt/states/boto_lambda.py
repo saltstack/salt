@@ -72,6 +72,12 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -249,7 +255,7 @@ def function_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Function {} is set to be created.".format(FunctionName)
+            ret["comment"] = f"Function {FunctionName} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_lambda.create_function"](
@@ -289,7 +295,7 @@ def function_present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **permission
+                    **permission,
                 )
                 if not r.get("updated"):
                     ret["result"] = False
@@ -305,11 +311,11 @@ def function_present(
         )["permissions"]
         ret["changes"]["old"] = {"function": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Function {} created.".format(FunctionName)
+        ret["comment"] = f"Function {FunctionName} created."
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "Function {} is present.".format(FunctionName)]
+        [ret["comment"], f"Function {FunctionName} is present."]
     )
     ret["changes"] = {}
     # function exists, ensure config matches
@@ -373,7 +379,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return "arn:aws:iam::{}:role/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:role/{name}"
 
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
@@ -461,7 +467,7 @@ def _function_config_present(
             [ret["comment"], "Function config to be modified"]
         )
         if __opts__["test"]:
-            ret["comment"] = "Function {} set to be modified.".format(FunctionName)
+            ret["comment"] = f"Function {FunctionName} set to be modified."
             ret["result"] = None
             return ret
         _r = __salt__["boto_lambda.update_function_config"](
@@ -502,7 +508,7 @@ def _function_code_present(
             dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
             if dlZipFile is False:
                 ret["result"] = False
-                ret["comment"] = "Failed to cache ZipFile `{}`.".format(ZipFile)
+                ret["comment"] = f"Failed to cache ZipFile `{ZipFile}`."
                 return ret
             ZipFile = dlZipFile
         size = os.path.getsize(ZipFile)
@@ -522,7 +528,7 @@ def _function_code_present(
         update = True
     if update:
         if __opts__["test"]:
-            ret["comment"] = "Function {} set to be modified.".format(FunctionName)
+            ret["comment"] = f"Function {FunctionName} set to be modified."
             ret["result"] = None
             return ret
         ret["changes"]["old"] = {
@@ -580,7 +586,7 @@ def _function_permissions_present(
             [ret["comment"], "Function permissions to be modified"]
         )
         if __opts__["test"]:
-            ret["comment"] = "Function {} set to be modified.".format(FunctionName)
+            ret["comment"] = f"Function {FunctionName} set to be modified."
             ret["result"] = None
             return ret
         for sid, diff in diffs.items():
@@ -609,7 +615,7 @@ def _function_permissions_present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **diff["new"]
+                    **diff["new"],
                 )
                 ret["changes"].setdefault("new", {}).setdefault("Permissions", {})[
                     sid
@@ -665,11 +671,11 @@ def function_absent(
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "Function {} does not exist.".format(FunctionName)
+        ret["comment"] = f"Function {FunctionName} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Function {} is set to be removed.".format(FunctionName)
+        ret["comment"] = f"Function {FunctionName} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_lambda.delete_function"](
@@ -681,7 +687,7 @@ def function_absent(
         return ret
     ret["changes"]["old"] = {"function": FunctionName}
     ret["changes"]["new"] = {"function": None}
-    ret["comment"] = "Function {} deleted.".format(FunctionName)
+    ret["comment"] = f"Function {FunctionName} deleted."
     return ret
 
 
@@ -746,7 +752,7 @@ def alias_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Alias {} is set to be created.".format(Name)
+            ret["comment"] = f"Alias {Name} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_lambda.create_alias"](
@@ -768,12 +774,10 @@ def alias_present(
         )
         ret["changes"]["old"] = {"alias": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Alias {} created.".format(Name)
+        ret["comment"] = f"Alias {Name} created."
         return ret
 
-    ret["comment"] = os.linesep.join(
-        [ret["comment"], "Alias {} is present.".format(Name)]
-    )
+    ret["comment"] = os.linesep.join([ret["comment"], f"Alias {Name} is present."])
     ret["changes"] = {}
     _describe = __salt__["boto_lambda.describe_alias"](
         FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile
@@ -792,7 +796,7 @@ def alias_present(
             [ret["comment"], "Alias config to be modified"]
         )
         if __opts__["test"]:
-            ret["comment"] = "Alias {} set to be modified.".format(Name)
+            ret["comment"] = f"Alias {Name} set to be modified."
             ret["result"] = None
             return ret
         _r = __salt__["boto_lambda.update_alias"](
@@ -854,11 +858,11 @@ def alias_absent(
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "Alias {} does not exist.".format(Name)
+        ret["comment"] = f"Alias {Name} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Alias {} is set to be removed.".format(Name)
+        ret["comment"] = f"Alias {Name} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_lambda.delete_alias"](
@@ -870,7 +874,7 @@ def alias_absent(
         return ret
     ret["changes"]["old"] = {"alias": Name}
     ret["changes"]["new"] = {"alias": None}
-    ret["comment"] = "Alias {} deleted.".format(Name)
+    ret["comment"] = f"Alias {Name} deleted."
     return ret
 
 
@@ -885,7 +889,7 @@ def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:lambda:{}:{}:function:{}".format(region, account_id, name)
+    return f"arn:aws:lambda:{region}:{account_id}:function:{name}"
 
 
 def event_source_mapping_present(

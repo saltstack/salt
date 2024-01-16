@@ -2982,10 +2982,13 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
+        .. versionadded:: 3008.0
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist, or metalink is required.
 
     Strict parsing of configuration files is the default, this can be disabled
     using the  ``strict_config`` keyword argument set to False
@@ -2996,16 +2999,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= metalink=http://host.com
     """
+    # set link types
+    link_types = ("baseurl", "mirrorlist", "metalink")
+
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False
@@ -3022,12 +3029,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
-    # specified in the repo_opts
-    if "mirrorlist" in repo_opts:
-        todelete.append("baseurl")
-    elif "baseurl" in repo_opts:
-        todelete.append("mirrorlist")
+    # Add what ever items in link_types is not in repo_opts to 'todelete' list
+    linkdict = {x: set(link_types) - {x} for x in link_types}
+    todelete.extend(
+        next(iter([y for x, y in linkdict.items() if x in repo_opts.keys()]), [])
+    )
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3090,10 +3096,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if all(x not in repo_opts.keys() for x in link_types):
                 raise SaltInvocationError(
-                    "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "The repo does not exist and needs to be created, but none of "
+                    f"{', '.join(link_types)} was given"
                 )
             filerepos[repo] = {}
     else:
@@ -3101,16 +3107,15 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = repos[repo]["file"]
         header, filerepos = _parse_repo_file(repofile, strict_parser)
 
-    # Error out if they tried to delete baseurl or mirrorlist improperly
-    if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+    # Error out if they tried to delete all linktypes
+    for link_type in link_types:
+        linklist = set(link_types) - {link_type}
+        if all(
+            x not in repo_opts and x not in filerepos[repo] and link_type in todelete
+            for x in linklist
+        ):
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
-            )
-    if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
-            raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                f"Cannot delete {link_type} without specifying {' or '.join(linklist)}"
             )
 
     # Delete anything in the todelete list

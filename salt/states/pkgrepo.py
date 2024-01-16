@@ -145,10 +145,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
-        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
-        note that this state is not presently capable of managing more than one
-        repo in a single repo file, so each instance of this state will manage
-        a single repo file containing the configuration for a single repo.
+        One of ``baseurl``, ``mirrorlist``, or ``metalink`` below is required.
+        Additionally, note that this state is not presently capable of managing
+        more than one repo in a single repo file, so each instance of this state
+        will manage a single repo file containing the configuration for a single repo.
 
     name
         This value will be used in two ways: Firstly, it will be the repo ID,
@@ -181,6 +181,11 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     mirrorlist
         A URL which points to a file containing a collection of baseurls
+
+    metalink
+        A URL for a curated list of non-stale mirrors only usable with yum/dnf
+
+        .. versionadded:: 3008.0
 
     comments
         Sometimes you want to supply additional information, but not as
