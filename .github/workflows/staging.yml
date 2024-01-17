@@ -2390,7 +2390,7 @@ jobs:
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
