@@ -27,7 +27,7 @@ Community members who repeatedly violate these policies are subject to bans.
    will be closed.
 
    - When an old release of Salt is marked out of support, all issues opened
-     against the the now defunct release will be closed.
+     against the now defunct release will be closed.
    - If the issue is still present in the current release of Salt, submit a new
      issue. Do not re-open the old issue after it has been closed.
    - When opening a new issue that was a bug in a previous release of Salt, you
