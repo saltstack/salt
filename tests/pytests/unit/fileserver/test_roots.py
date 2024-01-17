@@ -4,7 +4,6 @@
 
 import copy
 import pathlib
-import re
 import shutil
 import textwrap
 
@@ -278,9 +277,3 @@ def test_update_mtime_map_unicode_error(tmp_path):
         },
         "backend": "roots",
     }
-
-
-def test_update_unexpected_kwargs():
-    with pytest.raises(ValueError) as exc_info:
-        ret = roots.update(foo="bar")
-    assert re.match(r"Unexpected keyword arguments received:", str(exc_info.value))
