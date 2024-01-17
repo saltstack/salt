@@ -100,7 +100,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -154,7 +154,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
@@ -191,14 +191,14 @@ jobs:
             pkgs/checkout/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
@@ -252,7 +252,7 @@ jobs:
           fi
 
       - name: Upload DEBs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ${{ github.workspace }}/pkgs/*
@@ -281,14 +281,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
@@ -332,7 +332,7 @@ jobs:
           fi
 
       - name: Upload RPMs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
@@ -403,7 +403,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
@@ -445,7 +445,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} NSIS Packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
           path: pkg/windows/build/Salt-*.exe
@@ -453,7 +453,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
           path: pkg/windows/build/Salt-*.msi
