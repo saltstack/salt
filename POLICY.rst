@@ -34,6 +34,7 @@ Community members who repeatedly violate these policies are subject to bans.
      must validate it against a currently supported release of Salt for
      consideration. Issues that do not show the problem against a current
      release will be closed without consideration.
+
 #. Only defects can be submitted to the issue tracker.
 
    - Feature requests without a PR will be immediately closed.
@@ -44,6 +45,7 @@ Community members who repeatedly violate these policies are subject to bans.
      `Discussions <https://github.com/saltstack/salt/discussions>`_ tab or in
      the community `Open Hour <https://saltproject.io/calendar/>`_.
    - Questions will be immediately closed.
+
 #. Issues must submit sufficient information.
 
    - Issues must follow the relevant template for information.
