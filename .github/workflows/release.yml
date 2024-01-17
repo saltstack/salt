@@ -264,7 +264,6 @@ jobs:
       python-version: "3.10"
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     secrets: inherit
 
   release:

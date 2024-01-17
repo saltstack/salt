@@ -35,10 +35,6 @@ on:
         required: true
         type: string
         description: The nox version to install
-      nox-archive-hash:
-        required: true
-        type: string
-        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -155,13 +151,10 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.macos.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.macos.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.macos.${{ inputs.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-macos-${{ inputs.arch }}-${{ inputs.nox-session }}
 
       - name: Decompress .nox Directory
         run: |
