@@ -656,7 +656,7 @@ def matrix(
         "functional": 3,
         "integration": 5,
         "scenarios": 1,
-        "unit": 2,
+        "unit": 4,
     }
     # On nightly and scheduled builds we don't want splits at all
     if workflow.lower() in ("nightly", "scheduled"):
