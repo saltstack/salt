@@ -351,4 +351,3 @@ def test_relative_file_roots(tmp_state_tree):
     with patch.dict(roots.__opts__, opts), pytest.helpers.change_cwd(str(parent)):
         ret = roots.find_file("testfile")
         assert "testfile" == ret["rel"]
-
