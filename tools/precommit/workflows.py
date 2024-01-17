@@ -263,6 +263,15 @@ def generate_workflows(ctx: Context):
             for arch in ("x86_64", "arm64", "aarch64"):
                 build_rpms_listing.append((distro, release, arch))
 
+    build_debs_listing = []
+    for distro, releases in (
+        ("debian", ("10", "11", "12")),
+        ("ubuntu", ("20.04", "22.04")),
+    ):
+        for release in releases:
+            for arch in ("x86_64", "arm64"):
+                build_debs_listing.append((distro, release, arch))
+
     env = Environment(
         block_start_string="<%",
         block_end_string="%>",
@@ -305,6 +314,7 @@ def generate_workflows(ctx: Context):
                 test_salt_pkg_downloads_needs_slugs
             ),
             "build_rpms_listing": build_rpms_listing,
+            "build_debs_listing": build_debs_listing,
         }
         shared_context_file = (
             tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
