@@ -1154,6 +1154,7 @@ def test_almalinux_8_os_grains():
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
+
 @pytest.mark.skip_unless_on_linux
 def test_virtuozzo_7_os_grains():
     """
@@ -1182,7 +1183,6 @@ def test_virtuozzo_7_os_grains():
         "osfinger": "Virtuozzo-7",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
-
 
 
 @pytest.mark.skip_unless_on_linux
