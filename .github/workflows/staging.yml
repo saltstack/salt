@@ -39,6 +39,7 @@ env:
   COLUMNS: 190
   CACHE_SEED: SEED-7  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -2390,7 +2391,7 @@ jobs:
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
