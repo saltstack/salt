@@ -50,7 +50,7 @@ Community members who repeatedly violate these policies are subject to bans.
 
    - Issues must follow the relevant template for information.
    - Issues that do not give sufficient information about the nature of the
-     issue will be immediately closed.
+     issue **and how to reproduce the issue** will be immediately closed.
    - Issues that do not comply will be immediately closed.
 
 
