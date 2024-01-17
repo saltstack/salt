@@ -24,6 +24,7 @@ env:
   COLUMNS: 190
   CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
