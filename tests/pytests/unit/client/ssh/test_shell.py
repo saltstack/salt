@@ -1,10 +1,11 @@
+import logging
 import subprocess
 import types
 
 import pytest
 
 import salt.client.ssh.shell as shell
-from tests.support.mock import MagicMock, PropertyMock, patch
+from tests.support.mock import MagicMock, PropertyMock, call, patch
 
 
 @pytest.fixture
@@ -98,3 +99,29 @@ def test_ssh_shell_exec_cmd_returns_status_code_with_highest_bit_set_if_process_
     assert stdout == ""
     assert stderr == "leave me alone please"
     assert retcode == 137
+
+
+def exec_cmd(cmd):
+    if cmd.startswith("mkdir -p"):
+        return "", "Not a directory", 1
+    return "OK", "", 0
+
+
+def test_ssh_shell_send_makedirs_failure_returns_immediately():
+    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=exec_cmd):
+        shl = shell.Shell({}, "localhost")
+        stdout, stderr, retcode = shl.send("/tmp/file", "/tmp/file", True)
+    assert retcode == 1
+    assert "Not a directory" in stderr
+
+
+def test_ssh_shell_send_makedirs_on_relative_filename_skips_exec(caplog):
+    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=exec_cmd) as cmd:
+        with patch("salt.client.ssh.shell.Shell._run_cmd", return_value=("", "", 0)):
+            shl = shell.Shell({}, "localhost")
+            with caplog.at_level(logging.WARNING):
+                stdout, stderr, retcode = shl.send("/tmp/file", "targetfile", True)
+    assert retcode == 0
+    assert "Not a directory" not in stderr
+    assert call("mkdir -p ''") not in cmd.mock_calls
+    assert "Makedirs called on relative filename" in caplog.text

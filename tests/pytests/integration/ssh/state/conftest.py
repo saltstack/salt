@@ -17,7 +17,7 @@ def state_tree(base_env_state_tree_root_dir):
     state_file = """
     {%- from "map.jinja" import abc with context %}
     Ok with {{ abc }}:
-      test.succeed_without_changes
+      test.succeed_with_changes
     """
     top_tempfile = pytest.helpers.temp_file(
         "top.sls", top_file, base_env_state_tree_root_dir

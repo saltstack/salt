@@ -3248,7 +3248,9 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         # Let's get the value from the profile, if present
         if "profile" in vm_ and vm_["profile"] is not None:
             if name in opts["profiles"][vm_["profile"]]:
-                if isinstance(value, dict):
+                if isinstance(value, dict) and isinstance(
+                    opts["profiles"][vm_["profile"]][name], dict
+                ):
                     value.update(opts["profiles"][vm_["profile"]][name].copy())
                 else:
                     value = deepcopy(opts["profiles"][vm_["profile"]][name])
