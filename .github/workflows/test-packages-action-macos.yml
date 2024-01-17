@@ -201,7 +201,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
+        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
@@ -228,7 +230,9 @@ jobs:
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: artifacts
