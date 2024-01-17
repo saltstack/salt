@@ -138,16 +138,10 @@ def serve_file(load, fnd):
     return ret
 
 
-def update(**kwargs):
+def update():
     """
     When we are asked to update (regular interval) lets reap the cache
     """
-    # __pub_user responsible for the runner can be passed but we don't do anything with it
-    if "__pub_user" in kwargs:
-        del kwargs["__pub_user"]
-    if kwargs:
-        raise ValueError("Unexpected keyword arguments received: %s" % kwargs)
-
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__["cachedir"], "roots", "hash"), find_file
