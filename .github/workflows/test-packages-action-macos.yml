@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
           path: artifacts/pkg/
@@ -131,7 +131,7 @@ jobs:
           tree artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
@@ -202,7 +202,7 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
@@ -229,7 +229,7 @@ jobs:
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: artifacts
