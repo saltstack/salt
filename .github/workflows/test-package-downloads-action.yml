@@ -23,10 +23,6 @@ on:
         required: true
         type: string
         description: The nox version to install
-      nox-archive-hash:
-        required: true
-        type: string
-        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -244,13 +240,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.linux.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -488,13 +481,10 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.macos.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.macos.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Decompress .nox Directory
         run: |
@@ -684,13 +674,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.windows.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.windows.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

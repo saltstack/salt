@@ -36,10 +36,6 @@ on:
         required: true
         type: string
         description: The nox version to install
-      nox-archive-hash:
-        required: true
-        type: string
-        description: Nox Tarball Cache Hash
       gh-actions-python-version:
         required: false
         type: string
@@ -152,13 +148,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
-      - name: Download cached nox.windows.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.windows.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.windows.${{ inputs.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.gh-actions-python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-windows-${{ inputs.arch }}-${{ inputs.nox-session }}
 
       - name: PyPi Proxy
         run: |

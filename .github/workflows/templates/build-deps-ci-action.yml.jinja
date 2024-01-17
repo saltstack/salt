@@ -153,7 +153,7 @@ jobs:
           tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.linux.${{ matrix.arch }}.tar.*
@@ -241,7 +241,7 @@ jobs:
           nox --force-color -e compress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.macos.${{ matrix.arch }}.tar.*
@@ -353,7 +353,7 @@ jobs:
           tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.windows.${{ matrix.arch }}.tar.*
