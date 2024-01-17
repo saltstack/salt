@@ -252,6 +252,17 @@ def generate_workflows(ctx: Context):
         for _, arch, _ in test_salt_pkg_downloads_listing[platform]:
             test_salt_pkg_downloads_needs_slugs.add("build-ci-deps")
 
+    build_rpms_listing = []
+    for distro, releases in (
+        ("amazon", ("2", "2023")),
+        ("redhat", ("7", "8", "9")),
+        ("fedora", ("36", "37", "38")),
+        ("photon", ("3", "4", "5")),
+    ):
+        for release in releases:
+            for arch in ("x86_64", "arm64", "aarch64"):
+                build_rpms_listing.append((distro, release, arch))
+
     env = Environment(
         block_start_string="<%",
         block_end_string="%>",
@@ -293,6 +304,7 @@ def generate_workflows(ctx: Context):
             "test_salt_pkg_downloads_needs_slugs": sorted(
                 test_salt_pkg_downloads_needs_slugs
             ),
+            "build_rpms_listing": build_rpms_listing,
         }
         shared_context_file = (
             tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
