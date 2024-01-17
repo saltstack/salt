@@ -384,15 +384,12 @@ def test_issue_50221(
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
 
 
-@pytest.mark.skip_if_not_root
-@pytest.mark.usefixtures("pillar_tree")
 def test_issue_60426(
     salt_master,
     salt_call_cli,
     tmp_path,
-    salt_minion,
 ):
-    target_path = tmp_path / "/etc/foo/bar"
+    target_path = tmp_path.joinpath("etc/foo/bar")
     jinja_name = "foo_bar"
     jinja_contents = (
         "{% for item in accumulator['accumulated configstuff'] %}{{ item }}{% endfor %}"
@@ -453,6 +450,7 @@ def test_issue_60426(
         - filename: {target_path}
         - text:
           - some
+          - more
           - good
           - stuff
         - watch_in:
@@ -464,7 +462,6 @@ def test_issue_60426(
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
     )
-
     jinja_tempfile = salt_master.state_tree.base.temp_file(
         "{}.jinja".format(jinja_name), jinja_contents
     )
@@ -478,7 +475,7 @@ def test_issue_60426(
         # Check to make sure the file was created
         assert target_path.is_file()
         # The type of new line, ie, `\n` vs `\r\n` is not important
-        assert target_path.read_text() == "somegoodstuff"
+        assert target_path.read_text() == "somemoregoodstuff"
 
 
 @pytest.fixture
