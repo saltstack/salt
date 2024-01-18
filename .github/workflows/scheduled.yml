@@ -14,6 +14,7 @@ env:
   COLUMNS: 190
   CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -211,7 +212,7 @@ jobs:
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
