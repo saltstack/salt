@@ -131,6 +131,7 @@ cryptography==41.0.7
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via
@@ -194,6 +195,7 @@ idna==3.2
     #   -c requirements/static/ci/py3.12/linux.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -617,6 +619,10 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
+trustme==1.1.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/pytest.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

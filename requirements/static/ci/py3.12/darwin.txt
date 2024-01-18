@@ -92,6 +92,7 @@ cryptography==41.0.7
     #   etcd3-py
     #   moto
     #   pyopenssl
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via virtualenv
@@ -139,6 +140,7 @@ idna==3.2
     #   -r requirements/darwin.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -424,6 +426,8 @@ timelib==0.2.5
     #   -r requirements/darwin.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 typing-extensions==4.2.0
     # via
     #   pytest-shell-utilities

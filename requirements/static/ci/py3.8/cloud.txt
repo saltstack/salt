@@ -144,6 +144,7 @@ cryptography==41.0.7
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via
@@ -217,6 +218,7 @@ idna==3.2
     #   -c requirements/static/ci/py3.8/linux.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -723,6 +725,10 @@ transitions==0.8.9
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   junos-eznc
+trustme==1.1.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/pytest.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt

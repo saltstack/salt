@@ -87,6 +87,7 @@ cryptography==41.0.7
     #   moto
     #   pyopenssl
     #   requests-ntlm
+    #   trustme
 distlib==0.3.6
     # via virtualenv
 distro==1.5.0
@@ -132,6 +133,7 @@ idna==3.2
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -440,6 +442,8 @@ timelib==0.2.5
     #   -r requirements/windows.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 typing-extensions==4.4.0
     # via
     #   pytest-shell-utilities

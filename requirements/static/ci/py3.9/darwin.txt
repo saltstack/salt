@@ -102,6 +102,7 @@ cryptography==41.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via virtualenv
@@ -156,6 +157,7 @@ idna==3.2
     #   -r requirements/darwin.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -507,6 +509,8 @@ tomli==2.0.1
     # via pytest
 transitions==0.8.9
     # via junos-eznc
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 typing-extensions==4.2.0
     # via
     #   pytest-shell-utilities

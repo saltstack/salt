@@ -361,7 +361,10 @@ def query(
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
         if http_proxy_url is not None:
-            sess.proxies = {"http": http_proxy_url}
+            sess.proxies = {
+                "http": http_proxy_url,
+                "https": http_proxy_url,
+            }
     elif backend == "urllib2":
         sess_cookies = None
     else:
