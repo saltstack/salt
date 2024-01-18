@@ -663,7 +663,7 @@ def matrix(
     if workflow.lower() in ("nightly", "scheduled"):
         ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
         for key in _splits:
-            new_value = _splits[key] - 2
+            new_value = _splits[key] - 1
             if new_value < 1:
                 new_value = 1
             _splits[key] = new_value
