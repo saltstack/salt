@@ -3,7 +3,12 @@ import ssl
 import tarfile
 
 import pytest
-import trustme
+
+try:
+    import trustme
+except ImportError:
+    pass
+
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
