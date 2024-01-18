@@ -111,6 +111,7 @@ cryptography==41.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via virtualenv
@@ -159,6 +160,7 @@ idna==3.2
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -547,6 +549,8 @@ tornado==6.1
     # via python-telegram-bot
 transitions==0.8.9
     # via junos-eznc
+trustme==1.0.0
+    # via -r requirements/pytest.txt
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
