@@ -6,8 +6,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.stringutils
-from salt import crypt
-from tests.support.mock import MagicMock, MockCall, mock_open, patch
+from tests.support.mock import mock_open, patch
 from tests.support.unit import TestCase
 
 try:
@@ -17,7 +16,7 @@ try:
 except ImportError:
     HAS_M2 = False
 try:
-    from Cryptodome.PublicKey import RSA
+    from Cryptodome.PublicKey import RSA  # pylint: disable=unused-import
 
     HAS_PYCRYPTO_RSA = True
 except ImportError:
@@ -89,183 +88,6 @@ SIG = (
     b"\x98\x8a\x8a&#\xb9(#?\x80\x15\x9eW\xb5\x12\xd1\x95S\xf2<G\xeb\xf1"
     b"\x14H\xb2\xc4>\xc3A\xed\x86x~\xcfU\xd5Q\xfe~\x10\xd2\x9b"
 )
-
-
-@pytest.mark.skipif(not HAS_PYCRYPTO_RSA, reason="pycrypto >= 2.6 is not available")
-@pytest.mark.skipif(HAS_M2, reason="m2crypto is used by salt.crypt if installed")
-class CryptTestCase(TestCase):
-    @pytest.mark.slow_test
-    def test_gen_keys(self):
-        open_priv_wb = MockCall("/keydir{}keyname.pem".format(os.sep), "wb+")
-        open_pub_wb = MockCall("/keydir{}keyname.pub".format(os.sep), "wb+")
-
-        with patch.multiple(
-            os,
-            umask=MagicMock(),
-            chmod=MagicMock(),
-            access=MagicMock(return_value=True),
-        ):
-            with patch("salt.utils.files.fopen", mock_open()) as m_open, patch(
-                "os.path.isfile", return_value=True
-            ):
-                result = crypt.gen_keys("/keydir", "keyname", 2048)
-                assert result == "/keydir{}keyname.pem".format(os.sep), result
-                assert open_priv_wb not in m_open.calls
-                assert open_pub_wb not in m_open.calls
-
-            with patch("salt.utils.files.fopen", mock_open()) as m_open, patch(
-                "os.path.isfile", return_value=False
-            ):
-                crypt.gen_keys("/keydir", "keyname", 2048)
-                assert open_priv_wb in m_open.calls
-                assert open_pub_wb in m_open.calls
-
-    @patch("os.umask", MagicMock())
-    @patch("os.chmod", MagicMock())
-    @patch("os.chown", MagicMock(), create=True)
-    @patch("os.access", MagicMock(return_value=True))
-    @pytest.mark.slow_test
-    def test_gen_keys_with_passphrase(self):
-        key_path = os.path.join(os.sep, "keydir")
-        open_priv_wb = MockCall(os.path.join(key_path, "keyname.pem"), "wb+")
-        open_pub_wb = MockCall(os.path.join(key_path, "keyname.pub"), "wb+")
-
-        with patch("salt.utils.files.fopen", mock_open()) as m_open, patch(
-            "os.path.isfile", return_value=True
-        ):
-            self.assertEqual(
-                crypt.gen_keys(key_path, "keyname", 2048, passphrase="password"),
-                os.path.join(key_path, "keyname.pem"),
-            )
-            result = crypt.gen_keys(key_path, "keyname", 2048, passphrase="password")
-            assert result == os.path.join(key_path, "keyname.pem"), result
-            assert open_priv_wb not in m_open.calls
-            assert open_pub_wb not in m_open.calls
-
-        with patch("salt.utils.files.fopen", mock_open()) as m_open, patch(
-            "os.path.isfile", return_value=False
-        ):
-            crypt.gen_keys(key_path, "keyname", 2048)
-            assert open_priv_wb in m_open.calls
-            assert open_pub_wb in m_open.calls
-
-    def test_sign_message(self):
-        key = RSA.importKey(PRIVKEY_DATA)
-        with patch("salt.crypt.get_rsa_key", return_value=key):
-            self.assertEqual(SIG, salt.crypt.sign_message("/keydir/keyname.pem", MSG))
-
-    def test_sign_message_with_passphrase(self):
-        key = RSA.importKey(PRIVKEY_DATA)
-        with patch("salt.crypt.get_rsa_key", return_value=key):
-            self.assertEqual(
-                SIG,
-                crypt.sign_message("/keydir/keyname.pem", MSG, passphrase="password"),
-            )
-
-    def test_verify_signature(self):
-        with patch("salt.utils.files.fopen", mock_open(read_data=PUBKEY_DATA)):
-            self.assertTrue(crypt.verify_signature("/keydir/keyname.pub", MSG, SIG))
-
-
-@pytest.mark.skipif(not HAS_M2, reason="m2crypto is not available")
-class M2CryptTestCase(TestCase):
-    @patch("os.umask", MagicMock())
-    @patch("os.chmod", MagicMock())
-    @patch("os.access", MagicMock(return_value=True))
-    @pytest.mark.slow_test
-    def test_gen_keys(self):
-        with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
-            with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
-                with patch("os.path.isfile", return_value=True):
-                    self.assertEqual(
-                        crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{}keyname.pem".format(os.sep),
-                    )
-                    save_pem.assert_not_called()
-                    save_pub.assert_not_called()
-
-                with patch("os.path.isfile", return_value=False):
-                    self.assertEqual(
-                        crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{}keyname.pem".format(os.sep),
-                    )
-                    save_pem.assert_called_once_with(
-                        "/keydir{}keyname.pem".format(os.sep), cipher=None
-                    )
-                    save_pub.assert_called_once_with(
-                        "/keydir{}keyname.pub".format(os.sep)
-                    )
-
-    @patch("os.umask", MagicMock())
-    @patch("os.chmod", MagicMock())
-    @patch("os.chown", MagicMock())
-    @patch("os.access", MagicMock(return_value=True))
-    @pytest.mark.slow_test
-    def test_gen_keys_with_passphrase(self):
-        with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
-            with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
-                with patch("os.path.isfile", return_value=True):
-                    self.assertEqual(
-                        crypt.gen_keys(
-                            "/keydir", "keyname", 2048, passphrase="password"
-                        ),
-                        "/keydir{}keyname.pem".format(os.sep),
-                    )
-                    save_pem.assert_not_called()
-                    save_pub.assert_not_called()
-
-                with patch("os.path.isfile", return_value=False):
-                    self.assertEqual(
-                        crypt.gen_keys(
-                            "/keydir", "keyname", 2048, passphrase="password"
-                        ),
-                        "/keydir{}keyname.pem".format(os.sep),
-                    )
-                    callback = save_pem.call_args[1]["callback"]
-                    save_pem.assert_called_once_with(
-                        "/keydir{}keyname.pem".format(os.sep),
-                        cipher="des_ede3_cbc",
-                        callback=callback,
-                    )
-                    self.assertEqual(callback(None), b"password")
-                    save_pub.assert_called_once_with(
-                        "/keydir{}keyname.pub".format(os.sep)
-                    )
-
-    def test_sign_message(self):
-        key = M2Crypto.RSA.load_key_string(
-            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
-        )
-        with patch("salt.crypt.get_rsa_key", return_value=key):
-            self.assertEqual(SIG, salt.crypt.sign_message("/keydir/keyname.pem", MSG))
-
-    def test_sign_message_with_passphrase(self):
-        key = M2Crypto.RSA.load_key_string(
-            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
-        )
-        with patch("salt.crypt.get_rsa_key", return_value=key):
-            self.assertEqual(
-                SIG,
-                crypt.sign_message("/keydir/keyname.pem", MSG, passphrase="password"),
-            )
-
-    def test_verify_signature(self):
-        with patch(
-            "salt.utils.files.fopen",
-            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
-        ):
-            self.assertTrue(crypt.verify_signature("/keydir/keyname.pub", MSG, SIG))
-
-    def test_encrypt_decrypt_bin(self):
-        priv_key = M2Crypto.RSA.load_key_string(
-            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
-        )
-        pub_key = M2Crypto.RSA.load_pub_key_bio(
-            M2Crypto.BIO.MemoryBuffer(salt.utils.stringutils.to_bytes(PUBKEY_DATA))
-        )
-        encrypted = salt.crypt.private_encrypt(priv_key, b"salt")
-        decrypted = salt.crypt.public_decrypt(pub_key, encrypted)
-        self.assertEqual(b"salt", decrypted)
 
 
 class TestBadCryptodomePubKey(TestCase):

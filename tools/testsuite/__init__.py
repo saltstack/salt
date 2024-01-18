@@ -48,7 +48,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "darwin", "windows"),
+            "choices": ("linux", "macos", "windows"),
             "required": True,
         },
         "arch": {
@@ -146,7 +146,12 @@ def setup_testsuite(
     if exitcode and exitcode != ExitCode.SOFT_FAIL:
         ctx.exit(exitcode)
     exitcode = tools.utils.gh.download_nox_artifact(
-        ctx, run_id=run_id, slug=slug, nox_env="ci-test-onedir", repository=repository
+        ctx,
+        run_id=run_id,
+        platform=platform,
+        arch=arch,
+        nox_env="ci-test-onedir",
+        repository=repository,
     )
     if exitcode and exitcode != ExitCode.SOFT_FAIL:
         ctx.exit(exitcode)
