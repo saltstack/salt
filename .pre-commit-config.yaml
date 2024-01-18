@@ -352,6 +352,7 @@ repos:
           - --no-emit-index-url
           - requirements/static/pkg/darwin.in
 
+      - id: pip-tools-compile
         alias: compile-pkg-windows-3.8-zmq-requirements
         name: Windows Packaging Py3.8 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
@@ -559,7 +560,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.11-requirements
         name: Linux CI Py3.11 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/linux-crypto\.txt))$
         pass_filenames: false
         args:
@@ -574,7 +574,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.12-requirements
         name: Linux CI Py3.12 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
         pass_filenames: false
         args:
@@ -709,7 +708,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
@@ -724,7 +722,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.11-requirements
         name: FreeBSD CI Py3.11 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
@@ -739,7 +736,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.12-requirements
         name: FreeBSD CI Py3.12 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
@@ -960,6 +956,7 @@ repos:
           - --no-emit-index-url
           - requirements/static/ci/windows.in
 
+      - id: pip-tools-compile
         alias: compile-ci-windows-crypto-3.8-requirements
         name: Windows CI Py3.8 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/windows-crypto\.txt))$

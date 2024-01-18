@@ -45,12 +45,35 @@ def __virtual__():
 
 
 def _connect(
-    user=None, password=None, host=None, port=None, database="admin", authdb=None
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Returns a tuple of (user, host, port) with config, pillar, or default
-    values assigned to missing values.
+    Connect to a mongodb database with pymongo.MongoClient. If user and
+    password are provided, use those to authenticate with the database. If
+    any of user, password, host, or port are not provided then fall back to
+    config options:
+
+    - mongodb.user
+    - mongodb.password
+    - mongodb.host
+    - mongodb.port
+
+    By default use the admin database for the database and authdb.
+
+    If ``ssl`` is True, connect to mongodb over SSL.
+
+    If connection fails for any reason, log error and return False.
     """
+
+    verify_ssl = True if verify_ssl is None else verify_ssl
+
     if not user:
         user = __salt__["config.option"]("mongodb.user")
     if not password:
@@ -63,10 +86,15 @@ def _connect(
         authdb = database
 
     try:
-        conn = pymongo.MongoClient(host=host, port=port)
-        mdb = pymongo.database.Database(conn, database)
-        if user and password:
-            mdb.authenticate(user, password, source=authdb)
+        conn = pymongo.MongoClient(
+            host=host,
+            port=port,
+            username=user,
+            password=password,
+            authSource=authdb,
+            ssl=bool(ssl),
+            tlsAllowInvalidCertificates=not verify_ssl,
+        )
     except pymongo.errors.PyMongoError:
         log.error("Error connecting to database %s", database)
         return False
@@ -88,9 +116,17 @@ def _to_dict(objects):
     return objects
 
 
-def db_list(user=None, password=None, host=None, port=None, authdb=None):
+def db_list(
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
+):
     """
-    List all MongoDB databases
+    List all MongoDB databases.
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -107,13 +143,25 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mongodb.db_list <user> <password> <host> <port>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -121,13 +169,23 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
         log.info("Listing databases")
         return conn.list_database_names()
     except pymongo.errors.PyMongoError as err:
+        print("Ooops")
         log.error(err)
         return str(err)
 
 
-def db_exists(name, user=None, password=None, host=None, port=None, authdb=None):
+def db_exists(
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
+):
     """
-    Checks if a database exists in MongoDB
+    Checks if a database exists in MongoDB.
 
     name
         The name of the database to check for.
@@ -147,13 +205,25 @@ def db_exists(name, user=None, password=None, host=None, port=None, authdb=None)
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     """
-    dbs = db_list(user, password, host, port, authdb=authdb)
+    dbs = db_list(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
 
     if isinstance(dbs, str):
         return False
@@ -161,9 +231,18 @@ def db_exists(name, user=None, password=None, host=None, port=None, authdb=None)
     return name in dbs
 
 
-def db_remove(name, user=None, password=None, host=None, port=None, authdb=None):
+def db_remove(
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
+):
     """
-    Remove a MongoDB database
+    Remove a MongoDB database.
 
     name
         The name of the database to remove.
@@ -183,13 +262,25 @@ def db_remove(name, user=None, password=None, host=None, port=None, authdb=None)
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -208,10 +299,17 @@ def _version(mdb):
 
 
 def version(
-    user=None, password=None, host=None, port=None, database="admin", authdb=None
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Get MongoDB instance version
+    Get MongoDB instance version.
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -228,15 +326,29 @@ def version(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.version <user> <password> <host> <port> <database>
+        salt '*' mongodb.version <user> <password> <host> <port> <database> <ssl>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    # database is not passed into _connect here, which authdb typically falls
+    # back on. Probably not a bug but still confusing -W. Werner, 2022-02-10
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -249,10 +361,18 @@ def version(
 
 
 def user_find(
-    name, user=None, password=None, host=None, port=None, database="admin", authdb=None
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Get single user from MongoDB
+    Get single user from MongoDB.
 
     name
         The name of the user to find.
@@ -275,15 +395,27 @@ def user_find(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_find <name> <user> <password> <host> <port> <database> <authdb>
+        salt '*' mongodb.user_find <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -296,10 +428,17 @@ def user_find(
 
 
 def user_list(
-    user=None, password=None, host=None, port=None, database="admin", authdb=None
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    List users of a MongoDB database
+    List users of a MongoDB database.
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -319,13 +458,25 @@ def user_list(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_list <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_list <user> <password> <host> <port> <database> <authdb> <ssl>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -352,10 +503,18 @@ def user_list(
 
 
 def user_exists(
-    name, user=None, password=None, host=None, port=None, database="admin", authdb=None
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Checks if a user exists in MongoDB
+    Checks if a user exists in MongoDB.
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -375,13 +534,25 @@ def user_exists(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
-    users = user_list(user, password, host, port, database, authdb)
+    users = user_list(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
 
     if isinstance(users, str):
         return "Failed to connect to mongo database"
@@ -403,9 +574,11 @@ def user_create(
     database="admin",
     authdb=None,
     roles=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Create a MongoDB user
+    Create a MongoDB user.
 
     name
         The name of the user to create.
@@ -434,13 +607,25 @@ def user_create(
     roles
         The roles that should be associated with the user. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_create <user_name> <user_password> <roles> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_create <user_name> <user_password> <roles> <user> <password> <host> <port> <database> <authdb> <roles> <ssl>
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -460,10 +645,18 @@ def user_create(
 
 
 def user_remove(
-    name, user=None, password=None, host=None, port=None, database="admin", authdb=None
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Remove a MongoDB user
+    Remove a MongoDB user.
 
     name
         The name of the user that should be removed.
@@ -483,13 +676,25 @@ def user_remove(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
-    conn = _connect(user, password, host, port)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -504,34 +709,56 @@ def user_remove(
 
 
 def user_roles_exists(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Checks if a user of a MongoDB database has specified roles
+    Checks if a user of a MongoDB database has specified roles.
 
     name
-        The name of the user to check for the specified roles.
+        The name of the user to check for roles.
 
     roles
-        The roles to check are associated with the specified user.
+        JSON list of roles to check either as strings, or JSON objects of
+        rolename and dbname to check. Example: ``'["salt", "readWrite",
+        "dinner"]'`` or ``[{"db": "some_database", "role": "dinner"}, {"db":
+        "another_db", "role": "kaiser"}]``
 
     database
-        The database to check has the specified roles for the specified user.
+        The name of the database to check the user and roles against.
 
     user
-        The user to connect to MongoDB as. Default is None.
+        The user to authenticate with, if necessary.
 
     password
-        The password to use to connect to MongoDB as.  Default is None.
+        The password to authenticate with, if necessary.
 
     host
-        The host where MongoDB is running. Default is None.
+        The host running MongoDB.
 
     port
-        The host where MongoDB is running. Default is None.
+        The port MongoDB is listening on.
 
     authdb
-        The MongoDB database to use for authentication. Default is None.
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -548,7 +775,11 @@ def user_roles_exists(
     except Exception:  # pylint: disable=broad-except
         return "Roles provided in wrong format"
 
-    users = user_list(user, password, host, port, database, authdb)
+    # Here we pass in the database - does MongoDB return *all* of the roles
+    # across databases for a particular user?
+    users = user_list(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
 
     if isinstance(users, str):
         return "Failed to connect to mongo database"
@@ -567,34 +798,55 @@ def user_roles_exists(
 
 
 def user_grant_roles(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Grant one or many roles to a MongoDB user
+    Grant one or many roles to a MongoDB user.
 
     name
-        The user to grant the specified roles to.
+        The name of the user to grant roles to.
 
     roles
-        The roles to grant to the specified user.
+        JSON list of roles to check either as strings, or JSON objects of
+        rolename and dbname to check. See ``user_roles_exists`` or examples
+        below.
 
     database
-        The database to great the roles against for the specified user.
+        The database to grant roles on.
 
     user
-        The user to connect to MongoDB as. Default is None.
+        The user to authenticate with, if necessary.
 
     password
-        The password to use to connect to MongoDB as.  Default is None.
+        The password to authenticate with, if necessary.
 
     host
-        The host where MongoDB is running. Default is None.
+        The host running MongoDB.
 
     port
-        The host where MongoDB is running. Default is None.
+        The port MongoDB is listening on.
 
     authdb
-        The MongoDB database to use for authentication. Default is None.
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -606,7 +858,9 @@ def user_grant_roles(
 
         salt '*' mongodb.user_grant_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -629,31 +883,55 @@ def user_grant_roles(
 
 
 def user_revoke_roles(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Revoke one or many roles to a MongoDB user
+    Revoke one or many roles from a MongoDB user.
 
-    user
-        The user to connect to MongoDB as. Default is None.
+    name
+        The name of the user to revoke roles from.
 
     roles
-        The roles to revoke from the specified user.
+        JSON list of roles to revoke either as strings, or JSON objects of
+        rolename and dbname to check. See ``user_roles_exists`` or examples
+        below.
 
     database
-        The database to revoke the roles from for the specified user.
+        The database to revoke roles on.
+
+    user
+        The user to authenticate with, if necessary.
 
     password
-        The password to use to connect to MongoDB as.  Default is None.
+        The password to authenticate with, if necessary.
 
     host
-        The host where MongoDB is running. Default is None.
+        The host running MongoDB.
 
     port
-        The host where MongoDB is running. Default is None.
+        The port MongoDB is listening on.
 
     authdb
-        The MongoDB database to use for authentication. Default is None.
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Examples:
 
@@ -665,7 +943,9 @@ def user_revoke_roles(
 
         salt '*' mongodb.user_revoke_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     """
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(
+        user, password, host, port, authdb=authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -695,6 +975,8 @@ def collection_create(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
     .. versionadded:: 3006.0
@@ -719,6 +1001,16 @@ def collection_create(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -726,7 +1018,9 @@ def collection_create(
         salt '*' mongodb.collection_create mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -750,6 +1044,8 @@ def collection_drop(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
     .. versionadded:: 3006.0
@@ -774,6 +1070,16 @@ def collection_drop(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -781,7 +1087,9 @@ def collection_drop(
         salt '*' mongodb.collection_drop mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -804,6 +1112,8 @@ def collections_list(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
     .. versionadded:: 3006.0
@@ -825,6 +1135,16 @@ def collections_list(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -832,7 +1152,9 @@ def collections_list(
         salt '*' mongodb.collections_list mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -845,6 +1167,7 @@ def collections_list(
     return ret
 
 
+# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def insert(
     objects,
     collection,
@@ -854,30 +1177,45 @@ def insert(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Insert an object or list of objects into a collection
+    Insert an object or list of objects into a collection.
 
     objects
-        The objects to insert into the collection, should be provided as a list.
+        The documents to store in the collection.
 
     collection
-        The collection to insert the objects into.
+        The MongoDB collection to store the documents in.
 
     user
-        The user to connect to MongoDB as. Default is None.
+        The user to authenticate with, if necessary.
 
     password
-        The password to use to connect to MongoDB as.  Default is None.
+        The password to authenticate with, if necessary.
 
     host
-        The host where MongoDB is running. Default is None.
+        The host running MongoDB.
 
     port
-        The host where MongoDB is running. Default is None.
+        The port MongoDB is listening on.
+
+    database
+        The database containing the collection, if not "admin".
 
     authdb
-        The MongoDB database to use for authentication. Default is None.
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -886,7 +1224,9 @@ def insert(
         salt '*' mongodb.insert '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -915,10 +1255,15 @@ def update_one(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
-    Update an object into a collection
+    Update a MongoDB document that matches the provided filter.
     http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
+
+    If the document is not found or too many documents match, then an error
+    will be returned.
 
     .. versionadded:: 2016.11.0
 
@@ -940,17 +1285,32 @@ def update_one(
     port
         The host where MongoDB is running. Default is None.
 
+    database
+        The database containing the collection, if not "admin".
+
     authdb
         The MongoDB database to use for authentication. Default is None.
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database>
+        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database> <ssl>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -979,7 +1339,9 @@ def update_one(
     _update_doc = document[1]
 
     # need a string to perform the test, so using objs[0]
-    test_f = find(collection, objs[0], user, password, host, port, database, authdb)
+    test_f = find(
+        collection, objs[0], user, password, host, port, database, authdb, ssl
+    )
     if not isinstance(test_f, list):
         return "The find result is not well formatted. An error appears; cannot update."
     elif not test_f:
@@ -993,7 +1355,7 @@ def update_one(
             col = getattr(mdb, collection)
             ids = col.update_one(_id_field, {"$set": _update_doc})
             nb_mod = ids.modified_count
-            return "{} objects updated".format(nb_mod)
+            return f"{nb_mod} objects updated"
         except pymongo.errors.PyMongoError as err:
             log.error("Updating object %s failed with error %s", objects, err)
             return err
@@ -1008,6 +1370,8 @@ def find(
     port=None,
     database="admin",
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
     Find an object or list of objects in a collection
@@ -1030,17 +1394,32 @@ def find(
     port
         The host where MongoDB is running. Default is None.
 
+    database
+        The database containing the collection, if not "admin".
+
     authdb
         The MongoDB database to use for authentication. Default is None.
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database>
+        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database> <authdb> <ssl>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -1078,6 +1457,8 @@ def remove(
     database="admin",
     w=1,
     authdb=None,
+    ssl=False,
+    verify_ssl=None,
 ):
     """
     Remove an object or list of objects from a collection
@@ -1109,14 +1490,26 @@ def remove(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3008.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database>
+        salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database> <w> <authdb> <ssl>
 
     """
-    conn = _connect(user, password, host, port, database, authdb)
+    conn = _connect(
+        user, password, host, port, database, authdb, ssl=ssl, verify_ssl=verify_ssl
+    )
     if not conn:
         return "Failed to connect to mongo database"
 
@@ -1139,7 +1532,7 @@ def remove(
             for count in range(0, w):
                 res = col.delete_one(query)
                 deleted_count += res.deleted_count
-        return "{} objects removed".format(deleted_count)
+        return f"{deleted_count} objects removed"
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", _get_error_message(err))
         return _get_error_message(err)

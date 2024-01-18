@@ -1932,6 +1932,11 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
+    for arg in session.posargs:
+        if arg.startswith("tests/pytests/pkg/"):
+            # The user is passing test paths
+            cmd_args.pop()
+            break
 
     if IS_LINUX:
         # Fetch the toolchain

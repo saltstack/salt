@@ -143,7 +143,7 @@ permissions:
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>

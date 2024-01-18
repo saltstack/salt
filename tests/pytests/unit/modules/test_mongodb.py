@@ -4,6 +4,7 @@
 
 import pytest
 
+import salt.modules.mongodb
 import salt.modules.mongodb as mongodb
 from tests.support.mock import MagicMock, patch
 
@@ -720,3 +721,136 @@ def test_remove():
             ret = mongodb.remove("test_collection", {"foo": "FOO", "bar": "BAR"})
             expected = "1 objects removed"
             assert ret == expected
+
+
+@pytest.fixture(autouse=True)
+def fake_pymongo():
+    salt.modules.mongodb.pymongo = MagicMock()
+    salt.modules.mongodb.pymongo.errors.PyMongoError = Exception
+    salt.modules.mongodb.HAS_MONGODB = True
+    fake_config = {
+        "mongodb.host": "mongodb-mod.example.com",
+        "mongodb.port": 44,
+    }
+    fake_salt = {
+        "config.option": fake_config.get,
+    }
+    with patch("salt.modules.mongodb._version", autospec=True, return_value=4):
+        yield {
+            salt.modules.mongodb: {"__salt__": fake_salt},
+        }
+
+
+@pytest.fixture(
+    params=[
+        (True, False, {"ssl": True}),
+        (True, False, {"ssl": True, "verify_ssl": None}),
+        (True, False, {"ssl": True, "verify_ssl": True}),
+        (True, True, {"ssl": True, "verify_ssl": False}),
+        (False, False, {"ssl": False, "verify_ssl": True}),
+        (False, True, {"ssl": False, "verify_ssl": False}),
+        (False, False, {"ssl": None, "verify_ssl": None}),
+        (False, True, {"ssl": None, "verify_ssl": False}),
+        (False, False, {}),
+    ],
+)
+def ssl_kwargs(request):
+    yield request.param
+
+
+def test_remove_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.remove(collection="whatever", **other_kwargs)
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_version_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.version(**other_kwargs)
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_user_roles_exists_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.user_roles_exists(
+        name="asdf", roles='["kaiser"]', database="bob", **other_kwargs
+    )
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_user_grant_roles_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.user_grant_roles(
+        name="asdf", roles='["kaiser"]', database="bob", **other_kwargs
+    )
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_user_revoke_roles_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.user_revoke_roles(
+        name="asdf", roles='["kaiser"]', database="bob", **other_kwargs
+    )
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_insert_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.insert(
+        objects='["things"]', collection="fnord", **other_kwargs
+    )
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_update_one_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.update_one(
+        objects='["things"]', collection="fnord", **other_kwargs
+    )
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )
+
+
+def test_find_should_pass_ssl_arg(ssl_kwargs):
+    expected_ssl, expected_allow_invalid, other_kwargs = ssl_kwargs
+    salt.modules.mongodb.find(collection="fnord", **other_kwargs)
+    salt.modules.mongodb.pymongo.MongoClient.assert_called_with(
+        host="mongodb-mod.example.com",
+        port=44,
+        ssl=expected_ssl,
+        tlsAllowInvalidCertificates=expected_allow_invalid,
+    )

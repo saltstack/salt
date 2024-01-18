@@ -257,6 +257,10 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
         else:
             yield patterns
 
+    exclude_patterns = set()
+    for pattern in unnest_lists(patterns["exclude_patterns"]):
+        exclude_patterns.add(pattern)
+
     dir_patterns = set()
     for pattern in unnest_lists(patterns["dir_patterns"]):
         dir_patterns.add(pattern)
@@ -271,6 +275,16 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
             if not path.exists():
                 continue
             match_path = path.as_posix()
+            skip_match = False
+            for pattern in exclude_patterns:
+                if fnmatch.fnmatch(str(match_path), pattern):
+                    ctx.info(
+                        f"Excluded file: {match_path}; Matching pattern: {pattern!r}"
+                    )
+                    skip_match = True
+                    break
+            if skip_match:
+                continue
             for pattern in dir_patterns:
                 if fnmatch.fnmatch(str(match_path), pattern):
                     ctx.info(
@@ -283,6 +297,16 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
             if not path.exists():
                 continue
             match_path = path.as_posix()
+            skip_match = False
+            for pattern in exclude_patterns:
+                if fnmatch.fnmatch(str(match_path), pattern):
+                    ctx.info(
+                        f"Excluded file: {match_path}; Matching pattern: {pattern!r}"
+                    )
+                    skip_match = True
+                    break
+            if skip_match:
+                continue
             for pattern in file_patterns:
                 if fnmatch.fnmatch(str(match_path), pattern):
                     ctx.info(
