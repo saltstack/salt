@@ -2,24 +2,21 @@
 Test utility methods that communicate with SMB shares.
 """
 import contextlib
-import getpass
 import logging
-import os
-import pathlib
 import shutil
-import signal
 import subprocess
-import tempfile
 
+import attr
 import pytest
+from pytestshellutils.exceptions import FactoryFailure
+from pytestshellutils.shell import Daemon
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string, running_username
 
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.smb
-
-## DGM import time
-
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
 
@@ -30,56 +27,70 @@ pytestmark = [
         not salt.utils.smb.HAS_SMBPROTOCOL,
         reason='"smbprotocol" needs to be installed.',
     ),
-    pytest.mark.skip_if_binaries_missing("smbd", check_all=False),
-    pytest.mark.skip_unless_on_linux(reason="using Linux samba to test smb"),
+    pytest.mark.skip_if_binaries_missing("smbd", "pdbedit"),
+    pytest.mark.skip_unless_on_linux,
 ]
 
 
-def check_pid(pid):
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    else:
-        return True
+@attr.s(kw_only=True, slots=True)
+class Smbd(Daemon):
+    """
+    SSHD implementation.
+    """
 
+    runtime_dir = attr.ib()
+    script_name = attr.ib(default=shutil.which("smbd"))
+    display_name = attr.ib(default=None)
+    listen_port = attr.ib(factory=ports.get_unused_localhost_port)
+    username = attr.ib(init=False, factory=running_username)
+    password = attr.ib(init=False, repr=False)
+    public_dir = attr.ib(init=False, repr=False)
+    config_dir = attr.ib(init=False, repr=False)
+    passwdb_file_path = attr.ib(init=False, repr=False)
+    config_file_path = attr.ib(init=False, repr=False)
 
-@pytest.fixture
-## def smb_dict(tmp_path):
-def smb_dict(tmp_path, salt_call_cli):
-    samba_dir = tmp_path / "samba"
-    samba_dir.mkdir(parents=True)
-    assert samba_dir.exists()
-    assert samba_dir.is_dir()
-    public_dir = tmp_path / "public"
-    public_dir.mkdir(parents=True)
-    assert public_dir.exists()
-    assert public_dir.is_dir()
-    passwdb = tmp_path / "passwdb"
-    username = getpass.getuser()
-    with salt.utils.files.fopen(passwdb, "w") as fp:
-        fp.write(
-            f"{username}:0:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:AC8E657F8"
-            "3DF82BEEA5D43BDAF7800CC:[U          ]:LCT-507C14C7:"
-        )
-    samba_conf = tmp_path / "smb.conf"
-    with salt.utils.files.fopen(samba_conf, "w") as fp:
-        fp.write(
+    @password.default
+    def _default_password(self):
+        return random_string(f"{self.username}-")
+
+    @config_dir.default
+    def _default_config_dir(self):
+        path = self.runtime_dir / "conf"
+        path.mkdir()
+        return path
+
+    @public_dir.default
+    def _default_public_dir(self):
+        path = self.runtime_dir / "public"
+        path.mkdir()
+        return path
+
+    @passwdb_file_path.default
+    def _default_passwdb_path(self):
+        return self.config_dir / "passwdb"
+
+    @config_file_path.default
+    def _default_config_file_path(self):
+        return self.config_dir / "smb.conf"
+
+    def _write_config(self):
+        self.config_file_path.write_text(
             f"[global]\n"
             "realm = saltstack.com\n"
             "interfaces = lo 127.0.0.0/8\n"
-            "smb ports = 1445\n"
+            f"smb ports = {self.listen_port}\n"
             "log level = 2\n"
             "map to guest = Bad User\n"
             "enable core files = no\n"
             "passdb backend = smbpasswd\n"
-            f"smb passwd file = {passwdb}\n"
-            f"lock directory = {samba_dir}\n"
-            f"state directory = {samba_dir}\n"
-            f"cache directory = {samba_dir}\n"
-            f"pid directory = {samba_dir}\n"
-            f"private dir = {samba_dir}\n"
-            f"ncalrpc dir = {samba_dir}\n"
+            f"smb passwd file = {self.passwdb_file_path}\n"
+            f"log file = {self.runtime_dir / 'log.%m'}\n"
+            f"lock directory = {self.runtime_dir}\n"
+            f"state directory = {self.runtime_dir}\n"
+            f"cache directory = {self.runtime_dir}\n"
+            f"pid directory = {self.runtime_dir}\n"
+            f"private dir = {self.runtime_dir}\n"
+            f"ncalrpc dir = {self.runtime_dir}\n"
             "socket options = IPTOS_LOWDELAY TCP_NODELAY\n"
             "min receivefile size = 0\n"
             "write cache size = 0\n"
@@ -88,126 +99,96 @@ def smb_dict(tmp_path, salt_call_cli):
             "client plaintext auth = no\n"
             "\n"
             "[public]\n"
-            f"path = {public_dir}\n"
+            f"path = {self.public_dir}\n"
             "read only = no\n"
             "guest ok = no\n"
             "writeable = yes\n"
-            f"force user = {username}\n"
+            f"force user = {self.username}\n"
         )
 
-    ## _smbd = subprocess.Popen([shutil.which("smbd"), "-F", "-P0", "-s", samba_conf])
-    ## _smbd = subprocess.Popen([smbd_path, "-F", "-P0", "-s", samba_conf])
-    ## time.sleep(2)
-    ## pidfile = samba_dir / "smbd.pid"
-    ## conn_dict = {
-    ##     "tmpdir": tmp_path,
-    ##     "samba_dir": samba_dir,
-    ##     "public_dir": public_dir,
-    ##     "passwdb": passwdb,
-    ##     "username": username,
-    ##     "samba_conf": samba_conf,
-    ##     "smbd_path": smbd_path,
-    ##     "pidfile": pidfile,
-    ## }
-
-    ## assert pidfile.exists()
-
-    smbd_path = shutil.which("smbd")
-    assert pathlib.Path(smbd_path).exists()
-    try:
-        _smbd = subprocess.Popen(
-            ## [smbd_path, "-i", "-d", "2", "-F", "-P0", "-s", samba_conf]
-            [smbd_path, "-d", "2", "-F", "-P0", "-s", samba_conf],
+    def _create_account(self):
+        ret = subprocess.run(
+            [
+                shutil.which("pdbedit"),
+                "--create",
+                f"--configfile={self.config_file_path}",
+                "-w",
+                "-u",
+                self.username,
+                "-t",
+            ],
+            input=f"{self.password}\n{self.password}\n".encode(),
             shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
+            check=False,
         )
-        ## streamdata = _smbd.communicate()[0]
-        ## rc = _smbd.returncode
-        ## assert rc == 0
-        ## time.sleep(2)
-        assert _smbd != 0
+        if ret.returncode != 0:
+            raise FactoryFailure(
+                f"Failed to add user {self.username} to {self.passwdb_file_path}"
+            )
 
-        out, err = _smbd.communicate()
-        if err:
-            print(f"DGM --Error--\nerr '{err}'", flush=True)
-        else:
-            print("DGM --No errors--\nout '{out}'", flush=True)
+    def __attrs_post_init__(self):
+        """
+        Post attrs initialization routines.
+        """
+        self.check_ports = [self.listen_port]
+        super().__attrs_post_init__()
+        self._write_config()
+        self._create_account()
 
-        pidfile = samba_dir / "smbd.pid"
-        conn_dict = {
-            "tmpdir": tmp_path,
-            "samba_dir": samba_dir,
-            "public_dir": public_dir,
-            "passwdb": passwdb,
-            "username": username,
-            "samba_conf": samba_conf,
-            "smbd_path": smbd_path,
-            "pidfile": pidfile,
-        }
+    def get_display_name(self):
+        """
+        Returns a human readable name for the factory.
+        """
+        if self.display_name is None:
+            self.display_name = "{}(port={})".format(
+                self.__class__.__name__, self.listen_port
+            )
+        return super().get_display_name()
 
-        ## lets examine contents of samba_dir ditectory
-        for file_dgm in pathlib.Path(tmp_path).iterdir():
-            log.warning(f"DGM walking tmp_path, file '{file_dgm}'")
-            print(f"DGM walking tmp_path, file '{file_dgm}'", flush=True)
-            if os.path.basename(str(file_dgm)) == "smbd.pid":
-                log.warning(f"DGM walking tmp_path found smbd.pid, file '{file_dgm}'")
-                assert "1" == "2"
+    def get_base_script_args(self):
+        """
+        Returns any additional arguments to pass to the CLI script.
+        """
+        return [
+            "--foreground",
+            f"--configfile={self.config_file_path}",
+        ]
 
-        for file_dgm in pathlib.Path(samba_dir).iterdir():
-            log.warning(f"DGM walking samba_dir, file '{file_dgm}'")
-            print(f"DGM walking samba_dir, file '{file_dgm}'", flush=True)
-            if os.path.basename(str(file_dgm)) == "smbd.pid":
-                log.warning(f"DGM walking samba_dir found smbd.pid, file '{file_dgm}'")
-                assert "1" == "2"
-
-        ## DGM try finding the smbd.pid file in the system
-        # DGM mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef | grep smbd")
-        mypsout = salt_call_cli.run("--local", "cmd.run", "ps -ef")
-        print(f"DGM ps -ef output for smbd '{mypsout}'", flush=True)
-        ## assert mypsout == ""
-
-        mypidfile = salt_call_cli.run("--local", "cmd.run", "find / -name smbd.pid")
-        print(f"DGM PID file is '{mypidfile}'", flush=True)
-        assert mypidfile == ""
-
-        assert pidfile.exists()
-
-    except (OSError, ValueError) as e:
-        assert f"exception occured, '{e}'" == ""
-
-    with salt.utils.files.fopen(pidfile, "r") as fp:
-        _pid = int(fp.read().strip())
-    if not check_pid(_pid):
-        raise Exception("Unable to locate smbd's pid file")
-    try:
-        yield conn_dict
-    finally:
-        os.kill(_pid, signal.SIGTERM)
+    @contextlib.contextmanager
+    def get_conn(self):
+        with contextlib.closing(
+            salt.utils.smb.get_conn(
+                "127.0.0.1", self.username, self.password, port=self.listen_port
+            )
+        ) as conn:
+            yield conn
 
 
-def test_write_file_ipv4(smb_dict):
+@pytest.fixture(scope="module")
+def smbd(tmp_path_factory):
+    runtime_dir = tmp_path_factory.mktemp("samba-runtime")
+    daemon = Smbd(runtime_dir=runtime_dir, cwd=runtime_dir, start_timeout=30)
+    with daemon.started():
+        yield daemon
+
+
+def test_write_file_ipv4(smbd, tmp_path):
     """
     Transfer a file over SMB
     """
     name = "test_write_file_v4.txt"
     content = "write test file content ipv4"
-    share_path = smb_dict["public_dir"] / name
+    share_path = smbd.public_dir / name
     assert not share_path.exists()
 
-    local_path = tempfile.mktemp()
-    with salt.utils.files.fopen(local_path, "w") as fp:
-        fp.write(content)
+    local_path = tmp_path / name
+    local_path.write_text(content)
 
-    with contextlib.closing(
-        salt.utils.smb.get_conn("127.0.0.1", smb_dict["username"], "foo", port=1445)
-    ) as conn:
+    with smbd.get_conn() as conn:
         salt.utils.smb.put_file(local_path, name, "public", conn=conn)
 
     assert share_path.exists()
-    with salt.utils.files.fopen(share_path, "r") as fp:
-        result = fp.read()
+    result = share_path.read_text()
     assert result == content
 
 
