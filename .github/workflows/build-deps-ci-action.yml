@@ -80,7 +80,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -153,7 +153,7 @@ jobs:
           tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.linux.${{ matrix.arch }}.tar.*
@@ -189,7 +189,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -241,7 +241,7 @@ jobs:
           nox --force-color -e compress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.macos.${{ matrix.arch }}.tar.*
@@ -278,7 +278,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -351,7 +351,7 @@ jobs:
           tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.windows.${{ matrix.arch }}.tar.*

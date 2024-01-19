@@ -35,10 +35,6 @@ on:
         required: true
         type: string
         description: The nox version to install
-      nox-archive-hash:
-        required: true
-        type: string
-        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -121,7 +117,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
           path: artifacts/pkg/
@@ -135,7 +131,7 @@ jobs:
           tree artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
@@ -156,13 +152,10 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.macos.${{ inputs.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.macos.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.macos.${{ inputs.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-macos-${{ inputs.arch }}-${{ inputs.nox-session }}
 
       - name: Decompress .nox Directory
         run: |
@@ -210,6 +203,8 @@ jobs:
       - name: Upload Test Run Artifacts
         if: always()
         uses: actions/upload-artifact@v3
+        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: |
@@ -237,6 +232,8 @@ jobs:
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
           path: artifacts
