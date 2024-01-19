@@ -445,7 +445,22 @@ def pytest_collection_modifyitems(config, items):
     from_filenames_collection_modifyitems(config, items)
 
     log.warning("Mofifying collected tests to keep track of fixture usage")
+
+    timeout_marker_tests_paths = (
+        str(TESTS_DIR / "unit"),
+        str(PYTESTS_DIR / "unit"),
+    )
     for item in items:
+        if (
+            not salt.utils.platform.is_windows()
+            and str(pathlib.Path(item.fspath).resolve()).startswith(
+                timeout_marker_tests_paths
+            )
+            and not item.get_closest_marker("timeout")
+        ):
+            # Let's apply the timeout marker on the test, if the marker
+            # is not already applied
+            item.add_marker(pytest.mark.timeout(60))
         for fixture in item.fixturenames:
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
