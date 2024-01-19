@@ -291,7 +291,7 @@ jobs:
 
       - name: Upload testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
@@ -437,7 +437,7 @@ jobs:
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -587,7 +587,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2-arm64-pkg-tests:
     name: Amazon Linux 2 Arm64 Package Test
@@ -609,7 +608,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-pkg-tests:
     name: Amazon Linux 2023 Package Test
@@ -631,7 +629,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-arm64-pkg-tests:
     name: Amazon Linux 2023 Arm64 Package Test
@@ -653,7 +650,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Test
@@ -675,7 +671,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-8-pkg-tests:
     name: CentOS Stream 8 Package Test
@@ -697,7 +692,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9-pkg-tests:
     name: CentOS Stream 9 Package Test
@@ -719,7 +713,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9-arm64-pkg-tests:
     name: CentOS Stream 9 Arm64 Package Test
@@ -741,7 +734,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-10-pkg-tests:
     name: Debian 10 Package Test
@@ -763,7 +755,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-pkg-tests:
     name: Debian 11 Package Test
@@ -785,7 +776,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Test
@@ -807,7 +797,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-pkg-tests:
     name: Debian 12 Package Test
@@ -829,7 +818,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-arm64-pkg-tests:
     name: Debian 12 Arm64 Package Test
@@ -851,7 +839,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-pkg-tests:
     name: Photon OS 3 Package Test
@@ -873,7 +860,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-arm64-pkg-tests:
     name: Photon OS 3 Arm64 Package Test
@@ -895,7 +881,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Test
@@ -917,7 +902,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-4-arm64-pkg-tests:
@@ -940,7 +924,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-pkg-tests:
@@ -963,7 +946,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-arm64-pkg-tests:
@@ -986,7 +968,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   ubuntu-2004-pkg-tests:
@@ -1009,7 +990,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Test
@@ -1031,7 +1011,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Test
@@ -1053,7 +1032,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Test
@@ -1075,7 +1053,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-12-pkg-tests:
     name: macOS 12 Package Test
@@ -1097,7 +1074,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-pkg-tests:
     name: macOS 13 Package Test
@@ -1119,7 +1095,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-xlarge-pkg-tests:
     name: macOS 13 Arm64 Package Test
@@ -1141,7 +1116,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Test
@@ -1163,7 +1137,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Test
@@ -1185,7 +1158,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Test
@@ -1207,7 +1179,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Test
@@ -1229,7 +1200,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Test
@@ -1251,7 +1221,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Test
@@ -1273,7 +1242,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2016:
     name: Windows 2016 Test
@@ -1295,7 +1263,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2019:
     name: Windows 2019 Test
@@ -1317,7 +1284,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   windows-2022:
     name: Windows 2022 Test
@@ -1339,7 +1305,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 210 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-12:
     name: macOS 12 Test
@@ -1361,7 +1326,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13:
     name: macOS 13 Test
@@ -1383,7 +1347,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   macos-13-xlarge:
     name: macOS 13 Arm64 Test
@@ -1405,7 +1368,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   almalinux-8:
     name: Alma Linux 8 Test
@@ -1427,7 +1389,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   almalinux-9:
     name: Alma Linux 9 Test
@@ -1449,7 +1410,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2:
     name: Amazon Linux 2 Test
@@ -1471,7 +1431,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2-arm64:
     name: Amazon Linux 2 Arm64 Test
@@ -1493,7 +1452,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023:
     name: Amazon Linux 2023 Test
@@ -1515,7 +1473,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
@@ -1537,7 +1494,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   archlinux-lts:
     name: Arch Linux LTS Test
@@ -1559,7 +1515,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centos-7:
     name: CentOS 7 Test
@@ -1581,7 +1536,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-8:
     name: CentOS Stream 8 Test
@@ -1603,7 +1557,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   centosstream-9:
     name: CentOS Stream 9 Test
@@ -1625,7 +1578,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-10:
     name: Debian 10 Test
@@ -1647,7 +1599,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11:
     name: Debian 11 Test
@@ -1669,7 +1620,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-11-arm64:
     name: Debian 11 Arm64 Test
@@ -1691,7 +1641,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12:
     name: Debian 12 Test
@@ -1713,7 +1662,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   debian-12-arm64:
     name: Debian 12 Arm64 Test
@@ -1735,7 +1683,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   fedora-37:
     name: Fedora 37 Test
@@ -1757,7 +1704,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   fedora-38:
     name: Fedora 38 Test
@@ -1779,7 +1725,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   opensuse-15:
     name: Opensuse 15 Test
@@ -1801,7 +1746,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3:
     name: Photon OS 3 Test
@@ -1823,7 +1767,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-3-arm64:
     name: Photon OS 3 Arm64 Test
@@ -1845,7 +1788,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   photonos-4:
     name: Photon OS 4 Test
@@ -1867,7 +1809,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-4-arm64:
@@ -1890,7 +1831,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5:
@@ -1913,7 +1853,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   photonos-5-arm64:
@@ -1936,7 +1875,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       fips: true
 
   ubuntu-2004:
@@ -1959,7 +1897,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
@@ -1981,7 +1918,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204:
     name: Ubuntu 22.04 Test
@@ -2003,7 +1939,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
@@ -2025,7 +1960,6 @@ jobs:
       skip-code-coverage: false
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   combine-all-code-coverage:
     name: Combine Code Coverage
@@ -2091,6 +2025,8 @@ jobs:
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
@@ -2137,7 +2073,7 @@ jobs:
           nox --force-color -e create-html-coverage-report -- salt
 
       - name: Upload Salt Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-salt-html-report
           path: artifacts/coverage/html/salt
@@ -2153,7 +2089,7 @@ jobs:
           nox --force-color -e create-json-coverage-reports
 
       - name: Upload Combined Code Coverage JSON Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-json-report
           path: artifacts/coverage/coverage.json
@@ -2165,7 +2101,7 @@ jobs:
           nox --force-color -e create-html-coverage-report
 
       - name: Upload Combined Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-html-report
           path: artifacts/coverage/html/full
@@ -2203,7 +2139,7 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Source Tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
           path: artifacts/pkgs/incoming
@@ -2253,7 +2189,7 @@ jobs:
           find artifacts/pkgs/repo -type f -print -exec cp {} artifacts/src \;
 
       - name: Upload Standalone Repository As An Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-src-repo
           path: |
@@ -2347,7 +2283,7 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download DEB Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
@@ -2568,7 +2504,7 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download RPM Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
@@ -2656,25 +2592,25 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Windows NSIS x86 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86-NSIS
           path: artifacts/pkgs/incoming
 
       - name: Download Windows MSI x86 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86-MSI
           path: artifacts/pkgs/incoming
 
       - name: Download Windows NSIS amd64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-amd64-NSIS
           path: artifacts/pkgs/incoming
 
       - name: Download Windows MSI amd64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-amd64-MSI
           path: artifacts/pkgs/incoming
@@ -2758,13 +2694,13 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download macOS x86_64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86_64-macos
           path: artifacts/pkgs/incoming
 
       - name: Download macOS Arch64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
           path: artifacts/pkgs/incoming
@@ -2848,49 +2784,49 @@ jobs:
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Linux x86_64 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Linux arm64 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-linux-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS x86_64 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-x86_64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-amd64.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive(zip)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-amd64.zip
           path: artifacts/pkgs/incoming
 
       - name: Download Windows x86 Onedir Archive
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-x86.tar.xz
           path: artifacts/pkgs/incoming
 
       - name: Download Windows amd64 Onedir Archive(zip)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-windows-x86.zip
           path: artifacts/pkgs/incoming
@@ -3010,7 +2946,7 @@ jobs:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
           path: repo/
