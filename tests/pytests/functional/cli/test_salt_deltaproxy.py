@@ -10,16 +10,13 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
 
 
 pytestmark = [
-    pytest.mark.skip_on_spawning_platform(
-        reason="Deltaproxy minions do not currently work on spawning platforms.",
-    ),
     pytest.mark.core_test,
+    pytest.mark.windows_whitelisted,
 ]
 
 
@@ -74,7 +71,6 @@ def clear_proxy_minions(salt_master, proxy_minion_id):
 
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 @pytest.mark.parametrize(
     "parallel_startup",
     [True, False],

@@ -58,6 +58,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+@salt.ext.tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -339,33 +340,28 @@ def post_master_init(self, master):
     _failed = list()
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(
-                    subproxy_post_master_init,
+        waitfor = []
+        for _id in self.opts["proxy"].get("ids", []):
+            waitfor.append(
+                subproxy_post_master_init(
                     _id,
                     uid,
                     self.opts,
                     self.proxy,
                     self.utils,
-                ): _id
-                for _id in self.opts["proxy"].get("ids", [])
-            }
-
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                sub_proxy_data = future.result()
-            except Exception as exc:  # pylint: disable=broad-except
-                _id = futures[future]
-                log.info(
-                    "An exception occured during initialization for %s, skipping: %s",
-                    _id,
-                    exc,
                 )
-                _failed.append(_id)
-                continue
-            minion_id = sub_proxy_data["proxy_opts"].get("id")
+            )
+        try:
+            results = yield salt.ext.tornado.gen.multi(waitfor)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Errors loading sub proxies: %s", exc)
+            raise
 
+        _failed = self.opts["proxy"].get("ids", [])[:]
+        for sub_proxy_data in results:
+            minion_id = sub_proxy_data["proxy_opts"].get("id")
+            if minion_id in _failed:
+                _failed.remove(minion_id)
             if sub_proxy_data["proxy_minion"]:
                 self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
@@ -380,7 +376,7 @@ def post_master_init(self, master):
         log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
             try:
-                sub_proxy_data = subproxy_post_master_init(
+                sub_proxy_data = yield subproxy_post_master_init(
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -409,6 +405,7 @@ def post_master_init(self, master):
     self.ready = True
 
 
+@salt.ext.tornado.gen.coroutine
 def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
@@ -435,7 +432,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = salt.pillar.get_pillar(
+    proxy_pillar = yield salt.pillar.get_async_pillar(
         proxyopts,
         proxy_grains,
         minion_id,

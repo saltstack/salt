@@ -1178,6 +1178,7 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc_info=True,
                 )
+                break
 
     # Multi Master Tune In
     def tune_in(self):
@@ -3893,7 +3894,7 @@ class ProxyMinion(Minion):
         functions.
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
-        return mp_call(self, master)
+        yield mp_call(self, master)
 
     @salt.ext.tornado.gen.coroutine
     def subproxy_post_master_init(self, minion_id, uid):
@@ -3903,7 +3904,7 @@ class ProxyMinion(Minion):
         :rtype : None
         """
         mp_call = _metaproxy_call(self.opts, "subproxy_post_master_init")
-        return mp_call(self, minion_id, uid)
+        yield mp_call(self, minion_id, uid)
 
     def tune_in(self, start=True):
         """
