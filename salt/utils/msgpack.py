@@ -30,6 +30,8 @@ if msgpack and not hasattr(msgpack, "exceptions"):
         PackValueError = PackValueError()
 
     exceptions = _exceptions()
+elif msgpack:
+    exceptions = msgpack.exceptions
 
 # One-to-one mappings
 Packer = msgpack.Packer
