@@ -8,8 +8,8 @@ import subprocess
 
 import attr
 import pytest
-from pytestshellutils.exceptions import FactoryFailure
-from pytestshellutils.shell import Daemon
+from pytestshellutils.exceptions import FactoryFailure, FactoryNotStarted
+from pytestshellutils.shell import Daemon, ProcessResult
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string, running_username
 
@@ -75,6 +75,9 @@ class Smbd(Daemon):
         return self.config_dir / "smb.conf"
 
     def _write_config(self):
+        for name in ("cache", "lock", "state", "logs"):
+            path = self.runtime_dir / name
+            path.mkdir(mode=0o0755)
         self.config_file_path.write_text(
             f"[global]\n"
             "realm = saltstack.com\n"
@@ -85,10 +88,10 @@ class Smbd(Daemon):
             "enable core files = no\n"
             "passdb backend = smbpasswd\n"
             f"smb passwd file = {self.passwdb_file_path}\n"
-            f"log file = {self.runtime_dir / 'log.%m'}\n"
-            f"lock directory = {self.runtime_dir}\n"
-            f"state directory = {self.runtime_dir}\n"
-            f"cache directory = {self.runtime_dir}\n"
+            f"log file = {self.runtime_dir / 'logs' / 'log.%m'}\n"
+            f"lock directory = {self.runtime_dir / 'lock'}\n"
+            f"state directory = {self.runtime_dir / 'state'}\n"
+            f"cache directory = {self.runtime_dir / 'cache'}\n"
             f"pid directory = {self.runtime_dir}\n"
             f"private dir = {self.runtime_dir}\n"
             f"ncalrpc dir = {self.runtime_dir}\n"
@@ -108,24 +111,57 @@ class Smbd(Daemon):
         )
 
     def _create_account(self):
+        cmdline = [
+            shutil.which("pdbedit"),
+            "--create",
+            f"--configfile={self.config_file_path}",
+            "-w",
+            "-u",
+            self.username,
+            "-t",
+        ]
         ret = subprocess.run(
-            [
-                shutil.which("pdbedit"),
-                "--create",
-                f"--configfile={self.config_file_path}",
-                "-w",
-                "-u",
-                self.username,
-                "-t",
-            ],
-            input=f"{self.password}\n{self.password}\n".encode(),
+            cmdline,
+            input=f"{self.password}\n{self.password}\n",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             shell=False,
             check=False,
+            universal_newlines=True,
+        )
+        result = ProcessResult(
+            returncode=ret.returncode,
+            stdout=ret.stdout,
+            stderr=ret.stderr,
+            cmdline=cmdline,
         )
         if ret.returncode != 0:
+            log.warning(result)
             raise FactoryFailure(
                 f"Failed to add user {self.username} to {self.passwdb_file_path}"
             )
+        log.debug(result)
+
+    def _check_config(self):
+        cmdline = [shutil.which("testparm"), "-s", str(self.config_file_path)]
+        ret = subprocess.run(
+            cmdline,
+            shell=False,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        result = ProcessResult(
+            returncode=ret.returncode,
+            stdout=ret.stdout,
+            stderr=ret.stderr,
+            cmdline=cmdline,
+        )
+        if ret.returncode != 0:
+            log.warning(result)
+            raise FactoryFailure(f"""Failed to run '{" ".join(cmdline)}'""")
+        log.debug(result)
 
     def __attrs_post_init__(self):
         """
@@ -135,6 +171,7 @@ class Smbd(Daemon):
         super().__attrs_post_init__()
         self._write_config()
         self._create_account()
+        self._check_config()
 
     def get_display_name(self):
         """
@@ -183,8 +220,18 @@ def smbd_factory(smbd_host, tmp_path_factory, salt_factories):
     }
     if salt_factories.stats_processes is not None:
         smdb_kwargs["stats_processes"] = salt_factories.stats_processes
-    with Smbd(**smdb_kwargs).started() as daemon:
-        yield daemon
+    try:
+        with Smbd(**smdb_kwargs).started() as daemon:
+            yield daemon
+    except FactoryNotStarted as exc:
+        log.error("Factory failed to start. Spitting daemon logs...")
+        for fpath in runtime_dir.joinpath("logs").glob("*"):
+            log.warning(
+                "Contents of '%s':\n>>>>>>>>>>>>>>>>>>\n%s\n<<<<<<<<<<<<<<<<<<\n",
+                fpath,
+                fpath.read_text(),
+            )
+        raise exc from None
 
 
 @pytest.fixture
