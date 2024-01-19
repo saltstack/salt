@@ -108,6 +108,12 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -176,7 +182,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{}:role/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:role/{name}"
 
 
 def _filedata(infile):
@@ -272,7 +278,7 @@ def create_function(
                 dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
                 if dlZipFile is False:
                     ret["result"] = False
-                    ret["comment"] = "Failed to cache ZipFile `{}`.".format(ZipFile)
+                    ret["comment"] = f"Failed to cache ZipFile `{ZipFile}`."
                     return ret
                 ZipFile = dlZipFile
             code = {
@@ -313,7 +319,7 @@ def create_function(
                     Timeout=Timeout,
                     MemorySize=MemorySize,
                     Publish=Publish,
-                    **kwargs
+                    **kwargs,
                 )
             except ClientError as e:
                 if (
@@ -645,7 +651,7 @@ def add_permission(
             StatementId=StatementId,
             Action=Action,
             Principal=str(Principal),
-            **kwargs
+            **kwargs,
         )
         return {"updated": True}
     except ClientError as e:

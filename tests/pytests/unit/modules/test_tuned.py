@@ -131,4 +131,71 @@ def test_none():
     }
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
-        assert tuned.active() == "none"
+        assert tuned.active()["retcode"] != 0
+
+
+def test_active_balanced():
+    ret = {
+        "pid": 12345,
+        "retcode": 0,
+        "stderr": "",
+        "stdout": "Current active profile: balanced",
+    }
+    mock_cmd = MagicMock(return_value=ret)
+    with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
+        assert tuned.active()["stdout"] == "balanced"
+
+
+def test_off():
+    ret = {
+        "pid": 12345,
+        "retcode": 0,
+        "stderr": "",
+        "stdout": "",
+    }
+    mock_cmd = MagicMock(return_value=ret)
+    with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
+        assert tuned.off()["retcode"] == 0
+
+
+def test_profile_valid():
+    ret = {
+        "pid": 12345,
+        "retcode": 0,
+        "stderr": "",
+        "stdout": "",
+    }
+    mock_cmd = MagicMock(return_value=ret)
+    with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
+        assert tuned.profile("balanced")["stdout"] == "balanced"
+
+
+def test_profile_noexist():
+    ret = {
+        "pid": 12345,
+        "retcode": 1,
+        "stderr": "Requested profile 'noexist' doesn't exist.",
+        "stdout": "",
+    }
+    mock_cmd = MagicMock(return_value=ret)
+    with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
+        assert (
+            tuned.profile("noexist")["stderr"]
+            == "Requested profile 'noexist' doesn't exist."
+        )
+
+
+def test_profile_invalid():
+    ret = {
+        "pid": 12345,
+        "retcode": 1,
+        "stderr": """Cannot load profile(s) 'invalid':
+         ("Cannot parse '/usr/lib/tuned/invalid/tuned.conf'.",
+          DuplicateError('Duplicate keyword name at line 4.'))""",
+        "stdout": "",
+    }
+    mock_cmd = MagicMock(return_value=ret)
+    with patch.dict(tuned.__salt__, {"cmd.run_all": mock_cmd}):
+        assert (
+            tuned.profile("invalid")["stderr"].startswith("Cannot load profile") is True
+        )

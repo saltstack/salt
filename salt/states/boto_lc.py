@@ -100,6 +100,12 @@ and autoscale groups are completely dependent on each other.
 
 from salt.exceptions import SaltInvocationError
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """

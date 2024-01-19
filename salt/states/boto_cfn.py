@@ -46,6 +46,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "boto_cfn"
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -56,7 +62,7 @@ def __virtual__():
     else:
         return (
             False,
-            "Cannot load {} state: boto_cfn module unavailable".format(__virtualname__),
+            f"Cannot load {__virtualname__} state: boto_cfn module unavailable",
         )
 
 
@@ -177,7 +183,7 @@ def present(
             log.debug("Templates are not the same. Compare value is %s", compare)
             # At this point we should be able to run update safely since we already validated the template
             if __opts__["test"]:
-                ret["comment"] = "Stack {} is set to be updated.".format(name)
+                ret["comment"] = f"Stack {name} is set to be updated."
                 ret["result"] = None
                 return ret
             updated = __salt__["boto_cfn.update_stack"](
@@ -213,11 +219,11 @@ def present(
             )
             ret["changes"]["new"] = updated
             return ret
-        ret["comment"] = "Stack {} exists.".format(name)
+        ret["comment"] = f"Stack {name} exists."
         ret["changes"] = {}
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Stack {} is set to be created.".format(name)
+        ret["comment"] = f"Stack {name} is set to be created."
         ret["result"] = None
         return ret
     created = __salt__["boto_cfn.create"](
@@ -239,7 +245,7 @@ def present(
         profile,
     )
     if created:
-        ret["comment"] = "Stack {} was created.".format(name)
+        ret["comment"] = f"Stack {name} was created."
         ret["changes"]["new"] = created
         return ret
     ret["result"] = False
@@ -263,11 +269,11 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if not __salt__["boto_cfn.exists"](name, region, key, keyid, profile):
-        ret["comment"] = "Stack {} does not exist.".format(name)
+        ret["comment"] = f"Stack {name} does not exist."
         ret["changes"] = {}
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Stack {} is set to be deleted.".format(name)
+        ret["comment"] = f"Stack {name} is set to be deleted."
         ret["result"] = None
         return ret
     deleted = __salt__["boto_cfn.delete"](name, region, key, keyid, profile)
@@ -280,7 +286,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
         ret["changes"] = {}
         return ret
     if deleted:
-        ret["comment"] = "Stack {} was deleted.".format(name)
+        ret["comment"] = f"Stack {name} was deleted."
         ret["changes"]["deleted"] = name
         return ret
 
@@ -293,7 +299,7 @@ def _get_template(template, name):
             return __salt__["cp.get_file_str"](template)
         except OSError as e:
             log.debug(e)
-            ret["comment"] = "File {} not found.".format(template)
+            ret["comment"] = f"File {template} not found."
             ret["result"] = False
             return ret
     return template

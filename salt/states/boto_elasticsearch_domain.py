@@ -85,6 +85,12 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -222,7 +228,7 @@ def present(
             AccessPolicies = salt.utils.json.loads(AccessPolicies)
         except ValueError as e:
             ret["result"] = False
-            ret["comment"] = "Failed to create domain: {}.".format(e.message)
+            ret["comment"] = f"Failed to create domain: {e.message}."
             return ret
     r = __salt__["boto_elasticsearch_domain.exists"](
         DomainName=DomainName, region=region, key=key, keyid=keyid, profile=profile
@@ -235,7 +241,7 @@ def present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Domain {} is set to be created.".format(DomainName)
+            ret["comment"] = f"Domain {DomainName} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_elasticsearch_domain.create"](
@@ -262,11 +268,11 @@ def present(
         )
         ret["changes"]["old"] = {"domain": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Domain {} created.".format(DomainName)
+        ret["comment"] = f"Domain {DomainName} created."
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "Domain {} is present.".format(DomainName)]
+        [ret["comment"], f"Domain {DomainName} is present."]
     )
     ret["changes"] = {}
     # domain exists, ensure config matches
@@ -311,7 +317,7 @@ def present(
             ret["changes"].setdefault("old", {})[k] = _describe[k]
     if need_update:
         if __opts__["test"]:
-            msg = "Domain {} set to be modified.".format(DomainName)
+            msg = f"Domain {DomainName} set to be modified."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -324,7 +330,7 @@ def present(
             key=key,
             keyid=keyid,
             profile=profile,
-            **comm_args
+            **comm_args,
         )
         if not r.get("updated"):
             ret["result"] = False
@@ -369,11 +375,11 @@ def absent(name, DomainName, region=None, key=None, keyid=None, profile=None):
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "Domain {} does not exist.".format(DomainName)
+        ret["comment"] = f"Domain {DomainName} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Domain {} is set to be removed.".format(DomainName)
+        ret["comment"] = f"Domain {DomainName} is set to be removed."
         ret["result"] = None
         return ret
 
@@ -386,5 +392,5 @@ def absent(name, DomainName, region=None, key=None, keyid=None, profile=None):
         return ret
     ret["changes"]["old"] = {"domain": DomainName}
     ret["changes"]["new"] = {"domain": None}
-    ret["comment"] = "Domain {} deleted.".format(DomainName)
+    ret["comment"] = f"Domain {DomainName} deleted."
     return ret

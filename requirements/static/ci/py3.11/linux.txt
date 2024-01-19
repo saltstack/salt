@@ -6,20 +6,24 @@
 #
 aiohttp-retry==2.8.3
     # via twilio
-aiohttp==3.9.0
+aiohttp==3.9.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
+    #   -r requirements/base.txt
     #   aiohttp-retry
     #   etcd3-py
     #   twilio
 aiosignal==1.3.1
-    # via aiohttp
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
+    #   aiohttp
 annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   pydantic
-ansible-core==2.15.0
+ansible-core==2.16.2
     # via ansible
-ansible==8.0.0 ; python_version >= "3.9"
+ansible==9.1.0 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
@@ -31,6 +35,7 @@ asn1crypto==1.5.1
     #   oscrypto
 attrs==23.1.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   aiohttp
     #   jsonschema
     #   pytest
@@ -57,9 +62,9 @@ botocore==1.29.152
     #   boto3
     #   moto
     #   s3transfer
-cachetools==4.2.2
+cachetools==5.3.1
     # via google-auth
-cassandra-driver==3.23.0
+cassandra-driver==3.28.0
     # via -r requirements/static/ci/common.in
 certifi==2023.07.22
     # via
@@ -133,8 +138,9 @@ filelock==3.13.1
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
+frozenlist==1.4.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   aiohttp
     #   aiosignal
 future==0.18.3
@@ -143,11 +149,11 @@ future==0.18.3
     #   textfsm
 genshi==0.7.7
     # via -r requirements/static/ci/common.in
-geomet==0.1.2
+geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.40
+gitpython==3.1.41
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
@@ -201,7 +207,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.3
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/base.txt
@@ -272,8 +278,9 @@ msgpack==1.0.7
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==6.0.4
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   aiohttp
     #   yarl
 napalm==4.1.0 ; sys_platform != "win32"
@@ -302,7 +309,7 @@ packaging==23.1
     #   ansible-core
     #   docker
     #   pytest
-paramiko==3.3.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -339,7 +346,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/crypto.txt
@@ -619,8 +626,10 @@ yamllint==1.32.0
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.9.2
-    # via aiohttp
+yarl==1.9.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
+    #   aiohttp
 zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt

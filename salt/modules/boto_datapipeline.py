@@ -23,6 +23,12 @@ try:
 except ImportError:
     HAS_BOTO3 = False
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -182,7 +188,7 @@ def pipeline_id_from_name(name, region=None, key=None, keyid=None, profile=None)
         if pipeline["name"] == name:
             r["result"] = pipeline["id"]
             return r
-    r["error"] = "No pipeline found with name={}".format(name)
+    r["error"] = f"No pipeline found with name={name}"
     return r
 
 

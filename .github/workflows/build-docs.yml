@@ -19,15 +19,13 @@ env:
   AWS_RETRY_MODE: "adaptive"
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
   build:
     name: Build
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
+      - ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +41,7 @@ jobs:
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
@@ -97,7 +95,7 @@ jobs:
 
       - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
         if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build-docs.outputs.artifact-name }}
           path: ${{ steps.build-docs.outputs.artifact-path }}

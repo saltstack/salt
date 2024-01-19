@@ -72,6 +72,12 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -424,7 +430,7 @@ def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:cloudtrail:{}:{}:trail/{}".format(region, account_id, name)
+    return f"arn:aws:cloudtrail:{region}:{account_id}:trail/{name}"
 
 
 def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):

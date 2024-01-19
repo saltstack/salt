@@ -87,5 +87,5 @@ def test_it(salt_ssh_cli, args):
 
     assert ret.returncode == EX_AGGREGATE
     assert ret.data
-    assert isinstance(ret.data, str)
-    assert "ComplianceError: 'Outlaw detected'" in ret.data
+    assert isinstance(ret.data, dict)
+    assert "ComplianceError: 'Outlaw detected'" in ret.data["stderr"]

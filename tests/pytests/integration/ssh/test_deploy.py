@@ -220,10 +220,10 @@ def test_retcode_exe_run_fail(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("file.touch", "/tmp/non/ex/is/tent")
     assert ret.returncode == EX_AGGREGATE
-    assert isinstance(ret.data, str)
+    assert isinstance(ret.data, dict)
     # This should be the exact output, but some other warnings
     # might be printed to stderr.
-    assert "Error running 'file.touch': No such file or directory" in ret.data
+    assert "Error running 'file.touch': No such file or directory" in ret.data["stderr"]
 
 
 def test_retcode_exe_run_exception(salt_ssh_cli):
@@ -233,8 +233,8 @@ def test_retcode_exe_run_exception(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("salttest.jinja_error")
     assert ret.returncode == EX_AGGREGATE
-    assert isinstance(ret.data, str)
-    assert ret.data.endswith("Exception: hehehe")
+    assert isinstance(ret.data, dict)
+    assert ret.data["stderr"].endswith("Exception: hehehe")
 
 
 @pytest.mark.usefixtures("invalid_json_exe_mod")
@@ -276,10 +276,14 @@ def test_wrapper_unwrapped_command_exception(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_exception.failure")
     assert ret.returncode == EX_AGGREGATE
-    assert isinstance(ret.data, str)
+    # "Probably got garbage" would be returned as a string (the module return),
+    # so no need to check
+    assert isinstance(ret.data, dict)
     assert ret.data
-    assert "Probably got garbage" not in ret.data
-    assert "Error running 'disk.usage': Invalid flag passed to disk.usage" in ret.data
+    assert (
+        "Error running 'disk.usage': Invalid flag passed to disk.usage"
+        in ret.data["stderr"]
+    )
 
 
 @pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_json_exe_mod")
@@ -289,9 +293,8 @@ def test_wrapper_unwrapped_command_parsing_failure(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoops")
     assert ret.returncode == EX_AGGREGATE
-    assert ret.data
-    assert "Probably got garbage" not in ret.data
     assert isinstance(ret.data, dict)
+    assert ret.data
     assert ret.data["_error"] == "Failed to return clean data"
     assert ret.data["retcode"] == 0
     assert (
@@ -307,9 +310,8 @@ def test_wrapper_unwrapped_command_invalid_return(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoopsiedoodle")
     assert ret.returncode == EX_AGGREGATE
-    assert ret.data
-    assert "Probably got garbage" not in ret.data
     assert isinstance(ret.data, dict)
+    assert ret.data
     assert ret.data["_error"] == "Return dict was malformed"
     assert ret.data["retcode"] == 0
     assert (

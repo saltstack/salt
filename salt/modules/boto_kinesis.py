@@ -66,6 +66,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "boto_kinesis"
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -491,7 +497,7 @@ def reshard(
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r["error"] = "failed to find next shard after {}".format(shard_id)
+                r["error"] = f"failed to find next shard after {shard_id}"
                 return r
             if force:
                 log.debug(

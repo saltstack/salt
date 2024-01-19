@@ -80,6 +80,12 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -211,13 +217,13 @@ def present(
             identifier,
         )
     except SaltInvocationError as err:
-        ret["comment"] = "Error: {}".format(err)
+        ret["comment"] = f"Error: {err}"
         ret["result"] = False
         return ret
 
     if isinstance(record, dict) and not record:
         if __opts__["test"]:
-            ret["comment"] = "Route53 record {} set to be added.".format(name)
+            ret["comment"] = f"Route53 record {name} set to be added."
             ret["result"] = None
             return ret
         added = __salt__["boto_route53.add_record"](
@@ -244,10 +250,10 @@ def present(
                 "ttl": ttl,
                 "identifier": identifier,
             }
-            ret["comment"] = "Added {} Route53 record.".format(name)
+            ret["comment"] = f"Added {name} Route53 record."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add {} Route53 record.".format(name)
+            ret["comment"] = f"Failed to add {name} Route53 record."
             return ret
     elif record:
         need_to_update = False
@@ -268,7 +274,7 @@ def present(
             need_to_update = True
         if need_to_update:
             if __opts__["test"]:
-                ret["comment"] = "Route53 record {} set to be updated.".format(name)
+                ret["comment"] = f"Route53 record {name} set to be updated."
                 ret["result"] = None
                 return ret
             updated = __salt__["boto_route53.update_record"](
@@ -295,12 +301,12 @@ def present(
                     "ttl": ttl,
                     "identifier": identifier,
                 }
-                ret["comment"] = "Updated {} Route53 record.".format(name)
+                ret["comment"] = f"Updated {name} Route53 record."
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to update {} Route53 record.".format(name)
+                ret["comment"] = f"Failed to update {name} Route53 record."
         else:
-            ret["comment"] = "{} exists.".format(name)
+            ret["comment"] = f"{name} exists."
     return ret
 
 
@@ -376,7 +382,7 @@ def absent(
     )
     if record:
         if __opts__["test"]:
-            ret["comment"] = "Route53 record {} set to be deleted.".format(name)
+            ret["comment"] = f"Route53 record {name} set to be deleted."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_route53.delete_record"](
@@ -396,12 +402,12 @@ def absent(
         if deleted:
             ret["changes"]["old"] = record
             ret["changes"]["new"] = None
-            ret["comment"] = "Deleted {} Route53 record.".format(name)
+            ret["comment"] = f"Deleted {name} Route53 record."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} Route53 record.".format(name)
+            ret["comment"] = f"Failed to delete {name} Route53 record."
     else:
-        ret["comment"] = "{} does not exist.".format(name)
+        ret["comment"] = f"{name} does not exist."
     return ret
 
 
@@ -575,13 +581,13 @@ def hosted_zone_present(
             profile=profile,
         )
         if res:
-            msg = "Hosted Zone {} successfully created".format(domain_name)
+            msg = f"Hosted Zone {domain_name} successfully created"
             log.info(msg)
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = res
         else:
-            ret["comment"] = "Creating Hosted Zone {} failed".format(domain_name)
+            ret["comment"] = f"Creating Hosted Zone {domain_name} failed"
             ret["result"] = False
 
     return ret
@@ -609,11 +615,11 @@ def hosted_zone_absent(
         domain_name=domain_name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not deets:
-        ret["comment"] = "Hosted Zone {} already absent".format(domain_name)
+        ret["comment"] = f"Hosted Zone {domain_name} already absent"
         log.info(ret["comment"])
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Route53 Hosted Zone {} set to be deleted.".format(domain_name)
+        ret["comment"] = f"Route53 Hosted Zone {domain_name} set to be deleted."
         ret["result"] = None
         return ret
     # Not entirely comfortable with this - no safety checks around pub/priv, VPCs
@@ -622,7 +628,7 @@ def hosted_zone_absent(
     if __salt__["boto_route53.delete_zone"](
         zone=domain_name, region=region, key=key, keyid=keyid, profile=profile
     ):
-        ret["comment"] = "Route53 Hosted Zone {} deleted".format(domain_name)
+        ret["comment"] = f"Route53 Hosted Zone {domain_name} deleted"
         log.info(ret["comment"])
         ret["changes"]["old"] = deets
         ret["changes"]["new"] = None

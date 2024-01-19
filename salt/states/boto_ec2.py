@@ -60,6 +60,12 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -90,12 +96,12 @@ def key_present(
             upload_public = __salt__["cp.get_file_str"](upload_public)
         except OSError as e:
             log.debug(e)
-            ret["comment"] = "File {} not found.".format(upload_public)
+            ret["comment"] = f"File {upload_public} not found."
             ret["result"] = False
             return ret
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "The key {} is set to be created.".format(name)
+            ret["comment"] = f"The key {name} is set to be created."
             ret["result"] = None
             return ret
         if save_private and not upload_public:
@@ -104,29 +110,29 @@ def key_present(
             )
             if created:
                 ret["result"] = True
-                ret["comment"] = "The key {} is created.".format(name)
+                ret["comment"] = f"The key {name} is created."
                 ret["changes"]["new"] = created
             else:
                 ret["result"] = False
-                ret["comment"] = "Could not create key {} ".format(name)
+                ret["comment"] = f"Could not create key {name} "
         elif not save_private and upload_public:
             imported = __salt__["boto_ec2.import_key"](
                 name, upload_public, region, key, keyid, profile
             )
             if imported:
                 ret["result"] = True
-                ret["comment"] = "The key {} is created.".format(name)
+                ret["comment"] = f"The key {name} is created."
                 ret["changes"]["old"] = None
                 ret["changes"]["new"] = imported
             else:
                 ret["result"] = False
-                ret["comment"] = "Could not create key {} ".format(name)
+                ret["comment"] = f"Could not create key {name} "
         else:
             ret["result"] = False
             ret["comment"] = "You can either upload or download a private key "
     else:
         ret["result"] = True
-        ret["comment"] = "The key name {} already exists".format(name)
+        ret["comment"] = f"The key name {name} already exists"
     return ret
 
 
@@ -138,21 +144,21 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
     exists = __salt__["boto_ec2.get_key"](name, region, key, keyid, profile)
     if exists:
         if __opts__["test"]:
-            ret["comment"] = "The key {} is set to be deleted.".format(name)
+            ret["comment"] = f"The key {name} is set to be deleted."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_ec2.delete_key"](name, region, key, keyid, profile)
         log.debug("exists is %s", deleted)
         if deleted:
             ret["result"] = True
-            ret["comment"] = "The key {} is deleted.".format(name)
+            ret["comment"] = f"The key {name} is deleted."
             ret["changes"]["old"] = name
         else:
             ret["result"] = False
-            ret["comment"] = "Could not delete key {} ".format(name)
+            ret["comment"] = f"Could not delete key {name} "
     else:
         ret["result"] = True
-        ret["comment"] = "The key name {} does not exist".format(name)
+        ret["comment"] = f"The key name {name} does not exist"
     return ret
 
 
@@ -284,7 +290,7 @@ def eni_present(
             )
             return ret
         r["result"] = result_create["result"]
-        ret["comment"] = "Created ENI {}".format(name)
+        ret["comment"] = f"Created ENI {name}"
         ret["changes"]["id"] = r["result"]["id"]
     else:
         _ret = _eni_attribute(
@@ -422,7 +428,7 @@ def _eni_attribute(metadata, attr, value, region, key, keyid, profile):
     if metadata[attr] == value:
         return ret
     if __opts__["test"]:
-        ret["comment"] = "ENI set to have {} updated.".format(attr)
+        ret["comment"] = f"ENI set to have {attr} updated."
         ret["result"] = None
         return ret
     result_update = __salt__["boto_ec2.modify_network_interface_attribute"](
@@ -439,7 +445,7 @@ def _eni_attribute(metadata, attr, value, region, key, keyid, profile):
         ret["result"] = False
         ret["comment"] = msg.format(attr, result_update["error"]["message"])
     else:
-        ret["comment"] = "Updated ENI {}.".format(attr)
+        ret["comment"] = f"Updated ENI {attr}."
         ret["changes"][attr] = {"old": metadata[attr], "new": value}
     return ret
 
@@ -561,7 +567,7 @@ def eni_absent(
                 result_delete["error"]["message"]
             )
             return ret
-        ret["comment"] = "Deleted ENI {}".format(name)
+        ret["comment"] = f"Deleted ENI {name}"
         ret["changes"]["id"] = None
         if release_eip and "allocationId" in r["result"]:
             _ret = __salt__["boto_ec2.release_eip_address"](
@@ -590,7 +596,7 @@ def snapshot_created(
     instance_name,
     wait_until_available=True,
     wait_timeout_seconds=300,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a snapshot from the given instance
@@ -602,11 +608,11 @@ def snapshot_created(
     if not __salt__["boto_ec2.create_image"](
         ami_name=ami_name, instance_name=instance_name, **kwargs
     ):
-        ret["comment"] = "Failed to create new AMI {ami_name}".format(ami_name=ami_name)
+        ret["comment"] = f"Failed to create new AMI {ami_name}"
         ret["result"] = False
         return ret
 
-    ret["comment"] = "Created new AMI {ami_name}".format(ami_name=ami_name)
+    ret["comment"] = f"Created new AMI {ami_name}"
     ret["changes"]["new"] = {ami_name: ami_name}
     if not wait_until_available:
         return ret
@@ -888,7 +894,7 @@ def instance_present(
 
     if _create:
         if __opts__["test"]:
-            ret["comment"] = "The instance {} is set to be created.".format(name)
+            ret["comment"] = f"The instance {name} is set to be created."
             ret["result"] = None
             return ret
         if image_name:
@@ -1015,7 +1021,7 @@ def instance_present(
                 return ret
         else:
             if __opts__["test"]:
-                ret["comment"] = "Instance {} to be updated.".format(name)
+                ret["comment"] = f"Instance {name} to be updated."
                 ret["result"] = None
                 return ret
             r = __salt__["boto_ec2.associate_eip_address"](
@@ -1248,7 +1254,7 @@ def instance_absent(
     )
     if not instances:
         ret["result"] = True
-        ret["comment"] = "Instance {} is already gone.".format(instance_id)
+        ret["comment"] = f"Instance {instance_id} is already gone."
         return ret
     instance = instances[0]
 
@@ -1269,7 +1275,7 @@ def instance_absent(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The instance {} is set to be deleted.".format(name)
+        ret["comment"] = f"The instance {name} is set to be deleted."
         ret["result"] = None
         return ret
 
@@ -1283,7 +1289,7 @@ def instance_absent(
     )
     if not r:
         ret["result"] = False
-        ret["comment"] = "Failed to terminate instance {}.".format(instance_id)
+        ret["comment"] = f"Failed to terminate instance {instance_id}."
         return ret
 
     ret["changes"]["old"] = {"instance_id": instance_id}
@@ -1309,9 +1315,7 @@ def instance_absent(
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Can't determine AllocationId for address {}.".format(ip)
+                    ret["comment"] = f"Can't determine AllocationId for address {ip}."
                     return ret
             else:
                 public_ip = instance.ip_address
@@ -1330,7 +1334,7 @@ def instance_absent(
                 ret["changes"]["old"]["public_ip"] = public_ip or r[0]["public_ip"]
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to release EIP {}.".format(ip)
+                ret["comment"] = f"Failed to release EIP {ip}."
                 return ret
 
     return ret
@@ -1450,14 +1454,14 @@ def volume_absent(
     log.info("Matched Volume ID %s", vol)
 
     if __opts__["test"]:
-        ret["comment"] = "The volume {} is set to be deleted.".format(vol)
+        ret["comment"] = f"The volume {vol} is set to be deleted."
         ret["result"] = None
         return ret
     if __salt__["boto_ec2.delete_volume"](volume_id=vol, force=True, **args):
-        ret["comment"] = "Volume {} deleted.".format(vol)
+        ret["comment"] = f"Volume {vol} deleted."
         ret["changes"] = {"old": {"volume_id": vol}, "new": {"volume_id": None}}
     else:
-        ret["comment"] = "Error deleting volume {}.".format(vol)
+        ret["comment"] = f"Error deleting volume {vol}."
         ret["result"] = False
     return ret
 
@@ -1665,9 +1669,7 @@ def volume_present(
             name=instance_name, in_states=running_states, **args
         )
         if not instance_id:
-            raise SaltInvocationError(
-                "Instance with Name {} not found.".format(instance_name)
-            )
+            raise SaltInvocationError(f"Instance with Name {instance_name} not found.")
 
     instances = __salt__["boto_ec2.find_instances"](
         instance_id=instance_id, return_objs=True, **args
@@ -1700,13 +1702,13 @@ def volume_present(
                 encrypted=encrypted,
                 kms_key_id=kms_key_id,
                 wait_for_creation=True,
-                **args
+                **args,
             )
             if "result" in _rt:
                 volume_id = _rt["result"]
             else:
                 raise SaltInvocationError(
-                    "Error creating volume with name {}.".format(volume_name)
+                    f"Error creating volume with name {volume_name}."
                 )
             _rt = __salt__["boto_ec2.set_volumes_tags"](
                 tag_maps=[
@@ -1715,7 +1717,7 @@ def volume_present(
                         "tags": {"Name": volume_name},
                     }
                 ],
-                **args
+                **args,
             )
             if _rt["success"] is False:
                 raise SaltInvocationError(
@@ -1731,7 +1733,7 @@ def volume_present(
         volume_ids=[volume_id], return_objs=True, **args
     )
     if len(vols) < 1:
-        raise SaltInvocationError("Volume {} do not exist".format(volume_id))
+        raise SaltInvocationError(f"Volume {volume_id} do not exist")
     vol = vols[0]
     if vol.zone != instance.placement:
         raise SaltInvocationError(

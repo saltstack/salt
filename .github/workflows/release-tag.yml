@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: write  # for dev-drprasad/delete-tag-and-release to delete tags or releases
     name: Generate Tag and Github Release
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: dev-drprasad/delete-tag-and-release@v0.2.0
       if: github.event.inputs.reTag == 'true'
@@ -54,7 +54,7 @@ jobs:
         custom_tag: ${{ github.event.inputs.saltVersion }}
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 

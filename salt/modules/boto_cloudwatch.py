@@ -65,6 +65,13 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
+
 def __virtual__():
     """
     Only load if boto libraries exist.

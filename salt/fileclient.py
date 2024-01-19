@@ -42,15 +42,12 @@ log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
 
 
-def get_file_client(opts, pillar=False, force_local=False):
+def get_file_client(opts, pillar=False):
     """
     Read in the ``file_client`` option and return the correct type of file
     server
     """
-    if force_local:
-        client = "local"
-    else:
-        client = opts.get("file_client", "remote")
+    client = opts.get("file_client", "remote")
 
     if pillar and client == "local":
         client = "pillar"
@@ -1153,7 +1150,7 @@ class RemoteClient(Client):
             )
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
-                f"File client timed out after {int(time.time() - start)}"
+                f"File client timed out after {int(time.monotonic() - start)} seconds"
             )
 
     def destroy(self):
