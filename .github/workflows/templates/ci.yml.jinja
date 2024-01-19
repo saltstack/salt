@@ -172,7 +172,7 @@
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -348,6 +348,8 @@
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
@@ -394,7 +396,7 @@
           nox --force-color -e create-html-coverage-report -- salt
 
       - name: Upload Salt Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-salt-html-report
           path: artifacts/coverage/html/salt
@@ -410,7 +412,7 @@
           nox --force-color -e create-json-coverage-reports
 
       - name: Upload Combined Code Coverage JSON Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-json-report
           path: artifacts/coverage/coverage.json
@@ -422,7 +424,7 @@
           nox --force-color -e create-html-coverage-report
 
       - name: Upload Combined Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-html-report
           path: artifacts/coverage/html/full
