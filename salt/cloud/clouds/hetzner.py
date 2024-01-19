@@ -304,13 +304,14 @@ def create(vm_):
     if server_type is None:
         raise SaltCloudException("The server size is not supported")
 
-    image = client.images.get_by_name(
-        config.get_cloud_config_value(
+    image = client.images.get_by_name_and_architecture(
+        name=config.get_cloud_config_value(
             "image",
             vm_,
             __opts__,
             search_global=False,
-        )
+        ),
+        architecture=server_type.architecture,
     )
     if image is None:
         raise SaltCloudException("The server image is not supported")
@@ -469,22 +470,22 @@ def start(name, call=None, wait=True):
     client = _connect_client()
     server = client.servers.get_by_name(name)
     if server is None:
-        return "Instance {} doesn't exist.".format(name)
+        return f"Instance {name} doesn't exist."
 
     server.power_on()
     if wait and not wait_until(name, "running"):
-        return "Instance {} doesn't start.".format(name)
+        return f"Instance {name} doesn't start."
 
     __utils__["cloud.fire_event"](
         "event",
         "started instance",
-        "salt/cloud/{}/started".format(name),
+        f"salt/cloud/{name}/started",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
 
-    return {"Started": "{} was started.".format(name)}
+    return {"Started": f"{name} was started."}
 
 
 def stop(name, call=None, wait=True):
@@ -503,22 +504,22 @@ def stop(name, call=None, wait=True):
     client = _connect_client()
     server = client.servers.get_by_name(name)
     if server is None:
-        return "Instance {} doesn't exist.".format(name)
+        return f"Instance {name} doesn't exist."
 
     server.power_off()
     if wait and not wait_until(name, "off"):
-        return "Instance {} doesn't stop.".format(name)
+        return f"Instance {name} doesn't stop."
 
     __utils__["cloud.fire_event"](
         "event",
         "stopped instance",
-        "salt/cloud/{}/stopped".format(name),
+        f"salt/cloud/{name}/stopped",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
 
-    return {"Stopped": "{} was stopped.".format(name)}
+    return {"Stopped": f"{name} was stopped."}
 
 
 def reboot(name, call=None, wait=True):
@@ -539,14 +540,14 @@ def reboot(name, call=None, wait=True):
     client = _connect_client()
     server = client.servers.get_by_name(name)
     if server is None:
-        return "Instance {} doesn't exist.".format(name)
+        return f"Instance {name} doesn't exist."
 
     server.reboot()
 
     if wait and not wait_until(name, "running"):
-        return "Instance {} doesn't start.".format(name)
+        return f"Instance {name} doesn't start."
 
-    return {"Rebooted": "{} was rebooted.".format(name)}
+    return {"Rebooted": f"{name} was rebooted."}
 
 
 def destroy(name, call=None):
@@ -567,12 +568,12 @@ def destroy(name, call=None):
     client = _connect_client()
     server = client.servers.get_by_name(name)
     if server is None:
-        return "Instance {} doesn't exist.".format(name)
+        return f"Instance {name} doesn't exist."
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -582,14 +583,14 @@ def destroy(name, call=None):
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):
-            return {"Error": "Unable to destroy {}, command timed out".format(name)}
+            return {"Error": f"Unable to destroy {name}, command timed out"}
 
     server.delete()
 
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -602,7 +603,7 @@ def destroy(name, call=None):
             __opts__,
         )
 
-    return {"Destroyed": "{} was destroyed.".format(name)}
+    return {"Destroyed": f"{name} was destroyed."}
 
 
 def resize(name, kwargs, call=None):
@@ -623,7 +624,7 @@ def resize(name, kwargs, call=None):
     client = _connect_client()
     server = client.servers.get_by_name(name)
     if server is None:
-        return "Instance {} doesn't exist.".format(name)
+        return f"Instance {name} doesn't exist."
 
     # Check the configuration
     size = kwargs.get("size", None)
@@ -637,7 +638,7 @@ def resize(name, kwargs, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "resizing instance",
-        "salt/cloud/{}/resizing".format(name),
+        f"salt/cloud/{name}/resizing",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -647,17 +648,17 @@ def resize(name, kwargs, call=None):
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):
-            return {"Error": "Unable to resize {}, command timed out".format(name)}
+            return {"Error": f"Unable to resize {name}, command timed out"}
 
     server.change_type(server_type, kwargs.get("upgrade_disk", False))
 
     __utils__["cloud.fire_event"](
         "event",
         "resizing instance",
-        "salt/cloud/{}/resized".format(name),
+        f"salt/cloud/{name}/resized",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
 
-    return {"Resized": "{} was resized.".format(name)}
+    return {"Resized": f"{name} was resized."}
