@@ -766,7 +766,7 @@ def _run(
             if change_windows_codepage:
                 salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-        if output_loglevel != "quiet" and output_encoding is not None:
+        if output_loglevel is not None and output_encoding is not None:
             log.debug(
                 "Decoding output from command %s using %s encoding",
                 cmd,
@@ -784,7 +784,7 @@ def _run(
             out = salt.utils.stringutils.to_unicode(
                 proc.stdout, encoding=output_encoding, errors="replace"
             )
-            if output_loglevel != "quiet":
+            if output_loglevel is not None:
                 log.error(
                     "Failed to decode stdout from command %s, non-decodable "
                     "characters have been replaced",
@@ -802,7 +802,7 @@ def _run(
             err = salt.utils.stringutils.to_unicode(
                 proc.stderr, encoding=output_encoding, errors="replace"
             )
-            if output_loglevel != "quiet":
+            if output_loglevel is not None:
                 log.error(
                     "Failed to decode stderr from command %s, non-decodable "
                     "characters have been replaced",
@@ -999,7 +999,6 @@ def _run_all_quiet(
     success_stderr=None,
     ignore_retcode=None,
 ):
-
     """
     Helper for running commands quietly for minion startup.
     Returns a dict of return data.
