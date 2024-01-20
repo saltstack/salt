@@ -2922,7 +2922,9 @@ jobs:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
           path: repo/
