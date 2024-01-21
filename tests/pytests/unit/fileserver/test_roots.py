@@ -5,6 +5,7 @@
 import copy
 import pathlib
 import shutil
+import sys
 import textwrap
 
 import pytest
@@ -310,4 +311,7 @@ def test_serve_file_not_in_root(tmp_state_tree):
         "rel": f"{pathlib.Path('..') / 'bar'}",
     }
     ret = roots.serve_file(load, fnd)
-    assert ret == {"data": "", "dest": "../bar"}
+    if "win" in sys.platform:
+        assert ret == {"data": "", "dest": "..\\bar"}
+    else:
+        assert ret == {"data": "", "dest": "../bar"}
