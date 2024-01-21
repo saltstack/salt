@@ -60,10 +60,10 @@ def testfilepath(tmp_state_tree, testfile):
 
 
 @pytest.fixture
-def configure_loader_modules(tmp_state_tree, master_config):
+def configure_loader_modules(tmp_state_tree, master_opts):
     overrides = {"file_roots": {"base": [str(tmp_state_tree)]}}
-    master_config.update(overrides)
-    return {roots: {"__opts__": master_config}}
+    master_opts.update(overrides)
+    return {roots: {"__opts__": master_opts}}
 
 
 def test_file_list(unicode_filename):
