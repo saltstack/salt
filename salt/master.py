@@ -1037,9 +1037,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         key = payload["enc"]
         load = payload["load"]
         if key == "aes":
-            ret = self.handle_aes(load)
+            ret = self._handle_aes(load)
         else:
-            ret = self.handle_clear(load)
+            ret = self._handle_clear(load)
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
