@@ -46,7 +46,7 @@ def _minion_count(grains):
         return int(env_count)
     # Default to 15 swarm minions
     count = 15
-    if grains["osarch"] != "osarch":
+    if grains["osarch"] != "aarch64":
         return count
     if grains["os"] != "Amazon":
         return count
