@@ -2,6 +2,8 @@
 Module for configuring DNS Client on Windows systems
 """
 
+import salt.utils.win_reg
+
 
 def __virtual__():
     """
@@ -53,7 +55,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
     # Do nothing is already configured
     configured_list = __salt__["win_dns_client.get_dns_servers"](interface)
     if configured_list == servers:
-        ret["comment"] = "{} are already configured".format(servers)
+        ret["comment"] = f"{servers} are already configured"
         ret["changes"] = {}
         ret["result"] = True
         return ret
@@ -91,7 +93,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                     if not __salt__["win_dns_client.rm_dns"](server, interface):
                         ret[
                             "comment"
-                        ] = "Failed to remove {} from DNS server list".format(server)
+                        ] = f"Failed to remove {server} from DNS server list"
                         ret["result"] = False
                         return ret
                     else:
@@ -109,7 +111,7 @@ def dns_dhcp(name, interface="Local Area Connection"):
     # Check the config
     config = __salt__["win_dns_client.get_dns_config"](interface)
     if config == "dhcp":
-        ret["comment"] = "{} already configured with DNS from DHCP".format(interface)
+        ret["comment"] = f"{interface} already configured with DNS from DHCP"
         return ret
     else:
         ret["changes"] = {"dns": "configured from DHCP"}
@@ -185,14 +187,14 @@ def primary_suffix(name, suffix=None, updates=False):
         },
     }
 
-    reg_data["suffix"]["old"] = __utils__["reg.read_value"](
+    reg_data["suffix"]["old"] = salt.utils.win_reg.read_value(
         reg_data["suffix"]["hive"],
         reg_data["suffix"]["key"],
         reg_data["suffix"]["vname"],
     )["vdata"]
 
     reg_data["updates"]["old"] = bool(
-        __utils__["reg.read_value"](
+        salt.utils.win_reg.read_value(
             reg_data["updates"]["hive"],
             reg_data["updates"]["key"],
             reg_data["updates"]["vname"],
@@ -208,7 +210,7 @@ def primary_suffix(name, suffix=None, updates=False):
             return ret
         # Changes to update policy needed
         else:
-            ret["comment"] = "{} suffix updates".format(updates_operation)
+            ret["comment"] = f"{updates_operation} suffix updates"
             ret["changes"] = {
                 "old": {"updates": reg_data["updates"]["old"]},
                 "new": {"updates": reg_data["updates"]["new"]},
@@ -234,13 +236,13 @@ def primary_suffix(name, suffix=None, updates=False):
             }
         # No changes to updates policy needed
         else:
-            ret["comment"] = "Updated primary DNS suffix ({})".format(suffix)
+            ret["comment"] = f"Updated primary DNS suffix ({suffix})"
             ret["changes"] = {
                 "old": {"suffix": reg_data["suffix"]["old"]},
                 "new": {"suffix": reg_data["suffix"]["new"]},
             }
 
-    suffix_result = __utils__["reg.set_value"](
+    suffix_result = salt.utils.win_reg.set_value(
         reg_data["suffix"]["hive"],
         reg_data["suffix"]["key"],
         reg_data["suffix"]["vname"],
@@ -248,7 +250,7 @@ def primary_suffix(name, suffix=None, updates=False):
         reg_data["suffix"]["vtype"],
     )
 
-    updates_result = __utils__["reg.set_value"](
+    updates_result = salt.utils.win_reg.set_value(
         reg_data["updates"]["hive"],
         reg_data["updates"]["key"],
         reg_data["updates"]["vname"],

@@ -66,7 +66,6 @@ def configure_loader_modules():
                 "grains": {},
             },
             "__grains__": {"kernel": "Linux"},
-            "__utils__": {"stringutils.get_diff": salt.utils.stringutils.get_diff},
         }
     }
 
@@ -183,7 +182,7 @@ def test_sed_limit_escaped(sed_content, subdir):
         path = tfile.name
         before = "/var/lib/foo"
         after = ""
-        limit = "^{}".format(before)
+        limit = f"^{before}"
 
         filemod.sed(path, before, after, limit=limit)
 
@@ -535,7 +534,7 @@ def test_get_diff():
     ):
 
         # Test diffing two text files
-        with patch.dict(filemod.__utils__, {"files.is_text": mock_text_text}):
+        with patch("salt.utils.files.is_text", mock_text_text):
 
             # Identical files
             ret = filemod.get_diff("text1", "text1")
@@ -556,7 +555,7 @@ def test_get_diff():
                 assert ret == diff_result
 
         # Test diffing two binary files
-        with patch.dict(filemod.__utils__, {"files.is_text": mock_bin_bin}):
+        with patch("salt.utils.files.is_text", mock_bin_bin):
 
             # Identical files
             ret = filemod.get_diff("binary1", "binary1")
@@ -567,13 +566,13 @@ def test_get_diff():
             assert ret == "Replace binary file"
 
         # Test diffing a text file with a binary file
-        with patch.dict(filemod.__utils__, {"files.is_text": mock_text_bin}):
+        with patch("salt.utils.files.is_text", mock_text_bin):
 
             ret = filemod.get_diff("text1", "binary1")
             assert ret == "Replace text file with binary file"
 
         # Test diffing a binary file with a text file
-        with patch.dict(filemod.__utils__, {"files.is_text": mock_bin_text}):
+        with patch("salt.utils.files.is_text", mock_bin_text):
 
             ret = filemod.get_diff("binary1", "text1")
             assert ret == "Replace binary file with text file"

@@ -1,22 +1,19 @@
 """
+Test cases for salt.modules.win_path.
+
 :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-
-
 import os
 
 import pytest
 
 import salt.modules.win_path as win_path
-import salt.utils.stringutils
-import salt.utils.win_reg as reg_util
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
-
-"""
-Test cases for salt.modules.win_path.
-"""
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+]
 
 
 @pytest.fixture()
@@ -26,13 +23,7 @@ def pathsep():
 
 @pytest.fixture
 def configure_loader_modules():
-    return {
-        win_path: {
-            "__opts__": {"test": False},
-            "__salt__": {},
-            "__utils__": {"reg.read_value": reg_util.read_value},
-        },
-    }
+    return {win_path: {}}
 
 
 def test_get_path():
@@ -40,7 +31,7 @@ def test_get_path():
     Test to return the system path
     """
     mock = MagicMock(return_value={"vdata": "C:\\Salt"})
-    with patch.dict(win_path.__utils__, {"reg.read_value": mock}):
+    with patch("salt.utils.win_reg.read_value", mock):
         assert win_path.get_path() == ["C:\\Salt"]
 
 
@@ -61,7 +52,7 @@ def test_util_reg():
     Test to check if registry comes back clean when get_path is called
     """
     mock = MagicMock(return_value={"vdata": ""})
-    with patch.dict(win_path.__utils__, {"reg.read_value": mock}):
+    with patch("salt.utils.win_reg.read_value", mock):
         assert win_path.get_path() == []
 
 
@@ -73,7 +64,7 @@ def test_add(pathsep):
 
     # Helper function to make the env var easier to reuse
     def _env(path):
-        return {"PATH": salt.utils.stringutils.to_str(pathsep.join(path))}
+        return {"PATH": pathsep.join(path)}
 
     # Helper function to make the run call easier to reuse
     def _run(name, index=None, retval=True, path=None):
@@ -85,17 +76,17 @@ def test_add(pathsep):
         mock_set = MagicMock(return_value=retval)
 
         # Mock individual calls that would occur during normal usage
-        patch_sep = patch.object(win_path, "PATHSEP", pathsep)
+        patch_sep = patch("salt.modules.win_path.os.pathsep", pathsep)
         patch_path = patch.object(win_path, "get_path", mock_get)
         patch_env = patch.object(os, "environ", env)
-        patch_dict = patch.dict(win_path.__utils__, {"reg.set_value": mock_set})
+        patch_win_reg = patch("salt.utils.win_reg.set_value", mock_set)
         patch_rehash = patch.object(win_path, "rehash", MagicMock(return_value=True))
 
-        with patch_sep, patch_path, patch_env, patch_dict, patch_rehash:
+        with patch_sep, patch_path, patch_env, patch_win_reg, patch_rehash:
             return win_path.add(name, index), env, mock_set
 
     def _path_matches(path):
-        return salt.utils.stringutils.to_str(pathsep.join(path))
+        return pathsep.join(path)
 
     # Test an empty reg update
     ret, env, mock_set = _run("")
@@ -191,7 +182,7 @@ def test_remove(pathsep):
 
     # Helper function to make the env var easier to reuse
     def _env(path):
-        return {"PATH": salt.utils.stringutils.to_str(pathsep.join(path))}
+        return {"PATH": pathsep.join(path)}
 
     def _run(name="c:\\salt", retval=True, path=None):
         if path is None:
@@ -201,16 +192,16 @@ def test_remove(pathsep):
         mock_get = MagicMock(return_value=list(path))
         mock_set = MagicMock(return_value=retval)
 
-        patch_path_sep = patch.object(win_path, "PATHSEP", pathsep)
+        patch_path_sep = patch("salt.modules.win_path.os.pathsep", pathsep)
         patch_path = patch.object(win_path, "get_path", mock_get)
         patch_env = patch.object(os, "environ", env)
-        patch_dict = patch.dict(win_path.__utils__, {"reg.set_value": mock_set})
+        patch_win_reg = patch("salt.utils.win_reg.set_value", mock_set)
         patch_rehash = patch.object(win_path, "rehash", MagicMock(return_value=True))
-        with patch_path_sep, patch_path, patch_env, patch_dict, patch_rehash:
+        with patch_path_sep, patch_path, patch_env, patch_win_reg, patch_rehash:
             return win_path.remove(name), env, mock_set
 
     def _path_matches(path):
-        return salt.utils.stringutils.to_str(pathsep.join(path))
+        return pathsep.join(path)
 
     # Test a successful reg update
     ret, env, mock_set = _run("C:\\Bar", retval=True)

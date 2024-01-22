@@ -25,16 +25,6 @@ REBOOT_BEHAVIOR = {
     2: "Can Require Reboot",
 }
 
-__virtualname__ = "win_update"
-
-
-def __virtual__():
-    if not salt.utils.platform.is_windows():
-        return False, "win_update: Only available on Windows"
-    if not HAS_PYWIN32:
-        return False, "win_update: Missing pywin32"
-    return __virtualname__
-
 
 class Updates:
     """
@@ -398,14 +388,14 @@ class WindowsUpdateAgent:
             results = searcher.Search(search_string)
             if results.Updates.Count == 0:
                 log.debug("No Updates found for:\n\t\t%s", search_string)
-                return "No Updates found: {}".format(search_string)
+                return f"No Updates found: {search_string}"
         except pywintypes.com_error as error:
             # Something happened, raise an error
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
             try:
                 failure_code = self.fail_codes[exc[5]]
             except KeyError:
-                failure_code = "Unknown Failure: {}".format(error)
+                failure_code = f"Unknown Failure: {error}"
 
             log.error("Search Failed: %s\n\t\t%s", failure_code, search_string)
             raise CommandExecutionError(failure_code)
@@ -719,7 +709,7 @@ class WindowsUpdateAgent:
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {}".format(error)
+                    failure_code = f"Unknown Failure: {error}"
 
                 log.error("Download Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -828,7 +818,7 @@ class WindowsUpdateAgent:
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {}".format(error)
+                    failure_code = f"Unknown Failure: {error}"
 
                 log.error("Install Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -962,7 +952,7 @@ class WindowsUpdateAgent:
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {}".format(error)
+                    failure_code = f"Unknown Failure: {error}"
 
                 # If "Uninstall Not Allowed" error, try using DISM
                 if exc[5] == -2145124312:
@@ -992,7 +982,7 @@ class WindowsUpdateAgent:
                                             "dism",
                                             "/Online",
                                             "/Remove-Package",
-                                            "/PackageName:{}".format(pkg),
+                                            f"/PackageName:{pkg}",
                                             "/Quiet",
                                             "/NoRestart",
                                         ]
@@ -1004,7 +994,7 @@ class WindowsUpdateAgent:
                         log.debug("Command: %s", " ".join(cmd))
                         log.debug("Error: %s", exc)
                         raise CommandExecutionError(
-                            "Uninstall using DISM failed: {}".format(exc)
+                            f"Uninstall using DISM failed: {exc}"
                         )
 
                     # DISM Uninstall Completed Successfully

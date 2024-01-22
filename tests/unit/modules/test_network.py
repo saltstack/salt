@@ -3,9 +3,7 @@ import os.path
 import shutil
 import socket
 
-import salt.config
 import salt.modules.network as network
-import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
@@ -21,13 +19,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        utils = salt.loader.utils(
-            opts, whitelist=["network", "path", "platform", "stringutils"]
-        )
-        return {
-            network: {"__utils__": utils},
-        }
+        return {network: {}}
 
     @patch("salt.utils.platform.is_windows")
     def test___virtual__is_windows_true(self, mock_is_windows):
@@ -80,9 +72,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a ping to a host
         """
-        with patch.dict(
-            network.__utils__, {"network.sanitize_host": MagicMock(return_value="A")}
-        ):
+        with patch("salt.utils.network.sanitize_host", MagicMock(return_value="A")):
             mock_all = MagicMock(side_effect=[{"retcode": 1}, {"retcode": 0}])
             with patch.dict(network.__salt__, {"cmd.run_all": mock_all}):
                 self.assertFalse(network.ping("host", return_boolean=True))
@@ -113,9 +103,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for return a dict containing information on all
          of the running TCP connections
         """
-        with patch.dict(
-            network.__utils__, {"network.active_tcp": MagicMock(return_value="A")}
-        ):
+        with patch("salt.utils.network.active_tcp", MagicMock(return_value="A")):
             with patch.dict(network.__grains__, {"kernel": "Linux"}):
                 self.assertEqual(network.active_tcp(), "A")
 
@@ -140,9 +128,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="")}):
                 self.assertListEqual(network.traceroute("gentoo.org"), [])
 
-            with patch.dict(
-                network.__utils__,
-                {"network.sanitize_host": MagicMock(return_value="gentoo.org")},
+            with patch(
+                "salt.utils.network.sanitize_host", MagicMock(return_value="gentoo.org")
             ):
                 with patch.dict(
                     network.__salt__, {"cmd.run": MagicMock(return_value="")}
@@ -153,8 +140,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a DNS lookup with dig
         """
-        with patch("salt.utils.path.which", MagicMock(return_value="dig")), patch.dict(
-            network.__utils__, {"network.sanitize_host": MagicMock(return_value="A")}
+        with patch("salt.utils.path.which", MagicMock(return_value="dig")), patch(
+            "salt.utils.network.sanitize_host", MagicMock(return_value="A")
         ), patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="A")}):
             self.assertEqual(network.dig("host"), "A")
 
@@ -172,9 +159,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for return a dictionary of information about
          all the interfaces on the minion
         """
-        with patch.dict(
-            network.__utils__, {"network.interfaces": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.interfaces", MagicMock(return_value={})):
             self.assertDictEqual(network.interfaces(), {})
 
     def test_hw_addr(self):
@@ -182,36 +167,28 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for return the hardware address (a.k.a. MAC address)
          for a given interface
         """
-        with patch.dict(
-            network.__utils__, {"network.hw_addr": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.hw_addr", MagicMock(return_value={})):
             self.assertDictEqual(network.hw_addr("iface"), {})
 
     def test_interface(self):
         """
         Test for return the inet address for a given interface
         """
-        with patch.dict(
-            network.__utils__, {"network.interface": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.interface", MagicMock(return_value={})):
             self.assertDictEqual(network.interface("iface"), {})
 
     def test_interface_ip(self):
         """
         Test for return the inet address for a given interface
         """
-        with patch.dict(
-            network.__utils__, {"network.interface_ip": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.interface_ip", MagicMock(return_value={})):
             self.assertDictEqual(network.interface_ip("iface"), {})
 
     def test_subnets(self):
         """
         Test for returns a list of subnets to which the host belongs
         """
-        with patch.dict(
-            network.__utils__, {"network.subnets": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.subnets", MagicMock(return_value={})):
             self.assertDictEqual(network.subnets(), {})
 
     def test_in_subnet(self):
@@ -219,22 +196,16 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for returns True if host is within specified
          subnet, otherwise False.
         """
-        with patch.dict(
-            network.__utils__, {"network.in_subnet": MagicMock(return_value={})}
-        ):
+        with patch("salt.utils.network.in_subnet", MagicMock(return_value={})):
             self.assertDictEqual(network.in_subnet("iface"), {})
 
     def test_ip_addrs(self):
         """
         Test for returns a list of IPv4 addresses assigned to the host.
         """
-        with patch.dict(
-            network.__utils__,
-            {
-                "network.ip_addrs": MagicMock(return_value=["0.0.0.0"]),
-                "network.in_subnet": MagicMock(return_value=True),
-            },
-        ):
+        with patch(
+            "salt.utils.network.ip_addrs", MagicMock(return_value=["0.0.0.0"])
+        ), patch("salt.utils.network.in_subnet", MagicMock(return_value=True)):
             self.assertListEqual(
                 network.ip_addrs("interface", "include_loopback", "cidr"), ["0.0.0.0"]
             )
@@ -246,9 +217,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for returns a list of IPv6 addresses assigned to the host.
         """
-        with patch.dict(
-            network.__utils__, {"network.ip_addrs6": MagicMock(return_value=["A"])}
-        ):
+        with patch("salt.utils.network.ip_addrs6", MagicMock(return_value=["A"])):
             self.assertListEqual(network.ip_addrs6("int", "include"), ["A"])
 
     def test_get_hostname(self):
@@ -265,12 +234,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(network.mod_hostname(None))
         file_d = "\n".join(["#", "A B C D,E,F G H"])
 
-        with patch.dict(
-            network.__utils__,
-            {
-                "path.which": MagicMock(return_value="hostname"),
-                "files.fopen": mock_open(read_data=file_d),
-            },
+        with patch("salt.utils.path.which", MagicMock(return_value="hostname")), patch(
+            "salt.utils.files.fopen", mock_open(read_data=file_d)
         ), patch.dict(
             network.__salt__, {"cmd.run": MagicMock(return_value=None)}
         ), patch.dict(
@@ -296,12 +261,10 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
             network.__salt__, {"cmd.run": MagicMock(return_value=None)}
-        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
-            network.__utils__,
-            {
-                "path.which": MagicMock(return_value="hostname"),
-                "files.fopen": fopen_mock,
-            },
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch(
+            "salt.utils.path.which", MagicMock(return_value="hostname")
+        ), patch(
+            "salt.utils.files.fopen", fopen_mock
         ):
             self.assertTrue(network.mod_hostname("hostname"))
             assert (
@@ -327,12 +290,10 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
             network.__salt__, {"cmd.run": MagicMock(return_value=None)}
-        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
-            network.__utils__,
-            {
-                "path.which": MagicMock(return_value="hostname"),
-                "files.fopen": fopen_mock,
-            },
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch(
+            "salt.utils.path.which", MagicMock(return_value="hostname")
+        ), patch(
+            "salt.utils.files.fopen", fopen_mock
         ):
             self.assertTrue(network.mod_hostname("hostname"))
             assert (
@@ -358,10 +319,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = "Unable to connect to host (0) on tcp port port"
             mock_socket.side_effect = Exception("foo")
-            with patch.dict(
-                network.__utils__,
-                {"network.sanitize_host": MagicMock(return_value="A")},
-            ):
+            with patch("salt.utils.network.sanitize_host", MagicMock(return_value="A")):
                 with patch.object(
                     socket,
                     "getaddrinfo",
@@ -377,10 +335,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             mock_socket.settimeout().return_value = None
             mock_socket.connect().return_value = None
             mock_socket.shutdown().return_value = None
-            with patch.dict(
-                network.__utils__,
-                {"network.sanitize_host": MagicMock(return_value="A")},
-            ):
+            with patch("salt.utils.network.sanitize_host", MagicMock(return_value="A")):
                 with patch.object(
                     socket,
                     "getaddrinfo",
@@ -611,9 +566,7 @@ nat should ignore this
 
         cmd_mock = MagicMock(side_effect=[mock_iproute_ipv4, mock_iproute_ipv6])
         with patch.dict(network.__grains__, {"kernel": "Linux"}):
-            with patch.dict(
-                network.__utils__, {"path.which": MagicMock(return_value=False)}
-            ):
+            with patch("salt.utils.path.which", MagicMock(return_value=False)):
                 with patch.dict(network.__salt__, {"cmd.run": cmd_mock}):
                     self.assertListEqual(
                         network.default_route("inet6"),

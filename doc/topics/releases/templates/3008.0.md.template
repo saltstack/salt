@@ -1,0 +1,33 @@
+(release-3008.0)=
+# Salt 3008.0 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## `__utils__` deprecated
+
+The `__utils__` usage throughout Salt's code base has been reduced on all **safe** calls.
+By **safe**, we mean, utility functions which do no use any of Salt's dunders, like `__opts__`, `__context__`, etc.
+
+Instead, the utility modules are imported and functions are called directly, without the salt loader in the middle.
+
+The `__utils__` loader will still be available until Salt `3009.0`, however, if one of the **safe** utilities is used,
+a deprecation warning will be raised and shown to the user, either in the logs, the CLI, or on state/highstate run
+results under the `warnings` key.
+
+Over time, the **unsafe** utility functions, those that use `__opts__`, `__context__`, etc, will get rewriten to
+stop using those dunders, or, in case they actually need access to any of Salt's dunders, those will get passed
+in to the function as an argument.
+
+This is also how you should migrate any custom utilities/modules you might have. Import the module and call the
+utility function directly, and, if dunder access is required, pass them as arguments to the function.
+
+
+<!--
+Do not edit the changelog below.
+This is auto generated
+-->
+## Changelog
+{{ changelog }}

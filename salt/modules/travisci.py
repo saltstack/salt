@@ -6,6 +6,7 @@ Commands for working with travisci.
 import base64
 import urllib.parse
 
+import salt.utils.http
 import salt.utils.json
 from salt.utils.versions import Version
 
@@ -62,7 +63,7 @@ def verify_webhook(signature, body):
 
     """
     # get public key setup
-    public_key = __utils__["http.query"]("https://api.travis-ci.org/config")["config"][
+    public_key = salt.utils.http.query("https://api.travis-ci.org/config")["config"][
         "notifications"
     ]["webhook"]["public_key"]
     pkey_public_key = OpenSSL.crypto.load_publickey(

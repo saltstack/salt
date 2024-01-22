@@ -38,7 +38,6 @@ Usage:
 import logging
 import time
 
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -51,22 +50,6 @@ except ImportError:
 
 
 log = logging.getLogger(__file__)
-
-# Define the virtual name
-__virtualname__ = "pdh"
-
-
-def __virtual__():
-    """
-    Only works on Windows systems with the PyWin32
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "salt.utils.win_pdh: Requires Windows"
-
-    if not HAS_WINDOWS_MODULES:
-        return False, "salt.utils.win_pdh: Missing required modules"
-
-    return __virtualname__
 
 
 class Counter:
@@ -167,7 +150,7 @@ class Counter:
         )
         if win32pdh.ValidatePath(path) == 0:
             return Counter(path, obj, instance, instance_index, counter)
-        raise CommandExecutionError("Invalid counter specified: {}".format(path))
+        raise CommandExecutionError(f"Invalid counter specified: {path}")
 
     build_counter = staticmethod(build_counter)
 

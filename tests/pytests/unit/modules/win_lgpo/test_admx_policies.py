@@ -16,7 +16,6 @@ import salt.grains.core
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
-import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
 
@@ -28,24 +27,16 @@ pytestmark = [
 
 
 @pytest.fixture
-def configure_loader_modules(tmp_path):
-    cachedir = tmp_path / "__test_admx_policy_cache_dir"
-    cachedir.mkdir(parents=True, exist_ok=True)
+def configure_loader_modules(minion_opts):
     return {
         win_lgpo: {
+            "__opts__": minion_opts,
             "__salt__": {
                 "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
             },
-            "__opts__": {
-                "cachedir": str(cachedir),
-            },
         },
-        win_file: {
-            "__utils__": {
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-        },
+        win_file: {},
     }
 
 

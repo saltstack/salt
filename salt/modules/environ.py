@@ -7,6 +7,8 @@ import logging
 import os
 
 import salt.utils.platform
+import salt.utils.win_functions
+import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 
@@ -71,8 +73,8 @@ def setval(key, val, false_unsets=False, permanent=False):
             try:
                 os.environ.pop(key, None)
                 if permanent and is_windows:
-                    __utils__["reg.delete_value"](permanent_hive, permanent_key, key)
-                    __utils__["win_functions.broadcast_setting_change"]()
+                    salt.utils.win_reg.delete_value(permanent_hive, permanent_key, key)
+                    salt.utils.win_functions.broadcast_setting_change()
                 return None
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
@@ -88,8 +90,8 @@ def setval(key, val, false_unsets=False, permanent=False):
         try:
             os.environ[key] = val
             if permanent and is_windows:
-                __utils__["reg.set_value"](permanent_hive, permanent_key, key, val)
-                __utils__["win_functions.broadcast_setting_change"]()
+                salt.utils.win_reg.set_value(permanent_hive, permanent_key, key, val)
+                salt.utils.win_functions.broadcast_setting_change()
             return os.environ[key]
         except Exception as exc:  # pylint: disable=broad-except
             log.error(

@@ -3,24 +3,8 @@ Dot NET functions
 
 .. versionadded:: 3001
 """
-
-import salt.utils.platform
 import salt.utils.win_reg as win_reg
 from salt.utils.versions import Version
-
-__virtualname__ = "dotnet"
-
-
-# Although utils are often directly imported, it is also possible to use the
-# loader.
-def __virtual__():
-    """
-    Only load if platform is Windows
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "This utility only works on Windows"
-
-    return __virtualname__
 
 
 def versions():
@@ -98,12 +82,12 @@ def versions():
             else:
                 continue
 
-            service_pack = " SP{}".format(sp) if sp != "N/A" else ""
+            service_pack = f" SP{sp}" if sp != "N/A" else ""
             return_dict["versions"].append(version)
             return_dict["details"][ver_key] = {
                 "version": version,
                 "service_pack": sp,
-                "full": "{}{}".format(version, service_pack),
+                "full": f"{version}{service_pack}",
             }
 
     return return_dict

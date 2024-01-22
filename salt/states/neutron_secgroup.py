@@ -33,7 +33,7 @@ Example States
         - description: "Very Secure Security Group"
         - project_name: Project1
 """
-
+import salt.utils.args
 
 __virtualname__ = "neutron_secgroup"
 
@@ -71,7 +71,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 
@@ -127,7 +127,7 @@ def absent(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 

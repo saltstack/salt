@@ -32,6 +32,7 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
+import salt.utils.state
 import salt.utils.versions
 from salt.features import features
 
@@ -398,7 +399,7 @@ def state(
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = __utils__["state.check_result"](m_ret, recurse=True)
+                m_state = salt.utils.state.check_result(m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:

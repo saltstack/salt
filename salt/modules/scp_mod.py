@@ -9,7 +9,7 @@ Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 
 import logging
 
-# Import salt modules
+import salt.utils.args
 
 try:
     import paramiko
@@ -34,11 +34,9 @@ def __virtual__():
 def _select_kwargs(**kwargs):
     paramiko_kwargs = {}
     scp_kwargs = {}
-    paramiko_args = __utils__["args.get_function_argspec"](paramiko.SSHClient.connect)[
-        0
-    ]
+    paramiko_args = salt.utils.args.get_function_argspec(paramiko.SSHClient.connect)[0]
     paramiko_args.append("auto_add_policy")
-    scp_args = __utils__["args.get_function_argspec"](scp.SCPClient.__init__)[0]
+    scp_args = salt.utils.args.get_function_argspec(scp.SCPClient.__init__)[0]
     scp_args.pop(0)  # strip transport arg (it is passed in _prepare_connection)
     for key, val in kwargs.items():
         if key in paramiko_args and val is not None:

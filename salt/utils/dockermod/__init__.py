@@ -35,20 +35,12 @@ except ImportError:
 
 NOTSET = object()
 
-__virtualname__ = "docker"
-
 # Default timeout as of docker-py 1.0.0
 CLIENT_TIMEOUT = 60
 # Timeout for stopping the container, before a kill is invoked
 SHUTDOWN_TIMEOUT = 10
 
 log = logging.getLogger(__name__)
-
-
-def __virtual__():
-    if docker is None:
-        return False
-    return __virtualname__
 
 
 def get_client_args(limit=None):

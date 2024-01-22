@@ -45,6 +45,7 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
+import salt.utils.yaml
 
 # pylint: disable=unused-import
 try:
@@ -1685,7 +1686,7 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         user_sls.append({"policies": policies})
         user_sls.append({"path": user.path})
         results["manage user " + name] = {"boto_iam.user_present": user_sls}
-    return __utils__["yaml.safe_dump"](results, default_flow_style=False, indent=2)
+    return salt.utils.yaml.safe_dump(results, default_flow_style=False, indent=2)
 
 
 def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=None):
@@ -1731,7 +1732,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         )
         role_sls.append({"path": role.path})
         results["manage role " + name] = {"boto_iam_role.present": role_sls}
-    return __utils__["yaml.safe_dump"](results, default_flow_style=False, indent=2)
+    return salt.utils.yaml.safe_dump(results, default_flow_style=False, indent=2)
 
 
 def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):

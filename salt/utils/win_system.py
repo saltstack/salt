@@ -24,29 +24,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
-__virtualname__ = "win_system"
 MINION_VOLATILE_KEY = "SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data"
 REBOOT_REQUIRED_NAME = "Reboot required"
-
-
-def __virtual__():
-    """
-    Only works on Windows systems
-    """
-    if not salt.utils.platform.is_windows():
-        return (
-            False,
-            "win_system salt util failed to load: "
-            "The util will only run on Windows systems",
-        )
-    if not HAS_WIN32_MODS:
-        return (
-            False,
-            "win_system salt util failed to load: "
-            "The util will only run on Windows systems",
-        )
-    return __virtualname__
 
 
 def get_computer_name():

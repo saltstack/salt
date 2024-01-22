@@ -23,9 +23,10 @@ pytestmark = [
 ]
 
 
-@pytest.fixture
-def utils_patch():
-    return ZFSMockData().get_patched_utils()
+@pytest.fixture(autouse=True)
+def _utils_patch():
+    with ZFSMockData().patched():
+        yield
 
 
 @pytest.fixture
@@ -42,7 +43,7 @@ def configure_loader_modules(minion_opts):
     return zpool_obj
 
 
-def test_absent_without_pool(utils_patch):
+def test_absent_without_pool():
     """
     Test zpool absent without a pool
     """
@@ -54,13 +55,11 @@ def test_absent_without_pool(utils_patch):
     }
 
     mock_exists = MagicMock(return_value=False)
-    with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
-        zpool.__utils__, utils_patch
-    ):
+    with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
         assert zpool.absent("myzpool") == ret
 
 
-def test_absent_destroy_pool(utils_patch):
+def test_absent_destroy_pool():
     """
     Test zpool absent destroying pool
     """
@@ -75,11 +74,11 @@ def test_absent_destroy_pool(utils_patch):
     mock_destroy = MagicMock(return_value=OrderedDict([("destroyed", True)]))
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.destroy": mock_destroy}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert zpool.absent("myzpool") == ret
 
 
-def test_absent_exporty_pool(utils_patch):
+def test_absent_exporty_pool():
     """
     Test zpool absent exporting pool
     """
@@ -94,11 +93,11 @@ def test_absent_exporty_pool(utils_patch):
     mock_destroy = MagicMock(return_value=OrderedDict([("exported", True)]))
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.export": mock_destroy}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert zpool.absent("myzpool", export=True) == ret
 
 
-def test_absent_busy(utils_patch):
+def test_absent_busy():
     """
     Test zpool absent on a busy pool
     """
@@ -133,11 +132,11 @@ def test_absent_busy(utils_patch):
     )
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.export": mock_destroy}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert zpool.absent("myzpool", export=True) == ret
 
 
-def test_present_import_success(utils_patch):
+def test_present_import_success():
     """
     Test zpool present with import allowed and unimported pool
     """
@@ -156,11 +155,11 @@ def test_present_import_success(utils_patch):
     mock_import = MagicMock(return_value=OrderedDict([("imported", True)]))
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.import": mock_import}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert zpool.present("myzpool", config=config) == ret
 
 
-def test_present_import_fail(utils_patch):
+def test_present_import_fail():
     """
     Test zpool present with import allowed and no unimported pool or layout
     """
@@ -182,11 +181,11 @@ def test_present_import_fail(utils_patch):
     mock_import = MagicMock(return_value=OrderedDict([("imported", False)]))
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.import": mock_import}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert zpool.present("myzpool", config=config) == ret
 
 
-def test_present_create_success(utils_patch):
+def test_present_create_success():
     """
     Test zpool present with non existing pool
     """
@@ -230,7 +229,7 @@ def test_present_create_success(utils_patch):
     )
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.create": mock_create}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert (
             zpool.present(
                 "myzpool",
@@ -243,7 +242,7 @@ def test_present_create_success(utils_patch):
         )
 
 
-def test_present_create_fail(utils_patch):
+def test_present_create_fail():
     """
     Test zpool present with non existing pool (without a layout)
     """
@@ -262,13 +261,11 @@ def test_present_create_fail(utils_patch):
     }
 
     mock_exists = MagicMock(return_value=False)
-    with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
-        zpool.__utils__, utils_patch
-    ):
+    with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
         assert zpool.present("myzpool", config=config) == ret
 
 
-def test_present_create_passthrough_fail(utils_patch):
+def test_present_create_passthrough_fail():
     """
     Test zpool present with non existing pool (without a layout)
     """
@@ -322,7 +319,7 @@ def test_present_create_passthrough_fail(utils_patch):
     )
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.create": mock_create}
-    ), patch.dict(zpool.__utils__, utils_patch):
+    ):
         assert (
             zpool.present(
                 "myzpool",
@@ -335,7 +332,7 @@ def test_present_create_passthrough_fail(utils_patch):
         )
 
 
-def test_present_update_success(utils_patch):
+def test_present_update_success():
     """
     Test zpool present with an existing pool that needs an update
     """
@@ -410,9 +407,7 @@ def test_present_update_success(utils_patch):
     mock_set = MagicMock(return_value=OrderedDict([("set", True)]))
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
         zpool.__salt__, {"zpool.get": mock_get}
-    ), patch.dict(zpool.__salt__, {"zpool.set": mock_set}), patch.dict(
-        zpool.__utils__, utils_patch
-    ):
+    ), patch.dict(zpool.__salt__, {"zpool.set": mock_set}):
         assert (
             zpool.present(
                 "myzpool",
@@ -424,7 +419,7 @@ def test_present_update_success(utils_patch):
         )
 
 
-def test_present_update_nochange_success(utils_patch):
+def test_present_update_nochange_success():
     """
     Test zpool present with an up-to-date pool
     """
@@ -499,16 +494,15 @@ def test_present_update_nochange_success(utils_patch):
 
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
         with patch.dict(zpool.__salt__, {"zpool.get": mock_get}):
-            with patch.dict(zpool.__utils__, utils_patch):
-                assert (
-                    zpool.present(
-                        "myzpool",
-                        config=config,
-                        layout=layout,
-                        properties=properties,
-                    )
-                    == ret
+            assert (
+                zpool.present(
+                    "myzpool",
+                    config=config,
+                    layout=layout,
+                    properties=properties,
                 )
+                == ret
+            )
 
     # Run state with test=true
     ret = {
@@ -520,14 +514,13 @@ def test_present_update_nochange_success(utils_patch):
 
     with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
         with patch.dict(zpool.__salt__, {"zpool.get": mock_get}):
-            with patch.dict(zpool.__utils__, utils_patch):
-                with patch.dict(zpool.__opts__, {"test": True}):
-                    assert (
-                        zpool.present(
-                            "myzpool",
-                            config=config,
-                            layout=layout,
-                            properties=properties,
-                        )
-                        == ret
+            with patch.dict(zpool.__opts__, {"test": True}):
+                assert (
+                    zpool.present(
+                        "myzpool",
+                        config=config,
+                        layout=layout,
+                        properties=properties,
                     )
+                    == ret
+                )

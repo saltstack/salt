@@ -11,6 +11,7 @@ import logging
 import re
 
 import salt.utils.platform
+import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 __virtualname__ = "proxy"
@@ -28,9 +29,7 @@ def __virtual__():
 def _get_proxy_osx(cmd_function, network_service):
     ret = {}
 
-    out = __salt__["cmd.run"](
-        "networksetup -{} {}".format(cmd_function, network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -{cmd_function} {network_service}")
     match = re.match("Enabled: (.*)\nServer: (.*)\nPort: (.*)\n", out)
     if match is not None:
         g = match.groups()
@@ -41,12 +40,10 @@ def _get_proxy_osx(cmd_function, network_service):
 
 
 def _set_proxy_osx(cmd_function, server, port, user, password, network_service):
-    cmd = "networksetup -{} {} {} {}".format(
-        cmd_function, network_service, server, port
-    )
+    cmd = f"networksetup -{cmd_function} {network_service} {server} {port}"
 
     if user is not None and password is not None:
-        cmd = cmd + " On {} {}".format(user, password)
+        cmd += f" On {user} {password}"
 
     out = __salt__["cmd.run"](cmd)
 
@@ -59,13 +56,13 @@ def _get_proxy_windows(types=None):
     if types is None:
         types = ["http", "https", "ftp"]
 
-    servers = __utils__["reg.read_value"](
+    servers = salt.utils.win_reg.read_value(
         hive="HKEY_CURRENT_USER",
         key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
         vname="ProxyServer",
     )["vdata"]
 
-    if servers and "=" in servers:
+    if servers and "=" in servers:  # pylint: disable=unsupported-membership-test
         split = servers.split(";")
         for s in split:
             if not s:
@@ -92,7 +89,7 @@ def _get_proxy_windows(types=None):
 
     # Return enabled info
     ret["enabled"] = (
-        __utils__["reg.read_value"](
+        salt.utils.win_reg.read_value(
             hive="HKEY_CURRENT_USER",
             key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
             vname="ProxyEnable",
@@ -111,16 +108,16 @@ def _set_proxy_windows(
 
     server_str = ""
     for t in types:
-        server_str += "{}={}:{};".format(t, server, port)
+        server_str += f"{t}={server}:{port};"
 
-    __utils__["reg.set_value"](
+    salt.utils.win_reg.set_value(
         hive="HKEY_CURRENT_USER",
         key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
         vname="ProxyServer",
         vdata=server_str,
     )
 
-    __utils__["reg.set_value"](
+    salt.utils.win_reg.set_value(
         hive="HKEY_CURRENT_USER",
         key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
         vname="ProxyEnable",
@@ -131,7 +128,7 @@ def _set_proxy_windows(
     if bypass_hosts is not None:
         bypass_hosts_str = "<local>;{}".format(";".join(bypass_hosts))
 
-        __utils__["reg.set_value"](
+        salt.utils.win_reg.set_value(
             hive="HKEY_CURRENT_USER",
             key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
             vname="ProxyOverride",
@@ -383,7 +380,7 @@ def get_proxy_bypass(network_service="Ethernet"):
 
     """
     if __grains__["os"] == "Windows":
-        reg_val = __utils__["reg.read_value"](
+        reg_val = salt.utils.win_reg.read_value(
             hive="HKEY_CURRENT_USER",
             key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
             vname="ProxyOverride",
@@ -395,9 +392,7 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         return reg_val.replace("<local>", "").split(";")
 
-    out = __salt__["cmd.run"](
-        "networksetup -getproxybypassdomains {}".format(network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -getproxybypassdomains {network_service}")
 
     return out.split("\n")
 

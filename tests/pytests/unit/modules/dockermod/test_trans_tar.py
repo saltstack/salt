@@ -10,25 +10,25 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def configure_loader_modules():
-    return {
-        docker_mod: {
-            "__utils__": {
-                "state.get_sls_opts": MagicMock(
-                    return_value={
-                        "pillarenv": MagicMock(),
-                        "pillar": {},
-                        "grains": {},
-                    }
-                ),
-                "args.clean_kwargs": lambda **x: x,
+    with patch(
+        "salt.utils.state.get_sls_opts",
+        MagicMock(
+            return_value={
+                "pillarenv": MagicMock(),
+                "pillar": {},
+                "grains": {},
+            }
+        ),
+    ), patch("salt.utils.args.clean_kwargs", lambda **x: x):
+        yield {
+            docker_mod: {
+                "__salt__": {
+                    "config.option": MagicMock(return_value=None),
+                    "cmd.run": fake_run,
+                },
+                "__opts__": {"id": "dockermod-unit-test"},
             },
-            "__salt__": {
-                "config.option": MagicMock(return_value=None),
-                "cmd.run": fake_run,
-            },
-            "__opts__": {"id": "dockermod-unit-test"},
-        },
-    }
+        }
 
 
 def fake_run(*args, **kwargs):

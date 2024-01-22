@@ -16,6 +16,7 @@ import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.ssh
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
@@ -298,7 +299,7 @@ def _git_run(
                 os.chown(tmp_ssh_wrapper, __salt__["file.user_to_uid"](user), -1)
                 env["GIT_SSH"] = tmp_ssh_wrapper
 
-            if "salt-call" not in _salt_cli and __utils__["ssh.key_is_encrypted"](
+            if "salt-call" not in _salt_cli and salt.utils.ssh.key_is_encrypted(
                 id_file
             ):
                 errors.append(

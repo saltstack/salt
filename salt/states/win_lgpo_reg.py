@@ -55,6 +55,7 @@ configure that policy.
 """
 import salt.utils.data
 import salt.utils.platform
+import salt.utils.win_reg
 
 __virtualname__ = "lgpo_reg"
 
@@ -82,7 +83,7 @@ def _get_current(key, name, policy_class):
     pol = __salt__["lgpo_reg.get_value"](
         key=key, v_name=name, policy_class=policy_class
     )
-    reg_raw = __utils__["reg.read_value"](hive=hive, key=key, vname=name)
+    reg_raw = salt.utils.win_reg.read_value(hive=hive, key=key, vname=name)
 
     reg = {}
     if reg_raw["vdata"] is not None:
@@ -251,7 +252,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     old = _get_current(key=key, name=name, policy_class=policy_class)
 
-    pol_correct = old["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = old["pol"].get("data", "") == f"**del.{name}"
     reg_correct = old["reg"] == {}
 
     if pol_correct and reg_correct:
@@ -273,7 +274,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     new = _get_current(key=key, name=name, policy_class=policy_class)
 
-    pol_correct = new["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = new["pol"].get("data", "") == f"**del.{name}"
     reg_correct = new["reg"] == {}
 
     if pol_correct and reg_correct:

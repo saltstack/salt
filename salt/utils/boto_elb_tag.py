@@ -21,10 +21,6 @@
 # IN THE SOFTWARE.
 
 
-def __virtual__():
-    return True
-
-
 def get_tag_descriptions():
     class TagDescriptions(dict):
         """

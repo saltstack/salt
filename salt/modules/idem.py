@@ -10,16 +10,17 @@ This module provides access to idem execution modules
 
 .. versionadded:: 3002
 """
+import salt.utils.idem
+
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {"exec_": "exec"}
 __virtualname__ = "idem"
 
 
 def __virtual__():
-    if "idem.hub" in __utils__:
+    if salt.utils.idem.HAS_POP[0]:
         return __virtualname__
-    else:
-        return False, "idem is not available"
+    return salt.utils.idem.HAS_POP
 
 
 def exec_(path, acct_file=None, acct_key=None, acct_profile=None, *args, **kwargs):
@@ -57,7 +58,7 @@ def exec_(path, acct_file=None, acct_key=None, acct_profile=None, *args, **kwarg
     :depends:       acct, pop, pop-config, idem
     :platform:      all
     """
-    hub = __utils__["idem.hub"]()
+    hub = salt.utils.idem.hub(__context__)
 
     coro = hub.idem.ex.run(
         path,

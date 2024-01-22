@@ -24,7 +24,6 @@ class DummyRequest:
 def configure_loader_modules():
     return {
         scaleway: {
-            "__utils__": {},
             "__opts__": {
                 "providers": {"my_scaleway": {}},
                 "profiles": {"my_scaleway": {}},
@@ -51,9 +50,8 @@ def test_query(profile):
     server_id = "foo"
     expected = salt.utils.json.loads(body)
     http_query = MagicMock(return_value=DummyRequest(200, body=body))
-    utils_dunder = {"http.query": http_query}
 
-    with patch.dict(scaleway.__utils__, utils_dunder):
+    with patch("salt.utils.http.query", http_query):
         # Case 1: use default api_root
         profile = copy.copy(profile)
         with patch.object(scaleway, "get_configured_provider", lambda: profile):

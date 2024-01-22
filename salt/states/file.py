@@ -6316,7 +6316,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not salt.utils.files.is_text(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6412,7 +6412,7 @@ def uncomment(name, regex, char="#", backup=".bak"):
     )
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not salt.utils.files.is_text(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6666,7 +6666,7 @@ def append(
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not salt.utils.files.is_text(name):
                 ret["changes"]["diff"] = "Replace binary file"
             else:
                 # Changes happened, add them
@@ -6688,7 +6688,7 @@ def append(
         nlines = nlines.splitlines()
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not salt.utils.files.is_text(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6959,7 +6959,7 @@ def prepend(
     if __opts__["test"]:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not salt.utils.files.is_text(name):
                 ret["changes"]["diff"] = "Replace binary file"
             else:
                 # Changes happened, add them
@@ -6998,7 +6998,7 @@ def prepend(
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not salt.utils.files.is_text(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them

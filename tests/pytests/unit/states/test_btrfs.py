@@ -17,7 +17,12 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def configure_loader_modules():
-    return {btrfs: {"__salt__": {}, "__states__": {}, "__utils__": {}}}
+    return {
+        btrfs: {
+            "__salt__": {},
+            "__states__": {},
+        },
+    }
 
 
 def test__mount_fails():
@@ -93,15 +98,12 @@ def test__umount():
     states_mock = {
         "mount.unmounted": MagicMock(),
     }
-    utils_mock = {
-        "files.rm_rf": MagicMock(),
-    }
-    with patch.dict(btrfs.__states__, states_mock), patch.dict(
-        btrfs.__utils__, utils_mock
-    ):
+    with patch.dict(btrfs.__states__, states_mock), patch(
+        "salt.utils.files.rm_rf", MagicMock()
+    ) as rm_rf:
         btrfs._umount("/tmp/xxx")
         states_mock["mount.unmounted"].assert_called_with("/tmp/xxx")
-        utils_mock["files.rm_rf"].assert_called_with("/tmp/xxx")
+        rm_rf.assert_called_with("/tmp/xxx")
 
 
 def test__is_default_not_default():

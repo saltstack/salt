@@ -52,6 +52,7 @@ import os
 
 import salt.loader
 import salt.template
+import salt.utils.roster_matcher
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError
 
@@ -67,12 +68,14 @@ def targets(tgt, tgt_type="glob", **kwargs):
     # Match the targets before rendering to avoid opening files unnecessarily.
     raw = dict.fromkeys(os.listdir(roster_dir), "")
     log.debug("Filtering %d minions in %s", len(raw), roster_dir)
-    matched_raw = __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")
+    matched_raw = salt.utils.roster_matcher.targets(
+        __opts__, raw, tgt, tgt_type, "ipv4"
+    )
     rendered = {}
     for minion_id in matched_raw:
         target_file = salt.utils.verify.clean_path(roster_dir, minion_id)
         if not os.path.exists(target_file):
-            raise CommandExecutionError("{} does not exist".format(target_file))
+            raise CommandExecutionError(f"{target_file} does not exist")
         rendered[minion_id] = _render(target_file, **kwargs)
     pruned_rendered = {id_: data for id_, data in rendered.items() if data}
     log.debug(
@@ -100,9 +103,9 @@ def _render(roster_file, **kwargs):
             __opts__["renderer_blacklist"],
             __opts__["renderer_whitelist"],
             mask_value="*passw*",
-            **kwargs
+            **kwargs,
         )
-        result.setdefault("host", "{}.{}".format(os.path.basename(roster_file), domain))
+        result.setdefault("host", f"{os.path.basename(roster_file)}.{domain}")
         return result
     except:  # pylint: disable=W0702
         log.warning('Unable to render roster file "%s".', roster_file, exc_info=True)

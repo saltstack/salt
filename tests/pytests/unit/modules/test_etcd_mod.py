@@ -41,7 +41,7 @@ def test_get(etcd_client_mock, instance):
     """
     Test if it get a value from etcd, by direct path
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.get.return_value = "stack"
         assert etcd_mod.get_("salt") == "stack"
         instance.get.assert_called_with("salt", recurse=False)
@@ -61,7 +61,7 @@ def test_set(etcd_client_mock, instance):
     """
     Test if it set a key in etcd, by direct path
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.set.return_value = "stack"
         assert etcd_mod.set_("salt", "stack") == "stack"
         instance.set.assert_called_with("salt", "stack", directory=False, ttl=None)
@@ -87,7 +87,7 @@ def test_update(etcd_client_mock, instance):
     """
     Test if can set multiple keys in etcd
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         args = {
             "x": {"y": {"a": "1", "b": "2"}},
             "z": "4",
@@ -114,7 +114,7 @@ def test_ls(etcd_client_mock, instance):
     """
     Test if it return all keys and dirs inside a specific path
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.ls.return_value = {"/some-dir": {}}
         assert etcd_mod.ls_("/some-dir") == {"/some-dir": {}}
         instance.ls.assert_called_with("/some-dir")
@@ -134,7 +134,7 @@ def test_rm(etcd_client_mock, instance):
     """
     Test if it delete a key from etcd
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.rm.return_value = False
         assert not etcd_mod.rm_("dir")
         instance.rm.assert_called_with("dir", recurse=False)
@@ -154,7 +154,7 @@ def test_tree(etcd_client_mock, instance):
     """
     Test if it recurses through etcd and return all values
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.tree.return_value = {}
         assert etcd_mod.tree("/some-dir") == {}
         instance.tree.assert_called_with("/some-dir")
@@ -173,7 +173,7 @@ def test_watch(etcd_client_mock, instance):
     """
     Test if watch returns the right tuples
     """
-    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         instance.watch.return_value = {
             "value": "stack",
             "changed": True,

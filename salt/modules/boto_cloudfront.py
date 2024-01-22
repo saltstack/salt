@@ -52,7 +52,9 @@ Connection module for Amazon CloudFront
 
 import logging
 
+import salt.utils.dictdiffer
 import salt.utils.versions
+import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 try:
@@ -269,8 +271,8 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
         # as opposed to being called from execution or state modules
         log.trace("Boto client error: {}", exc)
 
-    dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
-    return __utils__["yaml.dump"](
+    dumper = salt.utils.yaml.get_dumper("IndentedSafeOrderedDumper")
+    return salt.utils.yaml.dump(
         results,
         default_flow_style=False,
         Dumper=dumper,
@@ -400,9 +402,9 @@ def update_distribution(
     current_tags = dist_with_tags["tags"]
     etag = dist_with_tags["etag"]
 
-    config_diff = __utils__["dictdiffer.deep_diff"](current_config, config)
+    config_diff = salt.utils.dictdiffer.deep_diff(current_config, config)
     if tags:
-        tags_diff = __utils__["dictdiffer.deep_diff"](current_tags, tags)
+        tags_diff = salt.utils.dictdiffer.deep_diff(current_tags, tags)
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:

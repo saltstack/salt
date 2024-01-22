@@ -19,6 +19,11 @@ import salt.defaults.exitcodes
 import salt.exceptions
 import salt.utils.args
 import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.json
+import salt.utils.path
+import salt.utils.state
+import salt.utils.thin
 
 __func_alias__ = {"apply_": "apply"}
 
@@ -29,7 +34,7 @@ def __virtual__():
     """
     Chroot command is required.
     """
-    if __utils__["path.which"]("chroot") is not None:
+    if salt.utils.path.which("chroot") is not None:
         return True
     else:
         return (False, "Module chroot requires the command chroot")
@@ -150,7 +155,7 @@ def call(root, function, *args, **kwargs):
     # Create a temporary directory inside the chroot where we can
     # untar salt-thin
     thin_dest_path = tempfile.mkdtemp(dir=root)
-    thin_path = __utils__["thin.gen_thin"](
+    thin_path = salt.utils.thin.gen_thin(
         __opts__["cachedir"],
         extra_mods=__salt__["config.option"]("thin_extra_mods", ""),
         so_mods=__salt__["config.option"]("thin_so_mods", ""),
@@ -163,7 +168,7 @@ def call(root, function, *args, **kwargs):
     #
     stdout = __salt__["cmd.run"](["tar", "xzf", thin_path, "-C", thin_dest_path])
     if stdout:
-        __utils__["files.rm_rf"](thin_dest_path)
+        salt.utils.files.rm_rf(thin_dest_path)
         return {"result": False, "comment": stdout}
 
     chroot_path = os.path.join(os.path.sep, os.path.relpath(thin_dest_path, root))
@@ -171,7 +176,7 @@ def call(root, function, *args, **kwargs):
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                f"python{sys.version_info[0]}",
                 os.path.join(chroot_path, "salt-call"),
                 "--metadata",
                 "--local",
@@ -187,13 +192,13 @@ def call(root, function, *args, **kwargs):
                 function,
             ]
             + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+            + [f"{k}={v}" for (k, v) in safe_kwargs.items()]
         )
         ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
 
         # Process "real" result in stdout
         try:
-            data = __utils__["json.find_json"](ret["stdout"])
+            data = salt.utils.json.find_json(ret["stdout"])
             local = data.get("local", data)
             if isinstance(local, dict) and "retcode" in local:
                 __context__["retcode"] = local["retcode"]
@@ -205,7 +210,7 @@ def call(root, function, *args, **kwargs):
                 "comment": {"stdout": ret["stdout"], "stderr": ret["stderr"]},
             }
     finally:
-        __utils__["files.rm_rf"](thin_dest_path)
+        salt.utils.files.rm_rf(thin_dest_path)
 
 
 def apply_(root, mods=None, **kwargs):
@@ -270,7 +275,7 @@ def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
             hash_type=hash_type,
         )
     finally:
-        __utils__["files.rm_rf"](salt_state_path)
+        salt.utils.files.rm_rf(salt_state_path)
 
     return ret
 

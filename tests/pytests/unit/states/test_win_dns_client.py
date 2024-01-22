@@ -119,12 +119,12 @@ def test_primary_suffix():
             {"vdata": False},
         ]
     )
-    with patch.dict(win_dns_client.__utils__, {"reg.read_value": mock}):
+    with patch("salt.utils.win_reg.read_value", mock):
         ret.update({"comment": "No changes needed", "result": True})
         assert win_dns_client.primary_suffix("salt", "a") == ret
 
         mock = MagicMock(return_value=True)
-        with patch.dict(win_dns_client.__utils__, {"reg.set_value": mock}):
+        with patch("salt.utils.win_reg.set_value", mock):
             ret.update(
                 {
                     "changes": {"new": {"suffix": "a"}, "old": {"suffix": "b"}},

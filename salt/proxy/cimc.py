@@ -71,6 +71,7 @@ import re
 import xml.etree.ElementTree as ET
 
 import salt.exceptions
+import salt.utils.http
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ["cimc"]
@@ -159,7 +160,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
         '<configConfMo cookie="{}" inHierarchical="{}" dn="{}">'
         "<inConfig>{}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
     )
-    r = __utils__["http.query"](
+    r = salt.utils.http.query(
         DETAILS["url"],
         data=payload,
         method="POST",
@@ -198,7 +199,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
             cookie, h, cid
         )
     )
-    r = __utils__["http.query"](
+    r = salt.utils.http.query(
         DETAILS["url"],
         data=payload,
         method="POST",
@@ -229,7 +230,7 @@ def logon():
     payload = "<aaaLogin inName='{}' inPassword='{}'></aaaLogin>".format(
         DETAILS["username"], DETAILS["password"]
     )
-    r = __utils__["http.query"](
+    r = salt.utils.http.query(
         DETAILS["url"],
         data=payload,
         method="POST",
@@ -259,7 +260,7 @@ def logout(cookie=None):
     Closes the session with the device.
     """
     payload = '<aaaLogout cookie="{0}" inCookie="{0}"></aaaLogout>'.format(cookie)
-    __utils__["http.query"](
+    salt.utils.http.query(
         DETAILS["url"],
         data=payload,
         method="POST",

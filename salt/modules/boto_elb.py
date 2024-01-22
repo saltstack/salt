@@ -46,6 +46,7 @@ Connection module for Amazon ELB
 import logging
 import time
 
+import salt.utils.boto_elb_tag
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
@@ -1132,7 +1133,7 @@ def _get_all_tags(conn, load_balancer_names=None):
     tags = conn.get_object(
         "DescribeTags",
         params,
-        __utils__["boto_elb_tag.get_tag_descriptions"](),
+        salt.utils.boto_elb_tag.get_tag_descriptions(),
         verb="POST",
     )
     if tags[load_balancer_names]:

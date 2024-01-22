@@ -5,7 +5,6 @@ States for Management of Memcached Keys
 .. versionadded:: 2014.1.0
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.memcached import (
     DEFAULT_HOST,
@@ -21,7 +20,7 @@ def __virtual__():
     """
     Only load if memcache module is available
     """
-    if "{}.status".format(__virtualname__) in __salt__:
+    if f"{__virtualname__}.status" in __salt__:
         return __virtualname__
     return (False, "memcached module could not be loaded")
 
@@ -66,15 +65,15 @@ def managed(
 
     if cur == value:
         ret["result"] = True
-        ret["comment"] = "Key '{}' does not need to be updated".format(name)
+        ret["comment"] = f"Key '{name}' does not need to be updated"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
         if cur is None:
-            ret["comment"] = "Key '{}' would be added".format(name)
+            ret["comment"] = f"Key '{name}' would be added"
         else:
-            ret["comment"] = "Value of key '{}' would be changed".format(name)
+            ret["comment"] = f"Value of key '{name}' would be changed"
         return ret
 
     try:
@@ -85,13 +84,13 @@ def managed(
         ret["comment"] = str(exc)
     else:
         if ret["result"]:
-            ret["comment"] = "Successfully set key '{}'".format(name)
+            ret["comment"] = f"Successfully set key '{name}'"
             if cur is not None:
                 ret["changes"] = {"old": cur, "new": value}
             else:
                 ret["changes"] = {"key added": name, "value": value}
         else:
-            ret["comment"] = "Failed to set key '{}'".format(name)
+            ret["comment"] = f"Failed to set key '{name}'"
     return ret
 
 
@@ -139,12 +138,12 @@ def absent(name, value=None, host=DEFAULT_HOST, port=DEFAULT_PORT, time=DEFAULT_
             return ret
     if cur is None:
         ret["result"] = True
-        ret["comment"] = "Key '{}' does not exist".format(name)
+        ret["comment"] = f"Key '{name}' does not exist"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Key '{}' would be deleted".format(name)
+        ret["comment"] = f"Key '{name}' would be deleted"
         return ret
 
     try:
@@ -153,8 +152,8 @@ def absent(name, value=None, host=DEFAULT_HOST, port=DEFAULT_PORT, time=DEFAULT_
         ret["comment"] = str(exc)
     else:
         if ret["result"]:
-            ret["comment"] = "Successfully deleted key '{}'".format(name)
+            ret["comment"] = f"Successfully deleted key '{name}'"
             ret["changes"] = {"key deleted": name, "value": cur}
         else:
-            ret["comment"] = "Failed to delete key '{}'".format(name)
+            ret["comment"] = f"Failed to delete key '{name}'"
     return ret

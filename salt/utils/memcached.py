@@ -51,20 +51,7 @@ DEFAULT_PORT = 11211
 DEFAULT_TIME = 0
 DEFAULT_MIN_COMPRESS_LEN = 0
 
-# Set up logging
 log = logging.getLogger(__name__)
-
-# Don't shadow built-ins
-__func_alias__ = {"set_": "set"}
-
-
-# Although utils are often directly imported, it is also possible
-# to use the loader.
-def __virtual__():
-    """
-    Only load if python-memcached is installed
-    """
-    return True if HAS_LIBS else False
 
 
 def get_conn(opts, profile=None, host=None, port=None):
@@ -92,7 +79,7 @@ def get_conn(opts, profile=None, host=None, port=None):
         raise SaltInvocationError("port must be an integer")
 
     if HAS_LIBS:
-        return memcache.Client(["{}:{}".format(host, port)])
+        return memcache.Client([f"{host}:{port}"])
     else:
         raise CommandExecutionError(
             "(unable to import memcache, module most likely not installed)"

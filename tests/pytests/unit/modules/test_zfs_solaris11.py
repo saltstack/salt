@@ -4,22 +4,20 @@ Tests for salt.modules.zfs on Solaris
 
 import pytest
 
-import salt.loader
 import salt.modules.zfs as zfs
-import salt.utils.zfs
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 
 
-@pytest.fixture
-def utils_patch():
-    return ZFSMockData().get_patched_utils()
+@pytest.fixture(autouse=True)
+def _utils_patch():
+    with ZFSMockData().patched():
+        yield
 
 
 @pytest.fixture
 def configure_loader_modules(minion_opts):
-    utils = salt.loader.utils(minion_opts, whitelist=["zfs"])
-    zfs_obj = {
+    return {
         zfs: {
             "__opts__": minion_opts,
             "__grains__": {
@@ -29,11 +27,8 @@ def configure_loader_modules(minion_opts):
                 "kernel": "SunOS",
                 "kernelrelease": 5.11,
             },
-            "__utils__": utils,
         }
     }
-
-    return zfs_obj
 
 
 @pytest.mark.skip_unless_on_sunos

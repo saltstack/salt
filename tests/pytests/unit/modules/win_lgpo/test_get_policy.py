@@ -9,7 +9,6 @@ import salt.grains.core
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
-import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
 
@@ -30,11 +29,7 @@ def configure_loader_modules(minion_opts):
                 "file.makedirs": win_file.makedirs_,
             },
         },
-        win_file: {
-            "__utils__": {
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-        },
+        win_file: {},
     }
 
 

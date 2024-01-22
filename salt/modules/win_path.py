@@ -13,27 +13,21 @@ import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_functions
+import salt.utils.win_reg
 
-try:
-    HAS_WIN32 = True
-except ImportError:
-    HAS_WIN32 = False
-
-# Settings
 log = logging.getLogger(__name__)
 
 HIVE = "HKEY_LOCAL_MACHINE"
 KEY = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"
 VNAME = "PATH"
 VTYPE = "REG_EXPAND_SZ"
-PATHSEP = str(os.pathsep)
 
 
 def __virtual__():
     """
     Load only on Windows
     """
-    if salt.utils.platform.is_windows() and HAS_WIN32:
+    if salt.utils.platform.is_windows():
         return "win_path"
     return (False, "Module win_path: module only works on Windows systems")
 
@@ -77,7 +71,7 @@ def get_path():
         salt '*' win_path.get_path
     """
     ret = salt.utils.stringutils.to_unicode(
-        __utils__["reg.read_value"](
+        salt.utils.win_reg.read_value(
             "HKEY_LOCAL_MACHINE",
             "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
             "PATH",
@@ -114,7 +108,7 @@ def exists(path):
 
 
 def _update_local_path(local_path):
-    os.environ["PATH"] = PATHSEP.join(local_path)
+    os.environ["PATH"] = os.pathsep.join(local_path)
 
 
 def add(path, index=None, **kwargs):
@@ -159,7 +153,7 @@ def add(path, index=None, **kwargs):
     # The current path should not have any unicode in it, but don't take any
     # chances.
     local_path = [
-        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(PATHSEP)
+        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(os.pathsep)
     ]
 
     if index is not None:
@@ -270,7 +264,7 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = __utils__["reg.set_value"](
+    result = salt.utils.win_reg.set_value(
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 
@@ -312,7 +306,7 @@ def remove(path, **kwargs):
     # The current path should not have any unicode in it, but don't take any
     # chances.
     local_path = [
-        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(PATHSEP)
+        salt.utils.stringutils.to_str(x) for x in os.environ["PATH"].split(os.pathsep)
     ]
 
     def _check_path(dirs, path):
@@ -341,7 +335,7 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = __utils__["reg.set_value"](
+    result = salt.utils.win_reg.set_value(
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 

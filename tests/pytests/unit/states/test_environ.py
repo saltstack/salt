@@ -39,25 +39,18 @@ def test_setenv_permanent():
     """
     test that we can set permanent environment variables (requires pywin32)
     """
-    with patch.dict(
-        envmodule.__utils__,
-        {
-            "reg.set_value": MagicMock(),
-            "reg.delete_value": MagicMock(),
-            "win_functions.broadcast_setting_change": MagicMock(),
-        },
+    with patch("salt.utils.win_reg.set_value", MagicMock()) as set_value, patch(
+        "salt.utils.win_reg.delete_value", MagicMock()
+    ) as delete_value, patch(
+        "salt.utils.win_functions.broadcast_setting_change", MagicMock()
     ):
         ret = envstate.setenv("test", "value", permanent=True)
         assert ret["changes"] == {"test": "value"}
-        envmodule.__utils__["reg.set_value"].assert_called_with(
-            "HKCU", "Environment", "test", "value"
-        )
+        set_value.assert_called_with("HKCU", "Environment", "test", "value")
 
         ret = envstate.setenv("test", False, false_unsets=True, permanent=True)
         assert ret["changes"] == {"test": None}
-        envmodule.__utils__["reg.delete_value"].assert_called_with(
-            "HKCU", "Environment", "test"
-        )
+        delete_value.assert_called_with("HKCU", "Environment", "test")
 
 
 def test_setenv_dict():
@@ -125,7 +118,7 @@ def test_setenv_unset_multi():
         ret = envstate.setenv("notimportant", {"foo": "bar"})
         assert ret["changes"] == {"foo": "bar"}
 
-        with patch.dict(envstate.__utils__, {"reg.read_value": MagicMock()}):
+        with patch("salt.utils.win_reg.read_value", MagicMock()):
             ret = envstate.setenv(
                 "notimportant", {"test": False, "foo": "baz"}, false_unsets=True
             )
@@ -135,7 +128,7 @@ def test_setenv_unset_multi():
         else:
             assert envstate.os.environ == {"INITIAL": "initial", "foo": "baz"}
 
-        with patch.dict(envstate.__utils__, {"reg.read_value": MagicMock()}):
+        with patch("salt.utils.win_reg.read_value", MagicMock()):
             ret = envstate.setenv("notimportant", {"test": False, "foo": "bax"})
         assert ret["changes"] == {"test": "", "foo": "bax"}
         if salt.utils.platform.is_windows():

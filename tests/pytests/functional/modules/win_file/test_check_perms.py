@@ -16,15 +16,7 @@ pytestmark = [
 
 @pytest.fixture
 def configure_loader_modules():
-    return {
-        win_file: {
-            "__utils__": {
-                "dacl.check_perms": win_dacl.check_perms,
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-            "__opts__": {"test": False},
-        },
-    }
+    return {win_file: {}}
 
 
 @pytest.fixture(scope="function")

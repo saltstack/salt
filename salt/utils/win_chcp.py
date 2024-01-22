@@ -18,17 +18,6 @@ except ImportError:
     HAS_WIN32 = False
 
 
-# Although utils are often directly imported, it is also possible to use the loader.
-def __virtual__():
-    """
-    Only load if Win32 Libraries are installed
-    """
-    if not HAS_WIN32:
-        return False, "This utility requires pywin32"
-
-    return "win_chcp"
-
-
 @contextmanager
 def chcp(page_id, raise_error=False):
     """
@@ -53,7 +42,7 @@ def chcp(page_id, raise_error=False):
         try:
             page_id = int(page_id)
         except ValueError:
-            error = "The `page_id` needs to be an integer, not {}".format(type(page_id))
+            error = f"The `page_id` needs to be an integer, not {type(page_id)}"
             if raise_error:
                 raise CodePageError(error)
             log.error(error)
@@ -98,7 +87,7 @@ def get_codepage_id(raise_error=False):
         return win32console.GetConsoleCP()
     except pywintypes.error as exc:
         _, _, msg = exc.args
-        error = "Failed to get the windows code page: {}".format(msg)
+        error = f"Failed to get the windows code page: {msg}"
         if raise_error:
             raise CodePageError(error)
         else:
@@ -129,7 +118,7 @@ def set_codepage_id(page_id, raise_error=False):
         try:
             page_id = int(page_id)
         except ValueError:
-            error = "The `page_id` needs to be an integer, not {}".format(type(page_id))
+            error = f"The `page_id` needs to be an integer, not {type(page_id)}"
             if raise_error:
                 raise CodePageError(error)
             log.error(error)
@@ -139,7 +128,7 @@ def set_codepage_id(page_id, raise_error=False):
         return get_codepage_id(raise_error=raise_error)
     except pywintypes.error as exc:
         _, _, msg = exc.args
-        error = "Failed to set the windows code page: {}".format(msg)
+        error = f"Failed to set the windows code page: {msg}"
         if raise_error:
             raise CodePageError(error)
         else:

@@ -7,6 +7,7 @@ import os
 import pytest
 
 import salt.modules.environ as environ
+import salt.utils.win_reg
 from tests.support.mock import MagicMock, patch
 
 
@@ -37,41 +38,34 @@ def test_setval():
 
 
 def test_set_val_permanent():
-    with patch.dict(os.environ, {}), patch.dict(
-        environ.__utils__,
-        {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+    with patch.dict(os.environ, {}), patch.multiple(
+        "salt.utils.win_reg", set_value=MagicMock(), delete_value=MagicMock()
     ), patch("salt.utils.platform.is_windows", return_value=True):
 
         environ.setval("key", "Test", permanent=True)
-        environ.__utils__["reg.set_value"].assert_called_with(
+        salt.utils.win_reg.set_value.assert_called_with(
             "HKCU", "Environment", "key", "Test"
         )
 
 
 def test_set_val_permanent_false_unsets():
-    with patch.dict(os.environ, {}), patch.dict(
-        environ.__utils__,
-        {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+    with patch.dict(os.environ, {}), patch.multiple(
+        "salt.utils.win_reg", set_value=MagicMock(), delete_value=MagicMock()
     ), patch("salt.utils.platform.is_windows", return_value=True):
 
         environ.setval("key", False, false_unsets=True, permanent=True)
-        environ.__utils__["reg.set_value"].assert_not_called()
-        environ.__utils__["reg.delete_value"].assert_called_with(
-            "HKCU", "Environment", "key"
-        )
+        salt.utils.win_reg.set_value.assert_not_called()
+        salt.utils.win_reg.delete_value.assert_called_with("HKCU", "Environment", "key")
 
 
 def test_set_val_permanent_hklm():
-    with patch.dict(os.environ, {}), patch.dict(
-        environ.__utils__,
-        {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+    with patch.dict(os.environ, {}), patch.multiple(
+        "salt.utils.win_reg", set_value=MagicMock(), delete_value=MagicMock()
     ), patch("salt.utils.platform.is_windows", return_value=True):
 
         key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
         environ.setval("key", "Test", permanent="HKLM")
-        environ.__utils__["reg.set_value"].assert_called_with(
-            "HKLM", key, "key", "Test"
-        )
+        salt.utils.win_reg.set_value.assert_called_with("HKLM", key, "key", "Test")
 
 
 def test_setenv():

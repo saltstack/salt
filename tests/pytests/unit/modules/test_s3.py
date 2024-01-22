@@ -12,7 +12,8 @@ from tests.support.mock import MagicMock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    return {s3: {"__utils__": {"s3.query": MagicMock(return_value="A")}}}
+    with patch("salt.utils.s3.query", MagicMock(return_value="A")):
+        yield {s3: {}}
 
 
 def test__get_key_defaults():

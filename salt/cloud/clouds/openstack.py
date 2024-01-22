@@ -231,6 +231,8 @@ import pprint
 import socket
 
 import salt.config as config
+import salt.utils.dictupdate
+import salt.utils.json
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudExecutionFailure,
@@ -370,7 +372,7 @@ def get_conn():
     vm_ = get_configured_provider()
     profile = vm_.pop("profile", None)
     if profile is not None:
-        vm_ = __utils__["dictupdate.update"](
+        vm_ = salt.utils.dictupdate.update(
             os_client_config.vendors.get_profile(profile), vm_
         )
     conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
@@ -682,7 +684,7 @@ def _clean_create_kwargs(**kwargs):
                 continue
             log.error("Error %s: %s is not of type %s", key, value, VALID_OPTS[key])
         kwargs.pop(key)
-    return __utils__["dictupdate.update"](kwargs, extra)
+    return salt.utils.dictupdate.update(kwargs, extra)
 
 
 def request_instance(vm_, conn=None, call=None):
@@ -737,7 +739,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined ssh_key_file '{}' does not exist".format(key_filename)
+            f"The defined ssh_key_file '{key_filename}' does not exist"
         )
 
     vm_["key_filename"] = key_filename
@@ -846,7 +848,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -863,7 +865,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -912,7 +914,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop("func")
     for key, value in kwargs.items():
         try:
-            kwargs[key] = __utils__["json.loads"](value)
+            kwargs[key] = salt.utils.json.loads(value)
         except ValueError:
             continue
     try:

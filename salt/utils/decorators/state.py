@@ -1,11 +1,9 @@
 """
 Decorators for salt.state
-
-:codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 """
-
-
 import logging
+import warnings
+from functools import wraps
 
 import salt.utils.stringutils
 from salt.exceptions import SaltException
@@ -14,11 +12,15 @@ log = logging.getLogger(__name__)
 
 
 class OutputUnifier:
+    """
+    :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
+    """
+
     def __init__(self, *policies):
         self.policies = []
         for pls in policies:
             if not hasattr(self, pls):
-                raise SaltException("Unknown policy: {}".format(pls))
+                raise SaltException(f"Unknown policy: {pls}")
             else:
                 self.policies.append(getattr(self, pls))
 
@@ -36,11 +38,12 @@ class OutputUnifier:
                     "result": False,
                     "name": "later",
                     "changes": {},
-                    "comment": "An exception occurred in this state: {}".format(exc),
+                    "comment": f"An exception occurred in this state: {exc}",
                 }
         return data
 
     def __call__(self, func):
+        @wraps(func)
         def _func(*args, **kwargs):
             result = func(*args, **kwargs)
             sub_state_run = None
@@ -109,3 +112,45 @@ class OutputUnifier:
             result["result"] = bool(result["result"])
 
         return result
+
+
+def include_warnings_in_state_return(func):
+    """
+    Include any warnings thrown by Python's :ref:`warnings <python:warnings>` module
+    in state returns.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings(record=True) as collected_warnings:
+            ret = func(*args, **kwargs)
+        if collected_warnings:
+            if isinstance(ret, dict):
+                for warning in collected_warnings:
+                    try:
+                        ret.setdefault("warnings", []).append(
+                            warnings.formatwarning(
+                                warning.message,
+                                warning.category,
+                                warning.filename,
+                                warning.lineno,
+                                line=warning.line,
+                            )
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("Failed to format warning")
+            else:
+                try:
+                    warnings.showwarning(
+                        warning.message,
+                        warning.category,
+                        warning.filename,
+                        warning.lineno,
+                        file=warning.file,
+                        line=warning.line,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to show warning")
+        return ret
+
+    return wrapper

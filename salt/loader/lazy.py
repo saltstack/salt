@@ -1,3 +1,4 @@
+import ast
 import copy
 import functools
 import importlib
@@ -33,7 +34,7 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.utils.decorators import Depends
+from salt.utils.decorators import Depends, memoize
 from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 try:
@@ -244,7 +245,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
-        # Once we get rid of __utils__, the keyword argument bellow should be removed
+        # Once we get rid of __utils__, the keyword arguments bellow should be removed
+        _ast_dunder_virtual_inspect=False,
+        _ast_dunder_virtual_deprecate_only=True,
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
         """
@@ -275,6 +278,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        self._ast_dunder_virtual_inspect = _ast_dunder_virtual_inspect
+        self._ast_dunder_virtual_deprecate_only = _ast_dunder_virtual_deprecate_only
         self._only_pack_properly_namespaced_functions = (
             _only_pack_properly_namespaced_functions
         )
@@ -666,9 +671,51 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ):
                     del sys.path_importer_cache[directory]
 
+    @memoize
+    def _ast_dunder_virtual_defined(self, name, fpath):
+        with salt.utils.files.fopen(fpath) as rfh:
+            tree = ast.parse(rfh.read())
+            for node in tree.body:
+                if not isinstance(node, ast.FunctionDef):
+                    continue
+                if node.name == "__virtual__":
+                    # The module defines a __virtual__ function.
+                    # Continue regular loading.
+                    break
+            else:
+                # The module did not define a __virtual__ function, stop
+                # processing the module
+                log.debug(
+                    "Not loading %r because it does not define a __virtual__ function",
+                    name,
+                )
+                return False
+        return True
+
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name][:2]
+        func_decorator = None
+        if (
+            suffix == ".py"
+            and self._ast_dunder_virtual_inspect
+            and not self._ast_dunder_virtual_defined(name, fpath)
+        ):
+            func_decorator = _deprecated_dunder_utils_usage
+            if self._ast_dunder_virtual_deprecate_only is True:
+                # Pre 3010 behavior
+                log.debug(
+                    "Loading %r into __utils__ but this will stop working in Salt 3010",
+                    name,
+                )
+            else:
+                # Post 3010 behavior
+                log.debug(
+                    "Not loading %r because it does not define a __virtual__ function",
+                    name,
+                )
+                return False
+
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
         # This is for the unusual case where several Python versions share a single
@@ -989,6 +1036,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if hasattr(mod, "__deprecated__"):
                 func = extension_deprecation_message(*mod.__deprecated__)(func)
 
+            if func_decorator:
+                # Wrap the function in decorator
+                func = func_decorator(func)
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):
@@ -1283,3 +1334,19 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+def _deprecated_dunder_utils_usage(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3010,
+            "Detected __utils__ usage on a module that will stop getting "
+            "loaded into __utils__ after {version}. Please import the utils "
+            "module and call the utils function directly.",
+            stacklevel=6,
+            category=DeprecationWarning,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper

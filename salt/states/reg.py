@@ -72,6 +72,8 @@ Value:
 import logging
 
 import salt.utils.stringutils
+import salt.utils.win_dacl
+import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 
@@ -80,31 +82,11 @@ def __virtual__():
     """
     Load this state if the reg module exists
     """
-    if "reg.read_value" not in __utils__:
+    if salt.utils.win_reg.HAS_WINDOWS_MODULES is False:
         return (
             False,
-            "reg state module failed to load: missing util function: reg.read_value",
+            "The salt.utils.win_reg module could not be imported",
         )
-
-    if "reg.set_value" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: missing util function: reg.set_value",
-        )
-
-    if "reg.delete_value" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: missing util function: reg.delete_value",
-        )
-
-    if "reg.delete_key_recursive" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: "
-            "missing util function: reg.delete_key_recursive",
-        )
-
     return "reg"
 
 
@@ -396,12 +378,12 @@ def present(
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_current = __utils__["reg.read_value"](
+    reg_current = salt.utils.win_reg.read_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
     # Cast the vdata according to the vtype
-    vdata_decoded = __utils__["reg.cast_vdata"](vdata=vdata, vtype=vtype)
+    vdata_decoded = salt.utils.win_reg.cast_vdata(vdata=vdata, vtype=vtype)
 
     # Check if the key already exists
     # If so, check perms
@@ -411,7 +393,7 @@ def present(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
             salt.utils.stringutils.to_unicode(name, "utf-8"),
         )
-        return __utils__["dacl.check_perms"](
+        return salt.utils.win_dacl.check_perms(
             obj_name="\\".join([hive, key]),
             obj_type="registry32" if use_32bit_registry else "registry",
             ret=ret,
@@ -420,10 +402,11 @@ def present(
             deny_perms=win_deny_perms,
             inheritance=win_inheritance,
             reset=win_perms_reset,
+            test_mode=__opts__.get("test", False),
         )
 
     add_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)"
         ),
@@ -440,7 +423,7 @@ def present(
         return ret
 
     # Configure the value
-    ret["result"] = __utils__["reg.set_value"](
+    ret["result"] = salt.utils.win_reg.set_value(
         hive=hive,
         key=key,
         vname=vname,
@@ -451,13 +434,13 @@ def present(
 
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to add {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Failed to add {vname} to {hive}\{key}"
     else:
         ret["changes"] = {"reg": {"Added": add_change}}
-        ret["comment"] = r"Added {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Added {vname} to {hive}\{key}"
 
     if ret["result"]:
-        ret = __utils__["dacl.check_perms"](
+        ret = salt.utils.win_dacl.check_perms(
             obj_name="\\".join([hive, key]),
             obj_type="registry32" if use_32bit_registry else "registry",
             ret=ret,
@@ -466,6 +449,7 @@ def present(
             deny_perms=win_deny_perms,
             inheritance=win_inheritance,
             reset=win_perms_reset,
+            test_mode=__opts__.get("test", False),
         )
 
     return ret
@@ -517,15 +501,15 @@ def absent(name, vname=None, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_check = __utils__["reg.read_value"](
+    reg_check = salt.utils.win_reg.read_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
     remove_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(vname if vname else "(Default)"),
     }
 
@@ -536,15 +520,15 @@ def absent(name, vname=None, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    ret["result"] = __utils__["reg.delete_value"](
+    ret["result"] = salt.utils.win_reg.delete_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to remove {} from {}".format(key, hive)
+        ret["comment"] = rf"Failed to remove {key} from {hive}"
     else:
         ret["changes"] = {"reg": {"Removed": remove_change}}
-        ret["comment"] = r"Removed {} from {}".format(key, hive)
+        ret["comment"] = rf"Removed {key} from {hive}"
 
     return ret
 
@@ -595,13 +579,13 @@ def key_absent(name, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not __utils__["reg.read_value"](
+    if not salt.utils.win_reg.read_value(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )["success"]:
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
-    ret["changes"] = {"reg": {"Removed": {"Key": r"{}\{}".format(hive, key)}}}
+    ret["changes"] = {"reg": {"Removed": {"Key": rf"{hive}\{key}"}}}
 
     # Check for test option
     if __opts__["test"]:
@@ -609,14 +593,14 @@ def key_absent(name, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    __utils__["reg.delete_key_recursive"](
+    salt.utils.win_reg.delete_key_recursive(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
-    if __utils__["reg.read_value"](
+    if salt.utils.win_reg.read_value(
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )["success"]:
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Failed to remove registry key {}".format(name)
+        ret["comment"] = f"Failed to remove registry key {name}"
 
     return ret

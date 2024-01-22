@@ -4,3 +4,4 @@ boto3
 pyyaml
 jinja2
 packaging
+typing-extensions
