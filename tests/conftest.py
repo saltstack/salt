@@ -447,13 +447,13 @@ def pytest_collection_modifyitems(config, items):
     log.warning("Mofifying collected tests to keep track of fixture usage")
 
     timeout_marker_tests_paths = (
-        str(TESTS_DIR / "unit"),
-        str(PYTESTS_DIR / "unit"),
+        str(PYTESTS_DIR / "pkg"),
+        str(PYTESTS_DIR / "scenarios"),
     )
     for item in items:
         if (
             not salt.utils.platform.is_windows()
-            and str(pathlib.Path(item.fspath).resolve()).startswith(
+            and not str(pathlib.Path(item.fspath).resolve()).startswith(
                 timeout_marker_tests_paths
             )
             and not item.get_closest_marker("timeout")
