@@ -133,6 +133,8 @@ wheel==0.38.4
     # via -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt
+xmltodict==0.13.0
+    # via -r requirements/windows.txt
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0
