@@ -1438,6 +1438,7 @@ class VM:
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
+        env["RAISE_DEPRECATIONS_RUNTIME_ERRORS"] = "1"
         self.write_and_upload_dot_env(env)
         if self.is_windows is False and self.config.ssh_username != "root":
             sudo = True
