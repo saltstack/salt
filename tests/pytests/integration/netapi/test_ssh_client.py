@@ -135,6 +135,7 @@ def test_ssh_disabled(client, auth_creds):
     assert ret is None
 
 
+@pytest.mark.timeout(120)
 def test_shell_inject_ssh_priv(
     client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account
 ):

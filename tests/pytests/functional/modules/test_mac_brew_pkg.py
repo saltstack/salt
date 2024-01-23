@@ -49,6 +49,7 @@ def pkg_2_name(pkg):
             pkg.remove(pkg_name)
 
 
+@pytest.mark.timeout(120)
 def test_brew_install(pkg, pkg_1_name):
     """
     Tests the installation of packages

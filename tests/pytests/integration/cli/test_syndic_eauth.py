@@ -12,6 +12,7 @@ docker = pytest.importorskip("docker")
 
 pytestmark = [
     pytest.mark.core_test,
+    pytest.mark.timeout(120),
 ]
 
 
