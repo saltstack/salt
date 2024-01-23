@@ -55,6 +55,7 @@ class SSHStateTest(SSHCase):
         self.assertTrue(check_file)
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_state_sls_id(self):
         """
         test state.sls_id with salt-ssh

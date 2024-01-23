@@ -7,6 +7,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout(120),
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
@@ -49,7 +50,6 @@ def pkg_2_name(pkg):
             pkg.remove(pkg_name)
 
 
-@pytest.mark.timeout(120)
 def test_brew_install(pkg, pkg_1_name):
     """
     Tests the installation of packages

@@ -6,7 +6,6 @@ import shutil
 import sys
 from sysconfig import get_path
 
-import _pytest._version
 import attr
 import pytest
 
@@ -15,12 +14,10 @@ import salt.utils.files
 from tests.conftest import CODE_DIR
 from tests.support.mock import MagicMock, patch
 
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
-
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.timeout_unless_on_windows(120),
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.slow_test,
@@ -30,11 +27,8 @@ pytestmark = [
 @pytest.fixture
 def pkgrepo(states, grains):
     if grains["os_family"] != "Debian":
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
         raise pytest.skip.Exception(
-            "Test only for debian based platforms", **exc_kwargs
+            "Test only for debian based platforms", _use_item_location=True
         )
     return states.pkgrepo
 
@@ -102,12 +96,9 @@ def system_aptsources_ids(value):
 def system_aptsources(request, grains):
     sys_modules = list(sys.modules)
     copied_paths = []
-    exc_kwargs = {}
-    if PYTEST_GE_7:
-        exc_kwargs["_use_item_location"] = True
     if grains["os_family"] != "Debian":
         raise pytest.skip.Exception(
-            "Test only for debian based platforms", **exc_kwargs
+            "Test only for debian based platforms", _use_item_location=True
         )
     try:
         try:
@@ -117,7 +108,7 @@ def system_aptsources(request, grains):
                 raise pytest.skip.Exception(
                     "This test is meant to run without the system aptsources package, but it's "
                     "available from '{}'.".format(sourceslist.__file__),
-                    **exc_kwargs,
+                    _use_item_location=True,
                 )
             else:
                 # Run the test
@@ -162,7 +153,8 @@ def system_aptsources(request, grains):
                             shutil.copyfile(src, dst)
                 if not copied_paths:
                     raise pytest.skip.Exception(
-                        "aptsources.sourceslist python module not found", **exc_kwargs
+                        "aptsources.sourceslist python module not found",
+                        _use_item_location=True,
                     )
                 # Run the test
                 yield request.param
