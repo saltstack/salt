@@ -464,7 +464,6 @@ def test_custom_proxy_module(
     salt_cli,
     proxy_minion_id,
     parallel_startup,
-    integration_files_dir,
 ):
     """
     Ensure the salt-proxy control proxy starts and
@@ -593,12 +592,12 @@ def ping():
     [True, False],
     ids=["parallel_startup=True", "parallel_startup=False"],
 )
+@pytest.mark.timeout(120)
 def test_custom_proxy_module_raise_exception(
     salt_master,
     salt_cli,
     proxy_minion_id,
     parallel_startup,
-    integration_files_dir,
 ):
     """
     Ensure the salt-proxy control proxy starts and
