@@ -32,6 +32,9 @@ class FakeProcess:
         yield (self.pid, self._username, self._create_time)
 
 
+__accepted_statuses__ = ["sleeping", "idle", "running", "stopped"]
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {}
@@ -372,3 +375,13 @@ def test_ps_not_running_but_is_running():
 
         ret = ps.beacon(config)
         assert ret == []
+
+
+def test_invalid_status_config():
+        config = {"processes": [{"mysql": {"status": "oop"}}]}
+
+        ret = ps.validate(config)
+        assert ret == (
+            False,
+            f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}.",
+        )

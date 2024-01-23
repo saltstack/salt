@@ -32,6 +32,7 @@ except ImportError:
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __virtualname__ = "ps"
+__accepted_statuses__ = ["sleeping", "idle", "running", "stopped"]
 
 
 def __virtual__():
@@ -53,11 +54,16 @@ def validate(config):
             "Configuration for ps beacon must be a dictionary with key 'processes' that contains a list.",
         )
     else:
-        if "processes" not in config:
+        if "processes" not in list(config.keys()):
             return False, "Configuration for ps beacon requires processes."
         else:
             if not isinstance(config["processes"], list):
                 return False, "Processes for ps beacon must be a dictionary."
+
+        for e in config["processes"]:
+            status = next(iter(e.values()))
+            if not next(iter(status.values())) in __accepted_statuses__:
+                return False, f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}."
 
     return True, "Valid beacon configuration"
 
