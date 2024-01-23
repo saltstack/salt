@@ -2,6 +2,7 @@
 Utilies for beacons
 """
 
+import collections
 import copy
 
 
@@ -22,5 +23,5 @@ def list_to_dict(config):
     into a dictionary.
     """
     _config = {}
-    list(map(_config.update, config))
+    collections.deque(map(_config.update, config), maxlen=0)
     return _config
