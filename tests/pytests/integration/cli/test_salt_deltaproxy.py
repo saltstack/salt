@@ -592,7 +592,7 @@ def ping():
     [True, False],
     ids=["parallel_startup=True", "parallel_startup=False"],
 )
-@pytest.mark.timeout(120)
+@pytest.mark.timeout_unless_on_windows(120)
 def test_custom_proxy_module_raise_exception(
     salt_master,
     salt_cli,
