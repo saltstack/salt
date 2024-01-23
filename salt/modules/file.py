@@ -4700,6 +4700,9 @@ def get_managed(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
     **kwargs,
 ):
     """
@@ -4796,6 +4799,39 @@ def get_managed(
 
     gnupghome
         When verifying ``source_hash_sig``, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
 
@@ -5657,6 +5693,9 @@ def check_managed_changes(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
     **kwargs,
 ):
     """
@@ -5677,6 +5716,39 @@ def check_managed_changes(
         of the file to which the symlink points.
 
         .. versionadded:: 3005
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -5709,6 +5781,9 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
             **kwargs,
         )
 
@@ -5744,6 +5819,9 @@ def check_managed_changes(
         setype=setype,
         serange=serange,
         follow_symlinks=follow_symlinks,
+        ignore_ordering=ignore_ordering,
+        ignore_whitespace=ignore_whitespace,
+        ignore_comment_characters=ignore_comment_characters,
     )
     __clean_tmp(sfn)
     return changes
@@ -5766,6 +5844,9 @@ def check_file_meta(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
 ):
     """
     Check for the changes in the file metadata.
@@ -5848,8 +5929,42 @@ def check_file_meta(
         of the file to which the symlink points.
 
         .. versionadded:: 3005
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
     """
     changes = {}
+    has_changes = False
     if not source_sum:
         source_sum = dict()
 
@@ -5864,6 +5979,8 @@ def check_file_meta(
 
     if not lstats:
         changes["newfile"] = name
+        if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+            return True, changes
         return changes
 
     if "hsum" in source_sum:
@@ -5877,9 +5994,22 @@ def check_file_meta(
                 )
             if sfn:
                 try:
-                    changes["diff"] = get_diff(
-                        name, sfn, template=True, show_filenames=False
-                    )
+                    if any(
+                        [ignore_ordering, ignore_whitespace, ignore_comment_characters]
+                    ):
+                        has_changes, changes["diff"] = get_diff(
+                            name,
+                            sfn,
+                            template=True,
+                            show_filenames=False,
+                            ignore_ordering=ignore_ordering,
+                            ignore_whitespace=ignore_whitespace,
+                            ignore_comment_characters=ignore_comment_characters,
+                        )
+                    else:
+                        changes["diff"] = get_diff(
+                            name, sfn, template=True, show_filenames=False
+                        )
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -5905,7 +6035,17 @@ def check_file_meta(
                 tmp_.write(salt.utils.stringutils.to_str(contents))
         # Compare the static contents with the named file
         try:
-            differences = get_diff(name, tmp, show_filenames=False)
+            if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+                has_changes, differences = get_diff(
+                    name,
+                    tmp,
+                    show_filenames=False,
+                    ignore_ordering=ignore_ordering,
+                    ignore_whitespace=ignore_whitespace,
+                    ignore_comment_characters=ignore_comment_characters,
+                )
+            else:
+                differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -5968,6 +6108,9 @@ def check_file_meta(
             if serange and serange != current_serange:
                 changes["selinux"] = {"range": serange}
 
+    if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+        return has_changes, changes
+
     return changes
 
 
@@ -5980,6 +6123,9 @@ def get_diff(
     template=False,
     source_hash_file1=None,
     source_hash_file2=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
 ):
     """
     Return unified diff of two files
@@ -6030,6 +6176,39 @@ def get_diff(
         hash.
 
         .. versionadded:: 2018.3.0
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
 
     CLI Examples:
 
@@ -6089,9 +6268,20 @@ def get_diff(
             else:
                 if show_filenames:
                     args.extend(paths)
-                ret = __utils__["stringutils.get_diff"](*args)
-        return ret
-    return ""
+                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+                    ret = __utils__["stringutils.get_conditional_diff"](
+                        *args,
+                        ignore_ordering=ignore_ordering,
+                        ignore_whitespace=ignore_whitespace,
+                        ignore_comment_characters=ignore_comment_characters,
+                    )
+                else:
+                    ret = __utils__["stringutils.get_diff"](*args)
+    elif any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+        ret = (False, "")
+    else:
+        ret = ""
+    return ret
 
 
 def manage_file(
@@ -6128,6 +6318,9 @@ def manage_file(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
     **kwargs,
 ):
     """
@@ -6319,6 +6512,39 @@ def manage_file(
 
         .. versionadded:: 3007.0
 
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -6330,6 +6556,7 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    has_changes = False
     check_web_source_hash = bool(
         source
         and urllib.parse.urlparse(source).scheme != "salt"
@@ -6428,7 +6655,19 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if any(
+                        [ignore_ordering, ignore_whitespace, ignore_comment_characters]
+                    ):
+                        has_changes, file_diff = get_diff(
+                            real_name,
+                            sfn,
+                            show_filenames=False,
+                            ignore_ordering=ignore_ordering,
+                            ignore_whitespace=ignore_whitespace,
+                            ignore_comment_characters=ignore_comment_characters,
+                        )
+                    else:
+                        file_diff = get_diff(real_name, sfn, show_filenames=False)
                     if file_diff:
                         ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
@@ -6465,13 +6704,25 @@ def manage_file(
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             try:
-                differences = get_diff(
-                    real_name,
-                    tmp,
-                    show_filenames=False,
-                    show_changes=show_changes,
-                    template=True,
-                )
+                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+                    has_changes, differences = get_diff(
+                        real_name,
+                        tmp,
+                        show_filenames=False,
+                        show_changes=show_changes,
+                        template=True,
+                        ignore_ordering=ignore_ordering,
+                        ignore_whitespace=ignore_whitespace,
+                        ignore_comment_characters=ignore_comment_characters,
+                    )
+                else:
+                    differences = get_diff(
+                        real_name,
+                        tmp,
+                        show_filenames=False,
+                        show_changes=show_changes,
+                        template=True,
+                    )
 
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
@@ -6576,6 +6827,11 @@ def manage_file(
 
         if ret["changes"]:
             ret["comment"] = f"File {salt.utils.data.decode(name)} updated"
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
         elif not ret["changes"] and ret["result"]:
             ret["comment"] = "File {} is in the correct state".format(
@@ -6771,6 +7027,13 @@ def manage_file(
             ret["comment"] = "File " + name + " is in the correct state"
         if sfn:
             __clean_tmp(sfn)
+
+        if (
+            any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+            and ret["changes"]
+            and not has_changes
+        ):
+            ret["skip_req"] = True
 
         return ret
 
