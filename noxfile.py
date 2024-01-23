@@ -62,6 +62,7 @@ if PRINT_SYSTEM_INFO is None:
     PRINT_SYSTEM_INFO = CI_RUN
 else:
     PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
+PRINT_SYSTEM_INFO_ONLY = os.environ.get("PRINT_SYSTEM_INFO_ONLY", "0") == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
@@ -1014,6 +1015,11 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
     else:
         args.append("--log-file={}".format(RUNTESTS_LOGFILE))
     args.extend(cmd_args)
+
+    if PRINT_SYSTEM_INFO_ONLY and "--sys-info-and-exit" not in args:
+        args.append("--sys-info-and-exit")
+        session.run("python", "-m", "pytest", *args, env=env)
+        return
 
     if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
         args.append("--sysinfo")

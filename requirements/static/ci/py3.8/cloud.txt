@@ -509,7 +509,7 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.0rc29
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/pytest.txt
