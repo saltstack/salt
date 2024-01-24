@@ -108,6 +108,8 @@ cryptography==42.0.5
     #   moto
     #   paramiko
     #   pyopenssl
+    #   pyspnego
+    #   smbprotocol
     #   trustme
     #   vcert
 distlib==0.3.2

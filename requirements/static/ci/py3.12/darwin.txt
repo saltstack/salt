@@ -96,6 +96,8 @@ cryptography==42.0.5
     #   etcd3-py
     #   moto
     #   pyopenssl
+    #   pyspnego
+    #   smbprotocol
     #   trustme
     #   vcert
 distlib==0.3.2

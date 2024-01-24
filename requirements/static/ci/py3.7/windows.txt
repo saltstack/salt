@@ -96,7 +96,7 @@ cryptography==42.0.5
     #   pyopenssl
     #   requests-ntlm
     #   trustme
-istlib==0.3.2
+distlib==0.3.8
     # via virtualenv
 distro==1.5.0
     # via
