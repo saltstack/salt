@@ -12,7 +12,7 @@ Hives
 This is the top level of the registry. They all begin with HKEY.
 
     - HKEY_CLASSES_ROOT (HKCR)
-    - HKEY_CURRENT_USER(HKCU)
+    - HKEY_CURRENT_USER (HKCU)
     - HKEY_LOCAL MACHINE (HKLM)
     - HKEY_USER (HKU)
     - HKEY_CURRENT_CONFIG
@@ -139,7 +139,7 @@ def present(
             A string value representing the full path of the key to include the
             HIVE, Key, and all Subkeys. For example:
 
-            ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
+            ``HKEY_LOCAL_MACHINE\SOFTWARE\Salt``
 
             Valid hive values include:
 
@@ -298,24 +298,24 @@ def present(
     Example:
 
     The following example will set the ``(Default)`` value for the
-    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
+    ``SOFTWARE\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
     ``2016.3.1``:
 
     .. code-block:: yaml
 
-        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+        HKEY_CURRENT_USER\SOFTWARE\Salt:
           reg.present:
             - vdata: 2016.3.1
 
     Example:
 
     The following example will set the value for the ``version`` entry under
-    the ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
+    the ``SOFTWARE\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
     ``2016.3.1``. The value will be reflected in ``Wow6432Node``:
 
     .. code-block:: yaml
 
-        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+        HKEY_CURRENT_USER\SOFTWARE\Salt:
           reg.present:
             - vname: version
             - vdata: 2016.3.1
@@ -323,7 +323,7 @@ def present(
     In the above example the path is interpreted as follows:
 
         - ``HKEY_CURRENT_USER`` is the hive
-        - ``SOFTWARE\\Salt`` is the key
+        - ``SOFTWARE\Salt`` is the key
         - ``vname`` is the value name ('version') that will be created under the key
         - ``vdata`` is the data that will be assigned to 'version'
 
@@ -423,7 +423,7 @@ def present(
         )
 
     add_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)"
         ),
@@ -451,10 +451,10 @@ def present(
 
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to add {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Failed to add {vname} to {hive}\{key}"
     else:
         ret["changes"] = {"reg": {"Added": add_change}}
-        ret["comment"] = r"Added {} to {}\{}".format(vname, hive, key)
+        ret["comment"] = rf"Added {vname} to {hive}\{key}"
 
     if ret["result"]:
         ret = __utils__["dacl.check_perms"](
@@ -480,7 +480,7 @@ def absent(name, vname=None, use_32bit_registry=False):
             A string value representing the full path of the key to include the
             HIVE, Key, and all Subkeys. For example:
 
-            ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
+            ``HKEY_LOCAL_MACHINE\SOFTWARE\Salt``
 
             Valid hive values include:
 
@@ -504,7 +504,7 @@ def absent(name, vname=None, use_32bit_registry=False):
 
         .. code-block:: yaml
 
-            'HKEY_CURRENT_USER\\SOFTWARE\\Salt':
+            'HKEY_CURRENT_USER\SOFTWARE\Salt':
               reg.absent
                 - vname: version
 
@@ -521,11 +521,11 @@ def absent(name, vname=None, use_32bit_registry=False):
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
     remove_change = {
-        "Key": r"{}\{}".format(hive, key),
+        "Key": rf"{hive}\{key}",
         "Entry": "{}".format(vname if vname else "(Default)"),
     }
 
@@ -541,10 +541,10 @@ def absent(name, vname=None, use_32bit_registry=False):
     )
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to remove {} from {}".format(key, hive)
+        ret["comment"] = rf"Failed to remove {key} from {hive}"
     else:
         ret["changes"] = {"reg": {"Removed": remove_change}}
-        ret["comment"] = r"Removed {} from {}".format(key, hive)
+        ret["comment"] = rf"Removed {key} from {hive}"
 
     return ret
 
@@ -598,10 +598,10 @@ def key_absent(name, use_32bit_registry=False):
     if not __utils__["reg.read_value"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )["success"]:
-        ret["comment"] = "{} is already absent".format(name)
+        ret["comment"] = f"{name} is already absent"
         return ret
 
-    ret["changes"] = {"reg": {"Removed": {"Key": r"{}\{}".format(hive, key)}}}
+    ret["changes"] = {"reg": {"Removed": {"Key": rf"{hive}\{key}"}}}
 
     # Check for test option
     if __opts__["test"]:
@@ -617,6 +617,6 @@ def key_absent(name, use_32bit_registry=False):
     )["success"]:
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Failed to remove registry key {}".format(name)
+        ret["comment"] = f"Failed to remove registry key {name}"
 
     return ret

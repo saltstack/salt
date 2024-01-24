@@ -75,6 +75,16 @@ structure::
 
     More info here:
     https://docs.aws.amazon.com/cli/latest/topic/s3-config.html
+
+.. note:: This fileserver back-end will by default sync all buckets on every
+    fileserver update.
+
+    If you want files to be only populated in the cache when requested, you can
+    disable this in the master config:
+
+    .. code-block:: yaml
+
+        s3.s3_sync_on_update: False
 """
 
 
@@ -93,9 +103,6 @@ import salt.utils.hashutils
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
-
-S3_CACHE_EXPIRE = 30  # cache for 30 seconds
-S3_SYNC_ON_UPDATE = True  # sync cache on update rather than jit
 
 
 def envs():
@@ -116,7 +123,8 @@ def update():
 
     metadata = _init()
 
-    if S3_SYNC_ON_UPDATE:
+    # sync cache on update rather than jit
+    if __opts__.get("s3.s3_sync_on_update", True):
         # sync the buckets to the local cache
         log.info("Syncing local cache from S3...")
         for saltenv, env_meta in metadata.items():
@@ -343,7 +351,7 @@ def _init():
     specified and cache the data to disk.
     """
     cache_file = _get_buckets_cache_filename()
-    exp = time.time() - S3_CACHE_EXPIRE
+    exp = time.time() - __opts__.get("s3.s3_cache_expire", 30)
 
     # check mtime of the buckets files cache
     metadata = None

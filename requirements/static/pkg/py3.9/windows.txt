@@ -36,7 +36,7 @@ cryptography==41.0.7
     #   pyopenssl
 distro==1.8.0
     # via -r requirements/base.txt
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
