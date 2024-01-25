@@ -202,7 +202,7 @@ gitpython==3.1.41
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-google-auth==2.19.1
+google-auth==2.27.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   kubernetes
@@ -436,11 +436,11 @@ psutil==5.9.6
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.2.4
+pyasn1-modules==0.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   google-auth
-pyasn1==0.4.8
+pyasn1==0.5.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pyasn1-modules
@@ -522,7 +522,7 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.0rc29
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
@@ -672,7 +672,6 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
-    #   google-auth
     #   jsonschema
     #   junit-xml
     #   junos-eznc
@@ -766,7 +765,6 @@ urllib3==1.26.18
     #   -c requirements/static/ci/py3.12/linux.txt
     #   botocore
     #   docker
-    #   google-auth
     #   kubernetes
     #   python-etcd
     #   requests
