@@ -62,6 +62,10 @@ _deb_distro_info = {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
         },
+        "23.04": {
+            "label": "salt_ubuntu2304",
+            "codename": "mantic",
+        },
     },
 }
 
