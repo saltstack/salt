@@ -8,6 +8,7 @@ user's process to watch (good example would be
 IIS App Pools).
 
 .. code-block:: yaml
+
 beacons:
   ps:
     processes:
@@ -18,6 +19,7 @@ beacons:
          username: "DOMAIN\\username1"
       - mysql:
          status: stopped
+
 """
 import logging
 
@@ -63,12 +65,18 @@ def validate(config):
         for e in config["processes"]:
             status = next(iter(e.values()))
             if not next(iter(status.values())) in __accepted_statuses__:
-                return False, f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}."
+                return (
+                    False,
+                    f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}.",
+                )
 
     return True, "Valid beacon configuration"
 
 
 def beacon(config):
+    """
+    Search for given process(es) by name and optionally username.
+    """
     ret = []
     procs = []
 
@@ -108,7 +116,7 @@ def beacon(config):
         current_result[process_name]["instances"] = (
             []
             if len(found) == 0
-            else sorted(map(contextPullProps, found), key=lambda x: x[0])
+            else sorted(map(context_pull_props, found), key=lambda x: x[0])
         )
 
         ret.append(current_result)
@@ -116,6 +124,11 @@ def beacon(config):
     return sorted(ret, key=lambda x: list(x.keys()))
 
 
-def contextPullProps(process):
+def context_pull_props(process):
+    """
+    Retrieves process information for the given process.
+    Using x.oneshot() speeds up retrieving multiple attributes for a process and caches the results.
+    More Info: https://psutil.readthedocs.io/en/latest/#psutil.Process.oneshot
+    """
     with process.oneshot():
         return (process.pid, process.username(), process.create_time())

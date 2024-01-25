@@ -5,6 +5,7 @@
     ps usage beacon test cases
 """
 from contextlib import contextmanager
+
 import pytest
 
 import salt.beacons.ps as ps
@@ -378,10 +379,10 @@ def test_ps_not_running_but_is_running():
 
 
 def test_invalid_status_config():
-        config = {"processes": [{"mysql": {"status": "oop"}}]}
+    config = {"processes": [{"mysql": {"status": "oop"}}]}
 
-        ret = ps.validate(config)
-        assert ret == (
-            False,
-            f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}.",
-        )
+    ret = ps.validate(config)
+    assert ret == (
+        False,
+        f"Status not supported, currently supported are {', '.join(__accepted_statuses__)}.",
+    )
