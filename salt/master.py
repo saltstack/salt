@@ -258,7 +258,16 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         now = int(time.time())
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
-        old_present = set()
+        # load the presence data from the cache on disk
+        presence_cache = salt.utils.cache.CacheFactory.factory(
+            "disk",
+            3600,
+            minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+        )
+        try:
+            last_present = set(presence_cache["present"])
+        except KeyError:
+            last_present = set()
         while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
             if not last or (now - last) >= self.loop_interval:
@@ -270,7 +279,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
-            self.handle_presence(old_present)
+            self.handle_presence(last_present)
             self.handle_key_rotate(now)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
@@ -374,6 +383,14 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.event.fire_event(data, tagify("present", "presence"))
             old_present.clear()
             old_present.update(present)
+
+            # update the cache on disk
+            presence_cache = salt.utils.cache.CacheFactory.factory(
+                "disk",
+                3600,
+                minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+            )
+            presence_cache["present"] = list(set(present))
 
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
@@ -698,7 +715,6 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["aes"] = {

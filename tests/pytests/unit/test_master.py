@@ -1,10 +1,29 @@
+import os
 import time
 
 import pytest
 
 import salt.master
 import salt.utils.platform
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, call, patch
+
+
+@pytest.fixture
+def maintenance_opts(master_opts):
+    """
+    Options needed for master's Maintenence class
+    """
+    opts = master_opts.copy()
+    opts.update(git_pillar_update_interval=180, maintenance_interval=181)
+    yield opts
+
+
+@pytest.fixture
+def maintenance(maintenance_opts):
+    """
+    The master's Maintenence class
+    """
+    return salt.master.Maintenance(maintenance_opts)
 
 
 @pytest.fixture
@@ -160,3 +179,90 @@ def test_when_syndic_return_processes_load_then_correct_values_should_be_returne
     with patch.object(encrypted_requests, "_return", autospec=True) as fake_return:
         encrypted_requests._syndic_return(payload)
         fake_return.assert_called_with(expected_return)
+
+
+@pytest.mark.parametrize(
+    "presence_cache_data,connected_ids,change_expected",
+    [
+        (
+            ["minion1", "minion2"],
+            {"minion1", "minion2"},
+            False,
+        ),
+        (
+            ["minion1"],
+            {"minion1", "minion2"},
+            True,
+        ),
+        (
+            ["minion1", "minion2"],
+            {"minion1"},
+            True,
+        ),
+    ],
+)
+def test_handle_presence(
+    maintenance, presence_cache_data, connected_ids, change_expected
+):
+    """
+    Test the handle_presence function inside Maintenance class.
+    """
+    fire_event = MagicMock()
+
+    # populate the presence cache with old data
+    presence_cache = salt.utils.cache.CacheFactory.factory(
+        "disk",
+        3600,
+        minion_cache_path=os.path.join(maintenance.opts["cachedir"], "presence-data"),
+    )
+    presence_cache.clear()
+    presence_cache["present"] = presence_cache_data
+
+    with patch("salt.master.Maintenance.run", MagicMock()), patch(
+        "salt.master.Maintenance.presence_events", True, create=True
+    ), patch(
+        "salt.master.Maintenance.event",
+        MagicMock(
+            connect_pull=MagicMock(return_value=True),
+            fire_event=fire_event,
+        ),
+        create=True,
+    ), patch(
+        "salt.master.Maintenance.ckminions",
+        MagicMock(connected_ids=MagicMock(return_value=connected_ids)),
+        create=True,
+    ):
+        maintenance.handle_presence(set(presence_cache["present"]))
+
+        assert fire_event.called
+
+        if change_expected:
+            assert fire_event.call_count == 2
+            change_events = [
+                call[0][0]
+                for call in fire_event.call_args_list
+                if "/change" in call[0][1]
+            ]
+            assert change_events
+        else:
+            assert fire_event.call_count == 1
+
+        present_event = [
+            call[0][0] for call in fire_event.call_args_list if "/present" in call[0][1]
+        ][0]
+        assert (
+            set(present_event["present"]) == connected_ids
+        ), "The presence event sent does not contain the expected minions"
+
+        # reload the presence data from disk
+        new_presence_cache = salt.utils.cache.CacheFactory.factory(
+            "disk",
+            3600,
+            minion_cache_path=os.path.join(
+                maintenance.opts["cachedir"], "presence-data"
+            ),
+        )
+        new_present = set(new_presence_cache["present"])
+        assert (
+            new_present == connected_ids
+        ), "The presence cache on disk does not contain the expected minions"
