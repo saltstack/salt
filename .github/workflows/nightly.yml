@@ -2240,6 +2240,14 @@ jobs:
             distro: ubuntu
             version: "22.04"
             arch: arm64
+          - pkg-type: deb
+            distro: ubuntu
+            version: "23.04"
+            arch: x86_64
+          - pkg-type: deb
+            distro: ubuntu
+            version: "23.04"
+            arch: arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -2354,54 +2362,6 @@ jobs:
             version: "2023"
             arch: aarch64
           - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: arm64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: aarch64
-          - pkg-type: rpm
             distro: fedora
             version: "37"
             arch: x86_64
@@ -2460,6 +2420,42 @@ jobs:
           - pkg-type: rpm
             distro: photon
             version: "5"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
             arch: aarch64
 
     steps:
