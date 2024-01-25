@@ -194,7 +194,7 @@ try:
     try:
         from netmiko import NetMikoAuthenticationException, NetMikoTimeoutException
     except ImportError:
-        from netmiko.ssh_exception import (
+        from netmiko.ssh_exception import (  # pylint: disable=no-name-in-module
             NetMikoAuthenticationException,
             NetMikoTimeoutException,
         )

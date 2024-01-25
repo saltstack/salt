@@ -59,6 +59,12 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -235,7 +241,7 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return "arn:aws:sns:{}:{}:{}".format(_get_region(region, profile), account_id, name)
+    return f"arn:aws:sns:{_get_region(region, profile)}:{account_id}:{name}"
 
 
 def _get_region(region=None, profile=None):
@@ -252,7 +258,7 @@ def _get_region(region=None, profile=None):
 
 
 def _subscriptions_cache_key(name):
-    return "{}_{}_subscriptions".format(_cache_get_key(), name)
+    return f"{_cache_get_key()}_{name}_subscriptions"
 
 
 def _invalidate_cache():

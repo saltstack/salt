@@ -90,6 +90,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
+import salt.utils.package
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
@@ -136,7 +137,7 @@ def _clear_context(bin_env=None):
     """
     contextkey = "pip.version"
     if bin_env is not None:
-        contextkey = "{}.{}".format(contextkey, bin_env)
+        contextkey = f"{contextkey}.{bin_env}"
     __context__.pop(contextkey, None)
 
 
@@ -144,7 +145,7 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    if salt.utils.package.bundled():
         return True
     return False
 
@@ -157,7 +158,7 @@ def _get_pip_bin(bin_env):
     if not bin_env:
         if _check_bundled():
             logger.debug("pip: Using pip from bundled app")
-            return [os.path.normpath(sys.executable), "pip"]
+            return [str(sys.RELENV / "salt-pip")]
         else:
             logger.debug("pip: Using pip from currently-running Python")
             return [os.path.normpath(sys.executable), "-m", "pip"]
@@ -189,7 +190,7 @@ def _get_pip_bin(bin_env):
                         bin_path,
                     )
         raise CommandNotFoundError(
-            "Could not find a pip binary in virtualenv {}".format(bin_env)
+            f"Could not find a pip binary in virtualenv {bin_env}"
         )
 
     # bin_env is the python or pip binary
@@ -201,12 +202,10 @@ def _get_pip_bin(bin_env):
             # We have been passed a pip binary, use the pip binary.
             return [os.path.normpath(bin_env)]
 
-        raise CommandExecutionError(
-            "Could not find a pip binary within {}".format(bin_env)
-        )
+        raise CommandExecutionError(f"Could not find a pip binary within {bin_env}")
     else:
         raise CommandNotFoundError(
-            "Access denied to {}, could not find a pip binary".format(bin_env)
+            f"Access denied to {bin_env}, could not find a pip binary"
         )
 
 
@@ -254,7 +253,6 @@ def _get_env_activate(bin_env):
 
 
 def _find_req(link):
-
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
@@ -412,9 +410,7 @@ def _format_env_vars(env_vars):
                     val = str(val)
                 ret[key] = val
         else:
-            raise CommandExecutionError(
-                "env_vars {} is not a dictionary".format(env_vars)
-            )
+            raise CommandExecutionError(f"env_vars {env_vars} is not a dictionary")
     return ret
 
 
@@ -464,7 +460,7 @@ def install(
     cache_dir=None,
     no_binary=None,
     disable_version_check=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Install packages with pip
@@ -503,7 +499,9 @@ def install(
         or one or more package names with commas between them
 
     log
-        Log file where a complete (maximum verbosity) record will be kept
+        Log file where a complete (maximum verbosity) record will be kept.
+        If this file doesn't exist and the parent directory is writeable,
+        it will be created.
 
     proxy
         Specify a proxy in the form ``user:passwd@proxy.server:port``. Note
@@ -757,9 +755,19 @@ def install(
 
     if log:
         if os.path.isdir(log):
-            raise OSError("'{}' is a directory. Use --log path_to_file".format(log))
+            raise OSError(f"'{log}' is a directory. Use --log path_to_file")
+        if not os.path.exists(log):
+            parent = os.path.dirname(log)
+            if not os.path.exists(parent):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' does not exist."
+                )
+            elif not os.access(parent, os.W_OK):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' is not writeable."
+                )
         elif not os.access(log, os.W_OK):
-            raise OSError("'{}' is not writeable".format(log))
+            raise OSError(f"'{log}' is not writeable")
 
         cmd.extend(["--log", log])
 
@@ -784,9 +792,7 @@ def install(
                 raise ValueError("Timeout cannot be a float")
             int(timeout)
         except ValueError:
-            raise ValueError(
-                "'{}' is not a valid timeout, must be an integer".format(timeout)
-            )
+            raise ValueError(f"'{timeout}' is not a valid timeout, must be an integer")
         cmd.extend(["--timeout", timeout])
 
     if find_links:
@@ -797,9 +803,7 @@ def install(
             if not (
                 salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)
             ):
-                raise CommandExecutionError(
-                    "'{}' is not a valid URL or path".format(link)
-                )
+                raise CommandExecutionError(f"'{link}' is not a valid URL or path")
             cmd.extend(["--find-links", link])
 
     if no_index and (index_url or extra_index_url):
@@ -809,14 +813,12 @@ def install(
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError("'{}' is not a valid URL".format(index_url))
+            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
         cmd.extend(["--index-url", index_url])
 
     if extra_index_url:
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
-            raise CommandExecutionError(
-                "'{}' is not a valid URL".format(extra_index_url)
-            )
+            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
         cmd.extend(["--extra-index-url", extra_index_url])
 
     if no_index:
@@ -836,7 +838,7 @@ def install(
         cmd.append("--use-mirrors")
         for mirror in mirrors:
             if not mirror.startswith("http://"):
-                raise CommandExecutionError("'{}' is not a valid URL".format(mirror))
+                raise CommandExecutionError(f"'{mirror}' is not a valid URL")
             cmd.extend(["--mirrors", mirror])
 
     if disable_version_check:
@@ -846,9 +848,11 @@ def install(
         cmd.extend(["--build", build])
 
     # Use VENV_PIP_TARGET environment variable value as target
-    # if set and no target specified on the function call
+    # if set and no target specified on the function call.
+    # Do not set target if bin_env specified, use default
+    # for specified binary environment or expect explicit target specification.
     target_env = os.environ.get("VENV_PIP_TARGET", None)
-    if target is None and target_env is not None:
+    if target is None and target_env is not None and bin_env is None:
         target = target_env
 
     if target:
@@ -994,7 +998,7 @@ def install(
                 # Don't allow any recursion into keyword arg definitions
                 # Don't allow multiple definitions of a keyword
                 if isinstance(val, (dict, list)):
-                    raise TypeError("Too many levels in: {}".format(key))
+                    raise TypeError(f"Too many levels in: {key}")
                 # This is a a normal one-to-one keyword argument
                 cmd.extend([key, val])
             # It is a positional argument, append it to the list
@@ -1107,7 +1111,7 @@ def uninstall(
             # TODO make this check if writeable
             os.path.exists(log)
         except OSError:
-            raise OSError("'{}' is not writeable".format(log))
+            raise OSError(f"'{log}' is not writeable")
 
         cmd.extend(["--log", log])
 
@@ -1132,9 +1136,7 @@ def uninstall(
                 raise ValueError("Timeout cannot be a float")
             int(timeout)
         except ValueError:
-            raise ValueError(
-                "'{}' is not a valid timeout, must be an integer".format(timeout)
-            )
+            raise ValueError(f"'{timeout}' is not a valid timeout, must be an integer")
         cmd.extend(["--timeout", timeout])
 
     if pkgs:
@@ -1336,7 +1338,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
             user=user,
             cwd=cwd,
             env_vars=env_vars,
-            **kwargs
+            **kwargs,
         )
 
     cmd = _get_pip_bin(bin_env)
@@ -1394,7 +1396,7 @@ def version(bin_env=None, cwd=None, user=None):
     cwd = _pip_bin_env(cwd, bin_env)
     contextkey = "pip.version"
     if bin_env is not None:
-        contextkey = "{}.{}".format(contextkey, bin_env)
+        contextkey = f"{contextkey}.{bin_env}"
 
     if contextkey in __context__:
         return __context__[contextkey]
@@ -1648,18 +1650,6 @@ def list_all_versions(
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
 
-    if index_url:
-        if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError("'{}' is not a valid URL".format(index_url))
-        cmd.extend(["--index-url", index_url])
-
-    if extra_index_url:
-        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
-            raise CommandExecutionError(
-                "'{}' is not a valid URL".format(extra_index_url)
-            )
-        cmd.extend(["--extra-index-url", extra_index_url])
-
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
@@ -1669,8 +1659,17 @@ def list_all_versions(
         if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
             cmd.append("--use-deprecated=legacy-resolver")
         regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
-        cmd.extend(["install", "{}==versions".format(pkg)])
+        cmd.extend(["install", f"{pkg}==versions"])
 
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
+        cmd.extend(["--index-url", index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
+        cmd.extend(["--extra-index-url", extra_index_url])
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
     )

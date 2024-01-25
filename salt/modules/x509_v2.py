@@ -46,7 +46,8 @@ master to allow :term:`Peer Communication`:
         - x509.sign_remote_certificate
 
 In order for the :term:`Compound Matcher` to work with restricting signing
-policies to a subset of minions, in addition calls to :py:func:`match.compound <salt.modules.match.compound>`
+policies to a subset of minions, in addition calls to
+:py:func:`match.compound_matches <salt.runners.match.compound_matches>`
 by the minion acting as the CA must be permitted:
 
 .. code-block:: yaml
@@ -57,14 +58,32 @@ by the minion acting as the CA must be permitted:
       .*:
         - x509.sign_remote_certificate
 
+    peer_run:
       ca_server:
-        - match.compound
+        - match.compound_matches
 
 .. note::
 
-    Compound matching in signing policies currently has security tradeoffs since the
-    CA server queries the requesting minion itself if it matches, not the Salt master.
-    It is recommended to rely on glob matching only.
+    When compound match expressions are employed, pillar values can only be matched
+    literally. This is a barrier to enumeration attacks by the CA server.
+
+    Also note that compound matching requires a minion data cache on the master.
+    Any certificate signing request will be denied if :conf_master:`minion_data_cache` is
+    disabled (it is enabled by default).
+
+.. note::
+
+    Since grain values are controlled by minions, you should avoid using them
+    to restrict certificate issuance.
+
+    See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>`.
+
+.. versionchanged:: 3007.0
+
+    Previously, a compound expression match was validated by the requesting minion
+    itself via peer publishing, which did not protect from compromised minions.
+    The new match validation takes place on the master using peer running.
+
 
 Signing policies
 ~~~~~~~~~~~~~~~~
@@ -127,6 +146,20 @@ Breaking changes versus the previous ``x509`` modules
 * For ``x509.private_key_managed``, the file mode defaults to ``0400``. This should
   be considered a bug fix because writing private keys with world-readable
   permissions by default is a security issue.
+* Restricting signing policies using compound match expressions requires peer run
+  permissions instead of peer publishing permissions:
+
+.. code-block:: yaml
+
+    # x509, x509_v2 in 3006.*
+    peer:
+      ca_server:
+        - match.compound
+
+    # x509_v2 from 3007.0 onwards
+    peer_run:
+      ca_server:
+        - match.compound_matches
 
 Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
@@ -255,8 +288,8 @@ def create_certificate(
         Instead of returning the certificate, write it to this file path.
 
     overwrite
-        If ``path`` is specified and the file exists, do not overwrite it.
-        Defaults to false.
+        If ``path`` is specified and the file exists, overwrite it.
+        Defaults to true.
 
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
@@ -458,7 +491,7 @@ def create_certificate(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         kwargs["digest"] = kwargs.pop("algorithm")
@@ -473,7 +506,7 @@ def create_certificate(
     if "days_valid" not in kwargs and "not_after" not in kwargs:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
             )
             kwargs["days_valid"] = 365
@@ -614,7 +647,7 @@ def _create_certificate_local(
             path=os.path.join(copypath, f"{prepend}{cert.serial_number:x}.crt"),
             pem_type="CERTIFICATE",
         )
-    return builder.sign(signing_private_key, algorithm=algorithm), private_key_loaded
+    return cert, private_key_loaded
 
 
 def encode_certificate(
@@ -901,13 +934,16 @@ def create_crl(
             salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
             kwargs.pop("text")
 
-        if kwargs:
-            raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+        unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+        if unknown:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(unknown)}"
+            )
 
     if days_valid is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
             )
             days_valid = 100
@@ -919,14 +955,14 @@ def create_crl(
         parsed = {}
         if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "Revoked certificates should be specified as a simple list of dicts.",
             )
             for val in rev[next(iter(rev))]:
                 parsed.update(val)
         if "reason" in (parsed or rev):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
             )
             salt.utils.dictupdate.set_dict_key_value(
@@ -1076,7 +1112,7 @@ def create_csr(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -1193,7 +1229,7 @@ def create_private_key(
     keysize
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
-        Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
+        Irrelevant for Edwards-curve schemes (``ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
@@ -1222,7 +1258,7 @@ def create_private_key(
     # Deprecation checks vs the old x509 module
     if "bits" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`bits` has been renamed to `keysize`. Please update your code.",
         )
         keysize = kwargs.pop("bits")
@@ -1235,13 +1271,15 @@ def create_private_key(
         for x in ignored_params:
             kwargs.pop(x)
 
-    if kwargs:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+    unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+    if unknown:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
 
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem, pkcs12"
         )
+
     out = encode_private_key(
         _generate_pk(algo=algo, keysize=keysize),
         encoding=encoding,
@@ -1254,7 +1292,9 @@ def create_private_key(
         return out
 
     if encoding == "pem":
-        return write_pem(out.decode(), path, pem_type="(?:RSA )?PRIVATE KEY")
+        return write_pem(
+            out.decode(), path, pem_type="(?:(RSA|ENCRYPTED) )?PRIVATE KEY"
+        )
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
     return
@@ -1264,6 +1304,7 @@ def encode_private_key(
     private_key,
     encoding="pem",
     passphrase=None,
+    private_key_passphrase=None,
     pkcs12_encryption_compat=False,
     raw=False,
 ):
@@ -1276,13 +1317,30 @@ def encode_private_key(
 
         salt '*' x509.encode_private_key /etc/pki/my.key der
 
-    csr
+    private_key
         The private key to encode.
 
     encoding
         Specify the encoding of the resulting private key. It can be returned
         as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
         Defaults to ``pem``.
+
+    passphrase
+        If this is specified, the private key will be encrypted using this
+        passphrase. The encryption algorithm cannot be selected, it will be
+        determined automatically as the best available one.
+
+    private_key_passphrase
+        .. versionadded:: 3006.2
+
+        If the current ``private_key`` is encrypted, the passphrase to
+        decrypt it.
+
+    pkcs12_encryption_compat
+        Some operating systems are incompatible with the encryption defaults
+        for PKCS12 used since OpenSSL v3. This switch triggers a fallback to
+        ``PBESv1SHA1And3KeyTripleDESCBC``.
+        Please consider the `notes on PKCS12 encryption <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
 
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
@@ -1291,6 +1349,7 @@ def encode_private_key(
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem, pkcs12"
         )
+    private_key = x509util.load_privkey(private_key, passphrase=private_key_passphrase)
     if passphrase is None:
         cipher = serialization.NoEncryption()
     else:
@@ -1549,7 +1608,7 @@ def get_public_key(key, passphrase=None, asObj=None):
     except SaltInvocationError:
         pass
     raise CommandExecutionError(
-        "Could not load key as certificate, public key, private key, CSR or CRL"
+        "Could not load key as certificate, public key, private key or CSR"
     )
 
 
@@ -1597,7 +1656,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         for long_name in long_names:
             if long_name in policy:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
                 )
                 policy[name] = policy.pop(long_name)
@@ -1607,7 +1666,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         for long_name in long_names:
             if long_name in policy:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
                 )
                 policy[extname] = policy.pop(long_name)
@@ -1936,7 +1995,7 @@ def verify_private_key(private_key, public_key, passphrase=None):
     passphrase
         If ``private_key`` is encrypted, the passphrase to decrypt it.
     """
-    privkey = x509util.load_privkey(private_key, passphrase=None)
+    privkey = x509util.load_privkey(private_key, passphrase=passphrase)
     pubkey = x509util.load_pubkey(get_public_key(public_key))
     return x509util.is_pair(pubkey, privkey)
 
@@ -2175,17 +2234,19 @@ def _parse_crl_entry_extensions(extensions):
 
 def _match_minions(test, minion):
     if "@" in test:
-        # This essentially asks the minion if it is allowed to receive
-        # certificates with the signing policy. Implementing a match runner
-        # would plug that security hole somewhat, and fully if only pillars
-        # are used.
-        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
-        if minion not in match:
+        # Ask the master if the requesting minion matches a compound expression.
+        match = __salt__["publish.runner"]("match.compound_matches", arg=[test, minion])
+        if match is None:
             raise CommandExecutionError(
-                "Could not verify if minion matches compound matching expression. "
-                "Make sure the ca_server is allowed to run `match.compound` on "
-                "the requesting minion"
+                "Could not check minion match for compound expression. "
+                "Is this minion allowed to run `match.compound_matches` on the master?"
             )
-        return match[minion]
-    else:
-        return __salt__["match.glob"](test, minion)
+        try:
+            return match["res"] == minion
+        except (KeyError, TypeError) as err:
+            raise CommandExecutionError(
+                "Invalid return value of match.compound_matches."
+            ) from err
+        # The following line should never be reached.
+        return False
+    return __salt__["match.glob"](test, minion)

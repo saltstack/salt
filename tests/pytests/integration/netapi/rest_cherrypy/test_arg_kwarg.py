@@ -6,6 +6,7 @@ import salt.utils.json
 
 
 @pytest.mark.slow_test
+@pytest.mark.netapi_client_data(["local", "runner"])
 async def test_accepts_arg_kwarg_keys(
     http_client, auth_creds, content_type_map, subtests
 ):

@@ -1197,8 +1197,8 @@ seconds each iteration.
 
 Default: ``False``
 
-If the master rejects the minion's public key, retry instead of exiting.
-Rejected keys will be handled the same as waiting on acceptance.
+If the master denies or rejects the minion's public key, retry instead of
+exiting.  These keys will be handled the same as waiting on acceptance.
 
 .. code-block:: yaml
 
@@ -1304,6 +1304,36 @@ restart.
 .. code-block:: yaml
 
     auth_safemode: False
+
+.. conf_minion:: request_channel_timeout
+
+``request_channel_timeout``
+---------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``30``
+
+The default timeout timeout for request channel requests. This setting can be used to tune minions to better handle long running pillar and file client requests.
+
+.. code-block:: yaml
+
+    request_channel_timeout: 30
+
+``request_channel_tries``
+-------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``3``
+
+The default number of times the minion will try request channel requests. This
+setting can be used to tune minions to better handle long running pillar and
+file client requests by retrying them after a timeout happens.
+
+.. code-block:: yaml
+
+    request_channel_tries: 3
 
 .. conf_minion:: ping_interval
 
@@ -2035,7 +2065,6 @@ Valid options:
 Top File Settings
 =================
 
-These parameters only have an effect if running a masterless minion.
 
 .. conf_minion:: state_top
 
@@ -2438,10 +2467,7 @@ enabled and can be disabled by changing this value to ``False``.
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
 
-Normally the minion is not isolated to any single environment on the master
-when running states, but the environment can be isolated on the minion side
-by statically setting it. Remember that the recommended way to manage
-environments is to isolate via the top file.
+The default fileserver environment to use when copying files and applying states.
 
 .. code-block:: yaml
 
@@ -3281,6 +3307,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_level_logfile
 
@@ -3297,6 +3329,12 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_datefmt
 

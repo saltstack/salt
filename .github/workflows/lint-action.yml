@@ -13,6 +13,7 @@ on:
 env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 
 jobs:
@@ -22,17 +23,19 @@ jobs:
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: python:3.8-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
 
     steps:
       - name: Install System Deps
         run: |
-          echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
           apt-get update
-          apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
-          apt-get install -y git/buster-backports
+          apt-get install -y enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
-      - uses: actions/checkout@v3
+      - name: Add Git Safe Directory
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+      - uses: actions/checkout@v4
 
       - name: Install Nox
         run: |
@@ -64,17 +67,20 @@ jobs:
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: python:3.8-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
 
     steps:
       - name: Install System Deps
         run: |
-          echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+          echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
           apt-get update
-          apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
-          apt-get install -y git/buster-backports
+          apt-get install -y enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
-      - uses: actions/checkout@v3
+      - name: Add Git Safe Directory
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+      - uses: actions/checkout@v4
 
       - name: Install Nox
         run: |

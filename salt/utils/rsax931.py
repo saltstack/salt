@@ -24,21 +24,37 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        lib = "libeay32"
+        lib = None
+        for path in sys.path:
+            lib = glob.glob(os.path.join(path, "libcrypto*.dll"))
+            lib = lib[0] if lib else None
+            if lib:
+                break
+
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
         # Search in the following order. salts pkg, homebrew, macports, finnally
         # system.
         # look in salts pkg install location.
         lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
+
+        # look in location salt is running from
+        # this accounts for running from an unpacked
+        # onedir file
+        lib = lib or glob.glob("lib/libcrypto.dylib")
+
         # Find library symlinks in Homebrew locations.
-        brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
-        lib = lib or glob.glob(
-            os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
-        )
-        lib = lib or glob.glob(
-            os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
-        )
+        import salt.modules.mac_brew_pkg as mac_brew
+
+        brew_prefix = mac_brew.homebrew_prefix()
+        if brew_prefix is not None:
+            lib = lib or glob.glob(
+                os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
+            )
+            lib = lib or glob.glob(
+                os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
+            )
+
         # look in macports.
         lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
         # check if 10.15, regular libcrypto.dylib is just a false pointer.

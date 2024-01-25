@@ -145,10 +145,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
-        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
-        note that this state is not presently capable of managing more than one
-        repo in a single repo file, so each instance of this state will manage
-        a single repo file containing the configuration for a single repo.
+        One of ``baseurl``, ``mirrorlist``, or ``metalink`` below is required.
+        Additionally, note that this state is not presently capable of managing
+        more than one repo in a single repo file, so each instance of this state
+        will manage a single repo file containing the configuration for a single repo.
 
     name
         This value will be used in two ways: Firstly, it will be the repo ID,
@@ -181,6 +181,11 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     mirrorlist
         A URL which points to a file containing a collection of baseurls
+
+    metalink
+        A URL for a curated list of non-stale mirrors only usable with yum/dnf
+
+        .. versionadded:: 3008.0
 
     comments
         Sometimes you want to supply additional information, but not as
@@ -463,7 +468,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to examine repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to examine repo '{name}': {exc}"
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
@@ -545,7 +550,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                         break
         else:
             ret["result"] = True
-            ret["comment"] = "Package repo '{}' already configured".format(name)
+            ret["comment"] = f"Package repo '{name}' already configured"
             return ret
 
     if __opts__["test"]:
@@ -580,7 +585,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # This is another way to pass information back from the mod_repo
         # function.
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
     try:
@@ -596,10 +601,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["changes"] = {"repo": repo}
 
         ret["result"] = True
-        ret["comment"] = "Configured package repo '{}'".format(name)
+        ret["comment"] = f"Configured package repo '{name}'"
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Failed to confirm config of repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to confirm config of repo '{name}': {exc}"
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -619,6 +624,12 @@ def absent(name, **kwargs):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
+
+    .. note::
+        On apt-based systems this must be the complete source entry. For
+        example, if you include ``[arch=amd64]``, and a repo matching the
+        specified URI, dist, etc. exists _without_ an architecture, then no
+        changes will be made and the state will report a ``True`` result.
 
     **FEDORA/REDHAT-SPECIFIC OPTIONS**
 
@@ -699,11 +710,28 @@ def absent(name, **kwargs):
         repo = __salt__["pkg.get_repo"](stripname, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
+    if repo and (
+        __grains__["os_family"].lower() == "debian"
+        or __opts__.get("providers", {}).get("pkg") == "aptpkg"
+    ):
+        # On Debian/Ubuntu, pkg.get_repo will return a match for the repo
+        # even if the architectures do not match. However, changing get_repo
+        # breaks idempotency for pkgrepo.managed states. So, compare the
+        # architectures of the matched repo to the architectures specified in
+        # the repo string passed to this state. If the architectures do not
+        # match, then invalidate the match by setting repo to an empty dict.
+        from salt.modules.aptpkg import _split_repo_str
+
+        if set(_split_repo_str(stripname)["architectures"]) != set(
+            repo["architectures"]
+        ):
+            repo = {}
+
     if not repo:
-        ret["comment"] = "Package repo {} is absent".format(name)
+        ret["comment"] = f"Package repo {name} is absent"
         ret["result"] = True
         return ret
 
@@ -726,7 +754,7 @@ def absent(name, **kwargs):
     repos = __salt__["pkg.list_repos"]()
     if stripname not in repos:
         ret["changes"]["repo"] = name
-        ret["comment"] = "Removed repo {}".format(name)
+        ret["comment"] = f"Removed repo {name}"
 
         if not remove_key:
             ret["result"] = True
@@ -735,13 +763,13 @@ def absent(name, **kwargs):
                 removed_keyid = __salt__["pkg.del_repo_key"](stripname, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but failed to remove key: {}".format(exc)
+                ret["comment"] += f", but failed to remove key: {exc}"
             else:
                 ret["result"] = True
                 ret["changes"]["keyid"] = removed_keyid
-                ret["comment"] += ", and keyid {}".format(removed_keyid)
+                ret["comment"] += f", and keyid {removed_keyid}"
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove repo {}".format(name)
+        ret["comment"] = f"Failed to remove repo {name}"
 
     return ret

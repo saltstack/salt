@@ -22,7 +22,6 @@ def _load_matchers(opts):
     """
     Store matchers in __context__ so they're only loaded once
     """
-    __context__["matchers"] = {}
     __context__["matchers"] = salt.loader.matchers(opts)
 
 

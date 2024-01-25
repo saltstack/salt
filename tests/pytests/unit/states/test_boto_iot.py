@@ -16,6 +16,12 @@ botocore = pytest.importorskip("botocore", "1.4.41")
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
+
 class GlobalConfig:
     region = "us-east-1"
     access_key = "GKTADJGHEIQSXMKKRBJ08H"

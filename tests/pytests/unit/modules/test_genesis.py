@@ -1,10 +1,6 @@
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-
-
-import sys
-
 import pytest
 
 import salt.modules.genesis as genesis
@@ -20,11 +16,7 @@ def test_bootstrap():
     """
     Test for Create an image for a specific platform.
     """
-    # Changed in 3.7.0 pformat no longer includes the comma
-    if sys.version_info >= (3, 7):
-        exception_string = "Exception({})".format(repr("foo"))
-    else:
-        exception_string = "Exception({},)".format(repr("foo"))
+    exception_string = "Exception({})".format(repr("foo"))
     mock = MagicMock(return_value=False)
     with patch.dict(genesis.__salt__, {"file.directory_exists": mock}):
         mock = MagicMock(side_effect=Exception("foo"))

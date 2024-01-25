@@ -33,6 +33,7 @@ env:
   COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  RELENV_BUILDENV: 1
 
 
 runs:
@@ -42,41 +43,29 @@ runs:
 
     - name: Download Cached Deps Onedir Package Directory
       id: onedir-bare-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v3.3.1
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
+            hashFiles(
+              format('{0}/.relenv/**/*.xz', github.workspace),
+              'requirements/static/pkg/*/*.txt',
+              '.github/actions/build-onedir-deps/action.yml',
+              '.github/workflows/build-deps-onedir-*.yml',
+              'cicd/shared-gh-workflows-context.yml'
+            )
+          }}
 
     - name: Download Source Tarball
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Install Salt Into Onedir
-      if: ${{ inputs.platform != 'windows' }}
-      env:
-        USE_STATIC_REQUIREMENTS: "1"
-        RELENV_PIP_DIR: "1"
       shell: bash
       run: |
-        artifacts/${{ inputs.package-name }}/bin/python3 -m pip install salt-${{ inputs.salt-version }}.tar.gz
-        if [ ${{ inputs.platform }} == "darwin" ]; then
-          pkg/macos/prep_salt.sh --build-dir ./artifacts/${{ inputs.package-name }}
-          rm -rf ./artifacts/${{ inputs.package-name }}/opt
-          rm -rf ./artifacts/${{ inputs.package-name }}/etc
-          rm -rf ./artifacts/${{ inputs.package-name }}/Library
-        fi
-
-    - name: Install Salt Into Onedir (Windows)
-      if: ${{ inputs.platform == 'windows' }}
-      env:
-        USE_STATIC_REQUIREMENTS: "1"
-      shell: powershell
-      run: |
-        # install salt
-        pkg\windows\install_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD -SourceTarball salt-${{ inputs.salt-version }}.tar.gz
-        # prep salt
-        pkg\windows\prep_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD
+        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
@@ -102,7 +91,7 @@ runs:
         tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
         path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
@@ -111,7 +100,7 @@ runs:
 
     - name: Upload Onedir Zipfile as an Artifact
       if: ${{ inputs.platform == 'windows' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip
         path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip*

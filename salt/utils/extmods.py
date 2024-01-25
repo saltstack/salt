@@ -11,6 +11,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.url
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +33,13 @@ def _listdir_recursively(rootdir):
     return file_list
 
 
-def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
+def sync(
+    opts,
+    form,
+    saltenv=None,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+):
     """
     Sync custom modules into the extension_modules directory
     """
@@ -62,7 +69,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
     ret = []
     remote = set()
     source = salt.utils.url.create("_" + form)
-    mod_dir = os.path.join(opts["extension_modules"], "{}".format(form))
+    mod_dir = os.path.join(opts["extension_modules"], f"{form}")
     touched = False
     with salt.utils.files.set_umask(0o077):
         try:
@@ -75,58 +82,58 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            fileclient = salt.fileclient.get_file_client(opts)
-            for sub_env in saltenv:
-                log.info("Syncing %s for environment '%s'", form, sub_env)
-                cache = []
-                log.info("Loading cache from %s, for %s", source, sub_env)
-                # Grab only the desired files (.py, .pyx, .so)
-                cache.extend(
-                    fileclient.cache_dir(
-                        source,
-                        sub_env,
-                        include_empty=False,
-                        include_pat=r"E@\.(pyx?|so|zip)$",
-                        exclude_pat=None,
+            with salt.fileclient.get_file_client(opts) as fileclient:
+                for sub_env in saltenv:
+                    log.info("Syncing %s for environment '%s'", form, sub_env)
+                    cache = []
+                    log.info("Loading cache from %s, for %s", source, sub_env)
+                    # Grab only the desired files (.py, .pyx, .so)
+                    cache.extend(
+                        fileclient.cache_dir(
+                            source,
+                            sub_env,
+                            include_empty=False,
+                            include_pat=r"E@\.(pyx?|so|zip)$",
+                            exclude_pat=None,
+                        )
                     )
-                )
-                local_cache_dir = os.path.join(
-                    opts["cachedir"], "files", sub_env, "_{}".format(form)
-                )
-                log.debug("Local cache dir: '%s'", local_cache_dir)
-                for fn_ in cache:
-                    relpath = os.path.relpath(fn_, local_cache_dir)
-                    relname = os.path.splitext(relpath)[0].replace(os.sep, ".")
-                    if (
-                        extmod_whitelist
-                        and form in extmod_whitelist
-                        and relname not in extmod_whitelist[form]
-                    ):
-                        continue
-                    if (
-                        extmod_blacklist
-                        and form in extmod_blacklist
-                        and relname in extmod_blacklist[form]
-                    ):
-                        continue
-                    remote.add(relpath)
-                    dest = os.path.join(mod_dir, relpath)
-                    log.info("Copying '%s' to '%s'", fn_, dest)
-                    if os.path.isfile(dest):
-                        # The file is present, if the sum differs replace it
-                        hash_type = opts.get("hash_type", "md5")
-                        src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
-                        dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
-                        if src_digest != dst_digest:
-                            # The downloaded file differs, replace!
+                    local_cache_dir = os.path.join(
+                        opts["cachedir"], "files", sub_env, f"_{form}"
+                    )
+                    log.debug("Local cache dir: '%s'", local_cache_dir)
+                    for fn_ in cache:
+                        relpath = os.path.relpath(fn_, local_cache_dir)
+                        relname = os.path.splitext(relpath)[0].replace(os.sep, ".")
+                        if (
+                            extmod_whitelist
+                            and form in extmod_whitelist
+                            and relname not in extmod_whitelist[form]
+                        ):
+                            continue
+                        if (
+                            extmod_blacklist
+                            and form in extmod_blacklist
+                            and relname in extmod_blacklist[form]
+                        ):
+                            continue
+                        remote.add(relpath)
+                        dest = os.path.join(mod_dir, relpath)
+                        log.info("Copying '%s' to '%s'", fn_, dest)
+                        if os.path.isfile(dest):
+                            # The file is present, if the sum differs replace it
+                            hash_type = opts.get("hash_type", DEFAULT_HASH_TYPE)
+                            src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
+                            dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
+                            if src_digest != dst_digest:
+                                # The downloaded file differs, replace!
+                                shutil.copyfile(fn_, dest)
+                                ret.append(f"{form}.{relname}")
+                        else:
+                            dest_dir = os.path.dirname(dest)
+                            if not os.path.isdir(dest_dir):
+                                os.makedirs(dest_dir)
                             shutil.copyfile(fn_, dest)
-                            ret.append("{}.{}".format(form, relname))
-                    else:
-                        dest_dir = os.path.dirname(dest)
-                        if not os.path.isdir(dest_dir):
-                            os.makedirs(dest_dir)
-                        shutil.copyfile(fn_, dest)
-                        ret.append("{}.{}".format(form, relname))
+                            ret.append(f"{form}.{relname}")
 
             touched = bool(ret)
             if opts["clean_dynamic_modules"] is True:

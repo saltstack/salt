@@ -6,6 +6,12 @@ Management of Zabbix users.
 
 """
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 import logging
 from copy import deepcopy
@@ -192,14 +198,14 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     ret = {"name": alias, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_created = "User {} created.".format(alias)
-    comment_user_updated = "User {} updated.".format(alias)
-    comment_user_notcreated = "Unable to create user: {}. ".format(alias)
-    comment_user_exists = "User {} already exists.".format(alias)
+    comment_user_created = f"User {alias} created."
+    comment_user_updated = f"User {alias} updated."
+    comment_user_notcreated = f"Unable to create user: {alias}. "
+    comment_user_exists = f"User {alias} already exists."
     changes_user_created = {
         alias: {
-            "old": "User {} does not exist.".format(alias),
-            "new": "User {} created.".format(alias),
+            "old": f"User {alias} does not exist.",
+            "new": f"User {alias} created.",
         }
     }
 
@@ -342,7 +348,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                 usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
                 if usrgrp_diff and update_usrgrps:
-                    error.append("Unable to update group(s): {}".format(usrgrp_diff))
+                    error.append(f"Unable to update group(s): {usrgrp_diff}")
 
             else:
                 if update_usrgrps:
@@ -360,9 +366,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                     usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
                     if usrgrp_diff:
-                        error.append(
-                            "Unable to update group(s): {}".format(usrgrp_diff)
-                        )
+                        error.append(f"Unable to update group(s): {usrgrp_diff}")
 
                     ret["changes"]["usrgrps"] = str(updated_groups)
 
@@ -391,7 +395,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                             period=media["period"],
                             sendto=media["sendto"],
                             severity=media["severity"],
-                            **connection_args
+                            **connection_args,
                         )
 
                         if "error" in updatemed:
@@ -449,13 +453,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_deleted = "USer {} deleted.".format(name)
-    comment_user_notdeleted = "Unable to delete user: {}. ".format(name)
-    comment_user_notexists = "User {} does not exist.".format(name)
+    comment_user_deleted = f"USer {name} deleted."
+    comment_user_notdeleted = f"Unable to delete user: {name}. "
+    comment_user_notexists = f"User {name} does not exist."
     changes_user_deleted = {
         name: {
-            "old": "User {} exists.".format(name),
-            "new": "User {} deleted.".format(name),
+            "old": f"User {name} exists.",
+            "new": f"User {name} deleted.",
         }
     }
 

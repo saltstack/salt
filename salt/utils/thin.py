@@ -20,11 +20,11 @@ import jinja2
 import looseversion
 import msgpack
 import packaging
+import tornado
 import yaml
 
 import salt
 import salt.exceptions
-import salt.ext.tornado as tornado
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
@@ -906,7 +906,6 @@ def gen_min(
         "salt/client/__init__.py",
         "salt/ext",
         "salt/ext/__init__.py",
-        "salt/ext/six.py",
         "salt/ext/ipaddress.py",
         "salt/version.py",
         "salt/syspaths.py",

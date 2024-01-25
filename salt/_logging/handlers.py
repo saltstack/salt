@@ -5,7 +5,6 @@
     Salt's logging handlers
 """
 
-import copy
 import logging
 import logging.handlers
 import queue as _queue
@@ -88,7 +87,7 @@ class DeferredStreamHandler(StreamHandler):
     If anything goes wrong before logging is properly setup, all stored messages
     will be flushed to the handler's stream, ie, written to console.
 
-    .. versionadded:: 3005.0
+    .. versionadded:: 3005
     """
 
     def __init__(self, stream, max_queue_size=10000):
@@ -116,6 +115,7 @@ class DeferredStreamHandler(StreamHandler):
                 super().handle(record)
             finally:
                 self.__emitting = False
+        # This will raise a ValueError if the file handle has been closed.
         super().flush()
 
     def sync_with_handlers(self, handlers=()):
@@ -147,7 +147,7 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler
         Deal with syslog os errors when the log file does not exist
         """
         handled = False
-        if sys.stderr and sys.version_info >= (3, 5, 4):
+        if sys.stderr:
             exc_type, exc, exc_traceback = sys.exc_info()
             try:
                 if exc_type.__name__ in "FileNotFoundError":
@@ -216,92 +216,31 @@ class WatchedFileHandler(
     """
 
 
-if sys.version_info < (3, 7):
-    # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
-    #  https://bugs.python.org/issue35726
-    class QueueHandler(
-        ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
-    ):  # pylint: disable=no-member,inconsistent-mro
-        def __init__(self, queue):  # pylint: disable=useless-super-delegation
-            super().__init__(queue)
-            warn_until_date(
-                "20240101",
-                "Please stop using '{name}.QueueHandler' and instead "
-                "use 'logging.handlers.QueueHandler'. "
-                "'{name}.QueueHandler' will go away after "
-                "{{date}}.".format(name=__name__),
+class QueueHandler(
+    ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
+):  # pylint: disable=no-member,inconsistent-mro
+    def __init__(self, queue):  # pylint: disable=useless-super-delegation
+        super().__init__(queue)
+        warn_until_date(
+            "20240101",
+            "Please stop using '{name}.QueueHandler' and instead "
+            "use 'logging.handlers.QueueHandler'. "
+            "'{name}.QueueHandler' will go away after "
+            "{{date}}.".format(name=__name__),
+        )
+
+    def enqueue(self, record):
+        """
+        Enqueue a record.
+
+        The base implementation uses put_nowait. You may want to override
+        this method if you want to use blocking, timeouts or custom queue
+        implementations.
+        """
+        try:
+            self.queue.put_nowait(record)
+        except _queue.Full:
+            sys.stderr.write(
+                "[WARNING ] Message queue is full, "
+                'unable to write "{}" to log.\n'.format(record)
             )
-
-        def enqueue(self, record):
-            """
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            """
-            try:
-                self.queue.put_nowait(record)
-            except _queue.Full:
-                sys.stderr.write(
-                    "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log.\n'.format(record)
-                )
-
-        def prepare(self, record):
-            """
-            Prepares a record for queuing. The object returned by this method is
-            enqueued.
-            The base implementation formats the record to merge the message
-            and arguments, and removes unpickleable items from the record
-            in-place.
-            You might want to override this method if you want to convert
-            the record to a dict or JSON string, or send a modified copy
-            of the record while leaving the original intact.
-            """
-            # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also returns the formatted
-            # message. We can then use this to replace the original
-            # msg + args, as these might be unpickleable. We also zap the
-            # exc_info and exc_text attributes, as they are no longer
-            # needed and, if not None, will typically not be pickleable.
-            msg = self.format(record)
-            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
-            record = copy.copy(record)
-            record.message = msg
-            record.msg = msg
-            record.args = None
-            record.exc_info = None
-            record.exc_text = None
-            return record
-
-else:
-
-    class QueueHandler(
-        ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
-    ):  # pylint: disable=no-member,inconsistent-mro
-        def __init__(self, queue):  # pylint: disable=useless-super-delegation
-            super().__init__(queue)
-            warn_until_date(
-                "20240101",
-                "Please stop using '{name}.QueueHandler' and instead "
-                "use 'logging.handlers.QueueHandler'. "
-                "'{name}.QueueHandler' will go away after "
-                "{{date}}.".format(name=__name__),
-            )
-
-        def enqueue(self, record):
-            """
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            """
-            try:
-                self.queue.put_nowait(record)
-            except _queue.Full:
-                sys.stderr.write(
-                    "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log.\n'.format(record)
-                )

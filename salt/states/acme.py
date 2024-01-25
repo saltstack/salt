@@ -2,7 +2,7 @@
 ACME / Let's Encrypt certificate management state
 =================================================
 
-.. versionadded:: 2016.3
+.. versionadded:: 2016.3.0
 
 See also the module documentation
 
@@ -61,6 +61,8 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    manual_auth_hook=None,
+    manual_cleanup_hook=None,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -91,6 +93,8 @@ def cert(
     :param https_01_address: The address the server listens to during http-01 challenge.
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param manual_auth_hook: Path to the authentication hook script.
+    :param manual_cleanup_hook: Path to the cleanup or post-authentication hook script.
     """
 
     if certname is None:
@@ -109,15 +113,13 @@ def cert(
     else:
         ret["result"] = True
         ret["comment"].append(
-            "Certificate {} exists and does not need renewal.".format(certname)
+            f"Certificate {certname} exists and does not need renewal."
         )
 
     if action:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"].append(
-                "Certificate {} would have been {}ed.".format(certname, action)
-            )
+            ret["comment"].append(f"Certificate {certname} would have been {action}ed.")
             ret["changes"] = {"old": "current certificate", "new": "new certificate"}
         else:
             res = __salt__["acme.cert"](
@@ -140,6 +142,8 @@ def cert(
                 http_01_address=http_01_address,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
+                manual_auth_hook=manual_auth_hook,
+                manual_cleanup_hook=manual_cleanup_hook,
             )
             ret["result"] = res["result"]
             ret["comment"].append(res["comment"])

@@ -39,21 +39,34 @@ def salt_cli(salt_master):
 
 
 @pytest.fixture(scope="package")
-def minion_count():
+def _minion_count(grains):
     # Allow this to be changed via an environment variable if needed
-    return int(os.environ.get("SALT_CI_MINION_SWARM_COUNT", 20))
+    env_count = os.environ.get("SALT_CI_MINION_SWARM_COUNT")
+    if env_count is not None:
+        return int(env_count)
+    # Default to 15 swarm minions
+    count = 15
+    if grains["osarch"] != "aarch64":
+        return count
+    if grains["os"] != "Amazon":
+        return count
+    if grains["osmajorrelease"] != 2023:
+        return count
+    # Looks like the test suite on Amazon 2023 under ARM64 get's OOM killed
+    # Let's reduce the number of swarm minions
+    return count - 5
 
 
 @pytest.fixture(scope="package")
-def minion_swarm(salt_master, minion_count):
+def minion_swarm(salt_master, _minion_count):
     assert salt_master.is_running()
     minions = []
     # We create and arbitrarily tall context stack to register the
     # minions stop mechanism callback
     with ExitStack() as stack:
-        for idx in range(minion_count):
+        for idx in range(_minion_count):
             minion_factory = salt_master.salt_minion_daemon(
-                random_string("swarm-minion-{}-".format(idx)),
+                random_string(f"swarm-minion-{idx}-"),
                 extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             )
             stack.enter_context(minion_factory.started())

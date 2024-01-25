@@ -26,11 +26,9 @@ def test_not_missing_fun_calling_wfuncs(temp_salt_master, tmp_path):
     opts["tgt"] = "localhost"
     opts["arg"] = []
     roster = str(tmp_path / "roster")
-    handle_ssh_ret = [
-        {"localhost": {}},
-    ]
+    handle_ssh_ret = [({"localhost": {}}, 0)]
 
-    expected = {"localhost": {}}
+    expected = ({"localhost": {}}, 0)
     display_output = MagicMock()
     with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)), patch(
         "salt.client.ssh.SSH.handle_ssh", MagicMock(return_value=handle_ssh_ret)
@@ -43,8 +41,8 @@ def test_not_missing_fun_calling_wfuncs(temp_salt_master, tmp_path):
         assert "localhost" in ret
         assert "fun" in ret["localhost"]
         client.run()
-    display_output.assert_called_once_with(expected, "nested", opts)
-    assert ret is handle_ssh_ret[0]
+    display_output.assert_called_once_with(expected[0], "nested", opts)
+    assert ret is handle_ssh_ret[0][0]
     assert len(client.event.fire_event.call_args_list) == 2
     assert "fun" in client.event.fire_event.call_args_list[0][0][0]
     assert "fun" in client.event.fire_event.call_args_list[1][0][0]

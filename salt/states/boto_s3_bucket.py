@@ -145,6 +145,12 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -299,7 +305,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{}:role/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:role/{name}"
 
 
 def _compare_json(current, desired, region, key, keyid, profile):
@@ -440,7 +446,7 @@ def present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "S3 bucket {} is set to be created.".format(Bucket)
+            ret["comment"] = f"S3 bucket {Bucket} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_s3_bucket.create"](
@@ -481,13 +487,13 @@ def present(
             ("put_website", Website, Website),
         ):
             if testval is not None:
-                r = __salt__["boto_s3_bucket.{}".format(setter)](
+                r = __salt__[f"boto_s3_bucket.{setter}"](
                     Bucket=Bucket,
                     region=region,
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **funcargs
+                    **funcargs,
                 )
                 if not r.get("updated"):
                     ret["result"] = False
@@ -501,14 +507,12 @@ def present(
         )
         ret["changes"]["old"] = {"bucket": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "S3 bucket {} created.".format(Bucket)
+        ret["comment"] = f"S3 bucket {Bucket} created."
 
         return ret
 
     # bucket exists, ensure config matches
-    ret["comment"] = " ".join(
-        [ret["comment"], "S3 bucket {} is present.".format(Bucket)]
-    )
+    ret["comment"] = " ".join([ret["comment"], f"S3 bucket {Bucket} is present."])
     ret["changes"] = {}
     _describe = __salt__["boto_s3_bucket.describe"](
         Bucket=Bucket, region=region, key=key, keyid=keyid, profile=profile
@@ -647,7 +651,7 @@ def present(
             if not __opts__["test"]:
                 if deleter and desired is None:
                     # Setting can be deleted, so use that to unset it
-                    r = __salt__["boto_s3_bucket.{}".format(deleter)](
+                    r = __salt__[f"boto_s3_bucket.{deleter}"](
                         Bucket=Bucket,
                         region=region,
                         key=key,
@@ -662,13 +666,13 @@ def present(
                         ret["changes"] = {}
                         return ret
                 else:
-                    r = __salt__["boto_s3_bucket.{}".format(setter)](
+                    r = __salt__[f"boto_s3_bucket.{setter}"](
                         Bucket=Bucket,
                         region=region,
                         key=key,
                         keyid=keyid,
                         profile=profile,
-                        **(desired or {})
+                        **(desired or {}),
                     )
                     if not r.get("updated"):
                         ret["result"] = False
@@ -678,7 +682,7 @@ def present(
                         ret["changes"] = {}
                         return ret
     if update and __opts__["test"]:
-        msg = "S3 bucket {} set to be modified.".format(Bucket)
+        msg = f"S3 bucket {Bucket} set to be modified."
         ret["comment"] = msg
         ret["result"] = None
         return ret
@@ -693,7 +697,7 @@ def present(
         )
         log.warning(msg)
         ret["result"] = False
-        ret["comment"] = "Failed to update bucket: {}.".format(msg)
+        ret["comment"] = f"Failed to update bucket: {msg}."
         return ret
 
     return ret
@@ -737,11 +741,11 @@ def absent(name, Bucket, Force=False, region=None, key=None, keyid=None, profile
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "S3 bucket {} does not exist.".format(Bucket)
+        ret["comment"] = f"S3 bucket {Bucket} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "S3 bucket {} is set to be removed.".format(Bucket)
+        ret["comment"] = f"S3 bucket {Bucket} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_s3_bucket.delete"](
@@ -753,5 +757,5 @@ def absent(name, Bucket, Force=False, region=None, key=None, keyid=None, profile
         return ret
     ret["changes"]["old"] = {"bucket": Bucket}
     ret["changes"]["new"] = {"bucket": None}
-    ret["comment"] = "S3 bucket {} deleted.".format(Bucket)
+    ret["comment"] = f"S3 bucket {Bucket} deleted."
     return ret

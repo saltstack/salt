@@ -51,17 +51,19 @@ function Write-Result($result, $ForegroundColor="Green") {
 # Script Variables
 #-------------------------------------------------------------------------------
 
-$PROJECT_DIR   = $(git rev-parse --show-toplevel)
-$SCRIPT_DIR    = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-$BUILD_DIR     = "$PROJECT_DIR\pkg\windows\build"
-$BUILDENV_DIR  = "$PROJECT_DIR\pkg\windows\buildenv"
-$INSTALLER_DIR = "$SCRIPT_DIR\installer"
-$SCRIPTS_DIR   = "$BUILDENV_DIR\Scripts"
-$PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"
-$PY_VERSION    = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
-$PY_VERSION    = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
-$NSIS_BIN      = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
-$ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+$PROJECT_DIR    = $(git rev-parse --show-toplevel)
+$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
+$BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
+$BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
+$INSTALLER_DIR  = "$SCRIPT_DIR\installer"
+$SCRIPTS_DIR    = "$BUILDENV_DIR\Scripts"
+$SITE_PKGS_DIR  = "$BUILDENV_DIR\Lib\site-packages"
+$BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
+$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
+$PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
+$PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
+$NSIS_BIN       = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
+$ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
 
 if ( $ARCH -eq "64bit" ) {
     $ARCH = "AMD64"
@@ -119,15 +121,6 @@ if ( Test-Path -Path "$NSIS_BIN" ) {
     exit 1
 }
 
-Write-Host "Getting Estimated Installation Size: " -NoNewLine
-$estimated_size = [math]::Round(((Get-ChildItem "$BUILDENV_DIR" -Recurse -Force | Measure-Object -Sum Length).Sum / 1kb))
-if ( $estimated_size -gt 0 ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
 #-------------------------------------------------------------------------------
 # Copy the icon file to the build_env directory
 #-------------------------------------------------------------------------------
@@ -139,6 +132,290 @@ if ( Test-Path -Path "$INSTALLER_DIR\salt.ico" ) {
 } else {
     Write-Result "Failed" -ForegroundColor Red
     Write-Host "Failed to find salt.ico in build_env directory"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Remove Non-Windows Execution Modules
+#-------------------------------------------------------------------------------
+Write-Host "Removing Non-Windows Execution Modules: " -NoNewline
+$modules = "acme",
+           "aix",
+           "alternatives",
+           "apcups",
+           "apf",
+           "apt",
+           "arista",
+           "at",
+           "bcache",
+           "blockdev",
+           "bluez",
+           "bridge",
+           "bsd",
+           "btrfs",
+           "ceph",
+           "container_resource",
+           "cron",
+           "csf",
+           "daemontools",
+           "deb*",
+           "devmap",
+           "dpkg",
+           "ebuild",
+           "eix",
+           "eselect",
+           "ethtool",
+           "extfs",
+           "firewalld",
+           "freebsd",
+           "genesis",
+           "gentoo",
+           "glusterfs",
+           "gnomedesktop",
+           "groupadd",
+           "grub_legacy",
+           "guestfs",
+           "htpasswd",
+           "ilo",
+           "img",
+           "incron",
+           "inspector",
+           "ipset",
+           "iptables",
+           "iwtools",
+           "k8s",
+           "kapacitor",
+           "keyboard",
+           "keystone",
+           "kmod",
+           "layman",
+           "linux",
+           "localemod",
+           "locate",
+           "logadm",
+           "logrotate",
+           "lvs",
+           "lxc",
+           "mac",
+           "makeconf",
+           "mdadm",
+           "mdata",
+           "monit",
+           "moosefs",
+           "mount",
+           "napalm",
+           "netbsd",
+           "netscaler",
+           "neutron",
+           "nfs3",
+           "nftables",
+           "nova",
+           "nspawn",
+           "openbsd",
+           "openstack",
+           "openvswitch",
+           "opkg",
+           "pacman",
+           "parallels",
+           "parted",
+           "pcs",
+           "pkgin",
+           "pkgng",
+           "pkgutil",
+           "portage_config",
+           "postfix",
+           "poudriere",
+           "powerpath",
+           "pw_",
+           "qemu_",
+           "quota",
+           "redismod",
+           "restartcheck",
+           "rh_",
+           "riak",
+           "rpm",
+           "runit",
+           "s6",
+           "scsi",
+           "sensors",
+           "service",
+           "shadow",
+           "smartos",
+           "smf",
+           "snapper",
+           "solaris",
+           "solr",
+           "ssh_",
+           "supervisord",
+           "sysbench",
+           "sysfs",
+           "sysrc",
+           "system",
+           "test_virtual",
+           "timezone",
+           "trafficserver",
+           "tuned",
+           "udev",
+           "upstart",
+           "useradd",
+           "uswgi",
+           "varnish",
+           "vbox",
+           "virt",
+           "xapi",
+           "xbpspkg",
+           "xfs",
+           "yum*",
+           "zfs",
+           "znc",
+           "zpool",
+           "zypper"
+$modules | ForEach-Object {
+    Remove-Item -Path "$BUILD_SALT_DIR\modules\$_*" -Recurse
+    if ( Test-Path -Path "$BUILD_SALT_DIR\modules\$_*" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $BUILD_SALT_DIR\modules\$_"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Remove Non-Windows State Modules
+#-------------------------------------------------------------------------------
+Write-Host "Removing Non-Windows State Modules: " -NoNewline
+$states = "acme",
+          "alternatives",
+          "apt",
+          "at",
+          "blockdev",
+          "ceph",
+          "cron",
+          "csf",
+          "deb",
+          "eselect",
+          "ethtool",
+          "firewalld",
+          "glusterfs",
+          "gnome",
+          "htpasswd",
+          "incron",
+          "ipset",
+          "iptables",
+          "k8s",
+          "kapacitor",
+          "keyboard",
+          "keystone",
+          "kmod",
+          "layman",
+          "linux",
+          "lxc",
+          "mac",
+          "makeconf",
+          "mdadm",
+          "monit",
+          "mount",
+          "nftables",
+          "pcs",
+          "pkgng",
+          "portage",
+          "powerpath",
+          "quota",
+          "redismod",
+          "smartos",
+          "snapper",
+          "ssh",
+          "supervisord",
+          "sysrc",
+          "trafficserver",
+          "tuned",
+          "vbox",
+          "virt.py",
+          "zfs",
+          "zpool"
+$states | ForEach-Object {
+    Remove-Item -Path "$BUILD_SALT_DIR\states\$_*" -Recurse
+    if ( Test-Path -Path "$BUILD_SALT_DIR\states\$_*" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $BUILD_SALT_DIR\states\$_"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Remove compiled files
+#-------------------------------------------------------------------------------
+# We have to do this again because we use the Relenv Python to get the build
+# architecture. This recreates some of the pycache files that were removed
+# in the prep_salt script
+Write-Host "Removing __pycache__ directories: " -NoNewline
+$found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter "__pycache__" -Recurse
+$found | ForEach-Object {
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force
+    if ( Test-Path -Path "$($_.FullName)" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $($_.FullName)"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
+# __pycache__ directories, it won't be able to find them because they are no
+# longer present
+# This probably won't find any *.pyc files, but just in case
+$remove = "*.pyc",
+"*.chm"
+$remove | ForEach-Object {
+    Write-Host "Removing unneeded $_ files: " -NoNewline
+    $found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter $_ -Recurse
+    $found | ForEach-Object {
+        Remove-Item -Path "$($_.FullName)" -Recurse -Force
+        if ( Test-Path -Path "$($_.FullName)" ) {
+            Write-Result "Failed" -ForegroundColor Red
+            Write-Host "Failed to remove: $($_.FullName)"
+            exit 1
+        }
+    }
+    Write-Result "Success" -ForegroundColor Green
+}
+
+#-------------------------------------------------------------------------------
+# Set timestamps on Files
+#-------------------------------------------------------------------------------
+
+# We're doing this again in this script because we use python above to get the
+# build architecture and that adds back some __pycache__ and *.pyc files
+Write-Host "Getting commit time stamp: " -NoNewline
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$time_stamp = $origin.AddSeconds($hash_time)
+if ( $hash_time ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Setting time stamp on all files: " -NoNewline
+$found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Get the estimated size of the installation
+#-------------------------------------------------------------------------------
+Write-Host "Getting Estimated Installation Size: " -NoNewLine
+$estimated_size = [math]::Round(((Get-ChildItem "$BUILDENV_DIR" -Recurse -Force | Measure-Object -Sum Length).Sum / 1kb))
+if ( $estimated_size -gt 0 ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 

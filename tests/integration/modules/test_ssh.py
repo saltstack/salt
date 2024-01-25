@@ -6,14 +6,14 @@ import os
 import shutil
 
 import pytest
+import requests
 
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 
-GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
+GITHUB_FINGERPRINT = "b8:d8:95:ce:d9:2c:0a:c0:e1:71:cd:2e:f5:ef:01:ba:34:17:55:4a:4a:64:80:d3:31:cc:c2:be:3d:ed:0f:6b"
 
 
 def check_status():
@@ -21,12 +21,13 @@ def check_status():
     Check the status of Github for remote operations
     """
     try:
-        return HTTPClient().fetch("http://github.com").code == 200
+        return requests.get("https://github.com").status_code == 200
     except Exception:  # pylint: disable=broad-except
         return False
 
 
-@pytest.mark.windows_whitelisted
+# @pytest.mark.windows_whitelisted
+# De-whitelist windows since it's hanging on the newer windows golden images
 @pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHModuleTest(ModuleCase):
     """
@@ -49,9 +50,9 @@ class SSHModuleTest(ModuleCase):
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
 
-        ssh_raw_path = os.path.join(RUNTIME_VARS.FILES, "ssh", "raw")
-        with salt.utils.files.fopen(ssh_raw_path) as fd:
-            self.key = fd.read().strip()
+        known_hosts_file = os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts")
+        with salt.utils.files.fopen(known_hosts_file) as fd:
+            self.key = fd.read().strip().splitlines()[0].split()[-1]
 
     def tearDown(self):
         """
@@ -85,9 +86,7 @@ class SSHModuleTest(ModuleCase):
             )
             self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_bad_enctype(self):
@@ -124,9 +123,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["key"], self.key)
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.skip_on_photonos(
         reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
@@ -145,9 +142,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret[0]["key"], self.key)
             self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_check_known_host_add(self):
@@ -238,9 +233,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["old"], None)
             self.assertEqual(ret["new"][0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # check that item does exist
         ret = self.run_function(
             "ssh.get_known_host_entries",
@@ -250,9 +243,7 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # add the same item once again
         ret = self.run_function(
             "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
@@ -260,6 +251,4 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")

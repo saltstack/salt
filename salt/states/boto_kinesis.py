@@ -64,6 +64,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "boto_kinesis"
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -140,7 +146,7 @@ def present(
     if exists["result"] is False:
         if __opts__["test"]:
             ret["result"] = None
-            comments.append("Kinesis stream {} would be created".format(name))
+            comments.append(f"Kinesis stream {name} would be created")
             _add_changes(ret, changes_old, changes_new, comments)
             return ret
         else:
@@ -155,11 +161,11 @@ def present(
                 _add_changes(ret, changes_old, changes_new, comments)
                 return ret
 
-            comments.append("Kinesis stream {} successfully created".format(name))
+            comments.append(f"Kinesis stream {name} successfully created")
             changes_new["name"] = name
             changes_new["num_shards"] = num_shards
     else:
-        comments.append("Kinesis stream {} already exists".format(name))
+        comments.append(f"Kinesis stream {name} already exists")
 
     stream_response = __salt__["boto_kinesis.get_stream_when_active"](
         name, region, key, keyid, profile
@@ -238,9 +244,7 @@ def present(
                 " at {}".format(name, old_retention_hours)
             )
     else:
-        comments.append(
-            "Kinesis stream {}: did not configure retention hours".format(name)
-        )
+        comments.append(f"Kinesis stream {name}: did not configure retention hours")
 
     # Configure enhanced monitoring
     if enhanced_monitoring is not None:
@@ -345,9 +349,7 @@ def present(
                 enhanced_monitoring if len(enhanced_monitoring) > 0 else "None"
             )
     else:
-        comments.append(
-            "Kinesis stream {}: did not configure enhanced monitoring".format(name)
-        )
+        comments.append(f"Kinesis stream {name}: did not configure enhanced monitoring")
 
     # Reshard stream if necessary
     min_hash_key, max_hash_key, full_stream_details = __salt__[
@@ -439,11 +441,11 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 
     exists = __salt__["boto_kinesis.exists"](name, region, key, keyid, profile)
     if exists["result"] is False:
-        ret["comment"] = "Kinesis stream {} does not exist".format(name)
+        ret["comment"] = f"Kinesis stream {name} does not exist"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Kinesis stream {} would be deleted".format(name)
+        ret["comment"] = f"Kinesis stream {name} would be deleted"
         ret["result"] = None
         return ret
 
@@ -456,9 +458,9 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
         )
         ret["result"] = False
     else:
-        ret["comment"] = "Deleted stream {}".format(name)
-        ret["changes"].setdefault("old", "Stream {} exists".format(name))
-        ret["changes"].setdefault("new", "Stream {} deleted".format(name))
+        ret["comment"] = f"Deleted stream {name}"
+        ret["changes"].setdefault("old", f"Stream {name} exists")
+        ret["changes"].setdefault("new", f"Stream {name} deleted")
 
     return ret
 

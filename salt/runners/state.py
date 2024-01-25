@@ -86,7 +86,7 @@ def orchestrate(
 
         Runner uses the pillar variable
 
-    .. versionchanged:: 2017.5
+    .. versionchanged:: 2017.5.0
 
         Runner uses the pillar_enc variable that allows renderers to render the pillar.
         This is usable when supplying the contents of a file as pillar, and the file contains
@@ -101,6 +101,16 @@ def orchestrate(
        salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
 
     """
+
+    try:
+        orig_user = __opts__["user"]
+        __opts__["user"] = __user__
+        log.debug(
+            f"changed opts user from original '{orig_user}' to global user '{__user__}'"
+        )
+    except NameError:
+        log.debug("unable to find global user __user__")
+
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError("Pillar data must be formatted as a dictionary")
     __opts__["file_client"] = "local"

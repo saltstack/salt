@@ -1,5 +1,7 @@
 # FreeBSD static CI requirements
-pygit2==1.8.0; python_version >= '3.7'
+
+--constraint=../pkg/py{py_version}/{platform}.txt
+
 yamllint
 mercurial
 hglib

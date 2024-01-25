@@ -77,6 +77,8 @@ def test_cmp_strict(v1, v2, wanted):
         # Added by us
         ("3.10.0-514.el7", "3.10.0-514.6.1.el7", 1),
         ("2.2.2", "2.12.1", -1),
+        ("2.24.0", "2.23.0.windows.1", 1),
+        ("2.23.0.windows.2", "2.23.0.windows.1", 1),
     ),
 )
 def test_cmp(v1, v2, wanted):

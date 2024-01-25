@@ -30,8 +30,8 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - pytests.unit.states.test_service
-  - integration.modules.test_service
-  - integration.states.test_service
+  - pytests.functional.modules.test_service
+  - pytests.functional.states.test_service
 
 
 salt/modules/ansiblegate.py:
@@ -204,6 +204,19 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
+  - pytests.integration.netapi.test_ssh_client
+
+salt/client/ssh/wrapper/*:
+  - pytests.integration.ssh.test_deploy
+  - pytests.integration.ssh.test_grains
+  - pytests.integration.ssh.test_mine
+  - pytests.integration.ssh.test_master
+  - pytests.integration.ssh.test_jinja_filters
+  - pytests.integration.ssh.test_pillar
+  - pytests.integration.ssh.test_raw
+  - integration.ssh.test_state
+  - pytests.integration.ssh.test_py_versions
+  - pytests.integration.netapi.test_ssh_client
 
 salt/config/*:
   - unit.test_config
@@ -309,6 +322,7 @@ salt/utils/vt.py:
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
+  - pytests.integration.netapi.test_ssh_client
 
 salt/wheel/*:
   - pytests.integration.wheel.test_client
@@ -322,6 +336,9 @@ salt/(minion\.py|channel/.+|transport/.+):
 
 tests/support/mock.py:
   - unit.test_mock
+
+tests/support/virt.py:
+  - pytests.integration.modules.test_virt
 
 tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
@@ -337,3 +354,8 @@ tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+tests/integration/files/ssh/.*:
+  - integration.modules.test_ssh
+  - integration.states.test_ssh_auth
+  - integration.states.test_ssh_known_hosts

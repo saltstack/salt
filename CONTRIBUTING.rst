@@ -8,7 +8,7 @@ in a number of ways:
 -  Use Salt and open well-written bug reports.
 -  Join a `working group <https://github.com/saltstack/community>`__.
 -  Answer questions on `irc <https://web.libera.chat/#salt>`__,
-   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`__,
+   the `community Slack <https://via.vmw.com/salt-slack>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
    `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
@@ -513,7 +513,7 @@ Now you can run your tests:
 
 ::
 
-   python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py
+   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py
 
 It's a good idea to install
 `espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
@@ -522,9 +522,29 @@ this:
 
 ::
 
-   python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
+
+
+::
+
+   python -m nox -e "test-3(coverage=False)" -- --core-tests
+
+You can enable or disable test groups locally by passing their respected flag:
+
+* --no-fast-tests - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
+* --slow-tests - Tests that are ~10s or slower.
+* --core-tests - Tests of any speed that test the root parts of salt.
+* --flaky-jail - Test that need to be temporarily skipped.
+
+In your PR, you can enable or disable test groups by setting a label.
+All fast, slow, and core tests specified in the change file will always run.
+
+* test:no-fast
+* test:core
+* test:slow
+* test:flaky-jail
 
 
 Changelog and commit!
@@ -543,7 +563,7 @@ But that advice is backwards for the changelog. We follow the
 our changelog, and use towncrier to generate it for each release. As a
 contributor, all that means is that you need to add a file to the
 ``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
-instanch, if you fixed issue 123, you would do:
+instance, if you fixed issue 123, you would do:
 
 ::
 
@@ -557,6 +577,9 @@ commit message, it's usually a good idea to add other information, such as
 
 This will also help you out, because when you go to create the PR it
 will automatically insert the body of your commit messages.
+
+See the `changelog <https://docs.saltproject.io/en/latest/topics/development/changelog.html>`__
+docs for more information.
 
 
 Pull request time!

@@ -7,10 +7,16 @@ import time
 import pytest
 
 import salt.loader
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.state as state_util
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -18,7 +24,34 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+            "__utils__": {"state.check_result": state_util.check_result},
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
 
 
 def _check_skip(grains):
@@ -649,7 +682,6 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
         assert ret.errors == ["State 'C' in SLS 'badlist2' is not formed as a list"]
 
 
-@pytest.mark.slow_test
 def test_retry_option(state, state_tree):
     """
     test the retry option on a simple state with defaults
@@ -751,7 +783,6 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -799,7 +830,6 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
-@pytest.mark.slow_test
 def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -848,7 +878,6 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 5" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_state_non_base_environment(state, state_tree_prod, tmp_path):
     """
     test state.sls with saltenv using a nonbase environment
@@ -907,10 +936,8 @@ def test_parallel_state_with_long_tag(state, state_tree):
         )
 
     comments = sorted(x.comment for x in ret)
-    expected = sorted(
-        'Command "{}" run'.format(x) for x in (short_command, long_command)
-    )
-    assert comments == expected, "{} != {}".format(comments, expected)
+    expected = sorted(f'Command "{x}" run' for x in (short_command, long_command))
+    assert comments == expected, f"{comments} != {expected}"
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
@@ -1009,3 +1036,48 @@ def test_issue_62264_requisite_not_found(state, state_tree):
         for state_return in ret:
             assert state_return.result is True
             assert "The following requisites were not found" not in state_return.comment
+
+
+def test_state_sls_defaults(state, state_tree):
+    """ """
+    json_contents = """
+    {
+        "users": {
+            "root": 1
+        }
+    }
+    """
+    sls_contents = """
+    {% set test = salt['defaults.get']('core:users:root') %}
+
+    echo {{ test }}:
+      cmd.run
+    """
+    state_id = "cmd_|-echo 1_|-echo 1_|-run"
+    core_dir = state_tree / "core"
+    with pytest.helpers.temp_file(
+        core_dir / "defaults.json", json_contents, state_tree
+    ):
+        with pytest.helpers.temp_file(core_dir / "test.sls", sls_contents, state_tree):
+            ret = state.sls("core.test")
+            assert state_id in ret
+            for state_return in ret:
+                assert state_return.result is True
+                assert "echo 1" in state_return.comment
+
+
+def test_state_sls_mock_ret(state_tree):
+    """
+    test state.sls when mock=True is passed
+    """
+    sls_contents = """
+    echo1:
+      cmd.run:
+        - name: "echo 'This is a test!'"
+    """
+    with pytest.helpers.temp_file("mock.sls", sls_contents, state_tree):
+        ret = state_mod.sls("mock", mock=True)
+        assert (
+            ret["cmd_|-echo1_|-echo 'This is a test!'_|-run"]["comment"]
+            == "Not called, mocked"
+        )

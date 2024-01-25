@@ -65,8 +65,6 @@ def test_load_multiple_versions(version, encoding, tmp_path):
     [
         ((0, 6, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
         ((0, 5, 2), {"raw": True, "use_bin_type": True}),
-        ((0, 4, 0), {"use_bin_type": True}),
-        ((0, 3, 0), {}),
     ],
 )
 def test_sanitize_msgpack_kwargs(version, exp_kwargs):
@@ -88,8 +86,6 @@ def test_sanitize_msgpack_kwargs(version, exp_kwargs):
             {"strict_map_key": True, "use_bin_type": True, "encoding": "utf-8"},
         ),
         ((0, 5, 2), {"use_bin_type": True, "encoding": "utf-8"}),
-        ((0, 4, 0), {"use_bin_type": True, "encoding": "utf-8"}),
-        ((0, 3, 0), {"encoding": "utf-8"}),
     ],
 )
 def test_sanitize_msgpack_unpack_kwargs(version, exp_kwargs):

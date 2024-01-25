@@ -70,6 +70,12 @@ try:
 except ImportError:
     HAS_BOTO3 = False
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """

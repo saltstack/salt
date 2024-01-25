@@ -38,16 +38,16 @@ only recommended for very secure environments.
       .*:
         - .*
 
-This configuration will allow minions with IDs ending in example.com access
+This configuration allows minions with IDs ending in ``.example.com`` access
 to the test, ps, and pkg module functions.
 
 .. code-block:: yaml
 
     peer:
-      .*example.com:
-        - test.*
-        - ps.*
-        - pkg.*
+      .*\.example.com:
+        - test\..*
+        - ps\..*
+        - pkg\..*
 
 
 The configuration logic is simple, a regular expression is passed for matching
@@ -58,17 +58,38 @@ allow minions ending with foo.org access to the publisher.
 .. code-block:: yaml
 
     peer:
-      .*example.com:
-        - test.*
-        - ps.*
-        - pkg.*
-      .*foo.org:
-        - test.*
-        - ps.*
-        - pkg.*
+      .*\.example.com:
+        - test\..*
+        - ps\..*
+        - pkg\..*
+      .*\.foo.org:
+        - test\..*
+        - ps\..*
+        - pkg\..*
 
 .. note::
-    Functions are matched using regular expressions.
+    Functions are matched using regular expressions as well.
+
+It is also possible to limit target hosts with the :term:`Compound Matcher`.
+You can achieve this by adding another layer in between the source and the
+allowed functions:
+
+.. code-block:: yaml
+
+    peer:
+      '.*\.example\.com':
+        - 'G@role:db':
+          - test\..*
+          - pkg\..*
+
+.. note::
+
+    Notice that the source hosts are matched by a regular expression
+    on their minion ID, while target hosts can be matched by any of
+    the :ref:`available matchers <targeting-compound>`.
+
+    Note that globbing and regex matching on pillar values is not supported. You can only match exact values.
+
 
 Peer Runner Communication
 =========================

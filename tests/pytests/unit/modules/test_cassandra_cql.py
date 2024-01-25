@@ -15,6 +15,11 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+pytestmark = pytest.mark.skipif(
+    not cassandra_cql.HAS_DRIVER, reason="Cassandra CQL driver not loaded"
+)
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {cassandra_cql: {}}

@@ -20,13 +20,14 @@ import sys
 import threading
 import time
 
+from tornado import gen
+
 import salt._logging
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 

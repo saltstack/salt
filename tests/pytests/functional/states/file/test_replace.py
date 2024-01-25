@@ -376,3 +376,27 @@ def test_file_replace_prerequired_issues_55775(modules, state_tree, tmp_path):
             assert state_run.result is True
 
     assert managed_file.exists()
+
+
+def test_file_replace_check_cmd(modules, state_tree, tmp_path):
+    """
+    Test that check_cmd works for file.replace
+    and those states do not run.
+    """
+    sls_contents = f"""
+replace_in_file:
+  file.replace:
+    - name: /tmp/test
+    - pattern: hi
+    - repl: "replacement text"
+    - append_if_not_found: True
+    - check_cmd:
+      - "djasjahj"
+    """
+    with pytest.helpers.temp_file(
+        "file-replace-check-cmd.sls", sls_contents, state_tree
+    ):
+        ret = modules.state.sls("file-replace-check-cmd")
+        for state_run in ret:
+            assert state_run.result is False
+            assert state_run.comment == "check_cmd determined the state failed"

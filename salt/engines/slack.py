@@ -747,7 +747,7 @@ class SlackClient:
         results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
-            if self.master_minion.returners["{}.get_jid".format(source)](jid):
+            if self.master_minion.returners[f"{source}.get_jid"](jid):
                 job_result = runner.cmd("jobs.list_job", [jid])
                 jid_result = job_result.get("Result", {})
                 jid_function = job_result.get("Function", {})
@@ -838,7 +838,7 @@ class SlackClient:
                     channel.send_message(return_prefix)
                     ts = time.time()
                     st = datetime.datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S%f")
-                    filename = "salt-results-{}.yaml".format(st)
+                    filename = f"salt-results-{st}.yaml"
                     r = self.sc.api_call(
                         "files.upload",
                         channels=channel.id,
@@ -928,7 +928,7 @@ def start(
     """
 
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "This 'slack' engine will be deprecated and "
         "will be replace by the slack_bolt engine. This new "
         "engine will use the new Bolt library from Slack and requires "
@@ -947,4 +947,4 @@ def start(
         )
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:  # pylint: disable=broad-except
-        raise Exception("{}".format(traceback.format_exc()))
+        raise Exception(f"{traceback.format_exc()}")

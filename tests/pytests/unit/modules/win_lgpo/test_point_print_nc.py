@@ -20,6 +20,7 @@ import salt.utils.win_reg as win_reg
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.slow_test,
 ]
 
 

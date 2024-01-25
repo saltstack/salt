@@ -153,7 +153,8 @@ if ( $PKG ) {
     }
 }
 
-if ( $PKG ) {
+# Make sure ssm.exe is present. This is needed for VMtools
+if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
     Write-Host "Copying SSM to Root: " -NoNewline
     Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
@@ -164,6 +165,25 @@ if ( $PKG ) {
     }
 }
 
+# Copy the multiminion scripts to the Build directory
+$scripts = @(
+    "multi-minion.cmd",
+    "multi-minion.ps1"
+)
+$scripts | ForEach-Object {
+    if (!(Test-Path -Path "$BUILD_DIR\$_")) {
+        Write-Host "Copying $_ to the Build directory: " -NoNewline
+        Copy-Item -Path "$SCRIPT_DIR\$_" -Destination "$BUILD_DIR\$_"
+        if (Test-Path -Path "$BUILD_DIR\$_") {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+# Copy VCRedist 2013 to the prereqs directory
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
 Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
 $file = "vcredist_$ARCH_X`_2013.exe"
@@ -175,6 +195,7 @@ if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
     exit 1
 }
 
+# Copy Universal C Runtimes to the prereqs directory
 Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
 $file = "ucrt_$ARCH_X.zip"
 Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
@@ -257,229 +278,70 @@ $directories | ForEach-Object {
     }
 }
 
-#-------------------------------------------------------------------------------
-# Remove Non-Windows Execution Modules
-#-------------------------------------------------------------------------------
-Write-Host "Removing Non-Windows Execution Modules: " -NoNewline
-$modules = "acme",
-           "aix",
-           "alternatives",
-           "apcups",
-           "apf",
-           "apt",
-           "arista",
-           "at",
-           "bcache",
-           "blockdev",
-           "bluez",
-           "bridge",
-           "bsd",
-           "btrfs",
-           "ceph",
-           "container_resource",
-           "cron",
-           "csf",
-           "daemontools",
-           "deb*",
-           "devmap",
-           "dpkg",
-           "ebuild",
-           "eix",
-           "eselect",
-           "ethtool",
-           "extfs",
-           "firewalld",
-           "freebsd",
-           "genesis",
-           "gentoo",
-           "glusterfs",
-           "gnomedesktop",
-           "groupadd",
-           "grub_legacy",
-           "guestfs",
-           "htpasswd",
-           "ilo",
-           "img",
-           "incron",
-           "inspector",
-           "ipset",
-           "iptables",
-           "iwtools",
-           "k8s",
-           "kapacitor",
-           "keyboard",
-           "keystone",
-           "kmod",
-           "layman",
-           "linux",
-           "localemod",
-           "locate",
-           "logadm",
-           "logrotate",
-           "lvs",
-           "lxc",
-           "mac",
-           "makeconf",
-           "mdadm",
-           "mdata",
-           "monit",
-           "moosefs",
-           "mount",
-           "napalm",
-           "netbsd",
-           "netscaler",
-           "neutron",
-           "nfs3",
-           "nftables",
-           "nova",
-           "nspawn",
-           "openbsd",
-           "openstack",
-           "openvswitch",
-           "opkg",
-           "pacman",
-           "parallels",
-           "parted",
-           "pcs",
-           "pkgin",
-           "pkgng",
-           "pkgutil",
-           "portage_config",
-           "postfix",
-           "poudriere",
-           "powerpath",
-           "pw_",
-           "qemu_",
-           "quota",
-           "redismod",
-           "restartcheck",
-           "rh_",
-           "riak",
-           "rpm",
-           "runit",
-           "s6",
-           "scsi",
-           "seed",
-           "sensors",
-           "service",
-           "shadow",
-           "smartos",
-           "smf",
-           "snapper",
-           "solaris",
-           "solr",
-           "ssh_",
-           "supervisord",
-           "sysbench",
-           "sysfs",
-           "sysrc",
-           "system",
-           "test_virtual",
-           "timezone",
-           "trafficserver",
-           "tuned",
-           "udev",
-           "upstart",
-           "useradd",
-           "uswgi",
-           "varnish",
-           "vbox",
-           "virt",
-           "xapi",
-           "xbpspkg",
-           "xfs",
-           "yum*",
-           "zfs",
-           "znc",
-           "zpool",
-           "zypper"
-$modules | ForEach-Object {
-    Remove-Item -Path "$BUILD_SALT_DIR\modules\$_*" -Recurse
-    if ( Test-Path -Path "$BUILD_SALT_DIR\modules\$_*" ) {
+Write-Host "Removing __pycache__ directories: " -NoNewline
+$found = Get-ChildItem -Path "$BUILD_DIR" -Filter "__pycache__" -Recurse
+$found | ForEach-Object {
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force
+    if ( Test-Path -Path "$($_.FullName)" ) {
         Write-Result "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $BUILD_SALT_DIR\modules\$_"
+        Write-Host "Failed to remove: $($_.FullName)"
         exit 1
     }
 }
 Write-Result "Success" -ForegroundColor Green
 
-#-------------------------------------------------------------------------------
-# Remove Non-Windows State Modules
-#-------------------------------------------------------------------------------
-Write-Host "Removing Non-Windows State Modules: " -NoNewline
-$states = "acme",
-          "alternatives",
-          "apt",
-          "at",
-          "blockdev",
-          "ceph",
-          "cron",
-          "csf",
-          "deb",
-          "eselect",
-          "ethtool",
-          "firewalld",
-          "glusterfs",
-          "gnome",
-          "htpasswd",
-          "incron",
-          "ipset",
-          "iptables",
-          "k8s",
-          "kapacitor",
-          "keyboard",
-          "keystone",
-          "kmod",
-          "layman",
-          "linux",
-          "lxc",
-          "mac",
-          "makeconf",
-          "mdadm",
-          "monit",
-          "mount",
-          "nftables",
-          "pcs",
-          "pkgng",
-          "portage",
-          "powerpath",
-          "quota",
-          "redismod",
-          "smartos",
-          "snapper",
-          "ssh",
-          "supervisord",
-          "sysrc",
-          "trafficserver",
-          "tuned",
-          "vbox",
-          "virt.py",
-          "zfs",
-          "zpool"
-$states | ForEach-Object {
-    Remove-Item -Path "$BUILD_SALT_DIR\states\$_*" -Recurse
-    if ( Test-Path -Path "$BUILD_SALT_DIR\states\$_*" ) {
-        Write-Result "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $BUILD_SALT_DIR\states\$_"
-        exit 1
-    }
-}
-Write-Result "Success" -ForegroundColor Green
-
-Write-Host "Removing unneeded files (.pyc, .chm): " -NoNewline
-$remove = "__pycache__",
-          "*.pyc",
+# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
+# __pycache__ directories, it won't be able to find them because they are no
+# longer present
+# This probably won't find any *.pyc files, but just in case
+$remove = "*.pyc",
           "*.chm"
 $remove | ForEach-Object {
-    $found = Get-ChildItem -Path "$BUILD_DIR\$_" -Recurse
+    Write-Host "Removing unneeded $_ files: " -NoNewline
+    $found = Get-ChildItem -Path "$BUILD_DIR" -Filter $_ -Recurse
     $found | ForEach-Object {
-        Remove-Item -Path "$_" -Recurse -Force
-        if ( Test-Path -Path $_ ) {
+        Remove-Item -Path "$($_.FullName)" -Recurse -Force
+        if ( Test-Path -Path "$($_.FullName)" ) {
             Write-Result "Failed" -ForegroundColor Red
-            Write-Host "Failed to remove: $_"
+            Write-Host "Failed to remove: $($_.FullName)"
             exit 1
         }
     }
+    Write-Result "Success" -ForegroundColor Green
+}
+
+#-------------------------------------------------------------------------------
+# Set timestamps on Files
+#-------------------------------------------------------------------------------
+
+# We're doing this again in this script because we use python above to get the
+# build architecture and that adds back some __pycache__ and *.pyc files
+Write-Host "Getting commit time stamp: " -NoNewline
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$time_stamp = $origin.AddSeconds($hash_time)
+if ( $hash_time ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Setting time stamp on all salt files: " -NoNewline
+$found = Get-ChildItem -Path $BUILD_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+Write-Host "Setting time stamp on all prereq files: " -NoNewline
+$found = Get-ChildItem -Path $PREREQ_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
 }
 Write-Result "Success" -ForegroundColor Green
 

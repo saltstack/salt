@@ -42,10 +42,6 @@ execution modules
     at_solaris
     augeas_cfg
     aws_sqs
-    azurearm_compute
-    azurearm_dns
-    azurearm_network
-    azurearm_resource
     bamboohr
     baredoc
     bcache
@@ -502,6 +498,7 @@ execution modules
     vmctl
     vsphere
     webutil
+    win_appx
     win_auditpol
     win_autoruns
     win_certutil

@@ -8,11 +8,12 @@ import fnmatch
 import logging
 import os
 import sys
+import time
 import traceback
-import uuid
+
+import tornado.gen
 
 import salt.channel.client
-import salt.ext.tornado.gen
 import salt.fileclient
 import salt.loader
 import salt.minion
@@ -240,7 +241,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = False
         self.clean_cache = clean_cache
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
@@ -260,6 +261,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         try:
+            start = time.monotonic()
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -267,6 +269,10 @@ class AsyncRemotePillar(RemotePillarMixin):
         except salt.crypt.AuthenticationError as exc:
             log.error(exc.message)
             raise SaltClientError("Exception getting pillar.")
+        except salt.exceptions.SaltReqTimeoutError:
+            raise SaltClientError(
+                f"Pillar timed out after {int(time.monotonic() - start)} seconds"
+            )
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
@@ -278,7 +284,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise salt.ext.tornado.gen.Return(ret_pillar)
+        raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -351,10 +357,23 @@ class RemotePillar(RemotePillarMixin):
         }
         if self.ext:
             load["ext"] = self.ext
-        ret_pillar = self.channel.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
+
+        try:
+            start = time.monotonic()
+            ret_pillar = self.channel.crypted_transfer_decode_dictentry(
+                load,
+                dictkey="pillar",
+            )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
+        except salt.exceptions.SaltReqTimeoutError:
+            raise SaltClientError(
+                f"Pillar timed out after {int(time.monotonic() - start)} seconds"
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Exception getting pillar:")
+            raise SaltClientError("Exception getting pillar.")
 
         if not isinstance(ret_pillar, dict):
             log.error(
@@ -722,9 +741,7 @@ class Pillar:
                         )
                     )
         except Exception as exc:  # pylint: disable=broad-except
-            errors.append(
-                "Rendering Primary Top file failed, render error:\n{}".format(exc)
-            )
+            errors.append(f"Rendering Primary Top file failed, render error:\n{exc}")
             log.exception("Pillar rendering failed for minion %s", self.minion_id)
 
         # Search initial top files for includes
@@ -926,10 +943,10 @@ class Pillar:
                 saltenv,
                 sls,
                 _pillar_rend=True,
-                **defaults
+                **defaults,
             )
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "Rendering SLS '{}' failed, render error:\n{}".format(sls, exc)
+            msg = f"Rendering SLS '{sls}' failed, render error:\n{exc}"
             log.critical(msg, exc_info=True)
             if self.opts.get("pillar_safe_render_error", True):
                 errors.append(
@@ -942,7 +959,7 @@ class Pillar:
         nstate = None
         if state:
             if not isinstance(state, dict):
-                msg = "SLS '{}' does not render to a dictionary".format(sls)
+                msg = f"SLS '{sls}' does not render to a dictionary"
                 log.error(msg)
                 errors.append(msg)
             else:
@@ -1079,7 +1096,7 @@ class Pillar:
                             "a sign of a malformed pillar sls file. Returned "
                             "errors: %s",
                             sls,
-                            ", ".join(["'{}'".format(e) for e in errors]),
+                            ", ".join([f"'{e}'" for e in errors]),
                         )
                         continue
                     pillar = merge(
@@ -1105,7 +1122,7 @@ class Pillar:
                     self.minion_id,
                     pillar,
                     extra_minion_data=self.extra_minion_data,
-                    **val
+                    **val,
                 )
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
@@ -1115,7 +1132,7 @@ class Pillar:
                     self.minion_id,
                     pillar,
                     *val,
-                    extra_minion_data=self.extra_minion_data
+                    extra_minion_data=self.extra_minion_data,
                 )
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, *val)
@@ -1329,7 +1346,7 @@ class Pillar:
                         if ptr is not None:
                             ptr[child] = ret
                 except Exception as exc:  # pylint: disable=broad-except
-                    msg = "Failed to decrypt pillar key '{}': {}".format(key, exc)
+                    msg = f"Failed to decrypt pillar key '{key}': {exc}"
                     errors.append(msg)
                     log.error(msg, exc_info=True)
         return errors
@@ -1341,6 +1358,11 @@ class Pillar:
         if self._closing:
             return
         self._closing = True
+        if self.client:
+            try:
+                self.client.destroy()
+            except AttributeError:
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1352,7 +1374,7 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self, ext=True):
         ret = super().compile_pillar(ext=ext)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)

@@ -62,6 +62,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -1733,7 +1739,7 @@ def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
         return name
 
     account_id = get_account_id(region=region, key=key, keyid=keyid, profile=profile)
-    return "arn:aws:iam::{}:policy/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:policy/{name}"
 
 
 def policy_exists(policy_name, region=None, key=None, keyid=None, profile=None):

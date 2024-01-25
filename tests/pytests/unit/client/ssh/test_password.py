@@ -30,19 +30,36 @@ def test_password_failure(temp_salt_master, tmp_path):
     opts["arg"] = []
     roster = str(tmp_path / "roster")
     handle_ssh_ret = [
+        (
+            {
+                "localhost": {
+                    "retcode": 255,
+                    "stderr": "Permission denied (publickey).\r\n",
+                    "stdout": "",
+                    "_error": "Permission denied",
+                }
+            },
+            1,
+        )
+    ]
+    key_deploy_ret = (
         {
             "localhost": {
                 "retcode": 255,
-                "stderr": "Permission denied (publickey).\r\n",
+                "stderr": "Permission denied (publickey)",
                 "stdout": "",
+                "_error": "Permission denied",
             }
         },
-    ]
+        1,
+    )
     expected = {"localhost": "Permission denied (publickey)"}
     display_output = MagicMock()
     with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)), patch(
         "salt.client.ssh.SSH.handle_ssh", MagicMock(return_value=handle_ssh_ret)
-    ), patch("salt.client.ssh.SSH.key_deploy", MagicMock(return_value=expected)), patch(
+    ), patch(
+        "salt.client.ssh.SSH.key_deploy", MagicMock(return_value=key_deploy_ret)
+    ), patch(
         "salt.output.display_output", display_output
     ):
         client = ssh.SSH(opts)
@@ -50,4 +67,4 @@ def test_password_failure(temp_salt_master, tmp_path):
         with pytest.raises(SystemExit):
             client.run()
     display_output.assert_called_once_with(expected, "nested", opts)
-    assert ret is handle_ssh_ret[0]
+    assert ret is handle_ssh_ret[0][0]

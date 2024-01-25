@@ -3,33 +3,15 @@
       fail-fast: false
       matrix:
         include:
-          - distro: debian
-            version: "10"
-            arch: x86_64
-          - distro: debian
-            version: "10"
-            arch: aarch64
-          - distro: debian
-            version: "11"
-            arch: x86_64
-          - distro: debian
-            version: "11"
-            arch: aarch64
-          - distro: ubuntu
-            version: "20.04"
-            arch: x86_64
-          - distro: ubuntu
-            version: "20.04"
-            arch: aarch64
-          - distro: ubuntu
-            version: "22.04"
-            arch: x86_64
-          - distro: ubuntu
-            version: "22.04"
-            arch: aarch64
+        <%- for distro, version, arch in build_debs_listing %>
+          - pkg-type: deb
+            distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download System Dependencies
         run: |
@@ -38,9 +20,17 @@
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download DEB Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
@@ -80,8 +70,8 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create deb --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
+          tools pkg repo create deb --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 

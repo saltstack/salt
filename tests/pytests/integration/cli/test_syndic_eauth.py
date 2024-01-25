@@ -5,7 +5,14 @@ import time
 
 import pytest
 
+from tests.conftest import CODE_DIR
+
 docker = pytest.importorskip("docker")
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 def json_output_to_dict(output):
@@ -65,10 +72,19 @@ def syndic_network():
             network.remove()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def source_path():
-    x = pathlib.Path(__file__).parent.parent.parent.parent.parent / "salt"
-    return str(x)
+    return str(CODE_DIR / "salt")
+
+
+@pytest.fixture(scope="module")
+def container_image_name():
+    return "ghcr.io/saltstack/salt-ci-containers/salt:3005"
+
+
+@pytest.fixture(scope="module")
+def container_python_version():
+    return "3.7"
 
 
 @pytest.fixture(scope="module")
@@ -182,11 +198,18 @@ external_auth:
 
 
 @pytest.fixture(scope="module")
-def docker_master(salt_factories, syndic_network, config, source_path):
+def docker_master(
+    salt_factories,
+    syndic_network,
+    config,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["master_dir"])
     container = salt_factories.get_container(
         "master",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
@@ -194,7 +217,7 @@ def docker_master(salt_factories, syndic_network, config, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -206,18 +229,26 @@ def docker_master(salt_factories, syndic_network, config, source_path):
     # container.container_start_check(confirm_container_started, container)
     with container.started() as factory:
         for user in ("bob", "fnord"):
-            container.run(f"adduser -D {user}")
-            container.run(f"passwd -d {user}")
-        container.run("apk add linux-pam-dev")
+            ret = container.run(f"adduser {user}")
+            assert ret.returncode == 0
+            ret = container.run(f"passwd -d {user}")
+            assert ret.returncode == 0
         yield factory
 
 
 @pytest.fixture(scope="module")
-def docker_minion(salt_factories, syndic_network, config, source_path):
+def docker_minion(
+    salt_factories,
+    syndic_network,
+    config,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_dir"])
     container = salt_factories.get_container(
         "minion",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-minion",
             "entrypoint": "python -m http.server",
@@ -225,7 +256,7 @@ def docker_minion(salt_factories, syndic_network, config, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -240,11 +271,18 @@ def docker_minion(salt_factories, syndic_network, config, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_syndic_a(salt_factories, config, syndic_network, source_path):
+def docker_syndic_a(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["syndic_a_dir"])
     container = salt_factories.get_container(
         "syndic_a",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
@@ -252,7 +290,7 @@ def docker_syndic_a(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -267,11 +305,18 @@ def docker_syndic_a(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_syndic_b(salt_factories, config, syndic_network, source_path):
+def docker_syndic_b(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["syndic_b_dir"])
     container = salt_factories.get_container(
         "syndic_b",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
@@ -279,7 +324,7 @@ def docker_syndic_b(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -294,11 +339,18 @@ def docker_syndic_b(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_a1(salt_factories, config, syndic_network, source_path):
+def docker_minion_a1(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_a1_dir"])
     container = salt_factories.get_container(
         "minion_a1",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion -ldebug",
@@ -306,7 +358,7 @@ def docker_minion_a1(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -321,11 +373,18 @@ def docker_minion_a1(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_a2(salt_factories, config, syndic_network, source_path):
+def docker_minion_a2(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_a2_dir"])
     container = salt_factories.get_container(
         "minion_a2",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
@@ -333,7 +392,7 @@ def docker_minion_a2(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -348,11 +407,18 @@ def docker_minion_a2(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_b1(salt_factories, config, syndic_network, source_path):
+def docker_minion_b1(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_b1_dir"])
     container = salt_factories.get_container(
         "minion_b1",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
@@ -360,7 +426,7 @@ def docker_minion_b1(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -375,11 +441,18 @@ def docker_minion_b1(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_b2(salt_factories, config, syndic_network, source_path):
+def docker_minion_b2(
+    salt_factories,
+    config,
+    syndic_network,
+    source_path,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_b2_dir"])
     container = salt_factories.get_container(
         "minion_b2",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
@@ -387,7 +460,7 @@ def docker_minion_b2(salt_factories, config, syndic_network, source_path):
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },

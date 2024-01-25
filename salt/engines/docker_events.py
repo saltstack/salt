@@ -24,6 +24,12 @@ CLIENT_TIMEOUT = 60
 # Define the module's virtual name
 __virtualname__ = "docker_events"
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """

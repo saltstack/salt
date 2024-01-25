@@ -10,7 +10,6 @@ Execute calls on selinux
     proper packages are installed.
 """
 
-
 import os
 import re
 
@@ -135,22 +134,22 @@ def setenforce(mode):
     if isinstance(mode, str):
         if mode.lower() == "enforcing":
             mode = "1"
-            modestring = "Enforcing"
+            modestring = "enforcing"
         elif mode.lower() == "permissive":
             mode = "0"
-            modestring = "Permissive"
+            modestring = "permissive"
         elif mode.lower() == "disabled":
             mode = "0"
-            modestring = "Disabled"
+            modestring = "disabled"
         else:
-            return "Invalid mode {}".format(mode)
+            return f"Invalid mode {mode}"
     elif isinstance(mode, int):
         if mode:
             mode = "1"
         else:
             mode = "0"
     else:
-        return "Invalid mode {}".format(mode)
+        return f"Invalid mode {mode}"
 
     # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
     if getenforce() != "Disabled":
@@ -204,9 +203,9 @@ def setsebool(boolean, value, persist=False):
         salt '*' selinux.setsebool virt_use_usb off
     """
     if persist:
-        cmd = "setsebool -P {} {}".format(boolean, value)
+        cmd = f"setsebool -P {boolean} {value}"
     else:
-        cmd = "setsebool {} {}".format(boolean, value)
+        cmd = f"setsebool {boolean} {value}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -227,7 +226,7 @@ def setsebools(pairs, persist=False):
     else:
         cmd = "setsebool "
     for boolean, value in pairs.items():
-        cmd = "{} {}={}".format(cmd, boolean, value)
+        cmd = f"{cmd} {boolean}={value}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -284,9 +283,9 @@ def setsemod(module, state):
     .. versionadded:: 2016.3.0
     """
     if state.lower() == "enabled":
-        cmd = "semodule -e {}".format(module)
+        cmd = f"semodule -e {module}"
     elif state.lower() == "disabled":
-        cmd = "semodule -d {}".format(module)
+        cmd = f"semodule -d {module}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -304,7 +303,7 @@ def install_semod(module_path):
     """
     if module_path.find("salt://") == 0:
         module_path = __salt__["cp.cache_file"](module_path)
-    cmd = "semodule -i {}".format(module_path)
+    cmd = f"semodule -i {module_path}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -320,7 +319,7 @@ def remove_semod(module):
 
     .. versionadded:: 2016.11.6
     """
-    cmd = "semodule -r {}".format(module)
+    cmd = f"semodule -r {module}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -376,7 +375,7 @@ def _validate_filetype(filetype):
     specification. Throws an SaltInvocationError if it isn't.
     """
     if filetype not in _SELINUX_FILETYPES.keys():
-        raise SaltInvocationError("Invalid filetype given: {}".format(filetype))
+        raise SaltInvocationError(f"Invalid filetype given: {filetype}")
     return True
 
 
@@ -394,7 +393,7 @@ def _parse_protocol_port(name, protocol, port):
     protocol_port_pattern = r"^(tcp|udp)\/(([\d]+)\-?[\d]+)$"
     name_parts = re.match(protocol_port_pattern, name)
     if not name_parts:
-        name_parts = re.match(protocol_port_pattern, "{}/{}".format(protocol, port))
+        name_parts = re.match(protocol_port_pattern, f"{protocol}/{port}")
     if not name_parts:
         raise SaltInvocationError(
             'Invalid name "{}" format and protocol and port not provided or invalid:'
@@ -477,8 +476,10 @@ def fcontext_get_policy(
     if filetype:
         _validate_filetype(filetype)
     re_spacer = "[ ]+"
+    re_optional_spacer = "[ |\t]*"
     cmd_kwargs = {
         "spacer": re_spacer,
+        "ospacer": re_optional_spacer,
         "filespec": re.escape(name),
         "sel_user": sel_user or "[^:]+",
         "sel_role": "[^:]+",  # se_role for file context is always object_r
@@ -490,7 +491,7 @@ def fcontext_get_policy(
     )
     cmd = (
         "semanage fcontext -l | egrep "
-        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(
+        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
             **cmd_kwargs
         )
     )
@@ -609,20 +610,29 @@ def _fcontext_add_or_delete_policy(
     """
     if action not in ["add", "delete"]:
         raise SaltInvocationError(
-            'Actions supported are "add" and "delete", not "{}".'.format(action)
+            f'Actions supported are "add" and "delete", not "{action}".'
         )
-    cmd = "semanage fcontext --{}".format(action)
+
+    if "add" == action:
+        # need to use --modify if context for name file exists, otherwise ValueError
+        filespec = re.escape(name)
+        cmd = f"semanage fcontext -l | egrep '{filespec}'"
+        current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
+        if current_entry_text != "":
+            action = "modify"
+
+    cmd = f"semanage fcontext --{action}"
     # "semanage --ftype a" isn't valid on Centos 6,
     # don't pass --ftype since "a" is the default filetype.
     if filetype is not None and filetype != "a":
         _validate_filetype(filetype)
-        cmd += " --ftype {}".format(filetype)
+        cmd += f" --ftype {filetype}"
     if sel_type is not None:
-        cmd += " --type {}".format(sel_type)
+        cmd += f" --type {sel_type}"
     if sel_user is not None:
-        cmd += " --seuser {}".format(sel_user)
+        cmd += f" --seuser {sel_user}"
     if sel_level is not None:
-        cmd += " --range {}".format(sel_level)
+        cmd += f" --range {sel_level}"
     cmd += " " + re.escape(name)
     return __salt__["cmd.run_all"](cmd)
 
@@ -796,10 +806,45 @@ def port_add_policy(name, sel_type=None, protocol=None, port=None, sel_range=Non
 
     .. code-block:: bash
 
-        salt '*' selinux.port_add_policy add tcp/8080 http_port_t
-        salt '*' selinux.port_add_policy add foobar http_port_t protocol=tcp port=8091
+        salt '*' selinux.port_add_policy tcp/8080 http_port_t
+        salt '*' selinux.port_add_policy foobar http_port_t protocol=tcp port=8091
     """
     return _port_add_or_delete_policy("add", name, sel_type, protocol, port, sel_range)
+
+
+def port_modify_policy(name, sel_type=None, protocol=None, port=None, sel_range=None):
+    """
+    .. versionadded:: 2019.2.0
+
+    Modifies the SELinux policy for a given protocol and port.
+
+    Returns the result of the call to semanage.
+
+    name
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
+
+    sel_type
+        The SELinux Type. Required.
+
+    protocol
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
+
+    port
+        The port or port range. Required if name is not formatted.
+
+    sel_range
+        The SELinux MLS/MCS Security Range.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.port_modify_policy tcp/8080 http_port_t
+        salt '*' selinux.port_modify_policy foobar http_port_t protocol=tcp port=8091
+    """
+    return _port_add_or_delete_policy(
+        "modify", name, sel_type, protocol, port, sel_range
+    )
 
 
 def port_delete_policy(name, protocol=None, port=None):
@@ -835,21 +880,21 @@ def _port_add_or_delete_policy(
     """
     .. versionadded:: 2019.2.0
 
-    Performs the action as called from ``port_add_policy`` or ``port_delete_policy``.
+    Performs the action as called from ``port_add_policy``, ``port_modify_policy`` or ``port_delete_policy``.
 
     Returns the result of the call to semanage.
     """
-    if action not in ["add", "delete"]:
+    if action not in ["add", "modify", "delete"]:
         raise SaltInvocationError(
-            'Actions supported are "add" and "delete", not "{}".'.format(action)
+            f'Actions supported are "add", "modify" and "delete", not "{action}".'
         )
     if action == "add" and not sel_type:
         raise SaltInvocationError("SELinux Type is required to add a policy")
     (protocol, port) = _parse_protocol_port(name, protocol, port)
-    cmd = "semanage port --{} --proto {}".format(action, protocol)
+    cmd = f"semanage port --{action} --proto {protocol}"
     if sel_type:
-        cmd += " --type {}".format(sel_type)
+        cmd += f" --type {sel_type}"
     if sel_range:
-        cmd += " --range {}".format(sel_range)
-    cmd += " {}".format(port)
+        cmd += f" --range {sel_range}"
+    cmd += f" {port}"
     return __salt__["cmd.run_all"](cmd)

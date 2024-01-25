@@ -5,26 +5,12 @@ import time
 
 import pytest
 
-# Salt libs
 from salt.beacons import telegram_bot_msg
-
-# Salt testing libs
 from tests.support.mock import MagicMock, patch
 
-# Third-party libs
-try:
-    import telegram
-
-    HAS_TELEGRAM = True
-except ImportError:
-    HAS_TELEGRAM = False
-
+telegram = pytest.importorskip("telegram")
 
 log = logging.getLogger(__name__)
-
-pytestmark = [
-    pytest.mark.skipif(HAS_TELEGRAM is False, reason="telegram is not available"),
-]
 
 
 @pytest.fixture
@@ -94,13 +80,11 @@ def test_call_telegram_return_no_updates_for_user():
 
         log.debug("telegram %s", telegram)
         username = "different_user"
-        user = telegram.user.User(id=1, first_name="", username=username, is_bot=True)
-        chat = telegram.chat.Chat(1, "private", username=username)
+        user = telegram.User(id=1, first_name="", username=username, is_bot=True)
+        chat = telegram.Chat(1, "private", username=username)
         date = time.mktime(datetime.datetime(2016, 12, 18, 0, 0).timetuple())
-        message = telegram.message.Message(
-            message_id=1, from_user=user, date=date, chat=chat
-        )
-        update = telegram.update.Update(update_id=1, message=message)
+        message = telegram.Message(message_id=1, from_user=user, date=date, chat=chat)
+        update = telegram.Update(update_id=1, message=message)
 
         inst.get_updates.return_value = [update]
 
@@ -124,7 +108,7 @@ def test_call_telegram_returning_updates():
         chat = telegram.Chat(1, "private", username=username)
         date = time.mktime(datetime.datetime(2016, 12, 18, 0, 0).timetuple())
         message = telegram.Message(message_id=1, from_user=user, date=date, chat=chat)
-        update = telegram.update.Update(update_id=1, message=message)
+        update = telegram.Update(update_id=1, message=message)
 
         inst.get_updates.return_value = [update]
 

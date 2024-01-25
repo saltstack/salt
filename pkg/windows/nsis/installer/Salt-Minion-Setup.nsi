@@ -607,50 +607,44 @@ SectionEnd
 Section -install_vcredist_2013
 
     Var /GLOBAL VcRedistName
-    Var /GLOBAL VcRedistGuid
-    Var /GLOBAL NeedVcRedist
-
-    # GUIDs can be found by installing them and then running the following
-    # command:
-    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
-    !define VCREDIST_X86_NAME "vcredist_x86_2013"
-    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
-    !define VCREDIST_X64_NAME "vcredist_x64_2013"
-    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
+    Var /GLOBAL VcRedistReg
 
     # Only install 64bit VCRedist on 64bit machines
     # Use RunningX64 here to get the Architecture for the system running the
     # installer.
     ${If} ${RunningX64}
-        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
-        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        StrCpy $VcRedistName "vcredist_x64_2013"
+        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x64"
     ${Else}
-        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
-        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        StrCpy $VcRedistName "vcredist_x86_2013"
+        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86"
     ${EndIf}
 
     # Detecting VCRedist Installation
-    !define INSTALLSTATE_DEFAULT "5"
-
-    StrCpy $NeedVcRedist "False"
     detailPrint "Checking for $VcRedistName..."
-    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
-    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-    StrCpy $NeedVcRedist "True"
-
+    ReadRegDword $0 HKLM $VcRedistReg "Installed"
+    StrCmp $0 "1" +2 0
     Call InstallVCRedist
 
 SectionEnd
 
 
 Function InstallVCRedist
-    # Check to see if it's already installed
-    ${If} $NeedVcRedist == "True"
-        detailPrint "System requires $VcRedistName"
-        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-            "$VcRedistName is currently not installed. Would you like to \
-            install?" \
-            /SD IDYES IDNO endVCRedist
+    detailPrint "System requires $VcRedistName"
+    MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+        "$VcRedistName is currently not installed. Would you like to \
+        install?" \
+        /SD IDYES IDYES InstallVcRedist
+
+    detailPrint "$VcRedistName not installed"
+    detailPrint ">>>Installation aborted by user<<<"
+    MessageBox MB_ICONEXCLAMATION \
+        "$VcRedistName not installed. Aborted by user.$\n$\n\
+        Installer will now close." \
+        /SD IDOK
+    Quit
+
+    InstallVcRedist:
 
         # If an output variable is specified ($0 in the case below), ExecWait
         # sets the variable with the exit code (and only sets the error flag if
@@ -666,12 +660,15 @@ Function InstallVCRedist
         detailPrint "An error occurred during installation of $VcRedistName"
         MessageBox MB_OK|MB_ICONEXCLAMATION \
             "$VcRedistName failed to install. Try installing the package \
-            manually." \
+            manually.$\n$\n\
+            The installer will now close." \
             /SD IDOK
+            Quit
 
         CheckVcRedistErrorCode:
         # Check for Reboot Error Code (3010)
         ${If} $0 == 3010
+            detailPrint "$VcRedistName installed but requires a restart to complete."
             detailPrint "Reboot and run Salt install again"
             MessageBox MB_OK|MB_ICONINFORMATION \
                 "$VcRedistName installed but requires a restart to complete." \
@@ -682,14 +679,12 @@ Function InstallVCRedist
             detailPrint "An error occurred during installation of $VcRedistName"
             detailPrint "Error: $0"
             MessageBox MB_OK|MB_ICONEXCLAMATION \
-                "$VcRedistName failed with ErrorCode: $0. Try installing the \
-                package manually." \
+                "$VcRedistName failed to install. Try installing the package \
+                mnually.$\n\
+                ErrorCode: $0$\n\
+                The installer will now close." \
                 /SD IDOK
         ${EndIf}
-
-        endVCRedist:
-
-    ${EndIf}
 
 FunctionEnd
 
@@ -1114,9 +1109,10 @@ Function ${un}uninstallSalt
         ${EndIf}
 
     # Remove files
-    Delete "$INSTDIR\uninst.exe"
-    Delete "$INSTDIR\ssm.exe"
+    Delete "$INSTDIR\multi-minion*"
     Delete "$INSTDIR\salt*"
+    Delete "$INSTDIR\ssm.exe"
+    Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\vcredist.exe"
     RMDir /r "$INSTDIR\DLLs"
     RMDir /r "$INSTDIR\Include"
@@ -1194,6 +1190,20 @@ Function ${un}uninstallSalt
 
     ${Else}
 
+        # Prompt for the removal of the Installation Directory which contains
+        # the extras directory and the Root Directory which contains the config
+        # and pki directories. These directories will not be removed during
+        # an upgrade.
+        ${IfNot} $DeleteRootDir == 1
+            MessageBox MB_YESNO|MB_DEFBUTTON2|MB_USERICON \
+                "Would you like to completely remove the entire Salt \
+                Installation? This includes the following:$\n\
+                - Extra Pip Packages ($INSTDIR\extras-3.##)$\n\
+                - Minion Config ($RootDir\conf)$\n\
+                - Minion PKIs ($RootDir\conf\pki)"\
+                /SD IDNO IDNO finished
+        ${EndIf}
+
         # New Method Installation
         # This makes the $APPDATA variable point to the ProgramData folder instead
         # of the current user's roaming AppData folder
@@ -1219,8 +1229,8 @@ Function ${un}uninstallSalt
         # Only delete Salt Project directory if it's in Program Files
         # Otherwise, we can't guess where the user may have installed salt
         ${GetParent} $INSTDIR $0  # Get parent directory (Salt Project)
-        ${If} $0 == "$ProgramFiles\Salt Project" # Make sure it's not ProgramFiles
-        ${OrIf} $0 == "$ProgramFiles64\Salt Project" # Make sure it's not Program Files (x86)
+        ${If} $0 == "$ProgramFiles\Salt Project" # Make sure it's ProgramFiles
+        ${OrIf} $0 == "$ProgramFiles64\Salt Project" # Make sure it's Program Files (x86)
             SetOutPath "$SysDrive"  # Can't remove CWD
             RMDir /r $0
         ${EndIf}
@@ -1232,15 +1242,6 @@ Function ${un}uninstallSalt
 
         # Expand any environment variables
         ExpandEnvStrings $RootDir $RootDir
-
-        # Prompt for the removal of the Root Directory which contains the config
-        # and pki directories
-        ${IfNot} $DeleteRootDir == 1
-            MessageBox MB_YESNO|MB_DEFBUTTON2|MB_USERICON \
-                "Would you like to completely remove the Root Directory \
-                ($RootDir) and all of its contents?" \
-                /SD IDNO IDNO finished
-        ${EndIf}
 
         # Remove the Salt Project directory in ProgramData
         # The Salt Project directory will only ever be in ProgramData
@@ -1842,8 +1843,8 @@ Function un.parseUninstallerCommandLineSwitches
         $\n$\t$\tare the same (C:\salt)\
         $\n\
         $\n/delete-root-dir$\tDelete the root directory that contains the config\
-        $\n$\t$\tand pki directories. Default is to not delete the root\
-        $\n$\t$\tdirectory\
+        $\n$\t$\tand pki directories. Also removes the installation directory\
+        $\n$\t$\tincluding the extras directory. Default is to not delete\
         $\n\
         $\n$\t$\tThis applies to new method installations where the\
         $\n$\t$\troot directory is in ProgramData and the installation\

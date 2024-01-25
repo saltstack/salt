@@ -217,7 +217,7 @@ def _gather_pillar(pillarenv, pillar_override):
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         pillar_override=pillar_override,
