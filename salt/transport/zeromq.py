@@ -968,18 +968,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     htopic = salt.utils.stringutils.to_bytes(
                         hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    yield self.dpub_sock.send_multipart([htopic, payload])
+                    await self.dpub_sock.send_multipart([htopic, payload])
                     log.trace("Filtered data has been sent")
                 # Syndic broadcast
                 if self.opts.get("order_masters"):
                     log.trace("Sending filtered data to syndic")
-                    yield self.dpub_sock.send_multipart([b"syndic", payload])
+                    await self.dpub_sock.send_multipart([b"syndic", payload])
                     log.trace("Filtered data has been sent to syndic")
             # otherwise its a broadcast
             else:
                 # TODO: constants file for "broadcast"
                 log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
-                yield self.dpub_sock.send_multipart([b"broadcast", payload])
+                await self.dpub_sock.send_multipart([b"broadcast", payload])
                 log.trace("Broadcasted data has been sent")
         else:
             log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)
