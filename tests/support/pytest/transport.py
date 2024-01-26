@@ -281,13 +281,14 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
 
     def run(self):
-
         ioloop = tornado.ioloop.IOLoop()
         try:
             while True:
                 try:
                     payload = self.queue.get(False)
                 except queue.Empty:
+                    if self._closing is True:
+                        break
                     time.sleep(0.03)
                     continue
                 if payload is None:
