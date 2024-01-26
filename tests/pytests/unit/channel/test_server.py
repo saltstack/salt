@@ -18,29 +18,17 @@ def key_data():
     ]
 
 
-def test__clean_key_crlf(key_data):
-    tst_key = "\r\n".join(key_data)
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test__clean_key(key_data, linesep):
+    tst_key = linesep.join(key_data)
     chk_key = "\n".join(key_data)
     clean_func = server.ReqServerChannel._clean_key
     assert clean_func(tst_key) == clean_func(chk_key)
 
 
-def test__clean_key_cr(key_data):
-    tst_key = "\r".join(key_data)
-    chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) == clean_func(chk_key)
-
-
-def test__clean_key_lf(key_data):
-    tst_key = "\n".join(key_data)
-    chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) == clean_func(chk_key)
-
-
-def test__clean_key_crlf_mismatch(key_data):
-    tst_key = "\r\n".join(key_data)
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test__clean_key_mismatch(key_data, linesep):
+    tst_key = linesep.join(key_data)
     tst_key = tst_key.replace("5", "4")
     chk_key = "\n".join(key_data)
     clean_func = server.ReqServerChannel._clean_key
