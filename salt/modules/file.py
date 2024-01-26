@@ -6026,11 +6026,15 @@ def check_file_meta(
                             name, sfn, template=True, show_filenames=False
                         )
                     else:
-                        with tempfile.NamedTemporaryFile() as _mt:
-                            _mt.write(b"")
-                            changes["diff"] = get_diff(
-                                _mt.name, sfn, template=True, show_filenames=False
-                            )
+                        # Since the target file doesn't exist, create an empty one to
+                        # compare against
+                        tmp_empty = salt.utils.files.mkstemp(
+                            prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                        )
+                        with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                            tmp_.write(b"")
+                        changes["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
+
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -6068,9 +6072,14 @@ def check_file_meta(
             elif lstats:
                 differences = get_diff(name, tmp, show_filenames=False)
             else:
-                with tempfile.NamedTemporaryFile() as _mt:
-                    _mt.write(b"")
-                    differences = get_diff(_mt.name, tmp, show_filenames=False)
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                differences = get_diff(tmp_empty, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -6952,11 +6961,15 @@ def manage_file(
             # It is a new file, set the diff accordingly
             ret["changes"]["diff"] = "New file"
             if new_file_diff:
-                with tempfile.NamedTemporaryFile() as _mt:
-                    _mt.write(b"")
-                    ret["changes"]["diff"] = get_diff(
-                        _mt.name, sfn, show_filenames=False
-                    )
+
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                ret["changes"]["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
 
             if not os.path.isdir(contain_dir):
                 if makedirs:
@@ -7013,11 +7026,14 @@ def manage_file(
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             if new_file_diff and ret["changes"]["diff"] == "New file":
-                with tempfile.NamedTemporaryFile() as _mt:
-                    _mt.write(b"")
-                    ret["changes"]["diff"] = get_diff(
-                        _mt.name, tmp, show_filenames=False
-                    )
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                ret["changes"]["diff"] = get_diff(tmp_empty, tmp, show_filenames=False)
 
             # Copy into place
             salt.utils.files.copyfile(

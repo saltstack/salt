@@ -1048,8 +1048,11 @@ def test_issue_60203(
 def test_file_managed_new_file_diff(file, tmp_path):
     name = tmp_path / "new_file_diff.txt"
     ret = file.managed(str(name), contents="EITR", new_file_diff=True, test=True)
-    assert ret.changes == {"diff": "--- \n+++ \n@@ -0,0 +1 @@\n+EITR\n"}
+    assert ret.changes == {
+        "diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}",
+        "newfile": str(name),
+    }
     assert not name.exists()
     ret = file.managed(str(name), contents="EITR", new_file_diff=True)
-    assert ret.changes == {"diff": "--- \n+++ \n@@ -0,0 +1 @@\n+EITR\n"}
+    assert ret.changes == {"diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}"}
     assert name.exists()
