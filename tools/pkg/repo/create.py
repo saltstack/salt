@@ -64,7 +64,7 @@ _deb_distro_info = {
         },
         "23.04": {
             "label": "salt_ubuntu2304",
-            "codename": "mantic",
+            "codename": "lunar",
         },
     },
 }
