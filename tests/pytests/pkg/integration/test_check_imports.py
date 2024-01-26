@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 CHECK_IMPORTS_SLS_CONTENTS = """
 #!py
 import importlib
+import sys
 
 def run():
     config = {}
@@ -81,7 +82,12 @@ def run():
                 ]
             }
 
-    for import_name in ["telnetlib"]:
+    # Import required for all OS'es
+    for import_name in [
+        "jinja2",
+        "telnetlib",
+        "yaml",
+    ]:
         try:
             importlib.import_module(import_name)
             config[import_name] = {
@@ -101,6 +107,40 @@ def run():
                     }
                 ]
             }
+
+    # Windows specific requirements (I think, there may be some for other OSes in here)
+    if sys.platform == "win32":
+        for import_name in [
+            "cffi",
+            "clr_loader",
+            "lxml",
+            "pythonnet",
+            "pytz",
+            "pywintypes",
+            "timelib",
+            "win32",
+            "wmi",
+            "xmltodict",
+        ]:
+            try:
+                importlib.import_module(import_name)
+                config[import_name] = {
+                    'test.succeed_without_changes': [
+                        {
+                            "name": import_name,
+                            'comment': "The '{}' import succeeded.".format(import_name)
+                        }
+                    ]
+                }
+            except ModuleNotFoundError as err:
+                config[import_name] = {
+                    'test.fail_without_changes': [
+                        {
+                            "name": import_name,
+                            'comment': "The '{}' import failed. The error was: {}".format(import_name, err)
+                        }
+                    ]
+                }
     return config
 """
 
