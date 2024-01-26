@@ -52,6 +52,10 @@ class ReqServerChannel:
         transport = salt.transport.request_server(opts, **kwargs)
         return cls(opts, transport)
 
+    @staticmethod
+    def _clean_key(key):
+        return key.strip().replace("\r", "").replace("\n", "")
+
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
@@ -271,9 +275,6 @@ class ReqServerChannel:
                     raise
                 payload["load"] = self.crypticle.loads(payload["load"])
         return payload
-
-    def _clean_key(self, key):
-        return key.strip().replace("\r", "").replace("\n", "")
 
     def _auth(self, load, sign_messages=False):
         """
