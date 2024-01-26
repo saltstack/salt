@@ -1069,9 +1069,14 @@ class SignalHandlingProcess(Process):
             msg += "SIGTERM"
         msg += ". Exiting"
         log.debug(msg)
+
+        mach_id = salt.utils.platform.get_machine_identifier()
+        log.debug(f"DGM exiting for machine identifer '{mach_id}'")
+
         if HAS_PSUTIL:
             try:
-                process = psutil.Process(os.getpid())
+                cur_pid = os.getpid()
+                process = psutil.Process(cur_pid)
                 if hasattr(process, "children"):
                     for child in process.children(recursive=True):
                         try:
@@ -1084,6 +1089,10 @@ class SignalHandlingProcess(Process):
                                 self.pid,
                                 os.getpid(),
                             )
+
+                # DGM need to go through and clean up any resources left around like lock files
+                # example lockfile /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
+
             except psutil.NoSuchProcess:
                 log.warning(
                     "Unable to kill children of process %d, it does not exist."
