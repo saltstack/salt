@@ -247,6 +247,9 @@ class GitProvider:
 
         def _val_cb(x, y):
             return str(y)
+        # DGM try getting machine_identifier
+        self.mach_id = salt.utils.platform.get_machine_identifier()
+        log.debug(f"DGM getting machine_id for lock file, machine_id '{self.mach_id}'")
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
@@ -751,7 +754,12 @@ class GitProvider:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # No lock file present
-                pass
+                msg = "Attempt to remove lock {} for file ({}) which was not found to exist : {} ".format(
+                    self.url, lock_file, exc
+                )
+                log.debug(msg)
+                # DGM pass
+
             elif exc.errno == errno.EISDIR:
                 # Somehow this path is a directory. Should never happen
                 # unless some wiseguy manually creates a directory at this
@@ -903,6 +911,16 @@ class GitProvider:
                     self._get_lock_file(lock_type="update"),
                     self.role,
                 )
+            else:
+                log.warning(
+                    "Update lock file generated an unexpected exception for %s remote '%s', "
+                    "The lock file %s for %s type=update operation, exception: %s .",
+                    self.role,
+                    self.id,
+                    self._get_lock_file(lock_type="update"),
+                    self.role,
+                    str(exc),
+                )
             return False
 
     def _lock(self, lock_type="update", failhard=False):
@@ -930,6 +948,9 @@ class GitProvider:
             with os.fdopen(fh_, "wb"):
                 # Write the lock file and close the filehandle
                 os.write(fh_, salt.utils.stringutils.to_bytes(str(os.getpid())))
+                os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+                os.write(fh_, salt.utils.stringutils.to_bytes(str(self.mach_id)))
+
         except OSError as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), "r") as fd_:
@@ -937,44 +958,61 @@ class GitProvider:
                         pid = int(
                             salt.utils.stringutils.to_unicode(fd_.readline()).rstrip()
                         )
+                        mach_id = int(
+                            salt.utils.stringutils.to_unicode(fd_.readline()).rstrip()
+                        )
                     except ValueError:
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.
                         pid = 0
+                        mach_id = 0
                 global_lock_key = self.role + "_global_lock"
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
                     msg = (
                         "{} is enabled and {} lockfile {} is present for "
-                        "{} remote '{}'.".format(
+                        "{} remote '{}' on machine_id {}.".format(
                             global_lock_key,
                             lock_type,
                             lock_file,
                             self.role,
                             self.id,
+                            self.mach_id,
                         )
                     )
                     if pid:
                         msg += f" Process {pid} obtained the lock"
+                        if self.mach_id or mach_id:
+                            msg += " Process {} obtained the lock for machine_id {}, current machine_id {}".format(
+                                pid, mach_id, self.mach_id
+                            )
+                        else:
+                            msg += " Process {} obtained the lock".format(pid)
+
                         if not pid_exists(pid):
                             msg += (
                                 " but this process is not running. The "
                                 "update may have been interrupted. If "
                                 "using multi-master with shared gitfs "
                                 "cache, the lock may have been obtained "
-                                "by another master."
+                                "by another master"
                             )
+                            if self.mach_id != mach_id:
+                                msg += ", with machine_id {}".format(mach_id)
+                            else:
+                                msg += "."
                     log.warning(msg)
                     if failhard:
                         raise
                     return
                 elif pid and pid_exists(pid):
                     log.warning(
-                        "Process %d has a %s %s lock (%s)",
+                        "Process %d has a %s %s lock (%s) on machine_id %s",
                         pid,
                         self.role,
                         lock_type,
                         lock_file,
+                        self.mach_id,
                     )
                     if failhard:
                         raise
@@ -982,12 +1020,13 @@ class GitProvider:
                 else:
                     if pid:
                         log.warning(
-                            "Process %d has a %s %s lock (%s), but this "
+                            "Process %d has a %s %s lock (%s) on machine_id %s, but this "
                             "process is not running. Cleaning up lock file.",
                             pid,
                             self.role,
                             lock_type,
                             lock_file,
+                            self.mach_id,
                         )
                     success, fail = self._clear_lock()
                     if success:
@@ -996,12 +1035,17 @@ class GitProvider:
                         raise
                     return
             else:
-                msg = "Unable to set {} lock for {} ({}): {} ".format(
-                    lock_type, self.id, self._get_lock_file(lock_type), exc
+                msg = "Unable to set {} lock for {} ({}) on machine_id {}: {} ".format(
+                    lock_type,
+                    self.id,
+                    self._get_lock_file(lock_type),
+                    self.mach_id,
+                    exc,
                 )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
-        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}'"
+
+        msg = f"Set {lock_type} lock for {self.role} remote {self.id} on machine_id '{self.mach_id}'"
         log.debug(msg)
         return msg
 
@@ -1018,6 +1062,15 @@ class GitProvider:
         try:
             result = self._lock(lock_type="update")
         except GitLockError as exc:
+            log.warning(
+                "Update lock file generated an unexpected exception for %s remote '%s', "
+                "The lock file %s for %s type=update operation, exception: %s .",
+                self.role,
+                self.id,
+                self._get_lock_file(lock_type="update"),
+                self.role,
+                str(exc),
+            )
             failed.append(exc.strerror)
         else:
             if result is not None:
@@ -1055,10 +1108,15 @@ class GitProvider:
                 try:
                     self._lock(lock_type=lock_type, failhard=True)
                     lock_set = True
-                    yield
+                    # docs state need to yield a single value, lock_set will do
+                    yield lock_set
+
                     # Break out of his loop once we've yielded the lock, to
                     # avoid continued attempts to iterate and establish lock
+                    # just ensuring lock_set is true (belts and braces)
+                    lock_set = True
                     break
+
                 except (OSError, GitLockError) as exc:
                     if not timeout or time.time() - time_start > timeout:
                         raise GitLockError(exc.errno, exc.strerror)
