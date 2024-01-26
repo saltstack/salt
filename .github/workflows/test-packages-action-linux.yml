@@ -68,6 +68,7 @@ env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
@@ -189,11 +190,10 @@ jobs:
           # This step can go away once we stop testing classic packages upgrade/downgrades to/from 3005.x
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- "sudo python3 -m pip install -U 'importlib-metadata<=4.13.0' 'virtualenv<=20.21.1'"
 
-      - name: Show System Info & Test Plan
+      - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
-            ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+            --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         run: |

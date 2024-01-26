@@ -6,8 +6,6 @@
     which works under python 3 because on python 3 you can no longer compare
     strings against integers.
 """
-
-
 import datetime
 import inspect
 import logging
@@ -172,7 +170,7 @@ def warn_until(
 
     if _version_ >= version:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
-        raise RuntimeError(
+        deprecated_message = (
             "The warning triggered on filename '{filename}', line number "
             "{lineno}, is supposed to be shown until version "
             "{until_version} is released. Current version is now "
@@ -181,8 +179,15 @@ def warn_until(
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
                 salt_version=_version_.formatted_version,
-            ),
+            )
         )
+        if os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") == "1":
+            # We don't raise RuntimeError by default since that can break
+            # users systems. We do however want to raise them in a CI context.
+            raise RuntimeError(deprecated_message)
+        # Otherwise, print the deprecated message to STDERR
+        sys.stderr.write(f"\n{deprecated_message}\n")
+        sys.stderr.flush()
 
     if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
@@ -240,7 +245,7 @@ def warn_until_date(
     today = _current_date or datetime.datetime.utcnow().date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
-        raise RuntimeError(
+        deprecated_message = (
             "{message} This warning(now exception) triggered on "
             "filename '{filename}', line number {lineno}, is "
             "supposed to be shown until {date}. Today is {today}. "
@@ -252,6 +257,13 @@ def warn_until_date(
                 today=today.isoformat(),
             ),
         )
+        if os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") == "1":
+            # We don't raise RuntimeError by default since that can break
+            # users systems. We do however want to raise them in a CI context.
+            raise RuntimeError(deprecated_message)
+        # Otherwise, print the deprecated message to STDERR
+        sys.stderr.write(f"\n{deprecated_message}\n")
+        sys.stderr.flush()
 
     if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
