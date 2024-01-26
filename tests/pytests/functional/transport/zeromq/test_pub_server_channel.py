@@ -7,6 +7,7 @@ import time
 from contextlib import contextmanager
 
 import pytest
+import tornado.ioloop
 from saltfactories.utils import random_string
 
 import salt.transport.zeromq
@@ -32,9 +33,15 @@ class PubServerChannelSender:
         self.payload_list = payload_list
 
     def run(self):
+        loop = tornado.ioloop.IOLoop()
+        loop.add_callback(self._run, loop)
+        loop.start()
+
+    async def _run(self, loop):
         for payload in self.payload_list:
-            self.pub_server_channel.publish(payload)
-        time.sleep(2)
+            await self.pub_server_channel.publish(payload)
+        await asyncio.sleep(2)
+        loop.stop()
 
 
 def generate_msg_list(msg_cnt, minions_list, broadcast):

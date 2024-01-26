@@ -7,7 +7,6 @@ import socket
 import time
 
 import pytest
-import tornado.gen
 import tornado.ioloop
 import tornado.iostream
 import zmq
@@ -118,8 +117,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     break
             self.sock = tornado.iostream.IOStream(sock)
 
-    @tornado.gen.coroutine
-    def _recv(self):
+    async def _recv(self):
         if self.transport == "zeromq":
             # test_zeromq_filtering requires catching the
             # SaltDeserializationError in order to pass.
@@ -138,26 +136,25 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                         log.debug(
                             "Publish received for not this minion: %s", message_target
                         )
-                        raise salt.ext.tornado.gen.Return(None)
+                        return
                     serial_payload = salt.payload.loads(messages[1])
                 else:
                     raise Exception("Invalid number of messages")
-                raise salt.ext.tornado.gen.Return(serial_payload)
+                return serial_payload
             except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
-                raise tornado.gen.Return(serial_payload)
-            byts = yield self.sock.read_bytes(8096, partial=True)
+                return serial_payload
+            byts = await self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
-                raise tornado.gen.Return(serial_payload)
+                return serial_payload
             raise RecvError("TCP Error")
 
-    @tornado.gen.coroutine
-    def _run(self, loop):
+    async def _run(self, loop):
         try:
             self._setup_listener()
         except Exception:  # pylint: disable=broad-except
@@ -179,7 +176,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     log.error("Receive timeout reached in test collector!")
                     break
                 try:
-                    payload = yield self._recv()
+                    payload = await self._recv()
                 except RecvError:
                     time.sleep(0.03)
                 else:
@@ -329,6 +326,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
                 break
+            time.sleep(0.5)
             attempts -= 1
         else:
             pytest.fail("Failed to confirm the collector has started")
@@ -341,6 +339,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "stop": True})
             if self.collector.stop_running.wait(1) is True:
                 break
+            time.sleep(0.5)
             attempts -= 1
         else:
             pytest.fail("Failed to confirm the collector has stopped")
