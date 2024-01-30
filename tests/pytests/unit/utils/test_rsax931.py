@@ -1,7 +1,6 @@
 """
 Test the RSA ANSI X9.31 signer and verifier
 """
-
 import ctypes
 import ctypes.util
 import fnmatch
@@ -19,7 +18,7 @@ from salt.utils.rsax931 import (
     _find_libcrypto,
     _load_libcrypto,
 )
-from tests.support.mock import patch, MagicMock
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -215,6 +214,7 @@ def test_find_libcrypto_darwin_catalina():
     assert "/usr/lib/libcrypto.44.dylib" == lib_path
 
 
+@pytest.mark.skip_unless_on_darwin
 def test_find_libcrypto_darwin_pip_install():
     """
     Test _find_libcrypto on a macOS host where there salt has been installed
@@ -223,15 +223,17 @@ def test_find_libcrypto_darwin_pip_install():
     bin_path = "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10"
     expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
     glob_effect = ([], [], ["yay"], [], [], [], [])
-    with patch("salt.utils.platform.is_darwin", lambda: True),\
-            patch("sys.executable", bin_path),\
-            patch("os.path.islink", return_value=False),\
-            patch.object(glob, "glob", side_effect=glob_effect) as mock_glob:
+    with patch("salt.utils.platform.is_darwin", lambda: True), patch(
+        "sys.executable", bin_path
+    ), patch("os.path.islink", return_value=False), patch.object(
+        glob, "glob", side_effect=glob_effect
+    ) as mock_glob:
         lib_path = _find_libcrypto()
         assert lib_path == "yay"
         mock_glob.assert_any_call(expected)
 
 
+@pytest.mark.skip_unless_on_darwin
 def test_find_libcrypto_darwin_pip_install_venv():
     """
     Test _find_libcrypto on a macOS host where there salt has been installed
@@ -241,11 +243,13 @@ def test_find_libcrypto_darwin_pip_install_venv():
     lnk_path = "/Users/bill/src/salt/venv/bin/python"
     expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
     glob_effect = ([], [], ["yay"], [], [], [], [])
-    with patch("salt.utils.platform.is_darwin", lambda: True), \
-            patch("sys.executable", lnk_path), \
-            patch("os.path.islink", return_value=True), \
-            patch("os.path.realpath", return_value=src_path), \
-            patch.object(glob, "glob", side_effect=glob_effect) as mock_glob:
+    with patch("salt.utils.platform.is_darwin", lambda: True), patch(
+        "sys.executable", lnk_path
+    ), patch("os.path.islink", return_value=True), patch(
+        "os.path.realpath", return_value=src_path
+    ), patch.object(
+        glob, "glob", side_effect=glob_effect
+    ) as mock_glob:
         lib_path = _find_libcrypto()
         assert lib_path == "yay"
         mock_glob.assert_any_call(expected)

@@ -2,7 +2,6 @@
 Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 """
 
-
 import ctypes.util
 import glob
 import os
