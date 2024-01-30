@@ -1,5 +1,4 @@
 import json
-import shutil
 
 import pytest
 
@@ -30,14 +29,11 @@ def venv(tmp_path):
 @pytest.fixture
 def module_dirs(tmp_path):
     module_dir = tmp_path / "module-dir-base"
-    (module_dir / "modules").mkdir(parents=True)
-    try:
-        yield [str(module_dir)]
-    finally:
-        shutil.rmtree(str(module_dir), ignore_errors=True)
+    module_dir.joinpath("modules").mkdir(parents=True)
+    return [str(module_dir)]
 
 
-def test_module_dirs_priority(venv, salt_extension, salt_minion_factory, module_dirs):
+def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
     # Install our extension into the virtualenv
     venv.install(str(salt_extension.srcdir))
     installed_packages = venv.get_installed_packages()
@@ -54,9 +50,8 @@ def test_module_dirs_priority(venv, salt_extension, salt_minion_factory, module_
     mod_dirs = salt.loader._module_dirs(minion_config, "modules", "module")
     print(json.dumps(mod_dirs))
     """
-    opts = salt_minion_factory.config.copy()
-    opts["module_dirs"] = module_dirs
-    ret = venv.run_code(code, input=json.dumps(opts))
+    minion_opts["module_dirs"] = module_dirs
+    ret = venv.run_code(code, input=json.dumps(minion_opts))
     module_dirs_return = json.loads(ret.stdout)
     assert len(module_dirs_return) == 5
     for i, tail in enumerate(
@@ -68,7 +63,9 @@ def test_module_dirs_priority(venv, salt_extension, salt_minion_factory, module_
             "/site-packages/salt/modules",
         ]
     ):
-        assert module_dirs_return[i].endswith(tail)
+        assert module_dirs_return[i].endswith(
+            tail
+        ), f"{module_dirs_return[i]} does not end with {tail}"
 
 
 def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_factory):
