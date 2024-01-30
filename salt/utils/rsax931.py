@@ -44,8 +44,7 @@ def _find_libcrypto():
         lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
 
         # look in location salt is running from
-        # this accounts for running from an unpacked
-        # onedir file
+        # this accounts for running from an unpacked onedir file
         lib = lib or glob.glob("lib/libcrypto.dylib")
 
         # Look in the location relative to the python binary
