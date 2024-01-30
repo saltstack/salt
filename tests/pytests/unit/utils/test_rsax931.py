@@ -19,7 +19,7 @@ from salt.utils.rsax931 import (
     _find_libcrypto,
     _load_libcrypto,
 )
-from tests.support.mock import patch
+from tests.support.mock import patch, MagicMock
 
 
 @pytest.fixture
@@ -213,6 +213,42 @@ def test_find_libcrypto_darwin_catalina():
     ), patch.object(sys, "platform", "macosx"), patch.object(glob, "glob", test_glob):
         lib_path = _find_libcrypto()
     assert "/usr/lib/libcrypto.44.dylib" == lib_path
+
+
+def test_find_libcrypto_darwin_pip_install():
+    """
+    Test _find_libcrypto on a macOS host where there salt has been installed
+    into an existing python or virtual environment.
+    """
+    bin_path = "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10"
+    expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
+    glob_effect = ([], [], ["yay"], [], [], [], [])
+    with patch("salt.utils.platform.is_darwin", lambda: True),\
+            patch("sys.executable", bin_path),\
+            patch("os.path.islink", return_value=False),\
+            patch.object(glob, "glob", side_effect=glob_effect) as mock_glob:
+        lib_path = _find_libcrypto()
+        assert lib_path == "yay"
+        mock_glob.assert_any_call(expected)
+
+
+def test_find_libcrypto_darwin_pip_install_venv():
+    """
+    Test _find_libcrypto on a macOS host where there salt has been installed
+    into an existing python or virtual environment.
+    """
+    src_path = "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10"
+    lnk_path = "/Users/bill/src/salt/venv/bin/python"
+    expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
+    glob_effect = ([], [], ["yay"], [], [], [], [])
+    with patch("salt.utils.platform.is_darwin", lambda: True), \
+            patch("sys.executable", lnk_path), \
+            patch("os.path.islink", return_value=True), \
+            patch("os.path.realpath", return_value=src_path), \
+            patch.object(glob, "glob", side_effect=glob_effect) as mock_glob:
+        lib_path = _find_libcrypto()
+        assert lib_path == "yay"
+        mock_glob.assert_any_call(expected)
 
 
 def test_find_libcrypto_darwin_bigsur_packaged():
