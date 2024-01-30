@@ -1119,3 +1119,39 @@ def test_load_args_and_kwargs(minion_opts):
     _args = [{"max_sleep": 40, "__kwarg__": True}]
     with pytest.raises(salt.exceptions.SaltInvocationError):
         ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
+
+
+def test_connect_master_salt_client_error(minion_opts):
+    """
+    Ensure minion's destory method is called on an salt client error while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    minion.connect_master = MagicMock(side_effect=SaltClientError)
+    minion.destroy = MagicMock()
+    mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+
+def test_connect_master_unresolveable_error(minion_opts):
+    """
+    Ensure minion's destory method is called on an unresolvable while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    minion.connect_master = MagicMock(side_effect=SaltMasterUnresolvableError)
+    minion.destroy = MagicMock()
+    mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+
+def test_connect_master_general_exception_error(minion_opts):
+    """
+    Ensure minion's destory method is called on an un-handled exception while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    minion.connect_master = MagicMock(side_effect=Exception)
+    minion.destroy = MagicMock()
+    mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
