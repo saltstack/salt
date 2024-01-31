@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.10/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-certifi==2022.5.18.1
+certifi==2023.07.22
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -20,7 +20,7 @@ cherrypy==18.6.1
     # via -r requirements/windows.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==41.0.4
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -85,7 +85,7 @@ pycurl==7.43.0.5
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via -r requirements/windows.txt
 python-dateutil==2.8.1
     # via -r requirements/windows.txt
@@ -100,7 +100,7 @@ pywin32==303
     #   -r requirements/windows.txt
     #   cherrypy
     #   wmi
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==23.2.0
     # via -r requirements/zeromq.txt

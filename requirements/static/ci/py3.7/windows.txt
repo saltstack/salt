@@ -42,7 +42,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.12.7 ; python_version >= "3.6"
+certifi==2023.07.22 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -54,10 +54,10 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   cryptography
     #   pygit2
-chardet==3.0.4
-    # via requests
 charset-normalizer==2.0.12
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -74,7 +74,7 @@ colorama==0.4.1
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==41.0.4 ; python_version >= "3.7"
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -113,7 +113,7 @@ geomet==0.1.2
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.37 ; python_version >= "3.7"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -248,7 +248,7 @@ pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==20.0.1
+pyopenssl==23.2.0 ; python_version >= "3.6"
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -319,19 +319,19 @@ pywin32==303
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==22.0.3 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
-requests==2.25.1
+requests==2.31.0 ; python_version >= "3.7"
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
@@ -372,7 +372,6 @@ six==1.16.0
     #   kubernetes
     #   mock
     #   packaging
-    #   pyopenssl
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
@@ -402,7 +401,7 @@ typing-extensions==3.10.0.0
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   yarl
-urllib3==1.26.6
+urllib3==1.26.17
     # via
     #   -r requirements/windows.txt
     #   botocore

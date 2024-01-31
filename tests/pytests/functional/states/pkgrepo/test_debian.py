@@ -9,6 +9,7 @@ import _pytest._version
 import attr
 import pytest
 import salt.utils.files
+import salt.version
 from tests.conftest import CODE_DIR
 
 try:
@@ -541,10 +542,16 @@ def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_fil
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
-def test_repo_present_absent_no_trailing_slash_uri(pkgrepo, trailing_slash_repo_file):
+def test_repo_present_absent_no_trailing_slash_uri(
+    pkgrepo, trailing_slash_repo_file, grains
+):
     """
     test adding a repo with a trailing slash in the uri
     """
+    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
+        if salt.version.__saltstack_version__.info >= (3006, 0):
+            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
+        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
     # without the trailing slash
     repo_content = "deb http://www.deb-multimedia.org stable main"
     # initial creation

@@ -33,9 +33,6 @@ class PipModuleTest(ModuleCase):
         # Remove the venv test directory
         self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
         self.venv_dir = os.path.join(self.venv_test_dir, "venv")
-        self.pip_temp = os.path.join(self.venv_test_dir, ".pip-temp")
-        if not os.path.isdir(self.pip_temp):
-            os.makedirs(self.pip_temp)
         self.patched_environ = patched_environ(
             PIP_SOURCE_DIR="",
             PIP_BUILD_DIR="",
@@ -519,7 +516,7 @@ class PipModuleTest(ModuleCase):
     @pytest.mark.slow_test
     def test_pip_install_multiple_editables(self):
         editables = [
-            "git+https://github.com/jek/blinker.git#egg=Blinker",
+            "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
             "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
         ]
 
@@ -542,10 +539,11 @@ class PipModuleTest(ModuleCase):
             if self._check_download_error(ret["stdout"]):
                 self.skipTest("Test skipped due to pip download error")
             self.assertEqual(ret["retcode"], 0)
-            match = re.search(
-                "Successfully installed Blinker(.*) SaltTesting(.*)", ret["stdout"]
-            )
-            assert match is not None
+            for package in ("iStr", "SaltTesting"):
+                self.assertRegex(
+                    ret["stdout"],
+                    r"(?:.*)(Successfully installed)(?:.*)({})(?:.*)".format(package),
+                )
         except KeyError as exc:
             self.fail(
                 "The returned dictionary is missing an expected key. Error: '{}'."
@@ -555,7 +553,7 @@ class PipModuleTest(ModuleCase):
     @pytest.mark.slow_test
     def test_pip_install_multiple_editables_and_pkgs(self):
         editables = [
-            "git+https://github.com/jek/blinker.git#egg=Blinker",
+            "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
             "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
         ]
 
@@ -578,7 +576,7 @@ class PipModuleTest(ModuleCase):
             if self._check_download_error(ret["stdout"]):
                 self.skipTest("Test skipped due to pip download error")
             self.assertEqual(ret["retcode"], 0)
-            for package in ("Blinker", "SaltTesting", "pep8"):
+            for package in ("iStr", "SaltTesting", "pep8"):
                 self.assertRegex(
                     ret["stdout"],
                     r"(?:.*)(Successfully installed)(?:.*)({})(?:.*)".format(package),

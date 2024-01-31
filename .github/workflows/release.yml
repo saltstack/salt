@@ -15,10 +15,14 @@ on:
         default: "master"
         required: false
 
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+
 jobs:
   SaltChangelog:
     name: Build Salt Changelog
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -32,7 +36,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
         fetch-depth: 0
@@ -81,7 +85,7 @@ jobs:
 
   Manpages:
     name: Build Salt man Pages
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -96,7 +100,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
 
@@ -144,7 +148,7 @@ jobs:
   PullRequest:
     needs: [SaltChangelog, Manpages]
     name: Create Pull Request
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -157,7 +161,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
         fetch-depth: 0

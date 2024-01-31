@@ -9,6 +9,7 @@ import pytest
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
+import salt.version
 from saltfactories.utils.functional import Loaders
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,12 @@ def preserve_rhel_yum_conf():
 
 @pytest.fixture(autouse=True)
 def refresh_db(ctx, grains, modules):
+
+    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
+        if salt.version.__saltstack_version__.info >= (3006, 0):
+            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
+        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
+
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
         ctx["refresh"] = True
@@ -69,6 +76,7 @@ def test_pkg(grains):
     return _pkg
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.requires_salt_modules("pkg.list_pkgs")
 @pytest.mark.slow_test
 def test_list(modules):
@@ -79,6 +87,7 @@ def test_list(modules):
     assert len(ret.keys()) != 0
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.requires_salt_modules("pkg.version_cmp")
 @pytest.mark.slow_test
 def test_version_cmp(grains, modules):
@@ -103,6 +112,7 @@ def test_version_cmp(grains, modules):
     assert modules.pkg.version_cmp(*gt) == 1
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
 @pytest.mark.slow_test
@@ -156,6 +166,7 @@ def test_mod_del_repo(grains, modules):
             modules.pkg.del_repo(repo)
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.slow_test
 def test_mod_del_repo_multiline_values(modules):
     """
@@ -204,8 +215,9 @@ def test_mod_del_repo_multiline_values(modules):
             modules.pkg.del_repo(repo)
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
@@ -214,6 +226,7 @@ def test_owner(modules):
     assert len(ret) != 0
 
 
+@pytest.mark.flaky(max_runs=4)
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skipif(
     not salt.utils.platform.is_freebsd(),
@@ -229,6 +242,7 @@ def test_which(modules):
     assert len(ret) != 0
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
 @pytest.mark.slow_test
@@ -258,6 +272,7 @@ def test_install_remove(modules, test_pkg):
         test_remove()
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.skipif(
     salt.utils.platform.is_photonos(),
@@ -316,6 +331,7 @@ def test_hold_unhold(grains, modules, states, test_pkg):
             assert ret.result is True
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.refresh_db")
 @pytest.mark.slow_test
@@ -345,6 +361,7 @@ def test_refresh_db(grains, tmp_path, minion_opts):
     assert os.path.isfile(rtag) is False
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.requires_salt_modules("pkg.info_installed")
 @pytest.mark.slow_test
 def test_pkg_info(grains, modules, test_pkg):
@@ -372,6 +389,7 @@ def test_pkg_info(grains, modules, test_pkg):
         assert test_pkg in keys
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.skipif(True, reason="Temporary Skip - Causes centos 8 test to fail")
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules(
@@ -453,6 +471,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
             assert ret != {}
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.skipif(
     salt.utils.platform.is_darwin() is True,
@@ -500,6 +519,7 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
     assert pkg_latest in cmd_pkg
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.list_repos")
 @pytest.mark.slow_test

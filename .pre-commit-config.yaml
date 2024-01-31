@@ -21,6 +21,9 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.6-zmq-requirements
@@ -34,6 +37,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.7-zmq-requirements
@@ -47,6 +53,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.8-zmq-requirements
@@ -60,6 +69,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.9-zmq-requirements
@@ -73,6 +85,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.10-zmq-requirements
@@ -86,6 +101,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/linux.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.7-zmq-requirements
@@ -99,6 +117,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.8-zmq-requirements
@@ -112,6 +133,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.9-zmq-requirements
@@ -125,6 +149,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.10-zmq-requirements
@@ -138,6 +165,9 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.9-zmq-requirements
@@ -150,6 +180,9 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - requirements/static/pkg/darwin.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.10-zmq-requirements
@@ -162,6 +195,9 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - requirements/static/pkg/darwin.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.7-zmq-requirements
@@ -174,6 +210,9 @@ repos:
           - --platform=windows
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.8-zmq-requirements
@@ -186,6 +225,9 @@ repos:
           - --platform=windows
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.9-zmq-requirements
@@ -198,6 +240,9 @@ repos:
           - --platform=windows
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
       # There's no pywin32 package for Py3.10 yet
 #      - id: pip-tools-compile
@@ -1216,7 +1261,7 @@ repos:
           - docs.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1233,7 +1278,7 @@ repos:
           - filemap.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1254,7 +1299,7 @@ repos:
           - loader.check-virtual
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1275,7 +1320,7 @@ repos:
           - docstrings.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1298,7 +1343,7 @@ repos:
           - --error-on-known-failures
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3

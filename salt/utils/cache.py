@@ -6,6 +6,7 @@ import functools
 import logging
 import os
 import re
+import shutil
 import time
 
 import salt.config
@@ -15,6 +16,8 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
+import salt.utils.path
+import salt.version
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -203,14 +206,14 @@ class CacheCli:
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(salt.payload.dumps(minions))
+        self.cupd_out.send(salt.payload.dumps(minions))  # pylint: disable=missing-kwoa
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
         msg = salt.payload.dumps("minions")
-        self.creq_out.send(msg)
+        self.creq_out.send(msg)  # pylint: disable=missing-kwoa
         min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 
@@ -330,3 +333,32 @@ def context_cache(func):
         return func(*args, **kwargs)
 
     return context_cache_wrap
+
+
+def verify_cache_version(cache_path):
+    """
+    Check that the cached version matches the Salt version.
+    If the cached version does not match the Salt version, wipe the cache.
+
+    :return: ``True`` if cache version matches, otherwise ``False``
+    """
+    if not os.path.isdir(cache_path):
+        os.makedirs(cache_path)
+    with salt.utils.files.fopen(
+        salt.utils.path.join(cache_path, "cache_version"), "a+"
+    ) as file:
+        file.seek(0)
+        data = "\n".join(file.readlines())
+        if data != salt.version.__version__:
+            log.warning(f"Cache version mismatch clearing: {repr(cache_path)}")
+            file.truncate(0)
+            file.write(salt.version.__version__)
+            for item in os.listdir(cache_path):
+                if item != "cache_version":
+                    item_path = salt.utils.path.join(cache_path, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+                    else:
+                        shutil.rmtree(item_path)
+            return False
+        return True

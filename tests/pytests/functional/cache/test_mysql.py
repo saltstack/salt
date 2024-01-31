@@ -36,5 +36,8 @@ def cache(minion_opts, mysql_container):
     return cache
 
 
+@pytest.mark.skip(
+    "Skipping docker mysql tests on 3005. Requires significant change to resolve, updating salt factories"
+)
 def test_caching(subtests, cache):
     run_common_cache_tests(subtests, cache)

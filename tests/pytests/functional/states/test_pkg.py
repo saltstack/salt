@@ -23,6 +23,12 @@ pytestmark = [
 
 @pytest.fixture(scope="module", autouse=True)
 def refresh_db(grains, modules):
+
+    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
+        if salt.version.__saltstack_version__.info >= (3006, 0):
+            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
+        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
+
     modules.pkg.refresh_db()
 
     # If this is Arch Linux, check if pacman is in use by another process

@@ -37,7 +37,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2023.07.22
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
@@ -72,8 +72,8 @@ clustershell==1.8.3
 colorama==0.4.1
     # via pytest
 contextvars==2.4
-    # via -r requirements/static/pkg/py3.10/windows.txt
-cryptography==3.4.7
+    # via -r requirements/base.txt
+cryptography==41.0.4
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   moto
@@ -263,7 +263,7 @@ pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymysql==1.0.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via -r requirements/static/pkg/py3.10/windows.txt
 pyparsing==2.4.5
     # via packaging
@@ -314,7 +314,7 @@ pywin32==303
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   cfn-lint

@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 
+import msgpack
 import pytest
 import salt.channel.client
 import salt.channel.server
@@ -338,12 +339,14 @@ def run_loop_in_thread(loop, evt):
 
     @salt.ext.tornado.gen.coroutine
     def stopper():
+        yield salt.ext.tornado.gen.sleep(0.1)
         while True:
-            if evt.is_set():
+            if not evt.is_set():
                 loop.stop()
                 break
             yield salt.ext.tornado.gen.sleep(0.3)
 
+    loop.add_callback(evt.set)
     loop.add_callback(stopper)
     try:
         loop.start()
@@ -388,6 +391,7 @@ class MockSaltMinionMaster:
         )
 
     def __enter__(self):
+        self.evt.wait()
         return self
 
     def __exit__(self, *args, **kwargs):
@@ -397,11 +401,10 @@ class MockSaltMinionMaster:
         # Let the test suite handle this instead.
         self.process_manager.stop_restarting()
         self.process_manager.kill_children()
-        self.evt.set()
+        self.evt.clear()
         self.server_thread.join()
-        time.sleep(
-            2
-        )  # Give the procs a chance to fully close before we stop the io_loop
+        # Give the procs a chance to fully close before we stop the io_loop
+        time.sleep(2)
         self.server_channel.close()
         SMaster.secrets.pop("aes")
         del self.server_channel
@@ -420,15 +423,15 @@ class MockSaltMinionMaster:
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
 
 
-def test_badload(temp_salt_minion, temp_salt_master):
+@pytest.mark.flaky(max_runs=4)
+@pytest.mark.parametrize("message", ["", [], ()])
+def test_badload(temp_salt_minion, temp_salt_master, message):
     """
     Test a variety of bad requests, make sure that we get some sort of error
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
-        msgs = ["", [], tuple()]
-        for msg in msgs:
-            ret = minion_master.channel.send(msg, timeout=2, tries=1)
-            assert ret == "payload and load must be a dict"
+        ret = minion_master.channel.send(message, timeout=5, tries=1)
+        assert ret == "payload and load must be a dict"
 
 
 def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
@@ -1381,3 +1384,32 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
     assert "sig" in ret
     ret = client.auth.handle_signin_response(signin_payload, ret)
     assert ret == "retry"
+
+
+async def test_req_server_garbage_request(io_loop):
+    """
+    Validate invalid msgpack messages will not raise exceptions in the
+    RequestServers's message handler.
+    """
+    opts = salt.config.master_config("")
+    request_server = salt.transport.zeromq.RequestServer(opts)
+
+    def message_handler(payload):
+        return payload
+
+    request_server.post_fork(message_handler, io_loop)
+
+    byts = msgpack.dumps({"foo": "bar"})
+    badbyts = byts[:3] + b"^M" + byts[3:]
+
+    valid_response = msgpack.dumps({"msg": "bad load"})
+
+    stream = MagicMock()
+    request_server.stream = stream
+
+    try:
+        await request_server.handle_message(stream, badbyts)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail("Exception was raised {}".format(exc))
+
+    request_server.stream.send.assert_called_once_with(valid_response)
