@@ -137,9 +137,9 @@ def download_onedir_artifact(
         arch = "arm64"
     arch = arch.lower()
     platform = platform.lower()
-    if platform in ("linux", "macos") and arch not in ("x86_64", "aarch64"):
+    if platform in ("linux", "macos") and arch not in ("x86_64", "arm64"):
         ctx.error(
-            f"The 'arch' value for {platform} must be one of: 'x86_64', 'aarch64', 'arm64'"
+            f"The 'arch' value for {platform} must be one of: 'x86_64', 'aarch64', 'aarch64'"
         )
         ctx.exit(1)
     if platform == "windows" and arch not in ("x86", "amd64"):
