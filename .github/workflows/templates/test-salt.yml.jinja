@@ -29,7 +29,6 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ windows_full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -57,7 +56,6 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   <%- endfor %>
 
@@ -84,7 +82,6 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
     <%- if fips == "fips" %>
       fips: true
     <%- endif %>

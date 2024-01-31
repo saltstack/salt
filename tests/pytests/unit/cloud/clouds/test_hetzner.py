@@ -56,7 +56,7 @@ def locations():
 
 @pytest.fixture
 def sizes():
-    return {"cpx21": {"name": "cpx21", "cores": 3, "id": 32}}
+    return {"cpx21": {"architecture": "x86", "name": "cpx21", "cores": 3, "id": 32}}
 
 
 @pytest.fixture
@@ -278,22 +278,26 @@ def test_create(images, sizes, vm):
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
         with patch("salt.cloud.clouds.hetzner.wait_until", return_value=True) as wait:
-            with pytest.raises(SaltCloudException):
+            with pytest.raises(SaltCloudException, match="Missing server name"):
                 hetzner.create({})
 
             connect.return_value.server_types.get_by_name.return_value = None
-            connect.return_value.images.get_by_name.return_value = None
-            with pytest.raises(SaltCloudException):
-                hetzner.create(vm)
+            connect.return_value.images.get_by_name_and_architecture.return_value = None
 
+            with pytest.raises(
+                SaltCloudException, match="The server size is not supported"
+            ):
+                hetzner.create(vm)
             connect.return_value.server_types.get_by_name.return_value = ModelMock(
                 sizes["cpx21"]
             )
-            with pytest.raises(SaltCloudException):
-                hetzner.create(vm)
 
-            connect.return_value.images.get_by_name.return_value = ModelMock(
-                images["ubuntu-20.04"]
+            with pytest.raises(
+                SaltCloudException, match="The server image is not supported"
+            ):
+                hetzner.create(vm)
+            connect.return_value.images.get_by_name_and_architecture.return_value = (
+                ModelMock(images["ubuntu-20.04"])
             )
 
             assert hetzner.create(vm)["created"]
@@ -324,7 +328,10 @@ def test_create_location(vm):
 
         # Stop if the location is invalid
         connect.return_value.locations.get_by_name.return_value = None
-        with pytest.raises(SaltCloudException):
+        with pytest.raises(
+            SaltCloudException,
+            match="The server location is not supported",
+        ):
             hetzner.create(vm)
 
 
@@ -370,7 +377,9 @@ def test_create_datacenter(vm):
 
         # Stop if the datacenter is invalid
         connect.return_value.datacenters.get_by_name.return_value = None
-        with pytest.raises(SaltCloudException):
+        with pytest.raises(
+            SaltCloudException, match="The server datacenter is not supported"
+        ):
             hetzner.create(vm)
 
 
@@ -536,9 +545,13 @@ def test_resize():
                 ) = MagicMock()
 
                 # Invalid server size
-                with pytest.raises(SaltCloudException):
+                with pytest.raises(
+                    SaltCloudException, match="The new size is required"
+                ):
                     hetzner.resize("myvm", {}, "action")
-                with pytest.raises(SaltCloudException):
+                with pytest.raises(
+                    SaltCloudException, match="The server size is not supported"
+                ):
                     hetzner.resize("myvm", kwargs, "action")
 
                 connect.return_value.server_types.get_by_name.return_value = True

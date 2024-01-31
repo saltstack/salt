@@ -700,7 +700,8 @@ allowed-3rd-party-modules=msgpack,
                           looseversion,
                           pytestskipmarkers,
                           cryptography,
-                          aiohttp
+                          aiohttp,
+                          pytest_timeout
 
 [EXCEPTIONS]
 

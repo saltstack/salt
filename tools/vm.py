@@ -263,6 +263,22 @@ def rsync(ctx: Context, name: str, download: bool = False):
                 "--print-tests-selection",
             ],
         },
+        "print_system_info": {
+            "help": "Print the system information",
+            "action": "store_true",
+            "flags": [
+                "--psi",
+                "--print-system-information",
+            ],
+        },
+        "print_system_info_only": {
+            "help": "Print the system information and exit",
+            "action": "store_true",
+            "flags": [
+                "--psio",
+                "--print-system-information-only",
+            ],
+        },
         "skip_code_coverage": {
             "help": "Skip tracking code coverage",
             "action": "store_true",
@@ -293,6 +309,7 @@ def test(
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
     print_system_info: bool = False,
+    print_system_info_only: bool = False,
     skip_code_coverage: bool = False,
     envvars: list[str] = None,
     fips: bool = False,
@@ -323,6 +340,10 @@ def test(
         env["PRINT_SYSTEM_INFO"] = "1"
     else:
         env["PRINT_SYSTEM_INFO"] = "0"
+    if print_system_info_only:
+        env["PRINT_SYSTEM_INFO_ONLY"] = "1"
+    else:
+        env["PRINT_SYSTEM_INFO_ONLY"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
@@ -1438,6 +1459,7 @@ class VM:
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
+        env["RAISE_DEPRECATIONS_RUNTIME_ERRORS"] = "1"
         self.write_and_upload_dot_env(env)
         if self.is_windows is False and self.config.ssh_username != "root":
             sudo = True

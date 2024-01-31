@@ -36,7 +36,7 @@ cryptography==41.0.7
     #   pyopenssl
 distro==1.8.0
     # via -r requirements/base.txt
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
@@ -136,6 +136,8 @@ typing-extensions==4.8.0
 urllib3==1.26.18
     # via requests
 wmi==1.5.1 ; sys_platform == "win32"
+    # via -r requirements/base.txt
+xmltodict==0.13.0 ; sys_platform == "win32"
     # via -r requirements/base.txt
 yarl==1.9.4
     # via aiohttp

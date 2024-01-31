@@ -169,7 +169,7 @@ def _remove_circular_refs(ob, _seen=None):
     This has been taken from author Martijn Pieters
     https://stackoverflow.com/questions/44777369/
     remove-circular-references-in-dicts-lists-tuples/44777477#44777477
-    :param ob: dict, list, typle, set, and frozenset
+    :param ob: dict, list, tuple, set, and frozenset
         Standard python object
     :param object _seen:
         Object that has circular reference

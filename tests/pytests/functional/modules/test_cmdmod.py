@@ -50,15 +50,22 @@ def running_username():
 
 
 @pytest.fixture
-def script_contents(state_tree):
-    _contents = """
-    #!/usr/bin/env python3
-    import sys
-    print(" ".join(sys.argv[1:]))
-    """
+def script(state_tree):
+    if sys.platform == "win32":
+        _name = "script.bat"
+        _contents = """
+        @echo off
+        echo %*
+        """
+    else:
+        _name = "script.sh"
+        _contents = """
+        #!/bin/bash
+        echo "$*"
+        """
 
-    with pytest.helpers.temp_file("script.py", _contents, state_tree):
-        yield
+    with pytest.helpers.temp_file(_name, _contents, state_tree) as file:
+        yield file
 
 
 @pytest.fixture
@@ -76,10 +83,8 @@ def issue_56195_test_ps1(state_tree):
         yield
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="Windows does not have grep and sed")
 def test_run(cmdmod, grains):
     """
     cmd.run
@@ -221,67 +226,52 @@ def test_run_all_with_success_stderr(cmdmod, tmp_path):
     assert ret.get("retcode") == 0
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
-def test_script(cmdmod, script_contents):
+def test_script(cmdmod, script):
     """
     cmd.script
     """
     args = "saltines crackers biscuits=yes"
-    script = "salt://script.py"
+    script = f"salt://{os.path.basename(script)}"
     ret = cmdmod.script(script, args, saltenv="base")
     assert ret["stdout"] == args
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
-def test_script_query_string(cmdmod, script_contents):
+def test_script_query_string(cmdmod, script):
     """
     cmd.script
     """
     args = "saltines crackers biscuits=yes"
-    script = "salt://script.py?saltenv=base"
+    script = f"salt://{os.path.basename(script)}?saltenv=base"
     ret = cmdmod.script(script, args, saltenv="base")
     assert ret["stdout"] == args
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
-def test_script_retcode(cmdmod, script_contents):
+def test_script_retcode(cmdmod, script):
     """
     cmd.script_retcode
     """
-    script = "salt://script.py"
+    script = f"salt://{os.path.basename(script)}"
     ret = cmdmod.script_retcode(script, saltenv="base")
     assert ret == 0
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
-def test_script_cwd(cmdmod, script_contents, tmp_path):
+def test_script_cwd(cmdmod, script, tmp_path):
     """
     cmd.script with cwd
     """
     tmp_cwd = str(tmp_path)
     args = "saltines crackers biscuits=yes"
-    script = "salt://script.py"
+    script = f"salt://{os.path.basename(script)}"
     ret = cmdmod.script(script, args, cwd=tmp_cwd, saltenv="base")
     assert ret["stdout"] == args
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
 @pytest.mark.slow_test
-def test_script_cwd_with_space(cmdmod, script_contents, tmp_path):
+def test_script_cwd_with_space(cmdmod, script, tmp_path):
     """
     cmd.script with cwd
     """
@@ -289,7 +279,7 @@ def test_script_cwd_with_space(cmdmod, script_contents, tmp_path):
     os.mkdir(tmp_cwd)
 
     args = "saltines crackers biscuits=yes"
-    script = "salt://script.py"
+    script = f"salt://{os.path.basename(script)}"
     ret = cmdmod.script(script, args, cwd=tmp_cwd, saltenv="base")
     assert ret["stdout"] == args
 
@@ -305,28 +295,32 @@ def test_tty(cmdmod):
             assert "Success" in ret
 
 
-@pytest.mark.skip_on_windows
-@pytest.mark.skip_if_binaries_missing("which")
 def test_which(cmdmod):
     """
     cmd.which
     """
-    cmd_which = cmdmod.which("cat")
+    if sys.platform == "win32":
+        search = "cmd"
+        cmd = f"cmd /c where {search}"
+    else:
+        if not salt.utils.path.which("which"):
+            pytest.skip("which cmd not installed")
+        search = "cat"
+        cmd = f"which {search}"
+    cmd_which = cmdmod.which(search)
     assert isinstance(cmd_which, str)
-    cmd_run = cmdmod.run("which cat")
+    cmd_run = cmdmod.run(cmd)
     assert isinstance(cmd_run, str)
-    assert cmd_which.rstrip() == cmd_run.rstrip()
+    assert cmd_which.rstrip().lower() == cmd_run.rstrip().lower()
 
 
-@pytest.mark.skip_on_windows
-@pytest.mark.skip_if_binaries_missing("which")
 def test_which_bin(cmdmod):
     """
     cmd.which_bin
     """
     cmds = ["pip3", "pip2", "pip", "pip-python"]
     ret = cmdmod.which_bin(cmds)
-    assert os.path.split(ret)[1] in cmds
+    assert os.path.splitext(os.path.basename(ret))[0] in cmds
 
 
 @pytest.mark.slow_test
@@ -390,7 +384,13 @@ def test_quotes(cmdmod):
     """
     cmd.run with quoted command
     """
-    cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
+    if sys.platform == "win32":
+        # Some shell commands are not available through subprocess
+        # So you need to start a shell first
+        # There's also some different quoting in Windows
+        cmd = 'cmd /c echo SELECT * FROM foo WHERE bar="baz" '
+    else:
+        cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
     expected_result = 'SELECT * FROM foo WHERE bar="baz"'
     result = cmdmod.run_stdout(cmd).strip()
     assert result == expected_result
@@ -485,21 +485,35 @@ def test_runas(cmdmod, usermod, runas_usr):
     assert f"USER={runas_usr}" in out
 
 
-@pytest.mark.skip_if_binaries_missing("sleep", reason="sleep cmd not installed")
 def test_timeout(cmdmod):
     """
     cmd.run trigger timeout
     """
-    out = cmdmod.run("sleep 2 && echo hello", timeout=1, python_shell=True)
+    if sys.platform == "win32":
+        cmd = 'Start-Sleep 2; Write-Host "hello"'
+        out = cmdmod.run(cmd, timeout=1, python_shell=True, shell="powershell")
+    else:
+        if not salt.utils.path.which("sleep"):
+            pytest.skip("sleep cmd not installed")
+        cmd = "sleep 2 && echo hello"
+        out = cmdmod.run(cmd, timeout=1, python_shell=True)
+
     assert "Timed out" in out
 
 
-@pytest.mark.skip_if_binaries_missing("sleep", reason="sleep cmd not installed")
 def test_timeout_success(cmdmod):
     """
     cmd.run sufficient timeout to succeed
     """
-    out = cmdmod.run("sleep 1 && echo hello", timeout=2, python_shell=True)
+    if sys.platform == "win32":
+        cmd = 'Start-Sleep 1; Write-Host "hello"'
+        out = cmdmod.run(cmd, timeout=5, python_shell=True, shell="powershell")
+    else:
+        if not salt.utils.path.which("sleep"):
+            pytest.skip("sleep cmd not installed")
+        cmd = "sleep 1 && echo hello"
+        out = cmdmod.run(cmd, timeout=2, python_shell=True)
+
     assert out == "hello"
 
 
@@ -518,17 +532,15 @@ def test_cmd_run_whoami(cmdmod, running_username):
     assert user.lower() == cmd.lower()
 
 
-@pytest.mark.skip_on_windows(
-    reason="Skip on Windows, Windows enviroment issues for this test - test needs fixing"
-)
-@pytest.mark.skip_on_linux
 @pytest.mark.slow_test
+@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 def test_windows_env_handling(cmdmod):
     """
     Ensure that nt.environ is used properly with cmd.run*
     """
-    out = cmdmod.run("set", env={"abc": "123", "ABC": "456"}).splitlines()
-    assert "abc=456" in out
+    out = cmdmod.run("cmd /c set", env={"abc": "123", "ABC": "456"}).splitlines()
+    assert "abc=123" in out
+    assert "ABC=456" in out
 
 
 @pytest.mark.slow_test

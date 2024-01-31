@@ -23,10 +23,6 @@ on:
         required: true
         type: string
         description: The nox version to install
-      nox-archive-hash:
-        required: true
-        type: string
-        description: Nox Tarball Cache Hash
       python-version:
         required: false
         type: string
@@ -55,6 +51,7 @@ env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
@@ -87,7 +84,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -99,13 +96,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.linux.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -135,22 +129,9 @@ jobs:
         run: |
           tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
 
-      - name: Show System Info & Test Plan
-        env:
-          SALT_RELEASE: "${{ inputs.salt-version }}"
-          SALT_REPO_ARCH: ${{ matrix.arch }}
-          SALT_REPO_TYPE: ${{ inputs.environment }}
-          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
-          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
-          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
-          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
-          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
-          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
-          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+      - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
@@ -276,6 +257,8 @@ jobs:
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v3
+        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
           path: |
@@ -310,7 +293,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -336,30 +319,19 @@ jobs:
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
-      - name: Download cached nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.macos.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.macos.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Decompress .nox Directory
         run: |
           nox --force-color -e decompress-dependencies -- macos ${{ matrix.arch }}
 
-      - name: Show System Info & Test Plan
+      - name: Show System Info
         env:
-          SALT_RELEASE: "${{ inputs.salt-version }}"
           SKIP_REQUIREMENTS_INSTALL: "1"
-          PRINT_TEST_SELECTION: "1"
-          PRINT_TEST_PLAN_ONLY: "1"
-          PRINT_SYSTEM_INFO: "1"
-          GITHUB_ACTIONS_PIPELINE: "1"
-          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
-          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
-          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+          PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- download-pkgs
 
@@ -485,6 +457,8 @@ jobs:
       - name: Upload Test Run Artifacts
         if: always()
         uses: actions/upload-artifact@v3
+        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
           path: |
@@ -516,7 +490,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -528,13 +502,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Download cached nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3.3.1
+      - name: Download nox.windows.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.windows.${{ matrix.arch }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -564,22 +535,9 @@ jobs:
         run: |
           tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
 
-      - name: Show System Info & Test Plan
-        env:
-          SALT_RELEASE: "${{ inputs.salt-version }}"
-          SALT_REPO_ARCH: ${{ matrix.arch }}
-          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
-          SALT_REPO_TYPE: ${{ inputs.environment }}
-          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
-          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
-          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
-          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
-          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
-          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+      - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
@@ -705,6 +663,8 @@ jobs:
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v3
+        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
           path: |

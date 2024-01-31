@@ -105,8 +105,9 @@ cryptography==41.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   trustme
     #   vcert
-distlib==0.3.7
+distlib==0.3.8
     # via virtualenv
 distro==1.8.0
     # via
@@ -125,7 +126,7 @@ filelock==3.13.1
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   aiohttp
@@ -142,7 +143,7 @@ gitdb==4.0.10
     # via gitpython
 gitpython==3.1.41
     # via -r requirements/static/ci/common.in
-google-auth==2.19.1
+google-auth==2.27.0
     # via kubernetes
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.in
@@ -151,6 +152,7 @@ idna==3.4
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -308,9 +310,9 @@ psutil==5.9.6
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.2.4
+pyasn1-modules==0.3.0
     # via google-auth
-pyasn1==0.4.8
+pyasn1==0.5.1
     # via
     #   pyasn1-modules
     #   rsa
@@ -362,7 +364,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.0rc29
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -466,7 +468,6 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
-    #   google-auth
     #   jsonschema
     #   junit-xml
     #   junos-eznc
@@ -505,6 +506,8 @@ tornado==6.3.3
     #   -r requirements/base.txt
 transitions==0.9.0
     # via junos-eznc
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 ttp-templates==0.3.5
     # via napalm
 ttp==0.9.5
@@ -527,7 +530,6 @@ urllib3==1.26.18
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   botocore
     #   docker
-    #   google-auth
     #   kubernetes
     #   python-etcd
     #   requests

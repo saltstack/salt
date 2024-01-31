@@ -9,7 +9,7 @@ import textwrap
 import pytest
 
 import salt.utils.stringutils
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import LOREM_IPSUM
 
 
@@ -770,3 +770,216 @@ def test_human_to_bytes_edge_cases():
     assert salt.utils.stringutils.human_to_bytes("4 Kbytes") == 0
     assert salt.utils.stringutils.human_to_bytes("9ib") == 0
     assert salt.utils.stringutils.human_to_bytes("2HB") == 0
+
+
+def test_get_conditional_diff_no_diff():
+    has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+        "",
+        "",
+        ignore_ordering=True,
+        ignore_whitespace=True,
+        ignore_comment_characters="#",
+    )
+    assert has_changes is False
+    assert diff == ""
+
+
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, True),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, True),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
+    mock_diff = textwrap.dedent(
+        """
+        diff --git a/sample.txt b/sample.txt
+        index bf5a820..bea0a36 100644
+        --- a/sample.txt
+        +++ b/sample.txt
+        @@ -1,8 +1,5 @@
+         [section]
+        +stuff=things
+         things=stuff
+        -stuff=things
+        -
+        -foo=bar  # comment about foo
+        -
+        -# fizzy comment
+        +foo=bar
+         fizz=buzz
+        """
+    )
+    mock_diff_list = mock_diff.splitlines(True)
+    mock_get_diff_list = MagicMock(return_value=mock_diff_list)
+
+    with patch("salt.utils.stringutils.get_diff_list", mock_get_diff_list):
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
+        )
+        assert has_changes is expected_changes
+        assert diff == mock_diff
+
+
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, False),
+        (True, False, "#", False),
+        (True, False, None, False),
+        (False, True, "#", False),
+        (False, True, None, False),
+        (False, False, "#", False),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_ordering(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
+    mock_diff = textwrap.dedent(
+        """
+        diff --git a/sample.txt b/sample.txt
+        index bf5a820..bc36b01 100644
+        --- a/sample.txt
+        +++ b/sample.txt
+        @@ -1,8 +1,8 @@
+         [section]
+        -things=stuff
+         stuff=things
+        -
+        -foo=bar  # comment about foo
+        +things=stuff
+
+         # fizzy comment
+         fizz=buzz
+        +
+        +foo=bar  # comment about foo
+        """
+    )
+    mock_diff_list = mock_diff.splitlines(True)
+    mock_get_diff_list = MagicMock(return_value=mock_diff_list)
+
+    with patch("salt.utils.stringutils.get_diff_list", mock_get_diff_list):
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
+        )
+        assert has_changes is expected_changes
+        assert diff == mock_diff
+
+
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, False),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, False),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_whitespace(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
+    mock_diff = textwrap.dedent(
+        """
+        diff --git a/sample.txt b/sample.txt
+        index bf5a820..d17c48e 100644
+        --- a/sample.txt
+        +++ b/sample.txt
+        @@ -1,8 +1,7 @@
+         [section]
+         things=stuff
+        -stuff=things
+        + stuff=things
+
+         foo=bar  # comment about foo
+        -
+         # fizzy comment
+         fizz=buzz
+        """
+    )
+    mock_diff_list = mock_diff.splitlines(True)
+    mock_get_diff_list = MagicMock(return_value=mock_diff_list)
+
+    with patch("salt.utils.stringutils.get_diff_list", mock_get_diff_list):
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
+        )
+        assert has_changes is expected_changes
+        assert diff == mock_diff
+
+
+@pytest.mark.parametrize(
+    "ignore_ordering,ignore_whitespace,ignore_comment_characters,expected_changes",
+    (
+        (True, True, "#", False),
+        (True, True, None, True),
+        (True, False, "#", True),
+        (True, False, None, True),
+        (False, True, "#", False),
+        (False, True, None, True),
+        (False, False, "#", True),
+        (False, False, None, True),
+    ),
+)
+def test_get_conditional_diff_comment(
+    ignore_ordering, ignore_whitespace, ignore_comment_characters, expected_changes
+):
+    mock_diff = textwrap.dedent(
+        """
+        diff --git a/sample.txt b/sample.txt
+        index bf5a820..fb1136a 100644
+        --- a/sample.txt
+        +++ b/sample.txt
+        @@ -1,8 +1,8 @@
+         [section]
+        -things=stuff
+        +things=stuff  # comment about things
+        +# stuff comment
+         stuff=things
+
+        -foo=bar  # comment about foo
+        +foo=bar
+
+        -# fizzy comment
+         fizz=buzz
+        """
+    )
+    mock_diff_list = mock_diff.splitlines(True)
+    mock_get_diff_list = MagicMock(return_value=mock_diff_list)
+
+    with patch("salt.utils.stringutils.get_diff_list", mock_get_diff_list):
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=ignore_ordering,
+            ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
+        )
+        assert has_changes is expected_changes
+        assert diff == mock_diff

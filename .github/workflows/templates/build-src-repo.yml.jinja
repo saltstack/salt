@@ -20,7 +20,7 @@
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Source Tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
           path: artifacts/pkgs/incoming
@@ -70,7 +70,7 @@
           find artifacts/pkgs/repo -type f -print -exec cp {} artifacts/src \;
 
       - name: Upload Standalone Repository As An Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
           path: |

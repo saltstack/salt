@@ -11,16 +11,17 @@ from datetime import datetime, timedelta
 
 import pytest
 import requests
+from pytest_timeout import DEFAULT_METHOD
 
 import salt.utils.aws as aws
 from tests.support.helpers import patched_environ
 from tests.support.mock import MagicMock, patch
 
 pytestmark = [
-    # Skip testing on windows since it does not support signals
-    # which is what the timeout marker is using.
+    # Skip testing on windows since it does not support signal.SIGALRM
+    # which is what the timeout marker is using by default.
     pytest.mark.skip_on_windows,
-    pytest.mark.timeout(60, method="signal"),
+    pytest.mark.timeout(60, method=DEFAULT_METHOD),
 ]
 
 

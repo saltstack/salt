@@ -655,15 +655,15 @@ def matrix(
     _matrix = []
     _splits = {
         "functional": 3,
-        "integration": 5,
+        "integration": 6,
         "scenarios": 1,
-        "unit": 2,
+        "unit": 4,
     }
     # On nightly and scheduled builds we don't want splits at all
     if workflow.lower() in ("nightly", "scheduled"):
         ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
         for key in _splits:
-            new_value = _splits[key] - 2
+            new_value = _splits[key] - 1
             if new_value < 1:
                 new_value = 1
             _splits[key] = new_value

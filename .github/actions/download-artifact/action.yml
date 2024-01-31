@@ -24,6 +24,8 @@ runs:
   using: composite
   steps:
     - uses: actions/download-artifact@v3
+      # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+      # under the same name something that actions/upload-artifact@v4 does not do.
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}

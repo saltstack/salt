@@ -125,3 +125,84 @@ def test_issue_11003_immutable_lazy_proxy_sum(modules, tmp_path, state_tree):
     for item in ("", "bar", "baz"):
         block_contents.remove(item)
     assert block_contents == []
+
+
+def test_issue_60426(modules, tmp_path, state_tree):
+    target_path = tmp_path.joinpath("etc/foo/bar")
+    jinja_name = "foo_bar"
+    jinja_contents = (
+        "{% for item in accumulator['accumulated configstuff'] %}{{ item }}{% endfor %}"
+    )
+
+    sls_name = "issue-60426"
+    sls_contents = f"""
+    configuration file:
+      file.managed:
+        - name: {target_path}
+        - source: salt://foo_bar.jinja
+        - template: jinja
+        - makedirs: True
+
+    accumulated configstuff:
+      file.accumulated:
+        - filename: {target_path}
+        - text:
+          - some
+          - good
+          - stuff
+        - watch_in:
+          - configuration file
+    """
+
+    sls_tempfile = pytest.helpers.temp_file(
+        f"{sls_name}.sls", directory=state_tree, contents=sls_contents
+    )
+
+    jinja_tempfile = pytest.helpers.temp_file(
+        f"{jinja_name}.jinja", directory=state_tree, contents=jinja_contents
+    )
+
+    with sls_tempfile, jinja_tempfile:
+        ret = modules.state.apply(sls_name)
+        for state_run in ret:
+            assert state_run.result is True
+        # Check to make sure the file was created
+        assert target_path.is_file()
+        # The type of new line, ie, `\n` vs `\r\n` is not important
+        assert target_path.read_text() == "somegoodstuff"
+
+    sls_contents = f"""
+    configuration file:
+      file.managed:
+        - name: {target_path}
+        - source: salt://foo_bar.jinja
+        - template: jinja
+        - makedirs: True
+
+    accumulated configstuff:
+      file.accumulated:
+        - filename: {target_path}
+        - text:
+          - some
+          - more
+          - good
+          - stuff
+        - watch_in:
+          - file: configuration file
+    """
+
+    sls_tempfile = pytest.helpers.temp_file(
+        f"{sls_name}.sls", directory=state_tree, contents=sls_contents
+    )
+    jinja_tempfile = pytest.helpers.temp_file(
+        f"{jinja_name}.jinja", directory=state_tree, contents=jinja_contents
+    )
+
+    with sls_tempfile, jinja_tempfile:
+        ret = modules.state.apply(sls_name)
+        for state_run in ret:
+            assert state_run.result is True
+        # Check to make sure the file was created
+        assert target_path.is_file()
+        # The type of new line, ie, `\n` vs `\r\n` is not important
+        assert target_path.read_text() == "somemoregoodstuff"

@@ -11,6 +11,7 @@ Salt Table of Contents
     topics/index
     topics/salt_system_architecture
     topics/contributing-guide
+    topics/maintenance-policy
     topics/installation/index
     topics/configuration/index
     topics/using_salt

@@ -195,7 +195,7 @@ permissions:
           tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
 
       - name: Upload Onedir Tarball as an Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
@@ -378,7 +378,7 @@ permissions:
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Upload PyPi Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pypi-artifacts
           path: |
@@ -470,7 +470,7 @@ permissions:
           echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
 
       - name: Download PyPi Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pypi-artifacts
           path: artifacts/release
