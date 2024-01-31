@@ -8,6 +8,21 @@ Versions are `MAJOR.PATCH`.
 # Changelog
 
 ## 3006.5 (2023-12-12)
+Salt 3005.5 (2024-01-19)
+========================
+
+Security
+--------
+
+- Fix CVE-2024-22231 Prevent directory traversal when creating syndic cache directory on the master.
+- Fix CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
+
+These vulnerablities were discovered and reported by:
+Yudi Zhao(Huawei Nebula Security Lab),Chenwei Jiang(Huawei Nebula Security Lab) (#565)
+
+
+Salt v3005.4 (2023-10-16)
+=========================
 
 
 ### Removed
