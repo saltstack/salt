@@ -76,10 +76,10 @@ jobs:
 
       - name: Prepare Docs Build
         run: |
-          git clone https://gitlab.com/saltstack/open/docs/builddocs.git .builddocs
+          git clone https://gitlab.com/saltstack/open/docs/builddocs-fonts.git .builddocs-fonts
           sudo mkdir -p /usr/share/fonts/truetype /usr/share/fonts/opentype
-          sudo cp -rfv .builddocs/builddocs/files/fonts/truetype/*.ttf /usr/share/fonts/truetype/
-          sudo cp -rfv .builddocs/builddocs/files/fonts/opentype/*.otf /usr/share/fonts/opentype/
+          sudo cp -rfv .builddocs-fonts/*.ttf /usr/share/fonts/truetype/
+          sudo cp -rfv .builddocs-fonts/*.otf /usr/share/fonts/opentype/
           sudo fc-cache -f -v
 
       - name: Build Documentation (${{ matrix.docs-output }})
