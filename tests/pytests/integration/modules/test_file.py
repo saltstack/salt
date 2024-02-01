@@ -4,6 +4,10 @@ Tests for the file state
 import os
 
 import pytest
+from pytestshellutils.utils.processes import ProcessResult
+
+import salt.utils.files
+import salt.utils.stringutils
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
@@ -196,3 +200,33 @@ def test_check_file_meta_verify_ssl(
         )
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
+
+
+@pytest.mark.slow_test
+def test_check_cmd_creates_files_in_tmpdir_63877(tmp_path, salt_call_cli):
+    text_file = tmp_path / "foobar.txt"
+    rest_cwd = tmp_path / "ro_path"
+
+    rest_cwd.mkdir()
+    rest_cwd.chmod(0o555)  # disallow file creation
+
+    try:
+        ret = salt_call_cli.run(
+            "--local",
+            "state.single",
+            "file.managed",
+            name=str(text_file),
+            check_cmd="/bin/true",
+            contents=["foobar"],
+            cwd=rest_cwd,
+        )
+        assert (
+            isinstance(ret, (ProcessResult,)) and ret.returncode == 0
+        ), "possible regression: check for mkstemp permission denied"
+        with salt.utils.files.fopen(text_file, "r") as foobar:
+            data = salt.utils.stringutils.to_unicode(foobar.read())
+        assert "foobar" in data
+    finally:
+        text_file.unlink(missing_ok=True)
+        rest_cwd.rmdir()
+        tmp_path.rmdir()
