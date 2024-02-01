@@ -10,5 +10,3 @@ queue modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    pgjsonb_queue
-    sqlite_queue
