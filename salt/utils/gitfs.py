@@ -247,9 +247,11 @@ class GitProvider:
 
         def _val_cb(x, y):
             return str(y)
+
         # DGM try getting machine_identifier
+        # get machine_identifier
         self.mach_id = salt.utils.platform.get_machine_identifier()
-        log.debug(f"DGM getting machine_id for lock file, machine_id '{self.mach_id}'")
+        log.debug(f"machine_id for lock file, machine_id '{self.mach_id}'")
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
@@ -754,11 +756,8 @@ class GitProvider:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # No lock file present
-                msg = "Attempt to remove lock {} for file ({}) which was not found to exist : {} ".format(
-                    self.url, lock_file, exc
-                )
+                msg = f"Attempt to remove lock {self.url} for file ({lock_file}) which was not found to exist, exception : {exc} "
                 log.debug(msg)
-                # DGM pass
 
             elif exc.errno == errno.EISDIR:
                 # Somehow this path is a directory. Should never happen
@@ -1101,20 +1100,21 @@ class GitProvider:
         if poll_interval > timeout:
             poll_interval = timeout
 
-        lock_set = False
+        lock_set1 = False
+        lock_set2 = False
         try:
             time_start = time.time()
             while True:
                 try:
                     self._lock(lock_type=lock_type, failhard=True)
-                    lock_set = True
+                    lock_set1 = True
                     # docs state need to yield a single value, lock_set will do
-                    yield lock_set
+                    yield lock_set1
 
                     # Break out of his loop once we've yielded the lock, to
                     # avoid continued attempts to iterate and establish lock
                     # just ensuring lock_set is true (belts and braces)
-                    lock_set = True
+                    lock_set2 = True
                     break
 
                 except (OSError, GitLockError) as exc:
@@ -1132,7 +1132,9 @@ class GitProvider:
                         time.sleep(poll_interval)
                         continue
         finally:
-            if lock_set:
+            if lock_set1 or lock_set2:
+                msg = f"Attempting to remove '{lock_type}' lock for '{self.role}' remote '{self.id}' due to lock_set1 '{lock_set1}' or lock_set2 '{lock_set2}'"
+                log.debug(msg)
                 self.clear_lock(lock_type=lock_type)
 
     def init_remote(self):
