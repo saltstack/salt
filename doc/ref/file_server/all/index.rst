@@ -11,8 +11,5 @@ fileserver modules
     :template: autosummary.rst.tmpl
 
     gitfs
-    hgfs
     minionfs
     roots
-    s3fs
-    svnfs
