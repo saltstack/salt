@@ -2,6 +2,7 @@ import os.path
 
 import pytest
 
+import salt.utils.platform
 from salt.fileserver.gitfs import PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitFS, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
@@ -248,17 +249,18 @@ def _test_lock(opts):
     g.fetch_remotes()
     assert len(g.remotes) == 1
     repo = g.remotes[0]
+    mach_id = salt.utils.platform.get_machine_identifier()
     assert repo.get_salt_working_dir() in repo._get_lock_file()
     assert repo.lock() == (
         [
-            "Set update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+            f"Set update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
         ],
         [],
     )
     assert os.path.isfile(repo._get_lock_file())
     assert repo.clear_lock() == (
         [
-            "Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+            "Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
         ],
         [],
     )
