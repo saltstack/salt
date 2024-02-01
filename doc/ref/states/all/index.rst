@@ -80,6 +80,7 @@ state modules
     postgres_tablespace
     postgres_user
     process
+    proxy
     pyenv
     quota
     rabbitmq_cluster

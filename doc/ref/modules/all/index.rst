@@ -30,6 +30,7 @@ execution modules
     ansiblegate
     apache
     apf
+    aptpkg
     archive
     arista_pyeapi
     artifactory
@@ -41,6 +42,7 @@ execution modules
     bridge
     cassandra_cql
     celery
+    chef
     chocolatey
     chronos
     chroot
@@ -61,8 +63,6 @@ execution modules
     dig
     disk
     dnsutil
-    dockercompose
-    dockermod
     dpkg_lowpkg
     environ
     etcd_mod
@@ -160,6 +160,7 @@ execution modules
     pkgin
     pkgng
     pkgutil
+    postgres
     proxy
     ps
     publish

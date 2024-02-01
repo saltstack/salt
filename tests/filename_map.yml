@@ -47,9 +47,6 @@ salt/modules/*apache.py:
   - pytests.unit.states.apache.test_module
   - pytests.unit.states.apache.test_site
 
-salt/modules/augeas_cfg.py:
-  - pytests.unit.states.test_augeas
-
 salt/modules/cp.py:
   - pytests.functional.modules.file.test_replace
   - pytests.unit.modules.file.test_file_basics
@@ -65,27 +62,8 @@ salt/modules/cp.py:
   - integration.modules.test_file
   - pytests.functional.states.file.test_copy
 
-salt/modules/dockermod.py:
-  - pytests.unit.states.test_docker_image
-  - pytests.unit.states.test_docker_volume
-  - unit.utils.test_dockermod
-  - pytests.functional.states.test_docker_container
-  - pytests.functional.states.test_docker_network
-
 salt/modules/file.py:
   - pytests.integration.states.test_cron
-
-salt/modules/influxdb08mod.py:
-  - pytests.unit.states.test_influxdb08_database
-  - pytests.unit.states.test_influxdb08_user
-
-salt/modules/mysql.py:
-  - pytests.unit.states.mysql.test_user
-  - pytests.unit.states.mysql.test_query
-  - pytests.unit.states.mysql.test_grants
-
-salt/modules/openvswitch.py:
-  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
   - pytests.unit.states.postgresql.test_cluster
@@ -286,9 +264,6 @@ salt/(cli/run\.py|runner\.py):
   - pytests.integration.cli.test_salt_run
   - integration.runners.test_runner_returns
 
-salt/runners/venafiapi.py:
-  - integration.externalapi.test_venafiapi
-
 salt/serializers/*:
   - pytests.unit.serializers.test_serializers
 
@@ -337,9 +312,6 @@ salt/(minion\.py|channel/.+|transport/.+):
 
 tests/support/mock.py:
   - unit.test_mock
-
-tests/support/virt.py:
-  - pytests.integration.modules.test_virt
 
 tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
