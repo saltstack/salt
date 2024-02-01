@@ -7,6 +7,80 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3005.5 (2024-01-19)
+========================
+
+Security
+--------
+
+- Fix CVE-2024-22231 Prevent directory traversal when creating syndic cache directory on the master.
+- Fix CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
+
+These vulnerablities were discovered and reported by:
+Yudi Zhao(Huawei Nebula Security Lab),Chenwei Jiang(Huawei Nebula Security Lab) (#565)
+
+
+Salt v3005.4 (2023-10-16)
+=========================
+
+Security
+--------
+
+- Fix CVE-2023-34049 by ensuring we do not use a predictable name for the script and correctly check returncode of scp command.
+  This only impacts salt-ssh users using the pre-flight option. (cve-2023-34049)
+- Bump to `cryptography==41.0.4` due to https://github.com/advisories/GHSA-v8gr-m533-ghj9 (#65267)
+- Bump to `urllib3==1.26.17` or `urllib3==2.0.6` due to https://github.com/advisories/GHSA-v845-jxx5-vc9f (#65334)
+- Bump to `gitpython==3.1.37` due to https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65383)
+
+
+## Salt v3005.3 (2023-09-14)
+
+### Fixed
+
+- Fix __env__ and improve cache cleaning see more info at pull #65017. (#65002)
+
+
+### Security
+
+- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65167)
+
+
+Salt v3005.2 (2023-07-31)
+=========================
+
+Changed
+-------
+
+- Additional required package upgrades
+
+  * It's now `pyzmq>=20.0.0` on all platforms, and `<=22.0.3` just for windows.
+  * Upgrade to `pyopenssl==23.0.0` due to the cryptography upgrade. (#63757)
+
+
+Security
+--------
+
+- fix CVE-2023-20897 by catching exception instead of letting exception disrupt connection (cve-2023-20897)
+- Fixed gitfs cachedir_basename to avoid hash collisions. Added MP Lock to gitfs. These changes should stop race conditions. (cve-2023-20898)
+- Upgrade to `requests==2.31.0`
+
+  Due to:
+    * https://github.com/advisories/GHSA-j8r2-6x86-q33q (#64336)
+- Upgrade to `cryptography==41.0.3`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-jm77-qphf-c4w8)
+
+  Also resolves the following cryptography advisories:
+
+  Due to:
+    * https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
+    * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
+    * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
+
+  There is no security upgrade available for Py3.5 (#64595)
+- Bump to `certifi==2023.07.22` due to https://github.com/advisories/GHSA-xqr8-7jwr-rhp7
+
+  Python 3.5 cannot get the updated requirements since certifi no longer supports this python version (#64720)
+
+
 Salt v3005.1-2 (2022-11-04)
 ===========================
 

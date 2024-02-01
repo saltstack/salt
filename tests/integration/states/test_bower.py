@@ -10,6 +10,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 
+@skipIf(True, "Skippin in 3005, issue with bower cache on golden image")
 @skipIf(salt.utils.path.which("bower") is None, "bower not installed")
 class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test

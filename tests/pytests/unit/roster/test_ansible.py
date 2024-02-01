@@ -1,4 +1,5 @@
 import shutil
+import sys
 
 import pytest
 import salt.loader
@@ -159,6 +160,10 @@ def test_virtual_returns_False_if_ansible_inventory_doesnt_exist(which_value):
         assert ansible.__virtual__() == (False, "Install `ansible` to use inventory")
 
 
+@pytest.mark.skipif(
+    sys.version_info <= (3, 7),
+    reason="Older versions of Ansible do not allow you to ignore python deprecation warnings",
+)
 def test_ini(roster_opts, roster_dir, expected_targets_return):
     roster_opts["roster_file"] = str(roster_dir / "roster.ini")
     with patch.dict(ansible.__opts__, roster_opts):
@@ -166,6 +171,10 @@ def test_ini(roster_opts, roster_dir, expected_targets_return):
         assert ret == expected_targets_return
 
 
+@pytest.mark.skipif(
+    sys.version_info <= (3, 7),
+    reason="Older versions of Ansible do not allow you to ignore python deprecation warnings",
+)
 def test_yml(roster_opts, roster_dir, expected_targets_return):
     roster_opts["roster_file"] = str(roster_dir / "roster.yml")
     with patch.dict(ansible.__opts__, roster_opts):
@@ -173,6 +182,10 @@ def test_yml(roster_opts, roster_dir, expected_targets_return):
         assert ret == expected_targets_return
 
 
+@pytest.mark.skipif(
+    sys.version_info <= (3, 7),
+    reason="Older versions of Ansible do not allow you to ignore python deprecation warnings",
+)
 def test_script(roster_opts, roster_dir, expected_targets_return):
     roster_opts["roster_file"] = str(roster_dir / "roster.py")
     with patch.dict(ansible.__opts__, roster_opts):

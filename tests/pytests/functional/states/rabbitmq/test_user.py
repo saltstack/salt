@@ -47,6 +47,7 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_present_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
     """
     Test rabbitmq_user.present
@@ -76,6 +77,7 @@ def test_present_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
     assert ret == expected
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
     """
     Test rabbitmq_user.absent

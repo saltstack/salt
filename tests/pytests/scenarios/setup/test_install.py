@@ -28,11 +28,15 @@ def use_static_requirements_ids(value):
 
 @pytest.fixture(params=[True, False], ids=use_static_requirements_ids)
 def use_static_requirements(request):
+    if not request.param and salt.utils.platform.is_windows():
+        pytest.skip("Windows installs with static requirements only")
     return request.param
 
 
 @pytest.fixture
 def virtualenv(virtualenv, use_static_requirements):
+    if use_static_requirements is False:
+        pytest.skip("Skipping tests when USE_STATIC_REQUIREMENTS=0")
     virtualenv.environ["USE_STATIC_REQUIREMENTS"] = (
         "1" if use_static_requirements else "0"
     )
@@ -409,6 +413,23 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             # does not have wheel files uploaded, so, we force pycurl==7.43.0.5 to be
             # pre-installed before installing salt
             venv.install("pycurl==7.43.0.5")
+
+        venv.run(
+            venv.venv_python,
+            "-m",
+            "pip",
+            "install",
+            "pip>=20.2.4,<21.2",
+            "setuptools<58.0",
+        )
+        if "3.10" in sys.version:
+            venv.run(
+                venv.venv_python,
+                "-m",
+                "pip",
+                "install",
+                "packaging",
+            )
 
         venv.run(
             venv.venv_python,

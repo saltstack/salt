@@ -10,6 +10,8 @@ Nox configuration script
 import datetime
 import os
 import pathlib
+import platform
+import subprocess
 import sys
 import tempfile
 
@@ -272,6 +274,20 @@ def _install_requirements(
     requirements_file = _get_pip_requirements_file(
         session, transport, requirements_type=requirements_type
     )
+    if _get_session_python_version_info(session) >= (3, 10):
+        # Workaround pyyaml issue https://github.com/yaml/pyyaml/issues/601
+        with open(requirements_file, encoding="utf-8") as rfh:
+            contents = rfh.read().lower()
+            for line in contents.splitlines():
+                if line.startswith("pyyaml"):
+                    session.install(
+                        "--progress-bar=off",
+                        "--no-build-isolation",
+                        "Cython<3.0",
+                        line.strip(),
+                        silent=PIP_INSTALL_SILENT,
+                    )
+                    break
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -721,6 +737,17 @@ def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
 
+    if "amzn2" in platform.release():
+        # workaround on 3005 for https://github.com/saltstack/salt/issues/62851
+        subprocess.run(
+            [
+                "pip3",
+                "install",
+                "importlib_metadata<5.0.0",
+            ],
+            check=True,
+        )
+
     env = {"CI_RUN": "1" if CI_RUN else "0"}
 
     args = [
@@ -934,7 +961,14 @@ def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
-    session.notify("docs-html-{}(compress={})".format(session.python, compress))
+    session.notify(
+        find_session_runner(
+            session,
+            "docs-html-{}".format(session.python),
+            compress=compress,
+            clean=clean,
+        )
+    )
     session.notify(
         find_session_runner(
             session,

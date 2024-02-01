@@ -569,10 +569,6 @@ class Fileserver:
         back = self.backends(back)
         kwargs = {}
         fnd = {"path": "", "rel": ""}
-        if os.path.isabs(path):
-            return fnd
-        if "../" in path:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # don't attempt to find URL query arguments in the path
             path = salt.utils.url.unescape(path)
@@ -587,6 +583,9 @@ class Fileserver:
                         continue
                     args = comp.split("=", 1)
                     kwargs[args[0]] = args[1]
+
+        if os.path.isabs(path) or "../" in path:
+            return fnd
 
         if "env" in kwargs:
             # "env" is not supported; Use "saltenv".

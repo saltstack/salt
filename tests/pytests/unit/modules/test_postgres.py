@@ -18,6 +18,7 @@ def idfn(val):
         return "scram_pw"
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize(
     "role,password,verifier,method,result",
     [

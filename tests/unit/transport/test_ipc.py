@@ -126,6 +126,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         self.assertEqual(ret1, "TEST")
         self.assertEqual(ret2, "TEST")
 
+    @pytest.mark.flaky(max_runs=10)
     @salt.ext.tornado.testing.gen_test
     def test_async_reading_streamclosederror(self):
         client1 = self.sub_channel

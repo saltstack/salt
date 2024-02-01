@@ -27,6 +27,7 @@ import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.verify
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -98,6 +99,11 @@ def find_file(path, saltenv="base", **kwargs):
         if saltenv == "__env__":
             root = root.replace("__env__", actual_saltenv)
         full = os.path.join(root, path)
+
+        # Refuse to serve file that is not under the root.
+        if not salt.utils.verify.clean_path(root, full, subdir=True):
+            continue
+
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
             fnd["rel"] = path
@@ -128,6 +134,26 @@ def serve_file(load, fnd):
     ret["dest"] = fnd["rel"]
     gzip = load.get("gzip", None)
     fpath = os.path.normpath(fnd["path"])
+
+    actual_saltenv = saltenv = load["saltenv"]
+    if saltenv not in __opts__["file_roots"]:
+        if "__env__" in __opts__["file_roots"]:
+            log.debug(
+                "salt environment '%s' maps to __env__ file_roots directory", saltenv
+            )
+            saltenv = "__env__"
+        else:
+            return fnd
+    file_in_root = False
+    for root in __opts__["file_roots"][saltenv]:
+        if saltenv == "__env__":
+            root = root.replace("__env__", actual_saltenv)
+        # Refuse to serve file that is not under the root.
+        if salt.utils.verify.clean_path(root, fpath, subdir=True):
+            file_in_root = True
+    if not file_in_root:
+        return ret
+
     with salt.utils.files.fopen(fpath, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])

@@ -46,6 +46,7 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_enabled_enabled_disabled(rabbitmq_container):
     """
     Test rabbitmq_plugin.enabled and rabbitmq_plugin_disabled
@@ -89,6 +90,7 @@ def test_enabled_enabled_disabled(rabbitmq_container):
         assert ret == expected
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_disabled(rabbitmq_container):
     """
     Test rabbitmq_plugin.enabled and rabbitmq_plugin_disabled

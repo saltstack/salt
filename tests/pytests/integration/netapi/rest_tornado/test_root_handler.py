@@ -53,6 +53,7 @@ async def test_post_no_auth(http_client, content_type_map):
 # Local client tests
 
 
+@pytest.mark.flaky(max_runs=4)
 async def test_simple_local_post(http_client, salt_minion, salt_sub_minion):
     """
     Test a basic API of /
