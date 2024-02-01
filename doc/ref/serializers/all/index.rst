@@ -13,12 +13,8 @@ serializer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    configparser
     json
-    keyvalue
     msgpack
-    plist
-    python
     tomlmod
     yaml
     yamlex
