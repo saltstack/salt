@@ -1285,7 +1285,9 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 break
 
             if current_attempt >= max_attempts:
-                ctx.error(f"Failed to upload {fpath} to codecov")
+                ctx.error(f"Failed to upload {fpath} to codecov:")
+                ctx.console_stdout.print(stdout)
+                ctx.console.print(stderr)
                 ctx.exit(1)
 
             ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
