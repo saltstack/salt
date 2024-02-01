@@ -13,6 +13,7 @@ serializer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    configparser
     json
     msgpack
     tomlmod

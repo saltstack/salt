@@ -14,3 +14,5 @@ pillar modules
     git_pillar
     gpg
     nodegroups
+    postgres
+    sql_base
