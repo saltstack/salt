@@ -1901,10 +1901,16 @@ class AESFuncs(TransportMethods):
                 self.mminion.returners[fstr](load["jid"], load["load"])
 
             # Register the syndic
+
+            # We are creating a path using user suplied input. Use the
+            # clean_path to prevent a directory traversal.
+            root = os.path.join(self.opts["cachedir"], "syndics")
             syndic_cache_path = os.path.join(
                 self.opts["cachedir"], "syndics", load["id"]
             )
-            if not os.path.exists(syndic_cache_path):
+            if salt.utils.verify.clean_path(
+                root, syndic_cache_path
+            ) and not os.path.exists(syndic_cache_path):
                 path_name = os.path.split(syndic_cache_path)[0]
                 if not os.path.exists(path_name):
                     os.makedirs(path_name)
