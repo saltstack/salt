@@ -193,7 +193,8 @@ def get_account_created(name):
 
     :param str name: The username of the account
 
-    :return: The date/time the account was created (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was created (yyyy-mm-dd hh:mm:ss) or 0 if
+        the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -208,7 +209,7 @@ def get_account_created(name):
         ret = _get_account_policy_data_value(name, "creationTime")
     except CommandExecutionError as exc:
         if "Value not found" in exc.message:
-            return 0
+            return "0"
         else:
             raise
 
@@ -222,7 +223,8 @@ def get_last_change(name):
 
     :param str name: The username of the account
 
-    :return: The date/time the account was modified (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was modified (yyyy-mm-dd hh:mm:ss) or 0
+        if the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -237,7 +239,7 @@ def get_last_change(name):
         ret = _get_account_policy_data_value(name, "passwordLastSetTime")
     except CommandExecutionError as exc:
         if "Value not found" in exc.message:
-            return 0
+            return "0"
         else:
             raise
 
@@ -251,8 +253,9 @@ def get_login_failed_count(name):
 
     :param str name: The username of the account
 
-    :return: The number of failed login attempts
-    :rtype: int
+    :return: The number of failed login attempts. 0 may mean there are no failed
+        login attempts or the value is not defined
+    :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
 
@@ -266,7 +269,7 @@ def get_login_failed_count(name):
         ret = _get_account_policy_data_value(name, "failedLoginCount")
     except CommandExecutionError as exc:
         if "Value not found" in exc.message:
-            return 0
+            return "0"
         else:
             raise
     return salt.utils.mac_utils.parse_return(ret)
@@ -279,7 +282,7 @@ def get_login_failed_last(name):
     :param str name: The username of the account
 
     :return: The date/time of the last failed login attempt on this account
-        (yyyy-mm-dd hh:mm:ss)
+        (yyyy-mm-dd hh:mm:ss) or 0 if the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -294,7 +297,7 @@ def get_login_failed_last(name):
         ret = _get_account_policy_data_value(name, "failedLoginTimestamp")
     except CommandExecutionError as exc:
         if "Value not found" in exc.message:
-            return 0
+            return "0"
         else:
             raise
 

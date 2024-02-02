@@ -1,6 +1,7 @@
 """
 Unit Tests for the mac_desktop execution module.
 """
+from datetime import datetime
 
 import pytest
 
@@ -13,11 +14,15 @@ pytestmark = [
 ]
 
 
-def test_get_account_created():
+@pytest.fixture
+def zero_date():
+    return datetime.fromtimestamp(0).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def test_get_account_created(zero_date):
     with patch.object(mac_shadow, "_get_account_policy_data_value", return_value="0"):
         result = mac_shadow.get_account_created("junk")
-        expected = "1969-12-31 17:00:00"
-        assert result == expected
+        assert result == zero_date
 
 
 def test_get_account_created_no_value():
@@ -27,7 +32,7 @@ def test_get_account_created_no_value():
         side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_account_created("junk")
-        expected = 0
+        expected = "0"
         assert result == expected
 
 
@@ -40,11 +45,10 @@ def test_get_account_created_error():
         mac_shadow.get_account_created("junk")
 
 
-def test_get_last_change():
+def test_get_last_change(zero_date):
     with patch.object(mac_shadow, "_get_account_policy_data_value", return_value="0"):
         result = mac_shadow.get_last_change("junk")
-        expected = "1969-12-31 17:00:00"
-        assert result == expected
+        assert result == zero_date
 
 
 def test_get_last_change_no_value():
@@ -54,7 +58,7 @@ def test_get_last_change_no_value():
         side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_last_change("junk")
-        expected = 0
+        expected = "0"
         assert result == expected
 
 
@@ -81,7 +85,7 @@ def test_get_login_failed_count_no_value():
         side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_login_failed_count("junk")
-        expected = 0
+        expected = "0"
         assert result == expected
 
 
@@ -94,11 +98,10 @@ def test_get_login_failed_count_error():
         mac_shadow.get_login_failed_count("junk")
 
 
-def test_login_failed_last():
+def test_login_failed_last(zero_date):
     with patch.object(mac_shadow, "_get_account_policy_data_value", return_value="0"):
         result = mac_shadow.get_login_failed_last("junk")
-        expected = "1969-12-31 17:00:00"
-        assert result == expected
+        assert result == zero_date
 
 
 def test_get_login_failed_last_no_value():
@@ -108,7 +111,7 @@ def test_get_login_failed_last_no_value():
         side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_login_failed_last("junk")
-        expected = 0
+        expected = "0"
         assert result == expected
 
 
