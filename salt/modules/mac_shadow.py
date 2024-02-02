@@ -202,11 +202,12 @@ def get_account_created(name):
 
         salt '*' shadow.get_account_created admin
     """
-    ret = _get_account_policy_data_value(name, "creationTime")
-
-    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
+    try:
+        ret = _get_account_policy_data_value(name, "creationTime")
+        unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+        date_text = _convert_to_datetime(unix_timestamp)
+    except CommandExecutionError:
+        date_text = "0"
 
     return date_text
 
@@ -228,11 +229,12 @@ def get_last_change(name):
 
         salt '*' shadow.get_last_change admin
     """
-    ret = _get_account_policy_data_value(name, "passwordLastSetTime")
-
-    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
+    try:
+        ret = _get_account_policy_data_value(name, "passwordLastSetTime")
+        unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+        date_text = _convert_to_datetime(unix_timestamp)
+    except CommandExecutionError:
+        date_text = "0"
 
     return date_text
 
@@ -254,9 +256,11 @@ def get_login_failed_count(name):
 
         salt '*' shadow.get_login_failed_count admin
     """
-    ret = _get_account_policy_data_value(name, "failedLoginCount")
-
-    return salt.utils.mac_utils.parse_return(ret)
+    try:
+        ret = _get_account_policy_data_value(name, "failedLoginCount")
+        return salt.utils.mac_utils.parse_return(ret)
+    except CommandExecutionError:
+        return "0"
 
 
 def get_login_failed_last(name):
@@ -277,11 +281,12 @@ def get_login_failed_last(name):
 
         salt '*' shadow.get_login_failed_last admin
     """
-    ret = _get_account_policy_data_value(name, "failedLoginTimestamp")
-
-    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
+    try:
+        ret = _get_account_policy_data_value(name, "failedLoginTimestamp")
+        unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+        date_text = _convert_to_datetime(unix_timestamp)
+    except CommandExecutionError:
+        date_text = "0"
 
     return date_text
 
