@@ -281,7 +281,12 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
-        return self.stream.on_recv(callback)
+        try:
+            return self.stream.on_recv(callback)
+        except OSError as exc:
+            if callback is None and str(exc) == "Stream is closed":
+                return
+            raise
 
     @salt.ext.tornado.gen.coroutine
     def send(self, msg):
