@@ -20,13 +20,24 @@ def test_get_account_created():
         assert result == expected
 
 
-def test_get_account_created_error():
+def test_get_account_created_no_value():
     with patch.object(
-        mac_shadow, "_get_account_policy_data_value", side_effect=CommandExecutionError
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_account_created("junk")
-        expected = "0"
+        expected = 0
         assert result == expected
+
+
+def test_get_account_created_error():
+    with patch.object(
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Unknown error: something happened"),
+    ), pytest.raises(CommandExecutionError):
+        mac_shadow.get_account_created("junk")
 
 
 def test_get_last_change():
@@ -36,13 +47,24 @@ def test_get_last_change():
         assert result == expected
 
 
-def test_get_last_change_error():
+def test_get_last_change_no_value():
     with patch.object(
-        mac_shadow, "_get_account_policy_data_value", side_effect=CommandExecutionError
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_last_change("junk")
-        expected = "0"
+        expected = 0
         assert result == expected
+
+
+def test_get_last_change_error():
+    with patch.object(
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Unknown error: something happened"),
+    ), pytest.raises(CommandExecutionError):
+        mac_shadow.get_last_change("junk")
 
 
 def test_login_failed_count():
@@ -52,13 +74,24 @@ def test_login_failed_count():
         assert result == expected
 
 
-def test_get_login_failed_count_error():
+def test_get_login_failed_count_no_value():
     with patch.object(
-        mac_shadow, "_get_account_policy_data_value", side_effect=CommandExecutionError
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_login_failed_count("junk")
-        expected = "0"
+        expected = 0
         assert result == expected
+
+
+def test_get_login_failed_count_error():
+    with patch.object(
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Unknown error: something happened"),
+    ), pytest.raises(CommandExecutionError):
+        mac_shadow.get_login_failed_count("junk")
 
 
 def test_login_failed_last():
@@ -68,10 +101,21 @@ def test_login_failed_last():
         assert result == expected
 
 
-def test_get_login_failed_last_error():
+def test_get_login_failed_last_no_value():
     with patch.object(
-        mac_shadow, "_get_account_policy_data_value", side_effect=CommandExecutionError
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Value not found: creationTime"),
     ):
         result = mac_shadow.get_login_failed_last("junk")
-        expected = "0"
+        expected = 0
         assert result == expected
+
+
+def test_get_login_failed_last_error():
+    with patch.object(
+        mac_shadow,
+        "_get_account_policy_data_value",
+        side_effect=CommandExecutionError("Unknown error: something happened"),
+    ), pytest.raises(CommandExecutionError):
+        mac_shadow.get_login_failed_last("junk")
