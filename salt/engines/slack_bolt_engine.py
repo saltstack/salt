@@ -1000,8 +1000,6 @@ class SlackClient:
         if cmd in runner_functions:
             runner = salt.runner.RunnerClient(__opts__)
             log.debug("Command %s will run via runner_functions", cmd)
-            # pylint is tripping
-            # pylint: disable=missing-whitespace-after-comma
             job_id_dict = runner.asynchronous(cmd, {"arg": args, "kwarg": kwargs})
             job_id = job_id_dict["jid"]
 

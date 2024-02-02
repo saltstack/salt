@@ -1718,9 +1718,7 @@ def _netlink_tool_remote_on(port, which_end):
     valid = False
     tcp_end = "dst" if which_end == "remote_port" else "src"
     try:
-        data = subprocess.check_output(
-            ["ss", "-ant", tcp_end, f":{port}"]
-        )  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(["ss", "-ant", tcp_end, f":{port}"])
     except subprocess.CalledProcessError:
         log.error("Failed ss")
         raise
@@ -1766,9 +1764,7 @@ def _sunos_remotes_on(port, which_end):  # pragma: no cover
     """
     remotes = set()
     try:
-        data = subprocess.check_output(
-            ["netstat", "-f", "inet", "-n"]
-        )  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(["netstat", "-f", "inet", "-n"])
     except subprocess.CalledProcessError:
         log.error("Failed netstat")
         raise
@@ -1814,7 +1810,7 @@ def _freebsd_remotes_on(port, which_end):  # pragma: no cover
 
     try:
         cmd = salt.utils.args.shlex_split(f"sockstat -4 -c -p {port}")
-        data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
@@ -1876,7 +1872,7 @@ def _netbsd_remotes_on(port, which_end):  # pragma: no cover
 
     try:
         cmd = salt.utils.args.shlex_split(f"sockstat -4 -c -n -p {port}")
-        data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
@@ -1928,9 +1924,7 @@ def _openbsd_remotes_on(port, which_end):  # pragma: no cover
     """
     remotes = set()
     try:
-        data = subprocess.check_output(
-            ["netstat", "-nf", "inet"]
-        )  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(["netstat", "-nf", "inet"])
     except subprocess.CalledProcessError as exc:
         log.error('Failed "netstat" with returncode = %s', exc.returncode)
         raise
@@ -1969,9 +1963,7 @@ def _windows_remotes_on(port, which_end):
     """
     remotes = set()
     try:
-        data = subprocess.check_output(
-            ["netstat", "-n"]
-        )  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(["netstat", "-n"])
     except subprocess.CalledProcessError:
         log.error("Failed netstat")
         raise
@@ -2020,7 +2012,7 @@ def _linux_remotes_on(port, which_end):
                 f"-iTCP:{port:d}",
                 "-n",
                 "-P",
-            ]  # pylint: disable=minimum-python-version
+            ]
         )
     except subprocess.CalledProcessError as ex:
         if ex.returncode == 1:
@@ -2085,9 +2077,7 @@ def _aix_remotes_on(port, which_end):  # pragma: no cover
     """
     remotes = set()
     try:
-        data = subprocess.check_output(
-            ["netstat", "-f", "inet", "-n"]
-        )  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(["netstat", "-f", "inet", "-n"])
     except subprocess.CalledProcessError:
         log.error("Failed netstat")
         raise

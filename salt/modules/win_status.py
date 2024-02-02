@@ -525,9 +525,7 @@ def master(master=None, connected=True):
         """
         remotes = set()
         try:
-            data = subprocess.check_output(
-                ["netstat", "-n", "-p", "TCP"]
-            )  # pylint: disable=minimum-python-version
+            data = subprocess.check_output(["netstat", "-n", "-p", "TCP"])
         except subprocess.CalledProcessError:
             log.error("Failed netstat")
             raise

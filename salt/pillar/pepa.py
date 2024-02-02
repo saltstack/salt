@@ -291,7 +291,7 @@ except ImportError:
 # Only used when called from a terminal
 log = None
 if __name__ == "__main__":
-    import argparse  # pylint: disable=minimum-python-version
+    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("hostname", help="Hostname")
@@ -615,7 +615,7 @@ if __name__ == "__main__":
 
         if not request.ok:
             raise RuntimeError(
-                "Failed to authenticate to SaltStack REST API: {}".format(request.text)
+                f"Failed to authenticate to SaltStack REST API: {request.text}"
             )
 
         response = request.json()

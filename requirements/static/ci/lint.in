@@ -2,6 +2,5 @@
 
 --constraint=./py{py_version}/{platform}.txt
 
-pylint==2.4.4
-SaltPyLint>=2023.3.8
-toml
+pylint>=3.0
+SaltPyLint>=2024.2.2

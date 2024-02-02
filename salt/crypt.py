@@ -227,13 +227,13 @@ class PublicKey:
             try:
                 self.key = RSA.load_pub_key_bio(bio)
             except RSA.RSAError:
-                raise InvalidKeyError("Encountered bad RSA public key")
+                raise InvalidKeyError("Encountered bad RSA public key") from exc
         else:
             with salt.utils.files.fopen(path) as f:
                 try:
                     self.key = RSA.importKey(f.read())
                 except (ValueError, IndexError, TypeError):
-                    raise InvalidKeyError("Encountered bad RSA public key")
+                    raise InvalidKeyError("Encountered bad RSA public key") from exc
 
     def encrypt(self, data):
         bdata = salt.utils.stringutils.to_bytes(data)
@@ -312,13 +312,13 @@ def get_rsa_pub_key(path):
         try:
             key = RSA.load_pub_key_bio(bio)
         except RSA.RSAError:
-            raise InvalidKeyError("Encountered bad RSA public key")
+            raise InvalidKeyError("Encountered bad RSA public key") from exc
     else:
         with salt.utils.files.fopen(path) as f:
             try:
                 key = RSA.importKey(f.read())
             except (ValueError, IndexError, TypeError):
-                raise InvalidKeyError("Encountered bad RSA public key")
+                raise InvalidKeyError("Encountered bad RSA public key") from exc
     return key
 
 
@@ -579,10 +579,10 @@ class MasterKeys(dict):
             key_error = ValueError
         try:
             key = get_rsa_key(path, passphrase)
-        except key_error as e:
+        except key_error as exc:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
             log.error(message)
-            raise MasterExit(message)
+            raise MasterExit(message) from exc
         log.debug("Loaded %s key: %s", name, path)
         return key
 
@@ -739,13 +739,13 @@ class AsyncAuth:
         cls = self.__class__
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
-        for key in self.__dict__:
+        for key, value in self.__dict__.items():
             if key in ("io_loop",):
                 # The io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
                 # new copy.
                 continue
-            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+            setattr(result, key, copy.deepcopy(value, memo))
         return result
 
     @property
@@ -934,9 +934,9 @@ class AsyncAuth:
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
-        except SaltReqTimeoutError as e:
+        except SaltReqTimeoutError as exc:
             if safe:
-                log.warning("SaltReqTimeoutError: %s", e)
+                log.warning("SaltReqTimeoutError: %s", exc)
                 raise tornado.gen.Return("retry")
             if self.opts.get("detect_mode") is True:
                 raise tornado.gen.Return("retry")
@@ -944,7 +944,7 @@ class AsyncAuth:
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout"
                     " error"
-                )
+                ) from exc
         finally:
             if close_channel:
                 channel.close()

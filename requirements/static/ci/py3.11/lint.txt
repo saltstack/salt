@@ -4,31 +4,23 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/lint.txt requirements/static/ci/lint.in
 #
-astroid==2.3.3
+astroid==3.0.2
+    # via pylint
+dill==0.3.8
     # via pylint
 isort==4.3.21
     # via pylint
-lazy-object-proxy==1.4.3
-    # via astroid
 mccabe==0.6.1
     # via pylint
-modernize==0.5
-    # via saltpylint
-pycodestyle==2.10.0
-    # via saltpylint
-pylint==2.4.4
+platformdirs==4.0.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   pylint
+pylint==3.0.3
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-saltpylint==2023.8.3
+saltpylint==2024.2.2
     # via -r requirements/static/ci/lint.in
-six==1.16.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   astroid
-toml==0.10.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   -r requirements/static/ci/lint.in
-wrapt==1.11.2
-    # via astroid
+tomlkit==0.12.3
+    # via pylint

@@ -338,7 +338,7 @@ def check_user(user):
 
     try:
         if hasattr(os, "initgroups"):
-            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+            os.initgroups(user, pwuser.pw_gid)
         else:
             os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
         os.setgid(pwuser.pw_gid)

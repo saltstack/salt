@@ -483,9 +483,7 @@ def salt_cloud():
     """
     The main function for salt-cloud
     """
-    # Define 'salt' global so we may use it after ImportError. Otherwise,
-    # UnboundLocalError will be raised.
-    global salt  # pylint: disable=W0602
+    import salt.defaults.exitcodes
 
     try:
         # Late-imports for CLI performance

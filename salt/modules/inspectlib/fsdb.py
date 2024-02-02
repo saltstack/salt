@@ -187,7 +187,7 @@ class CsvDB:
             with gzip.open(os.path.join(self.db_path, obj._TABLE), "wt") as table_file:
                 csv.writer(table_file).writerow(
                     [
-                        "{col}:{type}".format(col=elm[0], type=get_type(elm[1]))
+                        f"{elm[0]}:{get_type(elm[1])}"
                         for elm in tuple(obj.__dict__.items())
                     ]
                 )
@@ -270,7 +270,7 @@ class CsvDB:
     def _validate_object(self, obj):
         descr = self._tables.get(obj._TABLE)
         if descr is None:
-            raise Exception("Table {} not found.".format(obj._TABLE))
+            raise Exception(f"Table {obj._TABLE} not found.")
         return obj._serialize(self._tables[obj._TABLE])
 
     def __criteria(self, obj, matches=None, mt=None, lt=None, eq=None):
@@ -338,9 +338,7 @@ class CsvDB:
         elif type == "float":
             data = float(data)
         elif type == "long":
-            # pylint: disable=undefined-variable,incompatible-py3-code
             data = sys.version_info[0] == 2 and long(data) or int(data)
-            # pylint: enable=undefined-variable,incompatible-py3-code
         else:
             data = str(data)
         return data

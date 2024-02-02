@@ -195,7 +195,7 @@ class SMaster:
 
         if event:
             event.fire_event(
-                {f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
+                {"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
             )
 
         if publisher:

@@ -1521,7 +1521,7 @@ def _lint(
                 sys.stdout.flush()
                 if pylint_report_path:
                     # Write report
-                    with open(pylint_report_path, "w") as wfh:
+                    with open(pylint_report_path, "w", encoding="utf-8") as wfh:
                         wfh.write(contents)
                     session.log("Report file written to %r", pylint_report_path)
             stdout.close()
@@ -2006,8 +2006,8 @@ def ci_test_onedir_pkgs(session):
             + cmd_args[:]
             + [
                 "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
-                f"--log-file=artifacts/logs/runtests-install.log",
+                "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                "--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
@@ -2024,8 +2024,8 @@ def ci_test_onedir_pkgs(session):
                 + cmd_args[:]
                 + [
                     "--no-install",
-                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
-                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",
                 ]
                 + session.posargs

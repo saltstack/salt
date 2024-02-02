@@ -35,10 +35,6 @@ To prevent Postgres commands from running arbitrarily long, a timeout (in second
         postgres.bins_dir: '/usr/pgsql-9.5/bin/'
 """
 
-# This pylint error is popping up where there are no colons?
-# pylint: disable=E8203
-
-
 import base64
 import datetime
 import hashlib

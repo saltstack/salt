@@ -21,6 +21,7 @@ from distutils.command.clean import clean
 from distutils.command.install_lib import install_lib
 from distutils.errors import DistutilsArgError
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
+from urllib.request import urlopen
 
 from setuptools import setup
 from setuptools.command.bdist_egg import bdist_egg
@@ -29,12 +30,6 @@ from setuptools.command.install import install
 from setuptools.command.sdist import sdist
 
 # pylint: enable=no-name-in-module
-
-
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen  # pylint: disable=no-name-in-module
 
 
 try:
@@ -181,7 +176,7 @@ else:
 
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
-    with open(requirements_file) as rfh:
+    with open(requirements_file, encoding="utf-8") as rfh:
         for line in rfh.readlines():
             line = line.strip()
             if not line or line.startswith(("#", "-r", "--")):
@@ -260,7 +255,9 @@ class GenerateSaltSyspaths(Command):
             exit(1)
 
         # Write the system paths file
-        open(self.distribution.salt_syspaths_hardcoded_path, "w").write(
+        open(
+            self.distribution.salt_syspaths_hardcoded_path, "w", encoding="utf-8"
+        ).write(
             INSTALL_SYSPATHS_TEMPLATE.format(
                 date=DATE,
                 root_dir=self.distribution.salt_root_dir,
@@ -308,9 +305,9 @@ class WriteSaltSshPackagingFile(Command):
                 exit(1)
 
             # pylint: disable=E0602
-            open(self.distribution.salt_ssh_packaging_file, "w").write(
-                "Packaged for Salt-SSH\n"
-            )
+            open(
+                self.distribution.salt_ssh_packaging_file, "w", encoding="utf-8"
+            ).write("Packaged for Salt-SSH\n")
             # pylint: enable=E0602
 
 
@@ -463,13 +460,14 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             try:
                 import requests
 
-                req = requests.get(url)
+                req = requests.get(url, timeout=30)
                 if req.status_code == 200:
                     script_contents = req.text.encode(req.encoding)
                 else:
                     log.error(
                         "Failed to update the bootstrap-salt.sh script. HTTP "
-                        "Error code: {}".format(req.status_code)
+                        "Error code: %s",
+                        req.status_code,
                     )
             except ImportError:
                 req = urlopen(url)
@@ -482,7 +480,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                         "Error code: {}".format(req.getcode())
                     )
             try:
-                with open(deploy_path, "w") as fp_:
+                with open(deploy_path, "w", encoding="utf-8") as fp_:
                     fp_.write(script_contents)
             except OSError as err:
                 log.error(f"Failed to write the updated script: {err}")
