@@ -1,4 +1,5 @@
 import ctypes
+import hashlib
 import logging
 import multiprocessing
 import queue
@@ -6,15 +7,16 @@ import socket
 import time
 
 import pytest
-import tornado.gen
 import tornado.ioloop
 import tornado.iostream
 import zmq
 from pytestshellutils.utils.processes import terminate_process
 
 import salt.channel.server
+import salt.crypt
 import salt.exceptions
 import salt.master
+import salt.payload
 import salt.utils.msgpack
 import salt.utils.process
 import salt.utils.stringutils
@@ -37,10 +39,12 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         port,
         aes_key,
         timeout=300,
-        zmq_filtering=False,
     ):
         super().__init__()
         self.minion_config = minion_config
+        self.hexid = hashlib.sha1(
+            salt.utils.stringutils.to_bytes(self.minion_config["id"])
+        ).hexdigest()
         self.interface = interface
         self.port = port
         self.aes_key = aes_key
@@ -49,10 +53,11 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.hard_timeout = time.time() + timeout + 120
         self.manager = multiprocessing.Manager()
         self.results = self.manager.list()
-        self.zmq_filtering = zmq_filtering
+        self.zmq_filtering = minion_config["zmq_filtering"]
         self.stopped = multiprocessing.Event()
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
+        self.stop_running = multiprocessing.Event()
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
 
     @property
@@ -86,9 +91,17 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             self.ctx = zmq.Context()
             self.sock = self.ctx.socket(zmq.SUB)
             self.sock.setsockopt(zmq.LINGER, -1)
-            self.sock.setsockopt(zmq.SUBSCRIBE, b"")
+            if self.zmq_filtering:
+                self.sock.setsockopt(zmq.SUBSCRIBE, b"broadcast")
+                if self.minion_config.get("__role") == "syndic":
+                    self.sock.setsockopt(zmq.SUBSCRIBE, b"syndic")
+                else:
+                    self.sock.setsockopt(
+                        zmq.SUBSCRIBE, salt.utils.stringutils.to_bytes(self.hexid)
+                    )
+            else:
+                self.sock.setsockopt(zmq.SUBSCRIBE, b"")
             pub_uri = f"tcp://{self.interface}:{self.port}"
-            log.info("Collector listen %s", pub_uri)
             self.sock.connect(pub_uri)
         else:
             end = time.time() + 120
@@ -104,30 +117,44 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     break
             self.sock = tornado.iostream.IOStream(sock)
 
-    @tornado.gen.coroutine
-    def _recv(self):
+    async def _recv(self):
         if self.transport == "zeromq":
             # test_zeromq_filtering requires catching the
             # SaltDeserializationError in order to pass.
             try:
-                payload = self.sock.recv(zmq.NOBLOCK)
-                serial_payload = salt.payload.loads(payload)
-                raise tornado.gen.Return(serial_payload)
+                messages = self.sock.recv_multipart(flags=zmq.NOBLOCK, copy=True)
+                messages_len = len(messages)
+                if messages_len == 1:
+                    serial_payload = salt.payload.loads(messages[0])
+                elif messages_len == 2:
+                    message_target = salt.utils.stringutils.to_str(messages[0])
+                    is_syndic = self.minion_config.get("__role") == "syndic"
+                    if (
+                        not is_syndic
+                        and message_target not in ("broadcast", self.hexid)
+                    ) or (is_syndic and message_target not in ("broadcast", "syndic")):
+                        log.debug(
+                            "Publish received for not this minion: %s", message_target
+                        )
+                        return
+                    serial_payload = salt.payload.loads(messages[1])
+                else:
+                    raise Exception("Invalid number of messages")
+                return serial_payload
             except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
-                raise tornado.gen.Return(serial_payload)
-            byts = yield self.sock.read_bytes(8096, partial=True)
+                return serial_payload
+            byts = await self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
-                raise tornado.gen.Return(serial_payload)
+                return serial_payload
             raise RecvError("TCP Error")
 
-    @tornado.gen.coroutine
-    def _run(self, loop):
+    async def _run(self, loop):
         try:
             self._setup_listener()
         except Exception:  # pylint: disable=broad-except
@@ -149,7 +176,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     log.error("Receive timeout reached in test collector!")
                     break
                 try:
-                    payload = yield self._recv()
+                    payload = await self._recv()
                 except RecvError:
                     time.sleep(0.03)
                 else:
@@ -164,6 +191,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                             continue
                         if "stop" in payload:
                             log.info("Collector stopped")
+                            self.stop_running.set()
                             break
                         last_msg = time.time()
                         self.results.append(payload["jid"])
@@ -250,13 +278,14 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
 
     def run(self):
-
         ioloop = tornado.ioloop.IOLoop()
         try:
             while True:
                 try:
                     payload = self.queue.get(False)
                 except queue.Empty:
+                    if self._closing is True:
+                        break
                     time.sleep(0.03)
                     continue
                 if payload is None:
@@ -297,6 +326,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
                 break
+            time.sleep(0.5)
             attempts -= 1
         else:
             pytest.fail("Failed to confirm the collector has started")
@@ -304,7 +334,15 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
     def __exit__(self, *args):
         # Publish a payload to tell the collection it's done processing
-        self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "stop": True})
+        attempts = 300
+        while attempts > 0:
+            self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "stop": True})
+            if self.collector.stop_running.wait(1) is True:
+                break
+            time.sleep(0.5)
+            attempts -= 1
+        else:
+            pytest.fail("Failed to confirm the collector has stopped")
         # Now trigger the collector to also exit
         self.collector.__exit__(*args)
         # We can safely wait here without a timeout because the Collector instance has a

@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.12/docs.txt requirements/base.txt requirements/static/ci/docs.in requirements/zeromq.txt
 #
-aiohttp==3.9.1
+aiohttp==3.9.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -64,7 +64,7 @@ distro==1.8.0
     #   -r requirements/base.txt
 docutils==0.20.1
     # via sphinx
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp

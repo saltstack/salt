@@ -25,6 +25,7 @@ env:
   CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -147,6 +148,7 @@ jobs:
             docs:
               - added|modified:
                 - doc/**
+                - .github/workflows/build-docs.yml
                 - *doc_requirements
             workflows:
               - added|modified:
@@ -222,7 +224,7 @@ jobs:
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -2053,6 +2055,7 @@ jobs:
           nox --force-color -e create-xml-coverage-reports
 
       - name: Upload Code Coverage To Codecov
+        if: ${{ ! github.event.repository.private }}
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
@@ -2262,6 +2265,14 @@ jobs:
             distro: ubuntu
             version: "22.04"
             arch: arm64
+          - pkg-type: deb
+            distro: ubuntu
+            version: "23.04"
+            arch: x86_64
+          - pkg-type: deb
+            distro: ubuntu
+            version: "23.04"
+            arch: arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -2376,54 +2387,6 @@ jobs:
             version: "2023"
             arch: aarch64
           - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "7"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "8"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: arm64
-          - pkg-type: rpm
-            distro: redhat
-            version: "9"
-            arch: aarch64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: x86_64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: arm64
-          - pkg-type: rpm
-            distro: fedora
-            version: "36"
-            arch: aarch64
-          - pkg-type: rpm
             distro: fedora
             version: "37"
             arch: x86_64
@@ -2482,6 +2445,42 @@ jobs:
           - pkg-type: rpm
             distro: photon
             version: "5"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "7"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "8"
+            arch: aarch64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
+            arch: x86_64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
+            arch: arm64
+          - pkg-type: rpm
+            distro: redhat
+            version: "9"
             arch: aarch64
 
     steps:
