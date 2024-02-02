@@ -2,7 +2,6 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-
 import asyncio
 import contextlib
 import logging
@@ -125,6 +124,17 @@ class SyncWrapper:
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # asyncio.get_running_loop() raises RuntimeError
+                # if there is no running loop, so we can run the method
+                # directly with no detaching it to the distinct thread.
+                # It will make SyncWrapper way faster for the cases
+                # when there are no nested SyncWrapper objects used.
+                return self.io_loop.run_sync(
+                    lambda: getattr(self.obj, key)(*args, **kwargs)
+                )
             results = []
             thread = threading.Thread(
                 target=self._target,
