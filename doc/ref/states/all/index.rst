@@ -108,6 +108,7 @@ state modules
     tls
     uptime
     user
+    virtualenv_mod
     win_appx
     win_certutil
     win_dacl

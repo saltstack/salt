@@ -165,8 +165,12 @@ def test_mod_del_repo(grains, modules):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(
+    'grains["os_family"] == "Suse"',
+    reason="Zypperpkg module removed as a part of great module migration",
+)
 @pytest.mark.usefixtures("_refresh_db")
-def test_mod_del_repo_multiline_values(modules):
+def test_mod_del_repo_multiline_values(modules, refresh_db):
     """
     test modifying and deleting a software repository defined with multiline values
     """
@@ -354,10 +358,14 @@ def test_refresh_db(grains, minion_opts):
     assert os.path.isfile(rtag) is False
 
 
+@pytest.mark.slow_test
+@pytest.mark.skipif(
+    'grains["os_family"] == "Suse"',
+    reason="Zypperpkg module removed as a part of great module migration",
+)
 @pytest.mark.usefixtures("_refresh_db")
 @pytest.mark.requires_salt_modules("pkg.info_installed")
-@pytest.mark.slow_test
-def test_pkg_info(grains, modules, test_pkg):
+def test_pkg_info(grains, modules, test_pkg, refresh_db):
     """
     Test returning useful information on Ubuntu systems.
     """
@@ -552,6 +560,10 @@ def test_list_repos_duplicate_entries(grains, modules):
 
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
+@pytest.mark.skipif(
+    'grains["os_family"] == "Suse"',
+    reason="Zypperpkg module removed as a part of great module migration",
+)
 def test_pkg_install_port(grains, modules):
     """
     test install package with a port in the url

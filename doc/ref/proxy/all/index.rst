@@ -11,3 +11,4 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     deltaproxy
+    dummy
