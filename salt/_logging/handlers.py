@@ -4,6 +4,7 @@
 
     Salt's logging handlers
 """
+
 import logging
 import logging.handlers
 import sys
