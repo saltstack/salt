@@ -84,8 +84,7 @@ def clean_key(key):
     """
     Clean the key so that it only has unix style line endings (\\n)
     """
-    key = key.strip().split()
-    return "\n".join(key)
+    return "\n".join(key.strip().split())
 
 
 def dropfile(cachedir, user=None):
