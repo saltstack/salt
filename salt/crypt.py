@@ -80,6 +80,14 @@ if not HAS_M2 and not HAS_CRYPTO:
 log = logging.getLogger(__name__)
 
 
+def clean_key(key):
+    """
+    Clean the key so that it only has unix style line endings (\\n)
+    """
+    key = key.strip().split()
+    return "\n".join(key)
+
+
 def dropfile(cachedir, user=None):
     """
     Set an AES dropfile to request the master update the publish session key
@@ -377,7 +385,7 @@ class MasterKeys(dict):
                 )
                 if os.path.isfile(self.sig_path):
                     with salt.utils.files.fopen(self.sig_path) as fp_:
-                        self.pub_signature = fp_.read()
+                        self.pub_signature = clean_key(fp_.read())
                     log.info(
                         "Read %s's signature from %s",
                         os.path.basename(self.pub_path),
@@ -462,7 +470,7 @@ class MasterKeys(dict):
                 with salt.utils.files.fopen(path, "wb+") as wfh:
                     wfh.write(key.publickey().exportKey("PEM"))
         with salt.utils.files.fopen(path) as rfh:
-            return rfh.read()
+            return clean_key(rfh.read())
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path
@@ -942,7 +950,7 @@ class AsyncAuth:
         except Exception:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
-            payload["pub"] = f.read()
+            payload["pub"] = clean_key(f.read())
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):
@@ -1165,11 +1173,9 @@ class AsyncAuth:
         m_pub_exists = os.path.isfile(m_pub_fn)
         if m_pub_exists and master_pub and not self.opts["open_mode"]:
             with salt.utils.files.fopen(m_pub_fn) as fp_:
-                local_master_pub = fp_.read()
+                local_master_pub = clean_key(fp_.read())
 
-            if payload["pub_key"].replace("\n", "").replace(
-                "\r", ""
-            ) != local_master_pub.replace("\n", "").replace("\r", ""):
+            if payload["pub_key"] != local_master_pub:
                 if not self.check_auth_deps(payload):
                     return ""
 
