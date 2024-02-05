@@ -615,6 +615,7 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "

@@ -278,9 +278,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_remove
   - integration.spm.test_repo
 
-salt/utils/docker/*:
-  - unit.utils.test_dockermod
-
 salt/utils/schedule.py:
   - pytests.unit.utils.scheduler.test_error
   - pytests.unit.utils.scheduler.test_eval
@@ -312,10 +309,6 @@ salt/(minion\.py|channel/.+|transport/.+):
 
 tests/support/mock.py:
   - unit.test_mock
-
-tests/support/pytest/mysql.py:
-  - pytests.functional.states.test_mysql
-  - pytests.functional.modules.test_mysql
 
 tests/support/pytest/transport.py:
   - pytests.functional.transport.ipc.test_pub_server_channel

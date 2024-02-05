@@ -10,6 +10,9 @@ pillar modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cmd_json
+    cmd_yaml
+    extra_minion_data_in_pillar
     file_tree
     git_pillar
     gpg

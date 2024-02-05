@@ -25,6 +25,10 @@ def modules(loaders, _formula):
     'grains["oscodename"] == "Photon"',
     reason="vim package not available for this distrubition",
 )
+@pytest.mark.skipif(
+    'grains["os_family"] == "Suse"',
+    reason="Zypperpkg module removed as a part of great module migration",
+)
 def test_vim_formula(modules):
     ret = modules.state.sls("vim")
     assert not ret.errors

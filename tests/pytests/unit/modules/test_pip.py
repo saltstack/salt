@@ -474,10 +474,10 @@ def test_install_venv():
             )
 
 
-def test_install_log_argument_in_resulting_command(python_binary):
+def test_install_log_argument_in_resulting_command(python_binary, tmp_path):
     with patch("os.access") as mock_path:
         pkg = "pep8"
-        log_path = "/tmp/pip-install.log"
+        log_path = str(tmp_path / "pip-install.log")
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, log=log_path)

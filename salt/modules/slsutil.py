@@ -1,6 +1,7 @@
 """
 Utility functions for use with or in SLS files
 """
+
 import logging
 import os
 import posixpath
@@ -162,36 +163,31 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         salt '*' slsutil.renderer string='Inline template! {{ saltenv }}'
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     """
-    try:
-        if not path and not string:
-            raise salt.exceptions.SaltInvocationError("Must pass either path or string")
+    if not path and not string:
+        raise salt.exceptions.SaltInvocationError("Must pass path or string.")
 
-        if path and string:
-            raise salt.exceptions.SaltInvocationError(
-                "Must not pass both path and string"
-            )
+    if path and string:
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string.")
 
-        renderers = salt.loader.render(__opts__, __salt__)
+    renderers = salt.loader.render(__opts__, __salt__)
 
-        if path:
-            path_or_string = __salt__["cp.get_url"](
-                path, saltenv=kwargs.get("saltenv", "base")
-            )
-        if string:
-            path_or_string = ":string:"
-            kwargs["input_data"] = string
-
-        ret = salt.template.compile_template(
-            path_or_string,
-            renderers,
-            default_renderer,
-            __opts__["renderer_blacklist"],
-            __opts__["renderer_whitelist"],
-            **kwargs,
+    if path:
+        path_or_string = __salt__["cp.get_url"](
+            path, saltenv=kwargs.get("saltenv", "base")
         )
-        return ret.read() if __utils__["stringio.is_readable"](ret) else ret
-    except Exception as exc:
-        log.error("WTF", exc_info=True)
+    if string:
+        path_or_string = ":string:"
+        kwargs["input_data"] = string
+
+    ret = salt.template.compile_template(
+        path_or_string,
+        renderers,
+        default_renderer,
+        __opts__["renderer_blacklist"],
+        __opts__["renderer_whitelist"],
+        **kwargs,
+    )
+    return ret.read() if __utils__["stringio.is_readable"](ret) else ret
 
 
 def _get_serialize_fn(serializer, fn_name):
