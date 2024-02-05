@@ -64,6 +64,8 @@ execution modules
     disk
     dnsutil
     dpkg_lowpkg
+    dummyproxy_pkg
+    dummyproxy_service
     environ
     etcd_mod
     ethtool
