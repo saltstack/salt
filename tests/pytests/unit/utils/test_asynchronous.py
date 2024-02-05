@@ -61,6 +61,17 @@ def test_basic_wrap():
     assert ret is True
 
 
+def test_basic_wrap_series():
+    """
+    Test that we can wrap an asynchronous caller and call the method in series.
+    """
+    sync = asynchronous.SyncWrapper(HelperA)
+    ret = sync.sleep()
+    assert ret is True
+    ret = sync.sleep()
+    assert ret is True
+
+
 def test_double():
     """
     Test when the asynchronous wrapper object itself creates a wrap of another thing
