@@ -93,7 +93,6 @@ execution modules
     cabal
     capirca_acl
     cassandra_cql
-    cassandra_mod
     celery
     ceph
     chassis
