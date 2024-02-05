@@ -904,3 +904,17 @@ def get_encoding(path):
         return "ASCII"
 
     raise CommandExecutionError("Could not detect file encoding")
+
+
+## TBD DGM just parking here till final machine identifier work is done
+def get_machine_identifier():
+    """
+    Provide the machine-identifier for machine/virtualization combination
+    """
+    locations = ["/etc/machine-id", "/var/lib/dbus/machine-id"]
+    existing_locations = [loc for loc in locations if os.path.exists(loc)]
+    if not existing_locations:
+        return ""
+    else:
+        with fopen(existing_locations[0]) as machineid:
+            return machineid.read().strip()

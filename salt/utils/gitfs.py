@@ -250,7 +250,7 @@ class GitProvider:
 
         # DGM try getting machine_identifier
         # get machine_identifier
-        self.mach_id = salt.utils.platform.get_machine_identifier()
+        self.mach_id = salt.utils.files.get_machine_identifier()
         log.debug(f"machine_id for lock file, machine_id '{self.mach_id}'")
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
