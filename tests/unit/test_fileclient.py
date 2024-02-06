@@ -9,7 +9,8 @@ from tests.support.unit import TestCase
 
 
 class FSClientTestCase(TestCase):
-    def _get_defaults(self, **kwargs):
+    @staticmethod
+    def _get_defaults(**kwargs):
         """
         master/minion config defaults
         """
