@@ -48,7 +48,7 @@ class FSClientTestCase(TestCase):
             client = fileclient.FSClient(opts)
             assert client.channel.fs.update.call_count == 0
 
-    def test_masterless_no_fs_update(self):
+    def test_masterless_fs_update(self):
         """
         Test that an FSClient spawned from a masterless run refreshes the
         fileserver backends. This is necessary to ensure that a masterless run
