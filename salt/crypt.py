@@ -84,7 +84,7 @@ def clean_key(key):
     """
     Clean the key so that it only has unix style line endings (\\n)
     """
-    return "\n".join(key.strip().split())
+    return "\n".join(key.strip().splitlines())
 
 
 def dropfile(cachedir, user=None):
@@ -189,7 +189,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     Load a private key from disk.  `timestamp` above is intended to be the
     timestamp of the file's last modification. This fn is memoized so if it is
     called with the same path and timestamp (the file's last modified time) the
-    second time the result is returned from the memoiziation.  If the file gets
+    second time the result is returned from the memoization.  If the file gets
     modified then the params are different and the key is loaded from disk.
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
@@ -843,11 +843,11 @@ class AsyncAuth:
                         "clean out the keys. The Salt Minion will now exit."
                     )
                     # Add a random sleep here for systems that are using a
-                    # a service manager to immediately restart the service
-                    # to avoid overloading the system
+                    # service manager to immediately restart the service to
+                    # avoid overloading the system
                     time.sleep(random.randint(10, 20))
                     sys.exit(salt.defaults.exitcodes.EX_NOPERM)
-            # has the master returned that its maxed out with minions?
+            # Has the master returned that it's maxed out with minions?
             elif payload["ret"] == "full":
                 return "full"
             else:
