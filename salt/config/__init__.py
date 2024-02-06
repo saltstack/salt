@@ -3948,6 +3948,14 @@ def apply_master_config(overrides=None, defaults=None):
 
     opts = defaults.copy()
     opts["__role"] = "master"
+
+    # Suppress fileserver update in FSChan, for LocalClient instances generated
+    # during Pillar compilation. The master daemon already handles FS updates
+    # in its maintenance thread. Refreshing during Pillar compilation slows
+    # down Pillar considerably (even to the point of timeout) when there are
+    # many gitfs remotes.
+    opts["__fs_update"] = True
+
     _adjust_log_file_override(overrides, defaults["log_file"])
     if overrides:
         opts.update(overrides)
