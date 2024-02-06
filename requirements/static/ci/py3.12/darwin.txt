@@ -85,7 +85,7 @@ contextvars==2.4
     #   -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==41.0.7
+cryptography==42.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
     #   -r requirements/darwin.txt
@@ -286,7 +286,7 @@ pygit2==1.13.1
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
     #   -r requirements/darwin.txt

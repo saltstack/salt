@@ -23,7 +23,7 @@ clr-loader==0.2.6
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.0
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -90,7 +90,7 @@ pymssql==2.2.7
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via -r requirements/windows.txt
 python-dateutil==2.8.1
     # via -r requirements/windows.txt

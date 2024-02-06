@@ -139,7 +139,7 @@ croniter==0.3.29 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
-cryptography==41.0.7
+cryptography==42.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -478,7 +478,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
