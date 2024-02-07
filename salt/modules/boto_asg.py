@@ -76,6 +76,12 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -119,7 +125,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
             if _conn:
                 return True
             else:
-                msg = "The autoscale group does not exist in region {}".format(region)
+                msg = f"The autoscale group does not exist in region {region}"
                 log.debug(msg)
                 return False
         except boto.exception.BotoServerError as e:
@@ -429,12 +435,12 @@ def update(
                 key = tag.get("key")
             except KeyError:
                 log.error("Tag missing key.")
-                return False, "Tag {} missing key".format(tag)
+                return False, f"Tag {tag} missing key"
             try:
                 value = tag.get("value")
             except KeyError:
                 log.error("Tag missing value.")
-                return False, "Tag {} missing value".format(tag)
+                return False, f"Tag {tag} missing value"
             propagate_at_launch = tag.get("propagate_at_launch", False)
             _tag = {
                 "key": key,
@@ -508,7 +514,7 @@ def update(
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to update ASG {}".format(name)
+            msg = f"Failed to update ASG {name}"
             log.error(msg)
             return False, str(e)
 
@@ -569,7 +575,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     while True:
         try:
             conn.delete_auto_scaling_group(name, force)
-            msg = "Deleted autoscale group {}.".format(name)
+            msg = f"Deleted autoscale group {name}."
             log.info(msg)
             return True
         except boto.exception.BotoServerError as e:
@@ -579,7 +585,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to delete autoscale group {}".format(name)
+            msg = f"Failed to delete autoscale group {name}"
             log.error(msg)
             return False
 
@@ -821,7 +827,7 @@ def create_launch_configuration(
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to create LC {}".format(name)
+            msg = f"Failed to create LC {name}"
             log.error(msg)
             return False
 
@@ -850,7 +856,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None, profile
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to delete LC {}".format(name)
+            msg = f"Failed to delete LC {name}"
             log.error(msg)
             return False
 

@@ -144,11 +144,18 @@ Delete also accepts a VPC peering connection id.
 
 import logging
 
+log = logging.getLogger(__name__)
+
 import salt.utils.dictupdate as dictupdate
 
 __virtualname__ = "boto_vpc"
 
-log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
 
 
 def __virtual__():
@@ -228,7 +235,7 @@ def present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "VPC {} is set to be created.".format(name)
+            ret["comment"] = f"VPC {name} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_vpc.create"](
@@ -252,7 +259,7 @@ def present(
         )
         ret["changes"]["old"] = {"vpc": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "VPC {} created.".format(name)
+        ret["comment"] = f"VPC {name} created."
         return ret
     ret["comment"] = "VPC present."
     return ret
@@ -294,11 +301,11 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
 
     _id = r.get("id")
     if not _id:
-        ret["comment"] = "{} VPC does not exist.".format(name)
+        ret["comment"] = f"{name} VPC does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "VPC {} is set to be removed.".format(name)
+        ret["comment"] = f"VPC {name} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_vpc.delete"](
@@ -310,7 +317,7 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
         return ret
     ret["changes"]["old"] = {"vpc": _id}
     ret["changes"]["new"] = {"vpc": None}
-    ret["comment"] = "VPC {} deleted.".format(name)
+    ret["comment"] = f"VPC {name} deleted."
     return ret
 
 
@@ -429,7 +436,7 @@ def dhcp_options_present(
         return ret
     else:
         if __opts__["test"]:
-            ret["comment"] = "DHCP options {} are set to be created.".format(name)
+            ret["comment"] = f"DHCP options {name} are set to be created."
             ret["result"] = None
             return ret
 
@@ -457,7 +464,7 @@ def dhcp_options_present(
 
         ret["changes"]["old"] = {"dhcp_options": None}
         ret["changes"]["new"] = {"dhcp_options": _new}
-        ret["comment"] = "DHCP options {} created.".format(name)
+        ret["comment"] = f"DHCP options {name} created."
         return ret
 
 
@@ -509,11 +516,11 @@ def dhcp_options_absent(
     _id = r.get("id")
 
     if not _id:
-        ret["comment"] = "DHCP options {} do not exist.".format(name)
+        ret["comment"] = f"DHCP options {name} do not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "DHCP options {} are set to be deleted.".format(name)
+        ret["comment"] = f"DHCP options {name} are set to be deleted."
         ret["result"] = None
         return ret
 
@@ -529,7 +536,7 @@ def dhcp_options_absent(
 
     ret["changes"]["old"] = {"dhcp_options": _id}
     ret["changes"]["new"] = {"dhcp_options": None}
-    ret["comment"] = "DHCP options {} deleted.".format(name)
+    ret["comment"] = f"DHCP options {name} deleted."
     return ret
 
 
@@ -669,7 +676,7 @@ def subnet_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Subnet {} is set to be created.".format(name)
+            ret["comment"] = f"Subnet {name} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_vpc.create_subnet"](
@@ -694,7 +701,7 @@ def subnet_present(
         )
         ret["changes"]["old"] = {"subnet": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Subnet {} created.".format(name)
+        ret["comment"] = f"Subnet {name} created."
     else:
         ret["comment"] = "Subnet present."
 
@@ -705,7 +712,7 @@ def subnet_present(
             )
         if not _verify_subnet_association(route_table_desc, _describe["subnet"]["id"]):
             if __opts__["test"]:
-                msg = "Subnet is set to be associated with route table {}".format(rtid)
+                msg = f"Subnet is set to be associated with route table {rtid}"
                 ret["comment"] = " ".join([ret["comment"], msg])
                 ret["result"] = None
                 return ret
@@ -743,7 +750,7 @@ def subnet_present(
                 ret["result"] = False
                 return ret
             else:
-                msg = "Subnet successfully associated with route table {}.".format(rtid)
+                msg = f"Subnet successfully associated with route table {rtid}."
                 ret["comment"] = " ".join([ret["comment"], msg])
                 if "new" not in ret["changes"]:
                     ret["changes"]["new"] = __salt__["boto_vpc.describe_subnet"](
@@ -761,7 +768,7 @@ def subnet_present(
             ret["comment"] = " ".join(
                 [
                     ret["comment"],
-                    "Subnet is already associated with route table {}".format(rtid),
+                    f"Subnet is already associated with route table {rtid}",
                 ]
             )
     return ret
@@ -823,7 +830,7 @@ def subnet_absent(
     _id = r.get("id")
 
     if not _id:
-        ret["comment"] = "{} subnet does not exist.".format(name)
+        ret["comment"] = f"{name} subnet does not exist."
         return ret
 
     if __opts__["test"]:
@@ -841,7 +848,7 @@ def subnet_absent(
 
     ret["changes"]["old"] = {"subnet": _id}
     ret["changes"]["new"] = {"subnet": None}
-    ret["comment"] = "Subnet {} deleted.".format(name)
+    ret["comment"] = f"Subnet {name} deleted."
     return ret
 
 
@@ -904,7 +911,7 @@ def internet_gateway_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Internet gateway {} is set to be created.".format(name)
+            ret["comment"] = f"Internet gateway {name} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_vpc.create_internet_gateway"](
@@ -926,9 +933,9 @@ def internet_gateway_present(
 
         ret["changes"]["old"] = {"internet_gateway": None}
         ret["changes"]["new"] = {"internet_gateway": r["id"]}
-        ret["comment"] = "Internet gateway {} created.".format(name)
+        ret["comment"] = f"Internet gateway {name} created."
         return ret
-    ret["comment"] = "Internet gateway {} present.".format(name)
+    ret["comment"] = f"Internet gateway {name} present."
     return ret
 
 
@@ -977,11 +984,11 @@ def internet_gateway_absent(
 
     igw_id = r["id"]
     if not igw_id:
-        ret["comment"] = "Internet gateway {} does not exist.".format(name)
+        ret["comment"] = f"Internet gateway {name} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Internet gateway {} is set to be removed.".format(name)
+        ret["comment"] = f"Internet gateway {name} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_vpc.delete_internet_gateway"](
@@ -1000,7 +1007,7 @@ def internet_gateway_absent(
         return ret
     ret["changes"]["old"] = {"internet_gateway": igw_id}
     ret["changes"]["new"] = {"internet_gateway": None}
-    ret["comment"] = "Internet gateway {} deleted.".format(name)
+    ret["comment"] = f"Internet gateway {name} deleted."
     return ret
 
 
@@ -1162,7 +1169,7 @@ def _route_table_present(
 
     if not _id:
         if __opts__["test"]:
-            msg = "Route table {} is set to be created.".format(name)
+            msg = f"Route table {name} is set to be created."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -1186,9 +1193,9 @@ def _route_table_present(
 
         ret["changes"]["old"] = {"route_table": None}
         ret["changes"]["new"] = {"route_table": r["id"]}
-        ret["comment"] = "Route table {} created.".format(name)
+        ret["comment"] = f"Route table {name} created."
         return ret
-    ret["comment"] = "Route table {} ({}) present.".format(name, _id)
+    ret["comment"] = f"Route table {name} ({_id}) present."
     return ret
 
 
@@ -1247,7 +1254,7 @@ def _routes_present(
                     ret["result"] = False
                     return ret
                 if r["id"] is None:
-                    msg = "Internet gateway {} does not exist.".format(i)
+                    msg = f"Internet gateway {i} does not exist."
                     ret["comment"] = msg
                     ret["result"] = False
                     return ret
@@ -1271,7 +1278,7 @@ def _routes_present(
                     ret["result"] = False
                     return ret
                 if r["id"] is None:
-                    msg = "VPC peering connection {} does not exist.".format(i)
+                    msg = f"VPC peering connection {i} does not exist."
                     ret["comment"] = msg
                     ret["result"] = False
                     return ret
@@ -1325,7 +1332,7 @@ def _routes_present(
                 to_delete.append(route)
     if to_create or to_delete:
         if __opts__["test"]:
-            msg = "Route table {} set to have routes modified.".format(route_table_name)
+            msg = f"Route table {route_table_name} set to have routes modified."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -1359,7 +1366,7 @@ def _routes_present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **r
+                    **r,
                 )
                 if not res["created"]:
                     msg = "Failed to create route {} in route table {}: {}.".format(
@@ -1414,7 +1421,7 @@ def _subnets_present(
                 ret["result"] = False
                 return ret
             if r["id"] is None:
-                msg = "Subnet {} does not exist.".format(i)
+                msg = f"Subnet {i} does not exist."
                 ret["comment"] = msg
                 ret["result"] = False
                 return ret
@@ -1538,11 +1545,11 @@ def route_table_absent(name, region=None, key=None, keyid=None, profile=None):
     rtbl_id = r["id"]
 
     if not rtbl_id:
-        ret["comment"] = "Route table {} does not exist.".format(name)
+        ret["comment"] = f"Route table {name} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Route table {} is set to be removed.".format(name)
+        ret["comment"] = f"Route table {name} is set to be removed."
         ret["result"] = None
         return ret
 
@@ -1557,7 +1564,7 @@ def route_table_absent(name, region=None, key=None, keyid=None, profile=None):
         return ret
     ret["changes"]["old"] = {"route_table": rtbl_id}
     ret["changes"]["new"] = {"route_table": None}
-    ret["comment"] = "Route table {} deleted.".format(name)
+    ret["comment"] = f"Route table {name} deleted."
     return ret
 
 
@@ -1652,7 +1659,7 @@ def nat_gateway_present(
 
     inst = r[0]
     _id = inst.get("NatGatewayId")
-    ret["comment"] = "Nat gateway {} present.".format(_id)
+    ret["comment"] = f"Nat gateway {_id} present."
     return ret
 
 
@@ -1742,9 +1749,7 @@ def nat_gateway_absent(
                 r["error"]["message"]
             )
             return ret
-        ret["comment"] = ", ".join(
-            (ret["comment"], "Nat gateway {} deleted.".format(rtbl_id))
-        )
+        ret["comment"] = ", ".join((ret["comment"], f"Nat gateway {rtbl_id} deleted."))
     ret["changes"]["old"] = {"nat_gateway": rtbl_id}
     ret["changes"]["new"] = {"nat_gateway": None}
     return ret

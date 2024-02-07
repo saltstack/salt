@@ -77,6 +77,12 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -306,7 +312,7 @@ def present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "RDS instance {} would be created.".format(name)
+            ret["comment"] = f"RDS instance {name} would be created."
             ret["result"] = None
             return ret
 
@@ -374,9 +380,9 @@ def present(
                 profile=profile,
             )
         }
-        ret["comment"] = "RDS instance {} created.".format(name)
+        ret["comment"] = f"RDS instance {name} created."
     else:
-        ret["comment"] = "RDS instance {} exists.".format(name)
+        ret["comment"] = f"RDS instance {name} exists."
     return ret
 
 
@@ -413,7 +419,7 @@ def replica_present(
     )
     if not replica_exists.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "RDS read replica {} is set to be created ".format(name)
+            ret["comment"] = f"RDS read replica {name} is set to be created "
             ret["result"] = None
             return ret
         created = __salt__["boto_rds.create_read_replica"](
@@ -433,7 +439,7 @@ def replica_present(
             profile,
         )
         if created:
-            ret["comment"] = "RDS replica {} created.".format(name)
+            ret["comment"] = f"RDS replica {name} created."
             ret["changes"]["old"] = {"instance": None}
             ret["changes"]["new"] = {
                 "instance": __salt__["boto_rds.describe_db_instances"](
@@ -447,7 +453,7 @@ def replica_present(
             }
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create RDS replica {}.".format(name)
+            ret["comment"] = f"Failed to create RDS replica {name}."
     else:
         jmespath = "DBInstances[0].DBParameterGroups[0].DBParameterGroupName"
         pmg_name = __salt__["boto_rds.describe_db_instances"](
@@ -472,11 +478,11 @@ def replica_present(
                 ret["result"] = False
                 ret[
                     "comment"
-                ] = "Failed to update parameter group of {} RDS instance.".format(name)
+                ] = f"Failed to update parameter group of {name} RDS instance."
             ret["changes"]["old"] = pmg_name
             ret["changes"]["new"] = db_parameter_group_name
         ret["result"] = True
-        ret["comment"] = "RDS replica {} exists.".format(name)
+        ret["comment"] = f"RDS replica {name} exists."
     return ret
 
 
@@ -547,7 +553,7 @@ def subnet_group_present(
                 ret["result"] = False
                 return ret
             if r["id"] is None:
-                ret["comment"] = "Subnet {} does not exist.".format(i)
+                ret["comment"] = f"Subnet {i} does not exist."
                 ret["result"] = False
                 return ret
             subnet_ids.append(r["id"])
@@ -557,7 +563,7 @@ def subnet_group_present(
     )
     if not exists.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Subnet group {} is set to be created.".format(name)
+            ret["comment"] = f"Subnet group {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_rds.create_subnet_group"](
@@ -573,14 +579,14 @@ def subnet_group_present(
 
         if not created:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} subnet group.".format(name)
+            ret["comment"] = f"Failed to create {name} subnet group."
             return ret
         ret["changes"]["old"] = None
         ret["changes"]["new"] = name
-        ret["comment"] = "Subnet {} created.".format(name)
+        ret["comment"] = f"Subnet {name} created."
         return ret
     else:
-        ret["comment"] = "Subnet {} present.".format(name)
+        ret["comment"] = f"Subnet {name} present."
 
         return ret
 
@@ -642,11 +648,11 @@ def absent(
     )
     if not current:
         ret["result"] = True
-        ret["comment"] = "{} RDS already absent.".format(name)
+        ret["comment"] = f"{name} RDS already absent."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "RDS {} would be removed.".format(name)
+        ret["comment"] = f"RDS {name} would be removed."
         ret["result"] = None
         return ret
     deleted = __salt__["boto_rds.delete"](
@@ -663,11 +669,11 @@ def absent(
     )
     if not deleted:
         ret["result"] = False
-        ret["comment"] = "Failed to delete {} RDS.".format(name)
+        ret["comment"] = f"Failed to delete {name} RDS."
         return ret
     ret["changes"]["old"] = {"instance": current[0]}
     ret["changes"]["new"] = {"instance": None}
-    ret["comment"] = "RDS {} deleted.".format(name)
+    ret["comment"] = f"RDS {name} deleted."
     return ret
 
 
@@ -681,11 +687,11 @@ def subnet_group_absent(
     )
     if not exists:
         ret["result"] = True
-        ret["comment"] = "{} RDS subnet group does not exist.".format(name)
+        ret["comment"] = f"{name} RDS subnet group does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "RDS subnet group {} is set to be removed.".format(name)
+        ret["comment"] = f"RDS subnet group {name} is set to be removed."
         ret["result"] = None
         return ret
     deleted = __salt__["boto_rds.delete_subnet_group"](
@@ -693,11 +699,11 @@ def subnet_group_absent(
     )
     if not deleted:
         ret["result"] = False
-        ret["comment"] = "Failed to delete {} RDS subnet group.".format(name)
+        ret["comment"] = f"Failed to delete {name} RDS subnet group."
         return ret
     ret["changes"]["old"] = name
     ret["changes"]["new"] = None
-    ret["comment"] = "RDS subnet group {} deleted.".format(name)
+    ret["comment"] = f"RDS subnet group {name} deleted."
     return ret
 
 
@@ -762,7 +768,7 @@ def parameter_present(
     )
     if not res.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Parameter group {} is set to be created.".format(name)
+            ret["comment"] = f"Parameter group {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_rds.create_parameter_group"](
@@ -777,12 +783,12 @@ def parameter_present(
         )
         if not created:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} parameter group.".format(name)
+            ret["comment"] = f"Failed to create {name} parameter group."
             return ret
         ret["changes"]["New Parameter Group"] = name
-        ret["comment"] = "Parameter group {} created.".format(name)
+        ret["comment"] = f"Parameter group {name} created."
     else:
-        ret["comment"] = "Parameter group {} present.".format(name)
+        ret["comment"] = f"Parameter group {name} present."
     if parameters is not None:
         params = {}
         changed = {}
@@ -799,7 +805,7 @@ def parameter_present(
         if not options.get("result"):
             ret["result"] = False
             ret["comment"] = os.linesep.join(
-                [ret["comment"], "Faled to get parameters for group  {}.".format(name)]
+                [ret["comment"], f"Faled to get parameters for group  {name}."]
             )
             return ret
         for parameter in options["parameters"].values():
@@ -853,14 +859,14 @@ def parameter_present(
             ret["comment"] = os.linesep.join(
                 [
                     ret["comment"],
-                    "Parameters {} for group {} are changed.".format(changed, name),
+                    f"Parameters {changed} for group {name} are changed.",
                 ]
             )
         else:
             ret["comment"] = os.linesep.join(
                 [
                     ret["comment"],
-                    "Parameters {} for group {} are present.".format(params, name),
+                    f"Parameters {params} for group {name} are present.",
                 ]
             )
     return ret

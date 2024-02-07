@@ -26,7 +26,7 @@ runs:
 
     - name: Download Release Patch
       if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.patch
 
@@ -53,7 +53,7 @@ runs:
         tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Upload Source Tarball as an Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
         path: dist/salt-*.tar.gz*

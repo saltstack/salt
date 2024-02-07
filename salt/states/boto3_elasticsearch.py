@@ -50,6 +50,12 @@ import salt.utils.json
 from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
 __virtualname__ = "boto3_elasticsearch"
 
 
@@ -73,7 +79,7 @@ def __virtual__():
         if req not in __salt__:
             return (
                 False,
-                "A required function was not found in __salt__: {}".format(req),
+                f"A required function was not found in __salt__: {req}",
             )
     return __virtualname__
 
@@ -378,7 +384,7 @@ def present(
             else:
                 ret["result"] = True
                 ret["comment"].append(
-                    'Elasticsearch Domain "{}" has been {}d.'.format(name, action)
+                    f'Elasticsearch Domain "{name}" has been {action}d.'
                 )
                 ret["changes"] = config_diff
     elif action == "upgrade":
@@ -455,7 +461,7 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                'Elasticsearch domain "{}" would have been removed.'.format(name)
+                f'Elasticsearch domain "{name}" would have been removed.'
             )
             ret["changes"] = {"old": name, "new": None}
         else:
@@ -477,14 +483,12 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
             else:
                 ret["result"] = True
                 ret["comment"].append(
-                    'Elasticsearch domain "{}" has been deleted.'.format(name)
+                    f'Elasticsearch domain "{name}" has been deleted.'
                 )
                 ret["changes"] = {"old": name, "new": None}
     else:
         ret["result"] = True
-        ret["comment"].append(
-            'Elasticsearch domain "{}" is already absent.'.format(name)
-        )
+        ret["comment"].append(f'Elasticsearch domain "{name}" is already absent.')
     ret = _check_return_value(ret)
     return ret
 
@@ -529,9 +533,7 @@ def upgraded(
     if not res["result"]:
         ret["result"] = False
         if "ResourceNotFoundException" in res["error"]:
-            ret["comment"].append(
-                'The Elasticsearch domain "{}" does not exist.'.format(name)
-            )
+            ret["comment"].append(f'The Elasticsearch domain "{name}" does not exist.')
         else:
             ret["comment"].append(res["error"])
     else:
@@ -727,9 +729,7 @@ def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=Non
         pass
     if not current_version:
         ret["result"] = True
-        ret["comment"].append(
-            'The Elasticsearch domain "{}" can not be upgraded.'.format(name)
-        )
+        ret["comment"].append(f'The Elasticsearch domain "{name}" can not be upgraded.')
     elif not latest_version:
         ret["result"] = True
         ret["comment"].append(
@@ -819,7 +819,7 @@ def tagged(
             current_tags = res["response"] or {}
     else:
         ret["result"] = False
-        ret["comment"].append('Elasticsearch domain "{}" does not exist.'.format(name))
+        ret["comment"].append(f'Elasticsearch domain "{name}" does not exist.')
     if isinstance(ret["result"], bool):
         return ret
 
@@ -827,7 +827,7 @@ def tagged(
     if not diff_tags:
         ret["result"] = True
         ret["comment"].append(
-            'Elasticsearch domain "{}" already has the specified tags.'.format(name)
+            f'Elasticsearch domain "{name}" already has the specified tags.'
         )
     else:
         if replace:

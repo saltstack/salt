@@ -55,6 +55,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 import salt.utils.data
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -106,7 +112,7 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
     if alarm_details:
         for k, v in attributes.items():
             if k not in alarm_details:
-                difference.append("{}={} (new)".format(k, v))
+                difference.append(f"{k}={v} (new)")
                 continue
             v = salt.utils.data.decode(v)
             v2 = salt.utils.data.decode(alarm_details[k])
@@ -120,7 +126,7 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
                 continue
             if isinstance(v, list) and sorted(v) == sorted(v2):
                 continue
-            difference.append("{}='{}' was: '{}'".format(k, v, v2))
+            difference.append(f"{k}='{v}' was: '{v2}'")
     else:
         difference.append("new alarm")
     create_or_update_alarm_args = {
@@ -134,10 +140,10 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
     if alarm_details:  # alarm is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
         if len(difference) == 0:
-            ret["comment"] = "alarm {} present and matching".format(name)
+            ret["comment"] = f"alarm {name} present and matching"
             return ret
         if __opts__["test"]:
-            msg = "alarm {} is to be created/updated.".format(name)
+            msg = f"alarm {name} is to be created/updated."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -148,10 +154,10 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["diff"] = difference
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} alarm".format(name)
+            ret["comment"] = f"Failed to create {name} alarm"
     else:  # alarm is absent. create it.
         if __opts__["test"]:
-            msg = "alarm {} is to be created/updated.".format(name)
+            msg = f"alarm {name} is to be created/updated."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -162,7 +168,7 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["new"] = attributes
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} alarm".format(name)
+            ret["comment"] = f"Failed to create {name} alarm"
     return ret
 
 
@@ -194,7 +200,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 
     if is_present:
         if __opts__["test"]:
-            ret["comment"] = "alarm {} is set to be removed.".format(name)
+            ret["comment"] = f"alarm {name} is set to be removed."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_cloudwatch.delete_alarm"](
@@ -205,8 +211,8 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["new"] = None
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} alarm.".format(name)
+            ret["comment"] = f"Failed to delete {name} alarm."
     else:
-        ret["comment"] = "{} does not exist in {}.".format(name, region)
+        ret["comment"] = f"{name} does not exist in {region}."
 
     return ret

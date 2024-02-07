@@ -80,6 +80,12 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -157,7 +163,7 @@ def thing_type_present(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Thing type {} is set to be created.".format(thingTypeName)
+        ret["comment"] = f"Thing type {thingTypeName} is set to be created."
         ret["result"] = None
         return ret
 
@@ -187,7 +193,7 @@ def thing_type_present(
     )
     ret["changes"]["old"] = {"thing_type": None}
     ret["changes"]["new"] = _describe
-    ret["comment"] = "Thing Type {} created.".format(thingTypeName)
+    ret["comment"] = f"Thing Type {thingTypeName} created."
     return ret
 
 
@@ -237,7 +243,7 @@ def thing_type_absent(
         return ret
 
     if _describe and not _describe["thing_type"]:
-        ret["comment"] = "Thing Type {} does not exist.".format(thingTypeName)
+        ret["comment"] = f"Thing Type {thingTypeName} does not exist."
         return ret
 
     _existing_thing_type = _describe["thing_type"]
@@ -319,7 +325,7 @@ def thing_type_absent(
         return ret
     ret["changes"]["old"] = _describe
     ret["changes"]["new"] = {"thing_type": None}
-    ret["comment"] = "Thing Type {} deleted.".format(thingTypeName)
+    ret["comment"] = f"Thing Type {thingTypeName} deleted."
     return ret
 
 
@@ -366,7 +372,7 @@ def policy_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Policy {} is set to be created.".format(policyName)
+            ret["comment"] = f"Policy {policyName} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_iot.create_policy"](
@@ -388,11 +394,11 @@ def policy_present(
         )
         ret["changes"]["old"] = {"policy": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Policy {} created.".format(policyName)
+        ret["comment"] = f"Policy {policyName} created."
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "Policy {} is present.".format(policyName)]
+        [ret["comment"], f"Policy {policyName} is present."]
     )
     ret["changes"] = {}
     # policy exists, ensure config matches
@@ -411,7 +417,7 @@ def policy_present(
     r = salt.utils.data.compare_dicts(describeDict, policyDocument)
     if bool(r):
         if __opts__["test"]:
-            msg = "Policy {} set to be modified.".format(policyName)
+            msg = f"Policy {policyName} set to be modified."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -487,11 +493,11 @@ def policy_absent(name, policyName, region=None, key=None, keyid=None, profile=N
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "Policy {} does not exist.".format(policyName)
+        ret["comment"] = f"Policy {policyName} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Policy {} is set to be removed.".format(policyName)
+        ret["comment"] = f"Policy {policyName} is set to be removed."
         ret["result"] = None
         return ret
     # delete non-default versions
@@ -532,7 +538,7 @@ def policy_absent(name, policyName, region=None, key=None, keyid=None, profile=N
         return ret
     ret["changes"]["old"] = {"policy": policyName}
     ret["changes"]["new"] = {"policy": None}
-    ret["comment"] = "Policy {} deleted.".format(policyName)
+    ret["comment"] = f"Policy {policyName} deleted."
     return ret
 
 
@@ -603,11 +609,11 @@ def policy_attached(
             return ret
         ret["changes"]["old"] = {"attached": False}
         ret["changes"]["new"] = {"attached": True}
-        ret["comment"] = "Policy {} attached to {}.".format(policyName, principal)
+        ret["comment"] = f"Policy {policyName} attached to {principal}."
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "Policy {} is attached.".format(policyName)]
+        [ret["comment"], f"Policy {policyName} is attached."]
     )
     ret["changes"] = {}
 
@@ -682,11 +688,11 @@ def policy_detached(
             return ret
         ret["changes"]["old"] = {"attached": True}
         ret["changes"]["new"] = {"attached": False}
-        ret["comment"] = "Policy {} detached from {}.".format(policyName, principal)
+        ret["comment"] = f"Policy {policyName} detached from {principal}."
         return ret
 
     ret["comment"] = os.linesep.join(
-        [ret["comment"], "Policy {} is detached.".format(policyName)]
+        [ret["comment"], f"Policy {policyName} is detached."]
     )
     ret["changes"] = {}
 
@@ -752,7 +758,7 @@ def topic_rule_present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Rule {} is set to be created.".format(ruleName)
+            ret["comment"] = f"Rule {ruleName} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_iot.create_topic_rule"](
@@ -775,12 +781,10 @@ def topic_rule_present(
         )
         ret["changes"]["old"] = {"rule": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Rule {} created.".format(ruleName)
+        ret["comment"] = f"Rule {ruleName} created."
         return ret
 
-    ret["comment"] = os.linesep.join(
-        [ret["comment"], "Rule {} is present.".format(ruleName)]
-    )
+    ret["comment"] = os.linesep.join([ret["comment"], f"Rule {ruleName} is present."])
     ret["changes"] = {}
     # policy exists, ensure config matches
     _describe = __salt__["boto_iot.describe_topic_rule"](
@@ -805,7 +809,7 @@ def topic_rule_present(
             ret["changes"].setdefault("old", {})[var] = _describe[var]
     if need_update:
         if __opts__["test"]:
-            msg = "Rule {} set to be modified.".format(ruleName)
+            msg = f"Rule {ruleName} set to be modified."
             ret["changes"] = {}
             ret["comment"] = msg
             ret["result"] = None
@@ -864,11 +868,11 @@ def topic_rule_absent(name, ruleName, region=None, key=None, keyid=None, profile
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "Rule {} does not exist.".format(ruleName)
+        ret["comment"] = f"Rule {ruleName} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Rule {} is set to be removed.".format(ruleName)
+        ret["comment"] = f"Rule {ruleName} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_iot.delete_topic_rule"](
@@ -880,5 +884,5 @@ def topic_rule_absent(name, ruleName, region=None, key=None, keyid=None, profile
         return ret
     ret["changes"]["old"] = {"rule": ruleName}
     ret["changes"]["new"] = {"rule": None}
-    ret["comment"] = "Rule {} deleted.".format(ruleName)
+    ret["comment"] = f"Rule {ruleName} deleted."
     return ret

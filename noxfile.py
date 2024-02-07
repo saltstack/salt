@@ -62,6 +62,7 @@ if PRINT_SYSTEM_INFO is None:
     PRINT_SYSTEM_INFO = CI_RUN
 else:
     PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
+PRINT_SYSTEM_INFO_ONLY = os.environ.get("PRINT_SYSTEM_INFO_ONLY", "0") == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
@@ -1022,6 +1023,11 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
         args.append(f"--log-file={RUNTESTS_LOGFILE}")
     args.extend(cmd_args)
 
+    if PRINT_SYSTEM_INFO_ONLY and "--sys-info-and-exit" not in args:
+        args.append("--sys-info-and-exit")
+        session.run("python", "-m", "pytest", *args, env=env)
+        return
+
     if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
         args.append("--sysinfo")
 
@@ -1230,14 +1236,29 @@ def coverage_report(session):
 def decompress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if "windows" in distro_slug:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'decompress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
+        scripts_dir_name = "Scripts"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+        scripts_dir_name = "bin"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if not nox_dependencies_tarball_path.exists():
         session.error(
@@ -1251,10 +1272,7 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
-        if "windows" not in distro_slug:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
-        else:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
+        scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
         for key in sorted(script_paths):
@@ -1285,7 +1303,7 @@ def decompress_dependencies(session):
                 continue
             if not path.is_file():
                 continue
-            if "windows" not in distro_slug:
+            if platform != "windows":
                 # Let's try to fix shebang's
                 try:
                     fpath = pathlib.Path(path)
@@ -1308,14 +1326,27 @@ def decompress_dependencies(session):
 def compress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if IS_WINDOWS:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'compress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if nox_dependencies_tarball_path.exists():
         session_warn(
@@ -1907,6 +1938,11 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
+    for arg in session.posargs:
+        if arg.startswith("tests/pytests/pkg/"):
+            # The user is passing test paths
+            cmd_args.pop()
+            break
 
     if IS_LINUX:
         # Fetch the toolchain
