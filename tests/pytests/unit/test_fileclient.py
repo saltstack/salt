@@ -1,6 +1,7 @@
 """
 Unit tests for salt.fileclient
 """
+import salt.config
 import salt.fileclient as fileclient
 from tests.support.mock import MagicMock, patch
 
@@ -12,9 +13,10 @@ def test_fsclient_master_no_fs_update(master_opts):
     maintenance thread for that.
     """
     master_opts["file_client"] = "local"
+    opts = salt.config.apply_master_config(master_opts)
     fileserver = MagicMock()
     with patch("salt.fileserver.Fileserver", fileserver):
-        client = fileclient.FSClient(master_opts)
+        client = fileclient.FSClient(opts)
         assert client.channel.fs.update.call_count == 0
 
 
@@ -25,7 +27,8 @@ def test_fsclient_masterless_fs_update(minion_opts):
     can access any configured gitfs remotes.
     """
     minion_opts["file_client"] = "local"
+    opts = salt.config.apply_minion_config(minion_opts)
     fileserver = MagicMock()
     with patch("salt.fileserver.Fileserver", fileserver):
-        client = fileclient.FSClient(minion_opts)
+        client = fileclient.FSClient(opts)
         assert client.channel.fs.update.call_count == 1
