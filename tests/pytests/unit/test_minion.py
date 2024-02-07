@@ -36,7 +36,7 @@ def connect_master_mock():
             self.calls = 0
             self.exc = Exception
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def __call__(self, *args, **kwargs):
             self.calls += 1
             if self.calls == 1:
