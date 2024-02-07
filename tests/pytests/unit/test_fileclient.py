@@ -12,8 +12,8 @@ def test_fsclient_master_no_fs_update(master_opts):
     backends to be refreshed on instantiation. The master already has the
     maintenance thread for that.
     """
-    master_opts["file_client"] = "local"
-    opts = salt.config.apply_master_config(master_opts)
+    overrides = {"file_client": "local"}
+    opts = salt.config.apply_master_config(overrides, master_opts)
     fileserver = MagicMock()
     with patch("salt.fileserver.Fileserver", fileserver):
         client = fileclient.FSClient(opts)
@@ -26,8 +26,8 @@ def test_fsclient_masterless_fs_update(minion_opts):
     fileserver backends. This is necessary to ensure that a masterless run
     can access any configured gitfs remotes.
     """
-    minion_opts["file_client"] = "local"
-    opts = salt.config.apply_minion_config(minion_opts)
+    overrides = {"file_client": "local"}
+    opts = salt.config.apply_minion_config(overrides, minion_opts)
     fileserver = MagicMock()
     with patch("salt.fileserver.Fileserver", fileserver):
         client = fileclient.FSClient(opts)
