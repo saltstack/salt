@@ -113,7 +113,9 @@ def _get_account_policy_data_value(name, key):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
         if "eDSUnknownNodeName" in exc.strerror:
-            raise CommandExecutionError("User not found: {}".format(name))
+            raise CommandExecutionError(f"User not found: {name}")
+        if "eDSUnknownMatchType" in exc.strerror:
+            raise CommandExecutionError(f"Value not found: {key}")
         raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
 
     return ret
@@ -191,7 +193,8 @@ def get_account_created(name):
 
     :param str name: The username of the account
 
-    :return: The date/time the account was created (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was created (yyyy-mm-dd hh:mm:ss) or 0 if
+        the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -202,13 +205,16 @@ def get_account_created(name):
 
         salt '*' shadow.get_account_created admin
     """
-    ret = _get_account_policy_data_value(name, "creationTime")
+    try:
+        ret = _get_account_policy_data_value(name, "creationTime")
+    except CommandExecutionError as exc:
+        if "Value not found" in exc.message:
+            return "0"
+        else:
+            raise
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
-
-    return date_text
+    return _convert_to_datetime(unix_timestamp)
 
 
 def get_last_change(name):
@@ -217,7 +223,8 @@ def get_last_change(name):
 
     :param str name: The username of the account
 
-    :return: The date/time the account was modified (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was modified (yyyy-mm-dd hh:mm:ss) or 0
+        if the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -228,13 +235,16 @@ def get_last_change(name):
 
         salt '*' shadow.get_last_change admin
     """
-    ret = _get_account_policy_data_value(name, "passwordLastSetTime")
+    try:
+        ret = _get_account_policy_data_value(name, "passwordLastSetTime")
+    except CommandExecutionError as exc:
+        if "Value not found" in exc.message:
+            return "0"
+        else:
+            raise
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
-
-    return date_text
+    return _convert_to_datetime(unix_timestamp)
 
 
 def get_login_failed_count(name):
@@ -243,8 +253,9 @@ def get_login_failed_count(name):
 
     :param str name: The username of the account
 
-    :return: The number of failed login attempts
-    :rtype: int
+    :return: The number of failed login attempts. 0 may mean there are no failed
+        login attempts or the value is not defined
+    :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
 
@@ -254,8 +265,13 @@ def get_login_failed_count(name):
 
         salt '*' shadow.get_login_failed_count admin
     """
-    ret = _get_account_policy_data_value(name, "failedLoginCount")
-
+    try:
+        ret = _get_account_policy_data_value(name, "failedLoginCount")
+    except CommandExecutionError as exc:
+        if "Value not found" in exc.message:
+            return "0"
+        else:
+            raise
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -266,7 +282,7 @@ def get_login_failed_last(name):
     :param str name: The username of the account
 
     :return: The date/time of the last failed login attempt on this account
-        (yyyy-mm-dd hh:mm:ss)
+        (yyyy-mm-dd hh:mm:ss) or 0 if the value is not defined
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -277,13 +293,16 @@ def get_login_failed_last(name):
 
         salt '*' shadow.get_login_failed_last admin
     """
-    ret = _get_account_policy_data_value(name, "failedLoginTimestamp")
+    try:
+        ret = _get_account_policy_data_value(name, "failedLoginTimestamp")
+    except CommandExecutionError as exc:
+        if "Value not found" in exc.message:
+            return "0"
+        else:
+            raise
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
-
-    date_text = _convert_to_datetime(unix_timestamp)
-
-    return date_text
+    return _convert_to_datetime(unix_timestamp)
 
 
 def set_maxdays(name, days):
