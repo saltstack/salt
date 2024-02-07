@@ -53,13 +53,13 @@ def _get_account_policy(name):
     :raises: CommandExecutionError on user not found or any other unknown error
     """
 
-    cmd = "pwpolicy -u {} -getpolicy".format(name)
+    cmd = f"pwpolicy -u {name} -getpolicy"
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
-        if "Error: user <{}> not found".format(name) in exc.strerror:
-            raise CommandExecutionError("User not found: {}".format(name))
-        raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
+        if f"Error: user <{name}> not found" in exc.strerror:
+            raise CommandExecutionError(f"User not found: {name}")
+        raise CommandExecutionError(f"Unknown error: {exc.strerror}")
 
     try:
         policy_list = ret.split("\n")[1].split(" ")
@@ -85,14 +85,14 @@ def _set_account_policy(name, policy):
 
     :raises: CommandExecutionError on user not found or any other unknown error
     """
-    cmd = 'pwpolicy -u {} -setpolicy "{}"'.format(name, policy)
+    cmd = f'pwpolicy -u {name} -setpolicy "{policy}"'
 
     try:
         return salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
-        if "Error: user <{}> not found".format(name) in exc.strerror:
-            raise CommandExecutionError("User not found: {}".format(name))
-        raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
+        if f"Error: user <{name}> not found" in exc.strerror:
+            raise CommandExecutionError(f"User not found: {name}")
+        raise CommandExecutionError(f"Unknown error: {exc.strerror}")
 
 
 def _get_account_policy_data_value(name, key):
@@ -108,7 +108,7 @@ def _get_account_policy_data_value(name, key):
 
     :raises: CommandExecutionError on user not found or any other unknown error
     """
-    cmd = "dscl . -readpl /Users/{} accountPolicyData {}".format(name, key)
+    cmd = f"dscl . -readpl /Users/{name} accountPolicyData {key}"
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
@@ -116,7 +116,7 @@ def _get_account_policy_data_value(name, key):
             raise CommandExecutionError(f"User not found: {name}")
         if "eDSUnknownMatchType" in exc.strerror:
             raise CommandExecutionError(f"Value not found: {key}")
-        raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
+        raise CommandExecutionError(f"Unknown error: {exc.strerror}")
 
     return ret
 
@@ -326,7 +326,7 @@ def set_maxdays(name, days):
     """
     minutes = days * 24 * 60
 
-    _set_account_policy(name, "maxMinutesUntilChangePassword={}".format(minutes))
+    _set_account_policy(name, f"maxMinutesUntilChangePassword={minutes}")
 
     return get_maxdays(name) == days
 
@@ -440,7 +440,7 @@ def set_change(name, date):
 
         salt '*' shadow.set_change username 09/21/2016
     """
-    _set_account_policy(name, "usingExpirationDate=1 expirationDateGMT={}".format(date))
+    _set_account_policy(name, f"usingExpirationDate=1 expirationDateGMT={date}")
 
     return get_change(name) == date
 
@@ -491,9 +491,7 @@ def set_expire(name, date):
 
         salt '*' shadow.set_expire username 07/23/2015
     """
-    _set_account_policy(
-        name, "usingHardExpirationDate=1 hardExpireDateGMT={}".format(date)
-    )
+    _set_account_policy(name, f"usingHardExpirationDate=1 hardExpireDateGMT={date}")
 
     return get_expire(name) == date
 
@@ -541,16 +539,16 @@ def del_password(name):
         salt '*' shadow.del_password username
     """
     # This removes the password
-    cmd = "dscl . -passwd /Users/{} ''".format(name)
+    cmd = f"dscl . -passwd /Users/{name} ''"
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if "eDSUnknownNodeName" in exc.strerror:
-            raise CommandExecutionError("User not found: {}".format(name))
-        raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
+            raise CommandExecutionError(f"User not found: {name}")
+        raise CommandExecutionError(f"Unknown error: {exc.strerror}")
 
     # This is so it looks right in shadow.info
-    cmd = "dscl . -create /Users/{} Password '*'".format(name)
+    cmd = f"dscl . -create /Users/{name} Password '*'"
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return info(name)["passwd"] == "*"
@@ -577,12 +575,12 @@ def set_password(name, password):
 
         salt '*' mac_shadow.set_password macuser macpassword
     """
-    cmd = "dscl . -passwd /Users/{} '{}'".format(name, password)
+    cmd = f"dscl . -passwd /Users/{name} '{password}'"
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if "eDSUnknownNodeName" in exc.strerror:
-            raise CommandExecutionError("User not found: {}".format(name))
-        raise CommandExecutionError("Unknown error: {}".format(exc.strerror))
+            raise CommandExecutionError(f"User not found: {name}")
+        raise CommandExecutionError(f"Unknown error: {exc.strerror}")
 
     return True
