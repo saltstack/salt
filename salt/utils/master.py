@@ -64,7 +64,14 @@ def clean_proc_dir(opts):
     proc_dir = os.path.join(opts["cachedir"], "proc")
     for fn_ in os.listdir(proc_dir):
         proc_file = os.path.join(proc_dir, fn_)
-        data = _read_proc_file(proc_file, opts)
+        try:
+            data = _read_proc_file(proc_file, opts)
+        except OSError:
+            # proc files may be removed at any time during this process by
+            # the master process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            log.trace("%s removed during processing by master process", proc_file)
+            continue
         if not data:
             try:
                 log.warning(
