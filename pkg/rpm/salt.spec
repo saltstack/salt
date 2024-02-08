@@ -432,17 +432,25 @@ find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
 
 
 # assumes systemd for RHEL 7 & 8 & 9
+# foregoing %systemd_* scriptlets due to RHEL 7/8 vs. RHEL 9 incompatibilities
+## - Using hardcoded scriptlet definitions from RHEL 7/8 that are forward-compatible
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
-%systemd_preun salt-syndic.service > /dev/null 2>&1
+# %systemd_preun salt-syndic.service > /dev/null 2>&1
+systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
+systemctl stop salt-syndic.service > /dev/null 2>&1 || :
 
 
 %preun minion
-%systemd_preun salt-minion.service
+# %systemd_preun salt-minion.service
+systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+systemctl stop salt-minion.service > /dev/null 2>&1 || :
 
 
 %preun api
-%systemd_preun salt-api.service
+# %systemd_preun salt-api.service
+systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
+systemctl stop salt-api.service > /dev/null 2>&1 || :
 
 
 %post
@@ -456,7 +464,8 @@ ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
 %post master
-%systemd_post salt-master.service
+# %systemd_post salt-master.service
+systemctl preset salt-master.service >/dev/null 2>&1 || :
 ln -s -f /opt/saltstack/salt/salt %{_bindir}/salt
 ln -s -f /opt/saltstack/salt/salt-cp %{_bindir}/salt-cp
 ln -s -f /opt/saltstack/salt/salt-key %{_bindir}/salt-key
@@ -477,11 +486,13 @@ if [ $1 -lt 2 ]; then
 fi
 
 %post syndic
-%systemd_post salt-syndic.service
+# %systemd_post salt-syndic.service
+systemctl preset salt-syndic.service >/dev/null 2>&1 || :
 ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 
 %post minion
-%systemd_post salt-minion.service
+# %systemd_post salt-minion.service
+systemctl preset salt-minion.service >/dev/null 2>&1 || :
 ln -s -f /opt/saltstack/salt/salt-minion %{_bindir}/salt-minion
 ln -s -f /opt/saltstack/salt/salt-call %{_bindir}/salt-call
 ln -s -f /opt/saltstack/salt/salt-proxy %{_bindir}/salt-proxy
@@ -503,7 +514,8 @@ fi
 ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 
 %post api
-%systemd_post salt-api.service
+# %systemd_post salt-api.service
+systemctl preset salt-api.service >/dev/null 2>&1 || :
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
 
 
@@ -544,7 +556,9 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun master
-%systemd_postun_with_restart salt-master.service
+# %systemd_postun_with_restart salt-master.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-minion | grep Name | grep salt-minion)" ]; then
@@ -560,10 +574,14 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun syndic
-%systemd_postun_with_restart salt-syndic.service
+# %systemd_postun_with_restart salt-syndic.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 
 %postun minion
-%systemd_postun_with_restart salt-minion.service
+# %systemd_postun_with_restart salt-minion.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-master | grep Name | grep salt-master)" ]; then
@@ -579,8 +597,9 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun api
-%systemd_postun_with_restart salt-api.service
-
+# %systemd_postun_with_restart salt-api.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 
 %changelog
 * Fri Jan 26 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.6
