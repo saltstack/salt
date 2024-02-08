@@ -260,7 +260,7 @@ def _test_lock(opts):
     assert os.path.isfile(repo._get_lock_file())
     assert repo.clear_lock() == (
         [
-            "Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            f"Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
         ],
         [],
     )
