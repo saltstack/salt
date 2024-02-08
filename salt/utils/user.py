@@ -32,6 +32,8 @@ except ImportError:
     HAS_GRP = False
 
 try:
+    import ctypes.wintypes
+
     import salt.utils.win_functions
 
     HAS_WIN_FUNCTIONS = True
