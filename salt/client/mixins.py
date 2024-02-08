@@ -378,11 +378,9 @@ class SyncClientMixin(ClientStateMixin):
                 data["fun_args"] = list(args) + ([kwargs] if kwargs else [])
                 func_globals["__jid_event__"].fire_event(data, "new")
 
-                sdata = copy.deepcopy(data)
                 proc_fn = os.path.join(self.opts["cachedir"], "proc", jid)
-                sdata["pid"] = os.getpid()
                 with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                    fp_.write(salt.payload.dumps(sdata))
+                    fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
 
                 func = self.functions[fun]
                 try:
