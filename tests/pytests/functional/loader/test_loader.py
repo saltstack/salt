@@ -79,24 +79,6 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
             tail
         ), f"{module_dirs_return[i]} does not end with {tail}"
 
-    # Test the deprecated mode as well
-    minion_opts["features"] = {"enable_deprecated_module_search_path_priority": True}
-    ret = venv.run_code(code, input=json.dumps(minion_opts))
-    module_dirs_return = json.loads(ret.stdout)
-    assert len(module_dirs_return) == 5
-    for i, tail in enumerate(
-        [
-            "/module-dir-base/modules",
-            "/module-dir-base",
-            "/site-packages/salt_ext_loader_test/modules",
-            "/var/cache/salt/minion/extmods/modules",
-            "/site-packages/salt/modules",
-        ]
-    ):
-        assert module_dirs_return[i].endswith(
-            tail
-        ), f"{module_dirs_return[i]} does not end with {tail}"
-
 
 def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_factory):
     # Install our extension into the virtualenv
