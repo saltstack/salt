@@ -111,7 +111,7 @@ def _read_proc_file(path, opts):
                 log.debug("Unable to remove proc file %s.", path)
             return None
     if not isinstance(data, dict):
-        # Invalid serial object
+        # Invalid payload object
         return None
     if not salt.utils.process.os_is_running(data["pid"]):
         # The process is no longer running, clear out the file and
