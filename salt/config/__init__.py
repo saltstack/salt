@@ -3949,7 +3949,7 @@ def apply_master_config(overrides=None, defaults=None):
     opts = defaults.copy()
     opts["__role"] = "master"
 
-    # Suppress fileserver update in FSChan, for LocalClient instances generated
+    # Suppress fileserver update in FSChan, for FSClient instances generated
     # during Pillar compilation. The master daemon already handles FS updates
     # in its maintenance thread. Refreshing during Pillar compilation slows
     # down Pillar considerably (even to the point of timeout) when there are
