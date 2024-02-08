@@ -1072,7 +1072,7 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        mach_id = salt.utils.platform.get_machine_identifier()
+        mach_id = salt.utils.files.get_machine_identifier()
         log.debug(
             f"exiting for process id '{os.getpid()}' and machine identifer '{mach_id}'"
         )
