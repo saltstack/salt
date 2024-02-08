@@ -8,8 +8,15 @@ from tests.support.mock import mock_open, patch
 
 
 @pytest.fixture
-def proc_file(tmp_path):
-    path = str(tmp_path / "20240208071139934305")
+def proc_dir(tmp_path):
+    path = tmp_path / "proc"
+    path.mkdir()
+    return str(path)
+
+
+@pytest.fixture
+def proc_file(proc_dir):
+    path = os.path.join(proc_dir, "20240208071139934305")
     data = {
         "fun": "runner.state.orch",
         "jid": "20240208071139934305",
@@ -124,4 +131,48 @@ def test_read_proc_file_running_not_salt_error(proc_file):
         "salt.utils.master._check_cmdline", return_value=False
     ), patch("os.remove", side_effect=OSError):
         assert salt.utils.master._read_proc_file(proc_file[0], {}) is None
+        assert os.path.exists(proc_file[0]) is True
+
+
+def test_clean_proc_dir_no_data(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", return_value=None):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
+        assert os.path.exists(proc_file[0]) is False
+
+
+def test_clean_proc_dir_no_data_error(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", return_value=None), patch(
+        "os.remove", side_effect=OSError
+    ):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
+        assert os.path.exists(proc_file[0]) is True
+
+
+def test_clean_proc_dir_running(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", return_value=proc_file[1]), patch(
+        "salt.utils.master._check_cmdline", return_value=True
+    ):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
+        assert os.path.exists(proc_file[0]) is True
+
+
+def test_clean_proc_dir_running_read_error(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", side_effect=OSError):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
+        assert os.path.exists(proc_file[0]) is True
+
+
+def test_clean_proc_dir_not_running(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", return_value=proc_file[1]), patch(
+        "salt.utils.master._check_cmdline", return_value=False
+    ):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
+        assert os.path.exists(proc_file[0]) is False
+
+
+def test_clean_proc_dir_not_running_error(tmp_path, proc_file):
+    with patch("salt.utils.master._read_proc_file", return_value=proc_file[1]), patch(
+        "salt.utils.master._check_cmdline", return_value=False
+    ), patch("os.remove", side_effect=OSError):
+        salt.utils.master.clean_proc_dir({"cachedir": str(tmp_path)})
         assert os.path.exists(proc_file[0]) is True
