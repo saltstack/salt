@@ -3,13 +3,13 @@ Functions to work with MessagePack
 """
 import logging
 
-import salt.version
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
 msgpack = None
-if salt.version.reqs.msgpack:
-    msgpack = salt.version.reqs.msgpack.module
+if salt.utils.versions.reqs.msgpack:
+    msgpack = salt.utils.versions.reqs.msgpack.module
 else:
     # TODO: Come up with a sane way to get a configured logfile
     #       and write to the logfile when this error is hit also
