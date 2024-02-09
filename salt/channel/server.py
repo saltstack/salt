@@ -371,7 +371,7 @@ class ReqServerChannel:
         elif os.path.isfile(pubfn):
             # The key has been accepted, check it
             with salt.utils.files.fopen(pubfn, "r") as pubfn_handle:
-                if pubfn_handle.read().strip() != load["pub"].strip():
+                if salt.crypt.clean_key(pubfn_handle.read()) != load["pub"]:
                     log.error(
                         "Authentication attempt from %s failed, the public "
                         "keys did not match. This may be an attempt to compromise "
@@ -480,7 +480,7 @@ class ReqServerChannel:
                 # case. Otherwise log the fact that the minion is still
                 # pending.
                 with salt.utils.files.fopen(pubfn_pend, "r") as pubfn_handle:
-                    if pubfn_handle.read() != load["pub"]:
+                    if salt.crypt.clean_key(pubfn_handle.read()) != load["pub"]:
                         log.error(
                             "Authentication attempt from %s failed, the public "
                             "key in pending did not match. This may be an "
@@ -536,7 +536,7 @@ class ReqServerChannel:
                 # so, pass on doing anything here, and let it get automatically
                 # accepted below.
                 with salt.utils.files.fopen(pubfn_pend, "r") as pubfn_handle:
-                    if pubfn_handle.read() != load["pub"]:
+                    if salt.crypt.clean_key(pubfn_handle.read()) != load["pub"]:
                         log.error(
                             "Authentication attempt from %s failed, the public "
                             "keys in pending did not match. This may be an "

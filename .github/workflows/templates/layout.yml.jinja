@@ -9,7 +9,7 @@
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set gh_actions_workflows_python_version = "3.10" %>
-<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml') }}" %>
+<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -37,6 +37,7 @@ env:
   CACHE_SEED: SEED-7  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 <%- endblock env %>
 
@@ -142,6 +143,7 @@ jobs:
             docs:
               - added|modified:
                 - doc/**
+                - .github/workflows/build-docs.yml
                 - *doc_requirements
             workflows:
               - added|modified:

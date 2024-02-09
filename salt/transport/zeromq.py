@@ -281,7 +281,12 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
-        return self.stream.on_recv(callback)
+        try:
+            return self.stream.on_recv(callback)
+        except OSError as exc:
+            if callback is None and str(exc) == "Stream is closed":
+                return
+            raise
 
     @salt.ext.tornado.gen.coroutine
     def send(self, msg):
@@ -777,21 +782,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     htopic = salt.utils.stringutils.to_bytes(
                         hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    yield self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
-                    yield self.dpub_sock.send(payload)
+                    yield self.dpub_sock.send_multipart([htopic, payload])
                     log.trace("Filtered data has been sent")
                 # Syndic broadcast
                 if self.opts.get("order_masters"):
                     log.trace("Sending filtered data to syndic")
-                    yield self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
-                    yield self.dpub_sock.send(payload)
+                    yield self.dpub_sock.send_multipart([b"syndic", payload])
                     log.trace("Filtered data has been sent to syndic")
             # otherwise its a broadcast
             else:
                 # TODO: constants file for "broadcast"
                 log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
-                yield self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
-                yield self.dpub_sock.send(payload)
+                yield self.dpub_sock.send_multipart([b"broadcast", payload])
                 log.trace("Broadcasted data has been sent")
         else:
             log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)

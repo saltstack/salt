@@ -18,6 +18,7 @@ def check_status():
         return False
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 @pytest.mark.skip_if_binaries_missing("gem")
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test

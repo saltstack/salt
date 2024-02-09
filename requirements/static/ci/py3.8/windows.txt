@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.9.0
+aiohttp==3.9.2
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
@@ -83,7 +83,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/windows.txt
@@ -91,6 +91,7 @@ cryptography==41.0.7
     #   moto
     #   pyopenssl
     #   requests-ntlm
+    #   trustme
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
@@ -138,6 +139,7 @@ idna==3.2
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -292,7 +294,7 @@ pymysql==1.0.2
     #   -r requirements/windows.txt
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/windows.txt
@@ -308,7 +310,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.0rc29
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -449,6 +451,8 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 typing-extensions==4.2.0
     # via
     #   pytest-shell-utilities
@@ -486,8 +490,10 @@ wmi==1.5.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/windows.txt
-xmltodict==0.12.0
+xmltodict==0.13.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/windows.txt
     #   moto
     #   pywinrm
 yamllint==1.26.3

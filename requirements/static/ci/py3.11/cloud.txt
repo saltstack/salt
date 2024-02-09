@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/cloud.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/cloud.in requirements/static/ci/common.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.0
+aiohttp==3.9.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   etcd3-py
@@ -119,7 +119,7 @@ croniter==0.3.29 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-cryptography==41.0.7
+cryptography==42.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -131,6 +131,7 @@ cryptography==41.0.7
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via
@@ -194,6 +195,7 @@ idna==3.2
     #   -c requirements/static/ci/py3.11/linux.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -403,7 +405,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -433,7 +435,7 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.0rc29
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
@@ -617,6 +619,10 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
+trustme==1.1.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/pytest.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt

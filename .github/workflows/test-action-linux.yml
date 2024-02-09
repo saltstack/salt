@@ -74,6 +74,7 @@ env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
@@ -193,9 +194,9 @@ jobs:
         run: |
           tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
-      - name: Show System Info & Test Plan
+      - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
