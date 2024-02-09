@@ -770,9 +770,7 @@ class GitProvider:
             else:
                 _add_error(failed, exc)
         else:
-            msg = "Removed {} lock for {} remote '{}'".format(
-                lock_type, self.role, self.id
-            )
+            msg = f"Removed {lock_type} lock for {self.role} remote '{self.id}' on machine_id '{self.mach_id}'"
             log.debug(msg)
             success.append(msg)
         return success, failed
@@ -969,24 +967,15 @@ class GitProvider:
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
                     msg = (
-                        "{} is enabled and {} lockfile {} is present for "
-                        "{} remote '{}' on machine_id {}.".format(
-                            global_lock_key,
-                            lock_type,
-                            lock_file,
-                            self.role,
-                            self.id,
-                            self.mach_id,
-                        )
+                        f"{global_lock_key} is enabled and {lock_type} lockfile {lock_file} is present for "
+                        f"{self.role} remote '{self.id}' on machine_id {self.mach_id}."
                     )
                     if pid:
                         msg += f" Process {pid} obtained the lock"
                         if self.mach_id or mach_id:
-                            msg += " Process {} obtained the lock for machine_id {}, current machine_id {}".format(
-                                pid, mach_id, self.mach_id
-                            )
+                            msg += f" Process {pid} obtained the lock for machine_id {mach_id}, current machine_id {self.mach_id}"
                         else:
-                            msg += " Process {} obtained the lock".format(pid)
+                            msg += f" Process {pid} obtained the lock"
 
                         if not pid_exists(pid):
                             msg += (
@@ -997,7 +986,7 @@ class GitProvider:
                                 "by another master"
                             )
                             if self.mach_id != mach_id:
-                                msg += ", with machine_id {}".format(mach_id)
+                                msg += f", with machine_id {mach_id}"
                             else:
                                 msg += "."
                     log.warning(msg)
@@ -1034,17 +1023,11 @@ class GitProvider:
                         raise
                     return
             else:
-                msg = "Unable to set {} lock for {} ({}) on machine_id {}: {} ".format(
-                    lock_type,
-                    self.id,
-                    self._get_lock_file(lock_type),
-                    self.mach_id,
-                    exc,
-                )
+                msg = f"Unable to set {lock_type} lock for {self.id} ({self._get_lock_file(lock_type)}) on machine_id {self.mach_id}: {exc}"
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
 
-        msg = f"Set {lock_type} lock for {self.role} remote {self.id} on machine_id '{self.mach_id}'"
+        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}' on machine_id '{self.mach_id}'"
         log.debug(msg)
         return msg
 
@@ -1424,9 +1407,7 @@ class GitPython(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        "Checkout lock exists for {} remote '{}'".format(
-                            self.role, self.id
-                        ),
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
                     )
                 else:
                     log.error(
@@ -1775,9 +1756,7 @@ class Pygit2(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        "Checkout lock exists for {} remote '{}'".format(
-                            self.role, self.id
-                        ),
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
                     )
                 else:
                     log.error(
@@ -2292,10 +2271,8 @@ class Pygit2(GitProvider):
             if not self.ssl_verify:
                 warnings.warn(
                     "pygit2 does not support disabling the SSL certificate "
-                    "check in versions prior to 0.23.2 (installed: {}). "
-                    "Fetches for self-signed certificates will fail.".format(
-                        PYGIT2_VERSION
-                    )
+                    f"check in versions prior to 0.23.2 (installed: {PYGIT2_VERSION}). "
+                    "Fetches for self-signed certificates will fail."
                 )
 
     def verify_auth(self):
@@ -2548,11 +2525,12 @@ class GitBase:
         if self.provider in AUTH_PROVIDERS:
             override_params += AUTH_PARAMS
         elif global_auth_params:
+            msg_auth_providers = "{}".format(", ".join(AUTH_PROVIDERS))
             msg = (
-                "{0} authentication was configured, but the '{1}' "
-                "{0}_provider does not support authentication. The "
-                "providers for which authentication is supported in {0} "
-                "are: {2}.".format(self.role, self.provider, ", ".join(AUTH_PROVIDERS))
+                f"{self.role} authentication was configured, but the '{self.provider}' "
+                f"{self.role}_provider does not support authentication. The "
+                f"providers for which authentication is supported in {self.role} "
+                f"are: {msg_auth_providers}."
             )
             if self.role == "gitfs":
                 msg += (
@@ -2935,15 +2913,13 @@ class GitBase:
         errors = []
         if GITPYTHON_VERSION < GITPYTHON_MINVER:
             errors.append(
-                "{} is configured, but the GitPython version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, GITPYTHON_MINVER, GITPYTHON_VERSION
-                )
+                f"{self.role} is configured, but the GitPython version is earlier than "
+                f"{GITPYTHON_MINVER}. Version {GITPYTHON_VERSION} detected."
             )
         if not salt.utils.path.which("git"):
             errors.append(
                 "The git command line utility is required when using the "
-                "'gitpython' {}_provider.".format(self.role)
+                f"'gitpython' {self.role}_provider."
             )
 
         if errors:
@@ -2982,24 +2958,20 @@ class GitBase:
         errors = []
         if PYGIT2_VERSION < PYGIT2_MINVER:
             errors.append(
-                "{} is configured, but the pygit2 version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, PYGIT2_MINVER, PYGIT2_VERSION
-                )
+                f"{self.role} is configured, but the pygit2 version is earlier than "
+                f"{PYGIT2_MINVER}. Version {PYGIT2_VERSION} detected."
             )
         if LIBGIT2_VERSION < LIBGIT2_MINVER:
             errors.append(
-                "{} is configured, but the libgit2 version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, LIBGIT2_MINVER, LIBGIT2_VERSION
-                )
+                f"{self.role} is configured, but the libgit2 version is earlier than "
+                f"{LIBGIT2_MINVER}. Version {LIBGIT2_VERSION} detected."
             )
         if not getattr(pygit2, "GIT_FETCH_PRUNE", False) and not salt.utils.path.which(
             "git"
         ):
             errors.append(
                 "The git command line utility is required when using the "
-                "'pygit2' {}_provider.".format(self.role)
+                f"'pygit2' {self.role}_provider."
             )
 
         if errors:
@@ -3312,10 +3284,11 @@ class GitFS(GitBase):
         ret = {"hash_type": self.opts["hash_type"]}
         relpath = fnd["rel"]
         path = fnd["path"]
+        lc_hash_type = self.opts["hash_type"]
         hashdest = salt.utils.path.join(
             self.hash_cachedir,
             load["saltenv"],
-            "{}.hash.{}".format(relpath, self.opts["hash_type"]),
+            f"{relpath}.hash.{lc_hash_type}",
         )
         try:
             with salt.utils.files.fopen(hashdest, "rb") as fp_:
@@ -3350,13 +3323,14 @@ class GitFS(GitBase):
             except OSError:
                 log.error("Unable to make cachedir %s", self.file_list_cachedir)
                 return []
+        lc_path_adj = load["saltenv"].replace(os.path.sep, "_|-")
         list_cache = salt.utils.path.join(
             self.file_list_cachedir,
-            "{}.p".format(load["saltenv"].replace(os.path.sep, "_|-")),
+            f"{lc_path_adj}.p",
         )
         w_lock = salt.utils.path.join(
             self.file_list_cachedir,
-            ".{}.w".format(load["saltenv"].replace(os.path.sep, "_|-")),
+            f".{lc_path_adj}.w",
         )
         cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
             self.opts, form, list_cache, w_lock
