@@ -70,6 +70,7 @@ def verify_cache(bucket, expected):
             assert correct_content == content
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_update(bucket, s3):
     """Tests that files get downloaded from s3 to the local cache."""
 
@@ -90,6 +91,7 @@ def test_update(bucket, s3):
     verify_cache(bucket, keys)
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_s3_hash(bucket, s3):
     """Verifies that s3fs hashes files correctly."""
 
@@ -119,6 +121,7 @@ def test_s3_hash(bucket, s3):
         assert item["hash"] == actual_hash["hsum"]
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_cache_round_trip(bucket):
     metadata = {"foo": "bar"}
     cache_file = s3fs._get_cached_file_name(bucket, "base", "somefile")
