@@ -10,6 +10,7 @@ import zmq
 import salt.config
 import salt.utils.event
 import salt.utils.stringutils
+from salt.exceptions import SaltDeserializationError
 from salt.utils.event import SaltEvent
 from tests.support.events import eventpublisher_process, eventsender_process
 from tests.support.mock import patch
@@ -304,3 +305,28 @@ def test_master_pub_permissions(sock_dir):
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
         assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
+
+
+def test_event_unpack_with_SaltDeserializationError(sock_dir):
+    with eventpublisher_process(str(sock_dir)), salt.utils.event.MasterEvent(
+        str(sock_dir), listen=True
+    ) as me, patch.object(
+        salt.utils.event.log, "warning", autospec=True
+    ) as mock_log_warning, patch.object(
+        salt.utils.event.log, "error", autospec=True
+    ) as mock_log_error:
+        me.fire_event({"data": "foo1"}, "evt1")
+        me.fire_event({"data": "foo2"}, "evt2")
+        evt2 = me.get_event(tag="")
+        with patch("salt.payload.loads", side_effect=SaltDeserializationError):
+            evt1 = me.get_event(tag="")
+        _assert_got_event(evt2, {"data": "foo2"}, expected_failure=True)
+        assert evt1 is None
+        assert (
+            mock_log_warning.mock_calls[0].args[0]
+            == "SaltDeserializationError on unpacking data, the payload could be incomplete"
+        )
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Unable to deserialize received event"
+        )
