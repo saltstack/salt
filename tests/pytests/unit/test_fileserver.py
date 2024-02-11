@@ -52,7 +52,7 @@ def test_future_file_list_cache_file_ignored(tmp_path):
                 _f.write(b"\x80")
 
     # Set modification time to file list cache file to 1 year in the future
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
     future = now + datetime.timedelta(days=365)
     mod_time = time.mktime(future.timetuple())
     os.utime(os.path.join(back_cachedir, "base.p"), (mod_time, mod_time))
