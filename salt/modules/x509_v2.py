@@ -1407,7 +1407,7 @@ def expires(certificate, days=0):
     """
     cert = x509util.load_cert(certificate)
     # dates are encoded in UTC/GMT, they are returned as a naive datetime object
-    return cert.not_valid_after <= datetime.datetime.utcnow() + datetime.timedelta(
+    return cert.not_valid_after <= datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
         days=days
     )
 
