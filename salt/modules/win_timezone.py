@@ -2,7 +2,7 @@
 Module for managing timezone on Windows systems.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from salt.exceptions import CommandExecutionError
 
@@ -240,7 +240,7 @@ def get_offset():
     """
     # http://craigglennie.com/programming/python/2013/07/21/working-with-timezones-using-Python-and-pytz-localize-vs-normalize/
     tz_object = pytz.timezone(get_zone())
-    utc_time = pytz.utc.localize(datetime.utcnow())
+    utc_time = pytz.utc.localize(datetime.now(tz=timezone.utc))
     loc_time = utc_time.astimezone(tz_object)
     norm_time = tz_object.normalize(loc_time)
     return norm_time.strftime("%z")
@@ -260,7 +260,7 @@ def get_zonecode():
         salt '*' timezone.get_zonecode
     """
     tz_object = pytz.timezone(get_zone())
-    loc_time = tz_object.localize(datetime.utcnow())
+    loc_time = tz_object.localize(datetime.now(tz=timezone.utc))
     return loc_time.tzname()
 
 
