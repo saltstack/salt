@@ -1,0 +1,5 @@
+Template: salt-master/user
+Type: string
+Default: salt
+Description: User for salt-master
+  User to run the salt-master process as
