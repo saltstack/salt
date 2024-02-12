@@ -294,4 +294,4 @@ def github_signature(string, shared_secret, challenge_hmac):
     if isinstance(key, str):
         key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
-    return hmac_hash.hexdigest() == challenge
+    return hmac.compare_digest(hmac_hash.hexdigest(), challenge)
