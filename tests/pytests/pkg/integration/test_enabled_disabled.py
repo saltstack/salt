@@ -14,15 +14,7 @@ def test_services(install_salt, salt_cli, salt_minion):
     elif install_salt.distro_id in ("centos", "redhat", "amzn", "fedora"):
         services_disabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
     elif install_salt.distro_id == "photon":
-        if float(install_salt.distro_version) < 5:
-            services_disabled = [
-                "salt-master",
-                "salt-minion",
-                "salt-syndic",
-                "salt-api",
-            ]
-        else:
-            services_enabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
+        services_enabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
     elif platform.is_darwin():
         services_enabled = ["salt-minion"]
         services_disabled = []
