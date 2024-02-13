@@ -1110,6 +1110,7 @@ def installed(
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
+        :mod:`apk <salt.modules.apkpkg>`,
         :mod:`yum <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypperpkg>`. The version number includes the
         release designation where applicable, to allow Salt to target a
