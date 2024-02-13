@@ -637,7 +637,8 @@ def apply_(mods=None, **kwargs):
 
     .. rubric:: APPLYING ALL STATES CONFIGURED IN TOP.SLS (A.K.A. :ref:`HIGHSTATE <running-highstate>`)
 
-    To apply all configured states, simply run ``state.apply``:
+    To apply all configured states, simply run ``state.apply`` with no SLS
+    targets, like so:
 
     .. code-block:: bash
 
