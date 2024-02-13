@@ -534,6 +534,7 @@ def utils(
     whitelist=None,
     context=None,
     proxy=None,
+    file_client=None,
     pack_self=None,
     loaded_base_name=None,
 ):
@@ -553,7 +554,11 @@ def utils(
         opts,
         tag="utils",
         whitelist=whitelist,
-        pack={"__context__": context, "__proxy__": proxy or {}},
+        pack={
+            "__context__": context,
+            "__proxy__": proxy or {},
+            "__file_client__": file_client,
+        },
         pack_self=pack_self,
         loaded_base_name=loaded_base_name,
         _only_pack_properly_namespaced_functions=False,
@@ -908,7 +913,13 @@ def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
 
 
 def render(
-    opts, functions, states=None, proxy=None, context=None, loaded_base_name=None
+    opts,
+    functions,
+    states=None,
+    proxy=None,
+    context=None,
+    file_client=None,
+    loaded_base_name=None,
 ):
     """
     Returns the render modules
@@ -929,6 +940,7 @@ def render(
         "__salt__": functions,
         "__grains__": opts.get("grains", {}),
         "__context__": context,
+        "__file_client__": file_client,
     }
 
     if states:
