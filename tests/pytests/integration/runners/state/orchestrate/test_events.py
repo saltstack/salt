@@ -419,6 +419,7 @@ def test_orchestration_onchanges_and_prereq(
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows
 @pytest.mark.skip_on_darwin
+@pytest.mark.timeout_unless_on_windows(120)
 def test_unknown_in_runner_event(
     runner_salt_run_cli,
     runner_salt_master,

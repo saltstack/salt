@@ -50,6 +50,7 @@ class SSHCustomModuleTest(SSHCase):
         self.assertEqual(expected, cmd)
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout(120)
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
