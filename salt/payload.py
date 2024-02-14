@@ -9,7 +9,6 @@ import datetime
 import gc
 import logging
 
-import salt.loader.context
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
