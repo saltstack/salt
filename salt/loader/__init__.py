@@ -20,7 +20,6 @@ import salt.syspaths
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
 import salt.utils.odict
@@ -358,6 +357,8 @@ def minion_mods(
                         ret[f_key] = funcs[func]
 
     if notify:
+        import salt.utils.event
+
         with salt.utils.event.get_event("minion", opts=opts, listen=False) as evt:
             evt.fire_event(
                 {"complete": True}, tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE

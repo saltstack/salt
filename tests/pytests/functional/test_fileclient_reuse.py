@@ -4,6 +4,7 @@ import salt.loader
 import salt.pillar
 import salt.state
 import salt.utils.cache
+import salt.utils.jinja
 from tests.support.mock import patch
 
 
