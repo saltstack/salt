@@ -32,13 +32,15 @@ except ImportError:
     HAS_GRP = False
 
 try:
-    import ctypes.wintypes
-
     import salt.utils.win_functions
 
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
+
+if sys.platform == "win32":
+    import ctypes.wintypes
+
 
 log = logging.getLogger(__name__)
 
