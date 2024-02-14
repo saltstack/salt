@@ -947,8 +947,8 @@ def test_pkg_cap_003_installed_multipkg_with_version(
     This is a destructive test as it installs and then removes two packages
     """
     target, realpkg = PKG_CAP_TARGETS[0]
-    version = latest_version(target)
-    realver = latest_version(realpkg)
+    version = modules.pkg.version(target)
+    realver = modules.pkg.version(realpkg)
 
     # If this condition is False, we need to find new targets.
     # This needs to be able to test successful installation of packages.
