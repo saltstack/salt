@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 class SSHStateTest(SSHCase):
     """
     testing the state system with salt-ssh
