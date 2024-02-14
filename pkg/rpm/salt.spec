@@ -436,7 +436,7 @@ find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
 ## - Using hardcoded scriptlet definitions from RHEL 7/8 that are forward-compatible
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
-# %systemd_preun salt-syndic.service > /dev/null 2>&1
+# %%systemd_preun salt-syndic.service > /dev/null 2>&1
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
   systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
@@ -444,7 +444,7 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %preun minion
-# %systemd_preun salt-minion.service
+# %%systemd_preun salt-minion.service
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
   systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
@@ -453,7 +453,7 @@ fi
 
 
 %preun api
-# %systemd_preun salt-api.service
+# %%systemd_preun salt-api.service
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
   systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
@@ -472,8 +472,11 @@ ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
 %post master
-# %systemd_post salt-master.service
-if [ $1 -eq 1 ] ; then
+# %%systemd_post salt-master.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-master.service >/dev/null 2>&1 || :
+else
   # Initial installation
   systemctl preset salt-master.service >/dev/null 2>&1 || :
 fi
@@ -497,16 +500,22 @@ if [ $1 -lt 2 ]; then
 fi
 
 %post syndic
-# %systemd_post salt-syndic.service
-if [ $1 -eq 1 ] ; then
+# %%systemd_post salt-syndic.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-syndic.service >/dev/null 2>&1 || :
+else
   # Initial installation
   systemctl preset salt-syndic.service >/dev/null 2>&1 || :
 fi
 ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 
 %post minion
-# %systemd_post salt-minion.service
-if [ $1 -eq 1 ] ; then
+# %%systemd_post salt-minion.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-minion.service >/dev/null 2>&1 || :
+else
   # Initial installation
   systemctl preset salt-minion.service >/dev/null 2>&1 || :
 fi
@@ -531,8 +540,11 @@ fi
 ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 
 %post api
-# %systemd_post salt-api.service
-if [ $1 -eq 1 ] ; then
+# %%systemd_post salt-api.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-api.service >/dev/null 2>&1 || :
+else
   # Initial installation
   systemctl preset salt-api.service >/dev/null 2>&1 || :
 fi
@@ -576,7 +588,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun master
-# %systemd_postun_with_restart salt-master.service
+# %%systemd_postun_with_restart salt-master.service
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
@@ -597,7 +609,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun syndic
-# %systemd_postun_with_restart salt-syndic.service
+# %%systemd_postun_with_restart salt-syndic.service
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
@@ -605,7 +617,7 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %postun minion
-# %systemd_postun_with_restart salt-minion.service
+# %%systemd_postun_with_restart salt-minion.service
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
@@ -626,7 +638,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun api
-# %systemd_postun_with_restart salt-api.service
+# %%systemd_postun_with_restart salt-api.service
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
