@@ -55,6 +55,7 @@ def npm(states, modules, apply_gitconfig_workaround):
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.timeout_unless_on_windows(120)
 def test_removed_installed_cycle(npm, modules):
     project_version = "pm2@5.1.0"
     success = modules.npm.uninstall("pm2")

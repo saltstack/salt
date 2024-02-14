@@ -12,6 +12,7 @@ from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.timeout_unless_on_windows(200),
 ]
 
 

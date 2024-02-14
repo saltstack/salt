@@ -44,17 +44,19 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
         time.sleep(5)
 
     data = None
-    for i in range(1, 30):
+    for _ in range(1, 30):
         time.sleep(1)
         data = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data
         if data:
             break
 
+    assert data
     assert salt_minion_retry.id in data
     assert data[salt_minion_retry.id] is True
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(180)
 def test_pillar_timeout(salt_master_factory, tmp_path):
     cmd = 'print(\'{"foo": "bar"}\');\n'
 

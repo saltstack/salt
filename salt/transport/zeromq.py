@@ -884,7 +884,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
-        run in a thread or process as it creates and runs an it's own ioloop.
+        run in a thread or process as it creates and runs its own ioloop.
         """
         ioloop = tornado.ioloop.IOLoop()
         ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)

@@ -65,6 +65,7 @@ def ansible_inventory(ansible_inventory_directory, sshd_server):
 
 
 @pytest.mark.requires_sshd_server
+@pytest.mark.timeout_unless_on_windows(240)
 def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     rundir = tmp_path / "rundir"
     rundir.mkdir(exist_ok=True, parents=True)
