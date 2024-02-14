@@ -2,7 +2,6 @@
     :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
 """
 
-
 import pytest
 
 import salt.modules.textfsm_mod as textfsm_mod
