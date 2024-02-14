@@ -11,12 +11,16 @@ from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
-
 SUBDIR = "subdir"
 
 
 def _saltenvs():
     return ("base", "dev")
+
+
+@pytest.fixture(params=_saltenvs())
+def saltenv(request):
+    return request.param
 
 
 def _subdir_files():
@@ -102,7 +106,7 @@ def _setup(fs_root, cache_root):
 
 
 @pytest.mark.parametrize("subdir", [SUBDIR, f"{SUBDIR}{os.sep}"])
-def test_cache_dir(mocked_opts, minion_opts, subdir):
+def test_cache_dir(mocked_opts, minion_opts, subdir, saltenv):
     """
     Ensure entire directory is cached to correct location
     """
@@ -111,31 +115,30 @@ def test_cache_dir(mocked_opts, minion_opts, subdir):
 
     with patch.dict(fileclient.__opts__, patched_opts):
         client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
-        for saltenv in _saltenvs():
-            assert client.cache_dir(
-                "salt://{}".format(subdir),
+        assert client.cache_dir(
+            f"salt://{subdir}",
+            saltenv,
+            exclude_pat="*foo.txt",
+            cachedir=None,
+        )
+        for subdir_file in _subdir_files():
+            cache_loc = os.path.join(
+                fileclient.__opts__["cachedir"],
+                "files",
                 saltenv,
-                exclude_pat="*foo.txt",
-                cachedir=None,
+                subdir,
+                subdir_file,
             )
-            for subdir_file in _subdir_files():
-                cache_loc = os.path.join(
-                    fileclient.__opts__["cachedir"],
-                    "files",
-                    saltenv,
-                    subdir,
-                    subdir_file,
-                )
-                if not subdir_file.endswith("foo.txt"):
-                    with salt.utils.files.fopen(cache_loc) as fp_:
-                        content = fp_.read()
-                    log.debug("cache_loc = %s", cache_loc)
-                    log.debug("content = %s", content)
-                    assert subdir_file in content
-                    assert SUBDIR in content
-                    assert saltenv in content
-                else:
-                    assert not os.path.exists(cache_loc)
+            if not subdir_file.endswith("foo.txt"):
+                with salt.utils.files.fopen(cache_loc) as fp_:
+                    content = fp_.read()
+                log.debug("cache_loc = %s", cache_loc)
+                log.debug("content = %s", content)
+                assert subdir_file in content
+                assert SUBDIR in content
+                assert saltenv in content
+            else:
+                assert not os.path.exists(cache_loc)
 
 
 def test_cache_dir_include_empty(mocked_opts, minion_opts, fs_root):
@@ -162,7 +165,7 @@ def test_cache_dir_include_empty(mocked_opts, minion_opts, fs_root):
             )
             os.makedirs(os.path.join(fs_root, saltenv, "emptydir"))
             assert client.cache_dir(
-                "salt://{}".format(SUBDIR), saltenv, cachedir=None, include_empty=True
+                f"salt://{SUBDIR}", saltenv, cachedir=None, include_empty=True
             )
             for subdir_file in _subdir_files():
                 cache_loc = os.path.join(
