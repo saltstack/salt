@@ -88,7 +88,7 @@ version of Python:
 
 ::
 
-   pyenv install 3.7.0
+   pyenv install 3.9.18
 
 If that fails, don't panic! You're probably just missing some build
 dependencies. Check out `pyenv common build
@@ -99,7 +99,7 @@ new virtual environment with this command:
 
 ::
 
-   pyenv virtualenv 3.7.0 salt
+   pyenv virtualenv 3.9.18 salt
 
 Then activate it:
 
@@ -321,8 +321,8 @@ documentation:
 
    ::
 
-       pyenv install 3.7.15
-       pyenv virtualenv 3.7.15 salt-docs
+       pyenv install 3.9.18
+       pyenv virtualenv 3.9.18 salt-docs
        echo 'salt-docs' > .python-version
 
 #. Activate `pyenv` if it's not auto-activated:
@@ -477,7 +477,7 @@ meaningful and complete! *Typically* the best tests for Salt are going
 to be unit tests. Testing is `a whole topic on its
 own <https://docs.saltproject.io/en/master/topics/tutorials/writing_tests.html>`__,
 But you may also want to write functional or integration tests. You'll
-find those in the ``salt/tests`` directory.
+find those in the ``tests/`` directory.
 
 When you're thinking about tests to write, the most important thing to
 keep in mind is, “What, exactly, am I testing?” When a test fails, you

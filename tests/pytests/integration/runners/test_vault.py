@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 
