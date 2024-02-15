@@ -26,6 +26,10 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.timeout_unless_on_windows(120),
+]
+
 
 def die(func):
     """
