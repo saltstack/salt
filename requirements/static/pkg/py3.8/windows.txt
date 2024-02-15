@@ -120,7 +120,7 @@ pywin32==306 ; sys_platform == "win32"
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.1.1
+pyzmq==25.1.2
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via -r requirements/base.txt
