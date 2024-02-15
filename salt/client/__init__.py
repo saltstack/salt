@@ -1203,7 +1203,7 @@ class LocalClient:
                     continue
 
                 # Anything below this point is expected to be a job return event.
-                if not raw["tag"].startswith(f"salt/job/{jid}/ret"):
+                if not raw["tag"].startswith(f"salt/job/{jid}/ret/"):
                     log.debug("Skipping non return event: %s", raw["tag"])
                     continue
                 if "return" not in raw["data"]:

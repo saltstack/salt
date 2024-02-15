@@ -1,4 +1,5 @@
 import packaging.version
+import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -34,6 +35,19 @@ def test_salt_downgrade(salt_call_cli, install_salt):
     use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
     assert "Authentication information could" in use_lib.stderr
 
+    # Verify there is a running minion by getting its PID
+    if platform.is_windows():
+        process_name = "salt-minion.exe"
+    else:
+        process_name = "salt-minion"
+    old_pid = None
+    for proc in psutil.process_iter():
+        if process_name in proc.name():
+            if psutil.Process(proc.ppid()).name() != process_name:
+                old_pid = proc.pid
+                break
+    assert old_pid is not None
+
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
     bin_file = "salt"
@@ -44,6 +58,17 @@ def test_salt_downgrade(salt_call_cli, install_salt):
             bin_file = install_salt.install_dir / "salt-call.exe"
     elif platform.is_darwin() and install_salt.classic:
         bin_file = install_salt.bin_dir / "salt-call"
+
+    # Verify there is a new running minion by getting its PID and comparing it
+    # with the PID from before the upgrade
+    new_pid = None
+    for proc in psutil.process_iter():
+        if process_name in proc.name():
+            if psutil.Process(proc.ppid()).name() != process_name:
+                new_pid = proc.pid
+                break
+    assert new_pid is not None
+    assert new_pid != old_pid
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
