@@ -23,17 +23,22 @@ def test__windows_platform_data_index_errors():
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
 
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         expected = {
@@ -63,17 +68,22 @@ def test__windows_platform_data_computer_system():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=mock),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=mock), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["manufacturer"] == "Dell Inc."
@@ -93,17 +103,22 @@ def test__windows_platform_data_operating_system():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=mock),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=mock
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["kernelrelease"] == "10.0.22631"
@@ -125,17 +140,22 @@ def test__windows_platform_data_bios():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=mock),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=mock
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["biosversion"] == "11.22.33"
@@ -153,17 +173,22 @@ def test__windows_platform_data_timezone():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=mock),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=mock
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["timezone"] == "(UTC-07:00) Mountain Time (US & Canada)"
@@ -179,17 +204,22 @@ def test__windows_platform_data_computer_system_product():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=mock),
-        patch.object(WMI, "Win32_BaseBoard", return_value=[]),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=mock
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=[]
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["uuid"] == "4c4c4544-0043-4610-8030-c2c04f483033"
@@ -206,17 +236,22 @@ def test__windows_platform_data_baseboard():
     WMI = Mock()
     platform_version = "1.2.3"
     os_version_info = {"Domain": "test", "DomainType": "test_type"}
-    with (
-        patch("salt.utils.winapi.Com", MagicMock()),
-        patch.object(wmi, "WMI", Mock(return_value=WMI)),
-        patch.object(WMI, "Win32_ComputerSystem", return_value=[]),
-        patch.object(WMI, "Win32_OperatingSystem", return_value=[]),
-        patch.object(WMI, "Win32_BIOS", return_value=[]),
-        patch.object(WMI, "Win32_TimeZone", return_value=[]),
-        patch.object(WMI, "Win32_ComputerSystemProduct", return_value=[]),
-        patch.object(WMI, "Win32_BaseBoard", return_value=mock),
-        patch("platform.version", return_value=platform_version),
-        patch("salt.utils.win_osinfo.get_join_info", return_value=os_version_info),
+    with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        wmi, "WMI", Mock(return_value=WMI)
+    ), patch.object(WMI, "Win32_ComputerSystem", return_value=[]), patch.object(
+        WMI, "Win32_OperatingSystem", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BIOS", return_value=[]
+    ), patch.object(
+        WMI, "Win32_TimeZone", return_value=[]
+    ), patch.object(
+        WMI, "Win32_ComputerSystemProduct", return_value=[]
+    ), patch.object(
+        WMI, "Win32_BaseBoard", return_value=mock
+    ), patch(
+        "platform.version", return_value=platform_version
+    ), patch(
+        "salt.utils.win_osinfo.get_join_info", return_value=os_version_info
     ):
         result = core._windows_platform_data()
         assert result["motherboard"]["productname"] == "002KVM"
