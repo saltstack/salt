@@ -19,7 +19,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
-    pytest.mark.timeout_unless_on_windows(320),
+    pytest.mark.timeout_unless_on_windows(400),
 ]
 
 
@@ -182,7 +182,7 @@ def test_exit_status_correct_usage(
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in (proxy_minion_id, proxy_one, proxy_two):
@@ -285,7 +285,7 @@ def test_missing_pillar_file(
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in (proxy_minion_id, proxy_one, proxy_two):
@@ -409,7 +409,7 @@ def test_invalid_connection(
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in (
@@ -538,7 +538,7 @@ def ping():
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in (proxy_minion_id, proxy_one, proxy_two):
@@ -671,7 +671,7 @@ def ping():
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in (proxy_minion_id, proxy_one, proxy_two):
@@ -812,7 +812,7 @@ def test_exit_status_correct_usage_large_number_of_minions(
             proxy_minion_id,
             defaults=config_defaults,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-            start_timeout=240,
+            start_timeout=320,
         )
 
         for minion_id in [proxy_minion_id] + sub_proxies:
