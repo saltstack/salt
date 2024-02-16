@@ -581,7 +581,6 @@ def ping():
     [True, False],
     ids=["parallel_startup=True", "parallel_startup=False"],
 )
-@pytest.mark.timeout_unless_on_windows(120)
 def test_custom_proxy_module_raise_exception(
     salt_master,
     salt_cli,
@@ -712,7 +711,6 @@ def ping():
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
-@pytest.mark.timeout_unless_on_windows(180)
 @pytest.mark.parametrize(
     "parallel_startup",
     [True, False],

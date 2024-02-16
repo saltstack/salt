@@ -29,6 +29,7 @@ import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.loader.context import NamedLoaderContext
+from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
@@ -342,7 +343,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     saltenv = context["saltenv"]
     loader = None
     newline = False
-    file_client = context.get("fileclient", None)
 
     if tmplstr and not isinstance(tmplstr, str):
         # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
@@ -362,7 +362,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 opts,
                 saltenv,
                 pillar_rend=context.get("_pillar_rend", False),
-                _file_client=file_client,
+                _file_client=context.get("fileclient", __file_client__.value()),
             )
 
         env_args = {"extensions": [], "loader": loader}

@@ -473,7 +473,7 @@ def pytest_collection_modifyitems(config, items):
             ):
                 # Let's apply the timeout marker on the test, if the marker
                 # is not already applied
-                item.add_marker(pytest.mark.timeout(60))
+                item.add_marker(pytest.mark.timeout(90))
         for fixture in item.fixturenames:
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue

@@ -571,17 +571,23 @@ class Pillar:
 
         # if we didn't pass in functions, lets load them
         if functions is None:
-            utils = salt.loader.utils(opts)
+            utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
-                self.functions = salt.loader.minion_mods(opts, utils=utils)
+                self.functions = salt.loader.minion_mods(
+                    opts, utils=utils, file_client=self.client
+                )
             else:
-                self.functions = salt.loader.minion_mods(self.opts, utils=utils)
+                self.functions = salt.loader.minion_mods(
+                    self.opts, utils=utils, file_client=self.client
+                )
         else:
             self.functions = functions
 
         self.opts["minion_id"] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
-        self.rend = salt.loader.render(self.opts, self.functions)
+        self.rend = salt.loader.render(
+            self.opts, self.functions, self.client, file_client=self.client
+        )
         ext_pillar_opts = copy.deepcopy(self.opts)
         # Keep the incoming opts ID intact, ie, the master id
         if "id" in opts:

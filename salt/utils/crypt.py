@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 
-import salt.loader
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
@@ -104,6 +103,10 @@ def decrypt(
     if renderers is None:
         if opts is None:
             raise TypeError("opts are required")
+
+        # Avaoid circular import
+        import salt.loader
+
         renderers = salt.loader.render(opts, {})
 
     rend_func = renderers.get(rend)
