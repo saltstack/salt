@@ -454,7 +454,7 @@ def test_get_cachedir_basename(main_class):
     assert main_class.remotes[1].get_cache_basename() == "_"
 
 
-def test_git_provider_mp_lock():
+def test_git_provider_mp_lock(main_class):
     """
     Check that lock is released after provider.lock()
     """
