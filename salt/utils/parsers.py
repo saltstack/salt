@@ -3037,6 +3037,13 @@ class SaltRunOptionParser(
             action="store_true",
             help="Do not load grains.",
         )
+        self.add_option(
+            "--set-metadata",
+            default=None,
+            dest="metadata",
+            metavar="METADATA",
+            help="Pass metadata into Salt, used to search jobs.",
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, "Output Options", "Configure your preferred output format."
         )
@@ -3531,6 +3538,7 @@ class SaltAPIParser(
     LogLevelMixIn,
     DaemonMixIn,
     MergeConfigMixIn,
+    SaltfileMixIn,
     metaclass=OptionParserMeta,
 ):
     """

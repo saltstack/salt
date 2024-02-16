@@ -2,7 +2,10 @@
 This runner is used only for test purposes and serves no production purpose
 """
 
+import logging
 import time
+
+log = logging.getLogger(__name__)
 
 
 def arg(*args, **kwargs):
@@ -99,6 +102,7 @@ def sleep(s_time=10):
 
         salt-run test.sleep s_time=5
     """
+    # import traceback; log.warning("%s", "".join(traceback.format_stack()))
     print(s_time)
     time.sleep(s_time)
     return True
@@ -116,9 +120,7 @@ def stream():
     """
     ret = True
     for i in range(1, 100):
-        __jid_event__.fire_event(
-            {"message": "Runner is {}% done".format(i)}, "progress"
-        )
+        __jid_event__.fire_event({"message": f"Runner is {i}% done"}, "progress")
         time.sleep(0.1)
     return ret
 

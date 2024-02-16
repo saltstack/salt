@@ -54,7 +54,7 @@ def sum_permissions(token, eauth):
         eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
 
         for group in user_groups & eauth_groups:
-            perms.extend(eauth["{}%".format(group)])
+            perms.extend(eauth[f"{group}%"])
     return perms
 
 
@@ -149,6 +149,7 @@ class NetapiClient:
         # Eauth currently requires a running daemon and commands run through
         # this method require eauth so perform a quick check to raise a
         # more meaningful error.
+        log.warning("NETAPI RUN %s", low)
         if not self._is_master_running():
             raise salt.exceptions.SaltDaemonNotRunning("Salt Master is not available.")
 
