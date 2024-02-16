@@ -179,7 +179,48 @@ Versions are `MAJOR.PATCH`.
 - Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c [#65137](https://github.com/saltstack/salt/issues/65137)
 
 
+## 3006.6 (2024-01-26)
+
+
+### Changed
+
+- Salt no longer time bombs user installations on code using `salt.utils.versions.warn_until_date` [#665924](https://github.com/saltstack/salt/issues/665924)
+
+
+### Fixed
+
+- Fix un-closed transport in tornado netapi [#65759](https://github.com/saltstack/salt/issues/65759)
+
+
+### Security
+
+- CVE-2024-22231 Prevent directory traversal when creating syndic cache directory on the master
+  CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
+  These vulerablities were discovered and reported by:
+  Yudi Zhao(Huawei Nebula Security Lab),Chenwei Jiang(Huawei Nebula Security Lab) [#565](https://github.com/saltstack/salt/issues/565)
+- Update some requirements which had some security issues:
+
+  * Bump to `pycryptodome==3.19.1` and `pycryptodomex==3.19.1` due to https://github.com/advisories/GHSA-j225-cvw7-qrx7
+  * Bump to `gitpython==3.1.41` due to https://github.com/advisories/GHSA-2mqj-m65w-jghx
+  * Bump to `jinja2==3.1.3` due to https://github.com/advisories/GHSA-h5c8-rqwp-cp95 [#65830](https://github.com/saltstack/salt/issues/65830)
+
+
 ## 3006.5 (2023-12-12)
+Salt 3005.5 (2024-01-19)
+========================
+
+Security
+--------
+
+- Fix CVE-2024-22231 Prevent directory traversal when creating syndic cache directory on the master.
+- Fix CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
+
+These vulnerablities were discovered and reported by:
+Yudi Zhao(Huawei Nebula Security Lab),Chenwei Jiang(Huawei Nebula Security Lab) (#565)
+
+
+Salt v3005.4 (2023-10-16)
+=========================
 
 
 ### Removed

@@ -9,7 +9,6 @@ import logging
 import os
 import re
 
-import salt.auth.ldap
 import salt.cache
 import salt.payload
 import salt.roster

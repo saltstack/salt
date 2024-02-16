@@ -14,6 +14,7 @@ from copy import deepcopy
 
 import salt.defaults.exitcodes
 import salt.exceptions
+import salt.features
 import salt.syspaths
 import salt.utils.data
 import salt.utils.dictupdate
@@ -1311,6 +1312,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "global_state_conditions": None,
         "reactor_niceness": None,
         "fips_mode": False,
+        "features": {},
     }
 )
 
@@ -1659,6 +1661,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_id": None,
         "cluster_peers": [],
         "cluster_pki_dir": None,
+        "features": {},
     }
 )
 
@@ -1693,6 +1696,7 @@ DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze(
         "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "proxy"),
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "proxy"),
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "proxy"),
+        "features": {},
     }
 )
 
@@ -1726,6 +1730,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_rotate_backup_count": 0,
         "bootstrap_delay": 0,
         "cache": "localfs",
+        "features": {},
     }
 )
 
@@ -2324,6 +2329,7 @@ def minion_config(
     if role != "master":
         apply_sdb(opts)
         _validate_opts(opts)
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -2335,6 +2341,7 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     _validate_opts(opts)
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -2421,6 +2428,7 @@ def proxy_config(
 
     apply_sdb(opts)
     _validate_opts(opts)
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -2498,6 +2506,7 @@ def syndic_config(
         if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -2754,6 +2763,7 @@ def cloud_config(
         prepend_root_dirs.append(opts["log_file"])
     prepend_root_dir(opts, prepend_root_dirs)
 
+    salt.features.setup_features(opts)
     # Return the final options
     return opts
 
@@ -3931,6 +3941,7 @@ def master_config(
     if salt.utils.data.is_dictlist(opts["nodegroups"]):
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -4193,6 +4204,7 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
 
     # Return the client options
     _validate_opts(opts)
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -4216,6 +4228,7 @@ def api_config(path):
     )
 
     prepend_root_dir(opts, ["api_pidfile", "api_logfile", "log_file", "pidfile"])
+    salt.features.setup_features(opts)
     return opts
 
 
