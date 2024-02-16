@@ -98,7 +98,7 @@ def _parallel_map(func, inputs):
     return outputs
 
 
-def state(
+def state(  # TODO
     name,
     tgt,
     ssh=False,
@@ -337,6 +337,7 @@ def state(
 
     masterless = __opts__["__role"] == "minion" and __opts__["file_client"] == "local"
     if not masterless:
+        # TODO: metadata
         _fire_args({"type": "state", "tgt": tgt, "name": name, "args": cmd_kw})
         cmd_ret = __salt__["saltutil.cmd"](tgt, fun, **cmd_kw)
     else:
@@ -438,7 +439,7 @@ def state(
     return state_ret
 
 
-def function(
+def function(  # TODO
     name,
     tgt,
     ssh=False,
@@ -554,6 +555,7 @@ def function(
         func_ret["result"] = None
         return func_ret
     try:
+        # TODO: metadata
         _fire_args({"type": "function", "tgt": tgt, "name": name, "args": cmd_kw})
         cmd_ret = __salt__["saltutil.cmd"](tgt, fun, **cmd_kw)
     except Exception as exc:  # pylint: disable=broad-except
@@ -781,6 +783,13 @@ def runner(name, **kwargs):
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    log.warning("SA.RUNNER %s", kwargs)
+
+    try:
+        kwargs["__job_metadata__"] = __job_metadata__
+    except NameError:
+        pass
+
     try:
         kwargs["__pub_user"] = __user__
         log.debug(
@@ -904,6 +913,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    # TODO: metadata
     def call_runner(runner_config):
         return __salt__["saltutil.runner"](
             runner_config["name"],
@@ -1018,7 +1028,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     return ret
 
 
-def wheel(name, **kwargs):
+def wheel(name, **kwargs):  # TODO?
     """
     Execute a wheel module on the master
 
@@ -1042,6 +1052,11 @@ def wheel(name, **kwargs):
     except NameError:
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
+
+    try:
+        kwargs["__job_metadata__"] = __job_metadata__
+    except NameError:
+        pass
 
     if __opts__.get("test", False):
         ret["result"] = None

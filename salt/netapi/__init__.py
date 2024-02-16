@@ -148,6 +148,7 @@ class NetapiClient:
         # Eauth currently requires a running daemon and commands run through
         # this method require eauth so perform a quick check to raise a
         # more meaningful error.
+        log.warning("NETAPI RUN %s", low)
         if not self._is_master_running():
             raise salt.exceptions.SaltDaemonNotRunning("Salt Master is not available.")
 
