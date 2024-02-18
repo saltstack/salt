@@ -27,7 +27,6 @@ attrs==23.1.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
@@ -461,7 +460,7 @@ pytest-timeout==1.4.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
-pytest==7.2.0
+pytest==7.3.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt

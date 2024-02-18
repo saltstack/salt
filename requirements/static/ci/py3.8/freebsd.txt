@@ -368,7 +368,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.2.0
+pytest==7.3.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
