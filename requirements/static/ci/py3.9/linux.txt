@@ -22,7 +22,6 @@ attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
