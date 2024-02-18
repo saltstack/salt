@@ -543,12 +543,14 @@ def onedir_dependencies(
         python_bin = env_scripts_dir / "python"
     else:
         env["RELENV_BUILDENV"] = "1"
+        env["MACOSX_DEPLOYMENT_TARGET"] = "10.15"
         python_bin = env_scripts_dir / "python3"
         install_args.extend(
             [
                 "--use-pep517",
                 "--no-cache-dir",
                 "--no-binary=:all:",
+                "-v",
             ]
         )
 
