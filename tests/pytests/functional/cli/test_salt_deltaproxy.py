@@ -19,6 +19,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
+    pytest.mark.timeout_unless_on_windows(320),
 ]
 
 
