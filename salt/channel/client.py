@@ -619,7 +619,7 @@ class AsyncPubChannel:
                         "Payload decryption failed even after re-authenticating with master %s",
                         self.opts["master_ip"],
                     )
-        raise salt.tornado.gen.Return(payload)
+        raise tornado.gen.Return(payload)
 
     def __enter__(self):
         return self
