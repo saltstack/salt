@@ -741,14 +741,16 @@ class AsyncReqMessageClient:
                 try:
                     recv = yield self.socket.recv()
                 except zmq.eventloop.future.CancelledError as exc:
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                     return
 
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            future.set_exception(exc)
+            if not future.done():
+                future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:

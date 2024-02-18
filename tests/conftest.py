@@ -460,9 +460,12 @@ def pytest_collection_modifyitems(config, items):
         if marker is not None:
             if not salt.utils.platform.is_windows():
                 # Apply the marker since we're not on windows
-                item.add_marker(
-                    pytest.mark.timeout(*marker.args, **marker.kwargs.copy())
-                )
+                marker_kwargs = marker.kwargs.copy()
+                if "func_only" not in marker_kwargs:
+                    # Default to counting only the test execution for the timeouts, ie,
+                    # withough including the fixtures setup time towards the timeout.
+                    marker_kwargs["func_only"] = True
+                item.add_marker(pytest.mark.timeout(*marker.args, **marker_kwargs))
         else:
             if (
                 not salt.utils.platform.is_windows()
@@ -473,7 +476,9 @@ def pytest_collection_modifyitems(config, items):
             ):
                 # Let's apply the timeout marker on the test, if the marker
                 # is not already applied
-                item.add_marker(pytest.mark.timeout(90))
+                # Default to counting only the test execution for the timeouts, ie,
+                # withough including the fixtures setup time towards the timeout.
+                item.add_marker(pytest.mark.timeout(90, func_only=True))
         for fixture in item.fixturenames:
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
