@@ -1181,7 +1181,7 @@ async def test_connect_master_unresolveable_error(minion_opts, connect_master_mo
     connect_master_mock.exc = SaltMasterUnresolvableError
     minion.connect_master = connect_master_mock
     minion.destroy = MagicMock()
-    mm._connect_minion(minion)
+    await mm._connect_minion(minion)
     minion.destroy.assert_called_once()
 
     # Unresolvable errors break out of the loop.
@@ -1194,10 +1194,10 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     """
     mm = salt.minion.MinionManager(minion_opts)
     minion = salt.minion.Minion(minion_opts)
-    connect_master_mock.exc = Exception
+    connect_master_mock.exc = SaltClientError
     minion.connect_master = connect_master_mock
     minion.destroy = MagicMock()
-    mm._connect_minion(minion)
+    await mm._connect_minion(minion)
     minion.destroy.assert_called_once()
 
     # The first call raised an error which caused minion.destroy to get called,
