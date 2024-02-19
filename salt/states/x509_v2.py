@@ -188,7 +188,6 @@ import os.path
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.features import features
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 try:
@@ -211,7 +210,7 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not features.get("x509_v2"):
+    if not __opts__["features"].get("x509_v2"):
         return (
             False,
             "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "

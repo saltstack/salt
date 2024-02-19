@@ -253,24 +253,43 @@ def generate_workflows(ctx: Context):
             test_salt_pkg_downloads_needs_slugs.add("build-ci-deps")
 
     build_rpms_listing = []
-    for distro, releases in (
-        ("amazon", ("2", "2023")),
-        ("redhat", ("7", "8", "9")),
-        ("fedora", ("36", "37", "38")),
-        ("photon", ("3", "4", "5")),
-    ):
-        for release in releases:
+    rpm_os_versions: dict[str, list[str]] = {
+        "amazon": [],
+        "fedora": [],
+        "photon": [],
+        "redhat": [],
+    }
+    for slug in sorted(AMIS):
+        if slug.endswith("-arm64"):
+            continue
+        if not slug.startswith(
+            ("amazonlinux", "almalinux", "centos", "fedora", "photonos")
+        ):
+            continue
+        os_name, os_version = slug.split("-")
+        if os_name == "amazonlinux":
+            rpm_os_versions["amazon"].append(os_version)
+        elif os_name == "photonos":
+            rpm_os_versions["photon"].append(os_version)
+        elif os_name == "fedora":
+            rpm_os_versions["fedora"].append(os_version)
+        else:
+            rpm_os_versions["redhat"].append(os_version)
+
+    for distro, releases in sorted(rpm_os_versions.items()):
+        for release in sorted(set(releases)):
             for arch in ("x86_64", "arm64", "aarch64"):
                 build_rpms_listing.append((distro, release, arch))
 
     build_debs_listing = []
-    for distro, releases in (
-        ("debian", ("10", "11", "12")),
-        ("ubuntu", ("20.04", "22.04")),
-    ):
-        for release in releases:
-            for arch in ("x86_64", "arm64"):
-                build_debs_listing.append((distro, release, arch))
+    for slug in sorted(AMIS):
+        if not slug.startswith(("debian-", "ubuntu-")):
+            continue
+        if slug.endswith("-arm64"):
+            continue
+        os_name, os_version = slug.split("-")
+        for arch in ("x86_64", "arm64"):
+            build_debs_listing.append((os_name, os_version, arch))
 
     env = Environment(
         block_start_string="<%",
