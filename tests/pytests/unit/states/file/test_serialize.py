@@ -31,7 +31,7 @@ def configure_loader_modules():
     }
 
 
-def test_file_managed_tmp_dir_system_temp(tmp_path):
+def test_file_serialize_tmp_dir_system_temp(tmp_path):
     tmp_file = tmp_path / "tmp.txt"
     mock_mkstemp = MagicMock()
     with patch("salt.utils.files.mkstemp", mock_mkstemp), patch.dict(
