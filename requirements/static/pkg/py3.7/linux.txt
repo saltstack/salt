@@ -27,7 +27,9 @@ idna==3.2
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   mako
 jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
@@ -45,10 +47,13 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.0.2
     # via -r requirements/base.txt
+mako==1.2.4
+    # via -r requirements/static/pkg/linux.in
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
+    #   mako
 more-itertools==5.0.0
     # via
     #   cheroot
