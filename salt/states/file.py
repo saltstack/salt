@@ -3021,7 +3021,7 @@ def managed(
         If ``True``, creation of new files will still show a diff in the
         changes return.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3008.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3370,9 +3370,11 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if not isinstance(
-                            ret["changes"], tuple
-                        ) and exc.strerror.startswith("Path not found"):
+                        if (
+                            not isinstance(ret["changes"], tuple)
+                            and exc.strerror.startswith("Path not found")
+                            and not new_file_diff
+                        ):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):

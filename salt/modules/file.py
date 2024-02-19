@@ -5755,7 +5755,7 @@ def check_managed_changes(
         If ``True``, creation of new files will still show a diff in the
         changes return.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -5976,7 +5976,7 @@ def check_file_meta(
         If ``True``, creation of new files will still show a diff in the
         changes return.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3008.0
     """
     changes = {}
     has_changes = False
@@ -6587,7 +6587,7 @@ def manage_file(
         If ``True``, creation of new files will still show a diff in the
         changes return.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3008.0
 
     CLI Example:
 
