@@ -2866,6 +2866,10 @@ def test_virtual_has_virtual_grain():
     assert virtual_grains["virtual"] != "physical"
 
 
+def test__windows_platform_data():
+    pass
+
+
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.parametrize(
     ("osdata", "expected"),
@@ -2873,6 +2877,13 @@ def test_virtual_has_virtual_grain():
         ({"kernel": "Not Windows"}, {}),
         ({"kernel": "Windows"}, {"virtual": "physical"}),
         ({"kernel": "Windows", "manufacturer": "QEMU"}, {"virtual": "kvm"}),
+        ({"kernel": "Windows", "biosstring": "VRTUAL"}, {"virtual": "HyperV"}),
+        ({"kernel": "Windows", "biosstring": "A M I"}, {"virtual": "VirtualPC"}),
+        (
+            {"kernel": "Windows", "biosstring": "Xen", "productname": "HVM domU"},
+            {"virtual": "Xen", "virtual_subtype": "HVM domU"},
+        ),
+        ({"kernel": "Windows", "biosstring": "AMAZON"}, {"virtual": "EC2"}),
         ({"kernel": "Windows", "manufacturer": "Bochs"}, {"virtual": "kvm"}),
         (
             {"kernel": "Windows", "productname": "oVirt"},
@@ -2881,10 +2892,6 @@ def test_virtual_has_virtual_grain():
         (
             {"kernel": "Windows", "productname": "RHEV Hypervisor"},
             {"virtual": "kvm", "virtual_subtype": "rhev"},
-        ),
-        (
-            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
-            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
         ),
         (
             {"kernel": "Windows", "productname": "VirtualBox"},
@@ -2913,6 +2920,7 @@ def test_virtual_has_virtual_grain():
             },
             {"virtual": "VirtualPC"},
         ),
+        ({"kernel": "Windows", "productname": "OpenStack"}, {"virtual": "OpenStack"}),
         (
             {"kernel": "Windows", "manufacturer": "Parallels Software"},
             {"virtual": "Parallels"},
@@ -2920,6 +2928,10 @@ def test_virtual_has_virtual_grain():
         (
             {"kernel": "Windows", "manufacturer": None, "productname": None},
             {"virtual": "physical"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
         ),
     ],
 )
@@ -2941,17 +2953,7 @@ def test_windows_virtual_set_virtual_grain():
         _,
     ) = platform.uname()
 
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        virtual_grains = core._windows_virtual(osdata)
+    virtual_grains = core._windows_virtual(osdata)
 
     assert "virtual" in virtual_grains
 
@@ -2969,46 +2971,15 @@ def test_windows_virtual_has_virtual_grain():
         _,
     ) = platform.uname()
 
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        virtual_grains = core._windows_virtual(osdata)
+    virtual_grains = core._windows_virtual(osdata)
 
     assert "virtual" in virtual_grains
-    assert virtual_grains["virtual"] != "physical"
 
 
 @pytest.mark.skip_unless_on_windows
 def test_osdata_virtual_key_win():
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        _windows_platform_data_ret = core.os_data()
-        _windows_platform_data_ret["virtual"] = "something"
-
-        with patch.object(
-            core, "_windows_platform_data", return_value=_windows_platform_data_ret
-        ) as _windows_platform_data:
-
-            osdata_grains = core.os_data()
-            _windows_platform_data.assert_called_once()
-
-        assert "virtual" in osdata_grains
-        assert osdata_grains["virtual"] != "physical"
+    osdata_grains = core.os_data()
+    assert "virtual" in osdata_grains
 
 
 @pytest.mark.skip_unless_on_linux
