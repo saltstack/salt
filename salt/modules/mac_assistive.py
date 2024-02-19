@@ -72,12 +72,12 @@ def install(app_id, enable=True, tries=3, wait=10):
                         "Error installing app({}): {}".format(app_id, exc)
                     )
                 elif num_tries < tries:
-                    time.sleep(wait)
                     num_tries += 1
                 else:
                     raise CommandExecutionError(
                         "Error installing app({}): {}".format(app_id, exc)
                     )
+        time.sleep(wait)
 
 
 def installed(app_id):
