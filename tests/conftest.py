@@ -23,7 +23,6 @@ import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
-import salt.loader
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

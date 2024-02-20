@@ -890,7 +890,9 @@ def log_handlers(opts, loaded_base_name=None):
     return FilterDictWrapper(ret, ".setup_handlers")
 
 
-def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
+def ssh_wrapper(
+    opts, functions=None, context=None, file_client=None, loaded_base_name=None
+):
     """
     Returns the custom logging handler modules
 
@@ -908,7 +910,11 @@ def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
         ),
         opts,
         tag="wrapper",
-        pack={"__salt__": functions, "__context__": context},
+        pack={
+            "__salt__": functions,
+            "__context__": context,
+            "__file_client__": file_client,
+        },
         loaded_base_name=loaded_base_name,
     )
 
