@@ -327,7 +327,7 @@ def ls(bank):
     # trim off the bank path prefix to emulate 'ls-like' output
     # implement "removeprefix" for < python 3.9 support
     out = [
-        row[0][len(bank_path) :] for row in cur.fetchall() if row.startswith(bank_path)
+        row[0][len(bank_path) :] for row in cur.fetchall() if row[0].startswith(bank_path)
     ]
 
     cur.close()
