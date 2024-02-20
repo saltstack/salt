@@ -323,15 +323,11 @@ def ls(bank):
     query = "SELECT bank FROM {} WHERE bank LIKE %s".format(
         __context__["mysql_table_name"]
     )
-    cur, _ = run_query(
-        __context__.get("mysql_client"), query, args=(f"{bank_path}%",)
-    )
+    cur, _ = run_query(__context__.get("mysql_client"), query, args=(f"{bank_path}%",))
     # trim off the bank path prefix to emulate 'ls-like' output
     # implement "removeprefix" for < python 3.9 support
     out = [
-        row[0][len(bank_path) :]
-        for row in cur.fetchall()
-        if row.startswith(bank_path)
+        row[0][len(bank_path) :] for row in cur.fetchall() if row.startswith(bank_path)
     ]
 
     cur.close()
