@@ -62,6 +62,10 @@ _deb_distro_info = {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
         },
+        "23.04": {
+            "label": "salt_ubuntu2304",
+            "codename": "lunar",
+        },
     },
 }
 
@@ -380,10 +384,14 @@ def rpm(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
+
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
+
+    if distro == "photon":
+        distro_version = f"{distro_version}.0"
 
     ctx.info("Creating repository directory structure ...")
     create_repo_path = create_top_level_repo_path(
@@ -900,7 +908,7 @@ def _create_onedir_based_repo(
         if distro == "onedir":
             if "-onedir-linux-" in dpath.name.lower():
                 release_os = "linux"
-            elif "-onedir-darwin-" in dpath.name.lower():
+            elif "-onedir-macos-" in dpath.name.lower():
                 release_os = "macos"
             elif "-onedir-windows-" in dpath.name.lower():
                 release_os = "windows"

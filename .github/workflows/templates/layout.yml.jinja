@@ -6,10 +6,10 @@
 <%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
-<%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set gh_actions_workflows_python_version = "3.10" %>
+<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -34,8 +34,10 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 <%- endblock env %>
 
@@ -75,7 +77,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
@@ -97,6 +99,7 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -141,6 +144,7 @@ jobs:
             docs:
               - added|modified:
                 - doc/**
+                - .github/workflows/build-docs.yml
                 - *doc_requirements
             workflows:
               - added|modified:
@@ -180,7 +184,7 @@ jobs:
                 - *pkg_tests_added_modified
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -212,6 +216,11 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools ci get-pr-test-labels --repository ${{ github.repository }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
 
       <%- if prepare_actual_release %>
 
@@ -280,12 +289,6 @@ jobs:
         run: |
           tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Check Salt Releases
-        run: |
-          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
-          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
-          echo '${{ steps.get-testing-releases.outputs.testing-releases }}' | jq -C '.'
-
       - name: Define Testrun
         id: define-testrun
         run: |
@@ -302,7 +305,7 @@ jobs:
 
       - name: Upload testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
@@ -343,7 +346,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>
     <%- endif %>

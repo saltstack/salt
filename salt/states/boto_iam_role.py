@@ -94,6 +94,12 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -255,7 +261,7 @@ def _role_present(
     role = __salt__["boto_iam.describe_role"](name, region, key, keyid, profile)
     if not role:
         if __opts__["test"]:
-            ret["comment"] = "IAM role {} is set to be created.".format(name)
+            ret["comment"] = f"IAM role {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_iam.create_role"](
@@ -264,12 +270,12 @@ def _role_present(
         if created:
             ret["changes"]["old"] = {"role": None}
             ret["changes"]["new"] = {"role": name}
-            ret["comment"] = "IAM role {} created.".format(name)
+            ret["comment"] = f"IAM role {name} created."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} IAM role.".format(name)
+            ret["comment"] = f"Failed to create {name} IAM role."
     else:
-        ret["comment"] = "{} role present.".format(name)
+        ret["comment"] = f"{name} role present."
         if not policy_document:
             _policy_document = __salt__["boto_iam.build_policy"](
                 region, key, keyid, profile
@@ -309,7 +315,7 @@ def _instance_profile_present(name, region=None, key=None, keyid=None, profile=N
     )
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "Instance profile {} is set to be created.".format(name)
+            ret["comment"] = f"Instance profile {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_iam.create_instance_profile"](
@@ -318,10 +324,10 @@ def _instance_profile_present(name, region=None, key=None, keyid=None, profile=N
         if created:
             ret["changes"]["old"] = {"instance_profile": None}
             ret["changes"]["new"] = {"instance_profile": name}
-            ret["comment"] = "Instance profile {} created.".format(name)
+            ret["comment"] = f"Instance profile {name} created."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} instance profile.".format(name)
+            ret["comment"] = f"Failed to create {name} instance profile."
     return ret
 
 
@@ -332,7 +338,7 @@ def _instance_profile_associated(name, region=None, key=None, keyid=None, profil
     )
     if not is_associated:
         if __opts__["test"]:
-            ret["comment"] = "Instance profile {} is set to be associated.".format(name)
+            ret["comment"] = f"Instance profile {name} is set to be associated."
             ret["result"] = None
             return ret
         associated = __salt__["boto_iam.associate_profile_to_role"](
@@ -341,7 +347,7 @@ def _instance_profile_associated(name, region=None, key=None, keyid=None, profil
         if associated:
             ret["changes"]["old"] = {"profile_associated": None}
             ret["changes"]["new"] = {"profile_associated": True}
-            ret["comment"] = "Instance profile {} associated.".format(name)
+            ret["comment"] = f"Instance profile {name} associated."
         else:
             ret["result"] = False
             ret[
@@ -591,19 +597,19 @@ def _role_absent(name, region=None, key=None, keyid=None, profile=None):
     exists = __salt__["boto_iam.role_exists"](name, region, key, keyid, profile)
     if exists:
         if __opts__["test"]:
-            ret["comment"] = "IAM role {} is set to be removed.".format(name)
+            ret["comment"] = f"IAM role {name} is set to be removed."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_iam.delete_role"](name, region, key, keyid, profile)
         if deleted:
             ret["changes"]["old"] = {"role": name}
             ret["changes"]["new"] = {"role": None}
-            ret["comment"] = "IAM role {} removed.".format(name)
+            ret["comment"] = f"IAM role {name} removed."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} iam role.".format(name)
+            ret["comment"] = f"Failed to delete {name} iam role."
     else:
-        ret["comment"] = "{} role does not exist.".format(name)
+        ret["comment"] = f"{name} role does not exist."
     return ret
 
 
@@ -615,7 +621,7 @@ def _instance_profile_absent(name, region=None, key=None, keyid=None, profile=No
     )
     if exists:
         if __opts__["test"]:
-            ret["comment"] = "Instance profile {} is set to be removed.".format(name)
+            ret["comment"] = f"Instance profile {name} is set to be removed."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_iam.delete_instance_profile"](
@@ -624,12 +630,12 @@ def _instance_profile_absent(name, region=None, key=None, keyid=None, profile=No
         if deleted:
             ret["changes"]["old"] = {"instance_profile": name}
             ret["changes"]["new"] = {"instance_profile": None}
-            ret["comment"] = "Instance profile {} removed.".format(name)
+            ret["comment"] = f"Instance profile {name} removed."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} instance profile.".format(name)
+            ret["comment"] = f"Failed to delete {name} instance profile."
     else:
-        ret["comment"] = "{} instance profile does not exist.".format(name)
+        ret["comment"] = f"{name} instance profile does not exist."
     return ret
 
 
@@ -637,7 +643,7 @@ def _policies_absent(name, region=None, key=None, keyid=None, profile=None):
     ret = {"result": True, "comment": "", "changes": {}}
     _list = __salt__["boto_iam.list_role_policies"](name, region, key, keyid, profile)
     if not _list:
-        ret["comment"] = "No policies in role {}.".format(name)
+        ret["comment"] = f"No policies in role {name}."
         return ret
     if __opts__["test"]:
         ret["comment"] = "{} policies to be removed from role {}.".format(
@@ -673,7 +679,7 @@ def _policies_detached(name, region=None, key=None, keyid=None, profile=None):
     )
     oldpolicies = [x.get("policy_arn") for x in _list]
     if not _list:
-        ret["comment"] = "No attached policies in role {}.".format(name)
+        ret["comment"] = f"No attached policies in role {name}."
         return ret
     if __opts__["test"]:
         ret["comment"] = "{} policies to be detached from role {}.".format(
@@ -693,7 +699,7 @@ def _policies_detached(name, region=None, key=None, keyid=None, profile=None):
             newpolicies = [x.get("policy_arn") for x in _list]
             ret["changes"]["new"] = {"managed_policies": newpolicies}
             ret["result"] = False
-            ret["comment"] = "Failed to detach {} from role {}".format(policy_arn, name)
+            ret["comment"] = f"Failed to detach {policy_arn} from role {name}"
             return ret
     _list = __salt__["boto_iam.list_attached_role_policies"](
         name, region=region, key=key, keyid=keyid, profile=profile
@@ -726,7 +732,7 @@ def _instance_profile_disassociated(
         if associated:
             ret["changes"]["old"] = {"profile_associated": True}
             ret["changes"]["new"] = {"profile_associated": False}
-            ret["comment"] = "Instance profile {} disassociated.".format(name)
+            ret["comment"] = f"Instance profile {name} disassociated."
         else:
             ret["result"] = False
             ret[

@@ -70,6 +70,12 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -135,11 +141,11 @@ def topic_present(
     something_changed = False
     current = __salt__["boto3_sns.describe_topic"](name, region, key, keyid, profile)
     if current:
-        ret["comment"] = "AWS SNS topic {} present.".format(name)
+        ret["comment"] = f"AWS SNS topic {name} present."
         TopicArn = current["TopicArn"]
     else:
         if __opts__["test"]:
-            ret["comment"] = "AWS SNS topic {} would be created.".format(name)
+            ret["comment"] = f"AWS SNS topic {name} would be created."
             ret["result"] = None
             return ret
         else:
@@ -152,7 +158,7 @@ def topic_present(
                 )
                 something_changed = True
             else:
-                ret["comment"] = "Failed to create AWS SNS topic {}".format(name)
+                ret["comment"] = f"Failed to create AWS SNS topic {name}"
                 log.error(ret["comment"])
                 ret["result"] = False
                 return ret
@@ -246,7 +252,7 @@ def topic_present(
             TopicArn, prot, endp, region=region, key=key, keyid=keyid, profile=profile
         )
         if subbed:
-            msg = " Subscription {}:{} set on topic {}.".format(prot, endp, TopicArn)
+            msg = f" Subscription {prot}:{endp} set on topic {TopicArn}."
             ret["comment"] += msg
             something_changed = True
         else:
@@ -318,11 +324,11 @@ def topic_absent(
     something_changed = False
     current = __salt__["boto3_sns.describe_topic"](name, region, key, keyid, profile)
     if not current:
-        ret["comment"] = "AWS SNS topic {} absent.".format(name)
+        ret["comment"] = f"AWS SNS topic {name} absent."
     else:
         TopicArn = current["TopicArn"]
         if __opts__["test"]:
-            ret["comment"] = "AWS SNS topic {} would be removed.".format(TopicArn)
+            ret["comment"] = f"AWS SNS topic {TopicArn} would be removed."
             if unsubscribe:
                 ret["comment"] += "  {} subscription(s) would be removed.".format(
                     len(current["Subscriptions"])
@@ -360,17 +366,14 @@ def topic_absent(
         if not __salt__["boto3_sns.delete_topic"](
             TopicArn, region=region, key=key, keyid=keyid, profile=profile
         ):
-            ret["comment"] = "Failed to delete SNS topic {}".format(TopicArn)
+            ret["comment"] = f"Failed to delete SNS topic {TopicArn}"
             log.error(ret["comment"])
             ret["result"] = False
         else:
-            ret["comment"] = "AWS SNS topic {} deleted.".format(TopicArn)
+            ret["comment"] = f"AWS SNS topic {TopicArn} deleted."
             if unsubscribe:
                 ret["comment"] += "  ".join(
-                    [
-                        "Subscription {} deleted".format(s)
-                        for s in current["Subscriptions"]
-                    ]
+                    [f"Subscription {s} deleted" for s in current["Subscriptions"]]
                 )
             something_changed = True
 

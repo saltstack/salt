@@ -15,16 +15,51 @@ log = logging.getLogger(__name__)
 CHECK_IMPORTS_SLS_CONTENTS = """
 #!py
 import importlib
+import sys
 
 def run():
     config = {}
     for module in [
-        'templates', 'platform', 'cli', 'executors', 'config', 'wheel', 'netapi',
-        'cache', 'proxy', 'transport', 'metaproxy', 'modules', 'tokens', 'matchers',
-        'acl', 'auth', 'log', 'engines', 'client', 'returners', 'runners', 'tops',
-        'output', 'daemons', 'thorium', 'renderers', 'states', 'cloud', 'roster',
-        'beacons', 'pillar', 'spm', 'utils', 'sdb', 'fileserver', 'defaults',
-        'ext', 'queues', 'grains', 'serializers'
+        '_logging',
+        'acl',
+        'auth',
+        'beacons',
+        'cache',
+        'cli',
+        'client',
+        'cloud',
+        'config',
+        'daemons',
+        'defaults',
+        'engines',
+        'executors',
+        'ext',
+        'fileserver',
+        'grains',
+        'matchers',
+        'metaproxy',
+        'modules',
+        'netapi',
+        'output',
+        'pillar',
+        'platform',
+        'proxy',
+        'queues',
+        'renderers',
+        'returners',
+        'roster',
+        'runners',
+        'sdb',
+        'serializers',
+        'spm',
+        'states',
+        'templates',
+        'thorium',
+        'tokens',
+        'tops',
+        'transport',
+        'utils',
+        'wheel',
     ]:
         import_name = "salt.{}".format(module)
         try:
@@ -47,7 +82,12 @@ def run():
                 ]
             }
 
-    for import_name in ["telnetlib"]:
+    # Import required for all OS'es
+    for import_name in [
+        "jinja2",
+        "telnetlib",
+        "yaml",
+    ]:
         try:
             importlib.import_module(import_name)
             config[import_name] = {
@@ -67,6 +107,40 @@ def run():
                     }
                 ]
             }
+
+    # Windows specific requirements (I think, there may be some for other OSes in here)
+    if sys.platform == "win32":
+        for import_name in [
+            "cffi",
+            "clr_loader",
+            "lxml",
+            "pythonnet",
+            "pytz",
+            "pywintypes",
+            "timelib",
+            "win32",
+            "wmi",
+            "xmltodict",
+        ]:
+            try:
+                importlib.import_module(import_name)
+                config[import_name] = {
+                    'test.succeed_without_changes': [
+                        {
+                            "name": import_name,
+                            'comment': "The '{}' import succeeded.".format(import_name)
+                        }
+                    ]
+                }
+            except ModuleNotFoundError as err:
+                config[import_name] = {
+                    'test.fail_without_changes': [
+                        {
+                            "name": import_name,
+                            'comment': "The '{}' import failed. The error was: {}".format(import_name, err)
+                        }
+                    ]
+                }
     return config
 """
 

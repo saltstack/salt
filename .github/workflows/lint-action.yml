@@ -13,12 +13,13 @@ on:
 env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 
 jobs:
   Salt:
     name: Lint Salt's Source Code
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "large", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
@@ -62,7 +63,7 @@ jobs:
 
   Tests:
     name: Lint Salt's Test Suite
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "large", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:

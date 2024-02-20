@@ -127,6 +127,13 @@ def __virtual__():
     return salt.utils.versions.check_boto_reqs(boto3_ver="1.3.1")
 
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
+
 def __init__(opts):
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "rds")
@@ -294,9 +301,7 @@ def create(
     if wait_status:
         wait_stati = ["available", "modifying", "backing-up"]
         if wait_status not in wait_stati:
-            raise SaltInvocationError(
-                "wait_status can be one of: {}".format(wait_stati)
-            )
+            raise SaltInvocationError(f"wait_status can be one of: {wait_stati}")
     if vpc_security_groups:
         v_tmp = __salt__["boto_secgroup.convert_to_group_ids"](
             groups=vpc_security_groups,
@@ -336,7 +341,7 @@ def create(
         if not wait_status:
             return {
                 "created": True,
-                "message": "RDS instance {} created.".format(name),
+                "message": f"RDS instance {name} created.",
             }
 
         while True:
@@ -408,14 +413,14 @@ def create_read_replica(
     if not res.get("exists"):
         return {
             "exists": bool(res),
-            "message": "RDS instance source {} does not exists.".format(source_name),
+            "message": f"RDS instance source {source_name} does not exists.",
         }
 
     res = __salt__["boto_rds.exists"](name, tags, region, key, keyid, profile)
     if res.get("exists"):
         return {
             "exists": bool(res),
-            "message": "RDS replica instance {} already exists.".format(name),
+            "message": f"RDS replica instance {name} already exists.",
         }
 
     try:
@@ -444,7 +449,7 @@ def create_read_replica(
             Tags=taglist,
             DBSubnetGroupName=db_subnet_group_name,
             StorageType=storage_type,
-            **kwargs
+            **kwargs,
         )
 
         return {"exists": bool(rds_replica)}
@@ -535,12 +540,12 @@ def create_parameter_group(
         if not rds:
             return {
                 "created": False,
-                "message": "Failed to create RDS parameter group {}".format(name),
+                "message": f"Failed to create RDS parameter group {name}",
             }
 
         return {
             "exists": bool(rds),
-            "message": "Created RDS parameter group {}".format(name),
+            "message": f"Created RDS parameter group {name}",
         }
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
@@ -617,7 +622,7 @@ def update_parameter_group(
     if not res.get("exists"):
         return {
             "exists": bool(res),
-            "message": "RDS parameter group {} does not exist.".format(name),
+            "message": f"RDS parameter group {name} does not exist.",
         }
 
     param_list = []
@@ -662,7 +667,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None, profile=None):
     if not res.get("exists"):
         return {
             "exists": bool(res),
-            "message": "RDS instance {} does not exist.".format(name),
+            "message": f"RDS instance {name} does not exist.",
         }
 
     try:
@@ -867,7 +872,7 @@ def delete(
         if not wait_for_deletion:
             return {
                 "deleted": bool(res),
-                "message": "Deleted RDS instance {}.".format(name),
+                "message": f"Deleted RDS instance {name}.",
             }
 
         start_time = time.time()
@@ -883,7 +888,7 @@ def delete(
             if not res.get("exists"):
                 return {
                     "deleted": bool(res),
-                    "message": "Deleted RDS instance {} completely.".format(name),
+                    "message": f"Deleted RDS instance {name} completely.",
                 }
 
             if time.time() - start_time > timeout:
@@ -922,12 +927,12 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
         if not res:
             return {
                 "deleted": bool(res),
-                "message": "Failed to delete RDS option group {}.".format(name),
+                "message": f"Failed to delete RDS option group {name}.",
             }
 
         return {
             "deleted": bool(res),
-            "message": "Deleted RDS option group {}.".format(name),
+            "message": f"Deleted RDS option group {name}.",
         }
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
@@ -952,7 +957,7 @@ def delete_parameter_group(name, region=None, key=None, keyid=None, profile=None
         r = conn.delete_db_parameter_group(DBParameterGroupName=name)
         return {
             "deleted": bool(r),
-            "message": "Deleted RDS parameter group {}.".format(name),
+            "message": f"Deleted RDS parameter group {name}.",
         }
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
@@ -977,7 +982,7 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
         r = conn.delete_db_subnet_group(DBSubnetGroupName=name)
         return {
             "deleted": bool(r),
-            "message": "Deleted RDS subnet group {}.".format(name),
+            "message": f"Deleted RDS subnet group {name}.",
         }
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
@@ -1024,12 +1029,12 @@ def describe_parameter_group(
         if not info:
             return {
                 "results": bool(info),
-                "message": "Failed to get RDS description for group {}.".format(name),
+                "message": f"Failed to get RDS description for group {name}.",
             }
 
         return {
             "results": bool(info),
-            "message": "Got RDS descrition for group {}.".format(name),
+            "message": f"Got RDS descrition for group {name}.",
         }
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
@@ -1058,7 +1063,7 @@ def describe_parameters(
     if not res.get("exists"):
         return {
             "result": False,
-            "message": "Parameter group {} does not exist".format(name),
+            "message": f"Parameter group {name} does not exist",
         }
 
     try:
@@ -1166,7 +1171,7 @@ def modify_db_instance(
     if not res.get("exists"):
         return {
             "modified": False,
-            "message": "RDS db instance {} does not exist.".format(name),
+            "message": f"RDS db instance {name} does not exist.",
         }
 
     try:
@@ -1189,12 +1194,12 @@ def modify_db_instance(
         if not info:
             return {
                 "modified": bool(info),
-                "message": "Failed to modify RDS db instance {}.".format(name),
+                "message": f"Failed to modify RDS db instance {name}.",
             }
 
         return {
             "modified": bool(info),
-            "message": "Modified RDS db instance {}.".format(name),
+            "message": f"Modified RDS db instance {name}.",
             "results": dict(info),
         }
     except ClientError as e:

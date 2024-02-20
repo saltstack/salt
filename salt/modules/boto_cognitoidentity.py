@@ -100,6 +100,12 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
+
 
 def __virtual__():
     """
@@ -365,7 +371,7 @@ def set_identity_pool_roles(
             if role_arn is None:
                 return {
                     "set": False,
-                    "error": "invalid AuthenticatedRole {}".format(AuthenticatedRole),
+                    "error": f"invalid AuthenticatedRole {AuthenticatedRole}",
                 }
             AuthenticatedRole = role_arn
 

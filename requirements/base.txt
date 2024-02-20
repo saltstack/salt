@@ -11,6 +11,7 @@ psutil>=5.0.0
 packaging>=21.3
 looseversion
 tornado>=6.3.3
+aiohttp>=3.9.0
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
@@ -35,3 +36,4 @@ pythonnet>=3.0.1; sys_platform == 'win32'
 pymssql>=2.2.1; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
 lxml>=4.6.3; sys_platform == 'win32'
+xmltodict>=0.13.0; sys_platform == 'win32'

@@ -223,6 +223,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif self.host and self.port:
             if self.path:
                 raise Exception("A host and port or a path must be provided, not both")
+        self.on_recv_task = None
 
     def close(self):
         if self._closing is True:
@@ -340,6 +341,28 @@ class PublishClient(salt.transport.base.PublishClient):
         return
         # raise Exception("Send not supported")
         # await self._socket.send(msg)
+
+    # async def on_recv_handler(self, callback):
+    #    while not self._socket:
+    #        # Retry quickly, we may want to increase this if it's hogging cpu.
+    #        await asyncio.sleep(0.003)
+    #    while True:
+    #        msg = await self.recv()
+    #        if msg:
+    #            await callback(msg)
+
+    # def on_recv(self, callback):
+    #    """
+    #    Register a callback for received messages (that we didn't initiate)
+    #    """
+    #    if self.on_recv_task:
+    #        # XXX: We are not awaiting this canceled task. This still needs to
+    #        # be addressed.
+    #        self.on_recv_task.cancel()
+    #    if callback is None:
+    #        self.on_recv_task = None
+    #    else:
+    #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
 
@@ -945,21 +968,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     htopic = salt.utils.stringutils.to_bytes(
                         hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    await self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
-                    await self.dpub_sock.send(payload)
+                    await self.dpub_sock.send_multipart([htopic, payload])
                     log.trace("Filtered data has been sent")
                 # Syndic broadcast
                 if self.opts.get("order_masters"):
                     log.trace("Sending filtered data to syndic")
-                    await self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
-                    await self.dpub_sock.send(payload)
+                    await self.dpub_sock.send_multipart([b"syndic", payload])
                     log.trace("Filtered data has been sent to syndic")
             # otherwise its a broadcast
             else:
                 # TODO: constants file for "broadcast"
                 log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
-                await self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
-                await self.dpub_sock.send(payload)
+                await self.dpub_sock.send_multipart([b"broadcast", payload])
                 log.trace("Broadcasted data has been sent")
         else:
             log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)

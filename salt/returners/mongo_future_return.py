@@ -137,6 +137,7 @@ def _get_options(ret=None):
     attrs = {
         "host": "host",
         "port": "port",
+        "ssl": "ssl",
         "db": "db",
         "user": "user",
         "password": "password",
@@ -158,6 +159,7 @@ def _get_conn(ret):
 
     host = _options.get("host")
     port = _options.get("port")
+    ssl = _options.get("ssl") or False
     uri = _options.get("uri")
     db_ = _options.get("db")
     user = _options.get("user")
@@ -178,7 +180,9 @@ def _get_conn(ret):
         mdb = conn.get_database()
     else:
         if PYMONGO_VERSION > Version("2.3"):
-            conn = pymongo.MongoClient(host, port, username=user, password=password)
+            conn = pymongo.MongoClient(
+                host, port, username=user, password=password, ssl=ssl
+            )
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(

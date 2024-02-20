@@ -115,29 +115,6 @@ log = logging.getLogger(__name__)
 # 6. Handle publications
 
 
-def _sync_grains(opts):
-    # need sync of custom grains as may be used in pillar compilation
-    # if coming up initially and remote client, the first sync _grains
-    # doesn't have opts["master_uri"] set yet during the sync, so need
-    # to force local, otherwise will throw an exception when attempting
-    # to retrieve opts["master_uri"] when retrieving key for remote communication
-    # in addition opts sometimes does not contain extmod_whitelist and extmod_blacklist
-    # hence set those to defaults, empty dict, if not part of opts, as ref'd in
-    # salt.utils.extmod sync function
-    if opts.get("extmod_whitelist", None) is None:
-        opts["extmod_whitelist"] = {}
-
-    if opts.get("extmod_blacklist", None) is None:
-        opts["extmod_blacklist"] = {}
-
-    if opts.get("file_client", "remote") == "remote" and not opts.get(
-        "master_uri", None
-    ):
-        salt.utils.extmods.sync(opts, "grains", force_local=True)
-    else:
-        salt.utils.extmods.sync(opts, "grains")
-
-
 def resolve_dns(opts, fallback=True):
     """
     Resolves the master_ip and master_uri options
@@ -313,9 +290,8 @@ def get_proc_dir(cachedir, **kwargs):
     else:
         mode = {"mode": mode}
 
-    if not os.path.isdir(fn_):
-        # proc_dir is not present, create it with mode settings
-        os.makedirs(fn_, **mode)
+    # proc_dir is not present, create it with mode settings
+    os.makedirs(fn_, **mode, exist_ok=True)
 
     d_stat = os.stat(fn_)
 
@@ -945,7 +921,6 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
-        _sync_grains(opts)
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
@@ -976,8 +951,7 @@ class SMinion(MinionBase):
             import salt.utils.yaml
 
             pdir = os.path.join(self.opts["cachedir"], "pillar")
-            if not os.path.isdir(pdir):
-                os.makedirs(pdir, 0o700)
+            os.makedirs(pdir, 0o700, exist_ok=True)
             ptop = os.path.join(pdir, "top.sls")
             if self.opts["saltenv"] is not None:
                 penv = self.opts["saltenv"]
@@ -1287,6 +1261,7 @@ class Minion(MinionBase):
         self.ready = False
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
+        self.req_channel = None
 
         if io_loop is None:
             self.io_loop = tornado.ioloop.IOLoop.current()
@@ -1397,6 +1372,16 @@ class Minion(MinionBase):
         """
         Return a future which will complete when you are connected to a master
         """
+        if hasattr(self, "pub_channel") and self.pub_channel:
+            self.pub_channel.on_recv(None)
+            if hasattr(self.pub_channel, "auth"):
+                self.pub_channel.auth.invalidate()
+            if hasattr(self.pub_channel, "close"):
+                self.pub_channel.close()
+        if hasattr(self, "req_channel") and self.req_channel:
+            self.req_channel.close()
+            self.req_channel = None
+
         # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
         master, self.pub_channel = yield self.eval_master(
             self.opts, self.timeout, self.safe, failed
@@ -2872,7 +2857,9 @@ class Minion(MinionBase):
                             self.pub_channel.auth.invalidate()
                         if hasattr(self.pub_channel, "close"):
                             self.pub_channel.close()
-                        del self.pub_channel
+                    if hasattr(self, "req_channel") and self.req_channel:
+                        self.req_channel.close()
+                        self.req_channel = None
 
                     # if eval_master finds a new master for us, self.connected
                     # will be True again on successful master authentication
@@ -3304,6 +3291,9 @@ class Minion(MinionBase):
             self.pub_channel.on_recv(None)
             self.pub_channel.close()
             del self.pub_channel
+        if hasattr(self, "req_channel") and self.req_channel:
+            self.req_channel.close()
+            self.req_channel = None
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()

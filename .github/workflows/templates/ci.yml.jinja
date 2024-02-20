@@ -52,7 +52,7 @@
       - x86_64
     <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     <%- endif %>
     needs:
       - prepare-workflow
@@ -62,7 +62,7 @@
     <%- if not prepare_actual_release %>
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -172,7 +172,7 @@
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -210,12 +210,12 @@
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -240,16 +240,14 @@
 
   <%- set job_name = "build-deps-onedir" %>
   <%- if includes.get(job_name, True) %>
-  <%- for platform in ("linux", "windows", "macos") %>
-    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ platform_job_name }>:
-    <%- do conclusion_needs.append(platform_job_name) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
     name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir-<{ platform }>.yml
+    uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -258,24 +256,21 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
-  <%- endfor %>
   <%- endif %>
 
 
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
-  <%- for platform in ("linux", "windows", "macos") %>
-    <%- set platform_job_name = "{}-{}".format(job_name, platform) %>
 
-  <{ platform_job_name }>:
-    <%- do conclusion_needs.append(platform_job_name) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-<{ platform }>
+      - build-deps-onedir
       - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir-<{ platform }>.yml
+    uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -284,7 +279,6 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
-  <%- endfor %>
   <%- endif %>
 
 
@@ -314,7 +308,7 @@
     <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs:
       - prepare-workflow
       <%- for need in test_salt_needs.iter(consume=False) %>
@@ -324,8 +318,7 @@
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
-        if: ${{ github.event.repository.private == false }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -355,6 +348,8 @@
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
+        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
+        # under the same name something that actions/upload-artifact@v4 does not do.
         with:
           name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
@@ -381,6 +376,7 @@
           nox --force-color -e create-xml-coverage-reports
 
       - name: Upload Code Coverage To Codecov
+        if: ${{ ! github.event.repository.private }}
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
@@ -401,7 +397,7 @@
           nox --force-color -e create-html-coverage-report -- salt
 
       - name: Upload Salt Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-salt-html-report
           path: artifacts/coverage/html/salt
@@ -417,7 +413,7 @@
           nox --force-color -e create-json-coverage-reports
 
       - name: Upload Combined Code Coverage JSON Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-json-report
           path: artifacts/coverage/coverage.json
@@ -429,7 +425,7 @@
           nox --force-color -e create-html-coverage-report
 
       - name: Upload Combined Code Coverage HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-full-html-report
           path: artifacts/coverage/html/full

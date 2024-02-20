@@ -969,7 +969,6 @@ class SlackClient:
                     del outstanding[jid]
 
     def run_command_async(self, msg):
-
         """
         :type msg: dict
         :param msg: The message dictionary that contains the command and all information.
@@ -985,6 +984,12 @@ class SlackClient:
         # Check for pillar string representation of dict and convert it to dict
         if "pillar" in kwargs:
             kwargs.update(pillar=ast.literal_eval(kwargs["pillar"]))
+        if "test" in kwargs and cmd.lower() in ["state.apply", "state.highstate"]:
+            if str(kwargs["test"]).lower() in ["true", "false"]:
+                if kwargs["test"].lower() == "true":
+                    kwargs["test"] = True
+                else:
+                    kwargs["test"] = False
 
         # Check for target. Otherwise assume None
         target = msg["target"]["target"]

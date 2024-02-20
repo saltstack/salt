@@ -38,7 +38,7 @@ download = command_group(
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "darwin", "windows"),
+            "choices": ("linux", "macos", "windows"),
             "required": True,
         },
         "arch": {
@@ -77,10 +77,15 @@ def download_onedir_artifact(
             "help": "The workflow run ID from where to download artifacts from",
             "required": True,
         },
-        "slug": {
-            "help": "The OS slug",
+        "platform": {
+            "help": "The onedir platform artifact to download",
+            "choices": ("linux", "macos", "windows"),
             "required": True,
-            "choices": OS_SLUGS,
+        },
+        "arch": {
+            "help": "The onedir artifact architecture",
+            "choices": ("x86_64", "aarch64", "amd64", "x86"),
+            "required": True,
         },
         "nox_env": {
             "help": "The nox environment name.",
@@ -93,7 +98,8 @@ def download_onedir_artifact(
 def download_nox_artifact(
     ctx: Context,
     run_id: int = None,
-    slug: str = None,
+    platform: str = None,
+    arch: str = None,
     nox_env: str = "ci-test-onedir",
     repository: str = "saltstack/salt",
 ):
@@ -102,14 +108,16 @@ def download_nox_artifact(
     """
     if TYPE_CHECKING:
         assert run_id is not None
-        assert slug is not None
-
-    if slug.endswith("arm64"):
-        slug = slug.replace("-arm64", "")
-        nox_env += "-aarch64"
+        assert arch is not None
+        assert platform is not None
 
     exitcode = tools.utils.gh.download_nox_artifact(
-        ctx=ctx, run_id=run_id, slug=slug, nox_env=nox_env, repository=repository
+        ctx=ctx,
+        run_id=run_id,
+        platform=platform,
+        arch=arch,
+        nox_env=nox_env,
+        repository=repository,
     )
     ctx.exit(exitcode)
 

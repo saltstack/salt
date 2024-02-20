@@ -1,6 +1,14 @@
 """
 Homebrew for macOS
 
+It is recommended for the ``salt-minion`` to have the ``HOMEBREW_PREFIX``
+environment variable set.
+
+This will ensure that Salt uses the correct path for the ``brew`` binary.
+
+Typically, this is set to ``/usr/local`` for Intel Macs and ``/opt/homebrew``
+for Apple Silicon Macs.
+
 .. important::
     If you feel that Salt should be using this module to manage packages on a
     minion, and it is using a different module (or gives an error similar to
@@ -10,6 +18,7 @@ Homebrew for macOS
 
 import copy
 import logging
+import os
 
 import salt.utils.data
 import salt.utils.functools
@@ -27,11 +36,11 @@ __virtualname__ = "pkg"
 
 def __virtual__():
     """
-    Confine this module to Mac OS with Homebrew.
+    Confine this module to macOS with Homebrew.
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not _homebrew_os_bin():
+    if not _homebrew_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -97,31 +106,54 @@ def _homebrew_os_bin():
     """
     Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
     """
-    return salt.utils.path.which("brew")
+
+    original_path = os.environ.get("PATH")
+    try:
+        # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
+        # the PATH does not include "/opt/homebrew"
+        current_path = original_path or ""
+        homebrew_path = "/opt/homebrew/bin"
+        if homebrew_path not in current_path.split(os.path.pathsep):
+            extended_path = os.path.pathsep.join([current_path, homebrew_path])
+            os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
+
+        # Search for the brew executable in the current PATH
+        brew = salt.utils.path.which("brew")
+    finally:
+        # Restore original PATH
+        if original_path is None:
+            del os.environ["PATH"]
+        else:
+            os.environ["PATH"] = original_path
+
+    return brew
 
 
 def _homebrew_bin():
     """
     Returns the full path to the homebrew binary in the homebrew installation folder
     """
-    brew = _homebrew_os_bin()
-    if brew:
-        # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
-        brew = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
-        brew += "/bin/brew"
-    return brew
+    ret = homebrew_prefix()
+    if ret is not None:
+        ret += "/bin/brew"
+    else:
+        log.warning("Failed to find homebrew prefix")
+
+    return ret
 
 
 def _call_brew(*cmd, failhard=True):
     """
     Calls the brew command with the user account of brew
     """
-    user = __salt__["file.get_user"](_homebrew_bin())
+    brew_exec = _homebrew_bin()
+
+    user = __salt__["file.get_user"](brew_exec)
     runas = user if user != __opts__["user"] else None
     _cmd = []
     if runas:
         _cmd = [f"sudo -i -n -H -u {runas} -- "]
-    _cmd = _cmd + [_homebrew_bin()] + list(cmd)
+    _cmd = _cmd + [brew_exec] + list(cmd)
     _cmd = " ".join(_cmd)
 
     runas = None
@@ -146,6 +178,47 @@ def _list_pkgs_from_context(versions_as_list):
         ret = copy.deepcopy(__context__["pkg.list_pkgs"])
         __salt__["pkg_resource.stringify"](ret)
         return ret
+
+
+def homebrew_prefix():
+    """
+    Returns the full path to the homebrew prefix.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.homebrew_prefix
+    """
+
+    # If HOMEBREW_PREFIX env variable is present, use it
+    env_homebrew_prefix = "HOMEBREW_PREFIX"
+    if env_homebrew_prefix in os.environ:
+        log.debug(f"{env_homebrew_prefix} is set. Using it for homebrew prefix.")
+        return os.environ[env_homebrew_prefix]
+
+    # Try brew --prefix otherwise
+    try:
+        log.debug("Trying to find homebrew prefix by running 'brew --prefix'")
+
+        brew = _homebrew_os_bin()
+        if brew is not None:
+            # Check if the found brew command is the right one
+            import salt.modules.cmdmod
+            import salt.modules.file
+
+            runas = salt.modules.file.get_user(brew)
+            ret = salt.modules.cmdmod.run(
+                "brew --prefix", runas=runas, output_loglevel="trace", raise_err=True
+            )
+
+            return ret
+    except CommandExecutionError as e:
+        log.debug(
+            f"Unable to find homebrew prefix by running 'brew --prefix'. Error: {str(e)}"
+        )
+
+    return None
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -657,17 +730,13 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                 if result:
                     changes = {"old": "install", "new": "hold"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target]["comment"] = "Package {} is now being held.".format(
-                        target
-                    )
+                    ret[target]["comment"] = f"Package {target} is now being held."
                 else:
                     ret[target].update(result=False)
                     ret[target]["comment"] = f"Unable to hold package {target}."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set to be held."
     return ret
 
 
@@ -727,9 +796,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif target in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be unheld.".format(
-                    target
-                )
+                ret[target]["comment"] = f"Package {target} is set to be unheld."
             else:
                 result = _unpin(target)
                 if result:
@@ -740,14 +807,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     ] = f"Package {target} is no longer being held."
                 else:
                     ret[target].update(result=False)
-                    ret[target]["comment"] = "Unable to unhold package {}.".format(
-                        target
-                    )
+                    ret[target]["comment"] = f"Unable to unhold package {target}."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set not to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set not to be held."
     return ret
 
 
