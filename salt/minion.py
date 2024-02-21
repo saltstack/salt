@@ -290,9 +290,8 @@ def get_proc_dir(cachedir, **kwargs):
     else:
         mode = {"mode": mode}
 
-    if not os.path.isdir(fn_):
-        # proc_dir is not present, create it with mode settings
-        os.makedirs(fn_, **mode)
+    # proc_dir is not present, create it with mode settings
+    os.makedirs(fn_, **mode, exist_ok=True)
 
     d_stat = os.stat(fn_)
 
@@ -952,8 +951,7 @@ class SMinion(MinionBase):
             import salt.utils.yaml
 
             pdir = os.path.join(self.opts["cachedir"], "pillar")
-            if not os.path.isdir(pdir):
-                os.makedirs(pdir, 0o700)
+            os.makedirs(pdir, 0o700, exist_ok=True)
             ptop = os.path.join(pdir, "top.sls")
             if self.opts["saltenv"] is not None:
                 penv = self.opts["saltenv"]

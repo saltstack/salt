@@ -431,7 +431,7 @@ def setup_macos(
         assert ret.returncode == 0, ret
     else:
         # We are testing the onedir download
-        onedir_name = f"salt-{salt_release}-onedir-darwin-{arch}.tar.xz"
+        onedir_name = f"salt-{salt_release}-onedir-macos-{arch}.tar.xz"
         if repo_subpath == "minor":
             repo_url_base = f"{root_url}/onedir/{repo_subpath}/{salt_release}"
         else:

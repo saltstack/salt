@@ -321,9 +321,9 @@ def clear_lock(clear_func, role, remote=None, lock_type="update"):
 
     Returns the return data from ``clear_func``.
     """
-    msg = "Clearing {} lock for {} remotes".format(lock_type, role)
+    msg = f"Clearing {lock_type} lock for {role} remotes"
     if remote:
-        msg += " matching {}".format(remote)
+        msg += f" matching {remote}"
     log.debug(msg)
     return clear_func(remote=remote, lock_type=lock_type)
 
@@ -376,12 +376,12 @@ class Fileserver:
                 # Only subtracting backends from enabled ones
                 ret = self.opts["fileserver_backend"]
                 for sub in back:
-                    if "{}.envs".format(sub[1:]) in server_funcs:
+                    if f"{sub[1:]}.envs" in server_funcs:
                         ret.remove(sub[1:])
                 return ret
 
         for sub in back:
-            if "{}.envs".format(sub) in server_funcs:
+            if f"{sub}.envs" in server_funcs:
                 ret.append(sub)
         return ret
 
@@ -409,7 +409,7 @@ class Fileserver:
         cleared = []
         errors = []
         for fsb in back:
-            fstr = "{}.clear_cache".format(fsb)
+            fstr = f"{fsb}.clear_cache"
             if fstr in self.servers:
                 log.debug("Clearing %s fileserver cache", fsb)
                 failed = self.servers[fstr]()
@@ -417,7 +417,7 @@ class Fileserver:
                     errors.extend(failed)
                 else:
                     cleared.append(
-                        "The {} fileserver cache was successfully cleared".format(fsb)
+                        f"The {fsb} fileserver cache was successfully cleared"
                     )
         return cleared, errors
 
@@ -431,17 +431,15 @@ class Fileserver:
         locked = []
         errors = []
         for fsb in back:
-            fstr = "{}.lock".format(fsb)
+            fstr = f"{fsb}.lock"
             if fstr in self.servers:
-                msg = "Setting update lock for {} remotes".format(fsb)
+                msg = f"Setting update lock for {fsb} remotes"
                 if remote:
                     if not isinstance(remote, str):
-                        errors.append(
-                            "Badly formatted remote pattern '{}'".format(remote)
-                        )
+                        errors.append(f"Badly formatted remote pattern '{remote}'")
                         continue
                     else:
-                        msg += " matching {}".format(remote)
+                        msg += f" matching {remote}"
                 log.debug(msg)
                 good, bad = self.servers[fstr](remote=remote)
                 locked.extend(good)
@@ -464,7 +462,7 @@ class Fileserver:
         cleared = []
         errors = []
         for fsb in back:
-            fstr = "{}.clear_lock".format(fsb)
+            fstr = f"{fsb}.clear_lock"
             if fstr in self.servers:
                 good, bad = clear_lock(self.servers[fstr], fsb, remote=remote)
                 cleared.extend(good)
@@ -478,7 +476,7 @@ class Fileserver:
         """
         back = self.backends(back)
         for fsb in back:
-            fstr = "{}.update".format(fsb)
+            fstr = f"{fsb}.update"
             if fstr in self.servers:
                 log.debug("Updating %s fileserver cache", fsb)
                 self.servers[fstr](**kwargs)
@@ -491,7 +489,7 @@ class Fileserver:
         back = self.backends(back)
         ret = {}
         for fsb in back:
-            fstr = "{}.update_intervals".format(fsb)
+            fstr = f"{fsb}.update_intervals"
             if fstr in self.servers:
                 ret[fsb] = self.servers[fstr]()
         return ret
@@ -505,7 +503,7 @@ class Fileserver:
         if sources:
             ret = {}
         for fsb in back:
-            fstr = "{}.envs".format(fsb)
+            fstr = f"{fsb}.envs"
             kwargs = (
                 {"ignore_cache": True}
                 if "ignore_cache" in _argspec(self.servers[fstr]).args
@@ -535,7 +533,7 @@ class Fileserver:
         """
         back = self.backends(back)
         for fsb in back:
-            fstr = "{}.init".format(fsb)
+            fstr = f"{fsb}.init"
             if fstr in self.servers:
                 self.servers[fstr]()
 
@@ -568,11 +566,6 @@ class Fileserver:
         saltenv = salt.utils.stringutils.to_unicode(saltenv)
         back = self.backends(back)
         kwargs = {}
-        fnd = {"path": "", "rel": ""}
-        if os.path.isabs(path):
-            return fnd
-        if "../" in path:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # don't attempt to find URL query arguments in the path
             path = salt.utils.url.unescape(path)
@@ -588,6 +581,10 @@ class Fileserver:
                     args = comp.split("=", 1)
                     kwargs[args[0]] = args[1]
 
+        fnd = {"path": "", "rel": ""}
+        if os.path.isabs(path) or "../" in path:
+            return fnd
+
         if "env" in kwargs:
             # "env" is not supported; Use "saltenv".
             kwargs.pop("env")
@@ -598,7 +595,7 @@ class Fileserver:
             saltenv = str(saltenv)
 
         for fsb in back:
-            fstr = "{}.find_file".format(fsb)
+            fstr = f"{fsb}.find_file"
             if fstr in self.servers:
                 fnd = self.servers[fstr](path, saltenv, **kwargs)
                 if fnd.get("path"):
@@ -768,7 +765,7 @@ class Fileserver:
             load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            fstr = "{}.file_list".format(fsb)
+            fstr = f"{fsb}.file_list"
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -793,7 +790,7 @@ class Fileserver:
             load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(None):
-            fstr = "{}.file_list_emptydirs".format(fsb)
+            fstr = f"{fsb}.file_list_emptydirs"
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -818,7 +815,7 @@ class Fileserver:
             load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            fstr = "{}.dir_list".format(fsb)
+            fstr = f"{fsb}.dir_list"
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -843,7 +840,7 @@ class Fileserver:
             load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            symlstr = "{}.symlink_list".format(fsb)
+            symlstr = f"{fsb}.symlink_list"
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
         # some *fs do not handle prefix. Ensure it is filtered
