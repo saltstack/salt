@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import time
 
 import psutil
@@ -19,6 +20,8 @@ pytestmark = [
         reason="vim package not available for this distribution",
     ),
 ]
+
+GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS", False))
 
 
 @pytest.fixture
