@@ -18,6 +18,7 @@ import tempfile
 
 import yaml
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 import tools.utils
 
@@ -137,7 +138,11 @@ def set_salt_version(
         ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
         with ctx.virtualenv(
             name="set-salt-version",
-            requirements_files=[tools.utils.REPO_ROOT / "requirements" / "base.txt"],
+            config=VirtualEnvPipConfig(
+                requirements_files=[
+                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
+                ]
+            ),
         ) as venv:
             code = f"""
             import sys
@@ -363,11 +368,11 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 
 @pkg.command(
     name="source-tarball",
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ]
-    },
+        ],
+    ),
 )
 def source_tarball(ctx: Context):
     shutil.rmtree("dist/", ignore_errors=True)
@@ -411,11 +416,11 @@ def source_tarball(ctx: Context):
 
 @pkg.command(
     name="pypi-upload",
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ]
-    },
+        ],
+    ),
     arguments={
         "files": {
             "help": "Files to upload to PyPi",
