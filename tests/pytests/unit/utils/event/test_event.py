@@ -10,6 +10,7 @@ import zmq
 import salt.config
 import salt.utils.event
 import salt.utils.stringutils
+from salt.exceptions import SaltDeserializationError
 from salt.utils.event import SaltEvent
 from tests.support.events import eventpublisher_process, eventsender_process
 from tests.support.mock import patch
@@ -304,3 +305,109 @@ def test_master_pub_permissions(sock_dir):
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
         assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
+
+
+def test_event_unpack_with_SaltDeserializationError(sock_dir):
+    with eventpublisher_process(str(sock_dir)), salt.utils.event.MasterEvent(
+        str(sock_dir), listen=True
+    ) as me, patch.object(
+        salt.utils.event.log, "warning", autospec=True
+    ) as mock_log_warning, patch.object(
+        salt.utils.event.log, "error", autospec=True
+    ) as mock_log_error:
+        me.fire_event({"data": "foo1"}, "evt1")
+        me.fire_event({"data": "foo2"}, "evt2")
+        evt2 = me.get_event(tag="")
+        with patch("salt.payload.loads", side_effect=SaltDeserializationError):
+            evt1 = me.get_event(tag="")
+        _assert_got_event(evt2, {"data": "foo2"}, expected_failure=True)
+        assert evt1 is None
+        assert (
+            mock_log_warning.mock_calls[0].args[0]
+            == "SaltDeserializationError on unpacking data, the payload could be incomplete"
+        )
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Unable to deserialize received event"
+        )
+
+
+def test_event_fire_ret_load():
+    event = SaltEvent(node=None)
+    test_load = {
+        "id": "minion_id.example.org",
+        "jid": "20240212095247760376",
+        "fun": "state.highstate",
+        "retcode": 254,
+        "return": {
+            "saltutil_|-sync_states_|-sync_states_|-sync_states": {
+                "result": True,
+            },
+            "saltutil_|-sync_modules_|-sync_modules_|-sync_modules": {
+                "result": False,
+            },
+        },
+    }
+    test_fire_event_data = {
+        "result": False,
+        "retcode": 254,
+        "jid": "20240212095247760376",
+        "id": "minion_id.example.org",
+        "success": False,
+        "return": "Error: saltutil.sync_modules",
+        "fun": "state.highstate",
+    }
+    test_unhandled_exc = "Unhandled exception running state.highstate"
+    test_traceback = [
+        "Traceback (most recent call last):\n",
+        "    Just an example of possible return as a list\n",
+    ]
+    with patch.object(
+        event, "fire_event", side_effect=[None, None, Exception]
+    ) as mock_fire_event, patch.object(
+        salt.utils.event.log, "error", autospec=True
+    ) as mock_log_error:
+        event.fire_ret_load(test_load)
+        assert len(mock_fire_event.mock_calls) == 2
+        assert mock_fire_event.mock_calls[0].args[0] == test_fire_event_data
+        assert mock_fire_event.mock_calls[0].args[1] == "saltutil.sync_modules"
+        assert mock_fire_event.mock_calls[1].args[0] == test_fire_event_data
+        assert (
+            mock_fire_event.mock_calls[1].args[1]
+            == "salt/job/20240212095247760376/sub/minion_id.example.org/error/state.highstate"
+        )
+        assert not mock_log_error.mock_calls
+
+        mock_log_error.reset_mock()
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event from '%s' iteration failed with exception: %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+
+        mock_log_error.reset_mock()
+        test_load["return"] = test_unhandled_exc
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event with bad payload received from '%s': %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+        assert (
+            mock_log_error.mock_calls[0].args[2]
+            == "Unhandled exception running state.highstate"
+        )
+
+        mock_log_error.reset_mock()
+        test_load["return"] = test_traceback
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event with bad payload received from '%s': %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+        assert mock_log_error.mock_calls[0].args[2] == "".join(test_traceback)
