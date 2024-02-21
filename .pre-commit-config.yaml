@@ -45,7 +45,7 @@ repos:
             salt/ext/.*
           )$
 
-  - repo: https://github.com/s0undt3ch/python-tools-scripts
+  - repo: https://github.com/saltstack/python-tools-scripts
     rev: "0.18.6"
     hooks:
       - id: tools
@@ -1416,7 +1416,7 @@ repos:
     hooks:
       - id: remove-import-headers
 
-  - repo: https://github.com/s0undt3ch/salt-rewrite
+  - repo: https://github.com/saltstack/salt-rewrite
     # Automatically rewrite code with known rules
     rev: 2.5.2
     hooks:
