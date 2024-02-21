@@ -304,6 +304,8 @@ def present(
     Create a new task in the designated location. This function has many keyword
     arguments that are not listed here. For additional arguments see:
 
+    .. versionadded:: 3007.0
+
     - :py:func:`edit_task`
     - :py:func:`add_action`
     - :py:func:`add_trigger`
@@ -458,6 +460,8 @@ def present(
 def absent(name, location="\\"):
     r"""
     Delete a task from the task scheduler.
+
+    .. versionadded:: 3007.0
 
     Args:
         name (str): The name of the task to delete.
