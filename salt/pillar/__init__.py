@@ -561,6 +561,7 @@ class Pillar:
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
 
         if opts.get("file_client", "") == "local" and not opts.get(
@@ -573,11 +574,15 @@ class Pillar:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
                 self.functions = salt.loader.minion_mods(
-                    opts, utils=utils, file_client=self.client
+                    opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
             else:
                 self.functions = salt.loader.minion_mods(
-                    self.opts, utils=utils, file_client=self.client
+                    self.opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
         else:
             self.functions = functions
@@ -1368,6 +1373,12 @@ class Pillar:
         if self.client:
             try:
                 self.client.destroy()
+            except AttributeError:
+                pass
+
+        if self.client:
+            try:
+                self.fileclient.destroy()
             except AttributeError:
                 pass
 
