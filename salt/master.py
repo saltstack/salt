@@ -2336,7 +2336,7 @@ class ClearFuncs(TransportMethods):
         batch_load.update(clear_load)
         batch = salt.cli.batch_async.BatchAsync(
             self.local.opts,
-            functools.partial(self._prep_jid, clear_load, {}),
+            lambda: self._prep_jid(clear_load, {}),
             batch_load,
         )
         ioloop = tornado.ioloop.IOLoop.current()
