@@ -791,18 +791,21 @@ def pkg_matrix(
         parts = distro_slug.split("-")
         name = parts[0]
         version = parts[1]
-        if name in ("debian", "ubuntu"):
-            arch = "amd64"
-        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
-            arch = "x86_64"
+
         if len(parts) > 2:
             arch = parts[2]
+        elif name in ("debian", "ubuntu"):
+            arch = "amd64"
+        else:
+            arch = "x86_64"
+
         if name == "amazonlinux":
             name = "amazon"
-        if "centos" in name:
+        elif "centos" in name or name == "almalinux":
             name = "redhat"
-        if "photon" in name:
+        elif "photon" in name:
             name = "photon"
+
         if name == "windows":
             prefixes = {
                 "classic": "windows/",
