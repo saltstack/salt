@@ -1,10 +1,6 @@
 """
-.. versionadded:: 3007.0
-
 Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 """
-
-import gc
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
@@ -86,8 +82,8 @@ class BatchAsync:
         self.ended = False
         self.event = salt.utils.event.get_event(
             "master",
-            self.opts["sock_dir"],
-            self.opts,
+            sock_dir=self.opts["sock_dir"],
+            opts=self.opts,
             listen=True,
             io_loop=ioloop,
             keep_loop=True,
@@ -110,7 +106,7 @@ class BatchAsync:
         if not self.event:
             return
         try:
-            mtag, data = self.event.unpack(raw, self.event.serial)
+            mtag, data = self.event.unpack(raw)
             for pattern, op in self.patterns:
                 if mtag.startswith(pattern[:-1]):
                     minion = data["id"]
@@ -127,7 +123,7 @@ class BatchAsync:
                             self.done_minions.add(minion)
                             self.event.io_loop.spawn_callback(self.schedule_next)
         except Exception as ex:  # pylint: disable=W0703
-            log.error("Exception occured while processing event: %s", ex)
+            log.error("Exception occured while processing event: %s", ex, exc_info=True)
 
     def _get_next(self):
         to_run = (
@@ -141,110 +137,113 @@ class BatchAsync:
         )
         return set(list(to_run)[:next_batch_size])
 
+    @tornado.gen.coroutine
     def check_find_job(self, batch_minions, jid):
         """
         Check if the job with specified ``jid`` was finished on the minions
         """
-        if self.event:
-            find_job_return_pattern = f"salt/job/{jid}/ret/*"
-            self.event.unsubscribe(find_job_return_pattern, match_type="glob")
-            self.patterns.remove((find_job_return_pattern, "find_job_return"))
+        if not self.event:
+            return
+        find_job_return_pattern = f"salt/job/{jid}/ret/*"
+        self.event.unsubscribe(find_job_return_pattern, match_type="glob")
+        self.patterns.remove((find_job_return_pattern, "find_job_return"))
 
-            timedout_minions = batch_minions.difference(
-                self.find_job_returned
-            ).difference(self.done_minions)
-            self.timedout_minions = self.timedout_minions.union(timedout_minions)
-            self.active = self.active.difference(self.timedout_minions)
-            running = batch_minions.difference(self.done_minions).difference(
-                self.timedout_minions
-            )
+        timedout_minions = batch_minions.difference(self.find_job_returned).difference(
+            self.done_minions
+        )
+        self.timedout_minions = self.timedout_minions.union(timedout_minions)
+        self.active = self.active.difference(self.timedout_minions)
+        running = batch_minions.difference(self.done_minions).difference(
+            self.timedout_minions
+        )
 
-            if timedout_minions:
-                self.schedule_next()
+        if timedout_minions:
+            self.event.io_loop.spawn_callback(self.schedule_next)
 
-            if self.event and running:
-                self.find_job_returned = self.find_job_returned.difference(running)
-                self.event.io_loop.spawn_callback(self.find_job, running)
+        if self.event and running:
+            self.find_job_returned = self.find_job_returned.difference(running)
+            self.event.io_loop.spawn_callback(self.find_job, running)
 
     @tornado.gen.coroutine
     def find_job(self, minions):
         """
         Find if the job was finished on the minions
         """
-        if self.event:
-            not_done = minions.difference(self.done_minions).difference(
-                self.timedout_minions
+        if not self.event:
+            return
+        not_done = minions.difference(self.done_minions).difference(
+            self.timedout_minions
+        )
+        if not not_done:
+            return
+        try:
+            jid = self.jid_gen()
+            find_job_return_pattern = f"salt/job/{jid}/ret/*"
+            self.patterns.add((find_job_return_pattern, "find_job_return"))
+            self.event.subscribe(find_job_return_pattern, match_type="glob")
+            ret = yield self.local.run_job_async(
+                not_done,
+                "saltutil.find_job",
+                [self.batch_jid],
+                "list",
+                gather_job_timeout=self.opts["gather_job_timeout"],
+                jid=jid,
+                **self.eauth,
             )
-            try:
-                if not_done:
-                    jid = self.jid_gen()
-                    find_job_return_pattern = f"salt/job/{jid}/ret/*"
-                    self.patterns.add((find_job_return_pattern, "find_job_return"))
-                    self.event.subscribe(find_job_return_pattern, match_type="glob")
-                    ret = yield self.local.run_job_async(
-                        not_done,
-                        "saltutil.find_job",
-                        [self.batch_jid],
-                        "list",
-                        gather_job_timeout=self.opts["gather_job_timeout"],
-                        jid=jid,
-                        **self.eauth,
-                    )
-                    yield tornado.gen.sleep(self.opts["gather_job_timeout"])
-                    if self.event:
-                        self.event.io_loop.spawn_callback(
-                            self.check_find_job, not_done, jid
-                        )
-            except Exception as ex:  # pylint: disable=W0703
-                log.error(
-                    "Exception occured handling batch async: %s. Aborting execution.",
-                    ex,
-                )
-                self.close_safe()
+            yield tornado.gen.sleep(self.opts["gather_job_timeout"])
+            if self.event:
+                self.event.io_loop.spawn_callback(self.check_find_job, not_done, jid)
+        except Exception as ex:  # pylint: disable=W0703
+            log.error(
+                "Exception occured handling batch async: %s. Aborting execution.",
+                ex,
+                exc_info=True,
+            )
+            self.close_safe()
 
     @tornado.gen.coroutine
     def start(self):
         """
         Start the batch execution
         """
+        if not self.event:
+            return
+        self.__set_event_handler()
+        ping_return = yield self.local.run_job_async(
+            self.opts["tgt"],
+            "test.ping",
+            [],
+            self.opts.get("selected_target_option", self.opts.get("tgt_type", "glob")),
+            gather_job_timeout=self.opts["gather_job_timeout"],
+            jid=self.ping_jid,
+            metadata=self.metadata,
+            **self.eauth,
+        )
+        self.targeted_minions = set(ping_return["minions"])
+        # start batching even if not all minions respond to ping
+        yield tornado.gen.sleep(
+            self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
+        )
         if self.event:
-            self.__set_event_handler()
-            ping_return = yield self.local.run_job_async(
-                self.opts["tgt"],
-                "test.ping",
-                [],
-                self.opts.get(
-                    "selected_target_option", self.opts.get("tgt_type", "glob")
-                ),
-                gather_job_timeout=self.opts["gather_job_timeout"],
-                jid=self.ping_jid,
-                metadata=self.metadata,
-                **self.eauth,
-            )
-            self.targeted_minions = set(ping_return["minions"])
-            # start batching even if not all minions respond to ping
-            yield tornado.gen.sleep(
-                self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
-            )
-            if self.event:
-                self.event.io_loop.spawn_callback(self.start_batch)
+            self.event.io_loop.spawn_callback(self.start_batch)
 
     @tornado.gen.coroutine
     def start_batch(self):
         """
         Start the next interation of batch execution
         """
-        if not self.initialized:
-            self.batch_size = get_bnum(self.opts, self.minions, True)
-            self.initialized = True
-            data = {
-                "available_minions": self.minions,
-                "down_minions": self.targeted_minions.difference(self.minions),
-                "metadata": self.metadata,
-            }
-            ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/start")
-            if self.event:
-                self.event.io_loop.spawn_callback(self.run_next)
+        if self.initialized:
+            return
+        self.batch_size = get_bnum(self.opts, self.minions, True)
+        self.initialized = True
+        data = {
+            "available_minions": self.minions,
+            "down_minions": self.targeted_minions.difference(self.minions),
+            "metadata": self.metadata,
+        }
+        ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/start")
+        if self.event:
+            self.event.io_loop.spawn_callback(self.run_next)
 
     @tornado.gen.coroutine
     def end_batch(self):
@@ -254,85 +253,80 @@ class BatchAsync:
         left = self.minions.symmetric_difference(
             self.done_minions.union(self.timedout_minions)
         )
-        if not left and not self.ended:
-            self.ended = True
-            data = {
-                "available_minions": self.minions,
-                "down_minions": self.targeted_minions.difference(self.minions),
-                "done_minions": self.done_minions,
-                "timedout_minions": self.timedout_minions,
-                "metadata": self.metadata,
-            }
-            self.event.fire_event(data, f"salt/batch/{self.batch_jid}/done")
+        # Send salt/batch/*/done only if there is nothing to do
+        # and the event haven't been sent already
+        if left or self.ended:
+            return
+        self.ended = True
+        data = {
+            "available_minions": self.minions,
+            "down_minions": self.targeted_minions.difference(self.minions),
+            "done_minions": self.done_minions,
+            "timedout_minions": self.timedout_minions,
+            "metadata": self.metadata,
+        }
+        self.event.fire_event(data, f"salt/batch/{self.batch_jid}/done")
 
-            # release to the IOLoop to allow the event to be published
-            # before closing batch async execution
-            yield tornado.gen.sleep(1)
-            self.close_safe()
+        # release to the IOLoop to allow the event to be published
+        # before closing batch async execution
+        yield tornado.gen.sleep(1)
+        self.close_safe()
 
     def close_safe(self):
-        """
-        Safely close the batch and destroy the object
-        """
-        for pattern, label in self.patterns:
-            self.event.unsubscribe(pattern, match_type="glob")
-        self.event.remove_event_handler(self.__event_handler)
-        self.event = None
+        if self.event:
+            for pattern, label in self.patterns:
+                self.event.unsubscribe(pattern, match_type="glob")
+            self.event.remove_event_handler(self.__event_handler)
+            self.event.destroy()
+            self.event = None
         self.local = None
         self.ioloop = None
-        del self
-        gc.collect()
 
     @tornado.gen.coroutine
     def schedule_next(self):
-        """
-        Schedule the next batch run
-        """
-        if not self.scheduled:
-            self.scheduled = True
-            # call later so that we maybe gather more returns
-            yield tornado.gen.sleep(self.batch_delay)
-            if self.event:
-                self.event.io_loop.spawn_callback(self.run_next)
+        if self.scheduled:
+            return
+        self.scheduled = True
+        # call later so that we maybe gather more returns
+        yield tornado.gen.sleep(self.batch_delay)
+        if self.event:
+            self.event.io_loop.spawn_callback(self.run_next)
 
     @tornado.gen.coroutine
     def run_next(self):
-        """
-        Execute the next batch run
-        """
         self.scheduled = False
         next_batch = self._get_next()
-        if next_batch:
-            self.active = self.active.union(next_batch)
-            try:
-                ret = yield self.local.run_job_async(
-                    next_batch,
-                    self.opts["fun"],
-                    self.opts["arg"],
-                    "list",
-                    raw=self.opts.get("raw", False),
-                    ret=self.opts.get("return", ""),
-                    gather_job_timeout=self.opts["gather_job_timeout"],
-                    jid=self.batch_jid,
-                    metadata=self.metadata,
-                )
-
-                yield tornado.gen.sleep(self.opts["timeout"])
-
-                # The batch can be done already at this point, which means no self.event
-                if self.event:
-                    self.event.io_loop.spawn_callback(self.find_job, set(next_batch))
-            except Exception as ex:  # pylint: disable=W0703
-                log.error("Error in scheduling next batch: %s. Aborting execution", ex)
-                self.active = self.active.difference(next_batch)
-                self.close_safe()
-        else:
+        if not next_batch:
             yield self.end_batch()
-        gc.collect()
+            return
+        self.active = self.active.union(next_batch)
+        try:
+            ret = yield self.local.run_job_async(
+                next_batch,
+                self.opts["fun"],
+                self.opts["arg"],
+                "list",
+                raw=self.opts.get("raw", False),
+                ret=self.opts.get("return", ""),
+                gather_job_timeout=self.opts["gather_job_timeout"],
+                jid=self.batch_jid,
+                metadata=self.metadata,
+            )
+
+            yield tornado.gen.sleep(self.opts["timeout"])
+
+            # The batch can be done already at this point, which means no self.event
+            if self.event:
+                self.event.io_loop.spawn_callback(self.find_job, set(next_batch))
+        except Exception as ex:  # pylint: disable=W0703
+            log.error(
+                "Error in scheduling next batch: %s. Aborting execution",
+                ex,
+                exc_info=True,
+            )
+            self.active = self.active.difference(next_batch)
+            self.close_safe()
 
     # pylint: disable=W1701
     def __del__(self):
-        self.local = None
-        self.event = None
-        self.ioloop = None
-        gc.collect()
+        self.close_safe()
