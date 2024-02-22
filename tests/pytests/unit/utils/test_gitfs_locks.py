@@ -112,11 +112,6 @@ class AdaptedConfigurationTestCaseMixin:
             pathlib.Path(RUNTIME_VARS.TMP).mkdir(exist_ok=True, parents=True)
 
         rootdir = config_overrides.get("root_dir", RUNTIME_VARS.TMP)
-        ## if not os.path.exists(rootdir):
-        ##     log.debug(f"DGM AdaptedConfigurationTestCaseMixin get_temp_config, oddity runtime_vars '{RUNTIME_VARS.TMP}' should already exist")
-        ##     os.makedirs(rootdir)
-
-        ## conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
         conf_dir = config_overrides.pop(
             "conf_dir", pathlib.PurePath(rootdir).joinpath("conf")
         )
@@ -148,25 +143,6 @@ class AdaptedConfigurationTestCaseMixin:
                 config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
             )
 
-        ## verify_env(
-        ##     [
-        ##         os.path.join(rdict["pki_dir"], "minions"),
-        ##         os.path.join(rdict["pki_dir"], "minions_pre"),
-        ##         os.path.join(rdict["pki_dir"], "minions_rejected"),
-        ##         os.path.join(rdict["pki_dir"], "minions_denied"),
-        ##         os.path.join(rdict["cachedir"], "jobs"),
-        ##         os.path.join(rdict["cachedir"], "tokens"),
-        ##         os.path.join(rdict["root_dir"], "cache", "tokens"),
-        ##         os.path.join(rdict["pki_dir"], "accepted"),
-        ##         os.path.join(rdict["pki_dir"], "rejected"),
-        ##         os.path.join(rdict["pki_dir"], "pending"),
-        ##         os.path.dirname(rdict["log_file"]),
-        ##         rdict["sock_dir"],
-        ##         conf_dir,
-        ##     ],
-        ##     RUNTIME_VARS.RUNNING_TESTS_USER,
-        ##     root_dir=rdict["root_dir"],
-        ## )
         verify_env(
             [
                 pathlib.PurePath(rdict["pki_dir"]).joinpath("minions"),
@@ -187,7 +163,6 @@ class AdaptedConfigurationTestCaseMixin:
             root_dir=rdict["root_dir"],
         )
 
-        ## rdict["conf_file"] = os.path.join(conf_dir, config_for)
         rdict["conf_file"] = pathlib.PurePath(conf_dir).joinpath(config_for)
         with salt.utils.files.fopen(rdict["conf_file"], "w") as wfh:
             salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
@@ -265,25 +240,6 @@ class AdaptedConfigurationTestCaseMixin:
 
     @staticmethod
     def get_config_file_path(filename):
-        ## if filename == "master":
-        ##     return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
-        ## if filename == "minion":
-        ##     return os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, filename)
-        ## if filename == "syndic_master":
-        ##     return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
-        ## if filename == "syndic":
-        ##     return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, "minion")
-        ## if filename == "sub_minion":
-        ##     return os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, "minion")
-        ## if filename == "mm_master":
-        ##     return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, "master")
-        ## if filename == "mm_sub_master":
-        ##     return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "master")
-        ## if filename == "mm_minion":
-        ##     return os.path.join(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR, "minion")
-        ## if filename == "mm_sub_minion":
-        ##     return os.path.join(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR, "minion")
-        ## return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
         if filename == "master":
             return pathlib.PurePath(RUNTIME_VARS.TMP_CONF_DIR).joinpath(filename)
         if filename == "minion":
@@ -506,3 +462,25 @@ def test_git_provider_mp_clear_lock_timeout(main_class):
         pytest.raises(TimeoutError, provider.clear_lock)
     finally:
         provider._master_lock.release()
+
+
+@pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
+def test_git_provider_mp_gen_lock(main_class):
+    """
+    Check that gen_lock is obtains lock, and then releases, provider.lock()
+    """
+    log.debug(f"DGM test_git_provider_mp_gen_lock, main_class '{dir(main_class)}'")
+    provider = main_class.remotes[0]
+    provider.gen_lock()
+    try:
+        # check that lock has been acquired
+        assert provider._master_lock.acquire(timeout=5)
+        # git provider should raise timeout error to avoid lock race conditions
+        pytest.raises(TimeoutError, provider.lock)
+    finally:
+        provider.gen_lock()
+
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+    provider._master_lock.release()
