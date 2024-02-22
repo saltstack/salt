@@ -137,13 +137,11 @@ def test_ssh_disabled(client, auth_creds):
 
 @pytest.mark.timeout_unless_on_windows(360)
 def test_shell_inject_ssh_priv(
-    client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account, grains
+    client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account
 ):
     """
     Verify CVE-2020-16846 for ssh_priv variable
     """
-    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 3:
-        pytest.skip("Skipping problematic test on PhotonOS 3")
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
     tgts = ["repo.saltproject.io", "www.zerodayinitiative.com"]
