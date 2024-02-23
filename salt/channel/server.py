@@ -377,7 +377,7 @@ class ReqServerChannel:
                 # if we clean it, it will not match. Only clean the key if it
                 # is a new style key.
                 if keyFromDisk[-1:] != "\n":
-                    keyFromDisk = salt.crypt.clean(orgkey)
+                    keyFromDisk = salt.crypt.clean_key(keyFromDisk)
 
                 if  keyFromDisk != load["pub"]:
                     log.error(
