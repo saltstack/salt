@@ -59,7 +59,8 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
+from typing import Union
 
 import tornado.ioloop
 import tornado.iostream
@@ -173,7 +174,7 @@ def fire_args(opts, jid, tag_data, prefix=""):
             )
 
 
-def tagify(suffix="", prefix="", base=SALT):
+def tagify(suffix: Union[Iterable[object], object] = "", prefix: str = "", base: str = SALT):
     """
     convenience function to build a namespaced event tag string
     from joining with the TABPART character the base, prefix and suffix
@@ -185,17 +186,17 @@ def tagify(suffix="", prefix="", base=SALT):
     Else use string suffix
 
     """
-    parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    parts: list = [base, TAGS.get(prefix, prefix)]
+    if isinstance(suffix, Iterable) and not isinstance(suffix, str):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    for index, part in enumerate(parts):
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            parts[index] = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
+            parts[index] = str(part)
     return TAGPARTER.join([part for part in parts if part])
 
 
