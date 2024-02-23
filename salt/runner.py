@@ -309,6 +309,7 @@ class Runner(RunnerClient):
                         tag=async_pub["tag"],
                         jid=async_pub["jid"],
                         daemonize=False,
+                        print_event=False,
                         full_return=full_return,
                     )
             except salt.exceptions.SaltException as exc:
