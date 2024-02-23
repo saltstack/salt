@@ -919,6 +919,8 @@ class GitProvider:
                     str(exc),
                 )
             return False
+        except NotImplementedError as exc:
+            log.warning(f"fetch got NotImplementedError, exc '{exc}'")
 
     def _lock(self, lock_type="update", failhard=False):
         """
@@ -1062,7 +1064,8 @@ class GitProvider:
     @contextlib.contextmanager
     def gen_lock(self, lock_type="update", timeout=0, poll_interval=0.5):
         """
-        Set and automatically clear a lock
+        Set and automatically clear a lock,
+        should be called from a context, for example: with self.gen_lock()
         """
         if not isinstance(lock_type, str):
             raise GitLockError(errno.EINVAL, f"Invalid lock_type '{lock_type}'")
@@ -2702,6 +2705,7 @@ class GitBase:
             success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
             errors.extend(failed)
+
         return cleared, errors
 
     def fetch_remotes(self, remotes=None):

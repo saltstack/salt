@@ -5,8 +5,6 @@ any remotes.
 
 import logging
 import pathlib
-
-## import os
 import tempfile
 
 import pytest
@@ -20,8 +18,6 @@ import salt.utils.path
 import salt.utils.platform
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-
-## from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -75,7 +71,7 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
 
 
-## @pytest.fixture(scope="session", autouse=True)
+## @pytest.fixture
 ## def get_tmp_dir(tmp_path):
 ##     dirpath = tmp_path / "git_test"
 ##     dirpath.mkdir(parents=True)
@@ -99,16 +95,10 @@ class AdaptedConfigurationTestCaseMixin:
 
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
-        log.debug(
-            f"DGM AdaptedConfigurationTestCaseMixin get_temp_config, config_for '{config_for}, config_overrides '{config_overrides}', runtime_vars tmp '{RUNTIME_VARS.TMP}', user '{RUNTIME_VARS.RUNNING_TESTS_USER}'"
-        )
 
         rootdir = config_overrides.get("root_dir", RUNTIME_VARS.TMP)
 
         if not pathlib.Path(rootdir).exists():
-            log.debug(
-                f"DGM AdaptedConfigurationTestCaseMixin get_temp_config, oddity runtime_vars '{RUNTIME_VARS.TMP}' should already exist"
-            )
             pathlib.Path(RUNTIME_VARS.TMP).mkdir(exist_ok=True, parents=True)
 
         rootdir = config_overrides.get("root_dir", RUNTIME_VARS.TMP)
@@ -170,10 +160,6 @@ class AdaptedConfigurationTestCaseMixin:
 
     @staticmethod
     def get_config(config_for, from_scratch=False):
-        log.debug(
-            f"DGM AdaptedConfigurationTestCaseMixin get_config, config_for '{config_for}, from_scratch '{from_scratch}', runtime runtime_configs '{RUNTIME_VARS.RUNTIME_CONFIGS}'"
-        )
-
         if from_scratch:
             if config_for in ("master", "syndic_master", "mm_master", "mm_sub_master"):
                 return salt.config.master_config(
@@ -300,7 +286,6 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
     def __init__(
         self,
     ):
-        # TBD DGM need to fixup using tmp_path fixture
         ## self._tmp_dir = pathlib.Path(tmp_path / "git_test").mkdir(exist_ok=True, parents=True)
         ## tmp_name = str(self._tmp_dir)
         self._tmp_dir = tempfile.TemporaryDirectory()
@@ -332,16 +317,21 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
                 )
 
             def init_remote(self):
+                log.debug(f"DGM MockedProvider init_remote tmp_name '{tmp_name}'")
                 self.gitdir = salt.utils.path.join(tmp_name, ".git")
+                log.debug(f"DGM MockedProvider init_remote gitdir '{self.gitdir}'")
                 self.repo = True
                 new = False
                 return new
 
             def envs(self):
+                dgm_test_base = ["base"]
+                log.debug(f"DGM MockedProvider env base '{dgm_test_base}'")
                 return ["base"]
 
-            def fetch(self):
+            def _fetch(self):
                 self.fetched = True
+                log.debug(f"DGM MockedProvider _fetch self.fetched '{self.fetched}'")
 
         # Clear the instance map so that we make sure to create a new instance
         # for this test class.
@@ -374,17 +364,12 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
 @pytest.fixture
 def main_class(tmp_path):
     test_git_base = TestGitBase()
-    log.debug(f"DGM main_class, test_git_base '{dir(test_git_base)}'")
-    log.debug(
-        f"DGM main_class, test_git_base.main_class '{dir(test_git_base.main_class)}'"
-    )
     yield test_git_base.main_class
 
     test_git_base.tearDown()
 
 
 def test_update_all(main_class):
-    log.debug(f"DGM test_update_all, main_class '{dir(main_class)}'")
     main_class.update()
     assert len(main_class.remotes) == 2, "Wrong number of remotes"
     assert main_class.remotes[0].fetched
@@ -466,21 +451,18 @@ def test_git_provider_mp_clear_lock_timeout(main_class):
 
 @pytest.mark.slow_test
 @pytest.mark.timeout_unless_on_windows(120)
-def test_git_provider_mp_gen_lock(main_class):
+def test_git_provider_mp_gen_lock(main_class, caplog):
     """
     Check that gen_lock is obtains lock, and then releases, provider.lock()
     """
-    log.debug(f"DGM test_git_provider_mp_gen_lock, main_class '{dir(main_class)}'")
-    provider = main_class.remotes[0]
-    provider.gen_lock()
-    try:
-        # check that lock has been acquired
-        assert provider._master_lock.acquire(timeout=5)
-        # git provider should raise timeout error to avoid lock race conditions
-        pytest.raises(TimeoutError, provider.lock)
-    finally:
-        provider.gen_lock()
+    test_msg1 = "Set update lock for gitfs remote 'file://repo1.git' on machine_id"
+    test_msg2 = "Attempting to remove 'update' lock for 'gitfs' remote 'file://repo1.git' due to lock_set1 'True' or lock_set2"
+    test_msg3 = "Removed update lock for gitfs remote 'file://repo1.git' on machine_id"
 
-    # check that lock has been released
-    assert provider._master_lock.acquire(timeout=5)
-    provider._master_lock.release()
+    provider = main_class.remotes[0]
+    with caplog.at_level(logging.DEBUG):
+        provider.fetch()
+
+    assert test_msg1 in caplog.text
+    assert test_msg2 in caplog.text
+    assert test_msg3 in caplog.text
