@@ -7,7 +7,6 @@ import logging
 import re
 import sys
 
-import salt.loader
 import salt.utils.event
 import salt.utils.minion
 
@@ -20,6 +19,8 @@ class Beacon:
     """
 
     def __init__(self, opts, functions):
+        import salt.loader
+
         self.opts = opts
         self.functions = functions
         self.beacons = salt.loader.beacons(opts, functions)
