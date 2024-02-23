@@ -11,7 +11,7 @@ import fnmatch
 import logging
 from typing import Any, Optional, Union
 
-import networkx as nx
+import networkx as nx  # pylint: disable=3rd-party-module-not-gated
 
 log = logging.getLogger(__name__)
 
