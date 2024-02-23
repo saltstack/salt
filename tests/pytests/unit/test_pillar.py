@@ -58,9 +58,9 @@ class MockFileclient:
     # pylint: enable=unused-argument,no-method-argument,method-hidden
 
 
-def _setup_test_topfile_sls_pillar_match(tempdir):
+def _setup_test_topfile_sls_pillar_match(tmp_path):
     # Write a simple topfile and two pillar state files
-    top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    top_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     s = """
 base:
   'phase:alpha':
@@ -69,7 +69,7 @@ base:
 """
     top_file.write(salt.utils.stringutils.to_bytes(s))
     top_file.flush()
-    generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    generic_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     generic_file.write(
         b"""
 generic:
@@ -106,9 +106,9 @@ def test_pillarenv_from_saltenv():
         assert pillar.opts["pillarenv"] == "dev"
 
 
-def _setup_test_topfile_sls(tempdir, nodegroup_order, glob_order):
+def _setup_test_topfile_sls(tmp_path, nodegroup_order, glob_order):
     # Write a simple topfile and two pillar state files
-    top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    top_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     s = """
 base:
   group:
@@ -127,7 +127,7 @@ base:
     )
     top_file.write(salt.utils.stringutils.to_bytes(s))
     top_file.flush()
-    ssh_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    ssh_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     ssh_file.write(
         b"""
 ssh:
@@ -135,7 +135,7 @@ ssh:
 """
     )
     ssh_file.flush()
-    ssh_minion_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    ssh_minion_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     ssh_minion_file.write(
         b"""
 ssh:
@@ -143,7 +143,7 @@ ssh:
 """
     )
     ssh_minion_file.flush()
-    generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    generic_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     generic_file.write(
         b"""
 generic:
@@ -155,7 +155,7 @@ generic:
 """
     )
     generic_file.flush()
-    generic_minion_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+    generic_minion_file = tempfile.NamedTemporaryFile(dir=str(tmp_path), delete=False)
     generic_minion_file.write(
         b"""
 generic:
@@ -503,9 +503,7 @@ def test_ext_pillar_with_extra_minion_data_val_elem():
     )
 
 
-# @patch("salt.channel.client.ReqChannel.factory", MagicMock())
-# @patch("salt.channel.client.AsyncReqChannel.factory", MagicMock())
-def test_ext_pillar_first():
+def test_ext_pillar_first(tmp_path):
     """
     test when using ext_pillar and ext_pillar_first
     """
@@ -532,31 +530,27 @@ def test_ext_pillar_first():
         "kernel": "Linux",
     }
 
-    tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-    try:
-        sls_files = _setup_test_topfile_sls_pillar_match(
-            tempdir,
-        )
-        fc_mock = MockFileclient(
-            cache_file=sls_files["top"]["dest"],
-            list_states=["top", "ssh", "ssh.minion", "generic", "generic.minion"],
-            get_state=sls_files,
-        )
-        with patch.object(
-            salt.fileclient, "get_file_client", MagicMock(return_value=fc_mock)
-        ), patch(
-            "salt.pillar.Pillar.ext_pillar",
-            MagicMock(
-                return_value=(
-                    {"id": "minion", "phase": "alpha", "role": "database"},
-                    [],
-                )
-            ),
-        ):
-            pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
-            assert pillar.compile_pillar()["generic"]["key1"] == "value1"
-    finally:
-        shutil.rmtree(tempdir, ignore_errors=True)
+    sls_files = _setup_test_topfile_sls_pillar_match(
+        str(tmp_path),
+    )
+    fc_mock = MockFileclient(
+        cache_file=sls_files["top"]["dest"],
+        list_states=["top", "ssh", "ssh.minion", "generic", "generic.minion"],
+        get_state=sls_files,
+    )
+    with patch.object(
+        salt.fileclient, "get_file_client", MagicMock(return_value=fc_mock)
+    ), patch(
+        "salt.pillar.Pillar.ext_pillar",
+        MagicMock(
+            return_value=(
+                {"id": "minion", "phase": "alpha", "role": "database"},
+                [],
+            )
+        ),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        assert pillar.compile_pillar()["generic"]["key1"] == "value1"
 
 
 @patch("salt.fileclient.Client.list_states")
@@ -784,9 +778,9 @@ def test_topfile_order():
     _run_test(nodegroup_order=2, glob_order=1, expected="foo")
 
 
-def test_relative_include(tempdir):
+def test_relative_include(tmp_path):
     join = os.path.join
-    with fopen(join(tempdir.tempdir, "top.sls"), "w") as f:
+    with fopen(join(str(tmp_path), "top.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -799,7 +793,7 @@ def test_relative_include(tempdir):
             ),
             file=f,
         )
-    includer_dir = join(tempdir.tempdir, "includer")
+    includer_dir = str(tmp_path / "includer")
     os.makedirs(includer_dir)
     with fopen(join(includer_dir, "init.sls"), "w") as f:
         print(
@@ -833,7 +827,7 @@ def test_relative_include(tempdir):
             file=f,
         )
 
-    with fopen(join(tempdir.tempdir, "simple_includer.sls"), "w") as simpleincluder:
+    with fopen(str(tmp_path / "simple_includer.sls"), "w") as simpleincluder:
         print(
             textwrap.dedent(
                 """
@@ -844,7 +838,7 @@ def test_relative_include(tempdir):
             ),
             file=simpleincluder,
         )
-    with fopen(join(tempdir.tempdir, "simple.sls"), "w") as f:
+    with fopen(str(tmp_path / "simple.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -854,7 +848,7 @@ def test_relative_include(tempdir):
             ),
             file=f,
         )
-    with fopen(join(tempdir.tempdir, "super_simple.sls"), "w") as f:
+    with fopen(str(tmp_path / "super_simple.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -865,9 +859,9 @@ def test_relative_include(tempdir):
             file=f,
         )
 
-    depth_dir = join(tempdir.tempdir, "includes", "with", "more")
-    os.makedirs(depth_dir)
-    with fopen(join(depth_dir, "depth.sls"), "w") as f:
+    depth_dir = tmp_path / "includes" / "with" / "more"
+    os.makedirs(str(depth_dir))
+    with fopen(str(depth_dir / "depth.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -882,7 +876,7 @@ def test_relative_include(tempdir):
             file=f,
         )
 
-    with fopen(join(depth_dir, "ramble.sls"), "w") as f:
+    with fopen(str(depth_dir / "ramble.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -893,7 +887,7 @@ def test_relative_include(tempdir):
             file=f,
         )
 
-    with fopen(join(depth_dir, "doors.sls"), "w") as f:
+    with fopen(str(depth_dir / "doors.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -909,7 +903,7 @@ def test_relative_include(tempdir):
         "renderer_blacklist": [],
         "renderer_whitelist": [],
         "state_top": "top.sls",
-        "pillar_roots": {"base": [tempdir.tempdir]},
+        "pillar_roots": {"base": [str(tmp_path)]},
         "extension_modules": "",
         "saltenv": "base",
         "file_roots": [],
@@ -943,14 +937,14 @@ def test_relative_include(tempdir):
     assert compiled_pillar["mojo"] == "bad risin'"
 
 
-def test_missing_include(tempdir):
+def test_missing_include(tmp_path):
     opts = {
         "optimization_order": [0, 1, 2],
         "renderer": "yaml",
         "renderer_blacklist": [],
         "renderer_whitelist": [],
         "state_top": "top.sls",
-        "pillar_roots": {"base": [tempdir.tempdir]},
+        "pillar_roots": {"base": [str(tmp_path)]},
         "extension_modules": "",
         "saltenv": "base",
         "file_roots": [],
@@ -968,8 +962,7 @@ def test_missing_include(tempdir):
         "kernel": "Linux",
     }
 
-    join = os.path.join
-    with fopen(join(tempdir.tempdir, "top.sls"), "w") as f:
+    with fopen(str(tmp_path / "top.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -980,9 +973,9 @@ def test_missing_include(tempdir):
             ),
             file=f,
         )
-    include_dir = join(tempdir.tempdir, "simple_include")
+    include_dir = tmp_path / "simple_include"
     os.makedirs(include_dir)
-    with fopen(join(include_dir, "init.sls"), "w") as f:
+    with fopen(str(include_dir / "init.sls"), "w") as f:
         print(
             textwrap.dedent(
                 """
@@ -1132,8 +1125,7 @@ def test_pillar_send_extra_minion_data_from_config(tmp_pki, grains):
     )
 
 
-def test_include(tempdir):
-    print(dir(tempdir))
+def test_include(tmp_path):
     opts = {
         "optimization_order": [0, 1, 2],
         "renderer": "yaml",
@@ -1155,7 +1147,7 @@ def test_include(tempdir):
         "osrelease": "13.04",
         "kernel": "Linux",
     }
-    sls_files = _setup_test_include_sls(tempdir.tempdir)
+    sls_files = _setup_test_include_sls(str(tmp_path))
     fc_mock = MockFileclient(
         cache_file=sls_files["top"]["dest"],
         get_state=sls_files,
