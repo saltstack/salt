@@ -21,7 +21,7 @@ pytestmark = [
     ),
 ]
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS", False))
+GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 @pytest.fixture
