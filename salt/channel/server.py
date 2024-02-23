@@ -371,7 +371,15 @@ class ReqServerChannel:
         elif os.path.isfile(pubfn):
             # The key has been accepted, check it
             with salt.utils.files.fopen(pubfn, "r") as pubfn_handle:
-                if salt.crypt.clean_key(pubfn_handle.read()) != load["pub"]:
+                keyFromDisk = pubfn_handle.read()
+
+                # if the keyFromDisk has a final newline it is a oldstyle key
+                # if we clean it, it will not match. Only clean the key if it
+                # is a new style key.
+                if keyFromDisk[-1:] != "\n":
+                    keyFromDisk = salt.crypt.clean(orgkey)
+
+                if  keyFromDisk != load["pub"]:
                     log.error(
                         "Authentication attempt from %s failed, the public "
                         "keys did not match. This may be an attempt to compromise "
