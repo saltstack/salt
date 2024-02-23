@@ -14,7 +14,7 @@ pytestmark = [
 
 log = logging.getLogger(__name__)
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS", False))
+GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 @pytest.mark.skipif(GITHUB_ACTIONS, reason="Test is failing in GitHub Actions")
