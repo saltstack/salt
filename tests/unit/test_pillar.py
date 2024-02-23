@@ -337,6 +337,7 @@ class PillarTestCase(TestCase):
             "renderer_blacklist": [],
             "renderer_whitelist": [],
             "state_top": "",
+            "pillar": {},
             "pillar_roots": [],
             "extension_modules": "",
             "saltenv": "base",
