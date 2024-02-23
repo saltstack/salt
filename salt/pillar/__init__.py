@@ -1374,8 +1374,7 @@ class Pillar:
                 self.client.destroy()
             except AttributeError:
                 pass
-
-        if self.client:
+        if self.fileclient:
             try:
                 self.fileclient.destroy()
             except AttributeError:
