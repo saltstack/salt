@@ -1,27 +1,29 @@
 """
-Read Pillar data from a mongodb collection
+Read Pillar data from a MongoDB collection
 
 :depends: pymongo (for salt-master)
 
-This module will load a node-specific pillar dictionary from a mongo
+This module will load a node-specific pillar dictionary from a MongoDB
 collection. It uses the node's id for lookups and can load either the whole
 document, or just a specific field from that
 document as the pillar dictionary.
 
-Salt Master Mongo Configuration
+Salt Master MongoDB Configuration
 ===============================
 
-The module shares the same base mongo connection variables as
+The module shares the same base MongoDB connection variables as
 :py:mod:`salt.returners.mongo_future_return`. These variables go in your master
 config file.
 
 .. code-block:: yaml
 
+    mongo.authdb: <database name>
     mongo.db: <database name>
     mongo.host: <server ip address>
     mongo.user: <MongoDB username>
     mongo.password: <MongoDB user password>
     mongo.port: 27017
+    mongo.ssl: false
 
 Or single URI:
 
@@ -43,13 +45,14 @@ Example:
     mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
     mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
 
+If URI is provided, the other settings are simply ignored.
 More information on URI format can be found in
 https://docs.mongodb.com/manual/reference/connection-string/
 
-Configuring the Mongo ext_pillar
+Configuring the MongoDB ext_pillar
 ================================
 
-The Mongo ext_pillar takes advantage of the fact that the Salt Master
+The MongoDB ext_pillar takes advantage of the fact that the Salt Master
 configuration file is yaml. It uses a sub-dictionary of values to adjust
 specific features of the pillar. This is the explicit single-line dictionary
 notation for yaml. One may be able to get the easier-to-read multi-line dict to
@@ -87,6 +90,17 @@ except ImportError:
     HAS_PYMONGO = False
 
 
+__opts__ = {
+    "mongo.authdb": "salt",
+    "mongo.db": "salt",
+    "mongo.host": "salt",
+    "mongo.password": "",
+    "mongo.port": 27017,
+    "mongo.ssl": False,
+    "mongo.user": "",
+}
+
+
 def __virtual__():
     if not HAS_PYMONGO:
         return False
@@ -110,7 +124,7 @@ def ext_pillar(
     Connect to a mongo database and read per-node pillar information.
 
     Parameters:
-        * `collection`: The mongodb collection to read data from. Defaults to
+        * `collection`: The MongoDB collection to read data from. Defaults to
           ``'pillar'``.
         * `id_field`: The field in the collection that represents an individual
           minion id. Defaults to ``'_id'``.
@@ -135,31 +149,26 @@ def ext_pillar(
 
     uri = __opts__.get("mongo.uri")
     host = __opts__.get("mongo.host")
-    port = __opts__.get("mongo.port")
+    port = __opts__.get("mongo.port") or 27017
     user = __opts__.get("mongo.user")
     password = __opts__.get("mongo.password")
 
     db = __opts__.get("mongo.db")
+    authdb = __opts__.get("mongo.authdb") or db
 
-    if uri:
-        if uri and host:
-            raise salt.exceptions.SaltConfigurationError(
-                "Mongo ext_pillar expects either uri or host configuration. Both were"
-                " provided"
-            )
-        pymongo.uri_parser.parse_uri(uri)
-        conn = pymongo.MongoClient(uri)
-        log.info("connecting to %s for mongo ext_pillar", uri)
-        mdb = conn.get_database()
-
-    else:
-        log.info("connecting to %s:%s for mongo ext_pillar", host, port)
-        conn = pymongo.MongoClient(
-            host=host, port=port, username=user, password=password, ssl=ssl
-        )
-
-        log.debug("using database '%s'", db)
-        mdb = conn[db]
+    if not uri:
+        # Construct URI from other settings
+        uri = 'mongodb://'
+        if user and password:
+            uri += '%s:%s@' % (user, password)
+        uri += '%s:%s/%s?authSource=%s&authMechanism=SCRAM-SHA-256' % (host, port, db, authdb)
+        if ssl:
+            uri += '&tls=true'
+        
+    pymongo.uri_parser.parse_uri(uri)
+    conn = pymongo.MongoClient(uri)
+    log.info("connecting to %s for mongo ext_pillar", uri)
+    mdb = conn.get_database()
 
     # Do the regex string replacement on the minion id
     if re_pattern:
