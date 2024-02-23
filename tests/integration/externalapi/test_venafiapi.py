@@ -13,6 +13,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 
+# pylint: disable=unused-import
 try:
     import vcert
     from vcert.common import CertificateRequest
@@ -21,6 +22,7 @@ try:
 except ImportError:
     HAS_VCERT = False
 
+# pylint: enable=unused-import
 from tests.support.case import ShellCase
 
 

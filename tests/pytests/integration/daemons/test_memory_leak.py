@@ -10,7 +10,7 @@ pytestmark = [
     pytest.mark.timeout_unless_on_windows(360),
 ]
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS", False))
+GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 @pytest.fixture
