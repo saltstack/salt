@@ -64,6 +64,8 @@ _OPTS = freeze(
             "+refs/tags/*:refs/tags/*",
         ],
         "git_pillar_includes": True,
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
 )
 
