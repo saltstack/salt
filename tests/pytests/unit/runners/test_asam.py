@@ -44,6 +44,7 @@ def test_add_platform():
         auth=("TheUsername", "ThePassword"),
         data={"manual": "false"},
         verify=True,
+        timeout=120,
     )
 
 
@@ -69,6 +70,7 @@ def test_remove_platform():
             "Submit": "Yes",
         },
         verify=True,
+        timeout=120,
     )
 
 
@@ -88,6 +90,7 @@ def test_list_platforms():
         auth=("TheUsername", "ThePassword"),
         data={"manual": "false"},
         verify=True,
+        timeout=120,
     )
 
 
@@ -107,4 +110,5 @@ def test_list_platform_sets():
         auth=("TheUsername", "ThePassword"),
         data={"manual": "false"},
         verify=True,
+        timeout=120,
     )

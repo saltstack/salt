@@ -49,7 +49,9 @@ def create(name, **params):
     application_url = _get_application_url()
     log.debug("[uptime] trying PUT request")
     params.update(url=name)
-    req = requests.put("{}/api/checks".format(application_url), data=params)
+    req = requests.put(
+        "{}/api/checks".format(application_url), data=params, timeout=120
+    )
     if not req.ok:
         raise CommandExecutionError("request to uptime failed : {}".format(req.reason))
     log.debug("[uptime] PUT request successful")
@@ -72,9 +74,11 @@ def delete(name):
         raise CommandExecutionError(msg)
     application_url = _get_application_url()
     log.debug("[uptime] trying DELETE request")
-    jcontent = requests.get("{}/api/checks".format(application_url)).json()
+    jcontent = requests.get("{}/api/checks".format(application_url), timeout=120).json()
     url_id = [x["_id"] for x in jcontent if x["url"] == name][0]
-    req = requests.delete("{}/api/checks/{}".format(application_url, url_id))
+    req = requests.delete(
+        "{}/api/checks/{}".format(application_url, url_id), timeout=120
+    )
     if not req.ok:
         raise CommandExecutionError("request to uptime failed : {}".format(req.reason))
     log.debug("[uptime] DELETE request successful")
@@ -106,7 +110,7 @@ def checks_list():
     """
     application_url = _get_application_url()
     log.debug("[uptime] get checks")
-    jcontent = requests.get("{}/api/checks".format(application_url)).json()
+    jcontent = requests.get("{}/api/checks".format(application_url), timeout=120).json()
     return [x["url"] for x in jcontent]
 
 

@@ -12,7 +12,7 @@ def test_jid_in_logs(caplog, salt_call_cli):
     """
     Test JID in log_format
     """
-    jid_formatted_str = DFLT_LOG_FMT_JID.split("%")[0]
+    jid_formatted_str = DFLT_LOG_FMT_JID.split("%", maxsplit=1)[0]
     formatter = logging.Formatter(fmt="%(jid)s %(message)s")
     with caplog.at_level(logging.DEBUG):
         previous_formatter = caplog.handler.formatter

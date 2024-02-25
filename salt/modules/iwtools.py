@@ -112,7 +112,7 @@ def _valid_iface(iface):
     Validate the specified interface
     """
     ifaces = list_interfaces()
-    if iface in ifaces.keys():
+    if iface in ifaces:
         return True
     return False
 

@@ -108,15 +108,13 @@ def put_blob(storage_conn=None, **kwargs):
         "x_ms_lease_id": kwargs.get("lease_id", None),
     }
     if "blob_path" in kwargs:
-        data = storage_conn.put_block_blob_from_path(
+        return storage_conn.put_block_blob_from_path(
             file_path=kwargs["blob_path"], **blob_kwargs
         )
     elif "blob_content" in kwargs:
-        data = storage_conn.put_block_blob_from_bytes(
+        return storage_conn.put_block_blob_from_bytes(
             blob=kwargs["blob_content"], **blob_kwargs
         )
-
-    return data
 
 
 def get_blob(storage_conn=None, **kwargs):
@@ -157,15 +155,13 @@ def get_blob(storage_conn=None, **kwargs):
     }
 
     if "local_path" in kwargs:
-        data = storage_conn.get_blob_to_path(
+        return storage_conn.get_blob_to_path(
             file_path=kwargs["local_path"],
             open_mode=kwargs.get("open_mode", "wb"),
             **blob_kwargs
         )
     elif "return_content" in kwargs:
-        data = storage_conn.get_blob_to_bytes(**blob_kwargs)
-
-    return data
+        return storage_conn.get_blob_to_bytes(**blob_kwargs)
 
 
 def object_to_dict(obj):

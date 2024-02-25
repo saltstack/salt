@@ -73,6 +73,7 @@ def setwinsize(child, rows=80, cols=80):
 
     Thank you for the shortcut PEXPECT
     """
+    # pylint: disable=used-before-assignment
     TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
     if TIOCSWINSZ == 2148037735:
         # Same bits, but with sign.
@@ -396,7 +397,7 @@ class Terminal:
         def _spawn(self):
             if not isinstance(self.args, str) and self.shell is True:
                 self.args = " ".join(self.args)
-            parent, child = pty.openpty()
+            parent, child = pty.openpty()  # pylint: disable=used-before-assignment
             err_parent, err_child = os.pipe()
             child_name = os.ttyname(child)
             proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn

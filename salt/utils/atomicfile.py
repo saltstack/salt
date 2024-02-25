@@ -14,8 +14,12 @@ import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == "nt":  # pragma: no cover
-    _rename = lambda src, dst: False  # pylint: disable=C0103
-    _rename_atomic = lambda src, dst: False  # pylint: disable=C0103
+
+    def _rename(src, dst):
+        return False
+
+    def _rename_atomic(src, dst):
+        return False
 
     try:
         import ctypes

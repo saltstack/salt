@@ -32,7 +32,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     """Only load this module if the Python ldap module is present"""
-    return bool(len(available_backends))
+    if available_backends:
+        return True
+    return False
 
 
 class LDAPError(Exception):

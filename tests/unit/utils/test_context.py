@@ -102,7 +102,7 @@ class ContextDictTests(AsyncTestCase):
 
         wait_iterator = salt.ext.tornado.gen.WaitIterator(*futures)
         while not wait_iterator.done():
-            r = yield wait_iterator.next()  # pylint: disable=incompatible-py3-code
+            r = yield wait_iterator.next()
             self.assertEqual(r[0], r[1])  # verify that the global value remails
             self.assertEqual(r[2], r[3])  # verify that the override sticks locally
             self.assertEqual(

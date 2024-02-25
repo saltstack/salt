@@ -256,7 +256,7 @@ class SaltPkgInstall:
                             self.install_dir / "salt-minion.exe"
                         ).exists() and not self.relenv:
                             log.debug(
-                                f"Removing {(self.install_dir / 'salt-minion.exe')}"
+                                "Removing %s", self.install_dir / "salt-minion.exe"
                             )
                             (self.install_dir / "salt-minion.exe").unlink()
 
@@ -640,7 +640,8 @@ class SaltPkgInstall:
                 Pin: origin "repo.saltproject.io"
                 Pin-Priority: 1001
                 """
-                    )
+                    ),
+                    encoding="utf-8",
                 )
                 cmd.append("--allow-downgrades")
             env = os.environ.copy()
@@ -1487,7 +1488,7 @@ class ApiRequest:
 @pytest.helpers.register
 def download_file(url, dest, auth=None):
     # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth) as r:
+    with requests.get(url, stream=True, auth=auth, timeout=60) as r:
         r.raise_for_status()
         with salt.utils.files.fopen(dest, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):

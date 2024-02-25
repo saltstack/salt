@@ -93,14 +93,14 @@ def set_(name, value, **kwargs):
     # YES, NO, Yes, No, True, False, etc. to boolean types.  However, in this case,
     # we will check to see if that happened and replace it with "YES" or "NO" because
     # those items are accepted in sysrc.
-    if type(value) == bool:
+    if isinstance(value, bool):
         if value:
             value = "YES"
         else:
             value = "NO"
 
     # This is here for the same reason, except for numbers
-    if type(value) == int:
+    if isinstance(value, int):
         value = str(value)
 
     cmd += " " + name + '="' + value + '"'

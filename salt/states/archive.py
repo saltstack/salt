@@ -119,7 +119,7 @@ def _update_checksum(path):
             log.warning(
                 "Failed to update checksum for %s: %s",
                 path,
-                exc.__str__(),
+                exc,
                 exc_info=True,
             )
 
@@ -1066,7 +1066,7 @@ def extracted(
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), exc.__str__()
+                salt.utils.url.redact_http_basic_auth(source_match), exc
             )
             log.exception(msg)
             ret["comment"] = msg
@@ -1208,7 +1208,7 @@ def extracted(
                 else:
                     ret["comment"] = (
                         "Failed to check for existence of if_missing path "
-                        "({}): {}".format(if_missing, exc.__str__())
+                        "({}): {}".format(if_missing, exc)
                     )
                     return ret
         else:
@@ -1237,7 +1237,7 @@ def extracted(
                             # that dir will raise an ENOTDIR OSError. So we
                             # expect these and will only abort here if the
                             # error code is something else.
-                            ret["comment"] = exc.__str__()
+                            ret["comment"] = str(exc)
                             return ret
 
             if incorrect_type:
@@ -1288,7 +1288,7 @@ def extracted(
                                 extraction_needed = True
                             except OSError as exc:
                                 if exc.errno != errno.ENOENT:
-                                    errors.append(exc.__str__())
+                                    errors.append(str(exc))
                         if errors:
                             msg = (
                                 "One or more paths existed by were the incorrect "
@@ -1369,7 +1369,7 @@ def extracted(
                     ret["changes"].setdefault("removed", []).append(full_path)
                 except OSError as exc:
                     if exc.errno != errno.ENOENT:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
 
             if errors:
                 msg = (

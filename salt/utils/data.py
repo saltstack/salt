@@ -1049,9 +1049,14 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
             return {}
 
     if key_cb is None:
-        key_cb = lambda x: x
+
+        def key_cb(x):
+            return x
+
     if val_cb is None:
-        val_cb = lambda x, y: y
+
+        def val_cb(x, y):
+            return y
 
     valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):

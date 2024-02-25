@@ -263,7 +263,10 @@ def set_crypttab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _crypttab_entry.crypttab_keys
+
+        def filterFn(key):
+            return key not in _crypttab_entry.crypttab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
         msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)

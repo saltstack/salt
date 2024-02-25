@@ -47,7 +47,7 @@ class MinionDefaultInclude(DefaultIncludeConfig):
 
 class MasterDefaultInclude(DefaultIncludeConfig):
     __target__ = "master"
-    __confd_directory = "master.d"
+    __confd_directory = "master.d"  # pylint: disable=unused-private-member
 
 
 class IncludeConfig(Schema):

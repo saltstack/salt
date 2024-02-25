@@ -99,7 +99,7 @@ class CacheDisk(CacheDict):
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
-            self._dict.__delitem__(key)
+            del self._dict[key]
 
     def __contains__(self, key):
         self._enforce_ttl_key(key)
@@ -365,7 +365,7 @@ def verify_cache_version(cache_path):
         file.seek(0)
         data = "\n".join(file.readlines())
         if data != salt.version.__version__:
-            log.warning(f"Cache version mismatch clearing: {repr(cache_path)}")
+            log.warning("Cache version mismatch clearing: %s", repr(cache_path))
             file.truncate(0)
             file.write(salt.version.__version__)
             for item in os.listdir(cache_path):

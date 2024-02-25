@@ -769,7 +769,9 @@ class Master(SMaster):
                     mod = ".".join(proc.split(".")[:-1])
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                    cls = _tmp.__getattribute__(cls)
+                    cls = _tmp.__getattribute__(  # pylint: disable=unnecessary-dunder-call
+                        cls
+                    )
                     name = "ExtProcess({})".format(cls.__qualname__)
                     self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except

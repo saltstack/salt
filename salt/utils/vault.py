@@ -136,10 +136,16 @@ def get_vault_connection():
                     if namespace is not None:
                         headers = {"X-Vault-Namespace": namespace}
                         response = requests.post(
-                            url, headers=headers, json=payload, verify=verify
+                            url,
+                            headers=headers,
+                            json=payload,
+                            verify=verify,
+                            timeout=120,
                         )
                     else:
-                        response = requests.post(url, json=payload, verify=verify)
+                        response = requests.post(
+                            url, json=payload, verify=verify, timeout=120
+                        )
                     if response.status_code != 200:
                         errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
@@ -153,7 +159,9 @@ def get_vault_connection():
                     headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
                     if namespace is not None:
                         headers["X-Vault-Namespace"] = namespace
-                    response = requests.post(url, headers=headers, verify=verify)
+                    response = requests.post(
+                        url, headers=headers, verify=verify, timeout=120
+                    )
                     if response.status_code != 200:
                         errmsg = "An error occured while unwrapping vault token"
                         raise salt.exceptions.CommandExecutionError(errmsg)
@@ -334,19 +342,21 @@ def make_request(
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
     namespace = namespace or connection.get("namespace")
-    if "verify" in args:
-        args["verify"] = args["verify"]
-    else:
+    if "verify" not in args:
         try:
             args["verify"] = __opts__.get("vault").get("verify", None)
         except (TypeError, AttributeError):
             # Don't worry about setting verify if it doesn't exist
             pass
+    if "timeout" not in args:
+        args["timeout"] = 120
     url = "{}/{}".format(vault_url, resource)
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
     if namespace is not None:
         headers["X-Vault-Namespace"] = namespace
-    response = requests.request(method, url, headers=headers, **args)
+    response = requests.request(  # pylint: disable=missing-timeout
+        method, url, headers=headers, **args
+    )
     if not response.ok and response.json().get("errors", None) == ["permission denied"]:
         log.info("Permission denied from vault")
         del_cache()
@@ -407,7 +417,7 @@ def _selftoken_expired():
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
         if namespace is not None:
             headers["X-Vault-Namespace"] = namespace
-        response = requests.get(url, headers=headers, verify=verify)
+        response = requests.get(url, headers=headers, verify=verify, timeout=120)
         if response.status_code != 200:
             return True
         return False
@@ -431,7 +441,7 @@ def _wrapped_token_valid():
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
         if namespace is not None:
             headers["X-Vault-Namespace"] = namespace
-        response = requests.post(url, headers=headers, verify=verify)
+        response = requests.post(url, headers=headers, verify=verify, timeout=120)
         if response.status_code != 200:
             return False
         return True

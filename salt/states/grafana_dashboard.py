@@ -459,6 +459,7 @@ def _update(dashboard, profile):
         request_url,
         headers={"Authorization": "Bearer {}".format(profile.get("grafana_token"))},
         json=payload,
+        timeout=120,
     )
     return response.json()
 

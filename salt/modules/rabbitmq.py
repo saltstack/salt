@@ -165,7 +165,9 @@ def _output_to_dict(cmdoutput, values_mapper=None):
 
     ret = {}
     if values_mapper is None:
-        values_mapper = lambda string: string.split("\t")
+
+        def values_mapper(string):
+            return string.split("\t")
 
     # remove first and last line: Listing ... - ...done
     data_rows = _strip_listing_to_done(cmdoutput.splitlines())
@@ -237,11 +239,11 @@ def list_users(runas=None):
     )
 
     # func to get tags from string such as "[admin, monitoring]"
-    func = (
-        lambda string: [x.strip() for x in string[1:-1].split(",")]
-        if "," in string
-        else [x for x in string[1:-1].split(" ")]
-    )
+    def func(string):
+        if "," in string:
+            return [x.strip() for x in string[1:-1].split(",")]
+        return [x for x in string[1:-1].split(" ")]
+
     return _output_to_dict(res, func)
 
 

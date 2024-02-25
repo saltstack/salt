@@ -43,10 +43,12 @@ def _exit_status(retcode):
     """
     Translate exit status of vmadm
     """
-    ret = {0: "Successful completion.", 1: "An error occurred.", 2: "Usage error."}[
-        retcode
-    ]
-    return ret
+    if retcode == 0:
+        return "Successful completion."
+    if retcode == 1:
+        return "An error occurred."
+    if retcode == 2:
+        return "Usage error."
 
 
 def _create_update_from_file(mode="create", uuid=None, path=None):

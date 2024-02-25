@@ -59,7 +59,9 @@ def confirm_container_started(timeout_at, container):
     sleeptime = 1
     while time.time() <= timeout_at:
         try:
-            response = requests.get("http://localhost:{}/version".format(etcd_port))
+            response = requests.get(
+                "http://localhost:{}/version".format(etcd_port), timeout=60
+            )
             try:
                 version = response.json()
                 if "etcdserver" in version:

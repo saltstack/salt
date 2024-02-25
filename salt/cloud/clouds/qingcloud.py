@@ -179,7 +179,7 @@ def query(params=None):
     # print('parameters:')
     # pprint.pprint(real_parameters)
 
-    request = requests.get(path, params=real_parameters, verify=verify_ssl)
+    request = requests.get(path, params=real_parameters, verify=verify_ssl, timeout=120)
 
     # print('url:')
     # print(request.url)
@@ -439,7 +439,7 @@ def _get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound("No size specified for this instance.")
 
-    if vm_size in sizes.keys():
+    if vm_size in sizes:
         return vm_size
 
     raise SaltCloudNotFound(

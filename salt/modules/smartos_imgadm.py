@@ -37,13 +37,16 @@ def _exit_status(retcode, stderr=None):
     """
     Translate exit status of imgadm
     """
-    ret = {
-        0: "Successful completion.",
-        1: "An error occurred." if not stderr else stderr,
-        2: "Usage error.",
-        3: "Image not installed.",
-    }[retcode]
-    return ret
+    if retcode == 0:
+        return "Successful completion."
+    if retcode == 1:
+        if stderr:
+            return stderr
+        return "An error occurred."
+    if retcode == 2:
+        return "Usage error."
+    if retcode == 3:
+        return "Image not installed."
 
 
 def _parse_image_meta(image=None, detail=False):

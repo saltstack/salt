@@ -630,17 +630,14 @@ def passwd(passwd, user="", alg="sha1", realm=None):
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     """
+    # pylint: disable=no-value-for-parameter
+    # we call the first parameter the same as the function!
+
     # Shouldn't it be SHA265 instead of SHA1?
-    digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
-    if digest:
+    digest = getattr(hashlib, alg, None)
+    if digest is not None:
         if realm:
-            digest.update(
-                "{}:{}:{}".format(
-                    user,
-                    realm,
-                    passwd,
-                )
-            )
+            digest.update(f"{user}:{realm}:{passwd}")
         else:
             digest.update(passwd)
 

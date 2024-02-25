@@ -76,7 +76,7 @@ def present(
         keys = [keys]
 
     for key in keys:
-        if key in current_keys.keys():
+        if key in current_keys:
             if trust:
                 if trust in _VALID_TRUST_VALUES:
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:

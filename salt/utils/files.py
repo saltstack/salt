@@ -322,8 +322,8 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
+        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
         try:
-            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
             os.umask(orig_mask)  # pylint: disable=blacklisted-function
@@ -390,7 +390,9 @@ def fopen(*args, **kwargs):
         )
         kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    f_handle = open(  # pylint: disable=resource-leakage,unspecified-encoding
+        *args, **kwargs
+    )
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -649,7 +651,10 @@ def is_text(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     """
-    int2byte = lambda x: bytes((x,))
+
+    def int2byte(x):
+        return bytes((x,))
+
     text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
     try:
         block = fp_.read(blocksize)

@@ -176,7 +176,7 @@ def list_ignored():
     #     "Safari6.1.2MountainLion-6.1.2",
     # or:
     #     Safari6.1.2MountainLion-6.1.2
-    rexp = re.compile('(?m)^    ["]?' r'([^,|\s].*[^"|\n|,])[,|"]?')
+    rexp = re.compile(r'(?m)^    ["]?([^,|\s].*[^"|\n|,])[,|"]?')
 
     return rexp.findall(out)
 

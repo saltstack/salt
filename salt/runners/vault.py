@@ -84,7 +84,7 @@ def generate_token(
                 if namespace is not None:
                     headers = {"X-Vault-Namespace": namespace}
                 response = requests.post(
-                    url, headers=headers, json=payload, verify=verify
+                    url, headers=headers, json=payload, verify=verify, timeout=120
                 )
                 if response.status_code != 200:
                     return {"error": response.reason}
@@ -117,7 +117,9 @@ def generate_token(
             return {"error": "No policies matched minion"}
 
         log.trace("Sending token creation request to Vault")
-        response = requests.post(url, headers=headers, json=payload, verify=verify)
+        response = requests.post(
+            url, headers=headers, json=payload, verify=verify, timeout=120
+        )
 
         if response.status_code != 200:
             return {"error": response.reason}
@@ -346,7 +348,7 @@ def _selftoken_expired():
         # Add Vault namespace to headers if Vault Enterprise enabled
         if namespace is not None:
             headers["X-Vault-Namespace"] = namespace
-        response = requests.get(url, headers=headers, verify=verify)
+        response = requests.get(url, headers=headers, verify=verify, timeout=120)
         if response.status_code != 200:
             return True
         return False

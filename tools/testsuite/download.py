@@ -14,7 +14,9 @@ from ptscripts import Context, command_group
 import tools.utils
 import tools.utils.gh
 
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+    "r", encoding="utf-8"
+) as rfh:
     OS_SLUGS = sorted(json.load(rfh))
 
 log = logging.getLogger(__name__)

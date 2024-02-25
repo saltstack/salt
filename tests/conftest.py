@@ -34,7 +34,7 @@ from tests.support.helpers import (
     PRE_PYTEST_SKIP_REASON,
     get_virtualenv_binary_path,
 )
-from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
+from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
@@ -1559,7 +1559,7 @@ def from_filenames_collection_modifyitems(config, items):
         ):
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
-            contents = properly_slashed_path.read_text()
+            contents = properly_slashed_path.read_text(encoding="utf-8")
             for sep in ("\r\n", "\\r\\n", "\\n"):
                 contents = contents.replace(sep, "\n")
             for line in contents.split("\n"):

@@ -206,7 +206,7 @@ class ReqServerChannel:
         if HAS_M2:
             pret["key"] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
         else:
-            cipher = PKCS1_OAEP.new(pub)
+            cipher = PKCS1_OAEP.new(pub)  # pylint: disable=used-before-assignment
             pret["key"] = cipher.encrypt(key)
         if ret is False:
             ret = {}

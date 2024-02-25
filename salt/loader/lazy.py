@@ -15,7 +15,7 @@ import time
 import traceback
 import types
 from collections.abc import MutableMapping
-from zipimport import zipimporter
+from zipimport import zipimporter  # pylint: disable=no-name-in-module
 
 import salt.config
 import salt.defaults.events

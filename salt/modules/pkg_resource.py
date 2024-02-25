@@ -26,7 +26,9 @@ def _repack_pkgs(pkgs, normalize=True):
     if normalize and "pkg.normalize_name" in __salt__:
         _normalize_name = __salt__["pkg.normalize_name"]
     else:
-        _normalize_name = lambda pkgname: pkgname
+
+        def _normalize_name(pkgname):
+            return pkgname
 
     repacked_pkgs = {
         _normalize_name(str(x)): str(y) if y is not None else y
@@ -71,7 +73,9 @@ def pack_sources(sources, normalize=True):
     if normalize and "pkg.normalize_name" in __salt__:
         _normalize_name = __salt__["pkg.normalize_name"]
     else:
-        _normalize_name = lambda pkgname: pkgname
+
+        def _normalize_name(pkgname):
+            return pkgname
 
     if isinstance(sources, str):
         try:

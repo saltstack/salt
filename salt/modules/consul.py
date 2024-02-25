@@ -75,7 +75,7 @@ def _query(
         data = None
     else:
         if data is not None:
-            if type(data) != str:
+            if not isinstance(data, str):
                 data = salt.utils.json.dumps(data)
         else:
             data = salt.utils.json.dumps({})

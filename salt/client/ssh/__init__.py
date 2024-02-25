@@ -559,7 +559,7 @@ class SSH(MultiprocessingStateMixin):
         try:
             retcode = int(retcode)
         except (TypeError, ValueError):
-            log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+            log.warning("Got an invalid retcode for host '%s': '%s'", host, retcode)
             retcode = 1
         # This job is done, yield
         try:
@@ -573,7 +573,9 @@ class SSH(MultiprocessingStateMixin):
                         retcode = int(remote_retcode)
                     except (TypeError, ValueError):
                         log.warning(
-                            f"Host '{host}' reported an invalid retcode: '{remote_retcode}'"
+                            "Host '%s' reported an invalid retcode: '%s'",
+                            host,
+                            remote_retcode,
                         )
                         retcode = max(retcode, 1)
                 except (KeyError, TypeError):
@@ -599,7 +601,7 @@ class SSH(MultiprocessingStateMixin):
         """
         que = multiprocessing.Queue()
         running = {}
-        target_iter = self.targets.__iter__()
+        target_iter = iter(self.targets)
         returned = set()
         rets = set()
         init = False
@@ -829,7 +831,7 @@ class SSH(MultiprocessingStateMixin):
         for ret, retcode in self.handle_ssh():
             host = next(iter(ret))
             if not isinstance(retcode, int):
-                log.warning(f"Host '{host}' returned an invalid retcode: {retcode}")
+                log.warning("Host '%s' returned an invalid retcode: %s", host, retcode)
                 retcode = 1
             final_exit = max(final_exit, retcode)
 
@@ -1784,7 +1786,7 @@ def ssh_version():
         ["ssh", "-V"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
     try:
-        version_parts = ret[1].split(b",")[0].split(b"_")[1]
+        version_parts = ret[1].split(b",", maxsplit=1)[0].split(b"_")[1]
         parts = []
         for part in version_parts:
             try:

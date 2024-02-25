@@ -57,7 +57,10 @@ def _blkid_output(out, fs_type=None):
     """
     Parse blkid output.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = {}
     for dev_meta in flt(out.split("\n\n")):
         dev = {}
@@ -84,7 +87,10 @@ def _blkid(fs_type=None):
 
     :param fs_type: Filter only devices that are formatted by that file system.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = dict()
     for dev_meta in flt(
         os.popen("blkid -o full").read().split(os.linesep)

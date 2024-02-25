@@ -2120,9 +2120,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
         return proc.exitstatus
     except salt.utils.vt.TerminalException as err:
         trace = traceback.format_exc()
-        log.error(
-            error_msg.format(cmd, err, trace)
-        )  # pylint: disable=str-format-in-logging
+        log.error(error_msg.format(cmd, err, trace))
     finally:
         proc.close(terminate=True, kill=True)
     # Signal an error
@@ -2969,7 +2967,7 @@ def update_bootstrap(config, url=None):
                     "Python requests library to be installed"
                 )
             }
-        req = requests.get(url)
+        req = requests.get(url, timeout=120)
         if req.status_code != 200:
             return {
                 "error": (

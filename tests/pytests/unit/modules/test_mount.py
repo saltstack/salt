@@ -416,8 +416,6 @@ def test_set_filesystems_with_data(tmp_sub_dir, config_file):
     Tests to verify set_filesystems reads and adjusts file /etc/filesystems correctly
     """
     # Note AIX uses tabs in filesystems files, hence disable warings and errors for tabs and spaces
-    # pylint: disable=W8191
-    # pylint: disable=E8101
     config_filepath = str(tmp_sub_dir / "filesystems")
     with patch.dict(mount.__grains__, {"os": "AIX", "kernel": "AIX"}):
         mount.set_filesystems(

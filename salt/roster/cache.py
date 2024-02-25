@@ -199,15 +199,21 @@ def _data_lookup(ref, lookup):
 def _minion_lookup(minion_id, key, minion):
     grains, pillar, addrs, mine = minion
 
+    def _data_lookup_ref(data_id):
+        if data_id == "pillar":
+            return pillar
+        if data_id == "grains":
+            return grains
+        if data_id == "mine":
+            return mine
+
     if key == "id":
         # Just paste in the minion ID
         return minion_id
     elif isinstance(key, dict):
         # Lookup the key in the dict
         for data_id, lookup in key.items():
-            ref = {"pillar": pillar, "grain": grains, "mine": mine}[data_id]
-
-            for k in _data_lookup(ref, lookup):
+            for k in _data_lookup(_data_lookup_ref(data_id), lookup):
                 if k:
                     return k
 
@@ -220,7 +226,7 @@ def _minion_lookup(minion_id, key, minion):
         try:
             net = ipaddress.ip_network(key, strict=True)
         except ValueError:
-            log.error("%s is an invalid CIDR network", net)
+            log.error("%s is an invalid CIDR network", key)
             return None
 
         for addr in addrs[net.version]:

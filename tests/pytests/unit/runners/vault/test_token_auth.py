@@ -68,7 +68,9 @@ def test_generate_token():
         assert "error" not in result
         assert "token" in result
         assert result["token"] == "test"
-        mock.assert_called_with("http://fake_url", headers=ANY, json=ANY, verify=ANY)
+        mock.assert_called_with(
+            "http://fake_url", headers=ANY, json=ANY, verify=ANY, timeout=120
+        )
 
         # Test uses
         num_uses = 6
@@ -85,7 +87,11 @@ def test_generate_token():
             },
         }
         mock.assert_called_with(
-            "http://fake_url", headers=ANY, json=json_request, verify=ANY
+            "http://fake_url",
+            headers=ANY,
+            json=json_request,
+            verify=ANY,
+            timeout=120,
         )
 
         # Test ttl
@@ -103,7 +109,7 @@ def test_generate_token():
             },
         }
         mock.assert_called_with(
-            "http://fake_url", headers=ANY, json=json_request, verify=ANY
+            "http://fake_url", headers=ANY, json=json_request, verify=ANY, timeout=120
         )
 
     mock = _mock_json_response({}, status_code=403, reason="no reason")
@@ -152,4 +158,5 @@ def test_generate_token_with_namespace():
                 },
                 json=ANY,
                 verify=ANY,
+                timeout=120,
             )

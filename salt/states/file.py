@@ -567,6 +567,8 @@ def _gen_keep_files(name, require, walk_d=None):
     like directory or recurse has a clean.
     """
 
+    walk_ret = set()
+
     def _is_child(path, directory):
         """
         Check whether ``path`` is child of ``directory``
@@ -1233,7 +1235,9 @@ def _shortcut_check(
 
     if os.path.isfile(name):
         with salt.utils.winapi.Com():
-            shell = win32com.client.Dispatch("WScript.Shell")
+            shell = win32com.client.Dispatch(  # pylint: disable=used-before-assignment
+                "WScript.Shell"
+            )
             scut = shell.CreateShortcut(name)
             state_checks = [scut.TargetPath.lower() == target.lower()]
             if arguments is not None:
@@ -9063,7 +9067,7 @@ def cached(
             name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
         )
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(str(exc))
         return ret
 
     if not local_copy:
@@ -9150,7 +9154,7 @@ def not_cached(name, saltenv="base"):
         try:
             os.remove(local_copy)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Failed to delete {}: {}".format(local_copy, exc.__str__())
+            ret["comment"] = "Failed to delete {}: {}".format(local_copy, exc)
         else:
             ret["result"] = True
             ret["changes"]["deleted"] = True

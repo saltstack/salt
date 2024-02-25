@@ -330,6 +330,7 @@ def _get_ip_wins_info(i_face):
 
 
 def _get_network_interfaces():
+    # pylint: disable=used-before-assignment
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 
 

@@ -223,7 +223,10 @@ def _usage_specific(raw):
     """
     Parse usage/specific.
     """
-    get_key = lambda val: dict([tuple(val.split(":"))])
+
+    def get_key(val):
+        return dict([tuple(val.split(":"))])
+
     raw = raw.split("\n")
     section, size, used = raw[0].split(" ")
     section = section.replace(",", "_").replace(":", "").lower()

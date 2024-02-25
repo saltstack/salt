@@ -1168,8 +1168,8 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
         digest = md.final()
         signed = rsa_key.sign(digest, algo="sha256")
     else:
-        rsa_ = PKCS1_v1_5.new(rsa_key)
-        hash_ = SHA256.new()
+        rsa_ = PKCS1_v1_5.new(rsa_key)  # pylint: disable=used-before-assignment
+        hash_ = SHA256.new()  # pylint: disable=used-before-assignment
         hash_.update(timestamp.encode(__salt_system_encoding__))
         signed = rsa_.sign(hash_)
     signed = base64.b64encode(signed)

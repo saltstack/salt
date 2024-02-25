@@ -119,9 +119,7 @@ def call_function(salt_function, *args, **kwargs):
     # function_kwargs is initialized to a dictionary of keyword arguments the function to be run accepts
     function_kwargs = dict(
         zip(
-            argspec.args[
-                -len(argspec.defaults or []) :
-            ],  # pylint: disable=incompatible-py3-code
+            argspec.args[-len(argspec.defaults or []) :],
             argspec.defaults or [],
         )
     )
