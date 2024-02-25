@@ -5696,6 +5696,7 @@ def check_managed_changes(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     """
@@ -5749,6 +5750,12 @@ def check_managed_changes(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -5822,6 +5829,7 @@ def check_managed_changes(
         ignore_ordering=ignore_ordering,
         ignore_whitespace=ignore_whitespace,
         ignore_comment_characters=ignore_comment_characters,
+        new_file_diff=new_file_diff,
     )
     __clean_tmp(sfn)
     return changes
@@ -5847,6 +5855,7 @@ def check_file_meta(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5962,6 +5971,12 @@ def check_file_meta(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
     """
     changes = {}
     has_changes = False
@@ -5977,7 +5992,7 @@ def check_file_meta(
     except CommandExecutionError:
         lstats = {}
 
-    if not lstats:
+    if not lstats and not new_file_diff:
         changes["newfile"] = name
         if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
             return True, changes
@@ -6006,10 +6021,20 @@ def check_file_meta(
                             ignore_whitespace=ignore_whitespace,
                             ignore_comment_characters=ignore_comment_characters,
                         )
-                    else:
+                    elif lstats:
                         changes["diff"] = get_diff(
                             name, sfn, template=True, show_filenames=False
                         )
+                    else:
+                        # Since the target file doesn't exist, create an empty one to
+                        # compare against
+                        tmp_empty = salt.utils.files.mkstemp(
+                            prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                        )
+                        with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                            tmp_.write(b"")
+                        changes["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
+
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -6044,8 +6069,17 @@ def check_file_meta(
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
                 )
-            else:
+            elif lstats:
                 differences = get_diff(name, tmp, show_filenames=False)
+            else:
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                differences = get_diff(tmp_empty, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -6055,6 +6089,9 @@ def check_file_meta(
                 changes["diff"] = "<Obfuscated Template>"
             else:
                 changes["diff"] = differences
+
+    if not lstats:
+        return changes
 
     if not salt.utils.platform.is_windows():
         # Check owner
@@ -6321,6 +6358,7 @@ def manage_file(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     """
@@ -6544,6 +6582,12 @@ def manage_file(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -6916,6 +6960,17 @@ def manage_file(
 
             # It is a new file, set the diff accordingly
             ret["changes"]["diff"] = "New file"
+            if new_file_diff:
+
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                ret["changes"]["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
+
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
@@ -6969,6 +7024,16 @@ def manage_file(
                     )
                 else:
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
+
+            if new_file_diff and ret["changes"]["diff"] == "New file":
+                # Since the target file doesn't exist, create an empty one to
+                # compare against
+                tmp_empty = salt.utils.files.mkstemp(
+                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
+                )
+                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
+                    tmp_.write(b"")
+                ret["changes"]["diff"] = get_diff(tmp_empty, tmp, show_filenames=False)
 
             # Copy into place
             salt.utils.files.copyfile(
