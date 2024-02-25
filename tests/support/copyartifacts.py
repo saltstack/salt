@@ -2,7 +2,7 @@
 Script for copying back xml junit files from tests
 """
 
-import argparse  # pylint: disable=minimum-python-version
+import argparse
 import os
 import subprocess
 
@@ -19,13 +19,12 @@ class DownloadArtifacts:
         self.sftpclient = paramiko.SFTPClient.from_transport(self.transport)
 
     def setup_transport(self):
-        # pylint: disable=minimum-python-version
+
         config = salt.utils.yaml.safe_load(
             subprocess.check_output(
                 ["bundle", "exec", "kitchen", "diagnose", self.instance]
             )
         )
-        # pylint: enable=minimum-python-version
         state = config["instances"][self.instance]["state_file"]
         tport = config["instances"][self.instance]["transport"]
         transport = paramiko.Transport(
@@ -44,9 +43,7 @@ class DownloadArtifacts:
         Make sure all xml files are readable by the world so that anyone can grab them
         """
         for remote, _ in self.artifacts:
-            self.transport.open_session().exec_command(
-                "sudo chmod -R +r {}".format(remote)
-            )
+            self.transport.open_session().exec_command(f"sudo chmod -R +r {remote}")
 
     def download(self):
         self._set_permissions()
@@ -61,11 +58,11 @@ class DownloadArtifacts:
                 self._do_download(remote, os.path.join(local, os.path.basename(remote)))
 
     def _do_download(self, remote, local):
-        print("Copying from {} to {}".format(remote, local))
+        print(f"Copying from {remote} to {local}")
         try:
             self.sftpclient.get(remote, local)
         except OSError:
-            print("Failed to copy: {}".format(remote))
+            print(f"Failed to copy: {remote}")
 
 
 if __name__ == "__main__":

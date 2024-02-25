@@ -109,7 +109,7 @@ def _get_version(host, port, user, password):
     # check the InfluxDB version via the HTTP API
     try:
         result = requests.get(
-            "http://{}:{}/ping".format(host, port), auth=(user, password)
+            "http://{}:{}/ping".format(host, port), auth=(user, password), timeout=120
         )
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]

@@ -384,6 +384,7 @@ def test__authenticate_with_custom_port():
             "https://proxmox.connection.url:9999/api2/json/access/ticket",
             verify=True,
             data={"username": ("fakeuser",), "password": "secretpassword"},
+            timeout=120,
         )
 
 

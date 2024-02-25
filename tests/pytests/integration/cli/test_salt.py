@@ -254,7 +254,7 @@ def test_minion_65400(salt_cli, salt_minion, salt_minion_2, salt_master):
     Ensure correct exit status when salt CLI starts correctly.
 
     """
-    state = f"""
+    state = """
     custom_test_state:
       test.configurable_test_state:
         - name: example

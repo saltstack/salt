@@ -44,7 +44,10 @@ try:
     # try importing ConnectionClosedException
     # from napalm-base
     # this exception has been introduced only in version 0.24.0
+    # pylint: disable=unused-import,no-name-in-module
     from napalm.base.exceptions import ConnectionClosedException
+
+    # pylint: enable=unused-import,no-name-in-module
 
     HAS_CONN_CLOSED_EXC_CLASS = True
 except ImportError:
@@ -93,10 +96,8 @@ def virtual(opts, virtualname, filename):
     else:
         return (
             False,
-            '"{vname}"" {filename} cannot be loaded: '
-            "NAPALM is not installed: ``pip install napalm``".format(
-                vname=virtualname, filename="({filename})".format(filename=filename)
-            ),
+            f'"{virtualname}" ({filename}) cannot be loaded: '
+            "NAPALM is not installed: ``pip install napalm``",
         )
 
 

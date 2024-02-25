@@ -89,6 +89,7 @@ def create(name, **params):
         "https://api.serverdensity.io/inventory/devices/",
         params={"token": get_sd_auth("api_token")},
         data=params,
+        timeout=120,
     )
     log.debug("Server Density API Response: %s", api_response)
     log.debug("Server Density API Response content: %s", api_response.content)
@@ -120,6 +121,7 @@ def delete(device_id):
     api_response = requests.delete(
         "https://api.serverdensity.io/inventory/devices/" + device_id,
         params={"token": get_sd_auth("api_token")},
+        timeout=120,
     )
     log.debug("Server Density API Response: %s", api_response)
     log.debug("Server Density API Response content: %s", api_response.content)
@@ -171,6 +173,7 @@ def ls(**params):
             "token": get_sd_auth("api_token"),
             "filter": salt.utils.json.dumps(params),
         },
+        timeout=120,
     )
     log.debug("Server Density API Response: %s", api_response)
     log.debug("Server Density API Response content: %s", api_response.content)
@@ -209,6 +212,7 @@ def update(device_id, **params):
         "https://api.serverdensity.io/inventory/devices/" + device_id,
         params={"token": get_sd_auth("api_token")},
         data=params,
+        timeout=120,
     )
     log.debug("Server Density API Response: %s", api_response)
     log.debug("Server Density API Response content: %s", api_response.content)

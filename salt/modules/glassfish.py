@@ -126,6 +126,7 @@ def _api_get(path, server=None):
         auth=_get_auth(server["user"], server["password"]),
         headers=_get_headers(),
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 
@@ -141,6 +142,7 @@ def _api_post(path, data, server=None):
         headers=_get_headers(),
         data=salt.utils.json.dumps(data),
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 
@@ -156,6 +158,7 @@ def _api_delete(path, data, server=None):
         headers=_get_headers(),
         params=data,
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 

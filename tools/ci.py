@@ -57,7 +57,7 @@ def print_gh_event(ctx: Context):
         assert gh_event_path is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
         ctx.exit(1)
@@ -179,7 +179,7 @@ def runner_types(ctx: Context, event_name: str):
         assert github_output is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
         ctx.exit(1)
@@ -326,7 +326,7 @@ def define_jobs(
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -473,7 +473,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -931,7 +931,7 @@ def get_pr_test_labels(
             assert gh_event_path is not None
 
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -1100,7 +1100,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -1167,7 +1167,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
             pr_event_data = gh_event.get("pull_request")
             if pr_event_data:
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])

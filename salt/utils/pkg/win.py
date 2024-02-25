@@ -825,7 +825,7 @@ class WinSoftware:
         Returns:
             str: Package Id
         """
-        return self.__next__()
+        return next(self)
 
     def get(self, pkg_id, default_value=None):
         """
@@ -848,7 +848,7 @@ class WinSoftware:
         return 1 if Version(ver1) > Version(ver2) else -1
 
     @staticmethod
-    def __latest_to_oldest_version(ver1, ver2):
+    def __latest_to_oldest_version(ver1, ver2):  # pylint: disable=unused-private-member
         """
         Used for sorting version numbers, latest to oldest
         """

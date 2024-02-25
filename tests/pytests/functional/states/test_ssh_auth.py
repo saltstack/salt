@@ -45,7 +45,7 @@ def test_ssh_auth_config(tmp_path, system_user, state_tree):
         ssh_auth_state.manage(
             name="test",
             user=system_user.username,
-            source=f"salt://authorized",
+            source="salt://authorized",
             config=str(new_auth_file),
             ssh_keys=[""],
         )

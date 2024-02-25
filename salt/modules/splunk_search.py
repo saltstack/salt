@@ -162,7 +162,7 @@ def create(name, profile="splunk", **kwargs):
     _req_url = "{}/servicesNS/{}/search/saved/searches/{}/acl".format(
         url, config.get("username"), urllib.parse.quote(name)
     )
-    requests.post(_req_url, auth=auth, verify=True, data=data)
+    requests.post(_req_url, auth=auth, verify=True, data=data, timeout=120)
     return _get_splunk_search_props(search)
 
 

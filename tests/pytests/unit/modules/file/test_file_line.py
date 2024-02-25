@@ -1633,7 +1633,7 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
     )
     # pylint: enable=W1401
     after, before = (
-        file_content.split(os.linesep)[0],
+        file_content.split(os.linesep, maxsplit=1)[0],
         file_content.split(os.linesep)[2],
     )
 

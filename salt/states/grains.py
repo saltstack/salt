@@ -296,7 +296,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
                     comments.append(
                         "Value {1} in grain {0} is set to be deleted".format(name, val)
                     )
-                    if "deleted" not in ret["changes"].keys():
+                    if "deleted" not in ret["changes"]:
                         ret["changes"] = {"deleted": []}
                     ret["changes"]["deleted"].append(val)
                 elif val in grain:
@@ -304,7 +304,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
                     comments.append(
                         "Value {1} was deleted from grain {0}".format(name, val)
                     )
-                    if "deleted" not in ret["changes"].keys():
+                    if "deleted" not in ret["changes"]:
                         ret["changes"] = {"deleted": []}
                     ret["changes"]["deleted"].append(val)
             ret["comment"] = "\n".join(comments)

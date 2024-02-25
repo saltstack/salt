@@ -39,7 +39,7 @@ class MappedResultMock(MagicMock):
 
     def __init__(self):
         def mapped_results(*args, **kwargs):
-            if args[0] not in self._instances.keys():
+            if args[0] not in self._instances:
                 raise virt.libvirt.libvirtError("Not found: {}".format(args[0]))
             return self._instances[args[0]]
 

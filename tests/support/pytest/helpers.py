@@ -706,13 +706,17 @@ class EntropyGenerator:
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
-        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        self.current_entropy = int(
+            kernel_entropy_file.read_text(encoding="utf-8").strip()
+        )
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
             log.info("The '%s' file is not avilable", kernel_poolsize_file)
         else:
-            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            self.current_poolsize = int(
+                kernel_poolsize_file.read_text(encoding="utf-8").strip()
+            )
             log.info("Entropy Poolsize: %s", self.current_poolsize)
             # Account for smaller poolsizes using BLAKE2s
             if self.current_poolsize == 256:
@@ -738,7 +742,9 @@ class EntropyGenerator:
                         raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -773,7 +779,9 @@ class EntropyGenerator:
                     check=True,
                 )
                 os.unlink(target_file.name)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break

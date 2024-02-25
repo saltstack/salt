@@ -53,7 +53,7 @@ def parse_gitlog(filename=None):
     if not filename or filename == "-":
         fh = sys.stdin
     else:
-        fh = open(filename, "r+")
+        fh = open(filename, "r+", encoding="utf-8")
 
     try:
         commitcount = 0

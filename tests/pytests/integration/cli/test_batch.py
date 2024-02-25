@@ -141,7 +141,9 @@ def test_batch_state_stopping_after_error(
 
     # Executing salt with batch: 1 and with failhard. It should stop after the first error.
     cmd = salt_cli.run(
-        "state.single" "test.fail_without_changes" "name=test_me",
+        "state.single",
+        "test.fail_without_changes",
+        "name=test_me",
         "-b 1",
         "--out=yaml",
         "--failhard",

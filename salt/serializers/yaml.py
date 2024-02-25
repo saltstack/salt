@@ -90,7 +90,7 @@ class EncryptedString(str):
 
     @staticmethod
     def yaml_dumper(dumper, data):
-        return dumper.represent_scalar(EncryptedString.yaml_tag, data.__str__())
+        return dumper.represent_scalar(EncryptedString.yaml_tag, str(data))
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232

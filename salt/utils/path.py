@@ -182,9 +182,11 @@ def which(exe=None):
         # The specified extension isn't valid, so we just assume it's part of the
         # filename and proceed to walk the pathext list
         else:
-            is_executable = lambda path, membership=res: is_executable_common(
-                path
-            ) and has_executable_ext(path, membership)
+
+            def is_executable(path, membership=res):
+                return is_executable_common(path) and has_executable_ext(
+                    path, membership
+                )
 
     else:
         # in posix, there's no such thing as file extensions..only zuul

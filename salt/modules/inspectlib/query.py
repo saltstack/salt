@@ -480,11 +480,13 @@ class Query(EnvLoader):
             raise InspectorQueryException(
                 'Unknown "{}" value for parameter "time"'.format(timeformat)
             )
-        tfmt = (
-            lambda param: timeformat == "tz"
-            and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param))
-            or int(param)
-        )
+
+        def tfmt(param):
+            return (
+                timeformat == "tz"
+                and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param))
+                or int(param)
+            )
 
         size_fmt = kwargs.get("size")
         if size_fmt is not None and size_fmt.lower() not in ["b", "kb", "mb", "gb"]:
@@ -525,9 +527,9 @@ class Query(EnvLoader):
                 pld_files.append(pld_data.path)
             else:
                 pld_files[pld_data.path] = {
-                    "uid": self._id_resolv(pld_data.uid, named=(owners == "id")),
+                    "uid": self._id_resolv(pld_data.uid, named=owners == "id"),
                     "gid": self._id_resolv(
-                        pld_data.gid, named=(owners == "id"), uid=False
+                        pld_data.gid, named=owners == "id", uid=False
                     ),
                     "size": _size_format(pld_data.p_size, fmt=size_fmt),
                     "mode": oct(pld_data.mode),

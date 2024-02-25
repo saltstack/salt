@@ -301,6 +301,7 @@ def test_make_request_single_use_token_run_ok(json_success, cache_single):
                 "http://127.0.0.1:8200/key",
                 headers=expected_headers,
                 verify=ANY,
+                timeout=ANY,
             )
             assert vault_return.json() == json_success
 
@@ -324,6 +325,7 @@ def test_make_request_single_use_token_run_auth_error(json_denied, cache_single)
                     "http://127.0.0.1:8200/key",
                     headers=expected_headers,
                     verify=ANY,
+                    timeout=ANY,
                 )
                 assert vault_return.json() == json_denied
                 mock_del_cache.assert_called()
@@ -358,6 +360,7 @@ def test_multi_use_token_successful_run(json_success, cache_uses):
                         "http://127.0.0.1:8200/key",
                         headers=expected_headers,
                         verify=ANY,
+                        timeout=ANY,
                     )
                     mock_write_cache.assert_called_with(expected_cache_write)
                     assert vault_return.json() == json_success
@@ -381,6 +384,7 @@ def test_multi_use_token_last_use(json_success, cache_uses_last):
                         "http://127.0.0.1:8200/key",
                         headers=expected_headers,
                         verify=ANY,
+                        timeout=ANY,
                     )
                     mock_del_cache.assert_called()
                     assert vault_return.json() == json_success
@@ -404,6 +408,7 @@ def test_unlimited_use_token_no_decrement(json_success, cache_unlimited):
                         "http://127.0.0.1:8200/key",
                         headers=expected_headers,
                         verify=ANY,
+                        timeout=ANY,
                     )
                     assert (
                         not mock_del_cache.called
@@ -508,6 +513,7 @@ def test_request_with_namespace(json_success, cache_single_namespace):
                     "http://127.0.0.1:8200/key",
                     headers=expected_headers,
                     verify=ANY,
+                    timeout=ANY,
                 )
                 assert vault_return.json() == json_success
 

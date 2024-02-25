@@ -403,7 +403,7 @@ def query(
         log.trace("EC2 Request Parameters: %s", params_with_headers)
         try:
             result = requests.get(
-                requesturl, headers=headers, params=params_with_headers
+                requesturl, headers=headers, params=params_with_headers, timeout=120
             )
             log.debug(
                 "EC2 Response Status Code: %s",
@@ -1198,9 +1198,9 @@ def get_imageid(vm_):
         "Filter.0.Value.0": image,
     }
     # Query AWS, sort by 'creationDate' and get the last imageId
-    _t = lambda x: datetime.datetime.strptime(
-        x["creationDate"], "%Y-%m-%dT%H:%M:%S.%fZ"
-    )
+    def _t(x):
+        return datetime.datetime.strptime(x["creationDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
+
     image_id = sorted(
         aws.query(
             params,

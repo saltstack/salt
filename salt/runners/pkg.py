@@ -40,7 +40,7 @@ def list_upgrades(jid, style="group", outputter="nested", ext_source=None):
         for minion in data:
             results = data[minion]["return"]
             for pkg, pkgver in results.items():
-                if pkg not in pkgs.keys():
+                if pkg not in pkgs:
                     pkgs[pkg] = {pkgver: {"hosts": []}}
 
                 if pkgver not in pkgs[pkg].keys():

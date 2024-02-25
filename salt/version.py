@@ -58,7 +58,7 @@ class SaltVersionsInfo(type):
     _previous_release = None
     _next_release = None
 
-    # pylint: disable=bad-whitespace,multiple-spaces-before-operator
+    # pylint: disable=bad-whitespace
     # ----- Please refrain from fixing whitespace ---------------------------------->
     # The idea is to keep this readable.
     # -------------------------------------------------------------------------------
@@ -184,7 +184,7 @@ class SaltVersionsInfo(type):
     # <---- Please refrain from fixing whitespace -----------------------------------
     # The idea is to keep this readable.
     # -------------------------------------------------------------------------------
-    # pylint: enable=bad-whitespace,multiple-spaces-before-operator
+    # pylint: enable=bad-whitespace
     # fmt: on
 
     @classmethod
@@ -862,7 +862,7 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     Report the versions of dependent software.
     """
     py_info = [
-        ("Python", sys.version.rsplit("\n")[0].strip()),
+        ("Python", sys.version.rsplit("\n", maxsplit=1)[0].strip()),
     ]
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))

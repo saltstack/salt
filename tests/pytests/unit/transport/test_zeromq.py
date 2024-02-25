@@ -616,7 +616,7 @@ def test_req_server_chan_encrypt_v2(pki_dir):
     if HAS_M2:
         aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
     else:
-        cipher = PKCS1_OAEP.new(key)
+        cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
         aes = cipher.decrypt(ret["key"])
     pcrypt = salt.crypt.Crypticle(opts, aes)
     signed_msg = pcrypt.loads(ret[dictkey])
@@ -1541,7 +1541,7 @@ async def test_unclosed_request_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
 
@@ -1557,6 +1557,6 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()

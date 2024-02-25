@@ -287,6 +287,7 @@ def get_load(jid):
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
+    exc = None
     for index in range(1, num_tries + 1):
         with salt.utils.files.fopen(load_p, "rb") as rfh:
             try:
@@ -297,7 +298,8 @@ def get_load(jid):
                     time.sleep(0.25)
     else:
         log.critical("Failed to unpack %s", load_p)
-        raise exc
+        if exc is not None:
+            raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]

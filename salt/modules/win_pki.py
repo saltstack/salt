@@ -124,7 +124,7 @@ def get_stores():
         salt '*' win_pki.get_stores
     """
     ret = dict()
-    cmd = r"Get-ChildItem -Path 'Cert:\' | " r"Select-Object LocationName, StoreNames"
+    cmd = r"Get-ChildItem -Path 'Cert:\' | Select-Object LocationName, StoreNames"
 
     items = _cmd_run(cmd=cmd, as_json=True)
 

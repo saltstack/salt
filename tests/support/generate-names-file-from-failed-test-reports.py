@@ -43,7 +43,7 @@ def main():
     failures = set()
     for fname in sorted(glob.glob(os.path.join(options.reports_dir, "*.xml"))):
         total_xml_reports += 1
-        with open(fname) as rfh:
+        with open(fname, encoding="utf-8") as rfh:
             test_suite, test_result = xunitparser.parse(rfh)
             if not test_result.errors and not test_result.failures:
                 continue
@@ -54,7 +54,7 @@ def main():
     if not total_xml_reports:
         parser.exit(status=1, message="No JUnit XML files were parsed")
 
-    with open(options.output_file, "w") as wfh:
+    with open(options.output_file, "w", encoding="utf-8") as wfh:
         wfh.write(os.linesep.join(sorted(failures)))
 
     parser.exit(status=0)

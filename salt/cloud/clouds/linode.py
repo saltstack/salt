@@ -530,7 +530,9 @@ class LinodeAPIv4(LinodeAPI):
         attempt = 0
         while True:
             try:
-                result = requests.request(method, url, json=data, headers=headers)
+                result = requests.request(
+                    method, url, json=data, headers=headers, timeout=120
+                )
 
                 log.debug("Linode API response status code: %d", result.status_code)
                 log.trace("Linode API response body: %s", result.text)
@@ -1092,7 +1094,9 @@ class LinodeAPIv4(LinodeAPI):
             "entity.type": entity,
         }
         last_event = None
-        condition = lambda event: self._check_event_status(event, status)
+
+        def condition(event):
+            return self._check_event_status(event, status)
 
         while True:
             if last_event is not None:
@@ -1965,8 +1969,8 @@ class LinodeAPIv3(LinodeAPI):
 
             for key, val in ips.items():
                 if key == linode_id:
-                    this_node["private_ips"] = val["private_ips"]
-                    this_node["public_ips"] = val["public_ips"]
+                    this_node["private_ips"] = val[1]
+                    this_node["public_ips"] = val[0]
 
             if full:
                 this_node["extra"] = node

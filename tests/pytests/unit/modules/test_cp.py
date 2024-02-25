@@ -43,7 +43,10 @@ def test__render_filenames_render_failed():
     saltenv = "base"
     template = "jinja"
     file_data = "Remember to keep your files well salted."
-    mock_jinja = lambda *args, **kwargs: {"result": False, "data": file_data}
+
+    def mock_jinja(*args, **kwargs):
+        return {"result": False, "data": file_data}
+
     with patch.dict(templates.TEMPLATE_REGISTRY, {"jinja": mock_jinja}):
         with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
             pytest.raises(
@@ -65,7 +68,10 @@ def test__render_filenames_success():
     saltenv = "base"
     template = "jinja"
     file_data = "/srv/salt/biscuits"
-    mock_jinja = lambda *args, **kwargs: {"result": True, "data": file_data}
+
+    def mock_jinja(*args, **kwargs):
+        return {"result": True, "data": file_data}
+
     ret = (file_data, file_data)  # salt.utils.files.fopen can only be mocked once
     with patch.dict(templates.TEMPLATE_REGISTRY, {"jinja": mock_jinja}):
         with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
@@ -149,7 +155,8 @@ def test_push():
         assert num_opens == 1, num_opens
         fh_ = m_open.filehandles[filename][0]
         assert fh_.read.call_count == 2, fh_.read.call_count
-        req_channel_factory_mock().__enter__().send.assert_called_once_with(
+
+        req_channel_factory_mock().__enter__().send.assert_called_once_with(  # pylint: disable=unnecessary-dunder-call
             dict(
                 loc=fh_.tell(),  # pylint: disable=resource-leakage
                 cmd="_file_recv",

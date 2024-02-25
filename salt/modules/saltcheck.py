@@ -476,7 +476,7 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
 
         # Check for situations to disable parallization
         if parallel:
-            if type(num_proc) == float:
+            if isinstance(num_proc, float):
                 num_proc = int(num_proc)
 
             if multiprocessing.cpu_count() < 2:

@@ -3,18 +3,12 @@ Custom configparser classes
 """
 
 import re
+from collections import OrderedDict
 from configparser import *  # pylint: disable=no-name-in-module,wildcard-import,unused-wildcard-import
 
 import salt.utils.stringutils
 
-try:
-    from collections import OrderedDict as _default_dict
-except ImportError:
-    # fallback for setup.py which hasn't yet built _collections
-    _default_dict = dict
 
-
-# pylint: disable=string-substitution-usage-error
 class GitConfigParser(RawConfigParser):
     """
     Custom ConfigParser which reads and writes git config files.
@@ -47,7 +41,7 @@ class GitConfigParser(RawConfigParser):
     def __init__(
         self,
         defaults=None,
-        dict_type=_default_dict,
+        dict_type=OrderedDict,
         allow_no_value=True,
     ):
         """
@@ -269,7 +263,7 @@ class GitConfigParser(RawConfigParser):
             fp_.write(convert("[%s]\n" % self.DEFAULTSECT))
             for (key, value) in self._defaults.items():
                 value = salt.utils.stringutils.to_unicode(value).replace("\n", "\n\t")
-                fp_.write(convert("{} = {}\n".format(key, value)))
+                fp_.write(convert(f"{key} = {value}\n"))
         for section in self._sections:
             fp_.write(convert("[%s]\n" % section))
             for (key, value) in self._sections[section].items():

@@ -241,5 +241,5 @@ def _get_paths(path_pattern, minion_id, pillar):
     except KeyError:
         log.warning("Could not resolve pillar path pattern %s", path_pattern)
 
-    log.debug(f"{minion_id} vault pillar paths: {paths}")
+    log.debug("%s vault pillar paths: %s", minion_id, paths)
     return paths

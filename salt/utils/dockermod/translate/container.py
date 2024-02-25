@@ -378,9 +378,7 @@ def port_bindings(val, **kwargs):
                 try:
                     start, end = helpers.get_port_range(container_port)
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for using
-                    # the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 bind_vals = [
                     (_format_port(port_num, proto), None)
                     for port_num in range(start, end + 1)
@@ -403,9 +401,7 @@ def port_bindings(val, **kwargs):
                     cport_start, cport_end = helpers.get_port_range(container_port)
                     hport_start, hport_end = helpers.get_port_range(bind_parts[0])
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for
-                    # using the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 if (hport_end - hport_start) != (cport_end - cport_start):
                     # Port range is mismatched
                     raise SaltInvocationError(
@@ -427,9 +423,7 @@ def port_bindings(val, **kwargs):
                 try:
                     cport_start, cport_end = helpers.get_port_range(container_port)
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for
-                    # using the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 cport_list = list(range(cport_start, cport_end + 1))
                 if host_port == "":
                     hport_list = [None] * len(cport_list)
@@ -437,9 +431,7 @@ def port_bindings(val, **kwargs):
                     try:
                         hport_start, hport_end = helpers.get_port_range(host_port)
                     except ValueError as exc:
-                        # Using __str__() to avoid deprecation warning for
-                        # using the message attribute of the ValueError.
-                        raise SaltInvocationError(exc.__str__())
+                        raise SaltInvocationError(str(exc))
                     hport_list = list(range(hport_start, hport_end + 1))
 
                     if (hport_end - hport_start) != (cport_end - cport_start):
@@ -526,9 +518,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
         try:
             range_start, range_end = helpers.get_port_range(item)
         except ValueError as exc:
-            # Using __str__() to avoid deprecation warning for using
-            # the "message" attribute of the ValueError.
-            raise SaltInvocationError(exc.__str__())
+            raise SaltInvocationError(str(exc))
         new_ports.update(
             [helpers.get_port_def(x, proto) for x in range(range_start, range_end + 1)]
         )

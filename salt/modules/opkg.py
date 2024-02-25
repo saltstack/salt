@@ -1222,7 +1222,10 @@ def version_cmp(
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 

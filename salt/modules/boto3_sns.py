@@ -137,7 +137,7 @@ def topic_exists(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto3_sns.topic_exists mytopic region=us-east-1
     """
     topics = list_topics(region=region, key=key, keyid=keyid, profile=profile)
-    return name in list(topics.values() + topics.keys())
+    return name in list(topics.values()) + list(topics)
 
 
 def create_topic(Name, region=None, key=None, keyid=None, profile=None):

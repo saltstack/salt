@@ -296,7 +296,7 @@ def test_paths_log_rotation(
                                 for _path in log_files_list:
                                     log_path = pathlib.Path(_path)
                                     assert log_path.exists()
-                                    with log_path.open("a") as f:
+                                    with log_path.open("a", encoding="utf-8") as f:
                                         f.write("This is a log rotation test\n")
 
                                 # force log rotation

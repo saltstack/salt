@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+    "r", encoding="utf-8"
+) as rfh:
     AMIS = json.load(rfh)
 
 

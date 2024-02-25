@@ -1686,7 +1686,7 @@ def running(
         if exc.info is not None:
             return _format_comments(ret, exc.info)
         else:
-            ret["comment"] = exc.__str__()
+            ret["comment"] = str(exc)
             return ret
 
     comments = []
@@ -1753,7 +1753,7 @@ def running(
         return _format_comments(ret, comments)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        msg = exc.__str__()
+        msg = str(exc)
         if (
             isinstance(exc, CommandExecutionError)
             and isinstance(exc.info, dict)
@@ -1810,7 +1810,7 @@ def running(
                 # of the network's subnet. An exception will be raised once
                 # you try to start the container, however.
                 ret["result"] = False
-                comments.append(exc.__str__())
+                comments.append(str(exc))
                 return _format_comments(ret, comments)
 
         post_net_connect = __salt__["docker.inspect_container"](temp_container_name)
@@ -1943,7 +1943,7 @@ def running(
                             )
                             disconnected = True
                     except CommandExecutionError as exc:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
 
                     if net_name in networks:
                         try:
@@ -1952,7 +1952,7 @@ def running(
                             )
                             connected = True
                         except CommandExecutionError as exc:
-                            errors.append(exc.__str__())
+                            errors.append(str(exc))
                             if disconnected:
                                 # We succeeded in disconnecting but failed
                                 # to reconnect. This can happen if the
@@ -2205,7 +2205,7 @@ def run(
         if exc.info is not None:
             return _format_comments(ret, exc.info)
         else:
-            ret["comment"] = exc.__str__()
+            ret["comment"] = str(exc)
             return ret
 
     if __opts__["test"]:

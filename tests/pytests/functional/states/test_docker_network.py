@@ -46,13 +46,16 @@ class Network:
                 "Indexing not supported for networks without a custom subnet"
             )
 
-    def arg_map(self, arg_name):
-        return {
-            "ipv4_address": "IPv4Address",
-            "ipv6_address": "IPv6Address",
-            "links": "Links",
-            "aliases": "Aliases",
-        }[arg_name]
+    @staticmethod
+    def arg_map(arg_name):
+        if arg_name == "ipv4_address":
+            return "IPv4Address"
+        if arg_name == "ipv6_address":
+            return "IPv6Address"
+        if arg_name == "links":
+            return "Links"
+        if arg_name == "aliases":
+            return "Aliases"
 
     @property
     def subnet(self):

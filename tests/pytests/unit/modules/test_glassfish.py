@@ -33,6 +33,7 @@ def test__api_get():
         url="http://localhost:4848/management/domain/ThePath",
         verify=True,
         auth=None,
+        timeout=120,
     )
 
 
@@ -51,6 +52,7 @@ def test__api_post():
         verify=True,
         auth=None,
         data='{"1": 1}',
+        timeout=120,
     )
 
 
@@ -69,4 +71,5 @@ def test__api_delete():
         verify=True,
         auth=None,
         params={1: 1},
+        timeout=120,
     )

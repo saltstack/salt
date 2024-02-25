@@ -614,7 +614,7 @@ def test_repo_absent_existing_repo_trailing_slash_uri(
 
     with subtests.test("Remove repo with trailing slash in URI"):
         # Write contents to file with trailing slash in URI
-        repo_file.write_text(f"{repo_content}\n")
+        repo_file.write_text(f"{repo_content}\n", encoding="utf-8")
         # Perform and validate removal
         ret = pkgrepo.absent(name=repo_content)
         assert ret.result
@@ -630,7 +630,7 @@ def test_repo_absent_existing_repo_trailing_slash_uri(
         # Create a repo file that matches the URI but contains no architecture.
         # This should not be identified as a match for repo_content, and thus
         # the result of a state should be a no-op.
-        repo_file.write_text(f"deb {repo_uri} stable main\n")
+        repo_file.write_text(f"deb {repo_uri} stable main\n", encoding="utf-8")
         # Since this was a no-op, the state should have succeeded, made no
         # changes, and left the repo file in place.
         ret = pkgrepo.absent(name=repo_content)

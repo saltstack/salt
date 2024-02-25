@@ -13,7 +13,7 @@
 import copy
 import getpass
 import logging
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import signal
 import sys

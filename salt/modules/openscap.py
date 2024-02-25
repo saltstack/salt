@@ -2,23 +2,11 @@
 Module for OpenSCAP Management
 
 """
-
-
+import argparse
 import shlex
 import shutil
 import tempfile
 from subprocess import PIPE, Popen
-
-ArgumentParser = object
-
-try:
-    import argparse  # pylint: disable=minimum-python-version
-
-    ArgumentParser = argparse.ArgumentParser
-    HAS_ARGPARSE = True
-except ImportError:  # python 2.6
-    HAS_ARGPARSE = False
-
 
 _XCCDF_MAP = {
     "eval": {
@@ -32,15 +20,10 @@ _XCCDF_MAP = {
 }
 
 
-def __virtual__():
-    return HAS_ARGPARSE, "argparse module is required."
-
-
-class _ArgumentParser(ArgumentParser):
+class _ArgumentParser(argparse.ArgumentParser):
     def __init__(self, action=None, *args, **kwargs):
         super().__init__(*args, prog="oscap", **kwargs)
         self.add_argument("action", choices=["eval"])
-        add_arg = None
         for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
             self.add_argument(*params, **kwparams)
 

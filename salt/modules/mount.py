@@ -866,7 +866,10 @@ def set_fstab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _fstab_entry.fstab_keys
+
+        def filterFn(key):
+            return key not in _fstab_entry.fstab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
         msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
@@ -996,7 +999,10 @@ def set_vfstab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _vfstab_entry.vfstab_keys
+
+        def filterFn(key):
+            return key not in _vfstab_entry.vfstab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
         msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
@@ -1878,7 +1884,10 @@ def set_filesystems(
         criteria = entry_ip.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _FileSystemsEntry.compatibility_keys
+
+        def filterFn(key):
+            return key not in _FileSystemsEntry.compatibility_keys
+
         invalid_keys = filter(filterFn, match_on)
         raise CommandExecutionError(
             'Unrecognized keys in match_on: "{}"'.format(invalid_keys)

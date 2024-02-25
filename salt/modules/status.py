@@ -186,10 +186,10 @@ def custom():
                     try:
                         ret[item] = vals[item]
                     except KeyError:
-                        log.warning(f"val {item} not in return of {func}")
+                        log.warning("val %s not in return of %s", item, func)
                         ret[item] = "UNKNOWN"
             except KeyError:
-                log.warning(f"custom status {func} isn't loaded")
+                log.warning("custom status %s isn't loaded", func)
 
     return ret
 
@@ -1361,7 +1361,10 @@ def netdev():
         """
         freebsd specific implementation of netdev
         """
-        _dict_tree = lambda: collections.defaultdict(_dict_tree)
+
+        def _dict_tree():
+            return collections.defaultdict(_dict_tree)
+
         ret = _dict_tree()
         netstat = __salt__["cmd.run"]("netstat -i -n -4 -b -d").splitlines()
         netstat += __salt__["cmd.run"]("netstat -i -n -6 -b -d").splitlines()[1:]

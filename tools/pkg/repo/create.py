@@ -789,9 +789,11 @@ def src(
         for hash_name in ("blake2b", "sha512", "sha3_512"):
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
@@ -929,9 +931,11 @@ def _create_onedir_based_repo(
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
             release_json[dpath.name][hash_name.upper()] = hexdigest
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():

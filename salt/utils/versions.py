@@ -352,7 +352,10 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 

@@ -3943,7 +3943,7 @@ def unheld(name, version=None, pkgs=None, all=False, **kwargs):
             (pkg_name, pkg_ver) = next(iter(pkg.items()))
             dpkgs.update({pkg_name: pkg_ver})
         else:
-            dpkgs.update({pkg: None})
+            dpkgs.update({pkg: None})  # pylint: disable=unhashable-member
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     comments = []

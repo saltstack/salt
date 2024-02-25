@@ -247,7 +247,7 @@ def present(
     try:
         image_info = __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" in msg:
             # Image not present
             image_info = None
@@ -355,7 +355,7 @@ def present(
     try:
         __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" not in msg:
             error = "Failed to inspect image '{}' after it was {}: {}".format(
                 full_image, action, msg

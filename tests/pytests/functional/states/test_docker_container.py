@@ -55,7 +55,7 @@ class Network:
         return ipaddress.ip_network(self.subnet)
 
     @_rand_indexes.default
-    def __rand_indexes(self):
+    def __rand_indexes(self):  # pylint: disable=unused-private-member
         return random.sample(
             range(2, self.net.num_addresses - 1), self.net.num_addresses - 3
         )
@@ -70,12 +70,14 @@ class Network:
 
     @staticmethod
     def arg_map(arg_name):
-        return {
-            "ipv4_address": "IPv4Address",
-            "ipv6_address": "IPv6Address",
-            "links": "Links",
-            "aliases": "Aliases",
-        }[arg_name]
+        if arg_name == "ipv4_address":
+            return "IPv4Address"
+        if arg_name == "ipv6_address":
+            return "IPv6Address"
+        if arg_name == "links":
+            return "Links"
+        if arg_name == "aliases":
+            return "Aliases"
 
     @property
     def compressed_subnet(self):

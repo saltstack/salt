@@ -259,11 +259,7 @@ def test_present():
     ):
         ret = host.present(hostname, ip_str)
         assert ret["result"] is True
-        assert (
-            ret["comment"]
-            == "Host {} ({}) already present".format(hostname, ip_str)
-            in ret["comment"]
-        )
+        assert "Host {} ({}) already present".format(hostname, ip_str) in ret["comment"]
         assert ret["changes"] == {}, ret["changes"]
         assert add_host.mock_calls == [], add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls

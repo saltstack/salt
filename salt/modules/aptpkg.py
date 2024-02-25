@@ -239,7 +239,7 @@ if not HAS_APT:
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
                 self.signedby = opts["signedby"]["value"]
-                for opt in opts.keys():
+                for opt in opts:
                     opt = opts[opt]["full"]
                     if opt:
                         try:
@@ -1609,9 +1609,11 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
-    rexp = re.compile("(?m)^Conf " "([^ ]+) " r"\(([^ ]+)")  # Package name  # Version
+    rexp = re.compile(r"(?m)^Conf ([^ ]+) \(([^ ]+)")  # Package name  # Version
     keys = ["name", "version"]
-    _get = lambda l, k: l[keys.index(k)]
+
+    def _get(line, k):
+        return line[keys.index(k)]
 
     upgrades = rexp.findall(out)
 
@@ -1685,7 +1687,10 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     # both apt_pkg.version_compare and _cmd_quote need string arguments.
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)

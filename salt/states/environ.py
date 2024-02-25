@@ -131,6 +131,7 @@ def setenv(
                             r" Manager\Environment"
                         )
 
+                    # pylint: disable=cell-var-from-loop
                     out = __utils__["reg.read_value"](
                         permanent_hive, permanent_key, _norm_key(key)
                     )

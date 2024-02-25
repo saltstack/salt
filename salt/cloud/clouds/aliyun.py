@@ -798,7 +798,7 @@ def query(params=None):
     signature = _compute_signature(parameters, access_key_secret)
     parameters["Signature"] = signature
 
-    request = requests.get(path, params=parameters, verify=True)
+    request = requests.get(path, params=parameters, verify=True, timeout=120)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
             "An error occurred while querying aliyun ECS. HTTP Code: {}  "

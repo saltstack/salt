@@ -312,6 +312,7 @@ class ReactWrap:
         Populate the client cache with an instance of the specified type
         """
         reaction_type = low["state"]
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
         if reaction_type not in self.client_cache:
             log.debug("Reactor is populating %s client cache", reaction_type)
             if reaction_type in ("runner", "wheel"):
@@ -333,6 +334,7 @@ class ReactWrap:
                 self.client_cache[reaction_type] = self.reaction_class[reaction_type](
                     self.opts["conf_file"]
                 )
+        # pylint: enable=unsupported-membership-test,unsupported-assignment-operation
 
     def run(self, low):
         """
