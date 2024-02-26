@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 __all__ = ["deserialize", "serialize", "available"]
 
-available = True
+available = salt.utils.msgpack.HAS_MSGPACK
 
 
 def serialize(obj, **options):
