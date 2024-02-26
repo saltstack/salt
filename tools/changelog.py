@@ -13,6 +13,7 @@ import textwrap
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 from tools.utils import REPO_ROOT, Version
 
@@ -23,16 +24,16 @@ changelog = command_group(
     name="changelog",
     help="Changelog tools",
     description=__doc__,
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "changelog.txt"
+            / "changelog.txt",
         ],
-    },
+    ),
 )
 
 
