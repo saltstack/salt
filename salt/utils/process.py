@@ -1096,11 +1096,12 @@ class SignalHandlingProcess(Process):
 
                 # need to go through and clean up any resources left around like lock files if using gitfs
                 # example lockfile /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
+                cache_dir = self.opts.get("cachedir", None)
                 gitfs_active = self.opts.get("gitfs_remotes", None)
-                if gitfs_active:
+                if cache_dir and gitfs_active:
                     # check for gitfs file locks to ensure no resource leaks
                     # last chance to clean up any missed unlock droppings
-                    cache_dir = Path("/var/cache/salt/master/gitfs/work")
+                    cache_dir = Path(cache_dir + "/gitfs/work")
                     if cache_dir.exists and cache_dir.is_dir():
                         file_list = list(cache_dir.glob("**/*.lk"))
                         file_del_list = []
