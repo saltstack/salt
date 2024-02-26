@@ -6,6 +6,8 @@ any remotes.
 import logging
 import pathlib
 import tempfile
+import time
+from multiprocessing import Process
 
 import pytest
 from saltfactories.utils import random_string
@@ -466,3 +468,58 @@ def test_git_provider_mp_gen_lock(main_class, caplog):
     assert test_msg1 in caplog.text
     assert test_msg2 in caplog.text
     assert test_msg3 in caplog.text
+
+
+def process_kill_test(main_class):
+    """
+    Process to obtain a lock and hold it,
+    which will then be given a SIGTERM to ensure clean up of resources for the lock
+
+    Check that lock is obtained and then it should be released by SIGTERM checks
+    """
+    provider = main_class.remotes[0]
+    provider.lock()
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+
+    time.sleep(20)  # give time for kill by sigterm
+
+
+@pytest.mark.slow_test
+@pytest.mark.skip_unless_on_linux
+def test_git_provider_sigterm_cleanup(caplog):
+    """
+    Start process which will obtain lock, and leave it locked
+    then kill the process via SIGTERM and ensure locked resources are cleaned up
+    """
+    log.debug("DGM test_git_provider_sigterm_cleanup entry")
+    ## start process_kill_test and obtain it's PID
+    ##    proc = subprocess.Popen("what go's here to start process_kill_test, etc")
+    ##
+    ##    child_pid = proc.pid
+    ##    log.debug(f"DGM test_git_provider_sigterm_cleanup child process pid '{child_pid}'")
+    ##
+    ##    with caplog.at_level(logging.DEBUG):
+    ##        proc.send_signal(signal.SIGTERM)
+
+    proc = Process(target=process_kill_test)
+    proc.start()
+
+    while not proc.is_alive():
+        log.debug(
+            "DGM test_git_provider_sigterm_cleanup sleeping waiting for child process to become alive"
+        )
+        time.sleep(1)  # give some time for it to be started
+
+    # child process should be alive
+    log.debug(
+        f"DGM test_git_provider_sigterm_cleanup child process is alive with pid '{proc.pid}'"
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        proc.terminate()  # sends a SIGTERM
+
+    test_msg1 = "SIGTERM clean up of resources, removed lock file"
+    assert test_msg1 in caplog.text
+
+    log.debug("DGM test_git_provider_sigterm_cleanup exit")
