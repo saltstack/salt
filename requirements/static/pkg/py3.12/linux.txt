@@ -16,7 +16,7 @@ cherrypy==18.6.1
     # via -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.3
+cryptography==42.0.5
     # via
     #   -r requirements/static/pkg/linux.in
     #   pyopenssl
