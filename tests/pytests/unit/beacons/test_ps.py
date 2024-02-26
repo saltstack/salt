@@ -40,7 +40,7 @@ def test_empty_config():
 
 def test_ps_running():
     with patch(
-        "salt.utils.psutil_compat.process_iter", autospec=True, spec_set=True
+        "psutil.process_iter", autospec=True, spec_set=True
     ) as mock_process_iter:
         mock_process_iter.return_value = [
             FakeProcess(_name="salt-master", pid=3),
@@ -57,7 +57,7 @@ def test_ps_running():
 
 def test_ps_not_running():
     with patch(
-        "salt.utils.psutil_compat.process_iter", autospec=True, spec_set=True
+        "psutil.process_iter", autospec=True, spec_set=True
     ) as mock_process_iter:
         mock_process_iter.return_value = [
             FakeProcess(_name="salt-master", pid=3),
