@@ -188,7 +188,7 @@ class Batch:
             if next_:
                 if not self.quiet:
                     salt.utils.stringutils.print_cli(
-                        "\nExecuting run on {}\n".format(sorted(next_))
+                        f"\nExecuting run on {sorted(next_)}\n"
                     )
                 # create a new iterator for this batch of minions
                 return_value = self.opts.get("return", self.opts.get("ret", ""))

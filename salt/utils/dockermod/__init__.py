@@ -5,7 +5,6 @@ This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
 """
 
-
 import copy
 import logging
 

@@ -91,7 +91,7 @@ def test_present():
         },
     ):
         with patch.dict(boto_iam_role.__opts__, {"test": False}):
-            comt = " Failed to create {} IAM role.".format(name)
+            comt = f" Failed to create {name} IAM role."
             ret.update({"comment": comt})
             assert boto_iam_role.present(name) == ret
 

@@ -45,7 +45,7 @@ def _get_cyg_dir(cyg_arch="x86_64"):
     elif cyg_arch == "x86":
         return "cygwin"
 
-    raise SaltInvocationError("Invalid architecture {arch}".format(arch=cyg_arch))
+    raise SaltInvocationError(f"Invalid architecture {cyg_arch}")
 
 
 def _check_cygwin_installed(cyg_arch="x86_64"):
@@ -129,9 +129,9 @@ def _run_silent_cygwin(cyg_arch="x86_64", args=None, mirrors=None):
     installation up and running.
     """
     cyg_cache_dir = os.sep.join(["c:", "cygcache"])
-    cyg_setup = "setup-{}.exe".format(cyg_arch)
+    cyg_setup = f"setup-{cyg_arch}.exe"
     cyg_setup_path = os.sep.join([cyg_cache_dir, cyg_setup])
-    cyg_setup_source = "http://cygwin.com/{}".format(cyg_setup)
+    cyg_setup_source = f"http://cygwin.com/{cyg_setup}"
     # cyg_setup_source_hash = 'http://cygwin.com/{0}.sig'.format(cyg_setup)
 
     # until a hash gets published that we can verify the newest setup against
@@ -147,15 +147,15 @@ def _run_silent_cygwin(cyg_arch="x86_64", args=None, mirrors=None):
 
     setup_command = cyg_setup_path
     options = []
-    options.append("--local-package-dir {}".format(cyg_cache_dir))
+    options.append(f"--local-package-dir {cyg_cache_dir}")
 
     if mirrors is None:
         mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
     for mirror in mirrors:
         for mirror_url, key in mirror.items():
-            options.append("--site {}".format(mirror_url))
+            options.append(f"--site {mirror_url}")
             if key:
-                options.append("--pubkey {}".format(key))
+                options.append(f"--pubkey {key}")
     options.append("--no-desktop")
     options.append("--quiet-mode")
     options.append("--disable-buggy-antivirus")
@@ -211,7 +211,7 @@ def install(packages=None, cyg_arch="x86_64", mirrors=None):
     args = []
     # If we want to install packages
     if packages is not None:
-        args.append("--packages {pkgs}".format(pkgs=packages))
+        args.append(f"--packages {packages}")
         # but we don't have cygwin installed yet
         if not _check_cygwin_installed(cyg_arch):
             # install just the base system
@@ -240,7 +240,7 @@ def uninstall(packages, cyg_arch="x86_64", mirrors=None):
     """
     args = []
     if packages is not None:
-        args.append("--remove-packages {pkgs}".format(pkgs=packages))
+        args.append(f"--remove-packages {packages}")
         LOG.debug("args: %s", args)
         if not _check_cygwin_installed(cyg_arch):
             LOG.debug("We're convinced cygwin isn't installed")

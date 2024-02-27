@@ -1,6 +1,7 @@
 """
 Testing Jinja filters availablilty via state system
 """
+
 import logging
 import os
 

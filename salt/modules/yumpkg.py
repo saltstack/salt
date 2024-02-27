@@ -18,6 +18,7 @@ Support for YUM/DNF
 .. versionadded:: 3007.0
     Support for ``dnf5``` on Fedora 39
 """
+
 import configparser
 import contextlib
 import datetime

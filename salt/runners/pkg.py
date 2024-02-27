@@ -4,7 +4,6 @@ Package helper functions using ``salt.modules.pkg``
 .. versionadded:: 2015.8.0
 """
 
-
 import salt.minion
 import salt.output
 
@@ -33,7 +32,7 @@ def list_upgrades(jid, style="group", outputter="nested", ext_source=None):
         (__opts__["ext_job_cache"], ext_source, __opts__["master_job_cache"])
     )
 
-    data = mminion.returners["{}.get_jid".format(returner)](jid)
+    data = mminion.returners[f"{returner}.get_jid"](jid)
     pkgs = {}
 
     if style == "group":

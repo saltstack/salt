@@ -2,7 +2,6 @@
 Resources needed by pkg providers
 """
 
-
 import copy
 import fnmatch
 import logging
@@ -410,7 +409,7 @@ def format_version(epoch, version, release):
     """
     Formats a version string for list_pkgs.
     """
-    full_version = "{}:{}".format(epoch, version) if epoch else version
+    full_version = f"{epoch}:{version}" if epoch else version
     if release:
-        full_version += "-{}".format(release)
+        full_version += f"-{release}"
     return full_version

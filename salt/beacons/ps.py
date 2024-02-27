@@ -1,6 +1,7 @@
 """
 Send events covering process status
 """
+
 import logging
 
 import salt.utils.beacons

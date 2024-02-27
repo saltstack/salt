@@ -349,9 +349,11 @@ def state(
         cmd_ret = {
             __opts__["id"]: {
                 "ret": tmp_ret,
-                "out": tmp_ret.get("out", "highstate")
-                if isinstance(tmp_ret, dict)
-                else "highstate",
+                "out": (
+                    tmp_ret.get("out", "highstate")
+                    if isinstance(tmp_ret, dict)
+                    else "highstate"
+                ),
             }
         }
 

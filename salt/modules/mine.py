@@ -309,7 +309,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     # Load from local minion's cache
     if __opts__["file_client"] == "local":
         ret = {}
-        is_target = {
+        _targets = {
             "glob": __salt__["match.glob"],
             "pcre": __salt__["match.pcre"],
             "list": __salt__["match.list"],
@@ -319,7 +319,8 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
             "compound": __salt__["match.compound"],
             "pillar": __salt__["match.pillar"],
             "pillar_pcre": __salt__["match.pillar_pcre"],
-        }[tgt_type](tgt)
+        }
+        is_target = _targets[tgt_type](tgt)
         if not is_target:
             return ret
 

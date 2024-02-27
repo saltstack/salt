@@ -9,7 +9,6 @@ to the correct service manager
     <module-provider-override>`.
 """
 
-
 import fnmatch
 import logging
 import re

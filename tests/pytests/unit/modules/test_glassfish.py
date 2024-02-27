@@ -4,6 +4,7 @@ tests.unit.modules.test_glassfish
 
 Unit tests for the glassfish module
 """
+
 import logging
 
 import pytest

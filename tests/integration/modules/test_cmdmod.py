@@ -56,7 +56,7 @@ class CMDModuleTest(ModuleCase):
         self.assertTrue(self.run_function("cmd.run", ["echo $SHELL"]))
         self.assertEqual(
             self.run_function(
-                "cmd.run", ["echo $SHELL", "shell={}".format(shell)], python_shell=True
+                "cmd.run", ["echo $SHELL", f"shell={shell}"], python_shell=True
             ).rstrip(),
             shell,
         )
@@ -108,7 +108,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(
             self.run_function(
                 "cmd.run_stderr",
-                ['echo "cheese" 1>&2', "shell={}".format(shell)],
+                ['echo "cheese" 1>&2', f"shell={shell}"],
                 python_shell=True,
             ).rstrip(),
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
@@ -126,7 +126,7 @@ class CMDModuleTest(ModuleCase):
 
         ret = self.run_function(
             "cmd.run_all",
-            ['echo "cheese" 1>&2', "shell={}".format(shell)],
+            ['echo "cheese" 1>&2', f"shell={shell}"],
             python_shell=True,
         )
         self.assertTrue("pid" in ret)
@@ -194,7 +194,7 @@ class CMDModuleTest(ModuleCase):
             expected_stderr = "No such file or directory"
         ret = self.run_function(
             "cmd.run_all",
-            ["{} {}".format(func, random_file)],
+            [f"{func} {random_file}"],
             success_stderr=[expected_stderr],
             python_shell=True,
         )
@@ -394,7 +394,7 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function(
             "cmd.run_all", [cmd], runas=RUNTIME_VARS.RUNNING_TESTS_USER
         )
-        errmsg = "The command returned: {}".format(result)
+        errmsg = f"The command returned: {result}"
         self.assertEqual(result["retcode"], 0, errmsg)
         self.assertEqual(result["stdout"], expected_result, errmsg)
 
@@ -505,7 +505,7 @@ class CMDModuleTest(ModuleCase):
             out = self.run_function(
                 "cmd.run", ["env"], runas=self.runas_usr
             ).splitlines()
-        self.assertIn("USER={}".format(self.runas_usr), out)
+        self.assertIn(f"USER={self.runas_usr}", out)
 
     @pytest.mark.skip_if_binaries_missing("sleep", reason="sleep cmd not installed")
     def test_timeout(self):

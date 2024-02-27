@@ -42,6 +42,7 @@ Not all packages can be found this way, but it seems like most of them can.
 
 Use the ``appx.install`` function to provision the new app.
 """
+
 import fnmatch
 import logging
 

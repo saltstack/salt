@@ -317,9 +317,11 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
                 self.expire_events(
                     tag=f"vault/lease/{ckey}/expire",
                     data={
-                        "valid_for_less": valid_for
-                        if valid_for is not None
-                        else data.get("min_ttl") or 0,
+                        "valid_for_less": (
+                            valid_for
+                            if valid_for is not None
+                            else data.get("min_ttl") or 0
+                        ),
                     },
                 )
             ret = None

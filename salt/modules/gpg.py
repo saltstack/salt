@@ -652,9 +652,9 @@ def delete_key(
         if skey:
             if not delete_secret:
                 ret["res"] = False
-                ret[
-                    "message"
-                ] = "Secret key exists, delete first or pass delete_secret=True."
+                ret["message"] = (
+                    "Secret key exists, delete first or pass delete_secret=True."
+                )
                 return ret
             else:
                 out = __delete_key(fingerprint, True, use_passphrase)
@@ -663,9 +663,9 @@ def delete_key(
                     ret["message"] = f"Secret key for {fingerprint} deleted\n"
                 else:
                     ret["res"] = False
-                    ret[
-                        "message"
-                    ] = f"Failed to delete secret key for {fingerprint}: {out}"
+                    ret["message"] = (
+                        f"Failed to delete secret key for {fingerprint}: {out}"
+                    )
                     return ret
 
         # Delete the public key
@@ -1401,9 +1401,11 @@ def verify(
             "username": sig.get("username"),
             "key_id": sig["keyid"],
             "fingerprint": sig["pubkey_fingerprint"],
-            "trust_level": VERIFY_TRUST_LEVELS[str(sig["trust_level"])]
-            if "trust_level" in sig
-            else None,
+            "trust_level": (
+                VERIFY_TRUST_LEVELS[str(sig["trust_level"])]
+                if "trust_level" in sig
+                else None
+            ),
             "status": sig["status"],
         }
         for sig in verified.sig_info.values()
@@ -1431,9 +1433,9 @@ def verify(
 
         if not any_signed:
             ret["res"] = False
-            ret[
-                "message"
-            ] = "None of the public keys listed in signed_by_any provided a valid signature"
+            ret["message"] = (
+                "None of the public keys listed in signed_by_any provided a valid signature"
+            )
             return ret
         any_check = True
 
@@ -1451,9 +1453,9 @@ def verify(
             except (KeyError, IndexError):
                 pass
             ret["res"] = False
-            ret[
-                "message"
-            ] = f"Public key {signer} has not provided a valid signature, but was listed in signed_by_all"
+            ret["message"] = (
+                f"Public key {signer} has not provided a valid signature, but was listed in signed_by_all"
+            )
             return ret
         all_check = True
 
@@ -1463,9 +1465,9 @@ def verify(
         return ret
 
     ret["res"] = False
-    ret[
-        "message"
-    ] = "Something went wrong while checking for specific signers. This is most likely a bug"
+    ret["message"] = (
+        "Something went wrong while checking for specific signers. This is most likely a bug"
+    )
     return ret
 
 

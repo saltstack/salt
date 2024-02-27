@@ -3,6 +3,7 @@ Run matchers from the master context.
 
 .. versionadded:: 3007.0
 """
+
 import logging
 
 import salt.utils.minions

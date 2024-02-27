@@ -2,7 +2,6 @@
 Return/control aspects of the grains data
 """
 
-
 import math
 
 import salt.utils.data

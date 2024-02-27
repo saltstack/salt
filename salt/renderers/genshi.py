@@ -2,7 +2,6 @@
 Genshi Renderer for Salt
 """
 
-
 try:
     from genshi.template import MarkupTemplate, NewTextTemplate, OldTextTemplate
 

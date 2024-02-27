@@ -4,6 +4,7 @@ tests.pytests.unit.test_crypt
 
 Unit tests for salt's crypt module
 """
+
 import uuid
 
 import pytest

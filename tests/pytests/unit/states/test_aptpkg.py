@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import pytest
 
 import salt.states.aptpkg as aptpkg
@@ -24,7 +23,7 @@ def test_held():
         "name": name,
         "result": False,
         "changes": {},
-        "comment": "Package {} does not have a state".format(name),
+        "comment": f"Package {name} does not have a state",
     }
 
     mock = MagicMock(return_value=False)

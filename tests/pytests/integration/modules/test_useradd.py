@@ -1,6 +1,7 @@
 """
 Integration tests for modules/useradd.py and modules/win_useradd.py
 """
+
 import pytest
 from saltfactories.utils import random_string
 

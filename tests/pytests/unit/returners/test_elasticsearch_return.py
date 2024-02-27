@@ -1,6 +1,7 @@
 """
 Test the elasticsearch returner
 """
+
 import pytest
 
 import salt.returners.elasticsearch_return as elasticsearch_return

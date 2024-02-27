@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.states.eselect as eselect
@@ -23,6 +24,6 @@ def test_set_():
 
     mock = MagicMock(return_value=target)
     with patch.dict(eselect.__salt__, {"eselect.get_current_target": mock}):
-        comt = "Target '{}' is already set on '{}' module.".format(target, name)
+        comt = f"Target '{target}' is already set on '{name}' module."
         ret.update({"comment": comt})
         assert eselect.set_(name, target) == ret

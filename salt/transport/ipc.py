@@ -2,7 +2,6 @@
 IPC transport classes
 """
 
-
 import errno
 import logging
 import socket

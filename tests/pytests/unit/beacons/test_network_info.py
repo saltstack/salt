@@ -4,6 +4,7 @@
 
     Network info beacon test cases
 """
+
 from collections import namedtuple
 
 import pytest

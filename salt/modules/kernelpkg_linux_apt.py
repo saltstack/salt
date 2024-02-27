@@ -53,7 +53,7 @@ def list_installed():
 
         salt '*' kernelpkg.list_installed
     """
-    pkg_re = re.compile(r"^{}-[\d.-]+-{}$".format(_package_prefix(), _kernel_type()))
+    pkg_re = re.compile(rf"^{_package_prefix()}-[\d.-]+-{_kernel_type()}$")
     pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True)
     if pkgs is None:
         pkgs = []
@@ -79,14 +79,12 @@ def latest_available():
 
         salt '*' kernelpkg.latest_available
     """
-    result = __salt__["pkg.latest_version"](
-        "{}-{}".format(_package_prefix(), _kernel_type())
-    )
+    result = __salt__["pkg.latest_version"](f"{_package_prefix()}-{_kernel_type()}")
     if result == "":
         return latest_installed()
 
     version = re.match(r"^(\d+\.\d+\.\d+)\.(\d+)", result)
-    return "{}-{}-{}".format(version.group(1), version.group(2), _kernel_type())
+    return f"{version.group(1)}-{version.group(2)}-{_kernel_type()}"
 
 
 def latest_installed():
@@ -152,9 +150,7 @@ def upgrade(reboot=False, at_time=None):
         chance to return, resulting in errors. A minimal delay (1 minute) is
         useful to ensure the result is delivered to the master.
     """
-    result = __salt__["pkg.install"](
-        name="{}-{}".format(_package_prefix(), latest_available())
-    )
+    result = __salt__["pkg.install"](name=f"{_package_prefix()}-{latest_available()}")
     _needs_reboot = needs_reboot()
 
     ret = {
@@ -202,14 +198,12 @@ def remove(release):
         salt '*' kernelpkg.remove 4.4.0-70-generic
     """
     if release not in list_installed():
-        raise CommandExecutionError(
-            "Kernel release '{}' is not installed".format(release)
-        )
+        raise CommandExecutionError(f"Kernel release '{release}' is not installed")
 
     if release == active():
         raise CommandExecutionError("Active kernel cannot be removed")
 
-    target = "{}-{}".format(_package_prefix(), release)
+    target = f"{_package_prefix()}-{release}"
     log.info("Removing kernel package %s", target)
 
     __salt__["pkg.purge"](target)

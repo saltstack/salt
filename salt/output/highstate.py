@@ -123,7 +123,6 @@ Example output with no special settings in configuration files:
     Total:     0
 """
 
-
 import collections
 import logging
 import pprint
@@ -572,10 +571,10 @@ def _format_host(host, data, indent_level=1):
             if "data" in ret:
                 if isinstance(ret["data"], list):
                     for item in ret["data"]:
-                        comment = "{} {}".format(comment, item)
+                        comment = f"{comment} {item}"
                 elif isinstance(ret["data"], dict):
                     for key, value in ret["data"].items():
-                        comment = "{}\n\t\t{}: {}".format(comment, key, value)
+                        comment = f"{comment}\n\t\t{key}: {value}"
                 else:
                     comment = "{} {}".format(comment, ret["data"])
             for detail in ["start_time", "duration"]:
@@ -635,13 +634,13 @@ def _format_host(host, data, indent_level=1):
             changestats.append(
                 colorfmt.format(
                     colors["LIGHT_YELLOW"],
-                    "unchanged={}".format(rcounts.get(None, 0)),
+                    f"unchanged={rcounts.get(None, 0)}",
                     colors,
                 )
             )
         if nchanges > 0:
             changestats.append(
-                colorfmt.format(colors["GREEN"], "changed={}".format(nchanges), colors)
+                colorfmt.format(colors["GREEN"], f"changed={nchanges}", colors)
             )
         if changestats:
             changestats = " ({})".format(", ".join(changestats))
@@ -733,7 +732,7 @@ def _format_host(host, data, indent_level=1):
                 sum_duration /= 1000
                 duration_unit = "s"
             total_duration = "Total run time: {} {}".format(
-                "{:.3f}".format(sum_duration).rjust(line_max_len - 5), duration_unit
+                f"{sum_duration:.3f}".rjust(line_max_len - 5), duration_unit
             )
             hstrs.append(colorfmt.format(colors["CYAN"], total_duration, colors))
 
@@ -763,7 +762,7 @@ def _format_changes(changes, orchestration=False):
         return True, _nested_changes(changes)
 
     if not isinstance(changes, dict):
-        return True, "Invalid Changes data: {}".format(changes)
+        return True, f"Invalid Changes data: {changes}"
 
     ret = changes.get("ret")
     if ret is not None and changes.get("out") == "highstate":

@@ -24,7 +24,7 @@ def test_batch_run(salt_cli, run_timeout, salt_sub_minion):
     """
     Tests executing a simple batch command to help catch regressions
     """
-    ret = "Executing run on [{}]".format(repr(salt_sub_minion.id))
+    ret = f"Executing run on [{repr(salt_sub_minion.id)}]"
     cmd = salt_cli.run(
         "test.echo",
         "batch testing",
@@ -59,8 +59,8 @@ def test_batch_run_grains_targeting(
     Tests executing a batch command using a percentage divisor as well as grains
     targeting.
     """
-    sub_min_ret = "Executing run on [{}]".format(repr(salt_sub_minion.id))
-    min_ret = "Executing run on [{}]".format(repr(salt_minion.id))
+    sub_min_ret = f"Executing run on [{repr(salt_sub_minion.id)}]"
+    min_ret = f"Executing run on [{repr(salt_minion.id)}]"
     cmd = salt_cli.run(
         "-C",
         "-b 25%",

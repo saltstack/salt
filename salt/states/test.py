@@ -478,17 +478,17 @@ def check_pillar(
                 fine[key] = key_type
 
     for key, key_type in failed.items():
-        comment = 'Pillar key "{}" '.format(key)
+        comment = f'Pillar key "{key}" '
         if key_type is None:
             comment += "is missing.\n"
         else:
-            comment += "is not {}.\n".format(key_type)
+            comment += f"is not {key_type}.\n"
         ret["comment"] += comment
 
     if verbose and fine:
         comment = "Those keys passed the check:\n"
         for key, key_type in fine.items():
-            comment += "- {} ({})\n".format(key, key_type)
+            comment += f"- {key} ({key_type})\n"
         ret["comment"] += comment
 
     return ret

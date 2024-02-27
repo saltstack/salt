@@ -94,7 +94,7 @@ def test_issue_2379_file_append(modules, tmp_path):
     )
     # create the sls template
     template_lines = [
-        "{}:".format(tmp_file),
+        f"{tmp_file}:",
         "  file.append:",
         "    - text: PermitRootLogin yes",
     ]

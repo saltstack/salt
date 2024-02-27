@@ -3,7 +3,6 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 """
 
-
 import logging
 import operator
 import os
@@ -134,7 +133,7 @@ def key_regen():
             path = os.path.join(root, fn_)
             try:
                 os.remove(path)
-            except os.error:
+            except OSError:
                 pass
     msg = (
         "The minion and master keys have been deleted.  Restart the Salt\n"
@@ -540,10 +539,10 @@ def safe_accept(target, tgt_type="glob"):
             elif minion not in pending:
                 failures[minion] = f"Minion key {minion} not found by salt-key"
             elif pending[minion] != finger:
-                failures[
-                    minion
-                ] = "Minion key {} does not match the key in salt-key: {}".format(
-                    finger, pending[minion]
+                failures[minion] = (
+                    "Minion key {} does not match the key in salt-key: {}".format(
+                        finger, pending[minion]
+                    )
                 )
             else:
                 subprocess.call(["salt-key", "-qya", minion])

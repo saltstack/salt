@@ -76,7 +76,7 @@ class BlackoutPillar:
                     )
                 else:
                     pytest.fail(
-                        "Minion did not refresh pillar after {} seconds".format(timeout)
+                        f"Minion did not refresh pillar after {timeout} seconds"
                     )
 
             time.sleep(sleep)

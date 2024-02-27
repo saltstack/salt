@@ -87,7 +87,6 @@ structure::
         s3.s3_sync_on_update: False
 """
 
-
 import datetime
 import logging
 import os

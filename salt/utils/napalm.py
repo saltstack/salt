@@ -14,7 +14,6 @@ Utils for the NAPALM modules and proxy.
 .. versionadded:: 2017.7.0
 """
 
-
 import copy
 import importlib
 import logging
@@ -95,7 +94,7 @@ def virtual(opts, virtualname, filename):
             False,
             '"{vname}"" {filename} cannot be loaded: '
             "NAPALM is not installed: ``pip install napalm``".format(
-                vname=virtualname, filename="({filename})".format(filename=filename)
+                vname=virtualname, filename=f"({filename})"
             ),
         )
 

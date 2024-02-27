@@ -2,7 +2,6 @@
 Display return data as a progress bar
 """
 
-
 try:
     import progressbar
 

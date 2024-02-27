@@ -2,7 +2,6 @@
 Test case for the YAML SDB module
 """
 
-
 import salt.sdb.yaml as sdb
 from tests.support.mock import MagicMock, patch
 

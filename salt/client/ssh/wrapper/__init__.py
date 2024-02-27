@@ -5,7 +5,6 @@ to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 """
 
-
 import copy
 import logging
 

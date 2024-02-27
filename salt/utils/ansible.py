@@ -24,7 +24,7 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
     Default: /etc/salt/roster
     """
     if not os.path.isfile(inventory):
-        raise CommandExecutionError("Inventory file not found: {}".format(inventory))
+        raise CommandExecutionError(f"Inventory file not found: {inventory}")
     if not os.path.isabs(inventory):
         raise CommandExecutionError("Path to inventory file must be an absolute path")
 
@@ -44,6 +44,4 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
         try:
             return salt.utils.json.loads(salt.utils.stringutils.to_str(inv))
         except ValueError:
-            raise CommandExecutionError(
-                "Error processing the inventory: {}".format(inv)
-            )
+            raise CommandExecutionError(f"Error processing the inventory: {inv}")

@@ -4518,9 +4518,11 @@ class BaseHighState:
                                 " on the salt master in saltenv(s): {} ".format(
                                     env_key,
                                     inc_sls,
-                                    ", ".join(matches)
-                                    if env_key == xenv_key
-                                    else env_key,
+                                    (
+                                        ", ".join(matches)
+                                        if env_key == xenv_key
+                                        else env_key
+                                    ),
                                 )
                             )
                         elif len(resolved_envs) > 1:
@@ -4720,10 +4722,10 @@ class BaseHighState:
                             # match SLS foobar in environment
                             this_sls = f"SLS {sls_match} in saltenv"
                             if this_sls in error:
-                                errors[
-                                    i
-                                ] = "No matching sls found for '{}' in env '{}'".format(
-                                    sls_match, saltenv
+                                errors[i] = (
+                                    "No matching sls found for '{}' in env '{}'".format(
+                                        sls_match, saltenv
+                                    )
                                 )
                     all_errors.extend(errors)
 

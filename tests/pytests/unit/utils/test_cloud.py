@@ -6,7 +6,6 @@
 
 """
 
-
 import os
 import string
 import tempfile

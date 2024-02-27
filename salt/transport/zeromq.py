@@ -1,6 +1,7 @@
 """
 Zeromq transport classes
 """
+
 import asyncio
 import asyncio.exceptions
 import errno
@@ -365,7 +366,6 @@ class PublishClient(salt.transport.base.PublishClient):
     #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
-
         """
         Register a callback for received messages (that we didn't initiate)
 

@@ -4,7 +4,6 @@
     Test cases for salt.modules.win_shadow
 """
 
-
 import pytest
 
 import salt.modules.win_shadow as win_shadow

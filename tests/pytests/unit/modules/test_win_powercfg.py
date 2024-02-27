@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_powercfg
 """
 
-
 import pytest
 
 import salt.modules.win_powercfg as powercfg

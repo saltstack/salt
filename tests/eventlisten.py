@@ -5,7 +5,6 @@ what the sock_dir is.
 This script is a generic tool to test event output
 """
 
-
 import optparse
 import os
 import pprint
@@ -135,7 +134,7 @@ def listen(opts):
                         )
                     continue
         else:
-            print("Event fired at {}".format(time.asctime()))
+            print(f"Event fired at {time.asctime()}")
             print("*" * 25)
             print("Tag: {}".format(ret["tag"]))
             print("Data:")

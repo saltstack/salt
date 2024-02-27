@@ -48,7 +48,7 @@ def write_launchd_plist(program):
     supported_programs = ["salt-master", "salt-minion"]
 
     if program not in supported_programs:
-        sys.stderr.write("Supported programs: '{}'\n".format(supported_programs))
+        sys.stderr.write(f"Supported programs: '{supported_programs}'\n")
         sys.exit(-1)
 
         return plist_sample_text.format(

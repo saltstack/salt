@@ -28,7 +28,6 @@ Example States
         - project: project1
 """
 
-
 __virtualname__ = "neutron_network"
 
 
@@ -99,7 +98,7 @@ def present(name, auth=None, **kwargs):
                 del kwargs["project"]
             else:
                 ret["result"] = False
-                ret["comment"] = "Project:{} not found.".format(projectname)
+                ret["comment"] = f"Project:{projectname} not found."
                 return ret
 
         network = __salt__["neutronng.network_create"](**kwargs)

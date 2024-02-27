@@ -3,6 +3,7 @@ Beacon to monitor statistics from ethernet adapters
 
 .. versionadded:: 2015.5.0
 """
+
 import logging
 
 import salt.utils.beacons

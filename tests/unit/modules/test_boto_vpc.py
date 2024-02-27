@@ -708,7 +708,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1262,7 +1262,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2223,7 +2223,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2239,7 +2239,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 name="my_peering",
                 requester_vpc_id=my_vpc.id,
                 peer_vpc_id=other_vpc.id,
-                **conn_parameters
+                **conn_parameters,
             )
         )
 
@@ -2256,7 +2256,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             requester_vpc_id=my_vpc.id,
             peer_vpc_id=other_vpc.id,
             peer_region="test_region",
-            **conn_parameters
+            **conn_parameters,
         )
 
     @mock_ec2_deprecated
@@ -2272,14 +2272,14 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 requester_vpc_id=my_vpc.id,
                 requester_vpc_name="foobar",
                 peer_vpc_id=other_vpc.id,
-                **conn_parameters
+                **conn_parameters,
             )
 
         boto_vpc.request_vpc_peering_connection(
             name="my_peering",
             requester_vpc_name="my_peering",
             peer_vpc_id=other_vpc.id,
-            **conn_parameters
+            **conn_parameters,
         )
 
 

@@ -8,7 +8,6 @@
     Test salt's "hacked" logging
 """
 
-
 import io
 import logging
 
@@ -32,9 +31,9 @@ def test_issue_2853_regex_TypeError():
         # Let's create another log instance to trigger salt's logging class
         # calculations.
         try:
-            SaltLoggingClass("{}.with_digits".format(__name__))
+            SaltLoggingClass(f"{__name__}.with_digits")
         except Exception as err:  # pylint: disable=broad-except
-            raise AssertionError("No exception should have been raised: {}".format(err))
+            raise AssertionError(f"No exception should have been raised: {err}")
 
     # Remove the testing handler
     log.removeHandler(handler)
@@ -49,9 +48,9 @@ def test_issue_2853_regex_TypeError():
         # Let's create another log instance to trigger salt's logging class
         # calculations.
         try:
-            SaltLoggingClass("{}.without_digits".format(__name__))
+            SaltLoggingClass(f"{__name__}.without_digits")
         except Exception as err:  # pylint: disable=broad-except
-            raise AssertionError("No exception should have been raised: {}".format(err))
+            raise AssertionError(f"No exception should have been raised: {err}")
 
         # Remove the testing handler
         log.removeHandler(handler)

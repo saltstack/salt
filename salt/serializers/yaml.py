@@ -8,7 +8,6 @@
     It also use C bindings if they are available.
 """
 
-
 import datetime
 import logging
 

@@ -572,9 +572,9 @@ def existing_cert(x509, cert_args, ca_key, rsa_privkey, request):
         ca_key,
         encoding=cert_args.get("encoding", "pem"),
         passphrase=cert_args.get("pkcs12_passphrase"),
-        subject=subject
-        if "signing_policy" not in cert_args
-        else "CN=from_signing_policy",
+        subject=(
+            subject if "signing_policy" not in cert_args else "CN=from_signing_policy"
+        ),
     )
     yield cert_args["name"]
 

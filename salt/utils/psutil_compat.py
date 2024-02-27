@@ -9,7 +9,6 @@ Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
 Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 """
 
-
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil  # pylint: disable=3rd-party-module-not-gated
 

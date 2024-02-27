@@ -1,6 +1,7 @@
 """
 Routines to set up a minion
 """
+
 import asyncio
 import binascii
 import contextlib

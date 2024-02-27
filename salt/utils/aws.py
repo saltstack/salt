@@ -7,6 +7,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 """
+
 import binascii
 import copy
 import hashlib

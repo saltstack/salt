@@ -575,8 +575,8 @@ class GitProvider:
         """
 
         def _getconf(self, tgt_env="base"):
-            strip_sep = (
-                lambda x: x.rstrip(os.sep) if name in ("root", "mountpoint") else x
+            strip_sep = lambda x: (
+                x.rstrip(os.sep) if name in ("root", "mountpoint") else x
             )
             if self.role != "gitfs":
                 return strip_sep(getattr(self, "_" + name))
@@ -3004,9 +3004,9 @@ class GitFS(GitBase):
                 remotes if remotes is not None else [],
                 per_remote_overrides=per_remote_overrides,
                 per_remote_only=per_remote_only,
-                git_providers=git_providers
-                if git_providers is not None
-                else GIT_PROVIDERS,
+                git_providers=(
+                    git_providers if git_providers is not None else GIT_PROVIDERS
+                ),
                 cache_root=cache_root,
                 init_remotes=init_remotes,
             )
@@ -3241,7 +3241,7 @@ class GitFS(GitBase):
         if not os.path.isdir(self.file_list_cachedir):
             try:
                 os.makedirs(self.file_list_cachedir)
-            except os.error:
+            except OSError:
                 log.error("Unable to make cachedir %s", self.file_list_cachedir)
                 return []
         list_cache = salt.utils.path.join(

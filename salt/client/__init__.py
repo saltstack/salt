@@ -8,7 +8,6 @@ The data structure needs to be:
               'key': '<read in the key file>'}
 """
 
-
 import logging
 
 # The components here are simple, and they need to be and stay simple, we

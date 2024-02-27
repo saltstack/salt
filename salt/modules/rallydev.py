@@ -12,7 +12,6 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
       password: 123pass
 """
 
-
 import logging
 
 import salt.utils.http
@@ -81,7 +80,7 @@ def _query(
         path += action
 
     if command:
-        path += "/{}".format(command)
+        path += f"/{command}"
 
     log.debug("RallyDev URL: %s", path)
 

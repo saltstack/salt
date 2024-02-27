@@ -1,6 +1,7 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
+
 import os
 
 import pytest
@@ -61,7 +62,7 @@ class EC2Test(CloudTest):
 
         if not group_or_subnet:
             self.skipTest(
-                "securitygroup or subnetid missing for {} config".format(self.PROVIDER)
+                f"securitygroup or subnetid missing for {self.PROVIDER} config"
             )
 
         super().setUp()
@@ -117,7 +118,7 @@ class EC2Test(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p ec2-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            f"-p ec2-test {self.instance_name} --no-deploy", timeout=TIMEOUT
         )
         # check if instance returned
         self.assertInstanceExists(ret_val)
@@ -132,7 +133,7 @@ class EC2Test(CloudTest):
         )
         self.assertFalse(
             self._instance_exists(),
-            "Instance wasn't renamed: |\n{}".format(rename_result),
+            f"Instance wasn't renamed: |\n{rename_result}",
         )
         self.assertInstanceExists(instance_name=changed_name)
 

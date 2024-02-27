@@ -54,7 +54,6 @@ def __virtual__():
 
 
 def _default_ret(name):
-
     """
     Returns a default structure of the dictionary to be returned as output of the state functions.
     """
@@ -63,7 +62,6 @@ def _default_ret(name):
 
 
 def _retrieve_rpm_probes():
-
     """
     Will retrieve the probes from the network device using salt module "probes" throught NAPALM proxy.
     """
@@ -72,7 +70,6 @@ def _retrieve_rpm_probes():
 
 
 def _expand_probes(probes, defaults):
-
     """
     Updates the probes dictionary with different levels of default values.
     """
@@ -104,7 +101,6 @@ def _expand_probes(probes, defaults):
 
 
 def _clean_probes(probes):
-
     """
     Will remove empty and useless values from the probes dictionary.
     """
@@ -127,7 +123,6 @@ def _clean_probes(probes):
 
 
 def _compare_probes(configured_probes, expected_probes):
-
     """
     Compares configured probes on the device with the expected configuration and returns the differences.
     """
@@ -190,14 +185,12 @@ def _compare_probes(configured_probes, expected_probes):
 
 
 def _ordered_dict_to_dict(probes):
-
     """Mandatory to be dict type in order to be used in the NAPALM Jinja template."""
 
     return salt.utils.json.loads(salt.utils.json.dumps(probes))
 
 
 def _set_rpm_probes(probes):
-
     """
     Calls the Salt module "probes" to configure the probes on the device.
     """
@@ -209,7 +202,6 @@ def _set_rpm_probes(probes):
 
 
 def _schedule_probes(probes):
-
     """
     Calls the Salt module "probes" to schedule the configured probes on the device.
     """
@@ -221,7 +213,6 @@ def _schedule_probes(probes):
 
 
 def _delete_rpm_probes(probes):
-
     """
     Calls the Salt module "probes" to delete probes from the device.
     """
@@ -240,7 +231,6 @@ def _delete_rpm_probes(probes):
 
 
 def managed(name, probes, defaults=None):
-
     """
     Ensure the networks device is configured as specified in the state SLS file.
     Probes not specified will be removed, while probes not confiured as expected will trigger config updates.

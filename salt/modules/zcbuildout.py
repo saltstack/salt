@@ -22,7 +22,6 @@ You have those following methods:
 * buildout
 """
 
-
 import copy
 import logging
 import os
@@ -190,9 +189,9 @@ def _encode_status(status):
             logs = status["logs_by_level"].get(logger, [])[:]
             if logs:
                 for i, log in enumerate(logs):
-                    status["logs_by_level"][logger][
-                        i
-                    ] = salt.utils.stringutils.to_unicode(log)
+                    status["logs_by_level"][logger][i] = (
+                        salt.utils.stringutils.to_unicode(log)
+                    )
     return status
 
 

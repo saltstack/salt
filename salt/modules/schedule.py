@@ -7,7 +7,6 @@ Requires that python-dateutil is installed on the minion.
 
 """
 
-
 import copy as pycopy
 import datetime
 import logging
@@ -423,10 +422,10 @@ def delete(name, **kwargs):
                                 )
                                 ret["changes"][name] = "removed"
                             else:
-                                ret[
-                                    "comment"
-                                ] = "Failed to delete job {} from schedule.".format(
-                                    name
+                                ret["comment"] = (
+                                    "Failed to delete job {} from schedule.".format(
+                                        name
+                                    )
                                 )
                             return ret
             except KeyError:
@@ -967,9 +966,9 @@ def disable_job(name, **kwargs):
                             ret["changes"][name] = "disabled"
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = f"Failed to disable job {name} in schedule."
+                            ret["comment"] = (
+                                f"Failed to disable job {name} in schedule."
+                            )
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1391,9 +1390,9 @@ def postpone_job(name, current_time, new_time, **kwargs):
                             )
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = f"Failed to postpone job {name} in schedule."
+                            ret["comment"] = (
+                                f"Failed to postpone job {name} in schedule."
+                            )
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1520,9 +1519,9 @@ def show_next_fire_time(name, **kwargs):
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
-        ret[
-            "comment"
-        ] = "Event module not available. Schedule show next fire time failed."
+        ret["comment"] = (
+            "Event module not available. Schedule show next fire time failed."
+        )
         ret["result"] = True
         return ret
 
@@ -1547,9 +1546,11 @@ def job_status(name, time_fmt="%Y-%m-%dT%H:%M:%S"):
 
     def convert_datetime_objects_in_dict_to_string(data_dict, time_fmt):
         return {
-            key: value.strftime(time_fmt)
-            if isinstance(value, datetime.datetime)
-            else value
+            key: (
+                value.strftime(time_fmt)
+                if isinstance(value, datetime.datetime)
+                else value
+            )
             for key, value in data_dict.items()
         }
 

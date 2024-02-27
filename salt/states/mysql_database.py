@@ -52,7 +52,7 @@ def present(name, character_set=None, collate=None, **connection_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {} is already present".format(name),
+        "comment": f"Database {name} is already present",
     }
     # check if database exists
     existing = __salt__["mysql.db_get"](name, **connection_args)
@@ -91,20 +91,20 @@ def present(name, character_set=None, collate=None, **connection_args):
             )
             if __opts__.get("test", False):
                 ret["result"] = None
-                ret["comment"] += "\n{}".format(comment)
+                ret["comment"] += f"\n{comment}"
                 return ret
             else:
-                ret["comment"] += "\n{}".format(comment)
+                ret["comment"] += f"\n{comment}"
 
         if alter_charset or alter_collate:
             if __opts__.get("test", False):
-                ret["comment"] += "\nDatabase {} is going to be updated".format(name)
+                ret["comment"] += f"\nDatabase {name} is going to be updated"
             else:
                 __salt__["mysql.alter_db"](
                     name,
                     character_set=character_set,
                     collate=collate,
-                    **connection_args
+                    **connection_args,
                 )
 
         current = __salt__["mysql.db_get"](name, **connection_args)
@@ -145,13 +145,13 @@ def present(name, character_set=None, collate=None, **connection_args):
     if __salt__["mysql.db_create"](
         name, character_set=character_set, collate=collate, **connection_args
     ):
-        ret["comment"] = "The database {} has been created".format(name)
+        ret["comment"] = f"The database {name} has been created"
         ret["changes"][name] = "Present"
     else:
-        ret["comment"] = "Failed to create database {}".format(name)
+        ret["comment"] = f"Failed to create database {name}"
         err = _get_mysql_error()
         if err is not None:
-            ret["comment"] += " ({})".format(err)
+            ret["comment"] += f" ({err})"
         ret["result"] = False
 
     return ret
@@ -175,13 +175,13 @@ def absent(name, **connection_args):
             )
             return ret
         if __salt__["mysql.db_remove"](name, **connection_args):
-            ret["comment"] = "Database {} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = "Unable to remove database {} ({})".format(name, err)
+                ret["comment"] = f"Unable to remove database {name} ({err})"
                 ret["result"] = False
                 return ret
     else:
@@ -192,5 +192,5 @@ def absent(name, **connection_args):
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
+    ret["comment"] = f"Database {name} is not present, so it cannot be removed"
     return ret

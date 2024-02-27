@@ -138,7 +138,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Group {} is already present".format(name),
+        "comment": f"Group {name} is already present",
     }
 
     # default to encrypted passwords
@@ -210,9 +210,9 @@ def present(
             if update:
                 ret["changes"][name] = update
             ret["result"] = None
-            ret["comment"] = "Group {} is set to be {}d".format(name, mode)
+            ret["comment"] = f"Group {name} is set to be {mode}d"
             return ret
-        cret = __salt__["postgres.group_{}".format(mode)](
+        cret = __salt__[f"postgres.group_{mode}"](
             groupname=name,
             createdb=createdb,
             createroles=createroles,
@@ -223,19 +223,19 @@ def present(
             replication=replication,
             rolepassword=password,
             groups=groups,
-            **db_args
+            **db_args,
         )
     else:
         cret = None
 
     if cret:
-        ret["comment"] = "The group {} has been {}d".format(name, mode)
+        ret["comment"] = f"The group {name} has been {mode}d"
         if update:
             ret["changes"][name] = update
         else:
             ret["changes"][name] = "Present"
     elif cret is not None:
-        ret["comment"] = "Failed to {} group {}".format(mode, name)
+        ret["comment"] = f"Failed to {mode} group {name}"
         ret["result"] = False
     else:
         ret["result"] = True
@@ -289,17 +289,17 @@ def absent(
     if __salt__["postgres.user_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {} is set to be removed".format(name)
+            ret["comment"] = f"Group {name} is set to be removed"
             return ret
         if __salt__["postgres.group_remove"](name, **db_args):
-            ret["comment"] = "Group {} has been removed".format(name)
+            ret["comment"] = f"Group {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Group {} failed to be removed".format(name)
+            ret["comment"] = f"Group {name} failed to be removed"
             return ret
     else:
-        ret["comment"] = "Group {} is not present, so it cannot be removed".format(name)
+        ret["comment"] = f"Group {name} is not present, so it cannot be removed"
 
     return ret

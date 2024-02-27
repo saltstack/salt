@@ -2,7 +2,6 @@
 Manage Dell DRAC
 """
 
-
 import logging
 
 import salt.utils.path
@@ -43,7 +42,7 @@ def __execute_cmd(command):
     """
     Execute rac commands
     """
-    cmd = __salt__["cmd.run_all"]("racadm {}".format(command))
+    cmd = __salt__["cmd.run_all"](f"racadm {command}")
 
     if cmd["retcode"] != 0:
         log.warning("racadm return an exit code '%s'.", cmd["retcode"])
@@ -106,7 +105,7 @@ def nameservers(*ns):
 
     for i in range(1, len(ns) + 1):
         if not __execute_cmd(
-            "config -g cfgLanNetworking -o cfgDNSServer{} {}".format(i, ns[i - 1])
+            f"config -g cfgLanNetworking -o cfgDNSServer{i} {ns[i - 1]}"
         ):
             return False
 
@@ -128,7 +127,7 @@ def syslog(server, enable=True):
     """
     if enable and __execute_cmd("config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 1"):
         return __execute_cmd(
-            "config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {}".format(server)
+            f"config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {server}"
         )
 
     return __execute_cmd("config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0")
@@ -166,9 +165,7 @@ def list_users():
     _username = ""
 
     for idx in range(1, 17):
-        cmd = __salt__["cmd.run_all"](
-            "racadm getconfig -g cfgUserAdmin -i {}".format(idx)
-        )
+        cmd = __salt__["cmd.run_all"](f"racadm getconfig -g cfgUserAdmin -i {idx}")
 
         if cmd["retcode"] != 0:
             log.warning("racadm return an exit code '%s'.", cmd["retcode"])
@@ -209,7 +206,7 @@ def delete_user(username, uid=None):
 
     if uid:
         return __execute_cmd(
-            'config -g cfgUserAdmin -o cfgUserAdminUserName -i {} ""'.format(uid)
+            f'config -g cfgUserAdmin -o cfgUserAdminUserName -i {uid} ""'
         )
 
     else:
@@ -285,7 +282,7 @@ def create_user(username, password, permissions, users=None):
 
     # Create user accountvfirst
     if not __execute_cmd(
-        "config -g cfgUserAdmin -o cfgUserAdminUserName -i {} {}".format(uid, username)
+        f"config -g cfgUserAdmin -o cfgUserAdminUserName -i {uid} {username}"
     ):
         delete_user(username, uid)
         return False
@@ -303,9 +300,7 @@ def create_user(username, password, permissions, users=None):
         return False
 
     # Enable users admin
-    if not __execute_cmd(
-        "config -g cfgUserAdmin -o cfgUserAdminEnable -i {} 1".format(uid)
-    ):
+    if not __execute_cmd(f"config -g cfgUserAdmin -o cfgUserAdminEnable -i {uid} 1"):
         delete_user(username, uid)
         return False
 
@@ -379,7 +374,7 @@ def set_snmp(community):
         salt dell drac.set_snmp public
     """
     return __execute_cmd(
-        "config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {}".format(community)
+        f"config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {community}"
     )
 
 
@@ -394,7 +389,7 @@ def set_network(ip, netmask, gateway):
         salt dell drac.set_network [DRAC IP] [NETMASK] [GATEWAY]
         salt dell drac.set_network 192.168.0.2 255.255.255.0 192.168.0.1
     """
-    return __execute_cmd("setniccfg -s {} {} {}".format(ip, netmask, gateway))
+    return __execute_cmd(f"setniccfg -s {ip} {netmask} {gateway}")
 
 
 def server_reboot():

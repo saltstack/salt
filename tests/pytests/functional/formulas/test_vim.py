@@ -1,6 +1,7 @@
 """
 Tests using vim formula
 """
+
 import pytest
 
 

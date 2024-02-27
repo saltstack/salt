@@ -57,7 +57,7 @@ def create_event(name, details, service_key, profile):
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __opts__["test"]:
-        ret["comment"] = "Need to create event: {}".format(name)
+        ret["comment"] = f"Need to create event: {name}"
         return ret
     __salt__["pagerduty.create_event"](
         description=name,
@@ -66,5 +66,5 @@ def create_event(name, details, service_key, profile):
         profile=profile,
     )
     ret["result"] = True
-    ret["comment"] = "Created event: {}".format(name)
+    ret["comment"] = f"Created event: {name}"
     return ret

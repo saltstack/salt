@@ -887,9 +887,11 @@ def get_source_sum(
                 if source_hash_sig:
                     _check_sig(
                         hash_fn,
-                        signature=source_hash_sig
-                        if isinstance(source_hash_sig, str)
-                        else None,
+                        signature=(
+                            source_hash_sig
+                            if isinstance(source_hash_sig, str)
+                            else None
+                        ),
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
@@ -5060,9 +5062,11 @@ def extract_hash(
     if basename_searches:
         log.debug(
             "file.extract_hash: %s %s hash for file matching%s: %s",
-            "If no source_hash_name match found, will extract"
-            if source_hash_name
-            else "Extracting",
+            (
+                "If no source_hash_name match found, will extract"
+                if source_hash_name
+                else "Extracting"
+            ),
             "any supported" if not hash_type else hash_type,
             "" if len(basename_searches) == 1 else " either of the following",
             ", ".join(basename_searches),

@@ -519,7 +519,9 @@ def pytest_collection_modifyitems(config, items):
                                 log.debug("Finish called on %s", self)
                                 try:
                                     return func(request)
-                                except BaseException as exc:  # pylint: disable=broad-except
+                                except (
+                                    BaseException  # pylint: disable=broad-except
+                                ) as exc:
                                     pytest.fail(
                                         "Failed to run finish() on {}: {}".format(
                                             fixturedef, exc

@@ -1,6 +1,7 @@
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
+
 import imp
 import os
 
@@ -32,7 +33,7 @@ class ZyppPluginsTestCase(TestCase):
 
     @pytest.mark.skipif(
         not os.path.exists(ZYPPNOTIFY_FILE),
-        reason="Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
+        reason=f"Required file '{ZYPPNOTIFY_FILE}' does not exist.",
     )
     def test_drift_detector(self):
         """

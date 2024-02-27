@@ -8,7 +8,6 @@ Wrapper function for mine operations for salt-ssh
     accessing the regular mine as well.
 """
 
-
 import copy
 import logging
 

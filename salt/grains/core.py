@@ -2380,10 +2380,10 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
                             "Please report this, as it is likely a bug."
                         )
                     else:
-                        grains[
-                            "osrelease"
-                        ] = "{majorversion}.{minorversion}-{buildnumber}".format(
-                            **synoinfo
+                        grains["osrelease"] = (
+                            "{majorversion}.{minorversion}-{buildnumber}".format(
+                                **synoinfo
+                            )
                         )
 
     log.trace(
@@ -2871,14 +2871,16 @@ def fqdns():
     opt = {"fqdns": []}
     if __opts__.get(
         "enable_fqdns_grains",
-        False
-        if salt.utils.platform.is_windows()
-        or salt.utils.platform.is_proxy()
-        or salt.utils.platform.is_sunos()
-        or salt.utils.platform.is_aix()
-        or salt.utils.platform.is_junos()
-        or salt.utils.platform.is_darwin()
-        else True,
+        (
+            False
+            if salt.utils.platform.is_windows()
+            or salt.utils.platform.is_proxy()
+            or salt.utils.platform.is_sunos()
+            or salt.utils.platform.is_aix()
+            or salt.utils.platform.is_junos()
+            or salt.utils.platform.is_darwin()
+            else True
+        ),
     ):
         opt = __salt__["network.fqdns"]()
     return opt
@@ -3309,7 +3311,7 @@ def _hw_data(osdata):
         # of information.  With that said, consolidate the output from various
         # commands and attempt various lookups.
         data = ""
-        for (cmd, args) in (
+        for cmd, args in (
             ("/usr/sbin/prtdiag", "-v"),
             ("/usr/sbin/prtconf", "-vp"),
             ("/usr/sbin/virtinfo", "-a"),

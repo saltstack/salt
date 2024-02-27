@@ -5,7 +5,6 @@
     Implements MsgPack serializer.
 """
 
-
 import copy
 import logging
 

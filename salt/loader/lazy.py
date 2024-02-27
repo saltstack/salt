@@ -315,7 +315,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # A list to determine precedence of extensions
         # Prefer packages (directories) over modules (single files)!
         self.suffix_order = [""]
-        for (suffix, mode, kind) in SUFFIXES:
+        for suffix, mode, kind in SUFFIXES:
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 

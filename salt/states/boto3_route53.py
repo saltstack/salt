@@ -59,6 +59,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 """
+
 # keep lint from choking
 # pylint: disable=W0106
 # pylint: disable=E1320
@@ -241,7 +242,7 @@ def hosted_zone_present(
             update_comment = True
 
     if not (create or add_vpcs or del_vpcs or update_comment):
-        ret["comment"] = "Hostd Zone {} already in desired state".format(Name)
+        ret["comment"] = f"Hostd Zone {Name} already in desired state"
         return ret
 
     if create:
@@ -282,10 +283,10 @@ def hosted_zone_present(
 
     if update_comment:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Route 53 {} hosted zone {} comment would be updated.".format(
-                "private" if PrivateZone else "public", Name
+            ret["comment"] = (
+                "Route 53 {} hosted zone {} comment would be updated.".format(
+                    "private" if PrivateZone else "public", Name
+                )
             )
             ret["result"] = None
             return ret
@@ -310,10 +311,10 @@ def hosted_zone_present(
                 ret["changes"].get("new", {}), r
             )
         else:
-            ret[
-                "comment"
-            ] = "Update of Route 53 {} hosted zone {} comment failed".format(
-                "private" if PrivateZone else "public", Name
+            ret["comment"] = (
+                "Update of Route 53 {} hosted zone {} comment failed".format(
+                    "private" if PrivateZone else "public", Name
+                )
             )
             log.error(ret["comment"])
             ret["result"] = False
@@ -321,10 +322,10 @@ def hosted_zone_present(
 
     if add_vpcs or del_vpcs:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Route 53 {} hosted zone {} associated VPCs would be updated.".format(
-                "private" if PrivateZone else "public", Name
+            ret["comment"] = (
+                "Route 53 {} hosted zone {} associated VPCs would be updated.".format(
+                    "private" if PrivateZone else "public", Name
+                )
             )
             ret["result"] = None
             return ret
@@ -366,10 +367,10 @@ def hosted_zone_present(
             log.info(msg)
             ret["comment"] = "  ".join([ret["comment"], msg])
         else:
-            ret[
-                "comment"
-            ] = "Update of Route 53 {} hosted zone {} associated VPCs failed".format(
-                "private" if PrivateZone else "public", Name
+            ret["comment"] = (
+                "Update of Route 53 {} hosted zone {} associated VPCs failed".format(
+                    "private" if PrivateZone else "public", Name
+                )
             )
             log.error(ret["comment"])
             ret["result"] = False
@@ -697,19 +698,19 @@ def rr_present(
                         profile=profile,
                     )
                     if len(r) < 1:
-                        ret[
-                            "comment"
-                        ] = "No EC2 instance with tag {} == {} found".format(
-                            tag_name, tag_value
+                        ret["comment"] = (
+                            "No EC2 instance with tag {} == {} found".format(
+                                tag_name, tag_value
+                            )
                         )
                         log.error(ret["comment"])
                         ret["result"] = False
                         return ret
                     if len(r) > 1:
-                        ret[
-                            "comment"
-                        ] = "Multiple EC2 instances with tag {} == {} found".format(
-                            tag_name, tag_value
+                        ret["comment"] = (
+                            "Multiple EC2 instances with tag {} == {} found".format(
+                                tag_name, tag_value
+                            )
                         )
                         log.error(ret["comment"])
                         ret["result"] = False
@@ -745,7 +746,7 @@ def rr_present(
                 # this appears to be incredibly difficult with the jinja templating engine
                 # so inject the quotations here to make a viable ChangeBatch
                 if Type == "TXT":
-                    rr = '"{}"'.format(rr)
+                    rr = f'"{rr}"'
                 fixed_rrs += [rr]
         ResourceRecords = [{"Value": rr} for rr in sorted(fixed_rrs)]
 
@@ -782,10 +783,10 @@ def rr_present(
     if not recordsets:
         create = True
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Route 53 resource record {} with type {} would be added.".format(
-                Name, Type
+            ret["comment"] = (
+                "Route 53 resource record {} with type {} would be added.".format(
+                    Name, Type
+                )
             )
             ret["result"] = None
             return ret
@@ -818,10 +819,10 @@ def rr_present(
         return ret
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Route 53 resource record {} with type {} would be updated.".format(
-                Name, Type
+            ret["comment"] = (
+                "Route 53 resource record {} with type {} would be updated.".format(
+                    Name, Type
+                )
             )
             ret["result"] = None
             return ret
@@ -859,10 +860,10 @@ def rr_present(
                 ret["changes"]["old"] = rrset
             ret["changes"]["new"] = ResourceRecordSet
         else:
-            ret[
-                "comment"
-            ] = "Failed to {} Route 53 resource record {} with type {}.".format(
-                "create" if create else "update", Name, Type
+            ret["comment"] = (
+                "Failed to {} Route 53 resource record {} with type {}.".format(
+                    "create" if create else "update", Name, Type
+                )
             )
             log.error(ret["comment"])
             ret["result"] = False
@@ -967,10 +968,10 @@ def rr_absent(
         recordsets = [r for r in recordsets if r.get("SetIdentifier") == SetIdentifier]
         log.debug("Resulted in recordsets %s.", recordsets)
     if not recordsets:
-        ret[
-            "comment"
-        ] = "Route 53 resource record {} with type {} already absent.".format(
-            Name, Type
+        ret["comment"] = (
+            "Route 53 resource record {} with type {} already absent.".format(
+                Name, Type
+            )
         )
         return ret
     elif len(recordsets) > 1:
@@ -980,10 +981,10 @@ def rr_absent(
         return ret
     ResourceRecordSet = recordsets[0]
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "Route 53 resource record {} with type {} would be deleted.".format(
-            Name, Type
+        ret["comment"] = (
+            "Route 53 resource record {} with type {} would be deleted.".format(
+                Name, Type
+            )
         )
         ret["result"] = None
         return ret
@@ -1007,10 +1008,10 @@ def rr_absent(
         ret["changes"]["old"] = ResourceRecordSet
         ret["changes"]["new"] = None
     else:
-        ret[
-            "comment"
-        ] = "Failed to delete Route 53 resource record {} with type {}.".format(
-            Name, Type
+        ret["comment"] = (
+            "Failed to delete Route 53 resource record {} with type {}.".format(
+                Name, Type
+            )
         )
         log.error(ret["comment"])
         ret["result"] = False

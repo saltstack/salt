@@ -4,6 +4,7 @@ deprovision the app from the online Windows image.
 
 .. versionadded:: 3007.0
 """
+
 import fnmatch
 import logging
 

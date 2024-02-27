@@ -46,7 +46,7 @@ def mod_data(opts, full):
     try:
         finder.load_file(full)
     except ImportError as exc:
-        print("ImportError - {} (Reason: {})".format(full, exc), file=sys.stderr)
+        print(f"ImportError - {full} (Reason: {exc})", file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split(".")[0]

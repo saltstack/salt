@@ -1646,7 +1646,7 @@ def regen_keys():
         path = os.path.join(__opts__["pki_dir"], fn_)
         try:
             os.remove(path)
-        except os.error:
+        except OSError:
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
@@ -1752,9 +1752,11 @@ def _exec(
         old_ret, fcn_ret = fcn_ret, {}
         for key, value in old_ret.items():
             fcn_ret[key] = {
-                "out": value.get("out", "highstate")
-                if isinstance(value, dict)
-                else "highstate",
+                "out": (
+                    value.get("out", "highstate")
+                    if isinstance(value, dict)
+                    else "highstate"
+                ),
                 "ret": value,
             }
 

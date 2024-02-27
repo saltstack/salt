@@ -62,7 +62,7 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        value = __salt__["config.option"]("ddns.{}".format(key))
+        value = __salt__["config.option"](f"ddns.{key}")
         if not value:
             value = None
     return value
@@ -85,7 +85,7 @@ def add_host(
     replace=True,
     timeout=5,
     port=53,
-    **kwargs
+    **kwargs,
 ):
     """
     Add, replace, or update the A and PTR (reverse) records for a host.
@@ -100,7 +100,7 @@ def add_host(
     if res is False:
         return False
 
-    fqdn = "{}.{}.".format(name, zone)
+    fqdn = f"{name}.{zone}."
     parts = ip.split(".")[::-1]
     popped = []
 
@@ -130,7 +130,7 @@ def delete_host(zone, name, nameserver="127.0.0.1", timeout=5, port=53, **kwargs
 
         salt ns1 ddns.delete_host example.com host1
     """
-    fqdn = "{}.{}".format(name, zone)
+    fqdn = f"{name}.{zone}"
     request = dns.message.make_query(fqdn, "A")
     answer = dns.query.udp(request, nameserver, timeout, port)
     try:
@@ -161,7 +161,7 @@ def delete_host(zone, name, nameserver="127.0.0.1", timeout=5, port=53, **kwargs
                 nameserver=nameserver,
                 timeout=timeout,
                 port=port,
-                **kwargs
+                **kwargs,
             )
         if ptr:
             res = True
@@ -178,7 +178,7 @@ def update(
     timeout=5,
     replace=False,
     port=53,
-    **kwargs
+    **kwargs,
 ):
     """
     Add, replace, or update a DNS record.
@@ -197,7 +197,7 @@ def update(
     if name[-1:] == ".":
         fqdn = name
     else:
-        fqdn = "{}.{}".format(name, zone)
+        fqdn = f"{name}.{zone}"
 
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
@@ -240,7 +240,7 @@ def delete(
     nameserver="127.0.0.1",
     timeout=5,
     port=53,
-    **kwargs
+    **kwargs,
 ):
     """
     Delete a DNS record.
@@ -256,7 +256,7 @@ def delete(
     if name[-1:] == ".":
         fqdn = name
     else:
-        fqdn = "{}.{}".format(name, zone)
+        fqdn = f"{name}.{zone}"
 
     request = dns.message.make_query(fqdn, (rdtype or "ANY"))
     answer = dns.query.udp(request, nameserver, timeout, port)

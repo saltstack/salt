@@ -625,9 +625,9 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret[
-            "comment"
-        ] = f"Network '{name}' already exists, and is configured as specified"
+        ret["comment"] = (
+            f"Network '{name}' already exists, and is configured as specified"
+        )
         log.trace("Details of docker network '%s': %s", name, network)
 
         temp_net_name = "".join(
@@ -696,8 +696,8 @@ def present(
             existing_pool_count = len(network["IPAM"]["Config"])
             desired_pool_count = len(temp_net_info["IPAM"]["Config"])
 
-            is_default_pool = (
-                lambda x: True if sorted(x) == ["Gateway", "Subnet"] else False
+            is_default_pool = lambda x: (
+                True if sorted(x) == ["Gateway", "Subnet"] else False
             )
 
             if (
@@ -875,9 +875,11 @@ def present(
                         errors.append(exc.__str__())
                     else:
                         ret["changes"].setdefault(
-                            "reconnected"
-                            if cid in disconnected_containers
-                            else "connected",
+                            (
+                                "reconnected"
+                                if cid in disconnected_containers
+                                else "connected"
+                            ),
                             [],
                         ).append(connect_info["Name"])
             else:

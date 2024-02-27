@@ -1,6 +1,7 @@
 """
     :codeauthor: :email:`Amel Ajdinovic <amel@stackpointcloud.com>`
 """
+
 import pytest
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
@@ -26,7 +27,7 @@ class OneAndOneTest(CloudTest):
         """
         Tests the return of running the --list-images command for 1and1
         """
-        image_list = self.run_cloud("--list-images {}".format(self.PROVIDER_NAME))
+        image_list = self.run_cloud(f"--list-images {self.PROVIDER_NAME}")
         self.assertIn("coreOSimage", [i.strip() for i in image_list])
 
     def test_instance(self):
@@ -35,7 +36,7 @@ class OneAndOneTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_str = self.run_cloud(
-            "-p oneandone-test {}".format(self.instance_name), timeout=TIMEOUT
+            f"-p oneandone-test {self.instance_name}", timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_str)
 

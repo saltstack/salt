@@ -6,7 +6,6 @@ See http://code.google.com/p/psutil.
             - python-utmp package (optional)
 """
 
-
 import datetime
 import re
 import time

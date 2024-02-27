@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.boto_route53 as boto53mod
@@ -71,16 +72,16 @@ def test_present():
         {"boto_route53.get_record": mock, "boto_route53.add_record": mock_bool},
     ):
         with patch.dict(boto_route53.__opts__, {"test": False}):
-            comt = "Failed to add {} Route53 record.".format(name)
+            comt = f"Failed to add {name} Route53 record."
             ret.update({"comment": comt})
             assert boto_route53.present(name, value, zone, record_type) == ret
 
         with patch.dict(boto_route53.__opts__, {"test": True}):
-            comt = "Route53 record {} set to be added.".format(name)
+            comt = f"Route53 record {name} set to be added."
             ret.update({"comment": comt, "result": None})
             assert boto_route53.present(name, value, zone, record_type) == ret
 
-            comt = "Route53 record {} set to be updated.".format(name)
+            comt = f"Route53 record {name} set to be updated."
             ret.update({"comment": comt})
             assert boto_route53.present(name, value, zone, record_type) == ret
 
@@ -100,12 +101,12 @@ def test_absent():
 
     mock = MagicMock(side_effect=[False, True])
     with patch.dict(boto_route53.__salt__, {"boto_route53.get_record": mock}):
-        comt = "{} does not exist.".format(name)
+        comt = f"{name} does not exist."
         ret.update({"comment": comt})
         assert boto_route53.absent(name, zone, record_type) == ret
 
         with patch.dict(boto_route53.__opts__, {"test": True}):
-            comt = "Route53 record {} set to be deleted.".format(name)
+            comt = f"Route53 record {name} set to be deleted."
             ret.update({"comment": comt, "result": None})
             assert boto_route53.absent(name, zone, record_type) == ret
 

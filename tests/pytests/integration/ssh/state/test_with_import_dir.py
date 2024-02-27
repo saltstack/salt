@@ -3,6 +3,7 @@ Verify salt-ssh can use imported map files in states
 when the map files are in another directory outside of
 sls files importing them.
 """
+
 import pytest
 
 pytestmark = [

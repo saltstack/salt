@@ -85,7 +85,9 @@ def sample_process():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+    with (
+        patch_stat_file
+    ), patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         proc = psutil.Process(pid=42)
         proc.info = proc.as_dict(("name", "status"))
         yield proc
@@ -1184,7 +1186,9 @@ def test_proc_info():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+    with (
+        patch_stat_file
+    ), patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         if salt.utils.platform.is_windows():
             with patch("psutil._pswindows.cext") as mock__psutil_windows:
                 with patch("psutil._pswindows.Process.ppid", return_value=99):

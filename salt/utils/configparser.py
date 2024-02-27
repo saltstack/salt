@@ -267,12 +267,12 @@ class GitConfigParser(RawConfigParser):
         )
         if self._defaults:
             fp_.write(convert("[%s]\n" % self.DEFAULTSECT))
-            for (key, value) in self._defaults.items():
+            for key, value in self._defaults.items():
                 value = salt.utils.stringutils.to_unicode(value).replace("\n", "\n\t")
-                fp_.write(convert("{} = {}\n".format(key, value)))
+                fp_.write(convert(f"{key} = {value}\n"))
         for section in self._sections:
             fp_.write(convert("[%s]\n" % section))
-            for (key, value) in self._sections[section].items():
+            for key, value in self._sections[section].items():
                 if (value is not None) or (self._optcre == self.OPTCRE):
                     if not isinstance(value, list):
                         value = [value]

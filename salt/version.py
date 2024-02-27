@@ -1,6 +1,7 @@
 """
 Set up the version of Salt
 """
+
 import argparse
 import operator
 import os
@@ -686,7 +687,6 @@ def salt_information():
 
 
 def package_information():
-
     """
     Report package type
     """

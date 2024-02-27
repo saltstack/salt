@@ -40,7 +40,7 @@ def _generate_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for module_name in modules_:
-        func_name = "testinfra.{}".format(module_name)
+        func_name = f"testinfra.{module_name}"
         __all__.append(module_name)
         log.debug(
             "Generating state for module %s as function %s", module_name, func_name

@@ -2,7 +2,6 @@
 unit tests for the git_pillar runner
 """
 
-
 import logging
 
 import pytest

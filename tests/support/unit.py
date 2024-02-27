@@ -18,6 +18,7 @@
 
     .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 """
+
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 
@@ -225,7 +226,7 @@ class TestCase(_TestCase):
                             found_zombies += 1
                 except Exception:  # pylint: disable=broad-except
                     pass
-                proc_info += "|Z:{}".format(found_zombies)
+                proc_info += f"|Z:{found_zombies}"
             proc_info += "] {short_desc}".format(short_desc=desc if desc else "")
             return proc_info
         else:

@@ -18,7 +18,6 @@ requisite to a pkg.installed state for the package which provides pip
           - pkg: python-pip
 """
 
-
 import logging
 import re
 import sys
@@ -754,8 +753,8 @@ def installed(
     # prepro = lambda pkg: pkg if type(pkg) == str else \
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
-    prepro = (
-        lambda pkg: pkg
+    prepro = lambda pkg: (
+        pkg
         if isinstance(pkg, str)
         else " ".join((pkg.items()[0][0], pkg.items()[0][1]))
     )

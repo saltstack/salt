@@ -108,9 +108,7 @@ def _get_version(host, port, user, password):
     version = None
     # check the InfluxDB version via the HTTP API
     try:
-        result = requests.get(
-            "http://{}:{}/ping".format(host, port), auth=(user, password)
-        )
+        result = requests.get(f"http://{host}:{port}/ping", auth=(user, password))
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:  # pylint: disable=broad-except
@@ -224,7 +222,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     """
     serv = _get_serv(ret=None)
-    sql = "select load from jids where jid = '{}'".format(jid)
+    sql = f"select load from jids where jid = '{jid}'"
 
     log.debug(">> Now in get_load %s", jid)
     data = serv.query(sql)
@@ -240,7 +238,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
 
-    sql = "select id, full_ret from returns where jid = '{}'".format(jid)
+    sql = f"select id, full_ret from returns where jid = '{jid}'"
 
     data = serv.query(sql)
     ret = {}
