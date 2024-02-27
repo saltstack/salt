@@ -7,7 +7,6 @@ import logging
 import pathlib
 import tempfile
 import time
-from multiprocessing import Process
 
 import pytest
 from saltfactories.utils import random_string
@@ -18,6 +17,7 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.process
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 from tests.support.runtests import RUNTIME_VARS
@@ -477,33 +477,34 @@ def process_kill_test(main_class):
 
     Check that lock is obtained and then it should be released by SIGTERM checks
     """
+    log.debug("DGM process_kill_test entry")
     provider = main_class.remotes[0]
     provider.lock()
+
+    log.debug("DGM process_kill_test obtained lock")
+
     # check that lock has been released
     assert provider._master_lock.acquire(timeout=5)
+    log.debug("DGM process_kill_test tested assert masterlock acquire")
 
     time.sleep(20)  # give time for kill by sigterm
+    log.debug("DGM process_kill_test exit")
 
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_linux
-def test_git_provider_sigterm_cleanup(caplog):
+def test_git_provider_sigterm_cleanup(main_class, caplog):
     """
     Start process which will obtain lock, and leave it locked
     then kill the process via SIGTERM and ensure locked resources are cleaned up
     """
     log.debug("DGM test_git_provider_sigterm_cleanup entry")
-    ## start process_kill_test and obtain it's PID
-    ##    proc = subprocess.Popen("what go's here to start process_kill_test, etc")
-    ##
-    ##    child_pid = proc.pid
-    ##    log.debug(f"DGM test_git_provider_sigterm_cleanup child process pid '{child_pid}'")
-    ##
-    ##    with caplog.at_level(logging.DEBUG):
-    ##        proc.send_signal(signal.SIGTERM)
 
-    proc = Process(target=process_kill_test)
-    proc.start()
+    provider = main_class.remotes[0]
+
+    procmgr = salt.utils.process.ProcessManager(wait_for_kill=30)
+    proc = procmgr.add_process(process_kill_test, args=(main_class,), name="test_kill")
+    ## proc.start()
 
     while not proc.is_alive():
         log.debug(
@@ -516,10 +517,33 @@ def test_git_provider_sigterm_cleanup(caplog):
         f"DGM test_git_provider_sigterm_cleanup child process is alive with pid '{proc.pid}'"
     )
 
-    with caplog.at_level(logging.DEBUG):
-        proc.terminate()  # sends a SIGTERM
+    file_name = provider._get_lock_file("update")
+    log.debug(
+        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}'"
+    )
 
-    test_msg1 = "SIGTERM clean up of resources, removed lock file"
-    assert test_msg1 in caplog.text
+    assert pathlib.Path(file_name).exists()
+    assert pathlib.Path(file_name).is_file()
+
+    log.debug(
+        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', exists and is a file, send SIGTERM signal"
+    )
+
+    proc.terminate()  # sends a SIGTERM
+
+    time.sleep(1)  # give some time for it to terminate
+    log.debug("DGM test_git_provider_sigterm_cleanup lock , post terminate")
+
+    assert not proc.is_alive()
+    log.debug("DGM test_git_provider_sigterm_cleanup lock , child is not alive")
+
+    test_file_exits = pathlib.Path(file_name).exists()
+    log.debug(
+        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does it exist anymore '{test_file_exits}'"
+    )
+    assert not pathlib.Path(file_name).exists()
+    log.debug(
+        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does NOT exist anymore"
+    )
 
     log.debug("DGM test_git_provider_sigterm_cleanup exit")
