@@ -1447,7 +1447,6 @@ repos:
             (?x)^(
                 templates/.*|
                 salt/ext/.*|
-                tests/kitchen/.*
             )$
 
   - repo: https://github.com/psf/black
@@ -1460,7 +1459,6 @@ repos:
             (?x)^(
                 templates/.*|
                 salt/ext/.*|
-                tests/kitchen/.*
             )$
 
   - repo: https://github.com/asottile/blacken-docs
