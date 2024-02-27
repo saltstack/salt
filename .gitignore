@@ -110,12 +110,6 @@ tests/integration/cloud/providers/pki/minions
 # Ignore pyenv files
 .python-version
 
-# Kitchen tests files
-.kitchen.local.yml
-kitchen.local.yml
-.kitchen/
-.bundle/
-Gemfile.lock
 /artifacts/
 requirements/static/*/py*/*.log
 
