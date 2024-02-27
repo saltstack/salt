@@ -46,13 +46,13 @@ class MockFileclient:
             self.list_states = lambda *x, **y: list_states
 
     # pylint: disable=unused-argument,no-method-argument,method-hidden
-    def cache_file(*args, **kwargs):
+    def cache_file(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def get_state(*args, **kwargs):
+    def get_state(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def list_states(*args, **kwargs):
+    def list_states(self, *args, **kwargs):
         raise NotImplementedError()
 
     # pylint: enable=unused-argument,no-method-argument,method-hidden
