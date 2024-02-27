@@ -62,7 +62,7 @@ def _validate_int(name, value, limits=(), strip="%"):
             value = value.strip(" " + strip)
         value = int(value)
     except (TypeError, ValueError):
-        comment += "{} must be an integer ".format(name)
+        comment += f"{name} must be an integer "
     # Must be in range
     else:
         if len(limits) == 2:
@@ -219,7 +219,7 @@ def status(name, maximum=None, minimum=None, absolute=False, free=False):
 
     # Validate name
     if name not in data:
-        ret["comment"] += "Disk mount {} not present. ".format(name)
+        ret["comment"] += f"Disk mount {name} not present. "
         return _status_path(name, ret, minimum, maximum, absolute, free)
     else:
         return _status_mount(name, ret, minimum, maximum, absolute, free, data)

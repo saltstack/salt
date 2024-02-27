@@ -119,7 +119,7 @@ def _is_device(path):
     """
     Return True if path is a physical device.
     """
-    out = __salt__["cmd.run_all"]("file -i {}".format(path))
+    out = __salt__["cmd.run_all"](f"file -i {path}")
     _verify_run(out)
 
     # Always [device, mime, charset]. See (file --help)

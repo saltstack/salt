@@ -38,7 +38,7 @@ def _normalize_server_settings(**settings):
         if isinstance(settings[setting], dict):
             value_from_key = next(iter(settings[setting].keys()))
 
-            ret[setting] = "{{{0}}}".format(value_from_key)
+            ret[setting] = f"{{{value_from_key}}}"
         else:
             ret[setting] = settings[setting]
     return ret

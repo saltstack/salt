@@ -339,7 +339,7 @@ def _get_ssh_keys(vm_):
     key_files = _get_ssh_key_files(vm_)
     for file in map(lambda file: Path(file).resolve(), key_files):
         if not (file.exists() or file.is_file()):
-            raise SaltCloudSystemExit("Invalid SSH key file: {}".format(str(file)))
+            raise SaltCloudSystemExit(f"Invalid SSH key file: {str(file)}")
         ssh_keys.add(file.read_text())
 
     return list(ssh_keys)
@@ -513,11 +513,11 @@ class LinodeAPIv4(LinodeAPI):
 
         if headers is None:
             headers = {}
-        headers["Authorization"] = "Bearer {}".format(api_key)
+        headers["Authorization"] = f"Bearer {api_key}"
         headers["Content-Type"] = "application/json"
         headers["User-Agent"] = "salt-cloud-linode"
 
-        url = "https://api.linode.com/{}{}".format(api_version, path)
+        url = f"https://api.linode.com/{api_version}{path}"
 
         decode = method != "DELETE"
         result = None
@@ -578,7 +578,7 @@ class LinodeAPIv4(LinodeAPI):
                 # If the response is not valid JSON or the error was not included, propagate the
                 # human readable status representation.
                 raise SaltCloudSystemExit(
-                    "Linode API error occurred: {}".format(err_response.reason)
+                    f"Linode API error occurred: {err_response.reason}"
                 )
         if decode:
             return self._get_response_json(result)
@@ -623,7 +623,7 @@ class LinodeAPIv4(LinodeAPI):
                 )
 
         response = self._query(
-            "/linode/instances/{}/boot".format(linode_id),
+            f"/linode/instances/{linode_id}/boot",
             method="POST",
             data={"config_id": config_id},
         )
@@ -656,7 +656,7 @@ class LinodeAPIv4(LinodeAPI):
                 )
 
         return self._query(
-            "/linode/instances/{}/clone".format(linode_id),
+            f"/linode/instances/{linode_id}/clone",
             method="POST",
             data={"region": location, "type": size},
         )
@@ -688,7 +688,7 @@ class LinodeAPIv4(LinodeAPI):
         }
 
         return self._query(
-            "/linode/instances/{}/configs".format(linode_id),
+            f"/linode/instances/{linode_id}/configs",
             method="POST",
             data={"label": name, "devices": devices},
         )
@@ -702,7 +702,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "starting create",
-            "salt/cloud/{}/creating".format(name),
+            f"salt/cloud/{name}/creating",
             args=__utils__["cloud.filter_event"](
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -795,7 +795,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "waiting for ssh",
-            "salt/cloud/{}/waiting_for_ssh".format(name),
+            f"salt/cloud/{name}/waiting_for_ssh",
             sock_dir=__opts__["sock_dir"],
             args={"ip_address": vm_["ssh_host"]},
             transport=__opts__["transport"],
@@ -810,7 +810,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "created instance",
-            "salt/cloud/{}/created".format(name),
+            f"salt/cloud/{name}/created",
             args=__utils__["cloud.filter_event"](
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -824,7 +824,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -838,7 +838,7 @@ class LinodeAPIv4(LinodeAPI):
         instance = self._get_linode_by_name(name)
         linode_id = instance.get("id", None)
 
-        self._query("/linode/instances/{}".format(linode_id), method="DELETE")
+        self._query(f"/linode/instances/{linode_id}", method="DELETE")
 
     def get_config_id(self, kwargs=None):
         name = kwargs.get("name", None)
@@ -853,7 +853,7 @@ class LinodeAPIv4(LinodeAPI):
         if linode_id is None:
             linode_id = self.get_linode(kwargs=kwargs).get("id", None)
 
-        response = self._query("/linode/instances/{}/configs".format(linode_id))
+        response = self._query(f"/linode/instances/{linode_id}/configs")
         configs = response.get("data", [])
 
         return {"config_id": configs[0]["id"]}
@@ -879,7 +879,7 @@ class LinodeAPIv4(LinodeAPI):
         instance = self._get_linode_by_name(name)
         linode_id = instance.get("id", None)
 
-        self._query("/linode/instances/{}/reboot".format(linode_id), method="POST")
+        self._query(f"/linode/instances/{linode_id}/reboot", method="POST")
         return self._wait_for_linode_status(linode_id, "running")
 
     def show_instance(self, name):
@@ -939,7 +939,7 @@ class LinodeAPIv4(LinodeAPI):
                 "msg": "Machine already running",
             }
 
-        self._query("/linode/instances/{}/boot".format(linode_id), method="POST")
+        self._query(f"/linode/instances/{linode_id}/boot", method="POST")
 
         self._wait_for_linode_status(linode_id, "running")
         return {
@@ -960,13 +960,13 @@ class LinodeAPIv4(LinodeAPI):
                 "msg": "Machine already stopped",
             }
 
-        self._query("/linode/instances/{}/shutdown".format(linode_id), method="POST")
+        self._query(f"/linode/instances/{linode_id}/shutdown", method="POST")
 
         self._wait_for_linode_status(linode_id, "offline")
         return {"success": True, "state": "Stopped", "action": "stop"}
 
     def _get_linode_by_id(self, linode_id):
-        return self._query("/linode/instances/{}".format(linode_id))
+        return self._query(f"/linode/instances/{linode_id}")
 
     def _get_linode_by_name(self, name):
         result = self._query("/linode/instances")
@@ -976,9 +976,7 @@ class LinodeAPIv4(LinodeAPI):
             if instance["label"] == name:
                 return instance
 
-        raise SaltCloudNotFound(
-            "The specified name, {}, could not be found.".format(name)
-        )
+        raise SaltCloudNotFound(f"The specified name, {name}, could not be found.")
 
     def _list_linodes(self, full=False):
         result = self._query("/linode/instances")
@@ -1005,7 +1003,7 @@ class LinodeAPIv4(LinodeAPI):
         return ret
 
     def _get_linode_type(self, linode_type):
-        return self._query("/linode/types/{}".format(linode_type))
+        return self._query(f"/linode/types/{linode_type}")
 
     def _get_ips(self, linode_id):
         instance = self._get_linode_by_id(linode_id)
@@ -1049,15 +1047,13 @@ class LinodeAPIv4(LinodeAPI):
                 time.sleep(poll_interval / 1000)
                 log.info("retrying: polling for %s...", description)
             else:
-                raise SaltCloudException(
-                    "timed out: polling for {}".format(description)
-                )
+                raise SaltCloudException(f"timed out: polling for {description}")
 
     def _wait_for_entity_status(
         self, getter, status, entity_name="item", identifier="some", timeout=None
     ):
         return self._poll(
-            "{} (id={}) status to be '{}'".format(entity_name, identifier, status),
+            f"{entity_name} (id={identifier}) status to be '{status}'",
             getter,
             lambda item: item.get("status") == status,
             timeout=timeout,
@@ -1126,8 +1122,8 @@ class LinodeAPIv4(LinodeAPI):
                     return True
 
                 return self._poll(
-                    "event {} to be '{}'".format(event_id, status),
-                    lambda: self._query("/account/events/{}".format(event_id)),
+                    f"event {event_id} to be '{status}'",
+                    lambda: self._query(f"/account/events/{event_id}"),
                     condition,
                     timeout=timeout,
                 )
@@ -1170,7 +1166,7 @@ class LinodeAPIv3(LinodeAPI):
         if "api_key" not in args.keys():
             args["api_key"] = apikey
         if action and "api_action" not in args.keys():
-            args["api_action"] = "{}.{}".format(action, command)
+            args["api_action"] = f"{action}.{command}"
         if header_dict is None:
             header_dict = {}
         if method != "POST":
@@ -1266,7 +1262,7 @@ class LinodeAPIv3(LinodeAPI):
             if status == "1":
                 raise SaltCloudSystemExit(
                     "Cannot boot Linode {0}. "
-                    + "Linode {} is already running.".format(linode_item)
+                    + f"Linode {linode_item} is already running."
                 )
 
         # Boot the VM and get the JobID from Linode
@@ -1311,7 +1307,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "starting create",
-            "salt/cloud/{}/creating".format(name),
+            f"salt/cloud/{name}/creating",
             args=__utils__["cloud.filter_event"](
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1348,7 +1344,7 @@ class LinodeAPIv3(LinodeAPI):
 
             kwargs = {
                 "clonefrom": clonefrom_name,
-                "image": "Clone of {}".format(clonefrom_name),
+                "image": f"Clone of {clonefrom_name}",
             }
 
             if size is None:
@@ -1412,7 +1408,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "requesting instance",
-            "salt/cloud/{}/requesting".format(name),
+            f"salt/cloud/{name}/requesting",
             args=__utils__["cloud.filter_event"](
                 "requesting", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1505,7 +1501,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "waiting for ssh",
-            "salt/cloud/{}/waiting_for_ssh".format(name),
+            f"salt/cloud/{name}/waiting_for_ssh",
             sock_dir=__opts__["sock_dir"],
             args={"ip_address": vm_["ssh_host"]},
             transport=__opts__["transport"],
@@ -1522,7 +1518,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "created instance",
-            "salt/cloud/{}/created".format(name),
+            f"salt/cloud/{name}/created",
             args=__utils__["cloud.filter_event"](
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1560,9 +1556,9 @@ class LinodeAPIv3(LinodeAPI):
             instance = self._get_linode_by_name(name)
             linode_id = instance.get("id", None)
 
-        disklist = "{},{}".format(root_disk_id, swap_disk_id)
+        disklist = f"{root_disk_id},{swap_disk_id}"
         if data_disk_id is not None:
-            disklist = "{},{},{}".format(root_disk_id, swap_disk_id, data_disk_id)
+            disklist = f"{root_disk_id},{swap_disk_id},{data_disk_id}"
 
         config_args = {
             "LinodeID": int(linode_id),
@@ -1663,7 +1659,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroying instance",
-            "salt/cloud/{}/destroying".format(name),
+            f"salt/cloud/{name}/destroying",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1678,7 +1674,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1732,7 +1728,7 @@ class LinodeAPIv3(LinodeAPI):
                     plan_type = "Nanode"
 
                 plan_size = plan_size / 1024
-                new_label = "{} {}GB".format(plan_type, plan_size)
+                new_label = f"{plan_type} {plan_size}GB"
 
                 if new_label not in sizes:
                     raise SaltCloudException(
@@ -2052,9 +2048,7 @@ class LinodeAPIv3(LinodeAPI):
             if name == node["LABEL"]:
                 return node
 
-        raise SaltCloudNotFound(
-            "The specified name, {}, could not be found.".format(name)
-        )
+        raise SaltCloudNotFound(f"The specified name, {name}, could not be found.")
 
     def _get_linode_by_id(self, linode_id):
         result = self._query("linode", "list", args={"LinodeID": linode_id})

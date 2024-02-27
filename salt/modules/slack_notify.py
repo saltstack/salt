@@ -204,7 +204,7 @@ def post_message(
             channel,
             channel,
         )
-        channel = "#{}".format(channel)
+        channel = f"#{channel}"
 
     if not from_name:
         log.error("from_name is a required option.")

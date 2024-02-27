@@ -55,9 +55,9 @@ def _pshell_json(cmd, cwd=None):
     Execute the desired powershell command and ensure that it returns data
     in JSON format and load that into python
     """
-    cmd = "Import-Module ServerManager; {}".format(cmd)
+    cmd = f"Import-Module ServerManager; {cmd}"
     if "convertto-json" not in cmd.lower():
-        cmd = "{} | ConvertTo-Json".format(cmd)
+        cmd = f"{cmd} | ConvertTo-Json"
     log.debug("PowerShell: %s", cmd)
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
 
@@ -70,9 +70,7 @@ def _pshell_json(cmd, cwd=None):
 
     if "retcode" not in ret or ret["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing PowerShell {}".format(cmd), info=ret
-        )
+        raise CommandExecutionError(f"Issue executing PowerShell {cmd}", info=ret)
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
     if ret["stdout"] == "":
@@ -227,7 +225,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         shlex.quote(feature),
         management_tools,
         "-IncludeAllSubFeature" if recurse else "",
-        "" if source is None else "-Source {}".format(source),
+        "" if source is None else f"-Source {source}",
     )
     out = _pshell_json(cmd)
 

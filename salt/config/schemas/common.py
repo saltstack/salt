@@ -25,7 +25,7 @@ class DefaultIncludeConfig(StringItem):
     description = __doc__
 
     def __init__(self, default=None, pattern=None, **kwargs):
-        default = "{}/*.conf".format(self.__confd_directory__)
+        default = f"{self.__confd_directory__}/*.conf"
         pattern = r"(?:.*)/\*\.conf"
         super().__init__(default=default, pattern=pattern, **kwargs)
 

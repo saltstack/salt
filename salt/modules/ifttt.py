@@ -38,7 +38,7 @@ def _query(event=None, method="GET", args=None, header_dict=None, data=None):
     secret_key = __salt__["config.get"]("ifttt.secret_key") or __salt__["config.get"](
         "ifttt:secret_key"
     )
-    path = "https://maker.ifttt.com/trigger/{}/with/key/{}".format(event, secret_key)
+    path = f"https://maker.ifttt.com/trigger/{event}/with/key/{secret_key}"
 
     if header_dict is None:
         header_dict = {"Content-type": "application/json"}

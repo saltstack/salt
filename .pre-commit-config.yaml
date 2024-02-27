@@ -1625,8 +1625,8 @@ repos:
     rev: v3.15.1
     hooks:
       - id: pyupgrade
-        name: Drop six usage and Py2 support
-        args: [--py3-plus, --keep-mock]
+        name: Upgrade code to Py3.7+
+        args: [--py37-plus, --keep-mock]
         exclude: >
           (?x)^(
             salt/client/ssh/ssh_py_shim.py

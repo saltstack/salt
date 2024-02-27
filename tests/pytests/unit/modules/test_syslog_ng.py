@@ -336,7 +336,7 @@ def test_config_test(orig_env, bin_dir, mocked_env):
 def test_config_test_cfgfile(orig_env, bin_dir, mocked_env):
     cfgfile = "/path/to/syslog-ng.conf"
     cmd_ret = {"retcode": 1, "stderr": "Syntax error...", "stdout": ""}
-    cmd_args = ["syslog-ng", "--syntax-only", "--cfgfile={}".format(cfgfile)]
+    cmd_args = ["syslog-ng", "--syntax-only", f"--cfgfile={cfgfile}"]
 
     cmd_mock = MagicMock(return_value=cmd_ret)
     with patch.dict(syslog_ng.__salt__, {"cmd.run_all": cmd_mock}), patch.dict(

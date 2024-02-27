@@ -43,7 +43,7 @@ def get_user_pubkeys(users):
             key_ids = user[tmp_user]
             user = tmp_user
 
-        url = "https://api.github.com/users/{}/keys".format(user)
+        url = f"https://api.github.com/users/{user}/keys"
         result = salt.utils.http.query(
             url,
             "GET",

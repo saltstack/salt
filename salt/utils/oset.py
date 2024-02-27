@@ -85,9 +85,7 @@ class OrderedSet(MutableSet):
         elif is_iterable(index):
             return OrderedSet([self.items[i] for i in index])
         else:
-            raise TypeError(
-                "Don't know how to index an OrderedSet by {}".format(repr(index))
-            )
+            raise TypeError(f"Don't know how to index an OrderedSet by {repr(index)}")
 
     def copy(self):
         return OrderedSet(self)
@@ -137,9 +135,7 @@ class OrderedSet(MutableSet):
             for item in sequence:
                 item_index = self.add(item)
         except TypeError:
-            raise ValueError(
-                "Argument needs to be an iterable, got {}".format(type(sequence))
-            )
+            raise ValueError(f"Argument needs to be an iterable, got {type(sequence)}")
         return item_index
 
     def index(self, key):
@@ -198,8 +194,8 @@ class OrderedSet(MutableSet):
 
     def __repr__(self):
         if not self:
-            return "{}()".format(self.__class__.__name__)
-        return "{}({})".format(self.__class__.__name__, repr(list(self)))
+            return f"{self.__class__.__name__}()"
+        return f"{self.__class__.__name__}({repr(list(self))})"
 
     def __eq__(self, other):
         if isinstance(other, OrderedSet):

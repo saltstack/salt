@@ -65,18 +65,18 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write("ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username))
+            kfh.write(f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n")
 
         # Create a bogus key file on base environment
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write("ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username))
+            kfh.write(f"ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n")
 
         ret = self.run_state(
             "ssh_auth.present",
             name="Setup Keys",
-            source="salt://{}?saltenv=prod".format(key_fname),
+            source=f"salt://{key_fname}?saltenv=prod",
             enc="ssh-rsa",
             user=username,
             comment=username,
@@ -84,7 +84,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username)
+                fhr.read(), f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n"
             )
 
         os.unlink(authorized_keys_file)
@@ -92,7 +92,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             "ssh_auth.present",
             name="Setup Keys",
-            source="salt://{}".format(key_fname),
+            source=f"salt://{key_fname}",
             enc="ssh-rsa",
             user=username,
             comment=username,
@@ -101,5 +101,5 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username)
+                fhr.read(), f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n"
             )

@@ -25,7 +25,7 @@ def test_function():
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "Function state would be executed on target {}".format(tgt),
+        "comment": f"Function state would be executed on target {tgt}",
     }
 
     with patch.dict(saltmod.__opts__, {"test": True}):
@@ -36,9 +36,7 @@ def test_function():
         {
             "result": True,
             "changes": {"ret": {tgt: ""}},
-            "comment": (
-                "Function ran successfully. Function state ran on {}.".format(tgt)
-            ),
+            "comment": (f"Function ran successfully. Function state ran on {tgt}."),
         }
     )
     with patch.dict(saltmod.__opts__, {"test": False}):

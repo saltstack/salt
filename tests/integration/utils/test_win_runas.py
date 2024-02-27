@@ -92,7 +92,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
             logger.exception(msg)
         exc_info = sys.exc_info()
         tb = traceback.format_tb(exc_info[2])
-        servicemanager.LogErrorMsg("{} {} {}".format(msg, exc_info[1], tb))
+        servicemanager.LogErrorMsg(f"{msg} {exc_info[1]} {tb}")
 
     @property
     def timeout_ms(self):
@@ -118,7 +118,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
             servicemanager.PYS_SERVICE_STARTED,
             (self._svc_name_, ""),
         )
-        self.log_info("Starting Service {}".format(self._svc_name_))
+        self.log_info(f"Starting Service {self._svc_name_}")
         monitor_thread = threading.Thread(target=self.target_thread)
         monitor_thread.start()
         while self.active:
@@ -362,7 +362,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -390,7 +390,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -423,7 +423,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -455,7 +455,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -477,7 +477,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -499,7 +499,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -521,7 +521,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -552,7 +552,7 @@ class RunAsTest(ModuleCase):
                 "-ComputerName",
                 self.hostname,
                 "-ScriptBlock",
-                "{{ python.exe {} }}".format(RUNAS_PATH),
+                f"{{ python.exe {RUNAS_PATH} }}",
             ]
         )
         self.assertEqual(ret, 1)
@@ -580,7 +580,7 @@ class RunAsTest(ModuleCase):
                 "-ComputerName",
                 self.hostname,
                 "-ScriptBlock",
-                "{{ python.exe {} }}".format(RUNAS_PATH),
+                f"{{ python.exe {RUNAS_PATH} }}",
             ]
         )
         self.assertEqual(ret, 1)
@@ -611,7 +611,7 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
+        cmd = f"python.exe {RUNAS_PATH}; exit $LASTEXITCODE"
         ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 
@@ -639,7 +639,7 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
+        cmd = f"python.exe {RUNAS_PATH}; exit $LASTEXITCODE"
         ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 

@@ -67,7 +67,7 @@ def get_class_paths(_class, saltclass_path):
     :return: 3-tuple of possible file counterparts
     :rtype: tuple(str)
     """
-    straight = os.path.join(saltclass_path, "classes", "{}.yml".format(_class))
+    straight = os.path.join(saltclass_path, "classes", f"{_class}.yml")
     sub_straight = os.path.join(
         saltclass_path, "classes", "{}.yml".format(_class.replace(".", os.sep))
     )
@@ -365,7 +365,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
         os.path.join(saltclass_path, "nodes"), followlinks=True
     ):
         for minion_file in files:
-            if minion_file == "{}.yml".format(minion_id):
+            if minion_file == f"{minion_id}.yml":
                 _file = os.path.join(root, minion_file)
 
     # Load the minion_id definition if existing, else an empty dict

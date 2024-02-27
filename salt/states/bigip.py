@@ -1628,9 +1628,7 @@ def modify_pool_member(
                 # check for changes
                 old = {"content": existing_member}
                 new = {"content": modified_member}
-                ret = _check_for_changes(
-                    "Pool Member: {member}".format(member=member), ret, old, new
-                )
+                ret = _check_for_changes(f"Pool Member: {member}", ret, old, new)
 
             else:
                 ret = _load_result(modified, ret)

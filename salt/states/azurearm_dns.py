@@ -169,7 +169,7 @@ def zone_present(
     tags=None,
     zone_type="Public",
     connection_auth=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 3000
@@ -304,12 +304,12 @@ def zone_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "DNS zone {} is already present.".format(name)
+            ret["comment"] = f"DNS zone {name} is already present."
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "DNS zone {} would be updated.".format(name)
+            ret["comment"] = f"DNS zone {name} would be updated."
             return ret
 
     else:
@@ -327,7 +327,7 @@ def zone_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "DNS zone {} would be created.".format(name)
+        ret["comment"] = f"DNS zone {name} would be created."
         ret["result"] = None
         return ret
 
@@ -344,12 +344,12 @@ def zone_present(
         resolution_virtual_networks=resolution_virtual_networks,
         tags=tags,
         zone_type=zone_type,
-        **zone_kwargs
+        **zone_kwargs,
     )
 
     if "error" not in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {} has been created.".format(name)
+        ret["comment"] = f"DNS zone {name} has been created."
         return ret
 
     ret["comment"] = "Failed to create DNS zone {}! ({})".format(
@@ -389,11 +389,11 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if "error" in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {} was not found.".format(name)
+        ret["comment"] = f"DNS zone {name} was not found."
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "DNS zone {} would be deleted.".format(name)
+        ret["comment"] = f"DNS zone {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": zone,
@@ -407,11 +407,11 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "DNS zone {} has been deleted.".format(name)
+        ret["comment"] = f"DNS zone {name} has been deleted."
         ret["changes"] = {"old": zone, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete DNS zone {}!".format(name)
+    ret["comment"] = f"Failed to delete DNS zone {name}!"
     return ret
 
 
@@ -437,7 +437,7 @@ def record_set_present(
     soa_record=None,
     caa_records=None,
     connection_auth=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 3000
@@ -576,7 +576,7 @@ def record_set_present(
         resource_group,
         record_type,
         azurearm_log_level="info",
-        **connection_auth
+        **connection_auth,
     )
 
     if "error" not in rec_set:
@@ -632,12 +632,12 @@ def record_set_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Record set {} is already present.".format(name)
+            ret["comment"] = f"Record set {name} is already present."
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Record set {} would be updated.".format(name)
+            ret["comment"] = f"Record set {name} would be updated."
             return ret
 
     else:
@@ -660,7 +660,7 @@ def record_set_present(
                 ret["changes"]["new"][record] = eval(record)
 
     if __opts__["test"]:
-        ret["comment"] = "Record set {} would be created.".format(name)
+        ret["comment"] = f"Record set {name} would be created."
         ret["result"] = None
         return ret
 
@@ -687,12 +687,12 @@ def record_set_present(
         cname_record=cname_record,
         soa_record=soa_record,
         caa_records=caa_records,
-        **rec_set_kwargs
+        **rec_set_kwargs,
     )
 
     if "error" not in rec_set:
         ret["result"] = True
-        ret["comment"] = "Record set {} has been created.".format(name)
+        ret["comment"] = f"Record set {name} has been created."
         return ret
 
     ret["comment"] = "Failed to create record set {}! ({})".format(
@@ -741,7 +741,7 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Record set {} would be deleted.".format(name)
+        ret["comment"] = f"Record set {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": rec_set,
@@ -755,9 +755,9 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Record set {} has been deleted.".format(name)
+        ret["comment"] = f"Record set {name} has been deleted."
         ret["changes"] = {"old": rec_set, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete record set {}!".format(name)
+    ret["comment"] = f"Failed to delete record set {name}!"
     return ret

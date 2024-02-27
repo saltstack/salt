@@ -96,7 +96,7 @@ class AnsibleState:
         for mod_name, mod_params in kwargs.items():
             args, kwargs = self.get_args(mod_params)
             try:
-                ans_mod_out = __salt__["ansible.{}".format(mod_name)](
+                ans_mod_out = __salt__[f"ansible.{mod_name}"](
                     **{"__pub_arg": [args, kwargs]}
                 )
             except Exception as err:  # pylint: disable=broad-except
@@ -170,7 +170,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     ret = {
         "result": False,
         "changes": {},
-        "comment": "Running playbook {}".format(name),
+        "comment": f"Running playbook {name}",
         "name": name,
     }
     if git_repo:
@@ -197,13 +197,13 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
-            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["comment"] = f"No changes to be made from playbook {name}"
             ret["result"] = True
         elif any(
             check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
-            ret["comment"] = "Changes will be made from playbook {}".format(name)
+            ret["comment"] = f"Changes will be made from playbook {name}"
             ret["result"] = None
             ret["changes"] = _changes(checks)
         else:
@@ -224,7 +224,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):
-            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["comment"] = f"No changes to be made from playbook {name}"
             ret["result"] = True
             ret["changes"] = _changes(results)
         else:
@@ -234,9 +234,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
                 for check in results["stats"].values()
             )
             if ret["result"]:
-                ret["comment"] = "Changes were made by playbook {}".format(name)
+                ret["comment"] = f"Changes were made by playbook {name}"
             else:
-                ret["comment"] = (
-                    "There were some issues running the playbook {}".format(name)
-                )
+                ret["comment"] = f"There were some issues running the playbook {name}"
     return ret

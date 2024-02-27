@@ -56,7 +56,7 @@ def write(domain, key, value, type="string", user=None):
         elif value is False:
             value = "FALSE"
 
-    cmd = 'defaults write "{}" "{}" -{} "{}"'.format(domain, key, type, value)
+    cmd = f'defaults write "{domain}" "{key}" -{type} "{value}"'
     return __salt__["cmd.run_all"](cmd, runas=user)
 
 
@@ -82,7 +82,7 @@ def read(domain, key, user=None):
         The user to read the defaults as
 
     """
-    cmd = 'defaults read "{}" "{}"'.format(domain, key)
+    cmd = f'defaults read "{domain}" "{key}"'
     return __salt__["cmd.run"](cmd, runas=user)
 
 
@@ -108,5 +108,5 @@ def delete(domain, key, user=None):
         The user to delete the defaults with
 
     """
-    cmd = 'defaults delete "{}" "{}"'.format(domain, key)
+    cmd = f'defaults delete "{domain}" "{key}"'
     return __salt__["cmd.run_all"](cmd, runas=user, output_loglevel="debug")

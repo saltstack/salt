@@ -90,4 +90,4 @@ def returner(ret):
                 )
 
     if not changes and not errors:
-        zabbix_send("salt.trap.info", "SALT {} OK".format(job_minion_id))
+        zabbix_send("salt.trap.info", f"SALT {job_minion_id} OK")

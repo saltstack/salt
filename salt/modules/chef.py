@@ -36,7 +36,7 @@ def _default_logfile(exe_name):
         logfile = logfile_tmp.name
         logfile_tmp.close()
     else:
-        logfile = salt.utils.path.join("/var/log", "{}.log".format(exe_name))
+        logfile = salt.utils.path.join("/var/log", f"{exe_name}.log")
 
     return logfile
 
@@ -116,7 +116,7 @@ def client(whyrun=False, localmode=False, logfile=None, **kwargs):
         "chef-client",
         "--no-color",
         "--once",
-        '--logfile "{}"'.format(logfile),
+        f'--logfile "{logfile}"',
         "--format doc",
     ]
 
@@ -184,7 +184,7 @@ def solo(whyrun=False, logfile=None, **kwargs):
     args = [
         "chef-solo",
         "--no-color",
-        '--logfile "{}"'.format(logfile),
+        f'--logfile "{logfile}"',
         "--format doc",
     ]
 
@@ -199,9 +199,9 @@ def _exec_cmd(*args, **kwargs):
     # Compile the command arguments
     cmd_args = " ".join(args)
     cmd_kwargs = "".join(
-        [" --{} {}".format(k, v) for k, v in kwargs.items() if not k.startswith("__")]
+        [f" --{k} {v}" for k, v in kwargs.items() if not k.startswith("__")]
     )
-    cmd_exec = "{}{}".format(cmd_args, cmd_kwargs)
+    cmd_exec = f"{cmd_args}{cmd_kwargs}"
     log.debug("Chef command: %s", cmd_exec)
 
     return __salt__["cmd.run_all"](cmd_exec, python_shell=False)

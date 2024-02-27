@@ -44,12 +44,12 @@ def test_ssh_shell_exec_cmd(caplog):
     _shell = shell.Shell(opts=opts, host=host)
     _shell.passwd = passwd
     with patch.object(_shell, "_split_cmd", return_value=["echo", passwd]):
-        ret = _shell.exec_cmd("echo {}".format(passwd))
+        ret = _shell.exec_cmd(f"echo {passwd}")
         assert not any([x for x in ret if passwd in str(x)])
         assert passwd not in caplog.text
 
     with patch.object(_shell, "_split_cmd", return_value=["ls", passwd]):
-        ret = _shell.exec_cmd("ls {}".format(passwd))
+        ret = _shell.exec_cmd(f"ls {passwd}")
         assert not any([x for x in ret if passwd in str(x)])
         assert passwd not in caplog.text
 

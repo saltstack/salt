@@ -246,7 +246,7 @@ def _configure(changes):
         _chassis_id = _updated_changes.get("chassis_id", "")
         if key == "removed":
             fun = "remove_config"
-        _ret = __salt__["snmp.{fun}".format(fun=fun)](
+        _ret = __salt__[f"snmp.{fun}"](
             location=_location,
             contact=_contact,
             community=_community,

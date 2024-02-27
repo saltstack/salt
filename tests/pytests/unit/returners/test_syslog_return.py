@@ -42,4 +42,4 @@ def test_syslog_returner_unicode():
         try:
             syslog.returner(ret)
         except Exception as e:  # pylint: disable=broad-except
-            pytest.fail("syslog.returner() failed with exception: {}".format(e))
+            pytest.fail(f"syslog.returner() failed with exception: {e}")

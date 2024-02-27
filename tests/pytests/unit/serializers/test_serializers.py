@@ -153,7 +153,7 @@ def test_compare_sls_vs_yaml_with_jinja():
 
     # BLAAM! yml_src is not valid !
     final_obj = OrderedDict(yaml.deserialize(yml_src))
-    assert obj != final_obj, "Objects matched! {} == {}".format(obj, final_obj)
+    assert obj != final_obj, f"Objects matched! {obj} == {final_obj}"
 
 
 @pytest.mark.skipif(yamlex.available is False, reason=SKIP_MESSAGE.format("sls"))

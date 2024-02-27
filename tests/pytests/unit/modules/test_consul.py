@@ -1147,11 +1147,11 @@ def test_catalog_register():
                 token=token,
                 node=node,
                 address=address,
-                **nodemeta_kwargs
+                **nodemeta_kwargs,
             )
             expected = {
                 "data": {"Address": address, "Node": node, "NodeMeta": nodemeta},
-                "message": "Catalog registration for {} successful.".format(node),
+                "message": f"Catalog registration for {node} successful.",
                 "res": True,
             }
 
@@ -1197,7 +1197,7 @@ def test_catalog_deregister():
                 checkid=checkid,
             )
             expected = {
-                "message": "Catalog item {} removed.".format(node),
+                "message": f"Catalog item {node} removed.",
                 "res": True,
             }
 
@@ -1603,7 +1603,7 @@ def test_acl_create():
     with patch.object(salt.utils.http, "query", return_value=mock_http_result):
         with patch.dict(consul.__salt__, {"config.get": mock_url}):
             result = consul.acl_create(consul_url=consul_url, token=token, name=name)
-            expected = {"message": "ACL {} created.".format(name), "res": True}
+            expected = {"message": f"ACL {name} created.", "res": True}
             assert expected == result
 
 
@@ -1652,7 +1652,7 @@ def test_acl_update():
             result = consul.acl_update(
                 consul_url=consul_url, token=token, name=name, id=aclid
             )
-            expected = {"message": "ACL {} created.".format(name), "res": True}
+            expected = {"message": f"ACL {name} created.", "res": True}
             assert expected == result
 
 
@@ -1692,7 +1692,7 @@ def test_acl_delete():
             result = consul.acl_delete(
                 consul_url=consul_url, token=token, name=name, id=aclid
             )
-            expected = {"message": "ACL {} deleted.".format(aclid), "res": True}
+            expected = {"message": f"ACL {aclid} deleted.", "res": True}
             assert expected == result
 
 
@@ -1774,7 +1774,7 @@ def test_acl_clone():
             )
             expected = {
                 "ID": aclid,
-                "message": "ACL {} cloned.".format(name),
+                "message": f"ACL {name} cloned.",
                 "res": True,
             }
             assert expected == result
@@ -1844,7 +1844,7 @@ def test_event_fire():
             result = consul.event_fire(consul_url=consul_url, token=token, name=name)
             expected = {
                 "data": "test",
-                "message": "Event {} fired.".format(name),
+                "message": f"Event {name} fired.",
                 "res": True,
             }
             assert expected == result

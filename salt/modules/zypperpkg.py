@@ -44,8 +44,8 @@ log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
 ZYPP_HOME = "/etc/zypp"
-LOCKS = "{}/locks".format(ZYPP_HOME)
-REPOS = "{}/repos.d".format(ZYPP_HOME)
+LOCKS = f"{ZYPP_HOME}/locks"
+REPOS = f"{ZYPP_HOME}/repos.d"
 DEFAULT_PRIORITY = 99
 PKG_ARCH_SEPARATOR = "."
 
@@ -371,9 +371,7 @@ class _Zypper:
                 self.TAG_RELEASED,
             )
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
-            raise CommandExecutionError(
-                "Zypper command failure: {}".format(self.error_msg)
-            )
+            raise CommandExecutionError(f"Zypper command failure: {self.error_msg}")
 
         return (
             self._is_xml_mode()
@@ -482,9 +480,7 @@ class Wildcard:
             "se", "-xv", self.name
         ).getElementsByTagName("solvable")
         if not solvables:
-            raise CommandExecutionError(
-                "No packages found matching '{}'".format(self.name)
-            )
+            raise CommandExecutionError(f"No packages found matching '{self.name}'")
 
         return sorted(
             {
@@ -519,7 +515,7 @@ class Wildcard:
         self._op = version.replace(exact_version, "") or None
         if self._op and self._op not in self.Z_OP:
             raise CommandExecutionError(
-                'Zypper do not supports operator "{}".'.format(self._op)
+                f'Zypper do not supports operator "{self._op}".'
             )
         self.version = exact_version
 
@@ -920,7 +916,7 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
 
     # Results can be different if a different root or a different
     # inclusion types are passed
-    contextkey = "pkg.list_pkgs_{}_{}".format(root, includes)
+    contextkey = f"pkg.list_pkgs_{root}_{includes}"
 
     if contextkey in __context__ and kwargs.get("use_context", True):
         return _list_pkgs_from_context(versions_as_list, contextkey, attr)
@@ -988,7 +984,7 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
             else:
                 elements = []
             for element in elements:
-                extended_name = "{}:{}".format(include, element)
+                extended_name = f"{include}:{element}"
                 info = info_available(extended_name, refresh=False, root=root)
                 _ret[extended_name] = [
                     {
@@ -1229,7 +1225,7 @@ def del_repo(repo, root=None):
                     "message": msg[0].childNodes[0].nodeValue,
                 }
 
-    raise CommandExecutionError("Repository '{}' not found.".format(repo))
+    raise CommandExecutionError(f"Repository '{repo}' not found.")
 
 
 def mod_repo(repo, **kwargs):
@@ -1316,7 +1312,7 @@ def mod_repo(repo, **kwargs):
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    "Repository '{}' already exists as '{}'.".format(repo, alias)
+                    f"Repository '{repo}' already exists as '{alias}'."
                 )
 
         # Add new repo
@@ -1472,7 +1468,7 @@ def install(
     ignore_repo_failure=False,
     no_recommends=False,
     root=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1639,7 +1635,7 @@ def install(
                 prefix, verstr = salt.utils.pkg.split_comparison(version_num)
                 if not prefix:
                     prefix = "="
-                target = "{}{}{}".format(param, prefix, verstr)
+                target = f"{param}{prefix}{verstr}"
                 log.debug("targeting package: %s", target)
                 targets.append(target)
     elif pkg_type == "advisory":
@@ -1647,9 +1643,7 @@ def install(
         cur_patches = list_patches(root=root)
         for advisory_id in pkg_params:
             if advisory_id not in cur_patches:
-                raise CommandExecutionError(
-                    'Advisory id "{}" not found'.format(advisory_id)
-                )
+                raise CommandExecutionError(f'Advisory id "{advisory_id}" not found')
             else:
                 # If we add here the `patch:` prefix, the
                 # `_find_types` helper will take the patches into the
@@ -1702,7 +1696,7 @@ def install(
     # if the name of the package is already prefixed with 'patch:' we
     # can avoid listing them in the `advisory_ids` field.
     if pkg_type == "advisory":
-        targets = ["patch:{}".format(t) for t in targets]
+        targets = [f"patch:{t}" for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
@@ -1766,7 +1760,7 @@ def upgrade(
     no_recommends=False,
     root=None,
     diff_attr=None,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -2185,7 +2179,7 @@ def list_holds(pattern=None, full=True, root=None, **kwargs):
                         )
                     )
 
-    ptrn_re = re.compile(r"{}-\S+".format(pattern)) if pattern else None
+    ptrn_re = re.compile(rf"{pattern}-\S+") if pattern else None
     for pkg_name, pkg_editions in inst_pkgs.items():
         for pkg_info in pkg_editions:
             pkg_ret = (
@@ -2327,14 +2321,12 @@ def unhold(name=None, pkgs=None, root=None, **kwargs):
                     )
                 )
             else:
-                removed.append(
-                    target if not lock_ver else "{}={}".format(target, lock_ver)
-                )
+                removed.append(target if not lock_ver else f"{target}={lock_ver}")
                 ret[target]["changes"]["new"] = ""
                 ret[target]["changes"]["old"] = "hold"
-                ret[target]["comment"] = "Package {} is no longer held.".format(target)
+                ret[target]["comment"] = f"Package {target} is no longer held."
         else:
-            ret[target]["comment"] = "Package {} was already unheld.".format(target)
+            ret[target]["comment"] = f"Package {target} was already unheld."
 
     if removed:
         __zypper__(root=root).call("rl", *removed)
@@ -2386,10 +2378,10 @@ def hold(name=None, pkgs=None, root=None, **kwargs):
             (target, version) = next(iter(target.items()))
         ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
         if not locks.get(target):
-            added.append(target if not version else "{}={}".format(target, version))
+            added.append(target if not version else f"{target}={version}")
             ret[target]["changes"]["new"] = "hold"
             ret[target]["changes"]["old"] = ""
-            ret[target]["comment"] = "Package {} is now being held.".format(target)
+            ret[target]["comment"] = f"Package {target} is now being held."
         else:
             ret[target]["comment"] = "Package {} is already set to be held.".format(
                 target
@@ -2739,7 +2731,7 @@ def search(criteria, refresh=False, **kwargs):
         .getElementsByTagName("solvable")
     )
     if not solvables:
-        raise CommandExecutionError("No packages found matching '{}'".format(criteria))
+        raise CommandExecutionError(f"No packages found matching '{criteria}'")
 
     out = {}
     for solvable in solvables:

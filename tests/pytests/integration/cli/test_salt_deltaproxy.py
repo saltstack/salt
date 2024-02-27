@@ -171,11 +171,11 @@ def test_exit_status_correct_usage(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
     with (
@@ -280,7 +280,7 @@ def test_missing_pillar_file(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile:
@@ -398,14 +398,14 @@ def test_invalid_connection(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_one), broken_proxy_one_pillar_file
+        f"{broken_proxy_one}.sls", broken_proxy_one_pillar_file
     )
     broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_two), broken_proxy_two_pillar_file
+        f"{broken_proxy_two}.sls", broken_proxy_two_pillar_file
     )
     with (
         top_tempfile
@@ -529,11 +529,11 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 
@@ -666,11 +666,11 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 

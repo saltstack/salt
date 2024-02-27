@@ -122,7 +122,7 @@ def _request(method, url, content_type=None, _data=None):
     try:
         handler = opener.open(request)
     except HTTPError as exc:
-        return {"error": "{}".format(exc)}
+        return {"error": f"{exc}"}
     return salt.utils.json.loads(handler.read())
 
 

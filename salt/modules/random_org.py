@@ -206,7 +206,7 @@ def generateIntegers(api_key=None, api_version=None, **kwargs):
     for item in ["number", "minimum", "maximum"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Rquired argument, {} is missing.".format(item)
+            ret["message"] = f"Rquired argument, {item} is missing."
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -332,7 +332,7 @@ def generateStrings(api_key=None, api_version=None, **kwargs):
     for item in ["number", "length", "characters"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {} is missing.".format(item)
+            ret["message"] = f"Required argument, {item} is missing."
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -422,7 +422,7 @@ def generateUUIDs(api_key=None, api_version=None, **kwargs):
     for item in ["number"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {} is missing.".format(item)
+            ret["message"] = f"Required argument, {item} is missing."
             return ret
 
     if isinstance(api_version, int):
@@ -503,7 +503,7 @@ def generateDecimalFractions(api_key=None, api_version=None, **kwargs):
     for item in ["number", "decimalPlaces"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {} is missing.".format(item)
+            ret["message"] = f"Required argument, {item} is missing."
             return ret
 
     if not isinstance(kwargs["number"], int) or not 1 <= kwargs["number"] <= 10000:
@@ -597,7 +597,7 @@ def generateGaussians(api_key=None, api_version=None, **kwargs):
     for item in ["number", "mean", "standardDeviation", "significantDigits"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {} is missing.".format(item)
+            ret["message"] = f"Required argument, {item} is missing."
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -697,7 +697,7 @@ def generateBlobs(api_key=None, api_version=None, **kwargs):
     for item in ["number", "size"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {} is missing.".format(item)
+            ret["message"] = f"Required argument, {item} is missing."
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 100:

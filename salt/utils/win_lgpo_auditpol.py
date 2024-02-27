@@ -116,11 +116,11 @@ def _auditpol_cmd(cmd):
     Raises:
         CommandExecutionError: If the command encounters an error
     """
-    ret = salt.modules.cmdmod.run_all(cmd="auditpol {}".format(cmd), python_shell=True)
+    ret = salt.modules.cmdmod.run_all(cmd=f"auditpol {cmd}", python_shell=True)
     if ret["retcode"] == 0:
         return ret["stdout"].splitlines()
 
-    msg = "Error executing auditpol command: {}\n".format(cmd)
+    msg = f"Error executing auditpol command: {cmd}\n"
     msg += "\n".join(ret["stdout"])
     raise CommandExecutionError(msg)
 
@@ -173,9 +173,9 @@ def get_settings(category="All"):
     if category.lower() in ["all", "*"]:
         category = "*"
     elif category.lower() not in [x.lower() for x in categories]:
-        raise KeyError('Invalid category: "{}"'.format(category))
+        raise KeyError(f'Invalid category: "{category}"')
 
-    cmd = '/get /category:"{}"'.format(category)
+    cmd = f'/get /category:"{category}"'
     results = _auditpol_cmd(cmd)
 
     ret = {}
@@ -213,7 +213,7 @@ def get_setting(name):
     for setting in current_settings:
         if name.lower() == setting.lower():
             return current_settings[setting]
-    raise KeyError("Invalid name: {}".format(name))
+    raise KeyError(f"Invalid name: {name}")
 
 
 def _get_valid_names():
@@ -264,13 +264,13 @@ def set_setting(name, value):
     """
     # Input validation
     if name.lower() not in _get_valid_names():
-        raise KeyError("Invalid name: {}".format(name))
+        raise KeyError(f"Invalid name: {name}")
     for setting in settings:
         if value.lower() == setting.lower():
-            cmd = '/set /subcategory:"{}" {}'.format(name, settings[setting])
+            cmd = f'/set /subcategory:"{name}" {settings[setting]}'
             break
     else:
-        raise KeyError("Invalid setting value: {}".format(value))
+        raise KeyError(f"Invalid setting value: {value}")
 
     _auditpol_cmd(cmd)
 
@@ -298,7 +298,7 @@ def get_auditpol_dump():
     with tempfile.NamedTemporaryFile(suffix=".csv") as tmp_file:
         csv_file = tmp_file.name
 
-    cmd = "/backup /file:{}".format(csv_file)
+    cmd = f"/backup /file:{csv_file}"
     _auditpol_cmd(cmd)
 
     with salt.utils.files.fopen(csv_file) as fp:

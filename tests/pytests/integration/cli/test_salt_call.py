@@ -40,7 +40,7 @@ def test_fib_txt_output(salt_call_cli):
 
 @pytest.mark.parametrize("indent", [-1, 0, 1])
 def test_json_out_indent(salt_call_cli, indent):
-    ret = salt_call_cli.run("--out=json", "--out-indent={}".format(indent), "test.ping")
+    ret = salt_call_cli.run("--out=json", f"--out-indent={indent}", "test.ping")
     assert ret.returncode == 0
     assert ret.data is True
     if indent == -1:
@@ -164,7 +164,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             try:
                 stat1 = output_file.stat()
             except OSError:
-                pytest.fail("Failed to generate output file {}".format(output_file))
+                pytest.fail(f"Failed to generate output file {output_file}")
 
             # Let's change umask
             os.umask(0o777)  # pylint: disable=blacklisted-function
@@ -187,7 +187,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             try:
                 stat3 = output_file.stat()
             except OSError:
-                pytest.fail("Failed to generate output file {}".format(output_file))
+                pytest.fail(f"Failed to generate output file {output_file}")
             # Mode must have changed since we're creating a new log file
             assert stat1.st_mode != stat3.st_mode
 
@@ -290,7 +290,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
         with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:
             fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
         ret = salt_call_cli.run(
-            "--config-dir={}".format(config_dir),
+            f"--config-dir={config_dir}",
             "--log-level=debug",
             "cmd.run",
             "echo foo",

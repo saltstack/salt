@@ -291,7 +291,7 @@ def test_patch_single_file_failure(file, tmp_path, files, patches):
         assert_fpath = f".*{reject_file.name}"
     else:
         assert_fpath = reject_file
-    assert re.search("saving rejects to (file )?{}".format(assert_fpath), ret.comment)
+    assert re.search(f"saving rejects to (file )?{assert_fpath}", ret.comment)
 
 
 @pytest.mark.skip_on_freebsd(
@@ -324,7 +324,7 @@ def test_patch_directory_failure(file, tmp_path, files, patches):
         assert_fpath = f".*{reject_file.name}"
     else:
         assert_fpath = reject_file
-    assert re.search("saving rejects to (file )?{}".format(assert_fpath), ret.comment)
+    assert re.search(f"saving rejects to (file )?{assert_fpath}", ret.comment)
 
 
 def test_patch_single_file_remote_source(file, files, patches, subtests):

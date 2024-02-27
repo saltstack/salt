@@ -834,7 +834,7 @@ class Schedule:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in ret.items():
                     if key != "kwargs":
-                        kwargs["__pub_{}".format(key)] = copy.deepcopy(val)
+                        kwargs[f"__pub_{key}"] = copy.deepcopy(val)
 
             # Only include these when running runner modules
             if self.opts["__role"] == "master":
@@ -899,7 +899,7 @@ class Schedule:
                             rets.extend(returner)
                     # simple de-duplication with order retained
                     for returner in OrderedDict.fromkeys(rets):
-                        ret_str = "{}.returner".format(returner)
+                        ret_str = f"{returner}.returner"
                         if ret_str in self.returners:
                             self.returners[ret_str](ret)
                         else:
@@ -1753,7 +1753,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
+                miss_msg = f" (runtime missed by {abs(seconds)} seconds)"
 
             try:
                 if run:

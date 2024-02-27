@@ -143,7 +143,7 @@ def beacon(config):
         for func in entry:
             ret[func] = {}
             try:
-                data = __salt__["status.{}".format(func)]()
+                data = __salt__[f"status.{func}"]()
             except salt.exceptions.CommandExecutionError as exc:
                 log.debug(
                     "Status beacon attempted to process function %s "
@@ -166,8 +166,6 @@ def beacon(config):
                         except TypeError:
                             ret[func][item] = data[int(item)]
                     except KeyError as exc:
-                        ret[func] = (
-                            "Status beacon is incorrectly configured: {}".format(exc)
-                        )
+                        ret[func] = f"Status beacon is incorrectly configured: {exc}"
 
     return [{"tag": ctime, "data": ret}]

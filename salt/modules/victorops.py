@@ -48,10 +48,10 @@ def _query(
     path = "https://alert.victorops.com/integrations/generic/20131114/"
 
     if action:
-        path += "{}/".format(action)
+        path += f"{action}/"
 
     if api_key:
-        path += "{}/".format(api_key)
+        path += f"{api_key}/"
 
     if routing_key:
         path += routing_key

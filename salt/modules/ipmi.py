@@ -57,7 +57,7 @@ def _get_config(**kwargs):
         "api_login_timeout": 2,
     }
     if "__salt__" in globals():
-        config_key = "{}.config".format(__virtualname__)
+        config_key = f"{__virtualname__}.config"
         config.update(__salt__["config.get"](config_key, {}))
     for k in set(config) & set(kwargs):
         config[k] = kwargs[k]
@@ -197,7 +197,7 @@ def set_channel_access(
     access_mode="always",
     privilege_update_mode="non_volatile",
     privilege_level="administrator",
-    **kwargs
+    **kwargs,
 ):
     """
     Set channel access
@@ -387,7 +387,7 @@ def set_user_access(
     link_auth=True,
     ipmi_msg=True,
     privilege_level="administrator",
-    **kwargs
+    **kwargs,
 ):
     """
     Set user access
@@ -896,7 +896,7 @@ def create_user(
     link_auth=True,
     ipmi_msg=True,
     privilege_level="administrator",
-    **kwargs
+    **kwargs,
 ):
     """
     create/ensure a user is created with provided settings.

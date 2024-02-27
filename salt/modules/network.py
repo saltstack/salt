@@ -299,7 +299,7 @@ def _netstat_bsd():
     ret = []
     if __grains__["kernel"] == "NetBSD":
         for addr_family in ("inet", "inet6"):
-            cmd = "netstat -f {} -an | tail -n+3".format(addr_family)
+            cmd = f"netstat -f {addr_family} -an | tail -n+3"
             out = __salt__["cmd.run"](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
@@ -382,7 +382,7 @@ def _netstat_sunos():
     ret = []
     for addr_family in ("inet", "inet6"):
         # Lookup TCP connections
-        cmd = "netstat -f {} -P tcp -an | tail +5".format(addr_family)
+        cmd = f"netstat -f {addr_family} -P tcp -an | tail +5"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -397,7 +397,7 @@ def _netstat_sunos():
                 }
             )
         # Lookup UDP connections
-        cmd = "netstat -f {} -P udp -an | tail +5".format(addr_family)
+        cmd = f"netstat -f {addr_family} -P udp -an | tail +5"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -421,7 +421,7 @@ def _netstat_aix():
     ## for addr_family in ('inet', 'inet6'):
     for addr_family in ("inet",):
         # Lookup connections
-        cmd = "netstat -n -a -f {} | tail -n +3".format(addr_family)
+        cmd = f"netstat -n -a -f {addr_family} | tail -n +3"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -1012,7 +1012,7 @@ def traceroute(host):
                         "ip": traceline[2],
                     }
                     for idx, delay in enumerate(delays):
-                        result["ms{}".format(idx + 1)] = delay
+                        result[f"ms{idx + 1}"] = delay
             except IndexError:
                 result = {}
 
@@ -1400,7 +1400,7 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith("hostnamectl"):
-        result = __salt__["cmd.run_all"]("{} status".format(hostname_cmd))
+        result = __salt__["cmd.run_all"](f"{hostname_cmd} status")
         if 0 == result["retcode"]:
             out = result["stdout"]
             for line in out.splitlines():
@@ -1432,7 +1432,7 @@ def mod_hostname(hostname):
             )
             return False
     elif not __utils__["platform.is_sunos"]():
-        __salt__["cmd.run"]("{} {}".format(hostname_cmd, hostname))
+        __salt__["cmd.run"](f"{hostname_cmd} {hostname}")
     else:
         __salt__["cmd.run"]("{} -S {}".format(uname_cmd, hostname.split(".")[0]))
 
@@ -1490,7 +1490,7 @@ def mod_hostname(hostname):
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
-                    "Couldn't set hostname to: {}\n".format(str_hostname)
+                    f"Couldn't set hostname to: {str_hostname}\n"
                 )
     elif __grains__["os_family"] == "OpenBSD":
         with __utils__["files.fopen"]("/etc/myname", "w") as fh_:
@@ -1666,7 +1666,7 @@ def _get_bufsize_linux(iface):
     """
     ret = {"result": False}
 
-    cmd = "/sbin/ethtool -g {}".format(iface)
+    cmd = f"/sbin/ethtool -g {iface}"
     out = __salt__["cmd.run"](cmd)
     pat = re.compile(r"^(.+):\s+(\d+)$")
     suffix = "max-"
@@ -1770,7 +1770,7 @@ def routes(family=None):
         salt '*' network.routes
     """
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {}".format(family))
+        raise CommandExecutionError(f"Invalid address family {family}")
 
     if __grains__["kernel"] == "Linux":
         if not __utils__["path.which"]("netstat"):
@@ -1814,7 +1814,7 @@ def default_route(family=None):
         salt '*' network.default_route
     """
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {}".format(family))
+        raise CommandExecutionError(f"Invalid address family {family}")
 
     _routes = routes(family)
 
@@ -1872,7 +1872,7 @@ def get_route(ip):
     """
 
     if __grains__["kernel"] == "Linux":
-        cmd = "ip route get {}".format(ip)
+        cmd = f"ip route get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         regexp = re.compile(
             r"(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:\-]+)\s+.*src\s+(?P<source>[\w\.:]+)"
@@ -1896,7 +1896,7 @@ def get_route(ip):
         #      flags: <UP,DONE,KERNEL>
         # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
         #       0         0         0         0         0         0      1500         0
-        cmd = "/usr/sbin/route -n get {}".format(ip)
+        cmd = f"/usr/sbin/route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1925,7 +1925,7 @@ def get_route(ip):
         #      flags: <UP,GATEWAY,DONE,STATIC>
         #     use       mtu    expire
         # 8352657         0         0
-        cmd = "route -n get {}".format(ip)
+        cmd = f"route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1953,7 +1953,7 @@ def get_route(ip):
         #     flags: <UP,GATEWAY,HOST,DONE,STATIC>
         # recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
         #      0         0         0         0         0         0         0    -68642
-        cmd = "route -n get {}".format(ip)
+        cmd = f"route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}

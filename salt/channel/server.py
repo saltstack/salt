@@ -144,9 +144,7 @@ class ReqServerChannel:
                 raise salt.ext.tornado.gen.Return("bad load: id contains a null byte")
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise salt.ext.tornado.gen.Return(
-                "bad load: id {} is not a string".format(id_)
-            )
+            raise salt.ext.tornado.gen.Return(f"bad load: id {id_} is not a string")
 
         version = 0
         if "version" in payload:

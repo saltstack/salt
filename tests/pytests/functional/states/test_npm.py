@@ -23,7 +23,7 @@ def install_npm(states):
         # Just name the thing we're looking for
         states.npm  # pylint: disable=pointless-statement
     except (CommandExecutionError, AttributeError, AssertionError) as exc:
-        pytest.skip("Unable to install npm - {}".format(exc))
+        pytest.skip(f"Unable to install npm - {exc}")
 
 
 @pytest.fixture(scope="module")

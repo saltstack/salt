@@ -53,7 +53,7 @@ def sum_permissions(token, eauth):
         eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
 
         for group in user_groups & eauth_groups:
-            perms.extend(eauth["{}%".format(group)])
+            perms.extend(eauth[f"{group}%"])
     return perms
 
 

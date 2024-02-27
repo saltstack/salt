@@ -27,7 +27,7 @@ def _test_generated_sls_context(tmplpath, sls, **expected):
     # DeNormalize tmplpath
     tmplpath = str(PurePath(PurePosixPath(tmplpath)))
     if tmplpath.startswith("\\"):
-        tmplpath = "C:{}".format(tmplpath)
+        tmplpath = f"C:{tmplpath}"
     expected["tplpath"] = tmplpath
     actual = generate_sls_context(tmplpath, sls)
     assert {key: actual[key] for key in expected if key in actual} == actual

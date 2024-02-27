@@ -21,17 +21,17 @@ def latest_installer_name(arch="AMD64", **kwargs):
     """
     Create an installer file name
     """
-    return "Salt-Minion-Latest-Py3-{}-Setup.exe".format(arch)
+    return f"Salt-Minion-Latest-Py3-{arch}-Setup.exe"
 
 
 def download_and_verify(fp, name, repo=REPO):
     """
     Download an installer and verify its contents.
     """
-    md5 = "{}.md5".format(name)
+    md5 = f"{name}.md5"
 
     def url(x):
-        return "{}/{}".format(repo, x)
+        return f"{repo}/{x}"
 
     resp = requests.get(url(md5), timeout=60)
     if resp.status_code != 200:

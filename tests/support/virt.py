@@ -33,10 +33,10 @@ class SaltVirtMinionContainerFactory(SaltMinion):
     tls_uri = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        self.uri = "localhost:{}".format(self.sshd_port)
-        self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
-        self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
-        self.tls_uri = "qemu+tls://127.0.0.1:{}/system".format(self.libvirt_tls_port)
+        self.uri = f"localhost:{self.sshd_port}"
+        self.ssh_uri = f"qemu+ssh://{self.uri}/system"
+        self.tcp_uri = f"qemu+tcp://localhost:{self.libvirt_tcp_port}/system"
+        self.tls_uri = f"qemu+tls://127.0.0.1:{self.libvirt_tls_port}/system"
 
         if "environment" not in self.container_run_kwargs:
             self.container_run_kwargs["environment"] = {}

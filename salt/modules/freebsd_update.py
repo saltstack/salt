@@ -194,7 +194,7 @@ def update(**kwargs):
             return ret
         if "stdout" in err_:
             stdout[mode] = err_["stdout"]
-    return "\n".join(["{}: {}".format(k, v) for (k, v) in stdout.items()])
+    return "\n".join([f"{k}: {v}" for (k, v) in stdout.items()])
 
 
 def ids(**kwargs):

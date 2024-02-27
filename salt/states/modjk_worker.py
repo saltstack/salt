@@ -44,7 +44,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
     }
 
     # Send the command to target
-    func = "modjk.{}".format(cmd)
+    func = f"modjk.{cmd}"
     args = [worker, lbn, profile]
     response = __salt__["publish.publish"](target, func, args, tgt_type)
 
@@ -58,7 +58,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
 
     # parse response
     if not response:
-        ret["msg"] = "no servers answered the published command {}".format(cmd)
+        ret["msg"] = f"no servers answered the published command {cmd}"
         return ret
     elif len(errors) > 0:
         ret["msg"] = "the following minions return False"

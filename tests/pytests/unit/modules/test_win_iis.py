@@ -601,7 +601,7 @@ def test_get_webconfiguration_settings():
     for setting in settings:
         ps_cmd.extend(
             [
-                "$Property = Get-WebConfigurationProperty -PSPath '{}'".format(name),
+                f"$Property = Get-WebConfigurationProperty -PSPath '{name}'",
                 "-Name '{name}' -Filter '{filter}' -ErrorAction Stop;".format(
                     filter=setting["filter"], name=setting["name"]
                 ),

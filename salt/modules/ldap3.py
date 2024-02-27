@@ -53,7 +53,7 @@ class LDAPError(Exception):
 
 def _convert_exception(e):
     """Convert an ldap backend exception to an LDAPError and raise it."""
-    raise LDAPError("exception in ldap backend: {!r}".format(e), e) from e
+    raise LDAPError(f"exception in ldap backend: {e!r}", e) from e
 
 
 def _bind(l, bind=None):
@@ -91,7 +91,7 @@ def _format_unicode_password(pwd):
     :returns:
         A unicode string
     """
-    return '"{}"'.format(pwd).encode("utf-16-le")
+    return f'"{pwd}"'.encode("utf-16-le")
 
 
 class _connect_ctx:
@@ -267,7 +267,7 @@ def connect(connect_spec=None):
     if backend_name not in available_backends:
         raise ValueError(
             "unsupported backend or required Python module"
-            + " unavailable: {}".format(backend_name)
+            + f" unavailable: {backend_name}"
         )
     url = connect_spec.get("url", "ldapi:///")
     try:

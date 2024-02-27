@@ -72,7 +72,7 @@ class SMBProto:
 
     def tree_connect(self, share):
         if share.endswith("$"):
-            share = r"\\{}\{}".format(self.server, share)
+            share = rf"\\{self.server}\{share}"
         tree = TreeConnect(self.session, share)
         tree.connect()
         return tree

@@ -537,7 +537,7 @@ def safe_accept(target, tgt_type="glob"):
                 del ret[minion]
                 continue
             elif minion not in pending:
-                failures[minion] = "Minion key {} not found by salt-key".format(minion)
+                failures[minion] = f"Minion key {minion} not found by salt-key"
             elif pending[minion] != finger:
                 failures[minion] = (
                     "Minion key {} does not match the key in salt-key: {}".format(
@@ -558,9 +558,7 @@ def safe_accept(target, tgt_type="glob"):
             print(message)
             print("")
 
-    __jid_event__.fire_event(
-        {"message": "Accepted {:d} keys".format(len(ret))}, "progress"
-    )
+    __jid_event__.fire_event({"message": f"Accepted {len(ret):d} keys"}, "progress")
     return ret, failures
 
 
@@ -729,8 +727,8 @@ def bootstrap(
             client_opts["argv"] = [
                 "http.query",
                 script,
-                "backend={}".format(http_backend),
-                "text_out={}".format(deploy_command),
+                f"backend={http_backend}",
+                f"text_out={deploy_command}",
             ]
             salt.client.ssh.SSH(client_opts).run()
             client_opts["argv"] = [
@@ -845,7 +843,7 @@ objShell.Exec("{1}{2}")"""
     vb_saltexec = "saltinstall.exe"
     vb_saltexec_args = " /S /minion-name=%COMPUTERNAME%"
     if master:
-        vb_saltexec_args += " /master={}".format(master)
+        vb_saltexec_args += f" /master={master}"
 
     # One further thing we need to do; the Windows Salt minion is pretty
     # self-contained, except for the Microsoft Visual C++ 2008 runtime.

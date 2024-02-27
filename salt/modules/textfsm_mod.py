@@ -476,5 +476,5 @@ def index(
         ret["result"] = True
     except clitable.CliTableError as cterr:
         log.error("Unable to proces the CliTable", exc_info=True)
-        ret["comment"] = "Unable to process the output: {}".format(cterr)
+        ret["comment"] = f"Unable to process the output: {cterr}"
     return ret

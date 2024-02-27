@@ -59,7 +59,7 @@ def test_versions_report(salt_cli):
     ret_lines = [line.strip() for line in ret_lines]
 
     for header in expected:
-        assert "{}:".format(header) in ret_lines
+        assert f"{header}:" in ret_lines
 
     ret_dict = {}
     expected_keys = set()

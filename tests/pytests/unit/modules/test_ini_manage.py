@@ -77,7 +77,7 @@ def test_section_req():
     """
     Test the __repr__ in the _Section class
     """
-    expected = "_Section(){}{{}}".format(os.linesep)
+    expected = f"_Section(){os.linesep}{{}}"
     assert repr(ini._Section("test")) == expected
 
 

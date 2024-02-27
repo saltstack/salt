@@ -47,9 +47,9 @@ def _get_conn(socket=DEFAULT_SOCKET_URL):
     """
     Get connection to haproxy socket.
     """
-    assert os.path.exists(socket), "{} does not exist.".format(socket)
+    assert os.path.exists(socket), f"{socket} does not exist."
     issock = os.stat(socket).st_mode
-    assert stat.S_ISSOCK(issock), "{} is not a socket.".format(socket)
+    assert stat.S_ISSOCK(issock), f"{socket} is not a socket."
     ha_conn = haproxy.conn.HaPConn(socket)
     return ha_conn
 

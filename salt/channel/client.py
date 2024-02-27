@@ -143,7 +143,7 @@ class AsyncReqChannel:
         auth,
         timeout=REQUEST_CHANNEL_TIMEOUT,
         tries=REQUEST_CHANNEL_TRIES,
-        **kwargs
+        **kwargs,
     ):
         self.opts = dict(opts)
         self.transport = transport
@@ -446,7 +446,7 @@ class AsyncPubChannel:
         except Exception as exc:  # pylint: disable=broad-except
             if "-|RETRY|-" not in str(exc):
                 raise salt.exceptions.SaltClientError(
-                    "Unable to sign_in to master: {}".format(exc)
+                    f"Unable to sign_in to master: {exc}"
                 )  # TODO: better error message
 
     def close(self):

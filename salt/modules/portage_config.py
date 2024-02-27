@@ -192,7 +192,7 @@ def _unify_keywords():
         if os.path.isdir(old_path):
             for triplet in salt.utils.path.os_walk(old_path):
                 for file_name in triplet[2]:
-                    file_path = "{}/{}".format(triplet[0], file_name)
+                    file_path = f"{triplet[0]}/{file_name}"
                     with salt.utils.files.fopen(file_path) as fh_:
                         for line in fh_:
                             line = salt.utils.stringutils.to_unicode(line).strip()
@@ -239,7 +239,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         for triplet in salt.utils.path.os_walk(path):
             for file_name in triplet[2]:
-                file_path = "{}/{}".format(triplet[0], file_name)
+                file_path = f"{triplet[0]}/{file_name}"
                 cp = triplet[0][len(path) + 1 :] + "/" + file_name
 
                 shutil.copy(file_path, file_path + ".bak")
@@ -426,7 +426,7 @@ def append_to_package_conf(conf, atom="", flags=None, string="", overwrite=False
                                 atom, " ".join(merged_flags)
                             )
                         else:
-                            new_contents += "{}\n".format(atom)
+                            new_contents += f"{atom}\n"
                         added = True
                 else:
                     new_contents += l

@@ -438,7 +438,7 @@ def delete(name, family="ipv4", **kwargs):
     if res["result"]:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Delete nftables rule for {} {}".format(name, command.strip())
+        ret["comment"] = f"Delete nftables rule for {name} {command.strip()}"
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
@@ -642,7 +642,7 @@ def table_present(name, family="ipv4", **kwargs):
         )
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to create table {} for family {}".format(name, family)
+        ret["comment"] = f"Failed to create table {name} for family {family}"
 
     return ret
 
@@ -687,6 +687,6 @@ def table_absent(name, family="ipv4", **kwargs):
         )
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to delete table {} from family {}".format(name, family)
+        ret["comment"] = f"Failed to delete table {name} from family {family}"
 
     return ret

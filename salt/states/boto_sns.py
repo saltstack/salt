@@ -106,10 +106,10 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
     )
     if is_present:
         ret["result"] = True
-        ret["comment"] = "AWS SNS topic {} present.".format(name)
+        ret["comment"] = f"AWS SNS topic {name} present."
     else:
         if __opts__["test"]:
-            msg = "AWS SNS topic {} is set to be created.".format(name)
+            msg = f"AWS SNS topic {name} is set to be created."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -118,13 +118,13 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
             name, region=region, key=key, keyid=keyid, profile=profile
         )
         if created:
-            msg = "AWS SNS topic {} created.".format(name)
+            msg = f"AWS SNS topic {name} created."
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = {"topic": name, "subscriptions": []}
             ret["result"] = True
         else:
-            ret["comment"] = "Failed to create {} AWS SNS topic".format(name)
+            ret["comment"] = f"Failed to create {name} AWS SNS topic"
             ret["result"] = False
             return ret
 
@@ -264,7 +264,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None, unsubscribe=Fa
             name, region=region, key=key, keyid=keyid, profile=profile
         )
         if deleted:
-            ret["comment"] = "AWS SNS topic {} deleted.".format(name)
+            ret["comment"] = f"AWS SNS topic {name} deleted."
             ret["changes"]["new"] = None
             if unsubscribe is False:
                 ret["changes"]["old"] = {"topic": name}
@@ -276,8 +276,8 @@ def absent(name, region=None, key=None, keyid=None, profile=None, unsubscribe=Fa
                     }
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} AWS SNS topic.".format(name)
+            ret["comment"] = f"Failed to delete {name} AWS SNS topic."
     else:
-        ret["comment"] = "AWS SNS topic {} does not exist.".format(name)
+        ret["comment"] = f"AWS SNS topic {name} does not exist."
 
     return ret

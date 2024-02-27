@@ -16,9 +16,8 @@ def test_pip_install(install_salt, salt_call_cli):
     """
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--versions-report"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+        capture_output=True,
+        text=True,
         check=True,
         shell=False,
     )
@@ -69,9 +68,8 @@ def test_pip_install(install_salt, salt_call_cli):
 
             ret = subprocess.run(
                 install_salt.binary_paths["salt"] + ["--versions-report"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
+                capture_output=True,
+                text=True,
                 check=True,
                 shell=False,
             )

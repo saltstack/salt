@@ -14,7 +14,7 @@ def test_event_return(master_opts):
         evt.start()
     except TypeError as exc:
         if "object" in str(exc):
-            pytest.fail("'{}' TypeError should have not been raised".format(exc))
+            pytest.fail(f"'{exc}' TypeError should have not been raised")
     finally:
         if evt is not None:
             terminate_process(evt.pid, kill_children=True)

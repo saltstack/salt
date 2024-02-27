@@ -173,7 +173,7 @@ def test_state_sls_id_test_true_post_run(salt_call_cli, testfile_path):
     assert ret.returncode == 0
     assert testfile_path.exists()
     for val in ret.data.values():
-        assert val["comment"] == "File {} updated".format(testfile_path)
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
@@ -195,7 +195,7 @@ def test_state_sls_id_test_false_pillar_true(salt_call_cli, testfile_path):
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=False)
     assert ret.returncode == 0
     for val in ret.data.values():
-        assert val["comment"] == "File {} updated".format(testfile_path)
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
 

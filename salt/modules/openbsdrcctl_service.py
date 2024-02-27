@@ -56,7 +56,7 @@ def available(name):
 
         salt '*' service.available sshd
     """
-    cmd = "{} get {}".format(_cmd(), name)
+    cmd = f"{_cmd()} get {name}"
     if __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 2:
         return False
     return True
@@ -88,7 +88,7 @@ def get_all():
     """
     ret = []
     service = _cmd()
-    for svc in __salt__["cmd.run"]("{} ls all".format(service)).splitlines():
+    for svc in __salt__["cmd.run"](f"{service} ls all").splitlines():
         ret.append(svc)
     return sorted(ret)
 
@@ -105,7 +105,7 @@ def get_disabled():
     """
     ret = []
     service = _cmd()
-    for svc in __salt__["cmd.run"]("{} ls off".format(service)).splitlines():
+    for svc in __salt__["cmd.run"](f"{service} ls off").splitlines():
         ret.append(svc)
     return sorted(ret)
 
@@ -122,7 +122,7 @@ def get_enabled():
     """
     ret = []
     service = _cmd()
-    for svc in __salt__["cmd.run"]("{} ls on".format(service)).splitlines():
+    for svc in __salt__["cmd.run"](f"{service} ls on").splitlines():
         ret.append(svc)
     return sorted(ret)
 
@@ -137,7 +137,7 @@ def start(name):
 
         salt '*' service.start <service name>
     """
-    cmd = "{} -f start {}".format(_cmd(), name)
+    cmd = f"{_cmd()} -f start {name}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -151,7 +151,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     """
-    cmd = "{} stop {}".format(_cmd(), name)
+    cmd = f"{_cmd()} stop {name}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -165,7 +165,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     """
-    cmd = "{} -f restart {}".format(_cmd(), name)
+    cmd = f"{_cmd()} -f restart {name}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -179,7 +179,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     """
-    cmd = "{} reload {}".format(_cmd(), name)
+    cmd = f"{_cmd()} reload {name}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -197,7 +197,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__["status.pid"](sig))
 
-    cmd = "{} check {}".format(_cmd(), name)
+    cmd = f"{_cmd()} check {name}"
     return not __salt__["cmd.retcode"](cmd, ignore_retcode=True)
 
 
@@ -217,14 +217,14 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
         salt '*' service.enable <service name> flags=<flags>
     """
-    stat_cmd = "{} set {} status on".format(_cmd(), name)
+    stat_cmd = f"{_cmd()} set {name} status on"
     stat_retcode = __salt__["cmd.retcode"](stat_cmd)
 
     flag_retcode = None
     # only (re)set flags for services that have an rc.d(8) script
-    if os.path.exists("/etc/rc.d/{}".format(name)):
+    if os.path.exists(f"/etc/rc.d/{name}"):
         flags = _get_flags(**kwargs)
-        flag_cmd = "{} set {} flags {}".format(_cmd(), name, flags)
+        flag_cmd = f"{_cmd()} set {name} flags {flags}"
         flag_retcode = __salt__["cmd.retcode"](flag_cmd)
 
     return not any([stat_retcode, flag_retcode])
@@ -240,7 +240,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     """
-    cmd = "{} set {} status off".format(_cmd(), name)
+    cmd = f"{_cmd()} set {name} status off"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -254,7 +254,7 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     """
-    cmd = "{} get {} status".format(_cmd(), name)
+    cmd = f"{_cmd()} get {name} status"
     return not __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 0
 
 
@@ -273,18 +273,16 @@ def enabled(name, **kwargs):
         salt '*' service.enabled <service name>
         salt '*' service.enabled <service name> flags=<flags>
     """
-    cmd = "{} get {} status".format(_cmd(), name)
+    cmd = f"{_cmd()} get {name} status"
     if not __salt__["cmd.retcode"](cmd, ignore_retcode=True):
         # also consider a service disabled if the current flags are different
         # than the configured ones so we have a chance to update them
         flags = _get_flags(**kwargs)
-        cur_flags = __salt__["cmd.run_stdout"]("{} get {} flags".format(_cmd(), name))
+        cur_flags = __salt__["cmd.run_stdout"](f"{_cmd()} get {name} flags")
         if format(flags) == format(cur_flags):
             return True
         if not flags:
-            def_flags = __salt__["cmd.run_stdout"](
-                "{} getdef {} flags".format(_cmd(), name)
-            )
+            def_flags = __salt__["cmd.run_stdout"](f"{_cmd()} getdef {name} flags")
             if format(cur_flags) == format(def_flags):
                 return True
 

@@ -853,7 +853,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             kwargs["service_name"],
             kwargs["deployment_name"],
             kwargs["role_name"],
-            **volume
+            **volume,
         )
         log.debug(attach)
 
@@ -954,7 +954,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             kwargs["service_name"],
             kwargs["deployment_name"],
             kwargs["role_name"],
-            **volume
+            **volume,
         )
         _wait_for_async(conn, result.request_id)
 
@@ -1031,7 +1031,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             result = conn.delete_deployment(service_name, service_name)
         except AzureConflictHttpError as exc:
             log.error(exc.message)
-            raise SaltCloudSystemExit("{}: {}".format(name, exc.message))
+            raise SaltCloudSystemExit(f"{name}: {exc.message}")
         delete_type = "delete_deployment"
     _wait_for_async(conn, result.request_id)
     ret[name] = {

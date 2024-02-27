@@ -512,7 +512,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
             if acesAdded:
                 ret["changes"]["Added ACEs"] = acesAdded
         else:
-            ret["comment"] = "Unable to obtain the DACL of {}".format(path)
+            ret["comment"] = f"Unable to obtain the DACL of {path}"
     else:
         ret["comment"] = "An empty value was specified for a required item."
         ret["result"] = False
@@ -603,7 +603,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
                     ret["result"] = True
                 except Exception as e:  # pylint: disable=broad-except
                     ret["result"] = False
-                    ret["comment"] = "Error removing ACE.  The error was {}.".format(e)
+                    ret["comment"] = f"Error removing ACE.  The error was {e}."
                     return ret
         else:
             ret["comment"] = "The specified ACE was not found on the path."
@@ -619,9 +619,9 @@ def _ace_to_text(ace, objectType):
     try:
         userSid = win32security.LookupAccountSid("", ace[2])
         if userSid[1]:
-            userSid = "{1}\\{0}".format(userSid[0], userSid[1])
+            userSid = f"{userSid[1]}\\{userSid[0]}"
         else:
-            userSid = "{}".format(userSid[0])
+            userSid = f"{userSid[0]}"
     except Exception:  # pylint: disable=broad-except
         userSid = win32security.ConvertSidToStringSid(ace[2])
     tPerm = ace[1]
@@ -643,7 +643,7 @@ def _ace_to_text(ace, objectType):
         if dc.validPropagations[objectType][x]["BITS"] == tProps:
             tProps = dc.validPropagations[objectType][x]["TEXT"]
             break
-    return "{} {} {} on {} {}".format(userSid, tAceType, tPerm, tProps, tInherited)
+    return f"{userSid} {tAceType} {tPerm} on {tProps} {tInherited}"
 
 
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
@@ -730,7 +730,7 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
             ret["comment"] = (
-                "Error attempting to set the inheritance.  The error was {}.".format(e)
+                f"Error attempting to set the inheritance.  The error was {e}."
             )
 
     return ret
@@ -818,7 +818,7 @@ def check_inheritance(path, objectType, user=None):
     except Exception as e:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = (
-            "Error obtaining the Security Descriptor or DACL of the path: {}.".format(e)
+            f"Error obtaining the Security Descriptor or DACL of the path: {e}."
         )
         return ret
 

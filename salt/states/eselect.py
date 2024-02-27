@@ -59,7 +59,7 @@ def set_(name, target, module_parameter=None, action_parameter=None):
         )
         ret["result"] = False
     elif __opts__["test"]:
-        ret["comment"] = "Target '{}' will be set on '{}' module.".format(target, name)
+        ret["comment"] = f"Target '{target}' will be set on '{name}' module."
         ret["result"] = None
     else:
         result = __salt__["eselect.set_target"](
@@ -70,7 +70,7 @@ def set_(name, target, module_parameter=None, action_parameter=None):
         )
         if result:
             ret["changes"][name] = {"old": old_target, "new": target}
-            ret["comment"] = "Target '{}' set on '{}' module.".format(target, name)
+            ret["comment"] = f"Target '{target}' set on '{name}' module."
         else:
             ret["comment"] = "Target '{}' failed to be set on '{}' module.".format(
                 target, name

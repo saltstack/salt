@@ -126,4 +126,4 @@ def ext_pillar(minion_id, pillar, **kwargs):
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError("ext_pillar.reclass: {}".format(e))
+        raise SaltInvocationError(f"ext_pillar.reclass: {e}")

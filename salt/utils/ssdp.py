@@ -285,7 +285,7 @@ class SSDPDiscoveryServer(SSDPBase):
                             family=family,
                             type=socket.SOCK_DGRAM,
                             proto=proto,
-                            flags=flags
+                            flags=flags,
                         )
                     )
                     if not infos:
@@ -407,9 +407,7 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         """
-        query = salt.utils.stringutils.to_bytes(
-            "{}{}".format(self.signature, time.time())
-        )
+        query = salt.utils.stringutils.to_bytes(f"{self.signature}{time.time()}")
         self._socket.sendto(query, ("<broadcast>", self.port))
 
         return query

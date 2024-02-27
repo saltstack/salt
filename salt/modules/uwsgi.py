@@ -40,6 +40,6 @@ def stats(socket):
         salt '*' uwsgi.stats 127.0.0.1:5050
     """
 
-    cmd = ["uwsgi", "--connect-and-read", "{}".format(socket)]
+    cmd = ["uwsgi", "--connect-and-read", f"{socket}"]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return salt.utils.json.loads(out)

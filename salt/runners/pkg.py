@@ -32,7 +32,7 @@ def list_upgrades(jid, style="group", outputter="nested", ext_source=None):
         (__opts__["ext_job_cache"], ext_source, __opts__["master_job_cache"])
     )
 
-    data = mminion.returners["{}.get_jid".format(returner)](jid)
+    data = mminion.returners[f"{returner}.get_jid"](jid)
     pkgs = {}
 
     if style == "group":

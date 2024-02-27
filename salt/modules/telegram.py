@@ -104,7 +104,7 @@ def _post_message(message, chat_id, token):
     :param token:       The Telegram API token.
     :return:            Boolean if message was sent successfully.
     """
-    url = "https://api.telegram.org/bot{}/sendMessage".format(token)
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     parameters = dict()
     if chat_id:

@@ -34,7 +34,7 @@ def profile_func(filename=None):
             try:
                 profiler = cProfile.Profile()
                 retval = profiler.runcall(fun, *args, **kwargs)
-                profiler.dump_stats(filename or "{}_func.profile".format(fun.__name__))
+                profiler.dump_stats(filename or f"{fun.__name__}_func.profile")
             except OSError:
                 logging.exception("Could not open profile file %s", filename)
 
@@ -65,9 +65,9 @@ def output_profile(pr, stats_path="/tmp/stats", stop=False, id_=None):
             date = datetime.datetime.now().isoformat()
             if id_ is None:
                 id_ = salt.utils.hashutils.random_hash(size=32)
-            ficp = os.path.join(stats_path, "{}.{}.pstats".format(id_, date))
-            fico = os.path.join(stats_path, "{}.{}.dot".format(id_, date))
-            ficn = os.path.join(stats_path, "{}.{}.stats".format(id_, date))
+            ficp = os.path.join(stats_path, f"{id_}.{date}.pstats")
+            fico = os.path.join(stats_path, f"{id_}.{date}.dot")
+            ficn = os.path.join(stats_path, f"{id_}.{date}.stats")
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
                 with salt.utils.files.fopen(ficn, "w") as fic:

@@ -66,7 +66,7 @@ def _client(
     influxdb_password=None,
     influxdb_host=None,
     influxdb_port=None,
-    **client_args
+    **client_args,
 ):
     if not influxdb_user:
         influxdb_user = __salt__["config.option"]("influxdb.user", "root")
@@ -84,7 +84,7 @@ def _client(
         port=influxdb_port,
         username=influxdb_user,
         password=influxdb_password,
-        **client_args
+        **client_args,
     )
 
 
@@ -674,7 +674,7 @@ def drop_continuous_query(database, name, **client_args):
     """
     client = _client(**client_args)
 
-    query = "DROP CONTINUOUS QUERY {} ON {}".format(name, database)
+    query = f"DROP CONTINUOUS QUERY {name} ON {database}"
     client.query(query)
     return True
 

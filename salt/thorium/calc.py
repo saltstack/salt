@@ -48,7 +48,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if name not in __reg__:
-        ret["comment"] = "{} not found in register".format(name)
+        ret["comment"] = f"{name} not found in register"
         ret["result"] = False
 
     def opadd(vals):

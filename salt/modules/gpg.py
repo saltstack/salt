@@ -121,7 +121,7 @@ def _get_user_info(user=None):
             # if it doesn't exist then fall back to user Salt running as
             userinfo = _get_user_info()
         else:
-            raise SaltInvocationError("User {} does not exist".format(user))
+            raise SaltInvocationError(f"User {user} does not exist")
 
     return userinfo
 
@@ -583,11 +583,11 @@ def delete_key(
             else:
                 if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":
                     # Delete the secret key
-                    ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
+                    ret["message"] = f"Secret key for {fingerprint} deleted\n"
 
         # Delete the public key
         if str(__delete_key(fingerprint, False, use_passphrase)) == "ok":
-            ret["message"] += "Public key for {} deleted".format(fingerprint)
+            ret["message"] += f"Public key for {fingerprint} deleted"
         ret["res"] = True
         return ret
     else:
@@ -985,12 +985,12 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             if key:
                 if "fingerprint" not in key:
                     ret["res"] = False
-                    ret["message"] = "Fingerprint not found for keyid {}".format(keyid)
+                    ret["message"] = f"Fingerprint not found for keyid {keyid}"
                     return ret
                 fingerprint = key["fingerprint"]
             else:
                 ret["res"] = False
-                ret["message"] = "KeyID {} not in GPG keychain".format(keyid)
+                ret["message"] = f"KeyID {keyid} not in GPG keychain"
                 return ret
         else:
             ret["res"] = False
@@ -1000,7 +1000,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
     if trust_level not in _VALID_TRUST_LEVELS:
         return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
 
-    stdin = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
+    stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
     cmd = [_gpg(), "--import-ownertrust"]
     _user = user
 
@@ -1290,7 +1290,7 @@ def encrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Encrypted data has been written to {}".format(output)
+                ret["comment"] = f"Encrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:
@@ -1378,7 +1378,7 @@ def decrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Decrypted data has been written to {}".format(output)
+                ret["comment"] = f"Decrypted data has been written to {output}"
             else:
                 ret["comment"] = result.data
         else:

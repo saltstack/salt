@@ -116,7 +116,7 @@ def render(input, saltenv="base", sls="", argline="", **kws):
             sls,
             context=ctx,
             argline=rt_argline.strip(),
-            **kws
+            **kws,
         )
         high = render_data(tmplout, saltenv, sls, argline=rd_argline.strip())
         return process_high_data(high, extract)
@@ -202,7 +202,7 @@ def render(input, saltenv="base", sls="", argline="", **kws):
             name, rt_argline = (args[1] + " ").split(" ", 1)
             render_template = renderers[name]  # e.g., the mako renderer
         except KeyError as err:
-            raise SaltRenderError("Renderer: {} is not available!".format(err))
+            raise SaltRenderError(f"Renderer: {err} is not available!")
         except IndexError:
             raise INVALID_USAGE_ERROR
 
@@ -428,7 +428,7 @@ EXTENDED_REQUIRE_IN = {}
 #   explicit require_in/watch_in/listen_in/onchanges_in/onfail_in can only contain states after it
 def add_implicit_requires(data):
     def T(sid, state):  # pylint: disable=C0103
-        return "{}:{}".format(sid, state_name(state))
+        return f"{sid}:{state_name(state)}"
 
     states_before = set()
     states_after = set()

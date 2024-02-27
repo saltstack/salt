@@ -846,7 +846,7 @@ def test_list_repo_pkgs_with_options(list_repos_var):
                         except AssertionError:
                             continue
                     else:
-                        pytest.fail("repo '{}' not checked".format(repo))
+                        pytest.fail(f"repo '{repo}' not checked")
 
 
 def test_list_upgrades_dnf():

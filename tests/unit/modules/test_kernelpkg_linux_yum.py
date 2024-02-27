@@ -43,7 +43,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 "__grains__": {
                     "os": self.OS_NAME,
                     "osmajorrelease": self.OS_MAJORRELEASE,
-                    "kernelrelease": "{}.{}".format(self.KERNEL_LIST[0], self.OS_ARCH),
+                    "kernelrelease": f"{self.KERNEL_LIST[0]}.{self.OS_ARCH}",
                 },
                 "__salt__": {
                     "pkg.normalize_name": pkg.normalize_name,

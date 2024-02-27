@@ -94,7 +94,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
     # overriding anything existing
     pillar_kwargs = {}
     for key, value in kwargs.items():
-        pillar_kwargs["ext_pillar_virt.{}".format(key)] = value
+        pillar_kwargs[f"ext_pillar_virt.{key}"] = value
 
     pillar = __salt__["pillar.ext"]({"libvirt": "_"}, pillar_kwargs)
     paths = {
@@ -106,7 +106,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
     }
 
     for key in paths:
-        p_key = "libvirt.{}.pem".format(key)
+        p_key = f"libvirt.{key}.pem"
         if p_key not in pillar:
             continue
         if not os.path.exists(os.path.dirname(paths[key])):
@@ -127,9 +127,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
     else:
         for key in ret["changes"]:
             with salt.utils.files.fopen(paths[key], "w+") as fp_:
-                fp_.write(
-                    salt.utils.stringutils.to_str(pillar["libvirt.{}.pem".format(key)])
-                )
+                fp_.write(salt.utils.stringutils.to_str(pillar[f"libvirt.{key}.pem"]))
 
         ret["comment"] = "Updated libvirt certs and keys"
 
@@ -145,7 +143,7 @@ def _virt_call(
     connection=None,
     username=None,
     password=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Helper to call the virt functions. Wildcards supported.
@@ -173,12 +171,12 @@ def _virt_call(
             if action_needed:
                 response = True
                 if not __opts__["test"]:
-                    response = __salt__["virt.{}".format(function)](
+                    response = __salt__[f"virt.{function}"](
                         targeted_domain,
                         connection=connection,
                         username=username,
                         password=password,
-                        **kwargs
+                        **kwargs,
                     )
                     if isinstance(response, dict):
                         response = response["name"]
@@ -676,14 +674,12 @@ def defined(
             ret["changes"][name] = status
             if not status.get("definition"):
                 ret["changes"] = {}
-                ret["comment"] = "Domain {} unchanged".format(name)
+                ret["comment"] = f"Domain {name} unchanged"
                 ret["result"] = True
             elif status.get("errors"):
-                ret["comment"] = (
-                    "Domain {} updated with live update(s) failures".format(name)
-                )
+                ret["comment"] = f"Domain {name} updated with live update(s) failures"
             else:
-                ret["comment"] = "Domain {} updated".format(name)
+                ret["comment"] = f"Domain {name} updated"
         else:
             if not __opts__["test"]:
                 __salt__["virt.init"](
@@ -717,7 +713,7 @@ def defined(
                     host_devices=host_devices,
                 )
             ret["changes"][name] = {"definition": True}
-            ret["comment"] = "Domain {} defined".format(name)
+            ret["comment"] = f"Domain {name} defined"
     except libvirt.libvirtError as err:
         # Something bad happened when defining / updating the VM, report it
         ret["comment"] = str(err)
@@ -1049,7 +1045,7 @@ def running(
                         username=username,
                         password=password,
                     )
-                comment = "Domain {} started".format(name)
+                comment = f"Domain {name} started"
                 if not ret["comment"].endswith("unchanged"):
                     comment = "{} and started".format(ret["comment"])
                 ret["comment"] = comment
@@ -1057,7 +1053,7 @@ def running(
                     ret["changes"][name] = {}
                 ret["changes"][name]["started"] = True
             elif not changed:
-                ret["comment"] = "Domain {} exists and is running".format(name)
+                ret["comment"] = f"Domain {name} exists and is running"
 
         except libvirt.libvirtError as err:
             # Something bad happened when starting / updating the VM, report it
@@ -1206,7 +1202,7 @@ def reverted(
     try:
         domains = fnmatch.filter(__salt__["virt.list_domains"](), name)
         if not domains:
-            ret["comment"] = 'No domains found for criteria "{}"'.format(name)
+            ret["comment"] = f'No domains found for criteria "{name}"'
         else:
             ignored_domains = list()
             if len(domains) > 1:
@@ -1515,10 +1511,10 @@ def network_defined(
                         password=password,
                     )
                 action = ", autostart flag changed" if needs_autostart else ""
-                ret["changes"][name] = "Network updated{}".format(action)
-                ret["comment"] = "Network {} updated{}".format(name, action)
+                ret["changes"][name] = f"Network updated{action}"
+                ret["comment"] = f"Network {name} updated{action}"
             else:
-                ret["comment"] = "Network {} unchanged".format(name)
+                ret["comment"] = f"Network {name} unchanged"
                 ret["result"] = True
         else:
             needs_autostart = autostart
@@ -1546,10 +1542,10 @@ def network_defined(
                 )
             if needs_autostart:
                 ret["changes"][name] = "Network defined, marked for autostart"
-                ret["comment"] = "Network {} defined, marked for autostart".format(name)
+                ret["comment"] = f"Network {name} defined, marked for autostart"
             else:
                 ret["changes"][name] = "Network defined"
-                ret["comment"] = "Network {} defined".format(name)
+                ret["comment"] = f"Network {name} defined"
 
         if needs_autostart:
             if not __opts__["test"]:
@@ -1974,15 +1970,13 @@ def pool_defined(
                         action = ", built"
 
                 action = (
-                    "{}, autostart flag changed".format(action)
-                    if needs_autostart
-                    else action
+                    f"{action}, autostart flag changed" if needs_autostart else action
                 )
-                ret["changes"][name] = "Pool updated{}".format(action)
-                ret["comment"] = "Pool {} updated{}".format(name, action)
+                ret["changes"][name] = f"Pool updated{action}"
+                ret["comment"] = f"Pool {name} updated{action}"
 
             else:
-                ret["comment"] = "Pool {} unchanged".format(name)
+                ret["comment"] = f"Pool {name} unchanged"
                 ret["result"] = True
         else:
             needs_autostart = autostart
@@ -2025,10 +2019,10 @@ def pool_defined(
                         )
             if needs_autostart:
                 ret["changes"][name] = "Pool defined, marked for autostart"
-                ret["comment"] = "Pool {} defined, marked for autostart".format(name)
+                ret["comment"] = f"Pool {name} defined, marked for autostart"
             else:
                 ret["changes"][name] = "Pool defined"
-                ret["comment"] = "Pool {} defined".format(name)
+                ret["comment"] = f"Pool {name} defined"
 
         if needs_autostart:
             if not __opts__["test"]:
@@ -2146,7 +2140,7 @@ def pool_running(
                                 username=username,
                                 password=password,
                             )
-                        action = "built, {}".format(action)
+                        action = f"built, {action}"
                 else:
                     action = "already running"
                     result = True
@@ -2160,16 +2154,16 @@ def pool_running(
                         password=password,
                     )
 
-            comment = "Pool {}".format(name)
+            comment = f"Pool {name}"
             change = "Pool"
             if name in ret["changes"]:
                 comment = "{},".format(ret["comment"])
                 change = "{},".format(ret["changes"][name])
 
             if action != "already running":
-                ret["changes"][name] = "{} {}".format(change, action)
+                ret["changes"][name] = f"{change} {action}"
 
-            ret["comment"] = "{} {}".format(comment, action)
+            ret["comment"] = f"{comment} {action}"
             ret["result"] = result
 
         except libvirt.libvirtError as err:
@@ -2301,9 +2295,9 @@ def pool_deleted(name, purge=False, connection=None, username=None, password=Non
                     info[name]["type"], ", ".join(unsupported)
                 )
         else:
-            ret["comment"] = "Storage pool could not be found: {}".format(name)
+            ret["comment"] = f"Storage pool could not be found: {name}"
     except libvirt.libvirtError as err:
-        ret["comment"] = "Failed deleting pool: {}".format(err.get_error_message())
+        ret["comment"] = f"Failed deleting pool: {err.get_error_message()}"
         ret["result"] = False
 
     return ret
@@ -2389,7 +2383,7 @@ def volume_defined(
         connection=connection, username=username, password=password
     )
     if pool not in pools:
-        raise SaltInvocationError("Storage pool {} not existing".format(pool))
+        raise SaltInvocationError(f"Storage pool {pool} not existing")
 
     vol_infos = (
         __salt__["virt.volume_infos"](
@@ -2449,7 +2443,7 @@ def volume_defined(
         ret["comment"] = "Volume {} {}defined in pool {}".format(
             name, test_comment, pool
         )
-        ret["changes"] = {"{}/{}".format(pool, name): {"old": "", "new": "defined"}}
+        ret["changes"] = {f"{pool}/{name}": {"old": "", "new": "defined"}}
     except libvirt.libvirtError as err:
         ret["comment"] = err.get_error_message()
         ret["result"] = False

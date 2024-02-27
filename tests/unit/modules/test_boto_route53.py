@@ -70,7 +70,7 @@ def _has_required_moto():
 @pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto module must be >= to {}".format(required_moto),
+    reason=f"The moto module must be >= to {required_moto}",
 )
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """

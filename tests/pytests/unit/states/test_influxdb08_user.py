@@ -38,22 +38,22 @@ def test_present():
         assert influxdb08_user.present(name, passwd, database="mydb") == ret
 
         with patch.dict(influxdb08_user.__opts__, {"test": True}):
-            comt = "User {} is not present and needs to be created".format(name)
+            comt = f"User {name} is not present and needs to be created"
             ret.update({"comment": comt, "result": None})
             assert influxdb08_user.present(name, passwd) == ret
 
         with patch.dict(influxdb08_user.__opts__, {"test": False}):
-            comt = "User {} has been created".format(name)
+            comt = f"User {name} has been created"
             ret.update(
                 {"comment": comt, "result": True, "changes": {"salt": "Present"}}
             )
             assert influxdb08_user.present(name, passwd) == ret
 
-            comt = "Failed to create user {}".format(name)
+            comt = f"Failed to create user {name}"
             ret.update({"comment": comt, "result": False, "changes": {}})
             assert influxdb08_user.present(name, passwd) == ret
 
-        comt = "User {} is already present".format(name)
+        comt = f"User {name} is already present"
         ret.update({"comment": comt, "result": True})
         assert influxdb08_user.present(name, passwd) == ret
 
@@ -73,19 +73,19 @@ def test_absent():
         {"influxdb08.user_exists": mock, "influxdb08.user_remove": mock_t},
     ):
         with patch.dict(influxdb08_user.__opts__, {"test": True}):
-            comt = "User {} is present and needs to be removed".format(name)
+            comt = f"User {name} is present and needs to be removed"
             ret.update({"comment": comt})
             assert influxdb08_user.absent(name) == ret
 
         with patch.dict(influxdb08_user.__opts__, {"test": False}):
-            comt = "User {} has been removed".format(name)
+            comt = f"User {name} has been removed"
             ret.update({"comment": comt, "result": True, "changes": {"salt": "Absent"}})
             assert influxdb08_user.absent(name) == ret
 
-            comt = "Failed to remove user {}".format(name)
+            comt = f"Failed to remove user {name}"
             ret.update({"comment": comt, "result": False, "changes": {}})
             assert influxdb08_user.absent(name) == ret
 
-        comt = "User {} is not present, so it cannot be removed".format(name)
+        comt = f"User {name} is not present, so it cannot be removed"
         ret.update({"comment": comt, "result": True})
         assert influxdb08_user.absent(name) == ret

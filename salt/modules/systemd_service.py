@@ -135,7 +135,7 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     """
-    contextkey = "systemd._check_for_unit_changes.{}".format(name)
+    contextkey = f"systemd._check_for_unit_changes.{name}"
     if contextkey not in __context__:
         if _untracked_custom_unit_found(name) or _unit_file_changed(name):
             systemctl_reload()
@@ -377,7 +377,7 @@ def _sysv_enabled(name, root):
     runlevel.
     """
     # Find exact match (disambiguate matches like "S01anacron" for cron)
-    rc = _root("/etc/rc{}.d/S*{}".format(_runlevel(), name), root)
+    rc = _root(f"/etc/rc{_runlevel()}.d/S*{name}", root)
     for match in glob.glob(rc):
         if re.match(r"S\d{,2}%s" % name, os.path.basename(match)):
             return True
@@ -1451,7 +1451,7 @@ def firstboot(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     out = __salt__["cmd.run_all"](cmd)
 

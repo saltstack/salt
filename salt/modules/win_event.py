@@ -175,7 +175,7 @@ def _get_handle(log_name):
         return win32evtlog.OpenEventLog(None, log_name)
     except pywintypes.error as exc:
         raise FileNotFoundError(
-            "Failed to open log: {}\nError: {}".format(log_name, exc.strerror)
+            f"Failed to open log: {log_name}\nError: {exc.strerror}"
         )
 
 
@@ -680,7 +680,7 @@ def add(
     if event_type is None:
         event_type = event_types["Error"]
     elif event_type not in event_types:
-        msg = "Incorrect event type: {}".format(event_type)
+        msg = f"Incorrect event type: {event_type}"
         raise CommandExecutionError(msg)
     else:
         event_type = event_types[event_type]

@@ -252,7 +252,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     old = _get_current(key=key, name=name, policy_class=policy_class)
 
-    pol_correct = old["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = old["pol"].get("data", "") == f"**del.{name}"
     reg_correct = old["reg"] == {}
 
     if pol_correct and reg_correct:
@@ -274,7 +274,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     new = _get_current(key=key, name=name, policy_class=policy_class)
 
-    pol_correct = new["pol"].get("data", "") == "**del.{}".format(name)
+    pol_correct = new["pol"].get("data", "") == f"**del.{name}"
     reg_correct = new["reg"] == {}
 
     if pol_correct and reg_correct:

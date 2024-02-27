@@ -30,7 +30,7 @@ def test_user_present():
     mock_f = MagicMock(return_value=False)
     mock_lst = MagicMock(return_value=["Error"])
     with patch.dict(keystone.__salt__, {"keystone.tenant_get": mock_lst}):
-        comt = 'Tenant / project "{}" does not exist'.format(tenant)
+        comt = f'Tenant / project "{tenant}" does not exist'
         ret.update({"comment": comt})
         assert keystone.user_present(name, password, email, tenant) == ret
 
@@ -55,7 +55,7 @@ def test_user_present():
         },
     ):
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'User "{}" will be updated'.format(name)
+            comt = f'User "{name}" will be updated'
             ret.update(
                 {
                     "comment": comt,
@@ -113,7 +113,7 @@ def test_user_present():
             assert keystone.user_present(name, password, email) == ret
 
         with patch.dict(keystone.__opts__, {"test": False}):
-            comt = "Keystone user {} has been added".format(name)
+            comt = f"Keystone user {name} has been added"
             ret.update(
                 {"comment": comt, "result": True, "changes": {"User": "Created"}}
             )
@@ -130,7 +130,7 @@ def test_user_absent():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'User "{}" is already absent'.format(name),
+        "comment": f'User "{name}" is already absent',
     }
 
     mock_lst = MagicMock(side_effect=[["Error"], []])
@@ -138,7 +138,7 @@ def test_user_absent():
         assert keystone.user_absent(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'User "{}" will be deleted'.format(name)
+            comt = f'User "{name}" will be deleted'
             ret.update({"comment": comt, "result": None})
             assert keystone.user_absent(name) == ret
 
@@ -154,7 +154,7 @@ def test_tenant_present():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Tenant / project "{}" already exists'.format(name),
+        "comment": f'Tenant / project "{name}" already exists',
     }
 
     mock_dict = MagicMock(
@@ -171,7 +171,7 @@ def test_tenant_present():
         {"keystone.tenant_get": mock_dict, "keystone.tenant_create": mock_t},
     ):
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Tenant / project "{}" will be updated'.format(name)
+            comt = f'Tenant / project "{name}" will be updated'
             ret.update(
                 {
                     "comment": comt,
@@ -181,7 +181,7 @@ def test_tenant_present():
             )
             assert keystone.tenant_present(name) == ret
 
-            comt = 'Tenant / project "{}" will be updated'.format(name)
+            comt = f'Tenant / project "{name}" will be updated'
             ret.update(
                 {
                     "comment": comt,
@@ -191,7 +191,7 @@ def test_tenant_present():
             )
             assert keystone.tenant_present(name, description) == ret
 
-            comt = 'Tenant / project "{}" will be added'.format(name)
+            comt = f'Tenant / project "{name}" will be added'
             ret.update(
                 {
                     "comment": comt,
@@ -202,7 +202,7 @@ def test_tenant_present():
             assert keystone.tenant_present(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": False}):
-            comt = 'Tenant / project "{}" has been added'.format(name)
+            comt = f'Tenant / project "{name}" has been added'
             ret.update(
                 {"comment": comt, "result": True, "changes": {"Tenant": "Created"}}
             )
@@ -219,7 +219,7 @@ def test_tenant_absent():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Tenant / project "{}" is already absent'.format(name),
+        "comment": f'Tenant / project "{name}" is already absent',
     }
 
     mock_lst = MagicMock(side_effect=[["Error"], []])
@@ -227,7 +227,7 @@ def test_tenant_absent():
         assert keystone.tenant_absent(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Tenant / project "{}" will be deleted'.format(name)
+            comt = f'Tenant / project "{name}" will be deleted'
             ret.update({"comment": comt, "result": None})
             assert keystone.tenant_absent(name) == ret
 
@@ -242,7 +242,7 @@ def test_role_present():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Role "{}" already exists'.format(name),
+        "comment": f'Role "{name}" already exists',
     }
 
     mock_lst = MagicMock(side_effect=[[], ["Error"]])
@@ -250,7 +250,7 @@ def test_role_present():
         assert keystone.role_present(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Role "{}" will be added'.format(name)
+            comt = f'Role "{name}" will be added'
             ret.update({"comment": comt, "result": None})
             assert keystone.role_present(name) == ret
 
@@ -265,7 +265,7 @@ def test_role_absent():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Role "{}" is already absent'.format(name),
+        "comment": f'Role "{name}" is already absent',
     }
 
     mock_lst = MagicMock(side_effect=[["Error"], []])
@@ -273,7 +273,7 @@ def test_role_absent():
         assert keystone.role_absent(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Role "{}" will be deleted'.format(name)
+            comt = f'Role "{name}" will be deleted'
             ret.update({"comment": comt, "result": None})
             assert keystone.role_absent(name) == ret
 
@@ -289,7 +289,7 @@ def test_service_present():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Service "{}" already exists'.format(name),
+        "comment": f'Service "{name}" already exists',
     }
 
     mock_lst = MagicMock(side_effect=[[], ["Error"]])
@@ -297,7 +297,7 @@ def test_service_present():
         assert keystone.service_present(name, service_type) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Service "{}" will be added'.format(name)
+            comt = f'Service "{name}" will be added'
             ret.update({"comment": comt, "result": None})
             assert keystone.service_present(name, service_type) == ret
 
@@ -312,7 +312,7 @@ def test_service_absent():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'Service "{}" is already absent'.format(name),
+        "comment": f'Service "{name}" is already absent',
     }
 
     mock_lst = MagicMock(side_effect=[["Error"], []])
@@ -320,7 +320,7 @@ def test_service_absent():
         assert keystone.service_absent(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Service "{}" will be deleted'.format(name)
+            comt = f'Service "{name}" will be deleted'
             ret.update({"comment": comt, "result": None})
             assert keystone.service_absent(name) == ret
 
@@ -352,12 +352,12 @@ def test_endpoint_present():
         {"keystone.endpoint_get": mock_lst, "keystone.endpoint_create": mock},
     ):
 
-        comt = 'Endpoint for service "{}" already exists'.format(name)
+        comt = f'Endpoint for service "{name}" already exists'
         ret.update({"comment": comt, "result": True, "changes": {}})
         assert keystone.endpoint_present(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Endpoint for service "{}" will be added'.format(name)
+            comt = f'Endpoint for service "{name}" will be added'
             ret.update(
                 {
                     "comment": comt,
@@ -367,12 +367,12 @@ def test_endpoint_present():
             )
             assert keystone.endpoint_present(name) == ret
 
-            comt = 'Endpoint for service "{}" already exists'.format(name)
+            comt = f'Endpoint for service "{name}" already exists'
             ret.update({"comment": comt, "result": True, "changes": {}})
             assert keystone.endpoint_present(name) == ret
 
         with patch.dict(keystone.__opts__, {"test": False}):
-            comt = 'Endpoint for service "{}" has been added'.format(name)
+            comt = f'Endpoint for service "{name}" has been added'
             ret.update({"comment": comt, "result": True, "changes": True})
             assert keystone.endpoint_present(name) == ret
 
@@ -384,7 +384,7 @@ def test_endpoint_absent():
     """
     name = "nova"
     region = "RegionOne"
-    comment = 'Endpoint for service "{}" is already absent'.format(name)
+    comment = f'Endpoint for service "{name}" is already absent'
     ret = {"name": name, "changes": {}, "result": True, "comment": comment}
 
     mock_lst = MagicMock(side_effect=[[], ["Error"]])
@@ -392,6 +392,6 @@ def test_endpoint_absent():
         assert keystone.endpoint_absent(name, region) == ret
 
         with patch.dict(keystone.__opts__, {"test": True}):
-            comt = 'Endpoint for service "{}" will be deleted'.format(name)
+            comt = f'Endpoint for service "{name}" will be deleted'
             ret.update({"comment": comt, "result": None})
             assert keystone.endpoint_absent(name, region) == ret

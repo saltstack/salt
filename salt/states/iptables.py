@@ -737,7 +737,7 @@ def delete(name, table="filter", family="ipv4", **kwargs):
     if not result:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Delete iptables rule for {} {}".format(name, command.strip())
+        ret["comment"] = f"Delete iptables rule for {name} {command.strip()}"
         if "save" in kwargs and kwargs["save"]:
             if kwargs["save"] is not True:
                 filename = kwargs["save"]

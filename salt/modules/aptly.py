@@ -77,10 +77,10 @@ def _format_repo_args(
 
     for setting in settings:
         if settings[setting] is not None:
-            ret.append("-{}={}".format(setting, settings[setting]))
+            ret.append(f"-{setting}={settings[setting]}")
 
     if cached_uploaders_path:
-        ret.append("-uploaders-file={}".format(cached_uploaders_path))
+        ret.append(f"-uploaders-file={cached_uploaders_path}")
 
     return ret
 
@@ -97,7 +97,7 @@ def _validate_config(config_path):
     log.debug("Checking configuration file: %s", config_path)
 
     if not os.path.isfile(config_path):
-        message = "Unable to get configuration file: {}".format(config_path)
+        message = f"Unable to get configuration file: {config_path}"
         log.error(message)
         raise SaltInvocationError(message)
 
@@ -119,7 +119,7 @@ def get_config(config_path=_DEFAULT_CONFIG_PATH):
     """
     _validate_config(config_path)
 
-    cmd = ["config", "show", "-config={}".format(config_path)]
+    cmd = ["config", "show", f"-config={config_path}"]
 
     cmd_ret = _cmd_run(cmd)
 
@@ -145,7 +145,7 @@ def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     _validate_config(config_path)
 
     ret = dict()
-    cmd = ["repo", "list", "-config={}".format(config_path), "-raw=true"]
+    cmd = ["repo", "list", f"-config={config_path}", "-raw=true"]
 
     cmd_ret = _cmd_run(cmd)
     repos = [line.strip() for line in cmd_ret.splitlines()]
@@ -183,8 +183,8 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     cmd = [
         "repo",
         "show",
-        "-config={}".format(config_path),
-        "-with-packages={}".format(with_packages),
+        f"-config={config_path}",
+        f"-with-packages={with_packages}",
         name,
     ]
 
@@ -250,7 +250,7 @@ def new_repo(
         log.debug("Repository already exists: %s", name)
         return True
 
-    cmd = ["repo", "create", "-config={}".format(config_path)]
+    cmd = ["repo", "create", f"-config={config_path}"]
     repo_params = _format_repo_args(
         comment=comment,
         component=component,
@@ -336,7 +336,7 @@ def set_repo(
         log.debug("Settings already have the desired values for repository: %s", name)
         return True
 
-    cmd = ["repo", "edit", "-config={}".format(config_path)]
+    cmd = ["repo", "edit", f"-config={config_path}"]
 
     repo_params = _format_repo_args(
         comment=comment,
@@ -395,8 +395,8 @@ def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
     cmd = [
         "repo",
         "drop",
-        "-config={}".format(config_path),
-        "-force={}".format(force),
+        f"-config={config_path}",
+        f"-force={force}",
         name,
     ]
 
@@ -427,7 +427,7 @@ def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
     """
     _validate_config(config_path)
 
-    cmd = ["mirror", "list", "-config={}".format(config_path), "-raw=true"]
+    cmd = ["mirror", "list", f"-config={config_path}", "-raw=true"]
 
     cmd_ret = _cmd_run(cmd)
     ret = [line.strip() for line in cmd_ret.splitlines()]
@@ -453,7 +453,7 @@ def list_published(config_path=_DEFAULT_CONFIG_PATH):
     """
     _validate_config(config_path)
 
-    cmd = ["publish", "list", "-config={}".format(config_path), "-raw=true"]
+    cmd = ["publish", "list", f"-config={config_path}", "-raw=true"]
 
     cmd_ret = _cmd_run(cmd)
     ret = [line.strip() for line in cmd_ret.splitlines()]
@@ -480,7 +480,7 @@ def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
     """
     _validate_config(config_path)
 
-    cmd = ["snapshot", "list", "-config={}".format(config_path), "-raw=true"]
+    cmd = ["snapshot", "list", f"-config={config_path}", "-raw=true"]
 
     if sort_by_time:
         cmd.append("-sort=time")
@@ -518,8 +518,8 @@ def cleanup_db(config_path=_DEFAULT_CONFIG_PATH, dry_run=False):
     cmd = [
         "db",
         "cleanup",
-        "-config={}".format(config_path),
-        "-dry-run={}".format(dry_run),
+        f"-config={config_path}",
+        f"-dry-run={dry_run}",
         "-verbose=true",
     ]
 
@@ -533,7 +533,7 @@ def cleanup_db(config_path=_DEFAULT_CONFIG_PATH, dry_run=False):
         if current_block:
             match = re.search(list_pattern, line)
             if match:
-                package_type = "deleted_{}".format(current_block)
+                package_type = f"deleted_{current_block}"
                 ret[package_type].append(match.group("package"))
             else:
                 current_block = None

@@ -131,7 +131,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "Unknown error. Additional info follows:\n\n{}".format(retcode),
+            f"Unknown error. Additional info follows:\n\n{retcode}",
             excinfo.exception.strerror,
         )
 
@@ -164,7 +164,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                 "wusa.exe",
                 "/uninstall",
                 "/quiet",
-                "/kb:{}".format(kb[2:]),
+                f"/kb:{kb[2:]}",
                 "/norestart",
             ],
             ignore_retcode=True,
@@ -215,13 +215,13 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                 "wusa.exe",
                 "/uninstall",
                 "/quiet",
-                "/kb:{}".format(kb[2:]),
+                f"/kb:{kb[2:]}",
                 "/norestart",
             ],
             ignore_retcode=True,
         )
         self.assertEqual(
-            "{} not installed. Additional info follows:\n\n{}".format(kb, retcode),
+            f"{kb} not installed. Additional info follows:\n\n{retcode}",
             excinfo.exception.strerror,
         )
 

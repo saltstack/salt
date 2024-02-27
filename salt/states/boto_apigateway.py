@@ -349,7 +349,7 @@ def present(
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret
 
@@ -434,7 +434,7 @@ def absent(
         swagger = _Swagger(api_name, stage_name, "", None, None, None, common_args)
 
         if not swagger.restApiId:
-            ret["comment"] = "[Rest API: {}] does not exist.".format(api_name)
+            ret["comment"] = f"[Rest API: {api_name}] does not exist."
             return ret
 
         if __opts__["test"]:
@@ -445,7 +445,7 @@ def absent(
                     "deleted.".format(stage_name, api_name)
                 )
             else:
-                ret["comment"] = "[stage: {}] will be deleted.".format(stage_name)
+                ret["comment"] = f"[stage: {stage_name}] will be deleted."
             ret["result"] = None
             return ret
 
@@ -459,7 +459,7 @@ def absent(
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret
 
@@ -724,11 +724,11 @@ class _Swagger:
             _name = self._paramdict.get("name")
             if _name:
                 if self.location == "header":
-                    return "method.request.header.{}".format(_name)
+                    return f"method.request.header.{_name}"
                 elif self.location == "query":
-                    return "method.request.querystring.{}".format(_name)
+                    return f"method.request.querystring.{_name}"
                 elif self.location == "path":
-                    return "method.request.path.{}".format(_name)
+                    return f"method.request.path.{_name}"
                 return None
             raise ValueError(
                 "Parameter must have a name: {}".format(
@@ -753,9 +753,7 @@ class _Swagger:
                             self.name
                         )
                     )
-                raise ValueError(
-                    "Body parameter must have a schema: {}".format(self.name)
-                )
+                raise ValueError(f"Body parameter must have a schema: {self.name}")
             return None
 
     class SwaggerMethodResponse:
@@ -818,7 +816,7 @@ class _Swagger:
                     self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ""
             else:
-                raise OSError("Invalid swagger file path, {}".format(swagger_file_path))
+                raise OSError(f"Invalid swagger file path, {swagger_file_path}")
 
             self._validate_swagger_file()
 
@@ -876,7 +874,7 @@ class _Swagger:
 
                     if model.get("type") != "object":
                         raise ValueError(
-                            "model schema {} must be type object".format(modelname)
+                            f"model schema {modelname} must be type object"
                         )
                     if "properties" not in model:
                         raise ValueError(
@@ -927,12 +925,12 @@ class _Swagger:
                 field not in _Swagger.SWAGGER_OBJ_V2_FIELDS
                 and not _Swagger.VENDOR_EXT_PATTERN.match(field)
             ):
-                raise ValueError("Invalid Swagger Object Field: {}".format(field))
+                raise ValueError(f"Invalid Swagger Object Field: {field}")
 
         # check for Required Swagger fields by Saltstack boto apigateway state
         for field in _Swagger.SWAGGER_OBJ_V2_FIELDS_REQUIRED:
             if field not in self._cfg:
-                raise ValueError("Missing Swagger Object Field: {}".format(field))
+                raise ValueError(f"Missing Swagger Object Field: {field}")
 
         # check for Swagger Version
         self._swagger_version = self._cfg.get("swagger")
@@ -1026,7 +1024,7 @@ class _Swagger:
         for path in paths:
             if not path.startswith("/"):
                 raise ValueError(
-                    "Path object {} should start with /. Please fix it".format(path)
+                    f"Path object {path} should start with /. Please fix it"
                 )
         return paths.items()
 
@@ -1099,7 +1097,7 @@ class _Swagger:
                 stages = __salt__["boto_apigateway.describe_api_stages"](
                     restApiId=self.restApiId,
                     deploymentId=deploymentId,
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 ).get("stages")
                 if stages:
                     no_more_deployments = False
@@ -1115,7 +1113,7 @@ class _Swagger:
         stage = __salt__["boto_apigateway.describe_api_stage"](
             restApiId=self.restApiId,
             stageName=self._stage_name,
-            **self._common_aws_args
+            **self._common_aws_args,
         ).get("stage")
         if stage:
             deploymentId = stage.get("deploymentId")
@@ -1155,7 +1153,7 @@ class _Swagger:
             restApiId=self.restApiId,
             stageName=self._stage_name,
             variables=stage_variables,
-            **self._common_aws_args
+            **self._common_aws_args,
         )
 
         if not res.get("overwrite"):
@@ -1173,7 +1171,7 @@ class _Swagger:
         stage = __salt__["boto_apigateway.describe_api_stage"](
             restApiId=self.restApiId,
             stageName=self._stage_name,
-            **self._common_aws_args
+            **self._common_aws_args,
         ).get("stage")
         if not stage:
             stage = __salt__["boto_apigateway.create_api_stage"](
@@ -1182,7 +1180,7 @@ class _Swagger:
                 deploymentId=self._deploymentId,
                 description=stage_desc_json,
                 variables=stage_variables,
-                **self._common_aws_args
+                **self._common_aws_args,
             )
             if not stage.get("stage"):
                 return {"set": False, "error": stage.get("error")}
@@ -1192,7 +1190,7 @@ class _Swagger:
                 restApiId=self.restApiId,
                 stageName=self._stage_name,
                 variables=stage_variables,
-                **self._common_aws_args
+                **self._common_aws_args,
             )
             if not overwrite.get("stage"):
                 return {"set": False, "error": overwrite.get("error")}
@@ -1201,7 +1199,7 @@ class _Swagger:
             restApiId=self.restApiId,
             stageName=self._stage_name,
             deploymentId=self._deploymentId,
-            **self._common_aws_args
+            **self._common_aws_args,
         )
 
     def _resolve_api_id(self):
@@ -1212,7 +1210,7 @@ class _Swagger:
         apis = __salt__["boto_apigateway.describe_apis"](
             name=self.rest_api_name,
             description=_Swagger.AWS_API_DESCRIPTION,
-            **self._common_aws_args
+            **self._common_aws_args,
         ).get("restapi")
         if apis:
             if len(apis) == 1:
@@ -1235,7 +1233,7 @@ class _Swagger:
             result = __salt__["boto_apigateway.delete_api_stage"](
                 restApiId=self.restApiId,
                 stageName=self._stage_name,
-                **self._common_aws_args
+                **self._common_aws_args,
             )
             if not result.get("deleted"):
                 ret["abort"] = True
@@ -1249,7 +1247,7 @@ class _Swagger:
                     result = __salt__["boto_apigateway.delete_api_deployment"](
                         restApiId=self.restApiId,
                         deploymentId=deploymentId,
-                        **self._common_aws_args
+                        **self._common_aws_args,
                     )
                     if not result.get("deleted"):
                         ret["abort"] = True
@@ -1265,7 +1263,7 @@ class _Swagger:
                     )
         else:
             # no matching stage_name/deployment found
-            ret["comment"] = "stage {} does not exist".format(self._stage_name)
+            ret["comment"] = f"stage {self._stage_name} does not exist"
 
         return ret
 
@@ -1326,7 +1324,7 @@ class _Swagger:
                 stageDescription=stage_desc_json,
                 description=self.deployment_label_json,
                 variables=stage_variables,
-                **self._common_aws_args
+                **self._common_aws_args,
             )
             if not res.get("created"):
                 ret["abort"] = True
@@ -1353,7 +1351,7 @@ class _Swagger:
                 delres = __salt__["boto_apigateway.delete_api_resources"](
                     restApiId=self.restApiId,
                     path=resource.get("path"),
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
                 if not delres.get("deleted"):
                     return delres
@@ -1366,7 +1364,7 @@ class _Swagger:
                 delres = __salt__["boto_apigateway.delete_api_model"](
                     restApiId=self.restApiId,
                     modelName=model.get("name"),
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
                 if not delres.get("deleted"):
                     return delres
@@ -1380,7 +1378,7 @@ class _Swagger:
         if self.restApiId:
             res = self._cleanup_api()
             if not res.get("deleted"):
-                ret["comment"] = "Failed to cleanup restAreId {}".format(self.restApiId)
+                ret["comment"] = f"Failed to cleanup restAreId {self.restApiId}"
                 ret["abort"] = True
                 ret["result"] = False
                 return ret
@@ -1389,7 +1387,7 @@ class _Swagger:
         response = __salt__["boto_apigateway.create_api"](
             name=self.rest_api_name,
             description=_Swagger.AWS_API_DESCRIPTION,
-            **self._common_aws_args
+            **self._common_aws_args,
         )
 
         if not response.get("created"):
@@ -1416,7 +1414,7 @@ class _Swagger:
         exists_response = __salt__["boto_apigateway.api_exists"](
             name=self.rest_api_name,
             description=_Swagger.AWS_API_DESCRIPTION,
-            **self._common_aws_args
+            **self._common_aws_args,
         )
         if exists_response.get("exists"):
             if __opts__["test"]:
@@ -1430,7 +1428,7 @@ class _Swagger:
             delete_api_response = __salt__["boto_apigateway.delete_api"](
                 name=self.rest_api_name,
                 description=_Swagger.AWS_API_DESCRIPTION,
-                **self._common_aws_args
+                **self._common_aws_args,
             )
             if not delete_api_response.get("deleted"):
                 ret["result"] = False
@@ -1552,7 +1550,7 @@ class _Swagger:
             _schema.update(
                 {
                     "$schema": _Swagger.JSON_SCHEMA_DRAFT_4,
-                    "title": "{} Schema".format(model),
+                    "title": f"{model} Schema",
                 }
             )
 
@@ -1569,7 +1567,7 @@ class _Swagger:
                     restApiId=self.restApiId,
                     modelName=model,
                     schema=_dict_to_json_pretty(_schema),
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
                 if not update_model_schema_response.get("updated"):
                     ret["result"] = False
@@ -1593,7 +1591,7 @@ class _Swagger:
                     modelDescription=model,
                     schema=_dict_to_json_pretty(_schema),
                     contentType="application/json",
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
 
                 if not create_model_response.get("created"):
@@ -1744,7 +1742,7 @@ class _Swagger:
         method_response_params = {}
         method_integration_response_params = {}
         for header in method_response.headers:
-            response_header = "method.response.header.{}".format(header)
+            response_header = f"method.response.header.{header}"
             method_response_params[response_header] = False
             header_data = method_response.headers.get(header)
             method_integration_response_params[response_header] = (
@@ -1821,7 +1819,7 @@ class _Swagger:
             apiKeyRequired=api_key_required,
             requestParameters=method.get("params"),
             requestModels=method.get("models"),
-            **self._common_aws_args
+            **self._common_aws_args,
         )
         if not m.get("created"):
             ret = _log_error_and_abort(ret, m)
@@ -1847,7 +1845,7 @@ class _Swagger:
             uri=lambda_uri,
             credentials=lambda_integration_role,
             requestTemplates=method.get("request_templates"),
-            **self._common_aws_args
+            **self._common_aws_args,
         )
         if not integration.get("created"):
             ret = _log_error_and_abort(ret, integration)
@@ -1870,7 +1868,7 @@ class _Swagger:
                     statusCode=httpStatus,
                     responseParameters=method_response.get("params"),
                     responseModels=method_response.get("models"),
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
                 if not mr.get("created"):
                     ret = _log_error_and_abort(ret, mr)
@@ -1885,7 +1883,7 @@ class _Swagger:
                     selectionPattern=method_response.get("pattern"),
                     responseParameters=method_response.get("integration_params"),
                     responseTemplates=method_response.get("response_templates"),
-                    **self._common_aws_args
+                    **self._common_aws_args,
                 )
                 if not mir.get("created"):
                     ret = _log_error_and_abort(ret, mir)
@@ -1895,7 +1893,7 @@ class _Swagger:
                 )
         else:
             raise ValueError(
-                "No responses specified for {} {}".format(resource_path, method_name)
+                f"No responses specified for {resource_path} {method_name}"
             )
 
         return ret
@@ -2042,7 +2040,7 @@ def usage_plan_present(
                 description=description,
                 throttle=throttle,
                 quota=quota,
-                **common_args
+                **common_args,
             )
             if "error" in result:
                 ret["result"] = False
@@ -2052,7 +2050,7 @@ def usage_plan_present(
                 return ret
 
             ret["changes"]["old"] = {"plan": None}
-            ret["comment"] = "A new usage plan {} has been created".format(plan_name)
+            ret["comment"] = f"A new usage plan {plan_name} has been created"
 
         else:
             # need an existing plan modified to match given value
@@ -2097,7 +2095,7 @@ def usage_plan_present(
                 return ret
 
             ret["changes"]["old"] = {"plan": plan}
-            ret["comment"] = "usage plan {} has been updated".format(plan_name)
+            ret["comment"] = f"usage plan {plan_name} has been updated"
 
         newstate = __salt__["boto_apigateway.describe_usage_plans"](
             name=plan_name, **common_args
@@ -2111,7 +2109,7 @@ def usage_plan_present(
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret
 
@@ -2152,7 +2150,7 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {} does not exist already".format(plan_name)
+            ret["comment"] = f"Usage plan {plan_name} does not exist already"
             return ret
 
         if __opts__["test"]:
@@ -2172,13 +2170,13 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
             )
             return ret
 
-        ret["comment"] = "Usage plan {} has been deleted".format(plan_name)
+        ret["comment"] = f"Usage plan {plan_name} has been deleted"
         ret["changes"]["old"] = {"plan": existing["plans"][0]}
         ret["changes"]["new"] = {"plan": None}
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret
 
@@ -2234,7 +2232,7 @@ def usage_plan_association_present(
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {} does not exist".format(plan_name)
+            ret["comment"] = f"Usage plan {plan_name} does not exist"
             ret["result"] = False
             return ret
 
@@ -2277,7 +2275,7 @@ def usage_plan_association_present(
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret
 
@@ -2335,7 +2333,7 @@ def usage_plan_association_absent(
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {} does not exist".format(plan_name)
+            ret["comment"] = f"Usage plan {plan_name} does not exist"
             ret["result"] = False
             return ret
 
@@ -2384,6 +2382,6 @@ def usage_plan_association_absent(
 
     except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{}".format(e.args)
+        ret["comment"] = f"{e.args}"
 
     return ret

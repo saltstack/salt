@@ -52,7 +52,7 @@ class NapalmProbesModuleTestCase(TestCase, LoaderModuleMockMixin):
             if template == "schedule_probes":
                 assert kwargs["probes"] == self._test_schedule_probes.copy()
                 return napalm_test_support.TEST_TERM_CONFIG.copy()
-            raise ValueError("incorrect template {}".format(template))
+            raise ValueError(f"incorrect template {template}")
 
         module_globals = {
             "__salt__": {
