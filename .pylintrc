@@ -704,7 +704,7 @@ redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
 fileperms-default=0644
 
 # File paths to ignore file permission. Glob patterns allowed.
-fileperms-ignore-paths=setup.py,noxfile.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py,tests/unit/files/rosters/ansible/roster.py
+fileperms-ignore-paths=setup.py,noxfile.py,tests/runtests.py,tests/saltsh.py,tests/buildpackage.py,tests/unit/files/rosters/ansible/roster.py
 
 [BLACKLISTED-FUNCTIONS]
 
