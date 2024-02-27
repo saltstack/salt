@@ -2,7 +2,6 @@
 Test module for syslog_ng state
 """
 
-
 import os
 import re
 import tempfile

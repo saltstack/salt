@@ -212,6 +212,7 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup:
 """
+
 import logging
 import os
 

@@ -6,7 +6,6 @@ This module allows you to manage windows licensing via slmgr.vbs
     salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
 """
 
-
 import logging
 import re
 

@@ -1,6 +1,7 @@
 """
 Unit tests for AWS KMS Decryption Renderer.
 """
+
 import pytest
 
 import salt.exceptions

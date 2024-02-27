@@ -2,7 +2,6 @@
 Decorator and functions to profile Salt using cProfile
 """
 
-
 import datetime
 import logging
 import os

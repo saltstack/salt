@@ -3,7 +3,6 @@ Support for getting and setting the environment variables
 of the current salt process.
 """
 
-
 import os
 
 import salt.utils.platform

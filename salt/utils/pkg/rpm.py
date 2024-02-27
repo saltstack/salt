@@ -1,6 +1,7 @@
 """
 Common functions for working with RPM packages
 """
+
 import collections
 import datetime
 import logging

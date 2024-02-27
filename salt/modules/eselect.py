@@ -2,7 +2,6 @@
 Support for eselect, Gentoo's configuration and management tool.
 """
 
-
 import logging
 
 import salt.utils.path

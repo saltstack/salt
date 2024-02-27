@@ -19,7 +19,6 @@ A state module for creating or destroying software RAID devices.
         - run: True
 """
 
-
 import logging
 
 import salt.utils.path
@@ -100,20 +99,20 @@ def present(name, level, devices, **kwargs):
             new_devices.append(dev)
 
     if len(uuid_dict) > 1:
-        ret[
-            "comment"
-        ] = "Devices are a mix of RAID constituents with multiple MD_UUIDs: {}.".format(
-            sorted(uuid_dict)
+        ret["comment"] = (
+            "Devices are a mix of RAID constituents with multiple MD_UUIDs: {}.".format(
+                sorted(uuid_dict)
+            )
         )
         ret["result"] = False
         return ret
     elif len(uuid_dict) == 1:
         uuid = next(iter(uuid_dict))
         if present and present["uuid"] != uuid:
-            ret[
-                "comment"
-            ] = "Devices MD_UUIDs: {} differs from present RAID uuid {}.".format(
-                uuid, present["uuid"]
+            ret["comment"] = (
+                "Devices MD_UUIDs: {} differs from present RAID uuid {}.".format(
+                    uuid, present["uuid"]
+                )
             )
             ret["result"] = False
             return ret

@@ -1929,10 +1929,10 @@ def revoke_cert(
                     )
                 except ValueError:
                     ret["retcode"] = 1
-                    ret[
-                        "comment"
-                    ] = "Revocation date '{}' does not matchformat '{}'".format(
-                        revoke_date, two_digit_year_fmt
+                    ret["comment"] = (
+                        "Revocation date '{}' does not matchformat '{}'".format(
+                            revoke_date, two_digit_year_fmt
+                        )
                     )
                     return ret
             elif index_serial_subject in line:

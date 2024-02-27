@@ -2,7 +2,6 @@
 Tests for the Openstack Cloud Provider
 """
 
-
 import logging
 import os
 import shutil

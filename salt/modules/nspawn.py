@@ -20,7 +20,6 @@ Minions running systemd >= 219 will place new containers in
     package.
 """
 
-
 import errno
 import functools
 import logging

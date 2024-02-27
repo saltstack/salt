@@ -11,6 +11,7 @@ Module to manage filesystem snapshots with snapper
 :maturity:      new
 :platform:      Linux
 """
+
 import difflib
 import logging
 import os
@@ -524,9 +525,9 @@ def modify_snapshot(
     try:
         # Updating only the explicitly provided attributes by the user
         updated_opts = {
-            "description": description
-            if description is not None
-            else snapshot["description"],
+            "description": (
+                description if description is not None else snapshot["description"]
+            ),
             "cleanup": cleanup if cleanup is not None else snapshot["cleanup"],
             "userdata": userdata if userdata is not None else snapshot["userdata"],
         }

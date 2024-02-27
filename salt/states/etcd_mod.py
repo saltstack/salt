@@ -154,7 +154,6 @@ Available Functions
             - file: /some/file.txt
 """
 
-
 # Define the module's virtual name
 __virtualname__ = "etcd"
 

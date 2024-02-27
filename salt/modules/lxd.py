@@ -31,7 +31,6 @@ several functions to help manage it and its containers.
 :platform: Linux
 """
 
-
 import logging
 import os
 from datetime import datetime
@@ -3438,17 +3437,17 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
         if newconfig[k] != obj.config[k]:
             if not test:
-                config_changes[
-                    k
-                ] = 'Changed config key "{}" to "{}", its value was "{}"'.format(
-                    k, newconfig[k], obj.config[k]
+                config_changes[k] = (
+                    'Changed config key "{}" to "{}", its value was "{}"'.format(
+                        k, newconfig[k], obj.config[k]
+                    )
                 )
                 obj.config[k] = newconfig[k]
             else:
-                config_changes[
-                    k
-                ] = 'Would change config key "{}" to "{}", its current value is "{}"'.format(
-                    k, newconfig[k], obj.config[k]
+                config_changes[k] = (
+                    'Would change config key "{}" to "{}", its current value is "{}"'.format(
+                        k, newconfig[k], obj.config[k]
+                    )
                 )
 
     # New keys

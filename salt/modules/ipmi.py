@@ -30,7 +30,6 @@ systems hardware through IPMI drivers. It uses a python module `pyghmi`.
                                     uid=1
 """
 
-
 IMPORT_ERR = None
 try:
     from pyghmi.ipmi import command  # nosec

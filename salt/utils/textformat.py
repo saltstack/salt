@@ -3,7 +3,6 @@ ANSI escape code utilities, see
 http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 """
 
-
 graph_prefix = "\x1b["
 graph_suffix = "m"
 codes = {

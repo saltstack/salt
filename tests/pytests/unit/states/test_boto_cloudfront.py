@@ -1,6 +1,7 @@
 """
 Unit tests for the boto_cloudfront state module.
 """
+
 import copy
 import textwrap
 

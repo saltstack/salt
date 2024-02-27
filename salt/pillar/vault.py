@@ -150,7 +150,6 @@ You can override the merging behavior per defined ext_pillar:
            merge_lists: false
 """
 
-
 import logging
 
 from requests.exceptions import HTTPError

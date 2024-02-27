@@ -15,6 +15,7 @@ Kapacitor state module.
 
 .. versionadded:: 2016.11.0
 """
+
 import difflib
 
 import salt.utils.files

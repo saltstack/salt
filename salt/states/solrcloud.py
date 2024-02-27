@@ -5,7 +5,6 @@ States for solrcloud alias and collection configuration
 
 """
 
-
 import salt.utils.json
 
 

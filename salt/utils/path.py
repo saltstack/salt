@@ -3,7 +3,6 @@ Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
 """
 
-
 import logging
 import os
 import posixpath

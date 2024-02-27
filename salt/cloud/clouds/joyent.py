@@ -532,7 +532,6 @@ def take_action(
     method="GET",
     location=DEFAULT_LOCATION,
 ):
-
     """
     take action call used by start,stop, reboot
     :param name: name given to the machine

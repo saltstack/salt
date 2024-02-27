@@ -192,7 +192,6 @@ execution functions against ESXi hosts via a Salt Proxy Minion, and a larger sta
 example.
 """
 
-
 import logging
 import sys
 from functools import wraps

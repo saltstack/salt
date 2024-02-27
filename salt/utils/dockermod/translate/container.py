@@ -445,9 +445,11 @@ def port_bindings(val, **kwargs):
                 bind_vals = [
                     (
                         _format_port(val, proto),
-                        (host_ip,)
-                        if hport_list[idx] is None
-                        else (host_ip, hport_list[idx]),
+                        (
+                            (host_ip,)
+                            if hport_list[idx] is None
+                            else (host_ip, hport_list[idx])
+                        ),
                     )
                     for idx, val in enumerate(cport_list)
                 ]

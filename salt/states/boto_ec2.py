@@ -50,7 +50,6 @@ The below code deletes a key pair:
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
 
-
 import logging
 from time import sleep, time
 
@@ -624,10 +623,10 @@ def snapshot_created(
                     state=images[0].state
                 )
             else:
-                ret[
-                    "comment"
-                ] = "AMI with name {ami_name} not found after timeout.".format(
-                    ami_name=ami_name
+                ret["comment"] = (
+                    "AMI with name {ami_name} not found after timeout.".format(
+                        ami_name=ami_name
+                    )
                 )
             ret["result"] = False
             return ret
@@ -1007,10 +1006,10 @@ def instance_present(
         if r[0].get("instance_id"):
             if r[0]["instance_id"] != instance_id:
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] = "EIP {} is already associated with instance {}.".format(
-                    public_ip if public_ip else allocation_id, r[0]["instance_id"]
+                ret["comment"] = (
+                    "EIP {} is already associated with instance {}.".format(
+                        public_ip if public_ip else allocation_id, r[0]["instance_id"]
+                    )
                 )
                 return ret
         else:
@@ -1070,10 +1069,10 @@ def instance_present(
                     )
                 except SaltInvocationError as e:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Failed to set attribute {} to {} on instance {}.".format(
-                        k, v, instance_name
+                    ret["comment"] = (
+                        "Failed to set attribute {} to {} on instance {}.".format(
+                            k, v, instance_name
+                        )
                     )
                     return ret
                 ret["changes"] = (
@@ -1309,9 +1308,9 @@ def instance_absent(
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Can't determine AllocationId for address {}.".format(ip)
+                    ret["comment"] = (
+                        "Can't determine AllocationId for address {}.".format(ip)
+                    )
                     return ret
             else:
                 public_ip = instance.ip_address
@@ -1748,14 +1747,14 @@ def volume_present(
             return ret
         else:
             if __opts__["test"]:
-                ret[
-                    "comment"
-                ] = "The volume {} is set to be detached from {}({} and attached on {}({}).".format(
-                    attach_data.instance_id,
-                    attach_data.devic,
-                    volume_id,
-                    instance_id,
-                    device,
+                ret["comment"] = (
+                    "The volume {} is set to be detached from {}({} and attached on {}({}).".format(
+                        attach_data.instance_id,
+                        attach_data.devic,
+                        volume_id,
+                        instance_id,
+                        device,
+                    )
                 )
                 ret["result"] = None
                 return ret
@@ -1956,7 +1955,6 @@ def private_ips_absent(
     keyid=None,
     profile=None,
 ):
-
     """
     Ensure an ENI does not have secondary private ip addresses associated with it
 

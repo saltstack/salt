@@ -1395,7 +1395,7 @@ class SSHThinTestCase(TestCase):
             thin_dir = venv.venv_dir / "thin"
             thin_archive = thin_dir / "thin.tgz"
             tar = tarfile.open(str(thin_archive))
-            tar.extractall(str(thin_dir))
+            tar.extractall(str(thin_dir))  # nosec
             tar.close()
             ret = venv.run(
                 venv.venv_python,

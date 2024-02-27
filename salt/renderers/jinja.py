@@ -4,7 +4,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 .. include:: ../../../_incl/jinja_security.rst
 """
 
-
 import logging
 from io import StringIO
 

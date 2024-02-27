@@ -1,6 +1,7 @@
 """
 Set up the version of Salt
 """
+
 import argparse
 import operator
 import os

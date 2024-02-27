@@ -3,6 +3,7 @@ Provide authentication using simple LDAP binds
 
 :depends:   - ldap Python module
 """
+
 import itertools
 import logging
 

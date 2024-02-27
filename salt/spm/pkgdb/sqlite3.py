@@ -4,7 +4,6 @@ This module allows SPM to use sqlite3 as the backend for SPM's package database.
 .. versionadded:: 2015.8.0
 """
 
-
 import datetime
 import logging
 import os

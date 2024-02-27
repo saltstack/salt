@@ -716,9 +716,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret[
-            "comment"
-        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        ret["comment"] = (
+            'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        )
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -780,9 +780,9 @@ def extracted(
                 # from making this state blow up with a traceback.
                 not_rel = True
             if not_rel:
-                ret[
-                    "comment"
-                ] = "Value for 'enforce_ownership_on' must be within {}".format(name)
+                ret["comment"] = (
+                    "Value for 'enforce_ownership_on' must be within {}".format(name)
+                )
                 return ret
 
     if if_missing is not None and os.path.exists(if_missing):
@@ -792,9 +792,9 @@ def extracted(
 
     if user or group:
         if salt.utils.platform.is_windows():
-            ret[
-                "comment"
-            ] = "User/group ownership cannot be enforced on Windows minions"
+            ret["comment"] = (
+                "User/group ownership cannot be enforced on Windows minions"
+            )
             return ret
 
         if user:
@@ -941,9 +941,9 @@ def extracted(
                 )
     else:
         if password:
-            ret[
-                "comment"
-            ] = "The 'password' argument is only supported for zip archives"
+            ret["comment"] = (
+                "The 'password' argument is only supported for zip archives"
+            )
             return ret
 
     if archive_format == "rar":
@@ -971,9 +971,9 @@ def extracted(
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret[
-                    "comment"
-                ] = "Invalid value for trim_output, must be True/False or an integer"
+                ret["comment"] = (
+                    "Invalid value for trim_output, must be True/False or an integer"
+                )
                 return ret
 
     if source_hash:
@@ -1048,10 +1048,10 @@ def extracted(
             # salt/states/file.py from being processed through the loader. If
             # that is the case, we have much more important problems as _all_
             # file states would be unavailable.
-            ret[
-                "comment"
-            ] = "Unable to cache {}, file.cached state not available".format(
-                salt.utils.url.redact_http_basic_auth(source_match)
+            ret["comment"] = (
+                "Unable to cache {}, file.cached state not available".format(
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
             )
             return ret
 
@@ -1423,7 +1423,7 @@ def extracted(
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, "r")) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))
+                            tar.extractall(salt.utils.stringutils.to_str(name))  # nosec
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]

@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import textwrap
 
 import pytest

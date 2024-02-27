@@ -75,7 +75,6 @@ Salt master configuration options
         pass_dir: <path>
 """
 
-
 import logging
 import os
 from os.path import expanduser

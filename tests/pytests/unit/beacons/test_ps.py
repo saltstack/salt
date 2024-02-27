@@ -4,6 +4,7 @@
 
     ps usage beacon test cases
 """
+
 import pytest
 
 import salt.beacons.ps as ps

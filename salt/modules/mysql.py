@@ -28,7 +28,6 @@ Module to provide MySQL compatibility to salt.
     Additionally, it is now possible to setup a user with no password.
 """
 
-
 import copy
 import hashlib
 import logging

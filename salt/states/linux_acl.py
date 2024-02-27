@@ -52,7 +52,6 @@ Ensure a Linux ACL list does not exist
          - perms: rwx
 """
 
-
 import logging
 import os
 

@@ -8,7 +8,6 @@
     Common salt configuration schemas
 """
 
-
 from salt.utils.schema import ArrayItem, OneOfItem, Schema, StringItem
 
 

@@ -1,6 +1,7 @@
 """
 Classes for working with Windows Update Agent
 """
+
 import logging
 import subprocess
 

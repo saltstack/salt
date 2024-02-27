@@ -8,6 +8,7 @@ The following packages are required packages for this module:
     bluez-utils >= 5.7
     pybluez >= 0.18
 """
+
 import shlex
 
 import salt.utils.validate.net

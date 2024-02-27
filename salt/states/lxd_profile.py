@@ -27,7 +27,6 @@ Manage LXD profiles.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -156,10 +155,10 @@ def present(
     # Description change
     #
     if str(profile.description) != str(description):
-        ret["changes"][
-            "description"
-        ] = 'Description changed, from "{}" to "{}".'.format(
-            profile.description, description
+        ret["changes"]["description"] = (
+            'Description changed, from "{}" to "{}".'.format(
+                profile.description, description
+            )
         )
 
         profile.description = description

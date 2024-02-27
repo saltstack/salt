@@ -1,6 +1,7 @@
 """
 Salt performance tests
 """
+
 import logging
 import shutil
 

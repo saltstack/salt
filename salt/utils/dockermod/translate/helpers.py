@@ -110,9 +110,11 @@ def map_vals(val, *names, **extra_opts):
                     "'{}' contains {} value(s) (expected {})".format(
                         item,
                         num_elements,
-                        expected_num_elements
-                        if fill is NOTSET
-                        else "up to {}".format(expected_num_elements),
+                        (
+                            expected_num_elements
+                            if fill is NOTSET
+                            else "up to {}".format(expected_num_elements)
+                        ),
                     )
                 )
             val[idx] = dict(zip(names, elements))

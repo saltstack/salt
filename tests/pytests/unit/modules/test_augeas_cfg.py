@@ -3,6 +3,7 @@
 
     Test cases for salt.modules.augeas_cfg
 """
+
 import pytest
 
 import salt.modules.augeas_cfg as augeas_cfg

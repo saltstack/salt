@@ -235,12 +235,16 @@ def _not_fast_forward(
         "Repository would be updated {}{}, but {}. Set 'force_reset' to "
         "True{} to force this update{}.{}".format(
             f"from {pre} to {post}" if local_changes and pre != post else f"to {post}",
-            f" (after checking out local branch '{branch}')"
-            if _need_branch_change(branch, local_branch)
-            else "",
-            "this is not a fast-forward merge"
-            if not local_changes
-            else "there are uncommitted changes",
+            (
+                f" (after checking out local branch '{branch}')"
+                if _need_branch_change(branch, local_branch)
+                else ""
+            ),
+            (
+                "this is not a fast-forward merge"
+                if not local_changes
+                else "there are uncommitted changes"
+            ),
             " (or 'remote-changes')" if local_changes else "",
             " and discard these changes" if local_changes else "",
             branch_msg,
@@ -1249,9 +1253,11 @@ def latest(
                                 else:
                                     actions.append(
                                         "Repository would be {} from {} to {}".format(
-                                            "hard-reset"
-                                            if force_reset and has_remote_rev
-                                            else "updated",
+                                            (
+                                                "hard-reset"
+                                                if force_reset and has_remote_rev
+                                                else "updated"
+                                            ),
                                             _short_sha(local_rev),
                                             _short_sha(remote_rev),
                                         )

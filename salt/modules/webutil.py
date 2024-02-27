@@ -7,7 +7,6 @@ The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 """
 
-
 import logging
 import os
 

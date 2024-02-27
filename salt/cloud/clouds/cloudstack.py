@@ -20,6 +20,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       driver: cloudstack
 
 """
+
 # pylint: disable=function-redefined
 
 import logging

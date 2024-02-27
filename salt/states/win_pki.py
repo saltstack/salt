@@ -6,7 +6,6 @@ Microsoft certificate management via the Pki PowerShell module.
 .. versionadded:: 2016.11.0
 """
 
-
 _DEFAULT_CONTEXT = "LocalMachine"
 _DEFAULT_FORMAT = "cer"
 _DEFAULT_STORE = "My"
@@ -104,10 +103,10 @@ def import_cert(
                 cert_props["thumbprint"], store_path
             )
         else:
-            ret[
-                "comment"
-            ] = "Certificate '{}' unable to be imported into store: {}".format(
-                cert_props["thumbprint"], store_path
+            ret["comment"] = (
+                "Certificate '{}' unable to be imported into store: {}".format(
+                    cert_props["thumbprint"], store_path
+                )
             )
     return ret
 
@@ -163,9 +162,9 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
                 thumbprint, store_path
             )
         else:
-            ret[
-                "comment"
-            ] = "Certificate '{}' unable to be removed from store: {}".format(
-                thumbprint, store_path
+            ret["comment"] = (
+                "Certificate '{}' unable to be removed from store: {}".format(
+                    thumbprint, store_path
+                )
             )
     return ret

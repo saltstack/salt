@@ -11,6 +11,7 @@
     Note: mock >= 2.0.0 required since unittest.mock does not have
     MagicMock.assert_called in Python < 3.6.
 """
+
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 

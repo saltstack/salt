@@ -373,6 +373,7 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 |       - root   |       - mat             |                         |
 +----------------+-------------------------+-------------------------+
 """
+
 import functools
 import glob
 import logging

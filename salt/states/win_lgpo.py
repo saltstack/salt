@@ -206,6 +206,7 @@ Multiple policy configuration
 
         Windows Components\\Windows Update\\Configure Automatic Updates:
 """
+
 import logging
 
 import salt.utils.data

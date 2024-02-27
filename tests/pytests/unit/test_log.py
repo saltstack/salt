@@ -8,7 +8,6 @@
     Test salt's "hacked" logging
 """
 
-
 import io
 import logging
 

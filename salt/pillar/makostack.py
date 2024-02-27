@@ -372,7 +372,6 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 +----------------+-------------------------+-------------------------+
 """
 
-
 import functools
 import logging
 import os

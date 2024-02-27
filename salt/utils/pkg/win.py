@@ -10,6 +10,7 @@ Collect information about software installed on Windows OS
 
 Known Issue: install_date may not match Control Panel\Programs\Programs and Features
 """
+
 import collections
 import datetime
 import locale

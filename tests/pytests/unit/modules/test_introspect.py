@@ -4,7 +4,6 @@
     Test cases for salt.modules.introspect
 """
 
-
 import pytest
 
 import salt.modules.introspect as introspect

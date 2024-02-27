@@ -1,6 +1,7 @@
 """
 Test the win_wua execution module
 """
+
 import pytest
 
 import salt.modules.win_wua as win_wua

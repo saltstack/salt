@@ -6,7 +6,6 @@ Control the OpenBSD packet filter (PF).
 .. versionadded:: 2019.2.0
 """
 
-
 import logging
 import re
 

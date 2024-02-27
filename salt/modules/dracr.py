@@ -4,7 +4,6 @@ Manage Dell DRAC.
 .. versionadded:: 2015.8.2
 """
 
-
 import logging
 import os
 import re

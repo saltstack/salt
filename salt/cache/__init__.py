@@ -4,7 +4,6 @@ Loader mechanism for caching data, with data expiration, etc.
 .. versionadded:: 2016.11.0
 """
 
-
 import logging
 import time
 

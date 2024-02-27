@@ -3,7 +3,6 @@ Provide the service module for system supervisord or supervisord in a
 virtualenv
 """
 
-
 import configparser
 import os
 

@@ -1,6 +1,7 @@
 """
 Tests for the idem state
 """
+
 import tempfile
 from contextlib import contextmanager
 

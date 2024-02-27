@@ -155,10 +155,10 @@ def _enable(name, started, result=True, **kwargs):
     # Check to see if this minion supports enable
     if "service.enable" not in __salt__ or "service.enabled" not in __salt__:
         if started is True:
-            ret[
-                "comment"
-            ] = "Enable is not available on this minion, service {} started".format(
-                name
+            ret["comment"] = (
+                "Enable is not available on this minion, service {} started".format(
+                    name
+                )
             )
         elif started is None:
             ret["comment"] = (
@@ -166,10 +166,10 @@ def _enable(name, started, result=True, **kwargs):
                 " service {} is in the desired state".format(name)
             )
         else:
-            ret[
-                "comment"
-            ] = "Enable is not available on this minion, service {} is dead".format(
-                name
+            ret["comment"] = (
+                "Enable is not available on this minion, service {} is dead".format(
+                    name
+                )
             )
         return ret
 
@@ -184,10 +184,10 @@ def _enable(name, started, result=True, **kwargs):
         elif started is None:
             # always be sure in this case to reset the changes dict
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "Service {} is already enabled, and is in the desired state".format(
-                name
+            ret["comment"] = (
+                "Service {} is already enabled, and is in the desired state".format(
+                    name
+                )
             )
         else:
             ret["comment"] = "Service {} is already enabled, and is dead".format(name)
@@ -214,10 +214,10 @@ def _enable(name, started, result=True, **kwargs):
                     name
                 )
             elif started is None:
-                ret[
-                    "comment"
-                ] = "Service {} has been enabled, and is in the desired state".format(
-                    name
+                ret["comment"] = (
+                    "Service {} has been enabled, and is in the desired state".format(
+                        name
+                    )
                 )
             else:
                 ret["comment"] = "Service {} has been enabled, and is dead".format(name)
@@ -240,10 +240,10 @@ def _enable(name, started, result=True, **kwargs):
             " but the service was already running".format(name)
         )
     else:
-        ret[
-            "comment"
-        ] = "Failed when setting service {} to start at boot, and the service is dead".format(
-            name
+        ret["comment"] = (
+            "Failed when setting service {} to start at boot, and the service is dead".format(
+                name
+            )
         )
 
     if enable_error:
@@ -274,10 +274,10 @@ def _disable(name, started, result=True, **kwargs):
     # is enable/disable available?
     if "service.disable" not in __salt__ or "service.disabled" not in __salt__:
         if started is True:
-            ret[
-                "comment"
-            ] = "Disable is not available on this minion, service {} started".format(
-                name
+            ret["comment"] = (
+                "Disable is not available on this minion, service {} started".format(
+                    name
+                )
             )
         elif started is None:
             ret["comment"] = (
@@ -285,10 +285,10 @@ def _disable(name, started, result=True, **kwargs):
                 " service {} is in the desired state".format(name)
             )
         else:
-            ret[
-                "comment"
-            ] = "Disable is not available on this minion, service {} is dead".format(
-                name
+            ret["comment"] = (
+                "Disable is not available on this minion, service {} is dead".format(
+                    name
+                )
             )
         return ret
 
@@ -310,10 +310,10 @@ def _disable(name, started, result=True, **kwargs):
         elif started is None:
             # always be sure in this case to reset the changes dict
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "Service {} is already disabled, and is in the desired state".format(
-                name
+            ret["comment"] = (
+                "Service {} is already disabled, and is in the desired state".format(
+                    name
+                )
             )
         else:
             ret["comment"] = "Service {} is already disabled, and is dead".format(name)
@@ -337,9 +337,9 @@ def _disable(name, started, result=True, **kwargs):
         if started is True:
             ret["comment"] = "Service {} has been disabled, and is running".format(name)
         elif started is None:
-            ret[
-                "comment"
-            ] = "Service {} has been disabled, and is in the desired state".format(name)
+            ret["comment"] = (
+                "Service {} has been disabled, and is in the desired state".format(name)
+            )
         else:
             ret["comment"] = "Service {} has been disabled, and is dead".format(name)
         return ret
@@ -347,10 +347,10 @@ def _disable(name, started, result=True, **kwargs):
     # Service failed to be disabled
     ret["result"] = False
     if started is True:
-        ret[
-            "comment"
-        ] = "Failed when setting service {} to not start at boot, and is running".format(
-            name
+        ret["comment"] = (
+            "Failed when setting service {} to not start at boot, and is running".format(
+                name
+            )
         )
     elif started is None:
         ret["comment"] = (

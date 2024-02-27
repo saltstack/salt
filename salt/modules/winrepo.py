@@ -6,6 +6,7 @@ Module to manage Windows software repo on a Standalone Minion
 For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
+
 import logging
 import os
 

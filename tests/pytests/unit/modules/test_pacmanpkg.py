@@ -2,7 +2,6 @@
     :codeauthor: Eric Vz <eric@base10.org>
 """
 
-
 import pytest
 
 import salt.modules.pacmanpkg as pacman

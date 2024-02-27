@@ -2,7 +2,6 @@
     Test cases for salt.modules.keystone
 """
 
-
 import pytest
 
 import salt.modules.config as config

@@ -1108,10 +1108,10 @@ class Schedule:
                     and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
-                        data[
-                            "_error"
-                        ] = 'Grain "whens" must be a dict. Ignoring job {}.'.format(
-                            data["name"]
+                        data["_error"] = (
+                            'Grain "whens" must be a dict. Ignoring job {}.'.format(
+                                data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1123,10 +1123,10 @@ class Schedule:
                     try:
                         when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data[
-                            "_error"
-                        ] = "Invalid date string {}. Ignoring job {}.".format(
-                            i, data["name"]
+                        data["_error"] = (
+                            "Invalid date string {}. Ignoring job {}.".format(
+                                i, data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1382,10 +1382,10 @@ class Schedule:
                 try:
                     start = dateutil_parser.parse(start)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for start. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for start. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1394,10 +1394,10 @@ class Schedule:
                 try:
                     end = dateutil_parser.parse(end)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for end. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for end. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1883,7 +1883,6 @@ class Schedule:
 
 
 def clean_proc_dir(opts):
-
     """
     Loop through jid files in the minion proc directory (default /var/cache/salt/minion/proc)
     and remove any that refer to processes that no longer exist

@@ -58,10 +58,10 @@ def present(
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "LVS Service {} is present but some options should update".format(
-                    name
+                ret["comment"] = (
+                    "LVS Service {} is present but some options should update".format(
+                        name
+                    )
                 )
                 return ret
             else:
@@ -80,9 +80,9 @@ def present(
                     return ret
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "LVS Service {} is not present and needs to be created".format(name)
+            ret["comment"] = (
+                "LVS Service {} is not present and needs to be created".format(name)
+            )
             ret["result"] = None
             return ret
         else:
@@ -141,8 +141,8 @@ def absent(name, protocol=None, service_address=None):
             ret["result"] = False
             return ret
     else:
-        ret[
-            "comment"
-        ] = "LVS Service {} is not present, so it cannot be removed".format(name)
+        ret["comment"] = (
+            "LVS Service {} is not present, so it cannot be removed".format(name)
+        )
 
     return ret

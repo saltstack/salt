@@ -199,10 +199,10 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
                     value = list(
                         set(value).difference(__context__["pending_grains"][name])
                     )
-                    ret[
-                        "comment"
-                    ] = 'Removed value {} from update due to context found in "{}".\n'.format(
-                        value, name
+                    ret["comment"] = (
+                        'Removed value {} from update due to context found in "{}".\n'.format(
+                            value, name
+                        )
                     )
             if "pending_grains" not in __context__:
                 __context__["pending_grains"] = {}
@@ -378,9 +378,9 @@ def absent(name, destructive=False, delimiter=DEFAULT_TARGET_DELIM, force=False)
                 ret["comment"] = "Grain {} is set to be deleted".format(name)
                 ret["changes"] = {"deleted": name}
             else:
-                ret[
-                    "comment"
-                ] = "Value for grain {} is set to be deleted (None)".format(name)
+                ret["comment"] = (
+                    "Value for grain {} is set to be deleted (None)".format(name)
+                )
                 ret["changes"] = {"grain": name, "value": None}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
@@ -436,9 +436,9 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
-                ret[
-                    "comment"
-                ] = "Value {1} is already in the list for grain {0}".format(name, value)
+                ret["comment"] = (
+                    "Value {1} is already in the list for grain {0}".format(name, value)
+                )
                 return ret
             if __opts__["test"]:
                 ret["result"] = None

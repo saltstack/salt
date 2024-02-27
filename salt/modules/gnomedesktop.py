@@ -2,7 +2,6 @@
 GNOME implementations
 """
 
-
 import logging
 import re
 

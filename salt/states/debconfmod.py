@@ -184,7 +184,7 @@ def set(name, data, **kwargs):
 
     current = __salt__["debconf.show"](name)
 
-    for (key, args) in data.items():
+    for key, args in data.items():
         # For debconf data, valid booleans are 'true' and 'false';
         # But str()'ing the args['value'] will result in 'True' and 'False'
         # which will be ignored and overridden by a dpkg-reconfigure.

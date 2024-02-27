@@ -701,7 +701,7 @@ def gen_thin(
                 # This is likely a compressed python .egg
                 tempdir = tempfile.mkdtemp()
                 egg = zipfile.ZipFile(top_dirname)
-                egg.extractall(tempdir)
+                egg.extractall(tempdir)  # nosec
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
 
@@ -973,7 +973,7 @@ def gen_min(
                 # This is likely a compressed python .egg
                 tempdir = tempfile.mkdtemp()
                 egg = zipfile.ZipFile(top_dirname)
-                egg.extractall(tempdir)
+                egg.extractall(tempdir)  # nosec
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
             if not os.path.isdir(top):

@@ -178,9 +178,11 @@ def test_commands_with_global_params():
                     "--non-interactive",
                     "--drop-if-no-change",
                     "--no-selfupdate",
-                    cmd.replace("_", ".")
-                    if cmd.startswith("grub")
-                    else cmd.replace("_", "-"),
+                    (
+                        cmd.replace("_", ".")
+                        if cmd.startswith("grub")
+                        else cmd.replace("_", "-")
+                    ),
                 ]
             )
 

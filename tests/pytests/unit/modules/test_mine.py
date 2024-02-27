@@ -3,7 +3,6 @@
     :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
-
 import pytest
 
 import salt.modules.mine as mine

@@ -2,7 +2,6 @@
 Test case for the cassandra_cql module
 """
 
-
 import logging
 import ssl
 

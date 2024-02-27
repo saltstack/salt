@@ -52,19 +52,19 @@ def present(
     comments["comment_port_created"] = "Port {} created on bridge {}.".format(
         name, bridge
     )
-    comments[
-        "comment_port_notcreated"
-    ] = "Unable to create port {} on bridge {}.".format(name, bridge)
+    comments["comment_port_notcreated"] = (
+        "Unable to create port {} on bridge {}.".format(name, bridge)
+    )
     comments["changes_port_created"] = {
         name: {
             "old": "No port named {} present.".format(name),
             "new": "Created port {1} on bridge {0}.".format(bridge, name),
         }
     }
-    comments[
-        "comment_port_internal"
-    ] = "Port {} already exists, but interface type has been changed to internal.".format(
-        name
+    comments["comment_port_internal"] = (
+        "Port {} already exists, but interface type has been changed to internal.".format(
+            name
+        )
     )
     comments["changes_port_internal"] = {"internal": {"old": False, "new": True}}
     comments["comment_port_internal_not_changed"] = (
@@ -76,23 +76,23 @@ def present(
         comments["comment_invalid_ip"] = "Remote is not valid ip address."
         if tunnel_type == "vlan":
             comments["comment_vlan_invalid_id"] = "VLANs id must be between 0 and 4095."
-            comments[
-                "comment_vlan_invalid_name"
-            ] = "Could not find network interface {}.".format(name)
-            comments[
-                "comment_vlan_port_exists"
-            ] = "Port {} with access to VLAN {} already exists on bridge {}.".format(
-                name, id, bridge
+            comments["comment_vlan_invalid_name"] = (
+                "Could not find network interface {}.".format(name)
             )
-            comments[
-                "comment_vlan_created"
-            ] = "Created port {} with access to VLAN {} on bridge {}.".format(
-                name, id, bridge
+            comments["comment_vlan_port_exists"] = (
+                "Port {} with access to VLAN {} already exists on bridge {}.".format(
+                    name, id, bridge
+                )
             )
-            comments[
-                "comment_vlan_notcreated"
-            ] = "Unable to create port {} with access to VLAN {} on bridge {}.".format(
-                name, id, bridge
+            comments["comment_vlan_created"] = (
+                "Created port {} with access to VLAN {} on bridge {}.".format(
+                    name, id, bridge
+                )
+            )
+            comments["comment_vlan_notcreated"] = (
+                "Unable to create port {} with access to VLAN {} on bridge {}.".format(
+                    name, id, bridge
+                )
             )
             comments["changes_vlan_created"] = {
                 name: {
@@ -108,9 +108,9 @@ def present(
             }
 
         elif tunnel_type == "gre":
-            comments[
-                "comment_gre_invalid_id"
-            ] = "Id of GRE tunnel must be an unsigned 32-bit integer."
+            comments["comment_gre_invalid_id"] = (
+                "Id of GRE tunnel must be an unsigned 32-bit integer."
+            )
             comments["comment_gre_interface_exists"] = (
                 "GRE tunnel interface {} with rempte ip {} and key {} "
                 "already exists on bridge {}.".format(name, remote, id, bridge)
@@ -139,9 +139,9 @@ def present(
             comments["comment_dstport"] = (
                 " (dst_port" + str(dst_port) + ")" if 0 < dst_port <= 65535 else ""
             )
-            comments[
-                "comment_vxlan_invalid_id"
-            ] = "Id of VXLAN tunnel must be an unsigned 64-bit integer."
+            comments["comment_vxlan_invalid_id"] = (
+                "Id of VXLAN tunnel must be an unsigned 64-bit integer."
+            )
             comments["comment_vxlan_interface_exists"] = (
                 "VXLAN tunnel interface {} with rempte ip {} and key {} "
                 "already exists on bridge {}{}.".format(

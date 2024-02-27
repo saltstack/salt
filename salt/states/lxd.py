@@ -27,7 +27,6 @@ Manage LXD profiles.
 :platform: Linux
 """
 
-
 import os.path
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError

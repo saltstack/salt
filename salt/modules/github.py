@@ -29,7 +29,6 @@ For example:
       allow_repo_privacy_changes: False
 """
 
-
 import logging
 
 import salt.utils.http

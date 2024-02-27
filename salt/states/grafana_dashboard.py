@@ -37,7 +37,6 @@ they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
 """
 
-
 import copy
 
 import requests

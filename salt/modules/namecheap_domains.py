@@ -402,9 +402,9 @@ def check(*domains_to_check):
     domains_checked = {}
     for result in response_xml.getElementsByTagName("DomainCheckResult"):
         available = result.getAttribute("Available")
-        domains_checked[
-            result.getAttribute("Domain").lower()
-        ] = salt.utils.namecheap.string_to_value(available)
+        domains_checked[result.getAttribute("Domain").lower()] = (
+            salt.utils.namecheap.string_to_value(available)
+        )
 
     return domains_checked
 

@@ -161,7 +161,7 @@ def installed(
             composer_home=composer_home,
             env=env,
         )
-    except (SaltException) as err:
+    except SaltException as err:
         ret["result"] = False
         ret["comment"] = "Error executing composer in '{}': {}".format(name, err)
         return ret
@@ -172,9 +172,9 @@ def installed(
     ret["result"] = True
 
     if quiet is True:
-        ret[
-            "comment"
-        ] = "Composer install completed successfully, output silenced by quiet flag"
+        ret["comment"] = (
+            "Composer install completed successfully, output silenced by quiet flag"
+        )
     else:
         ret["comment"] = "Composer install completed successfully"
         ret["changes"] = {"stderr": call["stderr"], "stdout": call["stdout"]}
@@ -281,7 +281,7 @@ def update(
             composer_home=composer_home,
             env=env,
         )
-    except (SaltException) as err:
+    except SaltException as err:
         ret["result"] = False
         ret["comment"] = "Error executing composer in '{}': {}".format(name, err)
         return ret
@@ -292,9 +292,9 @@ def update(
     ret["result"] = True
 
     if quiet is True:
-        ret[
-            "comment"
-        ] = "Composer update completed successfully, output silenced by quiet flag"
+        ret["comment"] = (
+            "Composer update completed successfully, output silenced by quiet flag"
+        )
     else:
         ret["comment"] = "Composer update completed successfully"
         ret["changes"] = {"stderr": call["stderr"], "stdout": call["stdout"]}

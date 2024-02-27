@@ -3,7 +3,6 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 """
 
-
 import copy
 import datetime
 import fnmatch
@@ -1385,7 +1384,7 @@ def recursive_diff(
             append_old = list(old.keys())[min_length:]
             append_new = list(new.keys())[min_length:]
         # Compare ordered
-        for (key_old, key_new) in zip(old, new):
+        for key_old, key_new in zip(old, new):
             if key_old == key_new:
                 if key_old in ignore_keys:
                     del ret_old[key_old]

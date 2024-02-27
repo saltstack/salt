@@ -4,7 +4,6 @@ Control Linux Containers via Salt
 :depends: lxc execution module
 """
 
-
 import copy
 import logging
 import os

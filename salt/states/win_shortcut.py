@@ -6,6 +6,7 @@ shortcuts.
 
 .. versionadded:: 3005
 """
+
 import salt.utils.data
 import salt.utils.path
 import salt.utils.platform

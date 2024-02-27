@@ -2,7 +2,6 @@
     Test parallels desktop execution module functions
 """
 
-
 import textwrap
 
 import pytest

@@ -86,7 +86,6 @@ Azure (ARM) Resource State Module
 
 """
 
-
 import json
 import logging
 from functools import wraps
@@ -172,9 +171,9 @@ def resource_group_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     group = {}
@@ -255,9 +254,9 @@ def resource_group_absent(name, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     group = {}
@@ -415,9 +414,9 @@ def policy_definition_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     if not policy_rule and not policy_rule_json and not policy_rule_file:
@@ -630,9 +629,9 @@ def policy_definition_absent(name, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     policy = __salt__["azurearm_resource.policy_definition_get"](
@@ -726,9 +725,9 @@ def policy_assignment_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     policy = __salt__["azurearm_resource.policy_assignment_get"](
@@ -843,9 +842,9 @@ def policy_assignment_absent(name, scope, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     policy = __salt__["azurearm_resource.policy_assignment_get"](

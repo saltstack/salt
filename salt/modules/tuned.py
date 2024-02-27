@@ -7,7 +7,6 @@ Interface to Red Hat tuned-adm module
 :platform:      Linux
 """
 
-
 import re
 
 import salt.utils.path

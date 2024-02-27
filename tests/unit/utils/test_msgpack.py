@@ -1,6 +1,7 @@
 """
 Test the MessagePack utility
 """
+
 import inspect
 import os
 import pprint

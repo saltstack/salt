@@ -18,7 +18,6 @@ Its output may be stored in a file or in a grain.
         - output:  "/tmp/query_id.txt"
 """
 
-
 import os.path
 
 import salt.utils.files
@@ -69,10 +68,10 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
                 return ret
             elif __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Ticket generation would be executed, storing result in grain: {}".format(
-                    grain
+                ret["comment"] = (
+                    "Ticket generation would be executed, storing result in grain: {}".format(
+                        grain
+                    )
                 )
                 return ret
         elif grain:
@@ -102,10 +101,10 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
             return ret
         elif __opts__["test"]:
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "Ticket generation would be executed, storing result in file: {}".format(
-                output
+            ret["comment"] = (
+                "Ticket generation would be executed, storing result in file: {}".format(
+                    output
+                )
             )
             return ret
     elif __opts__["test"]:
@@ -156,10 +155,10 @@ def generate_cert(name):
 
     # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(key):
-        ret[
-            "comment"
-        ] = "No execution needed. Cert: {} and key: {} already generated.".format(
-            cert, key
+        ret["comment"] = (
+            "No execution needed. Cert: {} and key: {} already generated.".format(
+                cert, key
+            )
         )
         return ret
     if __opts__["test"]:

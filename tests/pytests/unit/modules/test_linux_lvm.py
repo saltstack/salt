@@ -4,7 +4,6 @@
     TestCase for the salt.modules.linux_lvm module
 """
 
-
 import os.path
 
 import pytest

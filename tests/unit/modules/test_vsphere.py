@@ -4,6 +4,7 @@
 
     Tests for functions in salt.modules.vsphere
 """
+
 import pytest
 
 import salt.modules.vsphere as vsphere

@@ -456,17 +456,17 @@ def hold(queue_id):
         if queue_id == "ALL":
             ret["message"] = "Successfully placed all messages on hold"
         else:
-            ret[
-                "message"
-            ] = "Successfully placed message on hold with queue id {}".format(queue_id)
+            ret["message"] = (
+                "Successfully placed message on hold with queue id {}".format(queue_id)
+            )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to place all messages on hold"
         else:
-            ret[
-                "message"
-            ] = "Unable to place message on hold with queue id {}: {}".format(
-                queue_id, result["stderr"]
+            ret["message"] = (
+                "Unable to place message on hold with queue id {}: {}".format(
+                    queue_id, result["stderr"]
+                )
             )
     return ret
 
@@ -509,17 +509,17 @@ def unhold(queue_id):
         if queue_id == "ALL":
             ret["message"] = "Successfully set all message as unheld"
         else:
-            ret[
-                "message"
-            ] = "Successfully set message as unheld with queue id {}".format(queue_id)
+            ret["message"] = (
+                "Successfully set message as unheld with queue id {}".format(queue_id)
+            )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to set all message as unheld."
         else:
-            ret[
-                "message"
-            ] = "Unable to set message as unheld with queue id {}: {}".format(
-                queue_id, result["stderr"]
+            ret["message"] = (
+                "Unable to set message as unheld with queue id {}: {}".format(
+                    queue_id, result["stderr"]
+                )
             )
     return ret
 

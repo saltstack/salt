@@ -22,7 +22,6 @@ Example States
         - name: cirros
 """
 
-
 __virtualname__ = "glance_image"
 
 

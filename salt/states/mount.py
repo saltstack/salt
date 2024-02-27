@@ -477,10 +477,10 @@ def mounted(
                 if trigger_remount:
                     if __opts__["test"]:
                         ret["result"] = None
-                        ret[
-                            "comment"
-                        ] = "Remount would be forced because options ({}) changed".format(
-                            ",".join(sorted(trigger_remount))
+                        ret["comment"] = (
+                            "Remount would be forced because options ({}) changed".format(
+                                ",".join(sorted(trigger_remount))
+                            )
                         )
                         return ret
                     else:
@@ -642,9 +642,9 @@ def mounted(
                 elif mkmnt:
                     ret["comment"] = "{} would be created and mounted".format(name)
                 else:
-                    ret[
-                        "comment"
-                    ] = "{} does not exist and would not be created".format(name)
+                    ret["comment"] = (
+                        "{} does not exist and would not be created".format(name)
+                    )
                 return ret
 
             if not os.path.exists(name) and not mkmnt:
@@ -670,10 +670,10 @@ def mounted(
                 if mkmnt:
                     ret["comment"] = "{} would be created, but not mounted".format(name)
                 else:
-                    ret[
-                        "comment"
-                    ] = "{} does not exist and would neither be created nor mounted".format(
-                        name
+                    ret["comment"] = (
+                        "{} does not exist and would neither be created nor mounted".format(
+                            name
+                        )
                     )
             elif mkmnt:
                 __salt__["file.mkdir"](name, user=user)
@@ -861,10 +861,10 @@ def swap(name, persist=True, config="/etc/fstab"):
             ]:
                 ret["result"] = None
                 if name in on_:
-                    ret[
-                        "comment"
-                    ] = "Swap {} is set to be added to the fstab and to be activated".format(
-                        name
+                    ret["comment"] = (
+                        "Swap {} is set to be added to the fstab and to be activated".format(
+                            name
+                        )
                     )
             return ret
 

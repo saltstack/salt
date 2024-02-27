@@ -3,7 +3,6 @@ Read/Write multiple returners
 
 """
 
-
 import logging
 
 import salt.minion

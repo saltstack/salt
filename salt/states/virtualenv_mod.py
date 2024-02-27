@@ -4,7 +4,6 @@ Setup of Python virtualenv sandboxes.
 .. versionadded:: 0.17.0
 """
 
-
 import logging
 import os
 

@@ -6,7 +6,6 @@ State module to manage Elasticsearch indices
    Use elasticsearch state instead
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -35,9 +34,9 @@ def absent(name):
                     ret["comment"] = "Successfully removed index {}".format(name)
                     ret["changes"]["old"] = index[name]
                 else:
-                    ret[
-                        "comment"
-                    ] = "Failed to remove index {} for unknown reasons".format(name)
+                    ret["comment"] = (
+                        "Failed to remove index {} for unknown reasons".format(name)
+                    )
         else:
             ret["comment"] = "Index {} is already absent".format(name)
     except Exception as err:  # pylint: disable=broad-except

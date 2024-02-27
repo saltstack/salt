@@ -70,7 +70,6 @@ You can also include comments:
 
 """
 
-
 import logging
 
 import salt.utils.validate.net

@@ -355,11 +355,13 @@ def endpoint_get(service, region=None, profile=None, interface=None, **connectio
     e = [
         _f
         for _f in [
-            e
-            if e["service_id"] == service_id
-            and (e["region"] == region if region else True)
-            and (e["interface"] == interface if interface else True)
-            else None
+            (
+                e
+                if e["service_id"] == service_id
+                and (e["region"] == region if region else True)
+                and (e["interface"] == interface if interface else True)
+                else None
+            )
             for e in endpoints.values()
         ]
         if _f

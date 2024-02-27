@@ -37,7 +37,6 @@ Be warned that if you do this, then the file will be saved, but not in a format
 that can be re-imported into Python.
 """
 
-
 import os
 
 import salt.utils.data

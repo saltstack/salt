@@ -4,6 +4,7 @@
 
     Salt's Loader PyTest Mock Support
 """
+
 import logging
 import sys
 import types

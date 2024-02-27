@@ -302,10 +302,10 @@ def team_present(
                         }
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove repo {} from team {}.".format(
-                            repo_name, name
+                        ret["comment"] = (
+                            "Failed to remove repo {} from team {}.".format(
+                                repo_name, name
+                            )
                         )
                         return ret
 
@@ -373,9 +373,9 @@ def team_present(
                     )
                     if result:
                         ret["changes"][member] = {}
-                        ret["changes"][member][
-                            "old"
-                        ] = "User {} is not in team {}".format(member, name)
+                        ret["changes"][member]["old"] = (
+                            "User {} is not in team {}".format(member, name)
+                        )
                         ret["changes"][member]["new"] = "User {} is in team {}".format(
                             member, name
                         )
@@ -684,10 +684,10 @@ def repo_present(
                         ret["changes"][team_name] = team_change
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove repo {} from team {}.".format(
-                            name, team_name
+                        ret["comment"] = (
+                            "Failed to remove repo {} from team {}.".format(
+                                name, team_name
+                            )
                         )
                         return ret
 
@@ -709,10 +709,10 @@ def repo_present(
                         ret["changes"][team_name] = team_change
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove repo {} from team {}.".format(
-                            name, team_name
+                        ret["comment"] = (
+                            "Failed to remove repo {} from team {}.".format(
+                                name, team_name
+                            )
                         )
                         return ret
             else:

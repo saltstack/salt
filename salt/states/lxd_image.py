@@ -28,7 +28,6 @@ Manage LXD images.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"

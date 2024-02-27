@@ -2,7 +2,6 @@
 Support for ipset
 """
 
-
 import logging
 
 import salt.utils.path

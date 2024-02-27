@@ -7,6 +7,7 @@ This includes client side transport, for the ReqServer and the Publisher
 NOTE: This module has been deprecated and will be removed in Argon. Please use
 salt.channel.server instead.
 """
+
 import logging
 
 from salt.utils.versions import warn_until

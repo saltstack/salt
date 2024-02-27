@@ -21,7 +21,6 @@ Example:
 
 """
 
-
 import logging
 import re
 

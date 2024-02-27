@@ -58,10 +58,10 @@ def system(name, utc=True):
         compzone = __salt__["timezone.zone_compare"](name)
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Unable to compare desired timezone '{}' to system timezone: {}".format(
-            name, exc
+        ret["comment"] = (
+            "Unable to compare desired timezone '{}' to system timezone: {}".format(
+                name, exc
+            )
         )
         return ret
 

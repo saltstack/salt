@@ -11,7 +11,6 @@ config or pillar:
 :depends: pypureomapi Python module
 """
 
-
 import logging
 import struct
 

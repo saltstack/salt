@@ -574,10 +574,10 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
     out = __salt__["cmd.run"](cmd, python_shell=False).find(search_rule)
 
     if out == -1:
-        ret[
-            "comment"
-        ] = "Rule {} in chain {} in table {} in family {} does not exist".format(
-            rule, chain, table, family
+        ret["comment"] = (
+            "Rule {} in chain {} in table {} in family {} does not exist".format(
+                rule, chain, table, family
+            )
         )
     else:
         ret["comment"] = "Rule {} in chain {} in table {} in family {} exists".format(
@@ -799,10 +799,10 @@ def new_chain(
         )
         ret["result"] = True
     else:
-        ret[
-            "comment"
-        ] = "Chain {} in table {} in family {} could not be created".format(
-            chain, table, family
+        ret["comment"] = (
+            "Chain {} in table {} in family {} could not be created".format(
+                chain, table, family
+            )
         )
     return ret
 
@@ -850,10 +850,10 @@ def delete_chain(table="filter", chain=None, family="ipv4"):
         )
         ret["result"] = True
     else:
-        ret[
-            "comment"
-        ] = "Chain {} in table {} in family {} could not be deleted".format(
-            chain, table, family
+        ret["comment"] = (
+            "Chain {} in table {} in family {} could not be deleted".format(
+                chain, table, family
+            )
         )
     return ret
 
@@ -904,10 +904,10 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
 
     res = check(table, chain, rule, family=family)
     if res["result"]:
-        ret[
-            "comment"
-        ] = "Rule {} chain {} in table {} in family {} already exists".format(
-            rule, chain, table, family
+        ret["comment"] = (
+            "Rule {} chain {} in table {} in family {} already exists".format(
+                rule, chain, table, family
+            )
         )
         return ret
 
@@ -923,10 +923,10 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
             rule, chain, table, family
         )
     else:
-        ret[
-            "comment"
-        ] = 'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
-            rule, chain, table, family
+        ret["comment"] = (
+            'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
+                rule, chain, table, family
+            )
         )
     return ret
 
@@ -984,10 +984,10 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
 
     res = check(table, chain, rule, family=family)
     if res["result"]:
-        ret[
-            "comment"
-        ] = "Rule {} chain {} in table {} in family {} already exists".format(
-            rule, chain, table, family
+        ret["comment"] = (
+            "Rule {} chain {} in table {} in family {} already exists".format(
+                rule, chain, table, family
+            )
         )
         return ret
 
@@ -1008,10 +1008,10 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
             rule, chain, table, family
         )
     else:
-        ret[
-            "comment"
-        ] = 'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
-            rule, chain, table, family
+        ret["comment"] = (
+            'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
+                rule, chain, table, family
+            )
         )
     return ret
 
@@ -1061,10 +1061,10 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
 
     res = check(table, chain, rule, family=family)
     if not res["result"]:
-        ret[
-            "comment"
-        ] = "Rule {} chain {} in table {} in family {} does not exist".format(
-            rule, chain, table, family
+        ret["comment"] = (
+            "Rule {} chain {} in table {} in family {} does not exist".format(
+                rule, chain, table, family
+            )
         )
         return ret
 
@@ -1081,16 +1081,16 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
 
     if not out:
         ret["result"] = True
-        ret[
-            "comment"
-        ] = 'Deleted rule "{}" in chain {} in table {} in family {}.'.format(
-            rule, chain, table, family
+        ret["comment"] = (
+            'Deleted rule "{}" in chain {} in table {} in family {}.'.format(
+                rule, chain, table, family
+            )
         )
     else:
-        ret[
-            "comment"
-        ] = 'Failed to delete rule "{}" in chain {}  table {} in family {}'.format(
-            rule, chain, table, family
+        ret["comment"] = (
+            'Failed to delete rule "{}" in chain {}  table {} in family {}'.format(
+                rule, chain, table, family
+            )
         )
     return ret
 

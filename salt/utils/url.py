@@ -2,7 +2,6 @@
 URL utils
 """
 
-
 import re
 import sys
 from urllib.parse import urlparse, urlunparse

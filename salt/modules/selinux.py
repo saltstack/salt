@@ -10,7 +10,6 @@ Execute calls on selinux
     proper packages are installed.
 """
 
-
 import os
 import re
 

@@ -1588,7 +1588,7 @@ def test_line_insert_ensure_beforeafter_twolines(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
         ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1640,7 +1640,7 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
         ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1677,7 +1677,7 @@ def test_line_insert_ensure_beforeafter_rangelines():
         file_content.split(os.linesep)[0],
         file_content.split(os.linesep)[-1],
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
             "os.path.isfile", MagicMock(return_value=True)
         ), patch("os.stat", MagicMock()), patch(

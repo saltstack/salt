@@ -9,7 +9,6 @@ that use SMF also. (e.g. SmartOS)
     <module-provider-override>`.
 """
 
-
 import fnmatch
 import re
 

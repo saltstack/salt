@@ -1,6 +1,7 @@
 """
 Test functions in state.py that are not a part of a class
 """
+
 import pytest
 
 import salt.state

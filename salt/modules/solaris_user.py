@@ -10,7 +10,6 @@ Manage users with the useradd command
 
 """
 
-
 import copy
 import logging
 

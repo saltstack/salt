@@ -43,6 +43,7 @@ Example Provider Configuration
 :maintainer: Russell Tolle <russ.tolle@gmail.com>
 :depends: libcloud >= 1.0.0
 """
+
 # pylint: disable=function-redefined
 
 import logging
@@ -1698,7 +1699,6 @@ def delete_disk(kwargs=None, call=None):
 
 
 def create_disk(kwargs=None, call=None):
-
     """
     Create a new persistent disk. Must specify `disk_name` and `location`,
     and optionally can specify 'disk_type' as pd-standard or pd-ssd, which

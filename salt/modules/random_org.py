@@ -15,6 +15,7 @@ Module for retrieving random information from Random.org
           api_key: 7be1402d-5719-5bd3-a306-3def9f135da5
           api_version: 1
 """
+
 import http.client
 import logging
 import urllib.request
@@ -218,9 +219,9 @@ def generateIntegers(api_key=None, api_version=None, **kwargs):
         or not -1000000000 <= kwargs["minimum"] <= 1000000000
     ):
         ret["res"] = False
-        ret[
-            "message"
-        ] = "Minimum argument must be between -1,000,000,000 and 1,000,000,000"
+        ret["message"] = (
+            "Minimum argument must be between -1,000,000,000 and 1,000,000,000"
+        )
         return ret
 
     if (
@@ -228,9 +229,9 @@ def generateIntegers(api_key=None, api_version=None, **kwargs):
         or not -1000000000 <= kwargs["maximum"] <= 1000000000
     ):
         ret["res"] = False
-        ret[
-            "message"
-        ] = "Maximum argument must be between -1,000,000,000 and 1,000,000,000"
+        ret["message"] = (
+            "Maximum argument must be between -1,000,000,000 and 1,000,000,000"
+        )
         return ret
 
     if "base" in kwargs:
@@ -614,9 +615,9 @@ def generateGaussians(api_key=None, api_version=None, **kwargs):
         or not -1000000 <= kwargs["standardDeviation"] <= 1000000
     ):
         ret["res"] = False
-        ret[
-            "message"
-        ] = "The distribution's standard deviation must be between -1000000 and 1000000"
+        ret["message"] = (
+            "The distribution's standard deviation must be between -1000000 and 1000000"
+        )
         return ret
 
     if (

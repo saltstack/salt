@@ -1,6 +1,7 @@
 """
 Functions to work with MessagePack
 """
+
 import logging
 
 log = logging.getLogger(__name__)

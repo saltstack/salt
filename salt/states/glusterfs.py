@@ -2,7 +2,6 @@
 Manage GlusterFS pool.
 """
 
-
 import logging
 
 import salt.utils.cloud as suc
@@ -105,10 +104,10 @@ def peered(name):
         ret["comment"] = "Host {} successfully peered".format(name)
         ret["changes"] = {"new": newpeers, "old": peers}
     else:
-        ret[
-            "comment"
-        ] = "Host {} was successfully peered but did not appear in the list of peers".format(
-            name
+        ret["comment"] = (
+            "Host {} was successfully peered but did not appear in the list of peers".format(
+                name
+            )
         )
     return ret
 
@@ -368,10 +367,10 @@ def op_version(name, version):
         ret["result"] = True
         return ret
     elif __opts__["test"]:
-        ret[
-            "comment"
-        ] = "An attempt would be made to set the cluster.op-version for {} to {}.".format(
-            name, version
+        ret["comment"] = (
+            "An attempt would be made to set the cluster.op-version for {} to {}.".format(
+                name, version
+            )
         )
         ret["result"] = None
         return ret
@@ -421,18 +420,18 @@ def max_op_version(name):
         return ret
 
     if current == max_version:
-        ret[
-            "comment"
-        ] = "The cluster.op-version is already set to the cluster.max-op-version of {}".format(
-            current
+        ret["comment"] = (
+            "The cluster.op-version is already set to the cluster.max-op-version of {}".format(
+                current
+            )
         )
         ret["result"] = True
         return ret
     elif __opts__["test"]:
-        ret[
-            "comment"
-        ] = "An attempt would be made to set the cluster.op-version to {}.".format(
-            max_version
+        ret["comment"] = (
+            "An attempt would be made to set the cluster.op-version to {}.".format(
+                max_version
+            )
         )
         ret["result"] = None
         return ret

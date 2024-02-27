@@ -6,7 +6,6 @@ Module to provide icinga2 compatibility to salt.
 :depends:   - icinga2 server
 """
 
-
 import logging
 
 import salt.utils.path

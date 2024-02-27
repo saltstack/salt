@@ -2,7 +2,6 @@
 Unit Tests for functions located in salt/utils/files.py
 """
 
-
 import copy
 import io
 import os

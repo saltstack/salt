@@ -15,7 +15,6 @@ Module for sending messages to Slack
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-
 import logging
 import urllib.parse
 

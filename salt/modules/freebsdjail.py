@@ -2,7 +2,6 @@
 The jail module for FreeBSD
 """
 
-
 import os
 import re
 import subprocess

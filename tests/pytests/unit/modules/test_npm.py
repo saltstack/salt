@@ -4,7 +4,6 @@
     Test cases for salt.modules.npm
 """
 
-
 import textwrap
 
 import pytest

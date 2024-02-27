@@ -46,7 +46,6 @@ CLI Example:
     salt '*' foo.bar --out=pony
 """
 
-
 import subprocess
 
 import salt.utils.data

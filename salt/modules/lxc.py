@@ -1666,9 +1666,9 @@ def init(
                 ret["result"] = False
             else:
                 if not result:
-                    ret[
-                        "comment"
-                    ] = "Bootstrap failed, see minion log for more information"
+                    ret["comment"] = (
+                        "Bootstrap failed, see minion log for more information"
+                    )
                     ret["result"] = False
                 else:
                     changes.append({"bootstrap": "Container successfully bootstrapped"})
@@ -3274,7 +3274,6 @@ def systemd_running_state(name, path=None):
 
 
 def test_sd_started_state(name, path=None):
-
     """
     Test if a systemd container is fully started
 

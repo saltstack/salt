@@ -35,7 +35,6 @@ For the sake of brevity, examples for each state assume that jboss_config is con
 
 """
 
-
 import logging
 import re
 import time
@@ -649,10 +648,10 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
             ret["changes"]["reloaded"] = "configuration"
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Could not reload the configuration. Timeout ({} s) exceeded. ".format(
-                timeout
+            ret["comment"] = (
+                "Could not reload the configuration. Timeout ({} s) exceeded. ".format(
+                    timeout
+                )
             )
             if not status["success"]:
                 ret["comment"] = __append_comment(

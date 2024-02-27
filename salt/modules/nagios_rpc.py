@@ -5,7 +5,6 @@ Check Host & Service status from Nagios via JSON RPC.
 
 """
 
-
 import http.client
 import logging
 

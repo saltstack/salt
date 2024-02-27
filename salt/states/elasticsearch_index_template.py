@@ -6,7 +6,6 @@ State module to manage Elasticsearch index templates
    Use elasticsearch state instead
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -39,10 +38,10 @@ def absent(name):
                     )
                     ret["changes"]["old"] = index_template[name]
                 else:
-                    ret[
-                        "comment"
-                    ] = "Failed to remove index template {} for unknown reasons".format(
-                        name
+                    ret["comment"] = (
+                        "Failed to remove index template {} for unknown reasons".format(
+                            name
+                        )
                     )
         else:
             ret["comment"] = "Index template {} is already absent".format(name)
@@ -88,9 +87,9 @@ def present(name, definition):
         )
         if not index_template_exists:
             if __opts__["test"]:
-                ret[
-                    "comment"
-                ] = "Index template {} does not exist and will be created".format(name)
+                ret["comment"] = (
+                    "Index template {} does not exist and will be created".format(name)
+                )
                 ret["changes"] = {"new": definition}
                 ret["result"] = None
             else:

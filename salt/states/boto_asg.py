@@ -191,7 +191,6 @@ Overriding the alarm values on the resource:
                 threshold: 50.0
 """
 
-
 import copy
 import hashlib
 import logging

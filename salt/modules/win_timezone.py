@@ -1,6 +1,7 @@
 """
 Module for managing timezone on Windows systems.
 """
+
 import logging
 from datetime import datetime
 

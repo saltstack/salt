@@ -575,7 +575,7 @@ def create_node(kwargs):
         "HostName",
         "Password",
         "SystemDisk.Category",
-        "VSwitchId"
+        "VSwitchId",
         # 'DataDisk.n.Size', 'DataDisk.n.Category', 'DataDisk.n.SnapshotId'
     ]
 

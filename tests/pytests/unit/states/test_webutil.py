@@ -2,7 +2,6 @@
     :codeauthor: Alexander Pyatkin <asp@thexyz.net>
 """
 
-
 import pytest
 
 import salt.states.webutil as htpasswd

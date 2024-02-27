@@ -21,7 +21,6 @@ Example:
         - runas: rabbitmq
 """
 
-
 import logging
 
 import salt.utils.path

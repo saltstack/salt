@@ -34,7 +34,6 @@ specified, rather than top-level configurations. This being the case, it is
 better to always use a named configuration profile, as shown above.
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError

@@ -15,7 +15,6 @@ The default for this setting is ``False``.
 :depends: virtualbox
 """
 
-
 import logging
 import os.path
 import re

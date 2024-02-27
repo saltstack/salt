@@ -725,9 +725,9 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 if result:
                     changes = {"old": "hold", "new": "install"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target][
-                        "comment"
-                    ] = "Package {} is no longer being held.".format(target)
+                    ret[target]["comment"] = (
+                        "Package {} is no longer being held.".format(target)
+                    )
                 else:
                     ret[target].update(result=False)
                     ret[target]["comment"] = "Unable to unhold package {}.".format(

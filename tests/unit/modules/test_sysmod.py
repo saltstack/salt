@@ -2,7 +2,6 @@
 :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.sysmod as sysmod
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch

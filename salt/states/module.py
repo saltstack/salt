@@ -300,6 +300,7 @@ Windows system:
 
 .. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
+
 import logging
 
 import salt.loader
@@ -464,9 +465,11 @@ def _run(**kwargs):
                 success.append(
                     "{}: {}".format(
                         func,
-                        func_ret.get("comment", "Success")
-                        if isinstance(func_ret, dict)
-                        else func_ret,
+                        (
+                            func_ret.get("comment", "Success")
+                            if isinstance(func_ret, dict)
+                            else func_ret
+                        ),
                     )
                 )
                 ret["changes"][func] = func_ret

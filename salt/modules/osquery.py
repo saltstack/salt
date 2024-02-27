@@ -81,9 +81,9 @@ def _osquery_cmd(table, attrs=None, where=None, format="json"):
                 for a in attrs:
                     if a not in valid_attrs:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "{} is not a valid attribute for table {}".format(a, table)
+                        ret["comment"] = (
+                            "{} is not a valid attribute for table {}".format(a, table)
+                        )
                         return ret
                 _attrs = ",".join(attrs)
             else:

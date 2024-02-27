@@ -1190,21 +1190,21 @@ def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
                     cx509.SubjectKeyIdentifier
                 ).value.digest
             except cx509.ExtensionNotFound:
-                args[
-                    "key_identifier"
-                ] = cx509.AuthorityKeyIdentifier.from_issuer_public_key(
-                    ca_crt.public_key()
-                ).key_identifier
+                args["key_identifier"] = (
+                    cx509.AuthorityKeyIdentifier.from_issuer_public_key(
+                        ca_crt.public_key()
+                    ).key_identifier
+                )
             except Exception:  # pylint: disable=broad-except
                 pass
         if not args["key_identifier"] and ca_pub:
             # this should happen for self-signed certificates
             try:
-                args[
-                    "key_identifier"
-                ] = cx509.AuthorityKeyIdentifier.from_issuer_public_key(
-                    ca_pub
-                ).key_identifier
+                args["key_identifier"] = (
+                    cx509.AuthorityKeyIdentifier.from_issuer_public_key(
+                        ca_pub
+                    ).key_identifier
+                )
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -1484,12 +1484,14 @@ def _create_policy_constraints(val, **kwargs):
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
     args = {
-        "require_explicit_policy": int(val["requireExplicitPolicy"])
-        if "requireExplicitPolicy" in val
-        else None,
-        "inhibit_policy_mapping": int(val["inhibitPolicyMapping"])
-        if "inhibitPolicyMapping" in val
-        else None,
+        "require_explicit_policy": (
+            int(val["requireExplicitPolicy"])
+            if "requireExplicitPolicy" in val
+            else None
+        ),
+        "inhibit_policy_mapping": (
+            int(val["inhibitPolicyMapping"]) if "inhibitPolicyMapping" in val else None
+        ),
     }
     try:
         # not sure why pylint complains about this line having kwargs from keyUsage
@@ -1544,12 +1546,12 @@ def _create_name_constraints(val, **kwargs):
             ],
         }
     args = {
-        "permitted_subtrees": _parse_general_names(val["permitted"])
-        if "permitted" in val
-        else None,
-        "excluded_subtrees": _parse_general_names(val["excluded"])
-        if "excluded" in val
-        else None,
+        "permitted_subtrees": (
+            _parse_general_names(val["permitted"]) if "permitted" in val else None
+        ),
+        "excluded_subtrees": (
+            _parse_general_names(val["excluded"]) if "excluded" in val else None
+        ),
     }
     if not any(args.values()):
         raise SaltInvocationError("nameConstraints needs at least one definition")
@@ -1954,13 +1956,15 @@ def _render_subject_key_identifier(ext):
 
 def _render_authority_key_identifier(ext):
     return {
-        "keyid": pretty_hex(ext.value.key_identifier)
-        if ext.value.key_identifier
-        else None,
+        "keyid": (
+            pretty_hex(ext.value.key_identifier) if ext.value.key_identifier else None
+        ),
         "issuer": [render_gn(x) for x in ext.value.authority_cert_issuer or []] or None,
-        "issuer_sn": dec2hex(ext.value.authority_cert_serial_number)
-        if ext.value.authority_cert_serial_number
-        else None,
+        "issuer_sn": (
+            dec2hex(ext.value.authority_cert_serial_number)
+            if ext.value.authority_cert_serial_number
+            else None
+        ),
     }
 
 
@@ -1994,11 +1998,11 @@ def _render_authority_info_access(ext):
         for description in ext.value._descriptions:
             rendered.append(
                 {
-                    description.access_method._name
-                    if description.access_method._name != "Unknown OID"
-                    else description.access_method.dotted_string: render_gn(
-                        description.access_location.value
-                    )
+                    (
+                        description.access_method._name
+                        if description.access_method._name != "Unknown OID"
+                        else description.access_method.dotted_string
+                    ): render_gn(description.access_location.value)
                 }
             )
     except AttributeError:
@@ -2015,9 +2019,11 @@ def _render_distribution_points(ext):
                     "crlissuer": [render_gn(x) for x in dpoint.crl_issuer or []],
                     "fullname": [render_gn(x) for x in dpoint.full_name or []],
                     "reasons": list(sorted(x.value for x in dpoint.reasons or [])),
-                    "relativename": dpoint.relative_name.rfc4514_string()
-                    if dpoint.relative_name
-                    else None,
+                    "relativename": (
+                        dpoint.relative_name.rfc4514_string()
+                        if dpoint.relative_name
+                        else None
+                    ),
                 }
             )
     except AttributeError:
@@ -2031,9 +2037,11 @@ def _render_issuing_distribution_point(ext):
         "onysomereasons": list(
             sorted(x.value for x in ext.value.only_some_reasons or [])
         ),
-        "relativename": ext.value.relative_name.rfc4514_string()
-        if ext.value.relative_name
-        else None,
+        "relativename": (
+            ext.value.relative_name.rfc4514_string()
+            if ext.value.relative_name
+            else None
+        ),
         "onlyuser": ext.value.only_contains_user_certs,
         "onlyCA": ext.value.only_contains_ca_certs,
         "onlyAA": ext.value.only_contains_attribute_certs,

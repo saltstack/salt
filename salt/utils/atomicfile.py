@@ -2,6 +2,7 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 """
+
 import errno
 import os
 import random

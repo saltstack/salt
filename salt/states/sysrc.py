@@ -3,7 +3,6 @@ State to work with sysrc
 
 """
 
-
 # define the module's virtual name
 __virtualname__ = "sysrc"
 

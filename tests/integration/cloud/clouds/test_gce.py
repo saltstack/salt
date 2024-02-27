@@ -3,7 +3,6 @@
     :codeauthor: Tomas Sirny <tsirny@gmail.com>
 """
 
-
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 

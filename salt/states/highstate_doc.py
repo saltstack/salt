@@ -2,7 +2,6 @@
 To be used with processors in module `highstate_doc`.
 """
 
-
 __virtualname__ = "highstate_doc"
 
 

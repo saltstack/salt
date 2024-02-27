@@ -138,7 +138,7 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in d.items():
+    for k, v in d.items():
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
 
@@ -206,7 +206,7 @@ def expand_variables(a, b, expanded, path=None):
         b = a.copy()
         path = []
 
-    for (k, v) in a.items():
+    for k, v in a.items():
         if isinstance(v, dict):
             expand_variables(v, b, expanded, path + [str(k)])
         else:

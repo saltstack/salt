@@ -151,7 +151,6 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 """
 
-
 import itertools
 import logging
 import time

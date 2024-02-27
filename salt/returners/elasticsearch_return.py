@@ -93,7 +93,6 @@ Minion configuration:
           - saltutil.find_job
 """
 
-
 import datetime
 import logging
 import uuid

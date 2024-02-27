@@ -4491,9 +4491,9 @@ def load(path, repository=None, tag=None):
                 result = tag_(top_level_images[0], repository=repository, tag=tag)
                 ret["Image"] = tagged_image
             except IndexError:
-                ret[
-                    "Warning"
-                ] = "No top-level image layers were loaded, no image was tagged"
+                ret["Warning"] = (
+                    "No top-level image layers were loaded, no image was tagged"
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 ret["Warning"] = "Failed to tag {} as {}: {}".format(
                     top_level_images[0], tagged_image, exc

@@ -29,7 +29,6 @@ Example:
           - npm: bower
 """
 
-
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 

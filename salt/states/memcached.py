@@ -5,7 +5,6 @@ States for Management of Memcached Keys
 .. versionadded:: 2014.1.0
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.memcached import (
     DEFAULT_HOST,

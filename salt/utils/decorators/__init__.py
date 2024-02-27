@@ -2,7 +2,6 @@
 Helpful decorators for module writing
 """
 
-
 import errno
 import inspect
 import logging
@@ -217,9 +216,11 @@ class Depends:
                     mod_name,
                     func_name,
                     dependency,
-                    " version {}".format(params["version"])
-                    if "version" in params
-                    else "",
+                    (
+                        " version {}".format(params["version"])
+                        if "version" in params
+                        else ""
+                    ),
                 )
                 # if not, unload the function
                 if frame:

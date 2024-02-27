@@ -46,7 +46,6 @@ indicated above, though the model DOES NOT have to be named
 'SaltExternalAuthModel'.
 """
 
-
 import logging
 import os
 import sys

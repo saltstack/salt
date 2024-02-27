@@ -2,7 +2,6 @@
 Custom YAML loading in Salt
 """
 
-
 import re
 
 import yaml  # pylint: disable=blacklisted-import

@@ -7,7 +7,6 @@ values are stored and computed, such as averages etc.
 :depends: statistics PyPi module
 """
 
-
 try:
     import statistics
 

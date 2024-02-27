@@ -51,7 +51,6 @@ otherwise multi-minion targeting can lead to losing output:
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 """
 
-
 import logging
 import time
 from urllib.error import HTTPError

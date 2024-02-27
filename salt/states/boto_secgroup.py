@@ -509,9 +509,9 @@ def _rules_present(
         vpc_name=vpc_name,
     )
     if not sg:
-        ret[
-            "comment"
-        ] = "{} security group configuration could not be retrieved.".format(name)
+        ret["comment"] = (
+            "{} security group configuration could not be retrieved.".format(name)
+        )
         ret["result"] = False
         return ret
     rules = _split_rules(rules)
@@ -654,9 +654,9 @@ def _rules_egress_present(
         vpc_name=vpc_name,
     )
     if not sg:
-        ret[
-            "comment"
-        ] = "{} security group configuration could not be retrieved.".format(name)
+        ret["comment"] = (
+            "{} security group configuration could not be retrieved.".format(name)
+        )
         ret["result"] = False
         return ret
     rules_egress = _split_rules(rules_egress)
@@ -882,9 +882,9 @@ def _tags_present(
             vpc_name=vpc_name,
         )
         if not sg:
-            ret[
-                "comment"
-            ] = "{} security group configuration could not be retrieved.".format(name)
+            ret["comment"] = (
+                "{} security group configuration could not be retrieved.".format(name)
+            )
             ret["result"] = False
             return ret
         tags_to_add = tags

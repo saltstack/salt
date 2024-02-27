@@ -1,6 +1,7 @@
 """
 Manage groups on Mac OS 10.7+
 """
+
 import logging
 
 import salt.utils.functools

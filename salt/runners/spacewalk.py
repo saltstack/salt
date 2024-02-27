@@ -31,7 +31,7 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
 
 import atexit
 import logging
-import xmlrpc.client
+import xmlrpc.client  # nosec
 
 log = logging.getLogger(__name__)
 

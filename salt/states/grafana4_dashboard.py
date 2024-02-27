@@ -52,7 +52,6 @@ allowing users to manage their own custom rows.
                     type: graph
 """
 
-
 import copy
 
 import salt.utils.json

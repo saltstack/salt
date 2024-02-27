@@ -4,6 +4,7 @@ generated using the libvirt key runner
 
 :depends: certtool
 """
+
 import os
 import subprocess
 

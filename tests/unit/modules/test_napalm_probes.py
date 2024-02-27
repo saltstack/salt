@@ -2,7 +2,6 @@
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-
 import salt.modules.napalm_probes as napalm_probes
 import tests.support.napalm as napalm_test_support
 from tests.support.mixins import LoaderModuleMockMixin

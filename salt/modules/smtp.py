@@ -40,7 +40,6 @@ Module for Sending Messages via SMTP
 
 """
 
-
 import logging
 import os
 import socket

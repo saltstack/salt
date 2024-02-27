@@ -20,7 +20,6 @@ Module to provide MS SQL Server compatibility to salt.
     configs or pillars.
 """
 
-
 import salt.utils.json
 
 try:
@@ -217,7 +216,6 @@ def db_remove(database_name, **kwargs):
 
 
 def role_list(**kwargs):
-
     """
     Lists database roles.
 
@@ -231,7 +229,6 @@ def role_list(**kwargs):
 
 
 def role_exists(role, **kwargs):
-
     """
     Checks if a role exists.
 

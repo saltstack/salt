@@ -8,7 +8,6 @@ Manage the password database on BSD systems
     <module-provider-override>`.
 """
 
-
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError

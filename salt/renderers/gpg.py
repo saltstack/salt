@@ -335,7 +335,6 @@ In the Chlorine release, the default behavior will be reversed and an error
 message will be added to ``_errors`` by default.
 """
 
-
 import logging
 import os
 import re

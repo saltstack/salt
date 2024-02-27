@@ -51,10 +51,10 @@ def present(name, containment="NONE", options=None, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if __salt__["mssql.db_exists"](name, **kwargs):
-        ret[
-            "comment"
-        ] = "Database {} is already present (Not going to try to set its options)".format(
-            name
+        ret["comment"] = (
+            "Database {} is already present (Not going to try to set its options)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:

@@ -2,7 +2,6 @@
 Manage Dell DRAC
 """
 
-
 import logging
 
 import salt.utils.path

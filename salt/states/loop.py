@@ -57,7 +57,6 @@ The function :py:func:`data.subdict_match <salt.utils.data.subdict_match>` check
             instances: "{{ instance }}"
 """
 
-
 import logging
 import operator
 import sys
@@ -222,10 +221,10 @@ def until_no_eval(
             break
         time.sleep(period)
     else:
-        ret[
-            "comment"
-        ] = "Call did not produce the expected result after {} attempts".format(
-            current_attempt
+        ret["comment"] = (
+            "Call did not produce the expected result after {} attempts".format(
+                current_attempt
+            )
         )
         log.debug(
             "%s:until_no_eval:\n\t\tResults of all attempts: %s",

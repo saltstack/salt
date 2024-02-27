@@ -1,6 +1,7 @@
 """
 Validate the boto_sns module
 """
+
 import re
 
 import pytest

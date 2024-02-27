@@ -265,7 +265,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
             ("s", "1.2.3.42"),
             ("", "1.2.3.42"),
         ]
-        for (fmt, txt) in v4_pairs:
+        for fmt, txt in v4_pairs:
             self.assertEqual(txt, format(v4, fmt))
 
     def test_network_passed_as_address(self):
@@ -402,7 +402,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
             ("", "::102:32a"),
         ]
 
-        for (fmt, txt) in v6_pairs:
+        for fmt, txt in v6_pairs:
             self.assertEqual(txt, format(v6, fmt))
 
     def test_network_passed_as_address(self):

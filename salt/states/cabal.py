@@ -22,7 +22,6 @@ pkg.installed state for the package which provides cabal
 
 """
 
-
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 

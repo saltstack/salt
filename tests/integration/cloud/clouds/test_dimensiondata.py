@@ -2,7 +2,6 @@
 Integration tests for the Dimension Data cloud provider
 """
 
-
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 

@@ -24,7 +24,6 @@ rest API.
 
 """
 
-
 import logging
 
 import salt.proxy.cimc

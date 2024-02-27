@@ -19,7 +19,6 @@ authenticate as.
     auth_principal: kadmin/admin
 """
 
-
 import logging
 
 import salt.utils.path

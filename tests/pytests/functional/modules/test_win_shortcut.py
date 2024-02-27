@@ -1,6 +1,7 @@
 """
 Tests for win_shortcut execution module
 """
+
 import os
 import shutil
 import subprocess

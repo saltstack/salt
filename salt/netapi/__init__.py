@@ -2,7 +2,6 @@
 Make api awesomeness
 """
 
-
 import copy
 import inspect
 import logging

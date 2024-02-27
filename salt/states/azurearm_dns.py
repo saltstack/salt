@@ -116,6 +116,7 @@ Optional provider parameters:
                 - connection_auth: {{ profile }}
 
 """
+
 import logging
 from functools import wraps
 
@@ -232,9 +233,9 @@ def zone_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     zone = __salt__["azurearm_dns.zone_get"](
@@ -377,9 +378,9 @@ def zone_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     zone = __salt__["azurearm_dns.zone_get"](
@@ -564,9 +565,9 @@ def record_set_present(
     ]
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     rec_set = __salt__["azurearm_dns.record_set_get"](
@@ -590,19 +591,19 @@ def record_set_present(
             record = eval(record_str)
             if record:
                 if not ttl:
-                    ret[
-                        "comment"
-                    ] = "TTL is required when specifying record information!"
+                    ret["comment"] = (
+                        "TTL is required when specifying record information!"
+                    )
                     return ret
                 if not rec_set.get(record_str):
                     ret["changes"] = {"new": {record_str: record}}
                     continue
                 if record_str[-1] != "s":
                     if not isinstance(record, dict):
-                        ret[
-                            "comment"
-                        ] = "{} record information must be specified as a dictionary!".format(
-                            record_str
+                        ret["comment"] = (
+                            "{} record information must be specified as a dictionary!".format(
+                                record_str
+                            )
                         )
                         return ret
                     for k, v in record.items():
@@ -723,9 +724,9 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     rec_set = __salt__["azurearm_dns.record_set_get"](

@@ -64,6 +64,7 @@ Value:
 
 :depends:   - salt.utils.win_reg
 """
+
 # When production windows installer is using Python 3, Python 2 code can be removed
 
 import logging

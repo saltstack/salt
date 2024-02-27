@@ -576,9 +576,9 @@ def delete_key(
         if skey:
             if not delete_secret:
                 ret["res"] = False
-                ret[
-                    "message"
-                ] = "Secret key exists, delete first or pass delete_secret=True."
+                ret["message"] = (
+                    "Secret key exists, delete first or pass delete_secret=True."
+                )
                 return ret
             else:
                 if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":

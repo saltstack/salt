@@ -9,7 +9,6 @@ http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-r
 .. versionadded:: 0.16.0
 """
 
-
 import logging
 import os
 import re

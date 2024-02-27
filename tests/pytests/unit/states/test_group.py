@@ -6,8 +6,7 @@ from tests.support.mock import MagicMock, patch
 __context__ = {}
 
 
-def ping():
-    ...
+def ping(): ...
 
 
 @pytest.fixture

@@ -11,7 +11,6 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
     target machine.
 """
 
-
 import logging
 import re
 

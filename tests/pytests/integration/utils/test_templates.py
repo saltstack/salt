@@ -1,6 +1,7 @@
 """
 Tests for the templates utils
 """
+
 import os
 
 import pytest

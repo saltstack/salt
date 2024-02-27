@@ -54,6 +54,7 @@ Group Policy using the ``lgpo`` module.
 
 :depends: salt.utils.win_update
 """
+
 import logging
 
 import salt.utils.platform

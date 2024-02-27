@@ -1197,6 +1197,7 @@ def get_imageid(vm_):
         "Filter.0.Name": "name",
         "Filter.0.Value.0": image,
     }
+
     # Query AWS, sort by 'creationDate' and get the last imageId
     def _t(x):
         return datetime.datetime.strptime(x["creationDate"], "%Y-%m-%dT%H:%M:%S.%fZ")

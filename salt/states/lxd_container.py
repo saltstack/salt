@@ -27,7 +27,6 @@ Manage LXD containers.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -580,9 +579,9 @@ def frozen(name, start=True, remote_addr=None, cert=None, key=None, verify_cert=
 
     elif not is_running and start:
         if __opts__["test"]:
-            ret["changes"][
-                "started"
-            ] = 'Would start the container "{}" and freeze it after'.format(name)
+            ret["changes"]["started"] = (
+                'Would start the container "{}" and freeze it after'.format(name)
+            )
             return _unchanged(ret, ret["changes"]["started"])
         else:
             container.start(wait=True)
@@ -780,10 +779,10 @@ def migrated(
         return _error(ret, 'Source Container "{}" not found'.format(name))
 
     if __opts__["test"]:
-        ret["changes"][
-            "migrated"
-        ] = 'Would migrate the container "{}" from "{}" to "{}"'.format(
-            name, src_remote_addr, remote_addr
+        ret["changes"]["migrated"] = (
+            'Would migrate the container "{}" from "{}" to "{}"'.format(
+                name, src_remote_addr, remote_addr
+            )
         )
         return _unchanged(ret, ret["changes"]["migrated"])
 

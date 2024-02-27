@@ -8,7 +8,6 @@ The service module for OpenBSD
     <module-provider-override>`.
 """
 
-
 import fnmatch
 import logging
 import os

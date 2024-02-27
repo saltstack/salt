@@ -76,10 +76,10 @@ def install(name, link, path, priority):
         )
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Alternative will be set for {} to {} with priority {}".format(
-                name, path, priority
+            ret["comment"] = (
+                "Alternative will be set for {} to {} with priority {}".format(
+                    name, path, priority
+                )
             )
             ret["result"] = None
             return ret
@@ -87,10 +87,10 @@ def install(name, link, path, priority):
         out = __salt__["alternatives.install"](name, link, path, priority)
         if __salt__["alternatives.check_exists"](name, path):
             if __salt__["alternatives.check_installed"](name, path):
-                ret[
-                    "comment"
-                ] = "Alternative for {} set to path {} with priority {}".format(
-                    name, path, priority
+                ret["comment"] = (
+                    "Alternative for {} set to path {} with priority {}".format(
+                        name, path, priority
+                    )
                 )
             else:
                 ret["comment"] = (
@@ -135,10 +135,10 @@ def remove(name, path):
         current = __salt__["alternatives.show_current"](name)
         if current:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "Alternative for {} removed. Falling back to path {}".format(
-                name, current
+            ret["comment"] = (
+                "Alternative for {} removed. Falling back to path {}".format(
+                    name, current
+                )
             )
             ret["changes"] = {"path": current}
             return ret

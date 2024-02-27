@@ -200,7 +200,6 @@ The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
 Module was developed against.
 """
 
-
 import logging
 import sys
 
@@ -363,12 +362,12 @@ def dvs_configured(name, dvs):
                             )
                             updated_infra_res_pools.append(dict(dvs[infra_prop][idx]))
             if updated_infra_res_pools:
-                props_to_original_values[
-                    "infrastructure_traffic_resource_pools"
-                ] = original_infra_res_pools
-                props_to_updated_values[
-                    "infrastructure_traffic_resource_pools"
-                ] = updated_infra_res_pools
+                props_to_original_values["infrastructure_traffic_resource_pools"] = (
+                    original_infra_res_pools
+                )
+                props_to_updated_values["infrastructure_traffic_resource_pools"] = (
+                    updated_infra_res_pools
+                )
             if props_to_updated_values:
                 if __opts__["test"]:
                     changes_string = ""

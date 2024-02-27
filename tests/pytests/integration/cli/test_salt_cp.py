@@ -3,7 +3,6 @@ tests.integration.shell.cp
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import logging
 import os
 import pathlib

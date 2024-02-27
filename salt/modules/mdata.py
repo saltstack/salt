@@ -8,7 +8,6 @@ Module for managaging metadata in SmartOS Zones
 :platform:      smartos
 """
 
-
 import logging
 
 import salt.utils.decorators as decorators

@@ -127,10 +127,10 @@ def test_present_exists(input_params, existing_obj):
             },
         ):
             ret["result"] = True
-            ret[
-                "comment"
-            ] = 'Zabbix Value map "{}" already exists and corresponds to a definition.'.format(
-                name
+            ret["comment"] = (
+                'Zabbix Value map "{}" already exists and corresponds to a definition.'.format(
+                    name
+                )
             )
             assert zabbix_valuemap.present(name, {}) == ret
 

@@ -4,7 +4,6 @@ Manage DACLs on Windows
 :depends:   - winreg Python module
 """
 
-
 import logging
 import os
 import re
@@ -503,10 +502,10 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                 )
                 ret["result"] = True
             except Exception as e:  # pylint: disable=broad-except
-                ret[
-                    "comment"
-                ] = "An error occurred attempting to add the ace.  The error was {}".format(
-                    e
+                ret["comment"] = (
+                    "An error occurred attempting to add the ace.  The error was {}".format(
+                        e
+                    )
                 )
                 ret["result"] = False
                 return ret
@@ -730,9 +729,9 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret["result"] = True
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Error attempting to set the inheritance.  The error was {}.".format(e)
+            ret["comment"] = (
+                "Error attempting to set the inheritance.  The error was {}.".format(e)
+            )
 
     return ret
 
@@ -818,9 +817,9 @@ def check_inheritance(path, objectType, user=None):
         dacls = sd.GetSecurityDescriptorDacl()
     except Exception as e:  # pylint: disable=broad-except
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Error obtaining the Security Descriptor or DACL of the path: {}.".format(e)
+        ret["comment"] = (
+            "Error obtaining the Security Descriptor or DACL of the path: {}.".format(e)
+        )
         return ret
 
     for counter in range(0, dacls.GetAceCount()):

@@ -9,7 +9,6 @@ environments. This also provides a function to generate debian repositories
 This module implements the pkgbuild interface
 """
 
-
 import errno
 import logging
 import os

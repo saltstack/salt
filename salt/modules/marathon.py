@@ -6,7 +6,6 @@ Currently this only works when run through a proxy minion.
 .. versionadded:: 2015.8.2
 """
 
-
 import logging
 
 import salt.utils.http

@@ -6,6 +6,7 @@ Manage macOS local directory passwords and policies
 Note that it is usually better to apply password policies through the creation
 of a configuration profile.
 """
+
 # Authentication concepts reference:
 # https://developer.apple.com/library/mac/documentation/Networking/Conceptual/Open_Directory/openDirectoryConcepts/openDirectoryConcepts.html#//apple_ref/doc/uid/TP40000917-CH3-CIFCAIBB
 

@@ -3,6 +3,7 @@
 
     :codeauthor: :email:`Megan Wilhite (mwilhite@saltstack.com)`
 """
+
 import pytest
 
 import salt.returners.syslog_return as syslog

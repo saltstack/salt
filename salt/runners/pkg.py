@@ -4,7 +4,6 @@ Package helper functions using ``salt.modules.pkg``
 .. versionadded:: 2015.8.0
 """
 
-
 import salt.minion
 import salt.output
 
