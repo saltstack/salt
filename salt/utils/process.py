@@ -577,6 +577,7 @@ class ProcessManager:
         self._restart_processes = False
 
     def send_signal_to_processes(self, signal_):
+        log.warning(f"DGM process send_signal_to_processes signal '{signal_}'")
         if salt.utils.platform.is_windows() and signal_ in (
             signal.SIGTERM,
             signal.SIGINT,
@@ -595,8 +596,14 @@ class ProcessManager:
 
         for pid in self._process_map.copy():
             try:
+                log.warning(
+                    f"DGM process send_signal_to_processes kill pid '{pid}', signal '{signal_}'"
+                )
                 os.kill(pid, signal_)
             except OSError as exc:
+                log.warning(
+                    f"DGM process send_signal_to_processes OSError exc, '{exc}'"
+                )
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
                     # If it's not a "No such process" error, raise it
                     raise
@@ -658,6 +665,7 @@ class ProcessManager:
         """
         Kill all of the children
         """
+        log.warning("DGM process kill_children entry")
         if salt.utils.platform.is_windows():
             if multiprocessing.current_process().name != "MainProcess":
                 # Since the main process will kill subprocesses by tree,
@@ -678,6 +686,7 @@ class ProcessManager:
                     p_map["Process"].terminate()
         else:
             for pid, p_map in self._process_map.copy().items():
+                log.warning("DGM Terminating pid %s: %s", pid, p_map["Process"])
                 log.trace("Terminating pid %s: %s", pid, p_map["Process"])
                 if args:
                     # escalate the signal to the process
@@ -774,11 +783,17 @@ class ProcessManager:
         """
         Properly terminate this process manager instance
         """
+        log.warning("DGM process terminate entry")
         self.stop_restarting()
+        log.warning("DGM process terminate send signal SIGTERM")
         self.send_signal_to_processes(signal.SIGTERM)
+        log.warning("DGM process terminate kill children")
         self.kill_children()
+        log.warning("DGM process terminate exit")
 
     def _handle_signals(self, *args, **kwargs):
+        log.warning(f"DGM process _handle_signals args '{args}', kwargs '{kwargs}'")
+
         # first lets reset signal handlers to default one to prevent running this twice
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -1062,6 +1077,10 @@ class SignalHandlingProcess(Process):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
+        log.warning(
+            f"DGM SignalHandlingProcess _handle_signals, signum '{signum}', sigframe '{sigframe}'"
+        )
+
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = f"{self.__class__.__name__} received a "
@@ -1075,6 +1094,10 @@ class SignalHandlingProcess(Process):
         mach_id = salt.utils.files.get_machine_identifier()
         log.debug(
             f"exiting for process id '{os.getpid()}' and machine identifer '{mach_id}'"
+        )
+
+        log.warning(
+            f"DGM _handle_signals about to check HAS_PSUTIL, for process id '{os.getpid()}' and machine identifer '{mach_id}'"
         )
 
         if HAS_PSUTIL:
@@ -1098,16 +1121,28 @@ class SignalHandlingProcess(Process):
                 # example lockfile /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
                 cache_dir = self.opts.get("cachedir", None)
                 gitfs_active = self.opts.get("gitfs_remotes", None)
+                log.warning(
+                    f"DGM _handle_signals HAS_PSUTIL, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'"
+                )
                 if cache_dir and gitfs_active:
                     # check for gitfs file locks to ensure no resource leaks
                     # last chance to clean up any missed unlock droppings
                     cache_dir = Path(cache_dir + "/gitfs/work")
+                    log.warning(
+                        f"DGM _handle_signals HAS_PSUTIL,find for final cache_dir '{cache_dir}'"
+                    )
                     if cache_dir.exists and cache_dir.is_dir():
                         file_list = list(cache_dir.glob("**/*.lk"))
+                        log.warning(
+                            f"DGM _handle_signals HAS_PSUTIL,find for final cache_dir '{cache_dir}', produced glob file_list '{file_list}'"
+                        )
                         file_del_list = []
 
                         try:
                             for file_name in file_list:
+                                log.warning(
+                                    f"DGM _handle_signals HAS_PSUTIL, checking file name '{file_name}'"
+                                )
                                 with salt.utils.files.fopen(file_name, "r") as fd_:
                                     try:
                                         file_pid = int(
@@ -1127,6 +1162,9 @@ class SignalHandlingProcess(Process):
                                     except ValueError:
                                         # Lock file is empty, set mach_id to 0 so it evaluates as False.
                                         file_mach_id = 0
+                            log.warning(
+                                f"DGM _handle_signals HAS_PSUTIL, cur_pid '{cur_pid}', mach_id '{mach_id}', file_pid '{file_pid}', file_mach_id '{file_mach_id}'"
+                            )
                             if cur_pid == file_pid:
                                 if mach_id != file_mach_id:
                                     if not file_mach_id:
@@ -1145,6 +1183,9 @@ class SignalHandlingProcess(Process):
 
                         for (file_name, file_pid, file_mach_id) in file_del_list:
                             try:
+                                log.warning(
+                                    f"DGM _handle_signals file_pid '{file_pid}', file_mach_id '{file_mach_id}', removing file name '{file_name}'"
+                                )
                                 os.remove(file_name)
                             except OSError as exc:
                                 if exc.errno == errno.ENOENT:
