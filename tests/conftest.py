@@ -1553,7 +1553,7 @@ def from_filenames_collection_modifyitems(config, items):
             path.replace("\\", os.sep).replace("/", os.sep)
         )
         if not properly_slashed_path.exists():
-            errors.append("{}: Does not exist".format(properly_slashed_path))
+            errors.append(f"{properly_slashed_path}: Does not exist")
             continue
         if (
             properly_slashed_path.name == "testrun-changed-files.txt"
@@ -1576,12 +1576,12 @@ def from_filenames_collection_modifyitems(config, items):
                     )
                     continue
                 changed_files_selections.append(
-                    "{}: Source {}".format(line_path, properly_slashed_path)
+                    f"{line_path}: Source {properly_slashed_path}"
                 )
                 from_filenames_paths.add(line_path)
             continue
         changed_files_selections.append(
-            "{}: Source --from-filenames".format(properly_slashed_path)
+            f"{properly_slashed_path}: Source --from-filenames"
         )
         from_filenames_paths.add(properly_slashed_path)
 
@@ -1611,7 +1611,7 @@ def from_filenames_collection_modifyitems(config, items):
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
-            test_module_selections.append("{}: Source --from-filenames".format(path))
+            test_module_selections.append(f"{path}: Source --from-filenames")
             test_module_paths.add(path)
             continue
         if path.name == "setup.py" or path.as_posix().startswith("salt/"):
@@ -1624,18 +1624,18 @@ def from_filenames_collection_modifyitems(config, items):
                 # salt/version.py ->
                 #    tests/unit/test_version.py
                 #    tests/pytests/unit/test_version.py
-                "**/test_{}".format(path.name),
+                f"**/test_{path.name}",
                 # salt/modules/grains.py ->
                 #    tests/pytests/integration/modules/grains/tests_*.py
                 # salt/modules/saltutil.py ->
                 #    tests/pytests/integration/modules/saltutil/test_*.py
-                "**/{}/test_*.py".format(path.stem),
+                f"**/{path.stem}/test_*.py",
                 # salt/modules/config.py ->
                 #    tests/unit/modules/test_config.py
                 #    tests/integration/modules/test_config.py
                 #    tests/pytests/unit/modules/test_config.py
                 #    tests/pytests/integration/modules/test_config.py
-                "**/{}/test_{}".format(path.parent.name, path.name),
+                f"**/{path.parent.name}/test_{path.name}",
             )
             for pattern in glob_patterns:
                 for match in TESTS_DIR.rglob(pattern):
@@ -1694,20 +1694,20 @@ def from_filenames_collection_modifyitems(config, items):
                         test_module_paths.add(match_path)
             continue
         else:
-            errors.append("{}: Don't know what to do with this path".format(path))
+            errors.append(f"{path}: Don't know what to do with this path")
 
     if errors:
         terminal_reporter.write("Errors:\n", bold=True)
         for error in errors:
-            terminal_reporter.write(" * {}\n".format(error))
+            terminal_reporter.write(f" * {error}\n")
     if changed_files_selections:
         terminal_reporter.write("Changed files collected:\n", bold=True)
         for selection in changed_files_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     if test_module_selections:
         terminal_reporter.write("Selected test modules:\n", bold=True)
         for selection in test_module_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     terminal_reporter.section(
         "From Filenames(--from-filenames) Test Selection", sep="<"
     )

@@ -131,7 +131,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create infoblox record {}".format(name)
+        ret["comment"] = f"would attempt to create infoblox record {name}"
         return ret
 
     new_obj_ref = __salt__["infoblox.create_host"](data=data, **api_opts)

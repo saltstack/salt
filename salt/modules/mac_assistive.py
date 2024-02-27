@@ -69,13 +69,13 @@ def install(app_id, enable=True, tries=3, wait=10):
             except sqlite3.Error as exc:
                 if "attempt to write a readonly database" not in str(exc):
                     raise CommandExecutionError(
-                        "Error installing app({}): {}".format(app_id, exc)
+                        f"Error installing app({app_id}): {exc}"
                     )
                 elif num_tries < tries:
                     num_tries += 1
                 else:
                     raise CommandExecutionError(
-                        "Error installing app({}): {}".format(app_id, exc)
+                        f"Error installing app({app_id}): {exc}"
                     )
         time.sleep(wait)
 
@@ -100,7 +100,7 @@ def installed(app_id):
             return db.installed(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error checking if app({}) is installed: {}".format(app_id, exc)
+                f"Error checking if app({app_id}) is installed: {exc}"
             )
 
 
@@ -129,7 +129,7 @@ def enable_(app_id, enabled=True):
                 return db.disable(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error setting enable to {} on app({}): {}".format(enabled, app_id, exc)
+                f"Error setting enable to {enabled} on app({app_id}): {exc}"
             )
 
 
@@ -153,7 +153,7 @@ def enabled(app_id):
             return db.enabled(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error checking if app({}) is enabled: {}".format(app_id, exc)
+                f"Error checking if app({app_id}) is enabled: {exc}"
             )
 
 
@@ -175,9 +175,7 @@ def remove(app_id):
         try:
             return db.remove(app_id)
         except sqlite3.Error as exc:
-            raise CommandExecutionError(
-                "Error removing app({}): {}".format(app_id, exc)
-            )
+            raise CommandExecutionError(f"Error removing app({app_id}): {exc}")
 
 
 class TccDB:
@@ -205,7 +203,7 @@ class TccDB:
                 self.ge_bigsur_and_later = True
             else:
                 raise CommandExecutionError(
-                    "TCC Database structure unknown for digest '{}'".format(digest)
+                    f"TCC Database structure unknown for digest '{digest}'"
                 )
 
     def _get_client_type(self, app_id):

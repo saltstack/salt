@@ -169,7 +169,7 @@ class TextFormat:
             'The answer is: {0}'.format(green_blink_text(42))
         """
         end = TextFormat("reset") if reset else ""
-        return "{}{}{}".format(self.sequence, text, end)
+        return f"{self.sequence}{text}{end}"
 
     def __str__(self):
         return self.sequence

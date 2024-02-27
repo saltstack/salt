@@ -257,7 +257,7 @@ def _get_datacenter_name():
         details = __salt__["esxdatacenter.get_details"]()
     if not details:
         raise salt.exceptions.CommandExecutionError(
-            "details for proxy type '{}' not loaded".format(proxy_type)
+            f"details for proxy type '{proxy_type}' not loaded"
         )
     return details["datacenter"]
 
@@ -475,7 +475,7 @@ def _get_val2_dict_from_diff_dict(diff_dict):
     ret_dict = {}
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
+            raise ValueError(f"Unexpected diff difct '{diff_dict}'")
         if "val2" in diff_dict[p].keys():
             ret_dict.update({p: diff_dict[p]["val2"]})
         else:
@@ -490,7 +490,7 @@ def _get_val1_dict_from_diff_dict(diff_dict):
     ret_dict = {}
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
+            raise ValueError(f"Unexpected diff difct '{diff_dict}'")
         if "val1" in diff_dict[p].keys():
             ret_dict.update({p: diff_dict[p]["val1"]})
         else:
@@ -507,7 +507,7 @@ def _get_changes_from_diff_dict(diff_dict):
     changes_strings = []
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
+            raise ValueError(f"Unexpected diff difct '{diff_dict}'")
         if sorted(diff_dict[p].keys()) == ["val1", "val2"]:
             # Some string formatting
             from_str = diff_dict[p]["val1"]
@@ -520,12 +520,12 @@ def _get_changes_from_diff_dict(diff_dict):
                 to_str = "'{}'".format(diff_dict[p]["val2"])
             elif isinstance(diff_dict[p]["val2"], list):
                 to_str = "'{}'".format(", ".join(diff_dict[p]["val2"]))
-            changes_strings.append("{} from {} to {}".format(p, from_str, to_str))
+            changes_strings.append(f"{p} from {from_str} to {to_str}")
         else:
             sub_changes = _get_changes_from_diff_dict(diff_dict[p])
             if sub_changes:
-                changes_strings.append("{}:".format(p))
-                changes_strings.extend(["\t{}".format(c) for c in sub_changes])
+                changes_strings.append(f"{p}:")
+                changes_strings.extend([f"\t{c}" for c in sub_changes])
     return changes_strings
 
 
@@ -608,7 +608,7 @@ def portgroups_configured(name, dvs, portgroups):
                                 pg_name,
                                 dvs,
                                 datacenter,
-                                "\n".join(["\t{}".format(c) for c in changes_strings]),
+                                "\n".join([f"\t{c}" for c in changes_strings]),
                             )
                         )
                     else:
@@ -734,7 +734,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
                         name,
                         dvs,
                         datacenter,
-                        "\n".join(["\t{}".format(c) for c in changes_strings]),
+                        "\n".join([f"\t{c}" for c in changes_strings]),
                     )
                 )
             else:

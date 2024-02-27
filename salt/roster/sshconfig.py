@@ -33,7 +33,7 @@ def _get_ssh_config_file(opts):
     if not os.path.isfile(ssh_config_file):
         raise OSError("Cannot find SSH config file")
     if not os.access(ssh_config_file, os.R_OK):
-        raise OSError("Cannot access SSH config file: {}".format(ssh_config_file))
+        raise OSError(f"Cannot access SSH config file: {ssh_config_file}")
     return ssh_config_file
 
 
@@ -117,7 +117,7 @@ class RosterMatcher:
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 

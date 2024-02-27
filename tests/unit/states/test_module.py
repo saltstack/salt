@@ -136,8 +136,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        if ret["comment"] != "Unavailable function: {}.".format(CMD) or ret["result"]:
-            self.fail("module.run did not fail as expected: {}".format(ret))
+        if ret["comment"] != f"Unavailable function: {CMD}." or ret["result"]:
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_run_module_not_available_testmode(self):
         """
@@ -150,10 +150,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Unavailable function: {}.".format(CMD)
+            ret["comment"] != f"Unavailable function: {CMD}."
             or ret["result"] is not False
         ):
-            self.fail("module.run did not fail as expected: {}".format(ret))
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_run_module_noop(self):
         """
@@ -165,7 +165,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run()
         if ret["comment"] != "No function provided." or ret["result"] is not False:
-            self.fail("module.run did not fail as expected: {}".format(ret))
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_module_run_hidden_varargs(self):
         """
@@ -188,10 +188,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Function {} to be executed.".format(CMD)
+            ret["comment"] != f"Function {CMD} to be executed."
             or ret["result"] is not None
         ):
-            self.fail("module.run failed: {}".format(ret))
+            self.fail(f"module.run failed: {ret}")
 
     def test_run_missing_arg(self):
         """
@@ -202,9 +202,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        self.assertEqual(
-            ret["comment"], "'{}' failed: Missing arguments: name".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"'{CMD}' failed: Missing arguments: name")
 
     def test_run_correct_arg(self):
         """
@@ -215,8 +213,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: ["Fred"]})
-        if ret["comment"] != "{}: Success".format(CMD) or not ret["result"]:
-            self.fail("module.run failed: {}".format(ret))
+        if ret["comment"] != f"{CMD}: Success" or not ret["result"]:
+            self.fail(f"module.run failed: {ret}")
 
     def test_run_state_apply_result_false(self):
         """
@@ -293,9 +291,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: ["bla", {"example": "bla"}]})
         self.assertFalse(ret["result"])
-        self.assertEqual(
-            ret["comment"], "'{}' failed: Missing arguments: arg2".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"'{CMD}' failed: Missing arguments: arg2")
 
     def test_run_42270_kwargs_to_args(self):
         """
@@ -389,9 +385,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {}, clear=True):
             ret = module._legacy_run(CMD)
         self.assertFalse(ret["result"])
-        self.assertEqual(
-            ret["comment"], "Module function {} is not available".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"Module function {CMD} is not available")
 
     def test_module_run_test_true(self):
         """
@@ -399,9 +393,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(module.__opts__, {"test": True}):
             ret = module._legacy_run(CMD)
-        self.assertEqual(
-            ret["comment"], "Module function {} is set to execute".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"Module function {CMD} is set to execute")
 
     def test_module_run_missing_arg(self):
         """

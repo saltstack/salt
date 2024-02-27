@@ -55,7 +55,7 @@ class RosterMatcher:
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 

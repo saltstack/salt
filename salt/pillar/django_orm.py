@@ -125,7 +125,7 @@ def ext_pillar(
     env=None,
     env_file=None,
     *args,  # pylint: disable=W0613
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=W0613
     """
     Connect to a Django database through the ORM and retrieve model fields
@@ -179,7 +179,7 @@ def ext_pillar(
             (key, _, value) = salt.utils.stringutils.to_str(line).partition("=")
             base_env[key] = value
 
-        command = ["bash", "-c", "source {} && env".format(env_file)]
+        command = ["bash", "-c", f"source {env_file} && env"]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
@@ -229,7 +229,7 @@ def ext_pillar(
                     # (since we're using it as the key in a dictionary)
                     if name_field not in model:
                         raise salt.exceptions.SaltException(
-                            "Name '{}' not found in returned fields.".format(name_field)
+                            f"Name '{name_field}' not found in returned fields."
                         )
 
                     if model[name_field] in pillar_for_model:

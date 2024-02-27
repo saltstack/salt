@@ -89,7 +89,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {} is already present".format(name),
+        "comment": f"Database {name} is already present",
     }
 
     db_args = {
@@ -140,10 +140,10 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if name not in dbs:
-            ret["comment"] = "Database {} is set to be created".format(name)
+            ret["comment"] = f"Database {name} is set to be created"
         else:
             ret["comment"] = (
-                "Database {} exists, but parameters need to be changed".format(name)
+                f"Database {name} exists, but parameters need to be changed"
             )
         return ret
     if name not in dbs and __salt__["postgres.db_create"](
@@ -154,20 +154,20 @@ def present(
         lc_ctype=lc_ctype,
         owner=owner,
         template=template,
-        **db_args
+        **db_args,
     ):
-        ret["comment"] = "The database {} has been created".format(name)
+        ret["comment"] = f"The database {name} has been created"
         ret["changes"][name] = "Present"
     elif name in dbs and __salt__["postgres.db_alter"](
         name, tablespace=tablespace, owner=owner, owner_recurse=owner_recurse, **db_args
     ):
-        ret["comment"] = "Parameters for database {} have been changed".format(name)
+        ret["comment"] = f"Parameters for database {name} have been changed"
         ret["changes"][name] = "Parameters changed"
     elif name in dbs:
-        ret["comment"] = "Failed to change parameters for database {}".format(name)
+        ret["comment"] = f"Failed to change parameters for database {name}"
         ret["result"] = False
     else:
-        ret["comment"] = "Failed to create database {}".format(name)
+        ret["comment"] = f"Failed to create database {name}"
         ret["result"] = False
 
     return ret
@@ -219,13 +219,13 @@ def absent(
     if __salt__["postgres.db_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Database {} is set to be removed".format(name)
+            ret["comment"] = f"Database {name} is set to be removed"
             return ret
         if __salt__["postgres.db_remove"](name, **db_args):
-            ret["comment"] = "Database {} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
+    ret["comment"] = f"Database {name} is not present, so it cannot be removed"
     return ret

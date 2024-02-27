@@ -25,12 +25,12 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def patched_environ(vault_port):
-    with PatchedEnviron(VAULT_ADDR="http://127.0.0.1:{}".format(vault_port)):
+    with PatchedEnviron(VAULT_ADDR=f"http://127.0.0.1:{vault_port}"):
         yield
 
 
 def vault_container_version_id(value):
-    return "vault=={}".format(value)
+    return f"vault=={value}"
 
 
 @pytest.fixture(
@@ -49,7 +49,7 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
     }
     factory = salt_factories.get_container(
         "vault",
-        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
+        f"ghcr.io/saltstack/salt-ci-containers/vault:{vault_version}",
         check_ports=[vault_port],
         container_run_kwargs={
             "ports": {"8200/tcp": vault_port},
@@ -71,9 +71,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
             proc = subprocess.run(
                 [vault_binary, "login", "token=testsecret"],
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
+                capture_output=True,
+                text=True,
             )
             if proc.returncode == 0:
                 break
@@ -94,12 +93,11 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                 "policy",
                 "write",
                 "testpolicy",
-                "{}/vault.hcl".format(RUNTIME_VARS.FILES),
+                f"{RUNTIME_VARS.FILES}/vault.hcl",
             ],
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
+            capture_output=True,
+            text=True,
         )
         if proc.returncode != 0:
             ret = ProcessResult(
@@ -114,9 +112,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
             proc = subprocess.run(
                 [vault_binary, "secrets", "enable", "kv-v2"],
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
+                capture_output=True,
+                text=True,
             )
             ret = ProcessResult(
                 returncode=proc.returncode,
@@ -134,7 +131,7 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                 pass
             else:
                 log.debug("Failed to enable kv-v2:\n%s", ret)
-                pytest.fail("Could not enable kv-v2 {}".format(proc.stdout))
+                pytest.fail(f"Could not enable kv-v2 {proc.stdout}")
             if vault_version == "latest":
                 proc = subprocess.run(
                     [
@@ -146,9 +143,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                         "kv",
                     ],
                     check=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    universal_newlines=True,
+                    capture_output=True,
+                    text=True,
                 )
                 ret = ProcessResult(
                     returncode=proc.returncode,
@@ -173,9 +169,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                             "desc=test user",
                         ],
                         check=False,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True,
+                        capture_output=True,
+                        text=True,
                     )
                     ret = ProcessResult(
                         returncode=proc.returncode,
@@ -199,9 +194,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                                 "desc=test user",
                             ],
                             check=False,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            universal_newlines=True,
+                            capture_output=True,
+                            text=True,
                         )
                         ret = ProcessResult(
                             returncode=proc.returncode,
@@ -219,9 +213,8 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
                             proc = subprocess.run(
                                 [vault_binary, "kv", "get", "salt/user1"],
                                 check=False,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                universal_newlines=True,
+                                capture_output=True,
+                                text=True,
                             )
                             ret = ProcessResult(
                                 returncode=proc.returncode,
@@ -232,7 +225,7 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
 
                 else:
                     log.debug("Failed to enable kv-v2:\n%s", ret)
-                    pytest.fail("Could not enable kv-v2 {}".format(proc.stdout))
+                    pytest.fail(f"Could not enable kv-v2 {proc.stdout}")
         yield vault_version
 
 
@@ -276,7 +269,7 @@ def test_config(salt_call_cli, pillar_tree):
 
 def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
     if vault_container_version not in ["1.3.1", "latest"]:
-        pytest.skip("Test not applicable to vault {}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault {vault_container_version}")
 
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
@@ -292,7 +285,7 @@ def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
 
 def test_sdb_kv_dual_item(salt_call_cli, vault_container_version):
     if vault_container_version not in ["latest"]:
-        pytest.skip("Test not applicable to vault {}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault {vault_container_version}")
     ret = salt_call_cli.run("--local", "sdb.get", "sdb://sdbvault/salt/data/user1")
     assert ret.data
     assert ret.data == {"desc": "test user", "password": "p4ssw0rd"}

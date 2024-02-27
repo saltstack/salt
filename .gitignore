@@ -121,6 +121,7 @@ Session.vim
 
 # Nox requirements archives
 nox.*.tar.bzip2
+nox.*.tar.gz
 nox.*.tar.xz
 
 # Debian packages

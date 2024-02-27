@@ -298,7 +298,7 @@ def validate(config):
                 " dictionary".format(fun),
             )
         if fun not in __salt__:
-            return False, "Execution function {} is not availabe!".format(fun)
+            return False, f"Execution function {fun} is not availabe!"
     return True, "Valid configuration for the napal beacon!"
 
 

@@ -115,13 +115,13 @@ def test_sync(module_type, module_sync_functions):
     sync_out = MagicMock(return_value=[[], True])
     with patch("salt.utils.extmods.sync", sync_out) as extmods_sync:
         ret = saltutil.sync_modules()
-        func = "sync_{}".format(module_sync_functions[module_type])
+        func = f"sync_{module_sync_functions[module_type]}"
         ret = getattr(saltutil, func)()
         assert ret == []
 
         extmods_sync.assert_called_with(
             {},
-            "{}".format(module_type),
+            f"{module_type}",
             extmod_blacklist=None,
             extmod_whitelist=None,
             saltenv="base",

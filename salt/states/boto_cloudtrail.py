@@ -164,7 +164,7 @@ def present(
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "CloudTrail {} is set to be created.".format(Name)
+            ret["comment"] = f"CloudTrail {Name} is set to be created."
             ret["result"] = None
             return ret
         r = __salt__["boto_cloudtrail.create"](
@@ -192,7 +192,7 @@ def present(
         )
         ret["changes"]["old"] = {"trail": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "CloudTrail {} created.".format(Name)
+        ret["comment"] = f"CloudTrail {Name} created."
 
         if LoggingEnabled:
             r = __salt__["boto_cloudtrail.start_logging"](
@@ -223,9 +223,7 @@ def present(
             ret["changes"]["new"]["trail"]["Tags"] = Tags
         return ret
 
-    ret["comment"] = os.linesep.join(
-        [ret["comment"], "CloudTrail {} is present.".format(Name)]
-    )
+    ret["comment"] = os.linesep.join([ret["comment"], f"CloudTrail {Name} is present."])
     ret["changes"] = {}
     # trail exists, ensure config matches
     _describe = __salt__["boto_cloudtrail.describe"](
@@ -277,7 +275,7 @@ def present(
 
     if need_update:
         if __opts__["test"]:
-            msg = "CloudTrail {} set to be modified.".format(Name)
+            msg = f"CloudTrail {Name} set to be modified."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -344,7 +342,7 @@ def present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **adds
+                    **adds,
                 )
             if bool(removes):
                 r = __salt__["boto_cloudtrail.remove_tags"](
@@ -353,7 +351,7 @@ def present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **removes
+                    **removes,
                 )
 
     return ret
@@ -394,11 +392,11 @@ def absent(name, Name, region=None, key=None, keyid=None, profile=None):
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "CloudTrail {} does not exist.".format(Name)
+        ret["comment"] = f"CloudTrail {Name} does not exist."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "CloudTrail {} is set to be removed.".format(Name)
+        ret["comment"] = f"CloudTrail {Name} is set to be removed."
         ret["result"] = None
         return ret
     r = __salt__["boto_cloudtrail.delete"](
@@ -410,5 +408,5 @@ def absent(name, Name, region=None, key=None, keyid=None, profile=None):
         return ret
     ret["changes"]["old"] = {"trail": Name}
     ret["changes"]["new"] = {"trail": None}
-    ret["comment"] = "CloudTrail {} deleted.".format(Name)
+    ret["comment"] = f"CloudTrail {Name} deleted."
     return ret

@@ -178,7 +178,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
     if name not in _options:
         return _ret
 
-    _retrieve_fun = "_retrieve_ntp_{what}".format(what=name)
+    _retrieve_fun = f"_retrieve_ntp_{name}"
     ntp_list_output = _exec_fun(
         _retrieve_fun
     )  # contains only IP Addresses as dictionary keys
@@ -195,7 +195,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
     if configured_ntp_list == desired_ntp_list:
         _ret.update(
             {
-                "comment": "NTP {what} already configured as needed.".format(what=name),
+                "comment": f"NTP {name} already configured as needed.",
                 "result": True,
             }
         )
@@ -231,7 +231,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
     comment = ""
 
     if list_to_set:
-        _set_fun = "_set_ntp_{what}".format(what=name)
+        _set_fun = f"_set_ntp_{name}"
         _set = _exec_fun(_set_fun, list_to_set)
         if _set.get("result"):
             expected_config_change = True
@@ -242,7 +242,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
             )
 
     if list_to_delete:
-        _delete_fun = "_delete_ntp_{what}".format(what=name)
+        _delete_fun = f"_delete_ntp_{name}"
         _removed = _exec_fun(_delete_fun, list_to_delete)
         if _removed.get("result"):
             expected_config_change = True

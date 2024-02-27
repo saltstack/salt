@@ -205,7 +205,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
     def test_get_conn_with_no_auth_params_raises_invocation_error(self):
         with patch(
-            "boto.{}.connect_to_region".format(service),
+            f"boto.{service}.connect_to_region",
             side_effect=boto.exception.NoAuthHandlerFound(),
         ):
             with self.assertRaises(SaltInvocationError):
@@ -214,7 +214,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
     def test_get_conn_error_raises_command_execution_error(self):
         with patch(
-            "boto.{}.connect_to_region".format(service),
+            f"boto.{service}.connect_to_region",
             side_effect=BotoServerError(400, "Mocked error", body=error_body),
         ):
             with self.assertRaises(BotoServerError):

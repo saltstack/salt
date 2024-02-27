@@ -160,7 +160,7 @@ def get_image(server_):
         if server_image in (images[image]["name"], images[image]["id"]):
             return images[image]["id"]
     raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(server_image)
+        f"The specified image, '{server_image}', could not be found."
     )
 
 
@@ -225,7 +225,7 @@ def create(server_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{}' does not exist".format(key_filename)
+            f"The defined key_filename '{key_filename}' does not exist"
         )
 
     ssh_password = config.get_cloud_config_value("ssh_password", server_, __opts__)
@@ -346,10 +346,10 @@ def query(
         )
     )
 
-    path = "{}/{}/".format(base_path, method)
+    path = f"{base_path}/{method}/"
 
     if server_id:
-        path += "{}/".format(server_id)
+        path += f"{server_id}/"
 
     if command:
         path += command
@@ -439,7 +439,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -457,7 +457,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

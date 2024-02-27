@@ -226,7 +226,7 @@ def present(
         return ret
     elif not config:
         if __opts__["test"]:
-            msg = "Cache cluster {} is set to be created.".format(name)
+            msg = f"Cache cluster {name} is set to be created."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -260,11 +260,11 @@ def present(
             ret["changes"]["new"] = config
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} cache cluster.".format(name)
+            ret["comment"] = f"Failed to create {name} cache cluster."
             return ret
     # TODO: support modification of existing elasticache clusters
     else:
-        ret["comment"] = "Cache cluster {} is present.".format(name)
+        ret["comment"] = f"Cache cluster {name} is present."
     return ret
 
 
@@ -319,7 +319,7 @@ def subnet_group_present(
     )
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "Subnet group {} is set to be created.".format(name)
+            ret["comment"] = f"Subnet group {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_elasticache.create_subnet_group"](
@@ -335,11 +335,11 @@ def subnet_group_present(
         )
         if not created:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} subnet group.".format(name)
+            ret["comment"] = f"Failed to create {name} subnet group."
             return ret
         ret["changes"]["old"] = None
         ret["changes"]["new"] = name
-        ret["comment"] = "Subnet group {} created.".format(name)
+        ret["comment"] = f"Subnet group {name} created."
         return ret
     ret["comment"] = "Subnet group present."
     return ret
@@ -379,7 +379,7 @@ def absent(name, wait=True, region=None, key=None, keyid=None, profile=None):
 
     if is_present:
         if __opts__["test"]:
-            ret["comment"] = "Cache cluster {} is set to be removed.".format(name)
+            ret["comment"] = f"Cache cluster {name} is set to be removed."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_elasticache.delete"](
@@ -390,9 +390,9 @@ def absent(name, wait=True, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["new"] = None
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} cache cluster.".format(name)
+            ret["comment"] = f"Failed to delete {name} cache cluster."
     else:
-        ret["comment"] = "{} does not exist in {}.".format(name, region)
+        ret["comment"] = f"{name} does not exist in {region}."
     return ret
 
 
@@ -444,7 +444,7 @@ def creategroup(
     )
     if not is_present:
         if __opts__["test"]:
-            ret["comment"] = "Replication {} is set to be created.".format(name)
+            ret["comment"] = f"Replication {name} is set to be created."
             ret["result"] = None
         created = __salt__["boto_elasticache.create_replication_group"](
             name,
@@ -465,9 +465,9 @@ def creategroup(
             ret["result"] = True
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} replication group.".format(name)
+            ret["comment"] = f"Failed to create {name} replication group."
     else:
-        ret["comment"] = "{} replication group exists .".format(name)
+        ret["comment"] = f"{name} replication group exists ."
         ret["result"] = True
     return ret
 
@@ -482,7 +482,7 @@ def subnet_group_absent(
     )
     if not exists:
         ret["result"] = True
-        ret["comment"] = "{} ElastiCache subnet group does not exist.".format(name)
+        ret["comment"] = f"{name} ElastiCache subnet group does not exist."
         return ret
 
     if __opts__["test"]:
@@ -496,11 +496,11 @@ def subnet_group_absent(
     )
     if not deleted:
         ret["result"] = False
-        ret["comment"] = "Failed to delete {} ElastiCache subnet group.".format(name)
+        ret["comment"] = f"Failed to delete {name} ElastiCache subnet group."
         return ret
     ret["changes"]["old"] = name
     ret["changes"]["new"] = None
-    ret["comment"] = "ElastiCache subnet group {} deleted.".format(name)
+    ret["comment"] = f"ElastiCache subnet group {name} deleted."
     return ret
 
 
@@ -514,14 +514,12 @@ def replication_group_absent(
     )
     if not exists:
         ret["result"] = True
-        ret["comment"] = "{} ElastiCache replication group does not exist.".format(name)
+        ret["comment"] = f"{name} ElastiCache replication group does not exist."
         log.info(ret["comment"])
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = (
-            "ElastiCache replication group {} is set to be removed.".format(name)
-        )
+        ret["comment"] = f"ElastiCache replication group {name} is set to be removed."
         ret["result"] = True
         return ret
     deleted = __salt__["boto_elasticache.delete_replication_group"](
@@ -536,6 +534,6 @@ def replication_group_absent(
         return ret
     ret["changes"]["old"] = name
     ret["changes"]["new"] = None
-    ret["comment"] = "ElastiCache replication group {} deleted.".format(name)
+    ret["comment"] = f"ElastiCache replication group {name} deleted."
     log.info(ret["comment"])
     return ret

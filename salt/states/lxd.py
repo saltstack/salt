@@ -172,7 +172,7 @@ def config_managed(name, value, force_password=False):
         )
 
     elif str(value) == current_value:
-        return _success(ret, '"{}" is already set to "{}"'.format(name, value))
+        return _success(ret, f'"{name}" is already set to "{value}"')
 
     if __opts__["test"]:
         if name == _password_config_key:
@@ -180,7 +180,7 @@ def config_managed(name, value, force_password=False):
             ret["changes"] = {"password": msg}
             return _unchanged(ret, msg)
         else:
-            msg = 'Would set the "{}" to "{}"'.format(name, value)
+            msg = f'Would set the "{name}" to "{value}"'
             ret["changes"] = {name: msg}
             return _unchanged(ret, msg)
 
@@ -190,9 +190,7 @@ def config_managed(name, value, force_password=False):
         if name == _password_config_key:
             ret["changes"] = {name: "Changed the password"}
         else:
-            ret["changes"] = {
-                name: 'Changed from "{}" to {}"'.format(current_value, value)
-            }
+            ret["changes"] = {name: f'Changed from "{current_value}" to {value}"'}
     except CommandExecutionError as e:
         return _error(ret, str(e))
 
@@ -265,9 +263,9 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
         return _error(ret, str(e))
 
     if result is not True:
-        return _error(ret, "Failed to authenticate with peer: {}".format(remote_addr))
+        return _error(ret, f"Failed to authenticate with peer: {remote_addr}")
 
-    msg = "Successfully authenticated with peer: {}".format(remote_addr)
+    msg = f"Successfully authenticated with peer: {remote_addr}"
     ret["changes"] = msg
     return _success(ret, msg)
 

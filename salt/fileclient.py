@@ -107,7 +107,7 @@ class Client:
         Make sure that this path is intended for the salt master and trim it
         """
         if not path.startswith("salt://"):
-            raise MinionError("Unsupported path: {}".format(path))
+            raise MinionError(f"Unsupported path: {path}")
         file_path, saltenv = salt.utils.url.parse(path)
         return file_path
 
@@ -273,7 +273,7 @@ class Client:
             for fn_ in self.file_list_emptydirs(saltenv):
                 fn_ = salt.utils.data.decode(fn_)
                 if fn_.startswith(path):
-                    minion_dir = "{}/{}".format(dest, fn_)
+                    minion_dir = f"{dest}/{fn_}"
                     if not os.path.isdir(minion_dir):
                         os.makedirs(minion_dir)
                     ret.append(minion_dir)
@@ -438,7 +438,7 @@ class Client:
             ret.append(
                 self.get_file(
                     salt.utils.url.create(fn_),
-                    "{}/{}".format(dest, minion_relpath),
+                    f"{dest}/{minion_relpath}",
                     True,
                     saltenv,
                     gzip,
@@ -457,7 +457,7 @@ class Client:
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
                 minion_relpath = fn_[len(prefix) :].lstrip("/")
-                minion_mkdir = "{}/{}".format(dest, minion_relpath)
+                minion_mkdir = f"{dest}/{minion_relpath}"
                 if not os.path.isdir(minion_mkdir):
                     os.makedirs(minion_mkdir)
                 ret.append(minion_mkdir)
@@ -508,9 +508,7 @@ class Client:
         if url_scheme in ("file", ""):
             # Local filesystem
             if not os.path.isabs(url_path):
-                raise CommandExecutionError(
-                    "Path '{}' is not absolute".format(url_path)
-                )
+                raise CommandExecutionError(f"Path '{url_path}' is not absolute")
             if dest is None:
                 with salt.utils.files.fopen(url_path, "rb") as fp_:
                     data = fp_.read()
@@ -584,9 +582,7 @@ class Client:
                 )
                 return dest
             except Exception as exc:  # pylint: disable=broad-except
-                raise MinionError(
-                    "Could not fetch from {}. Exception: {}".format(url, exc)
-                )
+                raise MinionError(f"Could not fetch from {url}. Exception: {exc}")
         if url_data.scheme == "ftp":
             try:
                 ftp = ftplib.FTP()  # nosec
@@ -597,7 +593,7 @@ class Client:
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip("/")
                 with salt.utils.files.fopen(dest, "wb") as fp_:
-                    ftp.retrbinary("RETR {}".format(remote_file_path), fp_.write)
+                    ftp.retrbinary(f"RETR {remote_file_path}", fp_.write)
                 ftp.quit()
                 return dest
             except Exception as exc:  # pylint: disable=broad-except
@@ -631,7 +627,7 @@ class Client:
                 swift_conn.get_object(url_data.netloc, url_data.path[1:], dest)
                 return dest
             except Exception:  # pylint: disable=broad-except
-                raise MinionError("Could not fetch from {}".format(url))
+                raise MinionError(f"Could not fetch from {url}")
 
         get_kwargs = {}
         if url_data.username is not None and url_data.scheme in ("http", "https"):
@@ -654,7 +650,7 @@ class Client:
             fixed_url = url
 
         destfp = None
-        dest_etag = "{}.etag".format(dest)
+        dest_etag = f"{dest}.etag"
         try:
             # Tornado calls streaming_callback on redirect response bodies.
             # But we need streaming to support fetching large files (> RAM
@@ -768,7 +764,7 @@ class Client:
                         result.append(chunk)
 
             else:
-                dest_tmp = "{}.part".format(dest)
+                dest_tmp = f"{dest}.part"
                 # We need an open filehandle to use in the on_chunk callback,
                 # that's why we're not using a with clause here.
                 # pylint: disable=resource-leakage
@@ -830,7 +826,7 @@ class Client:
                 )
             )
         except urllib.error.URLError as exc:
-            raise MinionError("Error reading {}: {}".format(url, exc.reason))
+            raise MinionError(f"Error reading {url}: {exc.reason}")
         finally:
             if destfp is not None:
                 destfp.close()

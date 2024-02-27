@@ -193,7 +193,7 @@ def register_file(name, member, path, digest="", conn=None):
         "INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             name,
-            "{}/{}".format(path, member.path),
+            f"{path}/{member.path}",
             member.size,
             member.mode,
             digest,

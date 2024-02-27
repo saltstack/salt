@@ -30,7 +30,7 @@ class FunctionWrapper:
         cmd_prefix=None,
         aliases=None,
         minion_opts=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
         self.cmd_prefix = cmd_prefix
@@ -79,14 +79,14 @@ class FunctionWrapper:
                 cmd_prefix=cmd,
                 aliases=self.aliases,
                 minion_opts=self.minion_opts,
-                **kwargs
+                **kwargs,
             )
 
         if self.cmd_prefix:
             # We're in an inner FunctionWrapper as created by the code block
             # above. Reconstruct the original cmd in the form 'cmd.run' and
             # then evaluate as normal
-            cmd = "{}.{}".format(self.cmd_prefix, cmd)
+            cmd = f"{self.cmd_prefix}.{cmd}"
 
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
@@ -115,7 +115,7 @@ class FunctionWrapper:
                 disable_wipe=True,
                 fsclient=self.fsclient,
                 minion_opts=self.minion_opts,
-                **self.kwargs
+                **self.kwargs,
             )
             stdout, stderr, retcode = single.cmd_block()
             if stderr.count("Permission Denied"):
@@ -149,15 +149,13 @@ class FunctionWrapper:
             # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
             # containing only 'cmd' module calls, in that case. We don't
             # support assigning directly to prefixes in this way
-            raise KeyError(
-                "Cannot assign to module key {} in the FunctionWrapper".format(cmd)
-            )
+            raise KeyError(f"Cannot assign to module key {cmd} in the FunctionWrapper")
 
         if self.cmd_prefix:
             # We're in an inner FunctionWrapper as created by the first code
             # block in __getitem__. Reconstruct the original cmd in the form
             # 'cmd.run' and then evaluate as normal
-            cmd = "{}.{}".format(self.cmd_prefix, cmd)
+            cmd = f"{self.cmd_prefix}.{cmd}"
 
         if cmd in self.wfuncs:
             self.wfuncs[cmd] = value

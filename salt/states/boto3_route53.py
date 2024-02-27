@@ -241,7 +241,7 @@ def hosted_zone_present(
             update_comment = True
 
     if not (create or add_vpcs or del_vpcs or update_comment):
-        ret["comment"] = "Hostd Zone {} already in desired state".format(Name)
+        ret["comment"] = f"Hostd Zone {Name} already in desired state"
         return ret
 
     if create:
@@ -745,7 +745,7 @@ def rr_present(
                 # this appears to be incredibly difficult with the jinja templating engine
                 # so inject the quotations here to make a viable ChangeBatch
                 if Type == "TXT":
-                    rr = '"{}"'.format(rr)
+                    rr = f'"{rr}"'
                 fixed_rrs += [rr]
         ResourceRecords = [{"Value": rr} for rr in sorted(fixed_rrs)]
 

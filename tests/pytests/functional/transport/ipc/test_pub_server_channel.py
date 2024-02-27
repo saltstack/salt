@@ -96,7 +96,7 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
     def _send_small(opts, sid, num=10):
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
         for idx in range(num):
-            load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
+            load = {"tgt_type": "glob", "tgt": "*", "jid": f"{sid}-s{idx}"}
             server_channel.publish(load)
         time.sleep(0.3)
         time.sleep(3)
@@ -108,7 +108,7 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
             load = {
                 "tgt_type": "glob",
                 "tgt": "*",
-                "jid": "{}-l{}".format(sid, idx),
+                "jid": f"{sid}-l{idx}",
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
@@ -125,8 +125,8 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
             executor.submit(_send_large, opts, 2)
             executor.submit(_send_small, opts, 3)
             executor.submit(_send_large, opts, 4)
-        expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 3)])
-        expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (2, 4)])
+        expect.extend([f"{a}-s{b}" for a in range(10) for b in (1, 3)])
+        expect.extend([f"{a}-l{b}" for a in range(10) for b in (2, 4)])
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)

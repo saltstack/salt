@@ -96,10 +96,10 @@ def mkfs(device, fs_type, **kwargs):
         if key in kwarg_map:
             opt = kwarg_map[key]
             if kwargs[key] == "True":
-                opts += "-{} ".format(opt)
+                opts += f"-{opt} "
             else:
-                opts += "-{} {} ".format(opt, kwargs[key])
-    cmd = "mke2fs -F -t {} {}{}".format(fs_type, opts, device)
+                opts += f"-{opt} {kwargs[key]} "
+    cmd = f"mke2fs -F -t {fs_type} {opts}{device}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     ret = []
     for line in out:
@@ -183,10 +183,10 @@ def tune(device, **kwargs):
         if key in kwarg_map:
             opt = kwarg_map[key]
             if kwargs[key] == "True":
-                opts += "-{} ".format(opt)
+                opts += f"-{opt} "
             else:
-                opts += "-{} {} ".format(opt, kwargs[key])
-    cmd = "tune2fs {}{}".format(opts, device)
+                opts += f"-{opt} {kwargs[key]} "
+    cmd = f"tune2fs {opts}{device}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return out
 
@@ -229,7 +229,7 @@ def dump(device, args=None):
 
         salt '*' extfs.dump /dev/sda1
     """
-    cmd = "dumpe2fs {}".format(device)
+    cmd = f"dumpe2fs {device}"
     if args:
         cmd = cmd + " -" + args
     ret = {"attributes": {}, "blocks": {}}
@@ -264,7 +264,7 @@ def dump(device, args=None):
                 line = line.replace("]", "")
                 comps = line.split()
                 blkgrp = comps[1]
-                group = "Group {}".format(blkgrp)
+                group = f"Group {blkgrp}"
                 ret["blocks"][group] = {}
                 ret["blocks"][group]["group"] = blkgrp
                 ret["blocks"][group]["range"] = comps[3]

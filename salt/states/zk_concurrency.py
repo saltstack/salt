@@ -102,7 +102,7 @@ def lock(
         max_concurrency=max_concurrency,
         timeout=timeout,
         ephemeral_lease=ephemeral_lease,
-        **conn_kwargs
+        **conn_kwargs,
     )
     if locked:
         ret["result"] = True
@@ -151,13 +151,13 @@ def unlock(
         identifier=identifier,
         max_concurrency=max_concurrency,
         ephemeral_lease=ephemeral_lease,
-        **conn_kwargs
+        **conn_kwargs,
     )
 
     if unlocked:
         ret["result"] = True
     else:
-        ret["comment"] = "Unable to find lease for path {}".format(name)
+        ret["comment"] = f"Unable to find lease for path {name}"
 
     return ret
 

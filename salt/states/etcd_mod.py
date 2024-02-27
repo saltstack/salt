@@ -186,7 +186,7 @@ def __virtual__():
 
 def _etcd_action(*, action, key, profile, value=None, **kwargs):
     try:
-        ret = __salt__["etcd.{}".format(action)](
+        ret = __salt__[f"etcd.{action}"](
             key=key, profile=profile, value=value, **kwargs
         )
     except Exception:  # pylint: disable=broad-except

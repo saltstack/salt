@@ -316,7 +316,7 @@ def _is_true(val):
         return True
     elif str(val).lower() in ("false", "no", "0"):
         return False
-    raise ValueError("Failed parsing boolean value: {}".format(val))
+    raise ValueError(f"Failed parsing boolean value: {val}")
 
 
 def wait(
@@ -333,7 +333,7 @@ def wait(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run the given command only if the watch statement calls it.
@@ -484,7 +484,7 @@ def wait_script(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote source and execute it only if a watch
@@ -629,7 +629,7 @@ def run(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -847,12 +847,12 @@ def run(
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = 'Command "{}" would have been executed'.format(name)
+        ret["comment"] = f'Command "{name}" would have been executed'
         ret["changes"] = {"cmd": name}
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = 'Desired working directory "{}" is not available'.format(cwd)
+        ret["comment"] = f'Desired working directory "{cwd}" is not available'
         return ret
 
     # Wow, we passed the test, run this sucker!
@@ -867,7 +867,7 @@ def run(
 
     ret["changes"] = cmd_all
     ret["result"] = not bool(cmd_all["retcode"])
-    ret["comment"] = 'Command "{}" run'.format(name)
+    ret["comment"] = f'Command "{name}" run'
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -904,7 +904,7 @@ def script(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script and execute it with specified arguments.
@@ -1154,11 +1154,11 @@ def script(
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = "Command '{}' would have been executed".format(name)
+        ret["comment"] = f"Command '{name}' would have been executed"
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = 'Desired working directory "{}" is not available'.format(cwd)
+        ret["comment"] = f'Desired working directory "{cwd}" is not available'
         return ret
 
     # Wow, we passed the test, run this sucker!
@@ -1178,7 +1178,7 @@ def script(
             source, __env__
         )
     else:
-        ret["comment"] = "Command '{}' run".format(name)
+        ret["comment"] = f"Command '{name}' run"
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
@@ -1194,7 +1194,7 @@ def call(
     output_loglevel="debug",
     hide_output=False,
     use_vt=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Invoke a pre-defined Python function with arguments specified in the state
@@ -1257,7 +1257,7 @@ def wait_call(
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
-    **kwargs
+    **kwargs,
 ):
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}

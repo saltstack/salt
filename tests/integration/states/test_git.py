@@ -237,7 +237,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             name=TEST_REPO,
             rev="develop",
             target=target,
-            unless="test -e {}".format(target),
+            unless=f"test -e {target}",
             submodules=True,
         )
         self.assertSaltTrueReturn(ret)
@@ -495,7 +495,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret["result"]
 
         # Now remove the tag
-        self.run_function("git.push", [admin_dir, "origin", ":{}".format(tag1)])
+        self.run_function("git.push", [admin_dir, "origin", f":{tag1}"])
         # Add and push another tag
         self.run_function("git.tag", [admin_dir, tag2])
         self.run_function("git.push", [admin_dir, "origin", tag2])
@@ -541,29 +541,29 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target, test=True)
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
-        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == "{} would be cloned to {}".format(TEST_REPO, target)
+        assert ret["changes"] == {"new": f"{TEST_REPO} => {target}"}
+        assert ret["comment"] == f"{TEST_REPO} would be cloned to {target}"
 
         # Now actually run the state
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target)
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
-        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == "{} cloned to {}".format(TEST_REPO, target)
+        assert ret["changes"] == {"new": f"{TEST_REPO} => {target}"}
+        assert ret["comment"] == f"{TEST_REPO} cloned to {target}"
 
         # Run the state again to test idempotence
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target)
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == "Repository already exists at {}".format(target)
+        assert ret["comment"] == f"Repository already exists at {target}"
 
         # Run the state again to test idempotence (test mode)
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target, test=True)
         ret = ret[next(iter(ret))]
         assert not ret["changes"]
         assert ret["result"] is True
-        assert ret["comment"] == "Repository already exists at {}".format(target)
+        assert ret["comment"] == f"Repository already exists at {target}"
 
     @with_tempdir(create=False)
     @pytest.mark.slow_test
@@ -581,7 +581,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
-        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["changes"] == {"new": f"{TEST_REPO} => {target}"}
         assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
             TEST_REPO, target, old_branch
         )
@@ -592,7 +592,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
-        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["changes"] == {"new": f"{TEST_REPO} => {target}"}
         assert ret["comment"] == "{} cloned to {} with branch '{}'".format(
             TEST_REPO, target, old_branch
         )
@@ -630,7 +630,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"] == {"branch": {"old": old_branch, "new": new_branch}}
-        assert ret["comment"] == "Branch would be changed to '{}'".format(new_branch)
+        assert ret["comment"] == f"Branch would be changed to '{new_branch}'"
 
         # Now really change the branch
         ret = self.run_state(
@@ -639,7 +639,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"branch": {"old": old_branch, "new": new_branch}}
-        assert ret["comment"] == "Branch changed to '{}'".format(new_branch)
+        assert ret["comment"] == f"Branch changed to '{new_branch}'"
 
         # Change back to original branch. This tests that we don't attempt to
         # checkout a new branch (i.e. git checkout -b) for a branch that exists
@@ -650,7 +650,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"branch": {"old": new_branch, "new": old_branch}}
-        assert ret["comment"] == "Branch changed to '{}'".format(old_branch)
+        assert ret["comment"] == f"Branch changed to '{old_branch}'"
 
         # Test switching to a nonexistent branch. This should fail.
         ret = self.run_state(
@@ -659,9 +659,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is False
         assert not ret["changes"]
-        assert ret["comment"].startswith(
-            "Failed to change branch to '{}':".format(bad_branch)
-        )
+        assert ret["comment"].startswith(f"Failed to change branch to '{bad_branch}':")
 
     @with_tempdir(create=False)
     @ensure_min_git(min_version="1.7.10")
@@ -739,7 +737,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             name="user.name",
             value="foo bar",
             repo=name,
-            **{"global": False}
+            **{"global": False},
         )
         self.assertSaltTrueReturn(ret)
 
@@ -966,7 +964,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(
             ret[next(iter(ret))]["changes"],
-            {"new": "{} => {}".format(self.repo, self.target)},
+            {"new": f"{self.repo} => {self.target}"},
         )
 
         # Run git.latest state again. This should fail again, with a different

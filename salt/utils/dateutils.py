@@ -46,11 +46,9 @@ def date_cast(date):
         return datetime.datetime.fromtimestamp(date)
     except Exception:  # pylint: disable=broad-except
         if HAS_TIMELIB:
-            raise ValueError("Unable to parse {}".format(date))
+            raise ValueError(f"Unable to parse {date}")
 
-        raise RuntimeError(
-            "Unable to parse {}. Consider installing timelib".format(date)
-        )
+        raise RuntimeError(f"Unable to parse {date}. Consider installing timelib")
 
 
 @jinja_filter("date_format")

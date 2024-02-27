@@ -54,7 +54,7 @@ def test_get_policies_for_nonexisting_minions():
     # For non-existing minions, or the master-minion, grains will be None
     cases = {
         "no-tokens-to-replace": ["no-tokens-to-replace"],
-        "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
+        "single-dict:{minion}": [f"single-dict:{minion_id}"],
         "single-grain:{grains[os]}": [],
     }
     with patch(

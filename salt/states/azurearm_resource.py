@@ -192,17 +192,17 @@ def resource_group_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Resource group {} is already present.".format(name)
+            ret["comment"] = f"Resource group {name} is already present."
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = "Resource group {} tags would be updated.".format(name)
+            ret["comment"] = f"Resource group {name} tags would be updated."
             ret["result"] = None
             ret["changes"] = {"old": group.get("tags", {}), "new": tags}
             return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Resource group {} would be created.".format(name)
+        ret["comment"] = f"Resource group {name} would be created."
         ret["result"] = None
         ret["changes"] = {
             "old": {},
@@ -227,7 +227,7 @@ def resource_group_present(
 
     if present:
         ret["result"] = True
-        ret["comment"] = "Resource group {} has been created.".format(name)
+        ret["comment"] = f"Resource group {name} has been created."
         ret["changes"] = {"old": {}, "new": group}
         return ret
 
@@ -267,7 +267,7 @@ def resource_group_absent(name, connection_auth=None):
 
     if not present:
         ret["result"] = True
-        ret["comment"] = "Resource group {} is already absent.".format(name)
+        ret["comment"] = f"Resource group {name} is already absent."
         return ret
 
     elif __opts__["test"]:
@@ -275,7 +275,7 @@ def resource_group_absent(name, connection_auth=None):
             name, **connection_auth
         )
 
-        ret["comment"] = "Resource group {} would be deleted.".format(name)
+        ret["comment"] = f"Resource group {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": group,
@@ -297,11 +297,11 @@ def resource_group_absent(name, connection_auth=None):
 
     if not present:
         ret["result"] = True
-        ret["comment"] = "Resource group {} has been deleted.".format(name)
+        ret["comment"] = f"Resource group {name} has been deleted."
         ret["changes"] = {"old": group, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete resource group {}!".format(name)
+    ret["comment"] = f"Failed to delete resource group {name}!"
     return ret
 
 
@@ -322,7 +322,7 @@ def policy_definition_present(
     source_hash_name=None,
     skip_verify=False,
     connection_auth=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -450,7 +450,7 @@ def policy_definition_present(
         try:
             temp_rule = json.loads(policy_rule_json)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Unable to load policy rule json! ({})".format(exc)
+            ret["comment"] = f"Unable to load policy rule json! ({exc})"
             return ret
     elif policy_rule_file:
         try:
@@ -468,7 +468,7 @@ def policy_definition_present(
                 None,
                 None,
                 skip_verify=skip_verify,
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["comment"] = 'Unable to locate policy rule file "{}"! ({})'.format(
@@ -552,11 +552,11 @@ def policy_definition_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Policy definition {} is already present.".format(name)
+            ret["comment"] = f"Policy definition {name} is already present."
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = "Policy definition {} would be updated.".format(name)
+            ret["comment"] = f"Policy definition {name} would be updated."
             ret["result"] = None
             return ret
 
@@ -576,7 +576,7 @@ def policy_definition_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Policy definition {} would be created.".format(name)
+        ret["comment"] = f"Policy definition {name} would be created."
         ret["result"] = None
         return ret
 
@@ -598,12 +598,12 @@ def policy_definition_present(
         description=description,
         metadata=metadata,
         parameters=parameters,
-        **policy_kwargs
+        **policy_kwargs,
     )
 
     if "error" not in policy:
         ret["result"] = True
-        ret["comment"] = "Policy definition {} has been created.".format(name)
+        ret["comment"] = f"Policy definition {name} has been created."
         return ret
 
     ret["comment"] = "Failed to create policy definition {}! ({})".format(
@@ -640,11 +640,11 @@ def policy_definition_absent(name, connection_auth=None):
 
     if "error" in policy:
         ret["result"] = True
-        ret["comment"] = "Policy definition {} is already absent.".format(name)
+        ret["comment"] = f"Policy definition {name} is already absent."
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Policy definition {} would be deleted.".format(name)
+        ret["comment"] = f"Policy definition {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": policy,
@@ -658,11 +658,11 @@ def policy_definition_absent(name, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Policy definition {} has been deleted.".format(name)
+        ret["comment"] = f"Policy definition {name} has been deleted."
         ret["changes"] = {"old": policy, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete policy definition {}!".format(name)
+    ret["comment"] = f"Failed to delete policy definition {name}!"
     return ret
 
 
@@ -676,7 +676,7 @@ def policy_assignment_present(
     assignment_type=None,
     parameters=None,
     connection_auth=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -768,11 +768,11 @@ def policy_assignment_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Policy assignment {} is already present.".format(name)
+            ret["comment"] = f"Policy assignment {name} is already present."
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = "Policy assignment {} would be updated.".format(name)
+            ret["comment"] = f"Policy assignment {name} would be updated."
             ret["result"] = None
             return ret
 
@@ -791,7 +791,7 @@ def policy_assignment_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Policy assignment {} would be created.".format(name)
+        ret["comment"] = f"Policy assignment {name} would be created."
         ret["result"] = None
         return ret
 
@@ -808,12 +808,12 @@ def policy_assignment_present(
         display_name=display_name,
         description=description,
         parameters=parameters,
-        **policy_kwargs
+        **policy_kwargs,
     )
 
     if "error" not in policy:
         ret["result"] = True
-        ret["comment"] = "Policy assignment {} has been created.".format(name)
+        ret["comment"] = f"Policy assignment {name} has been created."
         return ret
 
     ret["comment"] = "Failed to create policy assignment {}! ({})".format(
@@ -853,11 +853,11 @@ def policy_assignment_absent(name, scope, connection_auth=None):
 
     if "error" in policy:
         ret["result"] = True
-        ret["comment"] = "Policy assignment {} is already absent.".format(name)
+        ret["comment"] = f"Policy assignment {name} is already absent."
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Policy assignment {} would be deleted.".format(name)
+        ret["comment"] = f"Policy assignment {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": policy,
@@ -871,9 +871,9 @@ def policy_assignment_absent(name, scope, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Policy assignment {} has been deleted.".format(name)
+        ret["comment"] = f"Policy assignment {name} has been deleted."
         ret["changes"] = {"old": policy, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete policy assignment {}!".format(name)
+    ret["comment"] = f"Failed to delete policy assignment {name}!"
     return ret

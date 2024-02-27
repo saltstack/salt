@@ -97,7 +97,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
             return ret
     elif output:
         if not overwrite and os.path.isfile(output):
-            ret["comment"] = "No execution needed. File {} already set".format(output)
+            ret["comment"] = f"No execution needed. File {output} already set"
             return ret
         elif __opts__["test"]:
             ret["result"] = None
@@ -121,7 +121,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
     if output == "grain":
         if grain and not key:
             __salt__["grains.setval"](grain, ticket)
-            ret["changes"]["ticket"] = "Executed. Output into grain: {}".format(grain)
+            ret["changes"]["ticket"] = f"Executed. Output into grain: {grain}"
         elif grain:
             if grain in __salt__["grains.ls"]():
                 grain_value = __salt__["grains.get"](grain)
@@ -133,7 +133,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
                 grain, key
             )
     elif output:
-        ret["changes"]["ticket"] = "Executed. Output into {}".format(output)
+        ret["changes"]["ticket"] = f"Executed. Output into {output}"
         with salt.utils.files.fopen(output, "w") as output_file:
             output_file.write(salt.utils.stringutils.to_str(ticket))
     else:
@@ -150,8 +150,8 @@ def generate_cert(name):
         The domain name for which this certificate and key will be generated
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    cert = "{}{}.crt".format(get_certs_path(), name)
-    key = "{}{}.key".format(get_certs_path(), name)
+    cert = f"{get_certs_path()}{name}.crt"
+    key = f"{get_certs_path()}{name}.key"
 
     # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(key):
@@ -170,8 +170,8 @@ def generate_cert(name):
     cert_save = __salt__["icinga2.generate_cert"](name)
     if not cert_save["retcode"]:
         ret["comment"] = "Certificate and key generated"
-        ret["changes"]["cert"] = "Executed. Certificate saved: {}".format(cert)
-        ret["changes"]["key"] = "Executed. Key saved: {}".format(key)
+        ret["changes"]["cert"] = f"Executed. Certificate saved: {cert}"
+        ret["changes"]["key"] = f"Executed. Key saved: {key}"
     return ret
 
 
@@ -186,11 +186,11 @@ def save_cert(name, master):
         Icinga2 master node for which this certificate will be saved
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    cert = "{}trusted-master.crt".format(get_certs_path())
+    cert = f"{get_certs_path()}trusted-master.crt"
 
     # Checking if execution is needed.
     if os.path.isfile(cert):
-        ret["comment"] = "No execution needed. Cert: {} already saved.".format(cert)
+        ret["comment"] = f"No execution needed. Cert: {cert} already saved."
         return ret
     if __opts__["test"]:
         ret["result"] = None
@@ -201,7 +201,7 @@ def save_cert(name, master):
     cert_save = __salt__["icinga2.save_cert"](name, master)
     if not cert_save["retcode"]:
         ret["comment"] = "Certificate for icinga2 master saved"
-        ret["changes"]["cert"] = "Executed. Certificate saved: {}".format(cert)
+        ret["changes"]["cert"] = f"Executed. Certificate saved: {cert}"
     return ret
 
 
@@ -222,11 +222,11 @@ def request_cert(name, master, ticket, port="5665"):
         Icinga2 port, defaults to 5665
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    cert = "{}ca.crt".format(get_certs_path())
+    cert = f"{get_certs_path()}ca.crt"
 
     # Checking if execution is needed.
     if os.path.isfile(cert):
-        ret["comment"] = "No execution needed. Cert: {} already exists.".format(cert)
+        ret["comment"] = f"No execution needed. Cert: {cert} already exists."
         return ret
     if __opts__["test"]:
         ret["result"] = None
@@ -237,7 +237,7 @@ def request_cert(name, master, ticket, port="5665"):
     cert_request = __salt__["icinga2.request_cert"](name, master, ticket, port)
     if not cert_request["retcode"]:
         ret["comment"] = "Certificate request from icinga2 master executed"
-        ret["changes"]["cert"] = "Executed. Certificate requested: {}".format(cert)
+        ret["changes"]["cert"] = f"Executed. Certificate requested: {cert}"
         return ret
 
     ret["comment"] = "FAILED. Certificate requested failed with output: {}".format(
@@ -261,8 +261,8 @@ def node_setup(name, master, ticket):
         Authentication ticket generated on icinga2 master
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    cert = "{}{}.crt.orig".format(get_certs_path(), name)
-    key = "{}{}.key.orig".format(get_certs_path(), name)
+    cert = f"{get_certs_path()}{name}.crt.orig"
+    key = f"{get_certs_path()}{name}.key.orig"
 
     # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(cert):

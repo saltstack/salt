@@ -70,13 +70,13 @@ def present(
 
         .. versionadded:: 2016.3.0
     """
-    msg = "Cluster {}/{} is already present".format(version, name)
+    msg = f"Cluster {version}/{name} is already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": msg}
 
     if __salt__["postgres.cluster_exists"](version, name):
         # check cluster config is correct
         infos = __salt__["postgres.cluster_list"](verbose=True)
-        info = infos["{}/{}".format(version, name)]
+        info = infos[f"{version}/{name}"]
         # TODO: check locale en encoding configs also
         if any(
             (
@@ -111,7 +111,7 @@ def present(
     if cluster:
         msg = "The cluster {0}/{1} has been created"
         ret["comment"] = msg.format(version, name)
-        ret["changes"]["{}/{}".format(version, name)] = "Present"
+        ret["changes"][f"{version}/{name}"] = "Present"
     else:
         msg = "Failed to create cluster {0}/{1}"
         ret["comment"] = msg.format(version, name)

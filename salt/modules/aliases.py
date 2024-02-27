@@ -80,9 +80,9 @@ def __write_aliases_file(lines):
             if not line_comment:
                 line_comment = ""
             if line_alias and line_target:
-                write_line = "{}: {}{}\n".format(line_alias, line_target, line_comment)
+                write_line = f"{line_alias}: {line_target}{line_comment}\n"
             else:
-                write_line = "{}\n".format(line_comment)
+                write_line = f"{line_comment}\n"
             write_line = write_line.encode(__salt_system_encoding__)
             out.write(write_line)
 

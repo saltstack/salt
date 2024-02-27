@@ -311,7 +311,7 @@ def update(name):
        salt '*' softwareupdate.update <update-name>
     """
     if not update_available(name):
-        raise SaltInvocationError("Update not available: {}".format(name))
+        raise SaltInvocationError(f"Update not available: {name}")
 
     cmd = ["softwareupdate", "--install", name]
     salt.utils.mac_utils.execute_return_success(cmd)
@@ -390,7 +390,7 @@ def download(name):
        salt '*' softwareupdate.download <update name>
     """
     if not update_available(name):
-        raise SaltInvocationError("Update not available: {}".format(name))
+        raise SaltInvocationError(f"Update not available: {name}")
 
     if name in list_downloads():
         return True

@@ -51,10 +51,10 @@ def profile(name):
 
     # test mode
     if __opts__["test"] is True:
-        ret["comment"] = 'The state of "{}" will be changed.'.format(current_state)
+        ret["comment"] = f'The state of "{current_state}" will be changed.'
         ret["changes"] = {
             "old": current_state,
-            "new": "Profile will be set to {}".format(profile),
+            "new": f"Profile will be set to {profile}",
         }
 
         # return None when testing
@@ -66,7 +66,7 @@ def profile(name):
     new_state = __salt__["tuned.profile"](profile)
 
     # create the comment data structure
-    ret["comment"] = 'The state of "{}" was changed!'.format(profile)
+    ret["comment"] = f'The state of "{profile}" was changed!'
 
     # fill in the ret data structure
     ret["changes"] = {
@@ -108,7 +108,7 @@ def off(name=None):
 
     # test mode
     if __opts__["test"] is True:
-        ret["comment"] = 'The state of "{}" will be changed.'.format(current_state)
+        ret["comment"] = f'The state of "{current_state}" will be changed.'
         ret["changes"] = {
             "old": current_state,
             "new": "Profile will be set to off",

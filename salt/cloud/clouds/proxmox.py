@@ -135,7 +135,7 @@ def _authenticate():
     )
 
     connect_data = {"username": username, "password": passwd}
-    full_url = "https://{}:{}/api2/json/access/ticket".format(url, port)
+    full_url = f"https://{url}:{port}/api2/json/access/ticket"
 
     response = requests.post(
         full_url, verify=verify_ssl, data=connect_data, timeout=120
@@ -155,7 +155,7 @@ def query(conn_type, option, post_data=None):
         log.debug("Not authenticated yet, doing that now..")
         _authenticate()
 
-    full_url = "https://{}:{}/api2/json/{}".format(url, port, option)
+    full_url = f"https://{url}:{port}/api2/json/{option}"
 
     log.debug("%s: %s (%s)", conn_type, full_url, post_data)
 
@@ -450,9 +450,7 @@ def avail_images(call=None, location="local"):
 
     ret = {}
     for host_name, host_details in avail_locations().items():
-        for item in query(
-            "get", "nodes/{}/storage/{}/content".format(host_name, location)
-        ):
+        for item in query("get", f"nodes/{host_name}/storage/{location}/content"):
             ret[item["volid"]] = item
     return ret
 
@@ -559,7 +557,7 @@ def _dictionary_to_stringlist(input_dict):
 
     setting1=value1,setting2=value2
     """
-    return ",".join("{}={}".format(k, input_dict[k]) for k in sorted(input_dict.keys()))
+    return ",".join(f"{k}={input_dict[k]}" for k in sorted(input_dict.keys()))
 
 
 def _reconfigure_clone(vm_, vmid):
@@ -715,7 +713,7 @@ def create(vm_):
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data["upid"], timeout=300):
-        return {"Error": "Unable to create {}, command timed out".format(name)}
+        return {"Error": f"Unable to create {name}, command timed out"}
 
     if vm_.get("clone") is True:
         _reconfigure_clone(vm_, vmid)
@@ -728,7 +726,7 @@ def create(vm_):
     # Wait until the VM has fully started
     log.debug('Waiting for state "running" for vm %s on %s', vmid, host)
     if not wait_for_state(vmid, "running"):
-        return {"Error": "Unable to start {}, command timed out".format(name)}
+        return {"Error": f"Unable to start {name}, command timed out"}
 
     if agent_get_ip is True:
         try:
@@ -868,7 +866,7 @@ def _import_api():
     Load this json content into global variable "api"
     """
     global api
-    full_url = "https://{}:{}/pve-docs/api-viewer/apidoc.js".format(url, port)
+    full_url = f"https://{url}:{port}/pve-docs/api-viewer/apidoc.js"
     returned_data = requests.get(full_url, verify=verify_ssl, timeout=120)
 
     re_filter = re.compile(" (?:pveapi|apiSchema) = (.*)^;", re.DOTALL | re.MULTILINE)
@@ -1102,12 +1100,12 @@ def get_vmconfig(vmid, node=None, node_type="openvz"):
     if node is None:
         # We need to figure out which node this VM is on.
         for host_name, host_details in avail_locations().items():
-            for item in query("get", "nodes/{}/{}".format(host_name, node_type)):
+            for item in query("get", f"nodes/{host_name}/{node_type}"):
                 if item["vmid"] == vmid:
                     node = host_name
 
     # If we reached this point, we have all the information we need
-    data = query("get", "nodes/{}/{}/{}/config".format(node, node_type, vmid))
+    data = query("get", f"nodes/{node}/{node_type}/{vmid}/config")
 
     return data
 
@@ -1179,7 +1177,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1193,7 +1191,7 @@ def destroy(name, call=None):
 
         # wait until stopped
         if not wait_for_state(vmobj["vmid"], "stopped"):
-            return {"Error": "Unable to stop {}, command timed out".format(name)}
+            return {"Error": f"Unable to stop {name}, command timed out"}
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
@@ -1203,7 +1201,7 @@ def destroy(name, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1213,7 +1211,7 @@ def destroy(name, call=None):
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
 
-        return {"Destroyed": "{} was destroyed.".format(name)}
+        return {"Destroyed": f"{name} was destroyed."}
 
 
 def set_vm_status(status, name=None, vmid=None):
@@ -1302,7 +1300,7 @@ def start(name, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'started'
 
-    return {"Started": "{} was started.".format(name)}
+    return {"Started": f"{name} was started."}
 
 
 def stop(name, vmid=None, call=None):
@@ -1324,7 +1322,7 @@ def stop(name, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
-    return {"Stopped": "{} was stopped.".format(name)}
+    return {"Stopped": f"{name} was stopped."}
 
 
 def shutdown(name=None, vmid=None, call=None):
@@ -1348,4 +1346,4 @@ def shutdown(name=None, vmid=None, call=None):
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
-    return {"Shutdown": "{} was shutdown.".format(name)}
+    return {"Shutdown": f"{name} was shutdown."}

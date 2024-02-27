@@ -58,7 +58,7 @@ def _get_config(**kwargs):
         "pk_file": pk_file,
     }
 
-    config_key = "{}.config".format(__virtualname__)
+    config_key = f"{__virtualname__}.config"
     try:
         config.update(__salt__["config.get"](config_key, {}))
     except (NameError, KeyError) as e:
@@ -146,7 +146,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         }
 
     if pk_file is None:
-        pk_file = "{}.pub".format(sk_file)
+        pk_file = f"{sk_file}.pub"
 
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
@@ -167,17 +167,15 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
             else:
                 # chmod 0600 file
                 os.chmod(sk_file, 1536)
-            return "saved sk_file: {}".format(sk_file)
+            return f"saved sk_file: {sk_file}"
         else:
-            raise Exception("sk_file:{} already exist.".format(sk_file))
+            raise Exception(f"sk_file:{sk_file} already exist.")
 
     if sk_file is None and pk_file:
         raise Exception("sk_file: Must be set inorder to generate a public key.")
 
     if os.path.isfile(sk_file) and os.path.isfile(pk_file):
-        raise Exception(
-            "sk_file:{} and pk_file:{} already exist.".format(sk_file, pk_file)
-        )
+        raise Exception(f"sk_file:{sk_file} and pk_file:{pk_file} already exist.")
 
     if os.path.isfile(sk_file) and not os.path.isfile(pk_file):
         # generate pk using the sk
@@ -187,7 +185,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         kp = nacl.public.PublicKey(sk)
         with salt.utils.files.fopen(pk_file, "wb") as keyf:
             keyf.write(base64.b64encode(kp.encode()))
-        return "saved pk_file: {}".format(pk_file)
+        return f"saved pk_file: {pk_file}"
 
     kp = nacl.public.PublicKey.generate()
     with salt.utils.files.fopen(sk_file, "wb") as keyf:
@@ -203,7 +201,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         os.chmod(sk_file, 1536)
     with salt.utils.files.fopen(pk_file, "wb") as keyf:
         keyf.write(base64.b64encode(kp.encode()))
-    return "saved sk_file:{}  pk_file: {}".format(sk_file, pk_file)
+    return f"saved sk_file:{sk_file}  pk_file: {pk_file}"
 
 
 def enc(data, **kwargs):
@@ -270,10 +268,10 @@ def enc_file(name, out=None, **kwargs):
     d = enc(data, **kwargs)
     if out:
         if os.path.isfile(out):
-            raise Exception("file:{} already exist.".format(out))
+            raise Exception(f"file:{out} already exist.")
         with salt.utils.files.fopen(out, "wb") as f:
             f.write(salt.utils.stringutils.to_bytes(d))
-        return "Wrote: {}".format(out)
+        return f"Wrote: {out}"
     return d
 
 
@@ -342,10 +340,10 @@ def dec_file(name, out=None, **kwargs):
     d = dec(data, **kwargs)
     if out:
         if os.path.isfile(out):
-            raise Exception("file:{} already exist.".format(out))
+            raise Exception(f"file:{out} already exist.")
         with salt.utils.files.fopen(out, "wb") as f:
             f.write(salt.utils.stringutils.to_bytes(d))
-        return "Wrote: {}".format(out)
+        return f"Wrote: {out}"
     return d
 
 

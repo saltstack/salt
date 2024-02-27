@@ -965,7 +965,7 @@ def test_delete_line_in_empty_file(anyattr, mode):
             )
         warning_call = _log.warning.call_args_list[0][0]
         warning_log_msg = warning_call[0] % warning_call[1:]
-        assert "Cannot find text to {}".format(mode) in warning_log_msg
+        assert f"Cannot find text to {mode}" in warning_log_msg
 
 
 @pytest.mark.parametrize("mode", ["delete", "replace"])
@@ -1149,7 +1149,7 @@ def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
     See issue #48113
     :return:
     """
-    file_content = "This is a line{}This is another line".format(os.linesep)
+    file_content = f"This is a line{os.linesep}This is another line"
     file_modified = salt.utils.stringutils.to_str(
         "This is a line{}"
         "This is another line{}"

@@ -194,7 +194,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
         salt '*' eselect.set_target kernel linux-3.17.5-gentoo
     """
     if action_parameter:
-        action_parameter = "{} {}".format(action_parameter, target)
+        action_parameter = f"{action_parameter} {target}"
     else:
         action_parameter = target
 

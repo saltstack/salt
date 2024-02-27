@@ -19,7 +19,7 @@ class DummyFS:
         self.backends = backends
 
     def keys(self):
-        return ["{}.envs".format(x) for x in self.backends]
+        return [f"{x}.envs" for x in self.backends]
 
 
 @pytest.fixture

@@ -36,7 +36,7 @@ def test_install():
     }
 
     bad_link = "/bin/pager"
-    err = "the primary link for {} must be {}".format(name, link)
+    err = f"the primary link for {name} must be {link}"
 
     mock_cinst = MagicMock(side_effect=[True, False])
     mock_cexist = MagicMock(
@@ -55,7 +55,7 @@ def test_install():
             "alternatives.show_link": mock_link,
         },
     ):
-        comt = "Alternative {} for {} is already registered".format(path, name)
+        comt = f"Alternative {path} for {name} is already registered"
         ret.update({"comment": comt, "result": True})
         assert alternatives.install(name, link, path, priority) == ret
 
@@ -84,7 +84,7 @@ def test_install():
         with patch.dict(alternatives.__opts__, {"test": False}):
             assert alternatives.install(name, link, path, priority) == ret
 
-        comt = "Alternative for {} not installed: {}".format(name, err)
+        comt = f"Alternative for {name} not installed: {err}"
         ret.update({"comment": comt, "result": False, "changes": {}, "link": bad_link})
         with patch.dict(alternatives.__opts__, {"test": False}):
             assert alternatives.install(name, bad_link, path, priority) == ret
@@ -133,12 +133,12 @@ def test_remove():
             "alternatives.remove": mock_bool,
         },
     ):
-        comt = "Alternative for {} will be removed".format(name)
+        comt = f"Alternative for {name} will be removed"
         ret.update({"comment": comt})
         with patch.dict(alternatives.__opts__, {"test": True}):
             assert alternatives.remove(name, path) == ret
 
-        comt = "Alternative for {} removed".format(name)
+        comt = f"Alternative for {name} removed"
         ret.update({"comment": comt, "result": True})
         with patch.dict(alternatives.__opts__, {"test": False}):
             assert alternatives.remove(name, path) == ret
@@ -148,11 +148,11 @@ def test_remove():
         with patch.dict(alternatives.__opts__, {"test": False}):
             assert alternatives.remove(name, path) == ret
 
-        comt = "Alternative for {} is set to it's default path True".format(name)
+        comt = f"Alternative for {name} is set to it's default path True"
         ret.update({"comment": comt, "result": True, "changes": {}})
         assert alternatives.remove(name, path) == ret
 
-        comt = "Alternative for {} doesn't exist".format(name)
+        comt = f"Alternative for {name} doesn't exist"
         ret.update({"comment": comt, "result": False})
         assert alternatives.remove(name, path) == ret
 
@@ -175,11 +175,11 @@ def test_auto():
         alternatives.__salt__,
         {"alternatives.display": mock, "alternatives.auto": mock_auto},
     ):
-        comt = "{} already in auto mode".format(name)
+        comt = f"{name} already in auto mode"
         ret.update({"comment": comt})
         assert alternatives.auto(name) == ret
 
-        comt = "{} will be put in auto mode".format(name)
+        comt = f"{name} will be put in auto mode"
         ret.update({"comment": comt, "result": None})
         with patch.dict(alternatives.__opts__, {"test": True}):
             assert alternatives.auto(name) == ret
@@ -213,20 +213,20 @@ def test_set():
             "alternatives.set": mock_bool,
         },
     ):
-        comt = "Alternative for {} already set to {}".format(name, path)
+        comt = f"Alternative for {name} already set to {path}"
         ret.update({"comment": comt})
         assert alternatives.set_(name, path) == ret
 
-        comt = "Alternative for {} will be set to path /usr/bin/less".format(name)
+        comt = f"Alternative for {name} will be set to path /usr/bin/less"
         ret.update({"comment": comt, "result": None})
         with patch.dict(alternatives.__opts__, {"test": True}):
             assert alternatives.set_(name, path) == ret
 
-        comt = "Alternative for {} not updated".format(name)
+        comt = f"Alternative for {name} not updated"
         ret.update({"comment": comt, "result": True})
         with patch.dict(alternatives.__opts__, {"test": False}):
             assert alternatives.set_(name, path) == ret
 
-        comt = "Alternative {} for {} doesn't exist".format(path, name)
+        comt = f"Alternative {path} for {name} doesn't exist"
         ret.update({"comment": comt, "result": False})
         assert alternatives.set_(name, path) == ret

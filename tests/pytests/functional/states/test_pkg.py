@@ -477,9 +477,10 @@ def test_pkg_011_latest_only_upgrade(
         new_version = modules.pkg.version(target, use_context=False)
         assert new_version == updates[target]
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
-        assert ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)][
-            "comment"
-        ] == "Package {} is already up-to-date".format(target)
+        assert (
+            ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"]
+            == f"Package {target} is already up-to-date"
+        )
 
 
 @pytest.mark.usefixtures("WILDCARDS_SUPPORTED")
@@ -627,7 +628,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -646,7 +647,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     )
 
     if versionlock_pkg and "-versionlock is not installed" in str(ret):
-        pytest.skip("{}  `{}` is installed".format(ret, versionlock_pkg))
+        pytest.skip(f"{ret}  `{versionlock_pkg}` is installed")
 
     # changes from pkg.hold for Red Hat family are different
     target_changes = {}
@@ -746,7 +747,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -759,7 +760,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
     assert target_ret.result is True
 
     if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
-        pytest.skip("{}  `{}` is installed".format(target_ret, versionlock_pkg))
+        pytest.skip(f"{target_ret}  `{versionlock_pkg}` is installed")
 
     try:
         tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
@@ -811,7 +812,7 @@ def test_pkg_cap_001_installed(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/updated: {}".format(realpkg)
+            f"The following packages would be installed/updated: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.installed(
@@ -909,7 +910,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
             test=True,
         )
         assert "packages would be installed/updated" in ret.comment
-        assert "{}={}".format(realpkg, realver) in ret.comment
+        assert f"{realpkg}={realver}" in ret.comment
 
         ret = states.pkg.installed(
             name="test_pkg_cap_003_installed_multipkg_with_version-install-capability",
@@ -953,7 +954,7 @@ def test_pkg_cap_004_latest(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/upgraded: {}".format(realpkg)
+            f"The following packages would be installed/upgraded: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.latest(name=target, refresh=False, resolve_capabilities=True)
@@ -993,9 +994,7 @@ def test_pkg_cap_005_downloaded(PKG_CAP_TARGETS, modules, states):
         resolve_capabilities=True,
         test=True,
     )
-    assert (
-        "The following packages would be downloaded: {}".format(realpkg) in ret.comment
-    )
+    assert f"The following packages would be downloaded: {realpkg}" in ret.comment
 
     ret = states.pkg.downloaded(name=target, refresh=False, resolve_capabilities=True)
     assert ret.result is True

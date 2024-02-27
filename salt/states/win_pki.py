@@ -64,7 +64,7 @@ def import_cert(
     """
     ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
-    store_path = r"Cert:\{}\{}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
 
     cached_source_path = __salt__["cp.cache_file"](name, saltenv)
     current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
@@ -139,7 +139,7 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
     """
     ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
-    store_path = r"Cert:\{}\{}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
     current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
 
     if thumbprint not in current_certs:

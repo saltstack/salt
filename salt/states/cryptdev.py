@@ -128,7 +128,7 @@ def mapped(
         )
         if crypttab_result:
             if crypttab_result == "new":
-                ret["changes"]["crypttab"] = "Entry added in {}".format(config)
+                ret["changes"]["crypttab"] = f"Entry added in {config}"
 
             if crypttab_result == "change":
                 ret["changes"]["crypttab"] = "Existing entry in {} changed".format(
@@ -136,7 +136,7 @@ def mapped(
                 )
 
         else:
-            ret["changes"]["crypttab"] = "Unable to set entry in {}".format(config)
+            ret["changes"]["crypttab"] = f"Unable to set entry in {config}"
             ret["result"] = False
 
     return ret
@@ -183,10 +183,10 @@ def unmapped(name, config="/etc/crypttab", persist=True, immediate=False):
         crypttab_result = __salt__["cryptdev.rm_crypttab"](name, config=config)
         if crypttab_result:
             if crypttab_result == "change":
-                ret["changes"]["crypttab"] = "Entry removed from {}".format(config)
+                ret["changes"]["crypttab"] = f"Entry removed from {config}"
 
         else:
-            ret["changes"]["crypttab"] = "Unable to remove entry in {}".format(config)
+            ret["changes"]["crypttab"] = f"Unable to remove entry in {config}"
             ret["result"] = False
 
     return ret

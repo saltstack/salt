@@ -1941,9 +1941,10 @@ def test_update_disks(make_mock_vm):
             added_disk_path = os.path.join(
                 virt.__salt__["config.get"]("virt:images"), "my_vm_added.qcow2"
             )
-            assert mock_run.call_args[0][
-                0
-            ] == 'qemu-img create -f qcow2 "{}" 2048M'.format(added_disk_path)
+            assert (
+                mock_run.call_args[0][0]
+                == f'qemu-img create -f qcow2 "{added_disk_path}" 2048M'
+            )
             assert mock_chmod.call_args[0][0] == added_disk_path
             assert [
                 (

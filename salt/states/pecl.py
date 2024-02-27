@@ -73,25 +73,25 @@ def installed(
             version is None or version in installed_pecls[package]
         ) and preferred_state in installed_pecls[package]:
             ret["result"] = True
-            ret["comment"] = "Pecl extension {} is already installed.".format(name)
+            ret["comment"] = f"Pecl extension {name} is already installed."
             return ret
 
     if version is not None:
         # Modify the name to include the version and proceed.
-        name = "{}-{}".format(name, version)
+        name = f"{name}-{version}"
 
     if __opts__["test"]:
-        ret["comment"] = "Pecl extension {} would have been installed".format(name)
+        ret["comment"] = f"Pecl extension {name} would have been installed"
         return ret
     if __salt__["pecl.install"](
         name, defaults=defaults, force=force, preferred_state=preferred_state
     ):
         ret["result"] = True
         ret["changes"][name] = "Installed"
-        ret["comment"] = "Pecl extension {} was successfully installed".format(name)
+        ret["comment"] = f"Pecl extension {name} was successfully installed"
     else:
         ret["result"] = False
-        ret["comment"] = "Could not install pecl extension {}.".format(name)
+        ret["comment"] = f"Could not install pecl extension {name}."
 
     return ret
 
@@ -106,17 +106,17 @@ def removed(name):
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
     if name not in __salt__["pecl.list"]():
         ret["result"] = True
-        ret["comment"] = "Pecl extension {} is not installed.".format(name)
+        ret["comment"] = f"Pecl extension {name} is not installed."
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Pecl extension {} would have been removed".format(name)
+        ret["comment"] = f"Pecl extension {name} would have been removed"
         return ret
     if __salt__["pecl.uninstall"](name):
         ret["result"] = True
         ret["changes"][name] = "Removed"
-        ret["comment"] = "Pecl extension {} was successfully removed.".format(name)
+        ret["comment"] = f"Pecl extension {name} was successfully removed."
     else:
         ret["result"] = False
-        ret["comment"] = "Could not remove pecl extension {}.".format(name)
+        ret["comment"] = f"Could not remove pecl extension {name}."
     return ret

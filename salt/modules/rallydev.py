@@ -80,7 +80,7 @@ def _query(
         path += action
 
     if command:
-        path += "/{}".format(command)
+        path += f"/{command}"
 
     log.debug("RallyDev URL: %s", path)
 

@@ -56,11 +56,11 @@ def _find_durations(data, name_max=60):
             if len(name) > name_max:
                 name = name[0 : name_max - 3] + "..."
 
-            l = len("{:0.4f}".format(dur))
+            l = len(f"{dur:0.4f}")
             if l > ml:
                 ml = l
 
-            ret.append([dur, name, "{}.{}".format(mod, fun)])
+            ret.append([dur, name, f"{mod}.{fun}"])
 
     for row in ret:
         row[0] = "{0:{w}.4f}".format(row[0], w=ml)

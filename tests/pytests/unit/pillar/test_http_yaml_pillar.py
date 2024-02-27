@@ -32,10 +32,10 @@ def test_ext_pillar_can_take_http_query_kwargs(backend, httpserver):
 
     # If the headers in header_dict are not in the request, httpserver will return an empty dictionary, so we know it will fail
     httpserver.expect_request(
-        "/http_yaml_pillar/{}".format(backend),
+        f"/http_yaml_pillar/{backend}",
         headers={"custom-backend-header": backend},
     ).respond_with_data(salt.utils.json.dumps(response), content_type="text/plain")
-    url = httpserver.url_for("/http_yaml_pillar/{}".format(backend))
+    url = httpserver.url_for(f"/http_yaml_pillar/{backend}")
 
     actual = http_yaml.ext_pillar("test-minion-id", {}, url, header_dict=header_dict)
     assert actual == response

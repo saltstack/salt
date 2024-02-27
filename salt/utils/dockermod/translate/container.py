@@ -137,7 +137,7 @@ def binds(val, **kwargs):  # pylint: disable=unused-argument
                 val = helpers.split(val)
             except AttributeError:
                 raise SaltInvocationError(
-                    "'{}' is not a dictionary or list of bind definitions".format(val)
+                    f"'{val}' is not a dictionary or list of bind definitions"
                 )
     return val
 
@@ -503,9 +503,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             if isinstance(val, int):
                 val = [val]
             else:
-                raise SaltInvocationError(
-                    "'{}' is not a valid port definition".format(val)
-                )
+                raise SaltInvocationError(f"'{val}' is not a valid port definition")
     new_ports = set()
     for item in val:
         if isinstance(item, int):
@@ -514,9 +512,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
         try:
             item, _, proto = item.partition("/")
         except AttributeError:
-            raise SaltInvocationError(
-                "'{}' is not a valid port definition".format(item)
-            )
+            raise SaltInvocationError(f"'{item}' is not a valid port definition")
         try:
             range_start, range_end = helpers.get_port_range(item)
         except ValueError as exc:
@@ -625,7 +621,7 @@ def ulimits(val, **kwargs):  # pylint: disable=unused-argument
                 }
             except (TypeError, ValueError):
                 raise SaltInvocationError(
-                    "Limit '{}' contains non-numeric value(s)".format(item)
+                    f"Limit '{item}' contains non-numeric value(s)"
                 )
     return val
 
@@ -647,7 +643,7 @@ def user(val, **kwargs):  # pylint: disable=unused-argument
     if not isinstance(val, (int, str)):
         raise SaltInvocationError("Value must be a username or uid")
     elif isinstance(val, int) and val < 0:
-        raise SaltInvocationError("'{}' is an invalid uid".format(val))
+        raise SaltInvocationError(f"'{val}' is an invalid uid")
     return val
 
 
@@ -666,7 +662,7 @@ def volumes(val, **kwargs):  # pylint: disable=unused-argument
     val = helpers.translate_stringlist(val)
     for item in val:
         if not os.path.isabs(item):
-            raise SaltInvocationError("'{}' is not an absolute path".format(item))
+            raise SaltInvocationError(f"'{item}' is not an absolute path")
     return val
 
 
@@ -683,5 +679,5 @@ def working_dir(val, **kwargs):  # pylint: disable=unused-argument
     except AttributeError:
         is_abs = False
     if not is_abs:
-        raise SaltInvocationError("'{}' is not an absolute path".format(val))
+        raise SaltInvocationError(f"'{val}' is not an absolute path")
     return val

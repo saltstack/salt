@@ -931,42 +931,42 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "blah"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is blah in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is blah in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "true"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is true in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is true in __opts__"
 
     with patch.dict(config.__opts__, {test_arg: False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(config.__opts__, {}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} does not exist in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} does not exist in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: None}):
         assert (
             state._get_test_value(test=None) is None
-        ), "Failure when {} is None in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is None in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in master __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in master __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
         with patch.dict(config.__pillar__, {test_arg: True}):
@@ -987,13 +987,13 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {"test": False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {"test": False}):
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             assert state._get_test_value(
                 test=None
-            ), "Failure when {} is False in __opts__".format(test_arg)
+            ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {}):
         assert state._get_test_value(test=True), "Failure when test is True as arg"
@@ -1262,7 +1262,7 @@ def test_event():
         "tag": "a_event_tag",
     }
 
-    _expected = '"date": "{}"'.format(now)
+    _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
         print_cli_mock = MagicMock()
         with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):

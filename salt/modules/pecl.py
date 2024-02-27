@@ -30,7 +30,7 @@ def _pecl(command, defaults=False):
     """
     Execute the command passed with pecl
     """
-    cmdline = "pecl {}".format(command)
+    cmdline = f"pecl {command}"
     if salt.utils.data.is_true(defaults):
         cmdline = "yes ''" + " | " + cmdline
 
@@ -68,7 +68,7 @@ def install(pecls, defaults=False, force=False, preferred_state="stable"):
     """
     if isinstance(pecls, str):
         pecls = [pecls]
-    preferred_state = "-d preferred_state={}".format(shlex.quote(preferred_state))
+    preferred_state = f"-d preferred_state={shlex.quote(preferred_state)}"
     if force:
         return _pecl(
             "{} install -f {}".format(preferred_state, shlex.quote(" ".join(pecls))),
@@ -149,7 +149,7 @@ def list_(channel=None):
     pecls = {}
     command = "list"
     if channel:
-        command = "{} -c {}".format(command, shlex.quote(channel))
+        command = f"{command} -c {shlex.quote(channel)}"
     lines = _pecl(command).splitlines()
     lines = (l for l in lines if pecl_channel_pat.match(l))
 

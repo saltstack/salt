@@ -130,7 +130,7 @@ def update(name, profile="splunk", **kwargs):
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{}: '{}' => '{}'".format(key, old_value, new_value))
+            diffs.append(f"{key}: '{old_value}' => '{new_value}'")
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs

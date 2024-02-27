@@ -83,7 +83,7 @@ def _check_users(users):
     for user, user_details in users.items():
         if not user_details:
             valid = False
-            messg += "Please provide details for username {user}.\n".format(user=user)
+            messg += f"Please provide details for username {user}.\n"
             continue
         if not (
             isinstance(user_details.get("level"), int)

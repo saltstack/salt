@@ -245,7 +245,7 @@ class LocalClient:
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace("\\", "_")
-        keyfile = os.path.join(self.opts["cachedir"], ".{}_key".format(key_user))
+        keyfile = os.path.join(self.opts["cachedir"], f".{key_user}_key")
         try:
             # Make sure all key parent directories are accessible
             salt.utils.verify.check_path_traversal(
@@ -265,7 +265,7 @@ class LocalClient:
         try:
             return range_.expand(tgt)
         except seco.range.RangeException as err:
-            print("Range server exception: {}".format(err))
+            print(f"Range server exception: {err}")
             return []
 
     def _get_timeout(self, timeout):
@@ -1053,11 +1053,11 @@ class LocalClient:
         :returns: all of the information for the JID
         """
         if verbose:
-            msg = "Executing job with jid {}".format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print("jid: {}".format(jid))
+            print(f"jid: {jid}")
         if timeout is None:
             timeout = self.opts["timeout"]
         fret = {}
@@ -1163,11 +1163,9 @@ class LocalClient:
         # iterator for this job's return
         if self.opts["order_masters"]:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(
-                "(salt/job|syndic/.*)/{}".format(jid), "regex"
-            )
+            ret_iter = self.get_returns_no_block(f"(salt/job|syndic/.*)/{jid}", "regex")
         else:
-            ret_iter = self.get_returns_no_block("salt/job/{}".format(jid))
+            ret_iter = self.get_returns_no_block(f"salt/job/{jid}")
         # iterator for the info of this job
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
@@ -1547,11 +1545,11 @@ class LocalClient:
         log.trace("entered - function get_cli_static_event_returns()")
         minions = set(minions)
         if verbose:
-            msg = "Executing job with jid {}".format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print("jid: {}".format(jid))
+            print(f"jid: {jid}")
 
         if timeout is None:
             timeout = self.opts["timeout"]
@@ -1581,7 +1579,7 @@ class LocalClient:
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            jid_tag = "salt/job/{}".format(jid)
+            jid_tag = f"salt/job/{jid}"
             raw = self.event.get_event(
                 wait, jid_tag, auto_reconnect=self.auto_reconnect
             )
@@ -1641,11 +1639,11 @@ class LocalClient:
         log.trace("func get_cli_event_returns()")
 
         if verbose:
-            msg = "Executing job with jid {}".format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print("jid: {}".format(jid))
+            print(f"jid: {jid}")
 
         # lazy load the connected minions
         connected_minions = None
@@ -1684,7 +1682,7 @@ class LocalClient:
                     if (
                         self.opts["minion_data_cache"]
                         and salt.cache.factory(self.opts).contains(
-                            "minions/{}".format(id_), "data"
+                            f"minions/{id_}", "data"
                         )
                         and connected_minions
                         and id_ not in connected_minions
@@ -1775,9 +1773,7 @@ class LocalClient:
         """
         if ng not in self.opts["nodegroups"]:
             conf_file = self.opts.get("conf_file", "the master config file")
-            raise SaltInvocationError(
-                "Node group {} unavailable in {}".format(ng, conf_file)
-            )
+            raise SaltInvocationError(f"Node group {ng} unavailable in {conf_file}")
         return salt.utils.minions.nodegroup_comp(ng, self.opts["nodegroups"])
 
     def _prep_pub(self, tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs):
@@ -2062,8 +2058,8 @@ class LocalClient:
 
     def _clean_up_subscriptions(self, job_id):
         if self.opts.get("order_masters"):
-            self.event.unsubscribe("syndic/.*/{}".format(job_id), "regex")
-        self.event.unsubscribe("salt/job/{}".format(job_id))
+            self.event.unsubscribe(f"syndic/.*/{job_id}", "regex")
+        self.event.unsubscribe(f"salt/job/{job_id}")
 
     def destroy(self):
         if self.event is not None:
@@ -2122,7 +2118,7 @@ class FunctionWrapper(dict):
             """
             args = list(args)
             for _key, _val in kwargs.items():
-                args.append("{}={}".format(_key, _val))
+                args.append(f"{_key}={_val}")
             return self.local.cmd(self.minion, key, args)
 
         return func
@@ -2272,9 +2268,9 @@ class ProxyCaller:
         if isinstance(executors, str):
             executors = [executors]
         for name in executors:
-            fname = "{}.execute".format(name)
+            fname = f"{name}.execute"
             if fname not in self.sminion.executors:
-                raise SaltInvocationError("Executor '{}' is not available".format(name))
+                raise SaltInvocationError(f"Executor '{name}' is not available")
             return_data = self.sminion.executors[fname](
                 self.opts, data, func, args, kwargs
             )

@@ -177,7 +177,7 @@ def _load_minion(minion_id, cache):
         6: sorted(ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])),
     }
 
-    mine = cache.fetch("minions/{}".format(minion_id), "mine")
+    mine = cache.fetch(f"minions/{minion_id}", "mine")
 
     return grains, pillar, addrs, mine
 
@@ -256,6 +256,4 @@ def _minion_lookup(minion_id, key, minion):
                     if filters[key](addr):
                         return str(addr)
             except KeyError:
-                raise KeyError(
-                    "Invalid filter {} specified in roster_order".format(key)
-                )
+                raise KeyError(f"Invalid filter {key} specified in roster_order")

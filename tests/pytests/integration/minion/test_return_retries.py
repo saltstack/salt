@@ -107,9 +107,7 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
         overrides=minion_overrides,
     )
     cli = master.salt_cli()
-    sls_tempfile = master.state_tree.base.temp_file(
-        "{}.sls".format(sls_name), sls_contents
-    )
+    sls_tempfile = master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents)
     with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), (
         sls_tempfile
     ):

@@ -208,7 +208,7 @@ def _set_status(m, comment=INVALID_RESPONSE, status=False, out=None):
     if out and isinstance(out, str):
         outlog += HR
         outlog += "OUTPUT:\n"
-        outlog += "{}\n".format(salt.utils.stringutils.to_unicode(out))
+        outlog += f"{salt.utils.stringutils.to_unicode(out)}\n"
         outlog += HR
     if m["logs"]:
         outlog += HR
@@ -224,7 +224,7 @@ def _set_status(m, comment=INVALID_RESPONSE, status=False, out=None):
         for logger in "error", "warn", "info", "debug":
             logs = m["logs_by_level"].get(logger, [])
             if logs:
-                outlog_by_level += "\n{}:\n".format(logger.upper())
+                outlog_by_level += f"\n{logger.upper()}:\n"
                 for idx, log in enumerate(logs[:]):
                     logs[idx] = salt.utils.stringutils.to_unicode(log)
                 outlog_by_level += "\n".join(logs)
@@ -517,7 +517,7 @@ def upgrade_bootstrap(
                     os.makedirs(dbuild)
                 # only try to download once per buildout checkout
                 with salt.utils.files.fopen(
-                    os.path.join(dbuild, "{}.updated_bootstrap".format(buildout_ver))
+                    os.path.join(dbuild, f"{buildout_ver}.updated_bootstrap")
                 ):
                     pass
             except OSError:
@@ -536,7 +536,7 @@ def upgrade_bootstrap(
                 fic.write(salt.utils.stringutils.to_str(data))
         if dled:
             with salt.utils.files.fopen(
-                os.path.join(dbuild, "{}.updated_bootstrap".format(buildout_ver)), "w"
+                os.path.join(dbuild, f"{buildout_ver}.updated_bootstrap"), "w"
             ) as afic:
                 afic.write("foo")
     except OSError:
@@ -689,7 +689,7 @@ def bootstrap(
     if (test_release is not False) and " --accept-buildout-test-releases" in content:
         bootstrap_args += " --accept-buildout-test-releases"
     if config and '"-c"' in content:
-        bootstrap_args += " -c {}".format(config)
+        bootstrap_args += f" -c {config}"
     # be sure that the bootstrap belongs to the running user
     try:
         if runas:
@@ -703,7 +703,7 @@ def bootstrap(
             exc,
             exc_info=_logger.isEnabledFor(logging.DEBUG),
         )
-    cmd = "{} bootstrap.py {}".format(python, bootstrap_args)
+    cmd = f"{python} bootstrap.py {bootstrap_args}"
     ret = _Popen(
         cmd, directory=directory, runas=runas, loglevel=loglevel, env=env, use_vt=use_vt
     )
@@ -844,7 +844,7 @@ def _merge_statuses(statuses):
             status["out"] += "\n"
             status["out"] += HR
             out = salt.utils.stringutils.to_unicode(out)
-            status["out"] += "{}\n".format(out)
+            status["out"] += f"{out}\n"
             status["out"] += HR
         if comment:
             if not status["comment"]:
@@ -856,12 +856,12 @@ def _merge_statuses(statuses):
             if not status["outlog"]:
                 status["outlog"] = ""
             outlog = salt.utils.stringutils.to_unicode(outlog)
-            status["outlog"] += "\n{}".format(HR)
+            status["outlog"] += f"\n{HR}"
             status["outlog"] += outlog
         if outlog_by_level:
             if not status["outlog_by_level"]:
                 status["outlog_by_level"] = ""
-            status["outlog_by_level"] += "\n{}".format(HR)
+            status["outlog_by_level"] += f"\n{HR}"
             status["outlog_by_level"] += salt.utils.stringutils.to_unicode(
                 outlog_by_level
             )

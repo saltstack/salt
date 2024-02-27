@@ -273,7 +273,7 @@ class SyncClientMixin(ClientStateMixin):
             return True
 
         try:
-            return self.opts["{}_returns".format(class_name)]
+            return self.opts[f"{class_name}_returns"]
         except KeyError:
             # No such option, assume this isn't one we care about gating and
             # just return True.
@@ -300,7 +300,7 @@ class SyncClientMixin(ClientStateMixin):
         tag = low.get("__tag__", salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {
-            "fun": "{}.{}".format(self.client, fun),
+            "fun": f"{self.client}.{fun}",
             "jid": jid,
             "user": low.get("__user__", "UNKNOWN"),
         }
@@ -523,7 +523,7 @@ class AsyncClientMixin(ClientStateMixin):
         tag,
         jid,
         daemonize=True,
-        full_return=False
+        full_return=False,
     ):
         """
         Run this method in a multiprocess target to execute the function

@@ -417,7 +417,7 @@ class _Section(OrderedDict):
             # Match comments
             com_match = COM_REGX.match(opt_str)
             if com_match:
-                name = "#comment{}".format(comment_count)
+                name = f"#comment{comment_count}"
                 self.com = com_match.group(1)
                 comment_count += 1
                 self.update({name: opt_str})
@@ -441,7 +441,7 @@ class _Section(OrderedDict):
                 self.update({name: value})
                 continue
             # Anything remaining is a mystery.
-            name = "#unknown{}".format(unknown_count)
+            name = f"#unknown{unknown_count}"
             self.update({name: opt_str})
             unknown_count += 1
 
@@ -512,7 +512,7 @@ class _Section(OrderedDict):
         for name, value in self.items():
             # Handle Comment Lines
             if COM_REGX.match(name):
-                yield "{}{}".format(value, os.linesep)
+                yield f"{value}{os.linesep}"
             # Handle Sections
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
@@ -521,7 +521,7 @@ class _Section(OrderedDict):
             else:
                 yield "{}{}{}{}".format(
                     name,
-                    " {} ".format(self.sep) if self.sep != " " else self.sep,
+                    f" {self.sep} " if self.sep != " " else self.sep,
                     value,
                     os.linesep,
                 )
@@ -583,7 +583,7 @@ class _Ini(_Section):
             except OSError as exc:
                 if __opts__["test"] is False:
                     raise CommandExecutionError(
-                        "Unable to open file '{}'. Exception: {}".format(self.name, exc)
+                        f"Unable to open file '{self.name}'. Exception: {exc}"
                     )
         if not inicontents:
             return
@@ -620,7 +620,7 @@ class _Ini(_Section):
                 outfile.writelines(ini_gen_list)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to write file '{}'. Exception: {}".format(self.name, exc)
+                f"Unable to write file '{self.name}'. Exception: {exc}"
             )
 
     @staticmethod

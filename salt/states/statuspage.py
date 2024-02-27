@@ -207,7 +207,7 @@ def create(
     page_id=None,
     api_key=None,
     api_version=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Insert a new entry under a specific endpoint.
@@ -259,14 +259,14 @@ def create(
         page_id=page_id,
         api_key=api_key,
         api_version=api_version,
-        **kwargs
+        **kwargs,
     )
     if not sp_create.get("result"):
         ret["comment"] = "Unable to create {endpoint}: {msg}".format(
             endpoint=endpoint_sg, msg=sp_create.get("comment")
         )
     else:
-        ret["comment"] = "{endpoint} created!".format(endpoint=endpoint_sg)
+        ret["comment"] = f"{endpoint_sg} created!"
         ret["result"] = True
         ret["changes"] = sp_create.get("out")
 
@@ -279,7 +279,7 @@ def update(
     page_id=None,
     api_key=None,
     api_version=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Update attribute(s) of a specific endpoint.
@@ -337,14 +337,14 @@ def update(
         page_id=page_id,
         api_key=api_key,
         api_version=api_version,
-        **kwargs
+        **kwargs,
     )
     if not sp_update.get("result"):
         ret["comment"] = "Unable to update {endpoint} #{id}: {msg}".format(
             endpoint=endpoint_sg, id=id, msg=sp_update.get("comment")
         )
     else:
-        ret["comment"] = "{endpoint} #{id} updated!".format(endpoint=endpoint_sg, id=id)
+        ret["comment"] = f"{endpoint_sg} #{id} updated!"
         ret["result"] = True
         ret["changes"] = sp_update.get("out")
 
@@ -411,7 +411,7 @@ def delete(
             endpoint=endpoint_sg, id=id, msg=sp_delete.get("comment")
         )
     else:
-        ret["comment"] = "{endpoint} #{id} deleted!".format(endpoint=endpoint_sg, id=id)
+        ret["comment"] = f"{endpoint_sg} #{id} deleted!"
         ret["result"] = True
 
 
@@ -544,7 +544,7 @@ def managed(
                 page_id=page_id,
                 api_key=api_key,
                 api_version=api_version,
-                **new_endpoint
+                **new_endpoint,
             )
             if not adding.get("result"):
                 ret.update({"comment": adding.get("comment")})
@@ -563,7 +563,7 @@ def managed(
                 page_id=page_id,
                 api_key=api_key,
                 api_version=api_version,
-                **update_endpoint
+                **update_endpoint,
             )
             if not updating.get("result"):
                 ret.update({"comment": updating.get("comment")})

@@ -287,7 +287,7 @@ class CacheRegex:
             pass
         if len(self.cache) > self.size:
             self.sweep()
-        regex = re.compile("{}{}{}".format(self.prepend, pattern, self.append))
+        regex = re.compile(f"{self.prepend}{pattern}{self.append}")
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
 
@@ -298,7 +298,7 @@ class ContextCache:
         Create a context cache
         """
         self.opts = opts
-        self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
+        self.cache_path = os.path.join(opts["cachedir"], "context", f"{name}.p")
 
     def cache_context(self, context):
         """

@@ -198,7 +198,7 @@ def set(name, data, **kwargs):
         if current is not None and [key, args["type"], str(args["value"])] in current:
             if ret["comment"] == "":
                 ret["comment"] = "Unchanged answers: "
-            ret["comment"] += "{} ".format(key)
+            ret["comment"] += f"{key} "
         else:
             if __opts__["test"]:
                 ret["result"] = None

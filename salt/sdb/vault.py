@@ -64,7 +64,7 @@ def set_(key, value, profile=None):
         data = {"data": data}
 
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("POST", url, json=data)
 
         if response.status_code != 204:
@@ -89,12 +89,12 @@ def get(key, profile=None):
         path = version2["data"]
 
     try:
-        url = "v1/{}".format(path)
+        url = f"v1/{path}"
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code == 404:
             if version2["v2"]:
                 path = version2["data"] + "/" + key
-                url = "v1/{}".format(path)
+                url = f"v1/{path}"
                 response = __utils__["vault.make_request"]("GET", url)
                 if response.status_code == 404:
                     return None

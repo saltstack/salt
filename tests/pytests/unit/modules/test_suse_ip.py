@@ -400,7 +400,7 @@ def _test_mode_0_or_2(mode_num=0):
         expected = [
             "downdelay=200",
             "miimon=100",
-            "mode={}".format(mode_num),
+            f"mode={mode_num}",
             "use_carrier=0",
         ]
         assert bonding_opts == expected, bonding_opts
@@ -414,7 +414,7 @@ def _test_mode_0_or_2(mode_num=0):
             "arp_ip_target=1.2.3.4,5.6.7.8",
             "downdelay=200",
             "miimon=100",
-            "mode={}".format(mode_num),
+            f"mode={mode_num}",
             "use_carrier=0",
         ]
         assert bonding_opts == expected, bonding_opts
@@ -426,7 +426,7 @@ def _test_mode_0_or_2(mode_num=0):
         expected = [
             "arp_interval=300",
             "arp_ip_target=1.2.3.4,5.6.7.8",
-            "mode={}".format(mode_num),
+            f"mode={mode_num}",
         ]
         assert bonding_opts == expected, bonding_opts
 
@@ -580,7 +580,7 @@ def test_build_interface_bond_mode_4():
                         raise
                 else:
                     expected = [
-                        "ad_select={}".format(ad_select),
+                        f"ad_select={ad_select}",
                         "downdelay=200",
                         "lacp_rate={}".format(
                             "1"

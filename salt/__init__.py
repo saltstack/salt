@@ -22,7 +22,7 @@ class TornadoImporter:
 
     def create_module(self, spec):
         if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(spec.name))
+            mod = importlib.import_module(f"salt.ext.{spec.name}")
         else:  # pragma: no cover
             # Remove 'salt.ext.' from the module
             mod = importlib.import_module(spec.name[9:])

@@ -578,14 +578,10 @@ def test_valid_command():
 
     patch_deleted = patch(
         "salt.modules.restartcheck._deleted_files",
-        MagicMock(
-            return_value=[(";touch {};".format(create_file), 123, "/root/ (deleted)")]
-        ),
+        MagicMock(return_value=[(f";touch {create_file};", 123, "/root/ (deleted)")]),
     )
 
-    patch_readlink = patch(
-        "os.readlink", return_value="/root/;touch {};".format(create_file)
-    )
+    patch_readlink = patch("os.readlink", return_value=f"/root/;touch {create_file};")
 
     check_error = True
     if salt.utils.path.which("repoquery"):

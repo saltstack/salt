@@ -55,7 +55,7 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle("{} {}".format(current.rstrip(), name))
+        setproctitle.setproctitle(f"{current.rstrip()} {name}")
 
 
 def daemonize(redirect_out=True):
@@ -173,7 +173,7 @@ def notify_systemd():
             if notify_socket:
                 # Handle abstract namespace socket
                 if notify_socket.startswith("@"):
-                    notify_socket = "\0{}".format(notify_socket[1:])
+                    notify_socket = f"\0{notify_socket[1:]}"
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
@@ -351,7 +351,7 @@ def set_pidfile(pidfile, user):
             pidfile, user
         )
         log.debug("%s Traceback follows:", msg, exc_info=True)
-        sys.stderr.write("{}\n".format(msg))
+        sys.stderr.write(f"{msg}\n")
         sys.exit(err.errno)
     log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
 
@@ -1062,7 +1062,7 @@ class SignalHandlingProcess(Process):
     def _handle_signals(self, signum, sigframe):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:

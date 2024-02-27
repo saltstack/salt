@@ -32,8 +32,7 @@ def test_salt_versions_report_master(install_salt):
     py_version = subprocess.run(
         [str(python_bin), "--version"],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     ).stdout
     py_version = py_version.decode().strip().replace(" ", ": ")
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])

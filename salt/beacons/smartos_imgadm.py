@@ -80,7 +80,7 @@ def beacon(config):
     for uuid in current_images:
         event = {}
         if uuid not in IMGADM_STATE["images"]:
-            event["tag"] = "imported/{}".format(uuid)
+            event["tag"] = f"imported/{uuid}"
             for label in current_images[uuid]:
                 event[label] = current_images[uuid][label]
 
@@ -91,7 +91,7 @@ def beacon(config):
     for uuid in IMGADM_STATE["images"]:
         event = {}
         if uuid not in current_images:
-            event["tag"] = "deleted/{}".format(uuid)
+            event["tag"] = f"deleted/{uuid}"
             for label in IMGADM_STATE["images"][uuid]:
                 event[label] = IMGADM_STATE["images"][uuid][label]
 

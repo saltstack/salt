@@ -209,7 +209,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             raise ConstructorError(
                 None,
                 None,
-                "expected a mapping node, but found {}".format(node.id),
+                f"expected a mapping node, but found {node.id}",
                 node.start_mark,
             )
 

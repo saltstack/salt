@@ -47,18 +47,18 @@ def present(
 
     comments = {}
 
-    comments["comment_bridge_notexists"] = "Bridge {} does not exist.".format(bridge)
-    comments["comment_port_exists"] = "Port {} already exists.".format(name)
+    comments["comment_bridge_notexists"] = f"Bridge {bridge} does not exist."
+    comments["comment_port_exists"] = f"Port {name} already exists."
     comments["comment_port_created"] = "Port {} created on bridge {}.".format(
         name, bridge
     )
     comments["comment_port_notcreated"] = (
-        "Unable to create port {} on bridge {}.".format(name, bridge)
+        f"Unable to create port {name} on bridge {bridge}."
     )
     comments["changes_port_created"] = {
         name: {
-            "old": "No port named {} present.".format(name),
-            "new": "Created port {1} on bridge {0}.".format(bridge, name),
+            "old": f"No port named {name} present.",
+            "new": f"Created port {name} on bridge {bridge}.",
         }
     }
     comments["comment_port_internal"] = (
@@ -77,7 +77,7 @@ def present(
         if tunnel_type == "vlan":
             comments["comment_vlan_invalid_id"] = "VLANs id must be between 0 and 4095."
             comments["comment_vlan_invalid_name"] = (
-                "Could not find network interface {}.".format(name)
+                f"Could not find network interface {name}."
             )
             comments["comment_vlan_port_exists"] = (
                 "Port {} with access to VLAN {} already exists on bridge {}.".format(
@@ -234,11 +234,7 @@ def present(
                 'dst_port="' + str(dst_port) + '", ' if 0 < dst_port <= 65535 else ""
             )
             interface_attroptions = (
-                '{{{0}key="'.format(opt_port)
-                + str(id)
-                + '", remote_ip="'
-                + str(remote)
-                + '"}'
+                f'{{{opt_port}key="' + str(id) + '", remote_ip="' + str(remote) + '"}'
             )
             try:
                 if (
@@ -388,16 +384,16 @@ def absent(name, bridge=None):
 
     # Comment and change messages
     comments = {}
-    comments["comment_bridge_notexists"] = "Bridge {} does not exist.".format(bridge)
+    comments["comment_bridge_notexists"] = f"Bridge {bridge} does not exist."
     comments["comment_port_notexists"] = "Port {} does not exist on bridge {}.".format(
         name, bridge
     )
-    comments["comment_port_deleted"] = "Port {} deleted.".format(name)
-    comments["comment_port_notdeleted"] = "Unable to delete port {}.".format(name)
+    comments["comment_port_deleted"] = f"Port {name} deleted."
+    comments["comment_port_notdeleted"] = f"Unable to delete port {name}."
     comments["changes_port_deleted"] = {
         name: {
-            "old": "Port named {} may exist.".format(name),
-            "new": "Deleted port {}.".format(name),
+            "old": f"Port named {name} may exist.",
+            "new": f"Deleted port {name}.",
         }
     }
 
