@@ -4,7 +4,6 @@ Create virtualenv environments.
 .. versionadded:: 0.17.0
 """
 
-
 import glob
 import logging
 import os

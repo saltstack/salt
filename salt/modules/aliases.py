@@ -74,7 +74,7 @@ def __write_aliases_file(lines):
                 os.chmod(out.name, 0o644)
                 os.chown(out.name, 0, 0)
 
-        for (line_alias, line_target, line_comment) in lines:
+        for line_alias, line_target, line_comment in lines:
             if isinstance(line_target, list):
                 line_target = ", ".join(line_target)
             if not line_comment:
@@ -173,7 +173,7 @@ def set_target(alias, target):
     lines = __parse_aliases()
     out = []
     ovr = False
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias == alias:
             if not ovr:
                 out.append((alias, target, line_comment))
@@ -202,7 +202,7 @@ def rm_alias(alias):
 
     lines = __parse_aliases()
     out = []
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias != alias:
             out.append((line_alias, line_target, line_comment))
 

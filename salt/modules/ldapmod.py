@@ -39,7 +39,6 @@ Salt interface to LDAP commands
     badness may ensue - you have been warned.
 """
 
-
 import logging
 import time
 

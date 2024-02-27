@@ -387,10 +387,10 @@ class SyncClientMixin(ClientStateMixin):
                     try:
                         data["return"] = func(*args, **kwargs)
                     except TypeError as exc:
-                        data[
-                            "return"
-                        ] = "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
-                            exc, func.__doc__
+                        data["return"] = (
+                            "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
+                                exc, func.__doc__
+                            )
                         )
                     try:
                         data["success"] = self.context.get("retcode", 0) == 0

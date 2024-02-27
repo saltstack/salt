@@ -1,6 +1,7 @@
 """
 Test Salt Pkg Downloads
 """
+
 import contextlib
 import logging
 import os

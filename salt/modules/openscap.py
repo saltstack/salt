@@ -2,6 +2,7 @@
 Module for OpenSCAP Management
 
 """
+
 import argparse
 import shlex
 import shutil

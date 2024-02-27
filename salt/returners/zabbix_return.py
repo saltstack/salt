@@ -16,7 +16,6 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
     salt '*' test.ping --return zabbix
 """
 
-
 import os
 
 # Define the module's virtual name

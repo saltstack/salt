@@ -2,7 +2,6 @@
 Control virtual machines via Salt
 """
 
-
 import logging
 import os.path
 

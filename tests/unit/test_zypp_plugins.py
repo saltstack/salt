@@ -1,6 +1,7 @@
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
+
 import imp  # pylint: disable=deprecated-module
 import os
 

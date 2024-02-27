@@ -4,7 +4,6 @@
     Test cases for salt.modules.xapi
 """
 
-
 import pytest
 
 import salt.modules.xapi_virt as xapi

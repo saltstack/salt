@@ -75,7 +75,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -520,9 +519,9 @@ def replication_group_absent(
         return ret
 
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "ElastiCache replication group {} is set to be removed.".format(name)
+        ret["comment"] = (
+            "ElastiCache replication group {} is set to be removed.".format(name)
+        )
         ret["result"] = True
         return ret
     deleted = __salt__["boto_elasticache.delete_replication_group"](

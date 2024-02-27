@@ -17,7 +17,6 @@ Support for YUM/DNF
 
 """
 
-
 import configparser
 import contextlib
 import datetime
@@ -2411,9 +2410,9 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     ret[target]["changes"]["new"] = ""
                     ret[target]["changes"]["old"] = "hold"
                 else:
-                    ret[target][
-                        "comment"
-                    ] = "Package {} was unable to be unheld.".format(target)
+                    ret[target]["comment"] = (
+                        "Package {} was unable to be unheld.".format(target)
+                    )
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)

@@ -2,7 +2,6 @@
 Tests for salt.utils.jid
 """
 
-
 import datetime
 import os
 

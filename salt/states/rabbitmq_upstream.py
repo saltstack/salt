@@ -17,7 +17,6 @@ Example:
 .. versionadded:: 3000
 """
 
-
 import json
 import logging
 

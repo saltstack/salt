@@ -2,7 +2,6 @@
 Unit Tests for functions located in salt.utils.state.py.
 """
 
-
 import copy
 import textwrap
 

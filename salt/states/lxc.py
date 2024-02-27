@@ -3,7 +3,6 @@ Manage Linux Containers
 =======================
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"

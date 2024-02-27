@@ -82,7 +82,6 @@ the following:
     user:  user name
 """
 
-
 import logging
 import os
 import re

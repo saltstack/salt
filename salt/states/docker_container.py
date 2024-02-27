@@ -1877,9 +1877,9 @@ def running(
                     if not _replace(name, temp_container_name):
                         ret["result"] = False
                         return _format_comments(ret, comments)
-                    ret["changes"].setdefault("container_id", {})[
-                        "added"
-                    ] = temp_container["Id"]
+                    ret["changes"].setdefault("container_id", {})["added"] = (
+                        temp_container["Id"]
+                    )
             else:
                 # No changes between existing container and temp container.
                 # First check if a requisite is asking to send a signal to the
@@ -2235,9 +2235,9 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    ret["comment"] = (
+                        "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    )
                     return ret
             else:
                 remove = bool(val)
@@ -2275,9 +2275,9 @@ def run(
                 pass
             else:
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret[
-                    "comment"
-                ] = "Container ran and exited with a return code of {}".format(retcode)
+                ret["comment"] = (
+                    "Container ran and exited with a return code of {}".format(retcode)
+                )
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")

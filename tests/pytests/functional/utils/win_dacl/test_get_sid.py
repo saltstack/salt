@@ -4,6 +4,7 @@ tests.pytests.unit.utils.win_dacl.test_get_sid
 
 Test the get_sid function in the win_dacl utility module
 """
+
 import pytest
 
 import salt.utils.win_dacl

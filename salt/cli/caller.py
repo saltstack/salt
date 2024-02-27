@@ -235,7 +235,7 @@ class BaseCaller:
                     retcode = salt.defaults.exitcodes.EX_GENERIC
 
             ret["retcode"] = retcode
-        except (CommandExecutionError) as exc:
+        except CommandExecutionError as exc:
             msg = "Error running '{0}': {1}\n"
             active_level = LOG_LEVELS.get(self.opts["log_level"].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:

@@ -898,9 +898,11 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{}".format(traceback.format_exc())
-            if cherrypy.config["debug"]
-            else "An unexpected error occurred",
+            "return": (
+                "{}".format(traceback.format_exc())
+                if cherrypy.config["debug"]
+                else "An unexpected error occurred"
+            ),
         }
 
     # Raises 406 if requested content-type is not supported
@@ -1747,9 +1749,9 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers[
-            "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        headers["Content-Disposition"] = (
+            'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        )
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"

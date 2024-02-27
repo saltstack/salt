@@ -1,6 +1,7 @@
 """
 Validate the virt module
 """
+
 import logging
 from numbers import Number
 from xml.etree import ElementTree

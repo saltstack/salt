@@ -4924,9 +4924,11 @@ def extract_hash(
     if basename_searches:
         log.debug(
             "file.extract_hash: %s %s hash for file matching%s: %s",
-            "If no source_hash_name match found, will extract"
-            if source_hash_name
-            else "Extracting",
+            (
+                "If no source_hash_name match found, will extract"
+                if source_hash_name
+                else "Extracting"
+            ),
             "any supported" if not hash_type else hash_type,
             "" if len(basename_searches) == 1 else " either of the following",
             ", ".join(basename_searches),

@@ -2,7 +2,6 @@
 Functions for working with files
 """
 
-
 import codecs
 import contextlib
 import errno
@@ -490,7 +489,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = os.listdir(top)
-    except os.error as err:
+    except OSError as err:
         if onerror is not None:
             onerror(err)
         return
@@ -699,7 +698,7 @@ def is_binary(path):
                 return salt.utils.stringutils.is_binary(data)
             except UnicodeDecodeError:
                 return True
-    except os.error:
+    except OSError:
         return False
 
 
@@ -888,7 +887,7 @@ def get_encoding(path):
     try:
         with fopen(path, "rb") as fp_:
             data = fp_.read(2048)
-    except os.error:
+    except OSError:
         raise CommandExecutionError("Failed to open file")
 
     # Check for Unicode BOM

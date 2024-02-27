@@ -258,7 +258,7 @@ def get_domain_ips(domain, ip_source):
         log.info("Exception polling address %s", error)
         return ips
 
-    for (name, val) in addresses.items():
+    for name, val in addresses.items():
         if val["addrs"]:
             for addr in val["addrs"]:
                 tp = to_ip_addr_type(addr["type"])

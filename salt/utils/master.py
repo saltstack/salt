@@ -5,6 +5,7 @@
     Utilities that can only be used on a salt master.
 
 """
+
 import logging
 import os
 import signal

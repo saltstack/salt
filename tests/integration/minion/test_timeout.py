@@ -2,7 +2,6 @@
 Tests for various minion timeouts
 """
 
-
 import os
 import sys
 

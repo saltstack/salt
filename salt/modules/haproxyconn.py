@@ -4,7 +4,6 @@ Support for haproxy
 .. versionadded:: 2014.7.0
 """
 
-
 import logging
 import os
 import stat
@@ -315,6 +314,7 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
         salt '*' haproxy.set_state my_proxy_server my_backend ready
 
     """
+
     # Pulling this in from the latest 0.5 release which is not yet in PyPi.
     # https://github.com/neurogeek/haproxyctl
     class setServerState(haproxy.cmds.Cmd):

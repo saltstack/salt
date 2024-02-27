@@ -12,7 +12,6 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
       password: 123pass
 """
 
-
 import logging
 
 import salt.utils.http

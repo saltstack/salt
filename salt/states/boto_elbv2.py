@@ -66,7 +66,6 @@ def create_target_group(
     unhealthy_threshold_count=2,
     **kwargs
 ):
-
     """
     .. versionadded:: 2017.11.0
 
@@ -348,9 +347,9 @@ def targets_deregistered(
                         changes = True
                         ret["result"] = True
                     else:
-                        ret[
-                            "comment"
-                        ] = "Target Group {} failed to remove targets".format(name)
+                        ret["comment"] = (
+                            "Target Group {} failed to remove targets".format(name)
+                        )
                         failure = True
         if failure:
             ret["result"] = False

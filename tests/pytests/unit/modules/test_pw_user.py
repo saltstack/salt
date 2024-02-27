@@ -2,7 +2,6 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-
 import logging
 
 import pytest

@@ -2,7 +2,6 @@
     :codeauthor: jmoney <justin@saltstack.com>
 """
 
-
 import pytest
 
 import salt.channel.client

@@ -87,6 +87,7 @@ markers for specific list items:
     to check the minion log for errors after configuring this beacon.
 
 """
+
 import datetime
 import logging
 
@@ -165,8 +166,8 @@ def beacon(config):
                         except TypeError:
                             ret[func][item] = data[int(item)]
                     except KeyError as exc:
-                        ret[
-                            func
-                        ] = "Status beacon is incorrectly configured: {}".format(exc)
+                        ret[func] = (
+                            "Status beacon is incorrectly configured: {}".format(exc)
+                        )
 
     return [{"tag": ctime, "data": ret}]

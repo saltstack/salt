@@ -6,7 +6,6 @@ This module allows you to manage proxy settings
     salt '*' network.get_http_proxy
 """
 
-
 import logging
 import re
 

@@ -61,7 +61,6 @@ run them.  And it will do this every minute, unless there are any jobs that are
 still running from the last time the process_runner task was executed.
 """
 
-
 import salt.loader
 from salt.exceptions import SaltInvocationError
 from salt.utils.event import get_event, tagify

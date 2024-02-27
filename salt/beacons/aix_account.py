@@ -5,6 +5,7 @@ Beacon to fire event when we notice a AIX user is locked due to many failed logi
 
 :depends: none
 """
+
 import logging
 
 log = logging.getLogger(__name__)

@@ -2,7 +2,6 @@
 Network tools to run from the Master
 """
 
-
 import logging
 import socket
 

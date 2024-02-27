@@ -3,7 +3,6 @@ Wrapper around uptime API
 =========================
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError

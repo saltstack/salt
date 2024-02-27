@@ -331,9 +331,11 @@ def change_xml(doc, data, mapping):
             if new_value is not None:
                 # We need to increment ids from arrays since xpath starts at 1
                 converters = {
-                    p: (lambda n: n + 1)
-                    if "[${}]".format(p) in xpath
-                    else (lambda n: n)
+                    p: (
+                        (lambda n: n + 1)
+                        if "[${}]".format(p) in xpath
+                        else (lambda n: n)
+                    )
                     for p in placeholders
                 }
                 ctx = {

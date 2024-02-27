@@ -235,9 +235,9 @@ def _minion_lookup(minion_id, key, minion):
     else:
         # Take the addresses from the grains and filter them
         filters = {
-            "global": lambda addr: addr.is_global
-            if addr.version == 6
-            else not addr.is_private,
+            "global": lambda addr: (
+                addr.is_global if addr.version == 6 else not addr.is_private
+            ),
             "public": lambda addr: not addr.is_private,
             "private": lambda addr: addr.is_private
             and not addr.is_loopback

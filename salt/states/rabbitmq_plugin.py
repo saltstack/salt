@@ -12,7 +12,6 @@ Example:
       rabbitmq_plugin.enabled: []
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError

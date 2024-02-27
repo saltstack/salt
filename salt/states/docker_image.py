@@ -310,10 +310,10 @@ def present(
                 repository=name, tag=tag, base=base, mods=sls, **sls_build_kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret[
-                "comment"
-            ] = "Encountered error using SLS {} for building {}: {}".format(
-                sls, full_image, exc
+            ret["comment"] = (
+                "Encountered error using SLS {} for building {}: {}".format(
+                    sls, full_image, exc
+                )
             )
             return ret
         if image_info is None or image_update["Id"] != image_info["Id"][:12]:

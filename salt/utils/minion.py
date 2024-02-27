@@ -2,7 +2,6 @@
 Utility functions for minions
 """
 
-
 import logging
 import os
 import threading

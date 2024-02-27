@@ -91,6 +91,7 @@ Azure (ARM) Network State Module
                 - connection_auth: {{ profile }}
 
 """
+
 import logging
 from functools import wraps
 
@@ -188,9 +189,9 @@ def virtual_network_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     vnet = __salt__["azurearm_network.virtual_network_get"](
@@ -312,9 +313,9 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     vnet = __salt__["azurearm_network.virtual_network_get"](
@@ -409,9 +410,9 @@ def subnet_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     snet = __salt__["azurearm_network.subnet_get"](
@@ -517,9 +518,9 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     snet = __salt__["azurearm_network.subnet_get"](
@@ -625,9 +626,9 @@ def network_security_group_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     nsg = __salt__["azurearm_network.network_security_group_get"](
@@ -721,9 +722,9 @@ def network_security_group_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     nsg = __salt__["azurearm_network.network_security_group_get"](
@@ -873,9 +874,9 @@ def security_rule_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     exclusive_params = [
@@ -1127,9 +1128,9 @@ def security_rule_absent(name, security_group, resource_group, connection_auth=N
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     rule = __salt__["azurearm_network.security_rule_get"](
@@ -1351,9 +1352,9 @@ def load_balancer_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     if sku:
@@ -1565,9 +1566,9 @@ def load_balancer_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     load_bal = __salt__["azurearm_network.load_balancer_get"](
@@ -1678,9 +1679,9 @@ def public_ip_address_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     if sku:
@@ -1823,9 +1824,9 @@ def public_ip_address_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     pub_ip = __salt__["azurearm_network.public_ip_address_get"](
@@ -1968,9 +1969,9 @@ def network_interface_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     iface = __salt__["azurearm_network.network_interface_get"](
@@ -2151,9 +2152,9 @@ def network_interface_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     iface = __salt__["azurearm_network.network_interface_get"](
@@ -2250,9 +2251,9 @@ def route_table_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     rt_tbl = __salt__["azurearm_network.route_table_get"](
@@ -2359,9 +2360,9 @@ def route_table_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     rt_tbl = __salt__["azurearm_network.route_table_get"](
@@ -2455,9 +2456,9 @@ def route_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     route = __salt__["azurearm_network.route_get"](
@@ -2557,9 +2558,9 @@ def route_absent(name, route_table, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     route = __salt__["azurearm_network.route_get"](

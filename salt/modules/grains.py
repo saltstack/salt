@@ -9,7 +9,6 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-
 import collections
 import logging
 import math
@@ -38,6 +37,7 @@ __outputter__ = {
     "item": "nested",
     "setval": "nested",
 }
+
 
 # http://stackoverflow.com/a/12414913/127816
 def _infinitedict():

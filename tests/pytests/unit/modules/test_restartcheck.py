@@ -217,7 +217,11 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         return_value=[],
     )
 
-    with patch_grains, patch_kernel_versions, patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:
+    with (
+        patch_grains
+    ), (
+        patch_kernel_versions
+    ), patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:
         actual_result = restartcheck.restartcheck()
     assert actual_result == expected_result
 
@@ -262,7 +266,11 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         return_value=[],
     )
 
-    with patch_grains, patch_kernel_versions, patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:
+    with (
+        patch_grains
+    ), (
+        patch_kernel_versions
+    ), patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:
         actual_result = restartcheck.restartcheck()
     assert actual_result == expected_result
 
@@ -635,7 +643,9 @@ def test_valid_command_b():
     patch_popen = patch("subprocess.Popen", popen_mock)
 
     patch_grains = patch.dict(restartcheck.__grains__, {"os_family": "RedHat"})
-    with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains, patch_popen:
+    with (
+        patch_kernel
+    ), patch_salt, patch_deleted, patch_readlink, patch_grains, patch_popen:
         ret = restartcheck.restartcheck()
         assert "Found 1 processes using old versions of upgraded files" in ret
         popen_mock.assert_called_with(

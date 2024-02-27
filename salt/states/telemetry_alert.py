@@ -190,10 +190,10 @@ def absent(name, deployment_id, metric_name, api_key=None, profile="telemetry"):
     if is_present:
         alert_id = is_present.get("_id")
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "alert {} is set to be removed from deployment: {}.".format(
-                metric_name, deployment_id
+            ret["comment"] = (
+                "alert {} is set to be removed from deployment: {}.".format(
+                    metric_name, deployment_id
+                )
             )
             ret["result"] = None
             return ret

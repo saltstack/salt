@@ -5,7 +5,6 @@ Wrapper around Server Density API
 .. versionadded:: 2014.7.0
 """
 
-
 import logging
 import os
 import tempfile

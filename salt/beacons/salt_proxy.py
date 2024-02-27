@@ -4,6 +4,7 @@
 
     .. versionadded:: 2015.8.3
 """
+
 import logging
 
 import salt.utils.beacons

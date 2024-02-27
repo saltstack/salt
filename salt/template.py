@@ -1,6 +1,7 @@
 """
 Manage basic template commands
 """
+
 import codecs
 import io
 import logging

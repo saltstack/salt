@@ -58,7 +58,6 @@ verbose : True
     Get verbose output
 """
 
-
 import os
 import urllib.request
 

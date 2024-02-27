@@ -306,7 +306,7 @@ class SSDPDiscoveryServer(SSDPBase):
             if not addr_pairs_info:
                 raise ValueError("can not get address information")
         exceptions = []
-        for ((family, proto), (local_address, remote_address)) in addr_pairs_info:
+        for (family, proto), (local_address, remote_address) in addr_pairs_info:
             sock = r_addr = None
             try:
                 sock = socket.socket(family=family, type=socket.SOCK_DGRAM, proto=proto)

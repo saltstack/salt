@@ -66,10 +66,10 @@ def present(
         ret["comment"] = "domain cannot be set without login"
         return ret
     if __salt__["mssql.user_exists"](name, domain=domain, database=database, **kwargs):
-        ret[
-            "comment"
-        ] = "User {} is already present (Not going to try to set its roles or options)".format(
-            name
+        ret["comment"] = (
+            "User {} is already present (Not going to try to set its roles or options)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:

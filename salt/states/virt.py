@@ -11,7 +11,6 @@ for the generation and signing of certificates for systems running libvirt:
       virt.keys
 """
 
-
 import fnmatch
 import logging
 import os
@@ -680,9 +679,9 @@ def defined(
                 ret["comment"] = "Domain {} unchanged".format(name)
                 ret["result"] = True
             elif status.get("errors"):
-                ret[
-                    "comment"
-                ] = "Domain {} updated with live update(s) failures".format(name)
+                ret["comment"] = (
+                    "Domain {} updated with live update(s) failures".format(name)
+                )
             else:
                 ret["comment"] = "Domain {} updated".format(name)
         else:
@@ -2422,9 +2421,9 @@ def volume_defined(
         # otherwise assume the volume has already been defined
         # if the sizes don't match, issue a warning comment: too dangerous to do this for now
         if int(vol_infos.get("capacity")) != int(size) * 1024 * 1024:
-            ret[
-                "comment"
-            ] = "The capacity of the volume is different, but no resize performed"
+            ret["comment"] = (
+                "The capacity of the volume is different, but no resize performed"
+            )
         return ret
 
     ret["result"] = None if __opts__["test"] else True

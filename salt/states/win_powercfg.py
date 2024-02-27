@@ -14,7 +14,6 @@ powercfg.
             - power: dc
 """
 
-
 import logging
 
 import salt.utils.data

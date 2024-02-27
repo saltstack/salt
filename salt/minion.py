@@ -1,6 +1,7 @@
 """
 Routines to set up a minion
 """
+
 import binascii
 import contextlib
 import copy

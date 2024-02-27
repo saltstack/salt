@@ -2,7 +2,6 @@
 Functions used for CLI color themes.
 """
 
-
 import logging
 import os
 

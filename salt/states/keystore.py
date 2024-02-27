@@ -2,7 +2,6 @@
 State management of a java keystore
 """
 
-
 import logging
 import os
 

@@ -89,7 +89,13 @@ def deltaproxy_pillar_tree(request, salt_master, salt_delta_proxy_factory):
     dummy_proxy_four_tempfile = salt_master.pillar_tree.base.temp_file(
         "{}.sls".format(proxy_four), dummy_proxy_pillar_file
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, dummy_proxy_three_tempfile, dummy_proxy_four_tempfile:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), (
+        dummy_proxy_one_tempfile
+    ), dummy_proxy_two_tempfile, dummy_proxy_three_tempfile, dummy_proxy_four_tempfile:
         yield
 
 

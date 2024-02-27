@@ -2,7 +2,6 @@
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
 
-
 import os
 
 import pytest

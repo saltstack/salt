@@ -89,9 +89,9 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                     ret["changes"]["Servers Removed"].append(server)
                 else:
                     if not __salt__["win_dns_client.rm_dns"](server, interface):
-                        ret[
-                            "comment"
-                        ] = "Failed to remove {} from DNS server list".format(server)
+                        ret["comment"] = (
+                            "Failed to remove {} from DNS server list".format(server)
+                        )
                         ret["result"] = False
                         return ret
                     else:
@@ -217,10 +217,10 @@ def primary_suffix(name, suffix=None, updates=False):
     else:
         # Changes to updates policy needed
         if reg_data["updates"]["new"] != reg_data["updates"]["old"]:
-            ret[
-                "comment"
-            ] = "Updated primary DNS suffix ({}) and {} suffix updates".format(
-                suffix, updates_operation
+            ret["comment"] = (
+                "Updated primary DNS suffix ({}) and {} suffix updates".format(
+                    suffix, updates_operation
+                )
             )
             ret["changes"] = {
                 "old": {

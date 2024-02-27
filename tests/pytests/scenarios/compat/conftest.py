@@ -4,6 +4,7 @@
 
     Salt Compatibility PyTest Fixtures
 """
+
 import logging
 import os
 import shutil

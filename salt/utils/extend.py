@@ -12,7 +12,6 @@ This tool is accessed using `salt-extend`
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-
 import logging
 import os
 import shutil

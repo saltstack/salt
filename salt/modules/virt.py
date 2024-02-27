@@ -116,6 +116,7 @@ ZB      10**21
 YB      10**24
 ======  =======
 """
+
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
@@ -322,9 +323,9 @@ def _parse_qemu_img_info(info):
             "file format": disk_infos["format"],
             "disk size": disk_infos["actual-size"],
             "virtual size": disk_infos["virtual-size"],
-            "cluster size": disk_infos["cluster-size"]
-            if "cluster-size" in disk_infos
-            else None,
+            "cluster size": (
+                disk_infos["cluster-size"] if "cluster-size" in disk_infos else None
+            ),
         }
 
         if "full-backing-filename" in disk_infos.keys():
@@ -554,9 +555,9 @@ def _get_disks(conn, dom):
                                 "file": backing_path.text
                             }
                             if backing_format is not None:
-                                extra_properties["backing file"][
-                                    "file format"
-                                ] = backing_format.get("type")
+                                extra_properties["backing file"]["file format"] = (
+                                    backing_format.get("type")
+                                )
                 except libvirt.libvirtError:
                     # The volume won't be found if the pool is not started, just output less infos
                     log.info(
@@ -773,7 +774,7 @@ def _migrate(dom, dst_uri, **kwargs):
         "comp_xbzrle_cache": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
     }
 
-    for (comp_option, param_key) in comp_options.items():
+    for comp_option, param_key in comp_options.items():
         comp_option_value = kwargs.get(comp_option)
         if comp_option_value:
             try:
@@ -1297,9 +1298,11 @@ def _gen_pool_xml(
     ):
         source = {
             "devices": source_devices or [],
-            "dir": source_dir
-            if source_format != "cifs" or not source_dir
-            else source_dir.lstrip("/"),
+            "dir": (
+                source_dir
+                if source_format != "cifs" or not source_dir
+                else source_dir.lstrip("/")
+            ),
             "adapter": source_adapter,
             "hosts": [
                 {"name": host[0], "port": host[1] if len(host) > 1 else None}
@@ -2975,12 +2978,16 @@ def _nics_equal(nic1, nic2):
         }
         return {
             "type": source_type,
-            "source": source_getters[source_type](source_node)
-            if source_node is not None
-            else None,
-            "model": nic.find("model").attrib["type"]
-            if nic.find("model") is not None
-            else None,
+            "source": (
+                source_getters[source_type](source_node)
+                if source_node is not None
+                else None
+            ),
+            "model": (
+                nic.find("model").attrib["type"]
+                if nic.find("model") is not None
+                else None
+            ),
         }
 
     def _get_mac(nic):
@@ -3228,12 +3235,16 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").get("service")
-            if item.find("source") is not None
-            else None,
-            "protocol": item.find("protocol").get("type")
-            if item.find("protocol") is not None
-            else None,
+            "port": (
+                item.find("source").get("service")
+                if item.find("source") is not None
+                else None
+            ),
+            "protocol": (
+                item.find("protocol").get("type")
+                if item.find("protocol") is not None
+                else None
+            ),
         }
 
     return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
@@ -6438,15 +6449,19 @@ def _parse_caps_host(host):
 
         elif child.tag == "cpu":
             cpu = {
-                "arch": child.find("arch").text
-                if child.find("arch") is not None
-                else None,
-                "model": child.find("model").text
-                if child.find("model") is not None
-                else None,
-                "vendor": child.find("vendor").text
-                if child.find("vendor") is not None
-                else None,
+                "arch": (
+                    child.find("arch").text if child.find("arch") is not None else None
+                ),
+                "model": (
+                    child.find("model").text
+                    if child.find("model") is not None
+                    else None
+                ),
+                "vendor": (
+                    child.find("vendor").text
+                    if child.find("vendor") is not None
+                    else None
+                ),
                 "features": [
                     feature.get("name") for feature in child.findall("feature")
                 ],
@@ -6492,12 +6507,14 @@ def _parse_caps_host(host):
 
     result["security"] = [
         {
-            "model": secmodel.find("model").text
-            if secmodel.find("model") is not None
-            else None,
-            "doi": secmodel.find("doi").text
-            if secmodel.find("doi") is not None
-            else None,
+            "model": (
+                secmodel.find("model").text
+                if secmodel.find("model") is not None
+                else None
+            ),
+            "doi": (
+                secmodel.find("doi").text if secmodel.find("doi") is not None else None
+            ),
             "baselabels": [
                 {"type": label.get("type"), "label": label.text}
                 for label in secmodel.findall("baselabel")
@@ -6645,9 +6662,9 @@ def _parse_domain_caps(caps):
     result = {
         "emulator": caps.find("path").text if caps.find("path") is not None else None,
         "domain": caps.find("domain").text if caps.find("domain") is not None else None,
-        "machine": caps.find("machine").text
-        if caps.find("machine") is not None
-        else None,
+        "machine": (
+            caps.find("machine").text if caps.find("machine") is not None else None
+        ),
         "arch": caps.find("arch").text if caps.find("arch") is not None else None,
     }
 
@@ -8708,9 +8725,11 @@ def volume_infos(pool=None, volume=None, **kwargs):
             if backing_store_path is not None:
                 backing_store = {
                     "path": backing_store_path.text,
-                    "format": backing_store_format.get("type")
-                    if backing_store_format is not None
-                    else None,
+                    "format": (
+                        backing_store_format.get("type")
+                        if backing_store_format is not None
+                        else None
+                    ),
                 }
 
             format_node = vol_xml.find("./target/format")

@@ -5,6 +5,7 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
+
 import functools
 import io
 import logging
@@ -908,7 +909,6 @@ def _parse_settings_bond_0(opts, iface, bond_def):
 
 
 def _parse_settings_bond_1(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond1.
     If an option has a value that is not expected, this
@@ -995,7 +995,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
 
 
 def _parse_settings_bond_3(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond3.
     If an option has a value that is not expected, this
@@ -1082,7 +1081,6 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 
 
 def _parse_settings_bond_5(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond5.
     If an option has a value that is not expected, this
@@ -1121,7 +1119,6 @@ def _parse_settings_bond_5(opts, iface, bond_def):
 
 
 def _parse_settings_bond_6(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond6.
     If an option has a value that is not expected, this
@@ -1295,9 +1292,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
             if tmp_ethtool:
                 for item in tmp_ethtool:
-                    adapters[iface]["data"][addrfam][
-                        _DEB_CONFIG_PPPOE_OPTS[item]
-                    ] = tmp_ethtool[item]
+                    adapters[iface]["data"][addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = (
+                        tmp_ethtool[item]
+                    )
             iface_data[addrfam]["addrfam"] = addrfam
 
     opts.pop("mode", None)
@@ -1350,7 +1347,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             iface_data["inet6"][opt] = opts[opt]
 
     # Remove incomplete/disabled inet blocks
-    for (addrfam, opt) in [("inet", "enable_ipv4"), ("inet6", "enable_ipv6")]:
+    for addrfam, opt in [("inet", "enable_ipv4"), ("inet6", "enable_ipv6")]:
         if opts.get(opt, None) is False:
             iface_data.pop(addrfam)
         elif iface_data[addrfam].get("addrfam", "") != addrfam:

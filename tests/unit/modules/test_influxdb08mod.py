@@ -2,7 +2,6 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-
 import salt.modules.influxdb08mod as influx08
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

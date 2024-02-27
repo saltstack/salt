@@ -2,7 +2,6 @@
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-
 import pytest
 
 import salt.states.libcloud_dns as libcloud_dns

@@ -166,10 +166,10 @@ def absent(
             ret["comment"] = "Schema {} failed to be removed".format(name)
             return ret
     else:
-        ret[
-            "comment"
-        ] = "Schema {} is not present in database {}, so it cannot be removed".format(
-            name, dbname
+        ret["comment"] = (
+            "Schema {} is not present in database {}, so it cannot be removed".format(
+                name, dbname
+            )
         )
 
     return ret

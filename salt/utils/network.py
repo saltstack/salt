@@ -2174,9 +2174,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     family = (
         socket.AF_INET6
         if ipv6
-        else socket.AF_INET
-        if ipv6 is False
-        else socket.AF_UNSPEC
+        else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
     )
     socket_error = False
     try:

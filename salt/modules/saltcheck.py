@@ -297,7 +297,6 @@ Supported assertions
   ``saltcheck.run_highstate_tests`` are needed.
 """
 
-
 import copy
 import logging
 import multiprocessing
@@ -879,12 +878,12 @@ class SaltCheck:
             else:
                 assertion_section_repr_title = ""
                 assertion_section_repr_value = ""
-            value[
-                "module.function [args]{}".format(assertion_section_repr_title)
-            ] = "{} {}{}".format(
-                mod_and_func,
-                dumps(args),
-                assertion_section_repr_value,
+            value["module.function [args]{}".format(assertion_section_repr_title)] = (
+                "{} {}{}".format(
+                    mod_and_func,
+                    dumps(args),
+                    assertion_section_repr_value,
+                )
             )
             value["saltcheck assertion"] = "{}{} {}".format(
                 ("" if expected_return is None else "{} ".format(expected_return)),

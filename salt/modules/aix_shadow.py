@@ -6,7 +6,6 @@ Manage account locks on AIX systems
 :depends: none
 """
 
-
 # Import python librarie
 import logging
 
@@ -30,7 +29,6 @@ def __virtual__():
 
 
 def login_failures(user):
-
     """
     Query for all accounts which have 3 or more login failures.
 

@@ -2,7 +2,6 @@
 Virtual machine image management tools
 """
 
-
 import logging
 import os
 import shutil

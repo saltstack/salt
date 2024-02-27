@@ -6,7 +6,6 @@ Perform an HTTP query and statefully return the result
 .. versionadded:: 2015.5.0
 """
 
-
 import logging
 import re
 import sys

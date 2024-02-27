@@ -7,7 +7,6 @@ without WSUS or Windows Update
 .. versionadded:: 2018.3.4
 """
 
-
 import logging
 
 import salt.utils.platform

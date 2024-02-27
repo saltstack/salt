@@ -8,7 +8,6 @@ from Microsoft IIS.
 
 """
 
-
 # Define the module's virtual name
 __virtualname__ = "win_iis"
 

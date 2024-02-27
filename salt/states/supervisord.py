@@ -82,9 +82,9 @@ def running(
 
     if "supervisord.status" not in __salt__:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Supervisord module not activated. Do you need to install supervisord?"
+        ret["comment"] = (
+            "Supervisord module not activated. Do you need to install supervisord?"
+        )
         return ret
 
     all_processes = __salt__["supervisord.status"](
@@ -115,14 +115,14 @@ def running(
                 if name.endswith(":"):
                     # Process group
                     if len(to_start) == len(matches):
-                        ret[
-                            "comment"
-                        ] = "All services in group '{}' will be started".format(name)
+                        ret["comment"] = (
+                            "All services in group '{}' will be started".format(name)
+                        )
                     else:
-                        ret[
-                            "comment"
-                        ] = "The following services will be started: {}".format(
-                            " ".join(to_start)
+                        ret["comment"] = (
+                            "The following services will be started: {}".format(
+                                " ".join(to_start)
+                            )
                         )
                 else:
                     # Single program
@@ -130,9 +130,9 @@ def running(
             else:
                 if name.endswith(":"):
                     # Process group
-                    ret[
-                        "comment"
-                    ] = "All services in group '{}' are already running".format(name)
+                    ret["comment"] = (
+                        "All services in group '{}' are already running".format(name)
+                    )
                 else:
                     ret["comment"] = "Service {} is already running".format(name)
         else:

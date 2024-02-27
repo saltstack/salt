@@ -90,7 +90,6 @@ PyVmomi can be installed via pip:
     information.
 """
 
-
 import copy
 import logging
 import sys

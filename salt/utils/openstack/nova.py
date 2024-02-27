@@ -2,7 +2,6 @@
 Nova class
 """
 
-
 import inspect
 import logging
 import time
@@ -1033,9 +1032,9 @@ class SaltNova:
                     "OS-EXT-SRV-ATTR:host"
                 ]
             if hasattr(item.__dict__, "OS-EXT-SRV-ATTR:hypervisor_hostname"):
-                ret[item.name]["OS-EXT-SRV-ATTR"][
-                    "hypervisor_hostname"
-                ] = item.__dict__["OS-EXT-SRV-ATTR:hypervisor_hostname"]
+                ret[item.name]["OS-EXT-SRV-ATTR"]["hypervisor_hostname"] = (
+                    item.__dict__["OS-EXT-SRV-ATTR:hypervisor_hostname"]
+                )
             if hasattr(item.__dict__, "OS-EXT-SRV-ATTR:instance_name"):
                 ret[item.name]["OS-EXT-SRV-ATTR"]["instance_name"] = item.__dict__[
                     "OS-EXT-SRV-ATTR:instance_name"

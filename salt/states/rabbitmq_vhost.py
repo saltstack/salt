@@ -14,7 +14,6 @@ Example:
         - read: .*
 """
 
-
 import logging
 
 import salt.utils.path

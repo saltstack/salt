@@ -296,9 +296,9 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
                 return ret
             query_params["cas"] = kwargs["cas"]
         else:
-            ret[
-                "message"
-            ] = "Key {} does not exists, CAS argument can not be used.".format(key)
+            ret["message"] = (
+                "Key {} does not exists, CAS argument can not be used.".format(key)
+            )
             ret["res"] = False
             return ret
 
@@ -1543,9 +1543,9 @@ def catalog_register(consul_url=None, token=None, **kwargs):
                 "warning",
                 "critical",
             ):
-                ret[
-                    "message"
-                ] = "Check status must be unknown, passing, warning, or critical."
+                ret["message"] = (
+                    "Check status must be unknown, passing, warning, or critical."
+                )
                 ret["res"] = False
                 return ret
             data["Check"]["Status"] = kwargs["check_status"]

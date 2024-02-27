@@ -4,7 +4,6 @@ Decorators for salt.state
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 """
 
-
 import logging
 
 import salt.utils.stringutils

@@ -2,7 +2,6 @@
 Convenience functions for dealing with datetime classes
 """
 
-
 import datetime
 
 import salt.utils.stringutils

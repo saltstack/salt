@@ -4,6 +4,7 @@ what the sock_dir is.
 
 This script is a generic tool to test event output
 """
+
 import optparse  # pylint: disable=deprecated-module
 import os
 import pprint

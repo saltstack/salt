@@ -27,7 +27,6 @@ The following options can be included in the acl dictionary:
     :type all: bool
 """
 
-
 __virtualname__ = "zookeeper"
 
 
@@ -154,10 +153,10 @@ def present(
         cur_acls = __salt__["zookeeper.get_acls"](name, **connkwargs)
         if cur_value == value and _check_acls(cur_acls, chk_acls):
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "Znode {} is already set to the correct value with the correct acls".format(
-                name
+            ret["comment"] = (
+                "Znode {} is already set to the correct value with the correct acls".format(
+                    name
+                )
             )
             return ret
         elif __opts__["test"] is True:

@@ -1,6 +1,7 @@
 """
 Test the win_task execution module
 """
+
 from datetime import datetime
 
 import pytest

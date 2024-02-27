@@ -41,7 +41,6 @@ The 5.5.0.2014.1.1 is a known stable version that this original VMware utils fil
 was developed against.
 """
 
-
 import logging
 import ssl
 import sys

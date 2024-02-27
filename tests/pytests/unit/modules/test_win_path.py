@@ -2,7 +2,6 @@
 :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import os
 
 import pytest

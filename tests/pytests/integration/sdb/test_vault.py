@@ -1,6 +1,7 @@
 """
 Integration tests for the vault modules
 """
+
 import json
 import logging
 import subprocess

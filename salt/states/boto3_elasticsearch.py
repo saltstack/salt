@@ -43,7 +43,6 @@ Manage Elasticsearch Service
 :depends: boto3
 """
 
-
 import logging
 
 import salt.utils.json

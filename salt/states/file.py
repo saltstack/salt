@@ -277,7 +277,6 @@ For example:
 
 """
 
-
 import copy
 import difflib
 import itertools
@@ -1139,7 +1138,7 @@ def _get_template_texts(
 
     txtl = []
 
-    for (source, source_hash) in source_list:
+    for source, source_hash in source_list:
 
         tmpctx = defaults if defaults else {}
         if context:
@@ -1897,9 +1896,7 @@ def symlink(
             fs_entry_type = (
                 "File"
                 if os.path.isfile(name)
-                else "Directory"
-                if os.path.isdir(name)
-                else "File system entry"
+                else "Directory" if os.path.isdir(name) else "File system entry"
             )
             return _error(
                 ret,
@@ -3113,9 +3110,9 @@ def managed(
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret[
-                "comment"
-            ] = "File {} is not present and is not set for creation".format(name)
+            ret["comment"] = (
+                "File {} is not present and is not set for creation".format(name)
+            )
             return ret
     u_check = _check_user(user, group)
     if u_check:
@@ -3178,9 +3175,9 @@ def managed(
             else:
                 ret["comment"] = "File {} not updated".format(name)
         elif not ret["changes"] and ret["result"]:
-            ret[
-                "comment"
-            ] = "File {} exists with proper permissions. No changes made.".format(name)
+            ret["comment"] = (
+                "File {} exists with proper permissions. No changes made.".format(name)
+            )
         return ret
 
     accum_data, _ = _load_accumulators()
@@ -4084,9 +4081,9 @@ def directory(
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, str):
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Failed to enforce group ownership for group {}".format(group)
+                    ret["comment"] = (
+                        "Failed to enforce group ownership for group {}".format(group)
+                    )
             else:
                 ret["result"] = False
                 ret["comment"] = (
@@ -6088,9 +6085,9 @@ def blockreplace(
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error managing block")
-        ret[
-            "comment"
-        ] = "Encountered error managing block: {}. See the log for details.".format(exc)
+        ret["comment"] = (
+            "Encountered error managing block: {}. See the log for details.".format(exc)
+        )
         return ret
 
     if changes:
@@ -7583,16 +7580,16 @@ def copy_(
             )
             ret["result"] = None
         else:
-            ret[
-                "comment"
-            ] = 'The target file "{}" exists and will not be overwritten'.format(name)
+            ret["comment"] = (
+                'The target file "{}" exists and will not be overwritten'.format(name)
+            )
             ret["result"] = True
         return ret
 
     if not changed:
-        ret[
-            "comment"
-        ] = 'The target file "{}" exists and will not be overwritten'.format(name)
+        ret["comment"] = (
+            'The target file "{}" exists and will not be overwritten'.format(name)
+        )
         ret["result"] = True
         return ret
 
@@ -7687,9 +7684,9 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret[
-                "comment"
-            ] = 'The target file "{}" exists and will not be overwritten'.format(name)
+            ret["comment"] = (
+                'The target file "{}" exists and will not be overwritten'.format(name)
+            )
             return ret
         elif not __opts__["test"]:
             # Remove the destination to prevent problems later
@@ -8057,9 +8054,9 @@ def serialize(
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret[
-                "comment"
-            ] = "File {} is not present and is not set for creation".format(name)
+            ret["comment"] = (
+                "File {} is not present and is not set for creation".format(name)
+            )
             return ret
 
     formatter = kwargs.pop("formatter", None)
@@ -8337,17 +8334,17 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
             else:
                 ret = __salt__["file.check_perms"](name, None, user, group, mode)[0]
                 if not ret["changes"]:
-                    ret[
-                        "comment"
-                    ] = "Character device {} is in the correct state".format(name)
+                    ret["comment"] = (
+                        "Character device {} is in the correct state".format(name)
+                    )
 
     elif ntype == "b":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a block device. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a block device. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a block device
@@ -8379,10 +8376,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "p":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a fifo pipe. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a fifo pipe. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a fifo
@@ -8976,9 +8973,9 @@ def cached(
                 if hash == source_sum["hsum"]:
                     ret["comment"] = "File already cached: {}".format(name)
                 else:
-                    ret[
-                        "comment"
-                    ] = "Hashes don't match.\nFile will be cached: {}".format(name)
+                    ret["comment"] = (
+                        "Hashes don't match.\nFile will be cached: {}".format(name)
+                    )
             else:
                 ret["comment"] = "No hash found. File will be cached: {}".format(name)
         else:
@@ -8998,10 +8995,10 @@ def cached(
                 )
                 if local_hash == source_sum["hsum"]:
                     ret["result"] = True
-                    ret[
-                        "comment"
-                    ] = "File {} is present on the minion and has hash {}".format(
-                        full_path, local_hash
+                    ret["comment"] = (
+                        "File {} is present on the minion and has hash {}".format(
+                            full_path, local_hash
+                        )
                     )
                 else:
                     ret["comment"] = (
@@ -9059,10 +9056,10 @@ def cached(
         return ret
 
     if not local_copy:
-        ret[
-            "comment"
-        ] = "Failed to cache {}, check minion log for more information".format(
-            salt.utils.url.redact_http_basic_auth(name)
+        ret["comment"] = (
+            "Failed to cache {}, check minion log for more information".format(
+                salt.utils.url.redact_http_basic_auth(name)
+            )
         )
         return ret
 
@@ -9259,9 +9256,9 @@ def pruned(name, recurse=False, ignore_errors=False, older_than=None):
 
         if result:
             if recurse and res["deleted"]:
-                ret[
-                    "comment"
-                ] = "Recursively removed empty directories under {}".format(name)
+                ret["comment"] = (
+                    "Recursively removed empty directories under {}".format(name)
+                )
                 ret["changes"]["deleted"] = sorted(res["deleted"])
             elif not recurse:
                 ret["comment"] = "Removed directory {}".format(name)

@@ -19,7 +19,6 @@ Example:
 
 """
 
-
 import logging
 
 try:

@@ -127,16 +127,16 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
         return ret
     if status["errors"]:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "the following balancers could not find the worker {}: {}".format(
-            name, status["errors"]
+        ret["comment"] = (
+            "the following balancers could not find the worker {}: {}".format(
+                name, status["errors"]
+            )
         )
         return ret
     if not status["wrong_state"]:
-        ret[
-            "comment"
-        ] = "the worker is in the desired activation state on all the balancers"
+        ret["comment"] = (
+            "the worker is in the desired activation state on all the balancers"
+        )
         return ret
     else:
         ret["comment"] = "the action {} will be sent to the balancers {}".format(

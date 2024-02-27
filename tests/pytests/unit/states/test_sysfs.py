@@ -1,6 +1,7 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
+
 import pytest
 
 import salt.states.sysfs as sysfs

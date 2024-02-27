@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_iis
 """
 
-
 import pytest
 
 import salt.modules.win_iis as win_iis

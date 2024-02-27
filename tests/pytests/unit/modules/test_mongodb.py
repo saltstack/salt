@@ -112,7 +112,9 @@ def test_version():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_command, patch_pymongo_database, patch_salt_dict:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_command, patch_pymongo_database, patch_salt_dict:
         ret = mongodb.version()
         assert ret == "6.0.2"
 
@@ -139,7 +141,9 @@ def test_db_list():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_list_db_names, patch_mongo_client, patch_pymongo_database, patch_salt_dict:
+    with (
+        patch_list_db_names
+    ), patch_mongo_client, patch_pymongo_database, patch_salt_dict:
         ret = mongodb.db_list()
         assert ret == ["admin", "config", "local"]
 
@@ -167,7 +171,9 @@ def test_db_exists():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_list_db_names, patch_mongo_client, patch_pymongo_database, patch_salt_dict:
+    with (
+        patch_list_db_names
+    ), patch_mongo_client, patch_pymongo_database, patch_salt_dict:
         ret = mongodb.db_exists("admin")
         assert ret
 
@@ -215,7 +221,9 @@ def test_user_list():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_pymongo_command, patch_salt_dict:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_pymongo_command, patch_salt_dict:
         ret = mongodb.user_list()
         expected = [
             {
@@ -318,7 +326,9 @@ def test_user_create():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_create("test_user", "test_password")
         assert ret
 
@@ -344,7 +354,9 @@ def test_user_create_exception():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_create("test_user", "test_password")
         assert not ret
 
@@ -370,7 +382,9 @@ def test_user_remove():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_remove("test_user")
         assert ret
 
@@ -396,7 +410,9 @@ def test_user_remove_exception():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_remove("test_user")
         assert not ret
 
@@ -446,7 +462,9 @@ def test_user_roles_exists():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_roles_exists("test_user", '["read"]', "admin")
         assert ret
 
@@ -471,7 +489,9 @@ def test_user_grant_roles():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_grant_roles(
             "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
         )
@@ -498,7 +518,9 @@ def test_user_revoke_roles():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_revoke_roles(
             "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
         )
@@ -525,7 +547,9 @@ def test_collection_create():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.collection_create("test_collection")
         assert ret
 
@@ -552,7 +576,9 @@ def test_collections_list():
         mongodb.__salt__, {"config.option": config_option_mock}
     )
 
-    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_list_collection_names:
+    with (
+        patch_mongo_client
+    ), patch_pymongo_database, patch_salt_dict, patch_pymongo_list_collection_names:
         ret = mongodb.collections_list()
         assert ret == ["system.users", "mycollection", "system.version"]
 
@@ -579,7 +605,9 @@ def test_insert():
     patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
     patch_pymongo_collection = patch.object(mongodb, "getattr", pymongo_collection_mock)
 
-    with patch_mongo_client, patch_salt_dict, patch_pymongo_database, patch_pymongo_collection:
+    with (
+        patch_mongo_client
+    ), patch_salt_dict, patch_pymongo_database, patch_pymongo_collection:
         patch_pymongo_collection_insert = patch.object(
             MockPyMongoCollection,
             "insert_many",

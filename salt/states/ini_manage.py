@@ -9,7 +9,6 @@ Manage ini files
 
 """
 
-
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "ini"

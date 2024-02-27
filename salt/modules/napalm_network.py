@@ -64,7 +64,6 @@ def __virtual__():
 
 
 def _filter_list(input_list, search_key, search_value):
-
     """
     Filters a list of dictionary by a set of key-value pair.
 
@@ -84,7 +83,6 @@ def _filter_list(input_list, search_key, search_value):
 
 
 def _filter_dict(input_dict, search_key, search_value):
-
     """
     Filters a dictionary of dictionaries by a key-value pair.
 
@@ -310,9 +308,9 @@ def _config_logic(
                     _comm = __salt__["napalm.junos_commit"](confirm=minutes)
                     if not _comm["out"]:
                         # If unable to commit confirm, should try to bail out
-                        loaded_result[
-                            "comment"
-                        ] = "Unable to commit confirm: {}".format(_comm["message"])
+                        loaded_result["comment"] = (
+                            "Unable to commit confirm: {}".format(_comm["message"])
+                        )
                         loaded_result["result"] = False
                         # But before exiting, we must gracefully discard the config
                         discarded = _safe_dicard_config(loaded_result, napalm_device)
@@ -838,7 +836,6 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 def traceroute(
     destination, source=None, ttl=None, timeout=None, vrf=None, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Calls the method traceroute from the NAPALM driver object and returns a dictionary with the result of the traceroute
     command executed on the device.
@@ -892,7 +889,6 @@ def ping(
     vrf=None,
     **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Executes a ping on the network device and returns a dictionary as a result.
 
@@ -947,7 +943,6 @@ def ping(
 def arp(
     interface="", ipaddr="", macaddr="", **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     NAPALM returns a list of dictionaries with details of the ARP entries.
 
@@ -1008,7 +1003,6 @@ def arp(
 
 @salt.utils.napalm.proxy_napalm_wrap
 def ipaddrs(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns IP addresses configured on the device.
 
@@ -1065,7 +1059,6 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
 
 @salt.utils.napalm.proxy_napalm_wrap
 def interfaces(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns details of the interfaces on the device.
 
@@ -1109,7 +1102,6 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
 
 @salt.utils.napalm.proxy_napalm_wrap
 def lldp(interface="", **kwargs):  # pylint: disable=unused-argument
-
     """
     Returns a detailed view of the LLDP neighbors.
 
@@ -1169,7 +1161,6 @@ def lldp(interface="", **kwargs):  # pylint: disable=unused-argument
 
 @salt.utils.napalm.proxy_napalm_wrap
 def mac(address="", interface="", vlan=0, **kwargs):  # pylint: disable=unused-argument
-
     """
     Returns the MAC Address Table on the device.
 
@@ -1563,10 +1554,10 @@ def load_config(
             # When using salt:// or https://, if the resource is not available,
             #   it will either raise an exception, or return False.
             ret = {"result": False, "out": None}
-            ret[
-                "comment"
-            ] = "Unable to read from {}. Please specify a valid file or text.".format(
-                filename
+            ret["comment"] = (
+                "Unable to read from {}. Please specify a valid file or text.".format(
+                    filename
+                )
             )
             log.error(ret["comment"])
             return ret
@@ -2097,7 +2088,6 @@ def load_template(
 
 @salt.utils.napalm.proxy_napalm_wrap
 def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
-
     """
     Commits the configuration changes made on the network device.
 
@@ -2117,7 +2107,6 @@ def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argu
 def discard_config(
     inherit_napalm_device=None, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Discards the changes applied.
 
@@ -2137,7 +2126,6 @@ def discard_config(
 def compare_config(
     inherit_napalm_device=None, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Returns the difference between the running config and the candidate config.
 
@@ -2155,7 +2143,6 @@ def compare_config(
 
 @salt.utils.napalm.proxy_napalm_wrap
 def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
-
     """
     Rollbacks the configuration.
 
@@ -2175,7 +2162,6 @@ def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-ar
 def config_changed(
     inherit_napalm_device=None, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Will prompt if the configuration has been changed.
 
@@ -2210,7 +2196,6 @@ def config_changed(
 def config_control(
     inherit_napalm_device=None, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Will check if the configuration was changed.
     If differences found, will try to commit.

@@ -3,6 +3,7 @@
 
     Unit tests for the Slack Webhook Returner.
 """
+
 import pytest
 
 import salt.returners.slack_webhook_return as slack_webhook

@@ -24,7 +24,6 @@ Example Usage:
 .. versionadded:: 2015.8.0
 """
 
-
 import hashlib
 import logging
 import sys

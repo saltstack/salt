@@ -17,7 +17,6 @@ Manage the available locales and the system default:
           - locale: us_locale
 """
 
-
 from salt.exceptions import CommandExecutionError
 
 

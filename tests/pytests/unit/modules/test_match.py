@@ -2,7 +2,6 @@
     :codeauthor: Oleg Lipovchenko <oleg.lipovchenko@gmail.com>
 """
 
-
 import pytest
 
 import salt.loader

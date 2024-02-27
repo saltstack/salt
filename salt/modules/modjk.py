@@ -29,6 +29,7 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 """
+
 import urllib.parse
 import urllib.request
 

@@ -1,6 +1,7 @@
 """
 Unit tests for salt.config
 """
+
 import logging
 import os
 import textwrap

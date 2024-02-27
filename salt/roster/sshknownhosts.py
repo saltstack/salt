@@ -36,7 +36,6 @@ Or with a Saltfile
 
 """
 
-
 import logging
 import os
 

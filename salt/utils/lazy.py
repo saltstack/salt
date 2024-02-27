@@ -2,7 +2,6 @@
 Lazily-evaluated data structures, primarily used by Salt's loader
 """
 
-
 import logging
 from collections.abc import MutableMapping
 

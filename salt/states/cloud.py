@@ -13,7 +13,6 @@ Use this minion to spin up a cloud instance:
         my-ec2-config
 """
 
-
 import pprint
 
 import salt.utils.cloud as suc
@@ -114,10 +113,10 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
     if info and "Error" not in info:
         ret["changes"] = info
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Created instance {} using provider {} and the following options: {}".format(
-            name, cloud_provider, pprint.pformat(kwargs)
+        ret["comment"] = (
+            "Created instance {} using provider {} and the following options: {}".format(
+                name, cloud_provider, pprint.pformat(kwargs)
+            )
         )
     elif info and "Error" in info:
         ret["result"] = False

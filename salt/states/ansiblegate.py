@@ -236,7 +236,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             if ret["result"]:
                 ret["comment"] = "Changes were made by playbook {}".format(name)
             else:
-                ret[
-                    "comment"
-                ] = "There were some issues running the playbook {}".format(name)
+                ret["comment"] = (
+                    "There were some issues running the playbook {}".format(name)
+                )
     return ret

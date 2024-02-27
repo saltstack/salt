@@ -2,7 +2,6 @@
 Execute puppet routines
 """
 
-
 import datetime
 import logging
 import os

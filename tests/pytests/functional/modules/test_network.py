@@ -1,6 +1,7 @@
 """
 Validate network module
 """
+
 import pytest
 
 pytestmark = [

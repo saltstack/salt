@@ -37,7 +37,6 @@ version currently listed in PyPi, run the following:
     pip install pyVmomi==5.5.0.2014.1.1
 """
 
-
 import logging
 
 import salt.utils.vmware

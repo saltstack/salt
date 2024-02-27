@@ -153,7 +153,6 @@ pillar stated above:
 
 """
 
-
 import logging
 import os
 

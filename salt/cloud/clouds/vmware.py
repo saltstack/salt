@@ -1454,15 +1454,21 @@ def _format_instance_info_select(vm, selection):
 
     if "storage" in selection:
         storage_full_info = {
-            "committed": int(vm["summary.storage.committed"])
-            if "summary.storage.committed" in vm
-            else "N/A",
-            "uncommitted": int(vm["summary.storage.uncommitted"])
-            if "summary.storage.uncommitted" in vm
-            else "N/A",
-            "unshared": int(vm["summary.storage.unshared"])
-            if "summary.storage.unshared" in vm
-            else "N/A",
+            "committed": (
+                int(vm["summary.storage.committed"])
+                if "summary.storage.committed" in vm
+                else "N/A"
+            ),
+            "uncommitted": (
+                int(vm["summary.storage.uncommitted"])
+                if "summary.storage.uncommitted" in vm
+                else "N/A"
+            ),
+            "unshared": (
+                int(vm["summary.storage.unshared"])
+                if "summary.storage.unshared" in vm
+                else "N/A"
+            ),
         }
         vm_select_info["storage"] = storage_full_info
 
@@ -1553,15 +1559,21 @@ def _format_instance_info(vm):
                 ] = device.backing.fileName
 
     storage_full_info = {
-        "committed": int(vm["summary.storage.committed"])
-        if "summary.storage.committed" in vm
-        else "N/A",
-        "uncommitted": int(vm["summary.storage.uncommitted"])
-        if "summary.storage.uncommitted" in vm
-        else "N/A",
-        "unshared": int(vm["summary.storage.unshared"])
-        if "summary.storage.unshared" in vm
-        else "N/A",
+        "committed": (
+            int(vm["summary.storage.committed"])
+            if "summary.storage.committed" in vm
+            else "N/A"
+        ),
+        "uncommitted": (
+            int(vm["summary.storage.uncommitted"])
+            if "summary.storage.uncommitted" in vm
+            else "N/A"
+        ),
+        "unshared": (
+            int(vm["summary.storage.unshared"])
+            if "summary.storage.unshared" in vm
+            else "N/A"
+        ),
     }
 
     file_full_info = {}
@@ -1593,14 +1605,18 @@ def _format_instance_info(vm):
     )
     vm_full_info = {
         "id": str(vm["name"]),
-        "image": "{} (Detected)".format(vm["config.guestFullName"])
-        if "config.guestFullName" in vm
-        else "N/A",
+        "image": (
+            "{} (Detected)".format(vm["config.guestFullName"])
+            if "config.guestFullName" in vm
+            else "N/A"
+        ),
         "size": "cpu: {}\nram: {}".format(cpu, ram),
         "size_dict": {"cpu": cpu, "memory": ram},
-        "state": str(vm["summary.runtime.powerState"])
-        if "summary.runtime.powerState" in vm
-        else "N/A",
+        "state": (
+            str(vm["summary.runtime.powerState"])
+            if "summary.runtime.powerState" in vm
+            else "N/A"
+        ),
         "private_ips": ip_addresses,
         "public_ips": [],
         "devices": device_full_info,
@@ -1610,12 +1626,14 @@ def _format_instance_info(vm):
         "hostname": str(vm["object"].guest.hostName),
         "mac_addresses": device_mac_addresses,
         "networks": network_full_info,
-        "path": str(vm["config.files.vmPathName"])
-        if "config.files.vmPathName" in vm
-        else "N/A",
-        "tools_status": str(vm["guest.toolsStatus"])
-        if "guest.toolsStatus" in vm
-        else "N/A",
+        "path": (
+            str(vm["config.files.vmPathName"])
+            if "config.files.vmPathName" in vm
+            else "N/A"
+        ),
+        "tools_status": (
+            str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
+        ),
     }
 
     return vm_full_info
@@ -2004,14 +2022,18 @@ def list_nodes(kwargs=None, call=None):
         )
         vm_info = {
             "id": vm["name"],
-            "image": "{} (Detected)".format(vm["config.guestFullName"])
-            if "config.guestFullName" in vm
-            else "N/A",
+            "image": (
+                "{} (Detected)".format(vm["config.guestFullName"])
+                if "config.guestFullName" in vm
+                else "N/A"
+            ),
             "size": "cpu: {}\nram: {}".format(cpu, ram),
             "size_dict": {"cpu": cpu, "memory": ram},
-            "state": str(vm["summary.runtime.powerState"])
-            if "summary.runtime.powerState" in vm
-            else "N/A",
+            "state": (
+                str(vm["summary.runtime.powerState"])
+                if "summary.runtime.powerState" in vm
+                else "N/A"
+            ),
             "private_ips": [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             "public_ips": [],
         }
@@ -2242,15 +2264,21 @@ def avail_images(call=None):
         if "config.template" in vm and vm["config.template"]:
             templates[vm["name"]] = {
                 "name": vm["name"],
-                "guest_fullname": vm["config.guestFullName"]
-                if "config.guestFullName" in vm
-                else "N/A",
-                "cpus": vm["config.hardware.numCPU"]
-                if "config.hardware.numCPU" in vm
-                else "N/A",
-                "ram": vm["config.hardware.memoryMB"]
-                if "config.hardware.memoryMB" in vm
-                else "N/A",
+                "guest_fullname": (
+                    vm["config.guestFullName"]
+                    if "config.guestFullName" in vm
+                    else "N/A"
+                ),
+                "cpus": (
+                    vm["config.hardware.numCPU"]
+                    if "config.hardware.numCPU" in vm
+                    else "N/A"
+                ),
+                "ram": (
+                    vm["config.hardware.memoryMB"]
+                    if "config.hardware.memoryMB" in vm
+                    else "N/A"
+                ),
             }
 
     return templates

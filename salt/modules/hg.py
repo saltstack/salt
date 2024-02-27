@@ -2,7 +2,6 @@
 Support for the Mercurial SCM
 """
 
-
 import logging
 
 import salt.utils.data

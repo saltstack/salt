@@ -8,6 +8,7 @@ Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
 :maturity:      new
 :depends:       sense_hat Python module
 """
+
 import logging
 import re
 

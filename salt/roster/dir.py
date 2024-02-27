@@ -46,7 +46,6 @@ This makes it possible to avoid having to specify the hostnames when you always 
 their minion id plus some domain.
 """
 
-
 import logging
 import os
 

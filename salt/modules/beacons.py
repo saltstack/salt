@@ -5,7 +5,6 @@ Module for managing the Salt beacons on a minion
 
 """
 
-
 import difflib
 import logging
 import os
@@ -185,10 +184,10 @@ def add(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Beacon {} configuration invalid, not adding.\n{}".format(
-                        name, vcomment
+                    ret["comment"] = (
+                        "Beacon {} configuration invalid, not adding.\n{}".format(
+                            name, vcomment
+                        )
                     )
                     return ret
         except KeyError:
@@ -285,10 +284,10 @@ def modify(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Beacon {} configuration invalid, not modifying.\n{}".format(
-                        name, vcomment
+                    ret["comment"] = (
+                        "Beacon {} configuration invalid, not modifying.\n{}".format(
+                            name, vcomment
+                        )
                     )
                     return ret
 
@@ -300,10 +299,10 @@ def modify(name, beacon_data, **kwargs):
 
         if not valid:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Beacon {} configuration invalid, not modifying.\n{}".format(
-                name, vcomment
+            ret["comment"] = (
+                "Beacon {} configuration invalid, not modifying.\n{}".format(
+                    name, vcomment
+                )
             )
             return ret
 
@@ -459,9 +458,9 @@ def save(**kwargs):
             fp_.write(yaml_out)
         ret["comment"] = "Beacons saved to {}.".format(sfn)
     except OSError:
-        ret[
-            "comment"
-        ] = "Unable to write to beacons file at {}. Check permissions.".format(sfn)
+        ret["comment"] = (
+            "Unable to write to beacons file at {}. Check permissions.".format(sfn)
+        )
         ret["result"] = False
     return ret
 
@@ -636,9 +635,9 @@ def enable_beacon(name, **kwargs):
                             ret["comment"] = "Enabled beacon {} on minion.".format(name)
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to enable beacon {} on minion.".format(name)
+                            ret["comment"] = (
+                                "Failed to enable beacon {} on minion.".format(name)
+                            )
                     elif event_ret:
                         ret["result"] = False
                         ret["comment"] = event_ret["comment"]
@@ -654,9 +653,9 @@ def enable_beacon(name, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Event module not available. Beacon enable_beacon job failed."
+            ret["comment"] = (
+                "Event module not available. Beacon enable_beacon job failed."
+            )
     return ret
 
 
@@ -732,9 +731,9 @@ def disable_beacon(name, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Event module not available. Beacon disable_beacon job failed."
+            ret["comment"] = (
+                "Event module not available. Beacon disable_beacon job failed."
+            )
     return ret
 
 

@@ -1,6 +1,7 @@
 """
 Run-time utilities
 """
+
 #
 # Copyright (C) 2014 SUSE LLC
 

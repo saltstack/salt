@@ -4,7 +4,6 @@ This module allows SPM to use the local filesystem to install files for SPM.
 .. versionadded:: 2015.8.0
 """
 
-
 import logging
 import os
 import os.path

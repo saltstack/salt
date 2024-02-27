@@ -2,7 +2,6 @@
 Use hiera data as a Pillar source
 """
 
-
 import logging
 
 import salt.utils.path

@@ -5,7 +5,6 @@ Module for managing logrotate.
 
 """
 
-
 _DEFAULT_CONF = "/etc/logrotate.conf"
 
 # Define the module's virtual name

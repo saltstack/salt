@@ -287,9 +287,9 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
             mopts = self.get_config(
                 self._salt_client_config_file_name_, from_scratch=True
             )
-            RUNTIME_VARS.RUNTIME_CONFIGS[
-                "runtime_client"
-            ] = salt.client.get_local_client(mopts=mopts)
+            RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"] = (
+                salt.client.get_local_client(mopts=mopts)
+            )
         return RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"]
 
 

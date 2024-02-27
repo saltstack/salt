@@ -67,6 +67,7 @@ state module
     Make sure the package name has the correct case for package managers which are
     case-sensitive (such as :mod:`pkgng <salt.modules.pkgng>`).
 """
+
 import fnmatch
 import logging
 import os
@@ -1890,10 +1891,10 @@ def installed(
                 ret["comment"] = exc.strerror_without_changes
             else:
                 ret["changes"] = {}
-                ret[
-                    "comment"
-                ] = "An error was encountered while installing package(s): {}".format(
-                    exc
+                ret["comment"] = (
+                    "An error was encountered while installing package(s): {}".format(
+                        exc
+                    )
                 )
             if warnings:
                 ret.setdefault("warnings", []).extend(warnings)
@@ -2298,9 +2299,9 @@ def downloaded(
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "An error was encountered while downloading package(s): {}".format(exc)
+            ret["comment"] = (
+                "An error was encountered while downloading package(s): {}".format(exc)
+            )
         return ret
 
     new_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
@@ -2355,9 +2356,9 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     if "pkg.list_patches" not in __salt__:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The pkg.patch_installed state is not available on this platform"
+        ret["comment"] = (
+            "The pkg.patch_installed state is not available on this platform"
+        )
         return ret
 
     if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
@@ -2378,9 +2379,9 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     if __opts__["test"]:
         summary = ", ".join(targets)
-        ret[
-            "comment"
-        ] = "The following advisory patches would be downloaded: {}".format(summary)
+        ret["comment"] = (
+            "The following advisory patches would be downloaded: {}".format(summary)
+        )
         return ret
 
     try:
@@ -2397,18 +2398,18 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "An error was encountered while downloading package(s): {}".format(exc)
+            ret["comment"] = (
+                "An error was encountered while downloading package(s): {}".format(exc)
+            )
         return ret
 
     if not ret["changes"] and not ret["comment"]:
         status = "downloaded" if downloadonly else "installed"
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Advisory patch is not needed or related packages are already {}".format(
-            status
+        ret["comment"] = (
+            "Advisory patch is not needed or related packages are already {}".format(
+                status
+            )
         )
 
     return ret
@@ -3094,9 +3095,9 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "An error was encountered while removing package(s): {}".format(exc)
+            ret["comment"] = (
+                "An error was encountered while removing package(s): {}".format(exc)
+            )
         return ret
 
 
@@ -3186,9 +3187,9 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "An error was encountered while purging package(s): {}".format(exc)
+            ret["comment"] = (
+                "An error was encountered while purging package(s): {}".format(exc)
+            )
         return ret
 
 
@@ -3278,9 +3279,9 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = "An error was encountered while updating packages: {}".format(exc)
+            ret["comment"] = (
+                "An error was encountered while updating packages: {}".format(exc)
+            )
         return ret
 
     # If a package list was provided, ensure those packages were updated
@@ -3425,19 +3426,19 @@ def group_installed(name, skip=None, include=None, **kwargs):
         if "unexpected keyword argument" in str(err):
             ret["comment"] = "Repo options are not supported on this platform"
         else:
-            ret[
-                "comment"
-            ] = f"An error was encountered while installing/updating group '{name}': {err}."
+            ret["comment"] = (
+                f"An error was encountered while installing/updating group '{name}': {err}."
+            )
         return ret
 
     mandatory = diff["mandatory"]["installed"] + diff["mandatory"]["not installed"]
 
     invalid_skip = [x for x in mandatory if x in skip]
     if invalid_skip:
-        ret[
-            "comment"
-        ] = "The following mandatory packages cannot be skipped: {}".format(
-            ", ".join(invalid_skip)
+        ret["comment"] = (
+            "The following mandatory packages cannot be skipped: {}".format(
+                ", ".join(invalid_skip)
+            )
         )
         return ret
 
@@ -3459,9 +3460,9 @@ def group_installed(name, skip=None, include=None, **kwargs):
     if __opts__["test"]:
         ret["result"] = None
         if partially_installed:
-            ret[
-                "comment"
-            ] = "Group '{}' is partially installed and will be updated".format(name)
+            ret["comment"] = (
+                "Group '{}' is partially installed and will be updated".format(name)
+            )
         else:
             ret["comment"] = "Group '{}' will be installed".format(name)
         return ret
@@ -3960,9 +3961,11 @@ def unheld(name, version=None, pkgs=None, all=False, **kwargs):
                 comments.append(
                     "The following package would be unheld: {}{}".format(
                         pkg_name,
-                        ""
-                        if not dpkgs.get(pkg_name)
-                        else " (version = {})".format(lock_ver),
+                        (
+                            ""
+                            if not dpkgs.get(pkg_name)
+                            else " (version = {})".format(lock_ver)
+                        ),
                     )
                 )
             else:

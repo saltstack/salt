@@ -40,6 +40,7 @@ Connection module for Amazon Elasticache
 
 :depends: boto
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

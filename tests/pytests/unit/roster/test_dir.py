@@ -2,7 +2,6 @@
 Test the directory roster.
 """
 
-
 import logging
 
 import pytest

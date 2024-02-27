@@ -159,9 +159,9 @@ def defragment(path):
             and not d_res["passed"]
             and "range ioctl not supported" in d_res["log"]
         ):
-            d_res[
-                "log"
-            ] = "Range ioctl defragmentation is not supported in this kernel."
+            d_res["log"] = (
+                "Range ioctl defragmentation is not supported in this kernel."
+            )
 
         if not is_mountpoint:
             d_res["mount_point"] = False

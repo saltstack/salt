@@ -234,7 +234,6 @@ Tags can also be set:
                 OtherTag: 'My Other Value'
 """
 
-
 import hashlib
 import logging
 import re
@@ -730,10 +729,10 @@ def _elb_present(
             profile=profile,
         )
         if not _security_groups:
-            ret[
-                "comment"
-            ] = "Security groups {} do not map to valid security group ids.".format(
-                security_groups
+            ret["comment"] = (
+                "Security groups {} do not map to valid security group ids.".format(
+                    security_groups
+                )
             )
             ret["result"] = False
             return ret
@@ -1039,9 +1038,9 @@ def _zones_present(name, availability_zones, region, key, keyid, profile):
             if enabled:
                 ret["comment"] = "Enabled availability zones on {} ELB.".format(name)
             else:
-                ret[
-                    "comment"
-                ] = "Failed to enable availability zones on {} ELB.".format(name)
+                ret["comment"] = (
+                    "Failed to enable availability zones on {} ELB.".format(name)
+                )
                 ret["result"] = False
         if to_disable:
             disabled = __salt__["boto_elb.disable_availability_zones"](

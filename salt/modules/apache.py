@@ -8,7 +8,6 @@ Support for Apache
     Debian-based system is detected.
 """
 
-
 import io
 import logging
 import re

@@ -24,6 +24,7 @@ See example config below.
         - test.ping
         - interval: 3600 # seconds
 """
+
 import salt.utils.beacons
 
 

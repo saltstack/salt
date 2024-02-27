@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_psget
 """
 
-
 import pytest
 
 import salt.modules.win_psget as win_psget

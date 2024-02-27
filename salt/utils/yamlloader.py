@@ -2,7 +2,6 @@
 Custom YAML loading in Salt
 """
 
-
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode

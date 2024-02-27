@@ -635,7 +635,7 @@ class SPMClient:
         if os.path.exists(self.opts["spm_repos_config"]):
             repo_files.append(self.opts["spm_repos_config"])
 
-        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(
+        for dirpath, dirnames, filenames in salt.utils.path.os_walk(
             "{}.d".format(self.opts["spm_repos_config"])
         ):
             for repo_file in filenames:
@@ -753,7 +753,7 @@ class SPMClient:
 
         old_files = []
         repo_metadata = {}
-        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(repo_path):
+        for dirpath, dirnames, filenames in salt.utils.path.os_walk(repo_path):
             for spm_file in filenames:
                 if not spm_file.endswith(".spm"):
                     continue

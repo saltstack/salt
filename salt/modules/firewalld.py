@@ -4,7 +4,6 @@ Support for firewalld.
 .. versionadded:: 2015.2.0
 """
 
-
 import logging
 import re
 

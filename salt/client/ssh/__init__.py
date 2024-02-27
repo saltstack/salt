@@ -745,9 +745,9 @@ class SSH(MultiprocessingStateMixin):
                     data["id"] = id_
                 if "fun" not in data:
                     data["fun"] = fun
-                data[
-                    "jid"
-                ] = jid  # make the jid in the payload the same as the jid in the tag
+                data["jid"] = (
+                    jid  # make the jid in the payload the same as the jid in the tag
+                )
                 self.event.fire_event(
                     data, salt.utils.event.tagify([jid, "ret", host], "job")
                 )
@@ -862,9 +862,9 @@ class SSH(MultiprocessingStateMixin):
                     data["id"] = id_
                 if "fun" not in data:
                     data["fun"] = fun
-                data[
-                    "jid"
-                ] = jid  # make the jid in the payload the same as the jid in the tag
+                data["jid"] = (
+                    jid  # make the jid in the payload the same as the jid in the tag
+                )
                 self.event.fire_event(
                     data, salt.utils.event.tagify([jid, "ret", host], "job")
                 )

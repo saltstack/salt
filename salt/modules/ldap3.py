@@ -10,7 +10,6 @@ This is an alternative to the ``ldap`` interface provided by the
 :depends: - ``ldap`` Python module
 """
 
-
 import logging
 
 import salt.utils.data

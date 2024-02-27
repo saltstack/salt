@@ -20,6 +20,7 @@ The consul module is used to create and manage Consul ACLs
        consul.acl_absent:
          - id: 38AC8470-4A83-4140-8DFD-F924CD32917F
 """
+
 import logging
 
 log = logging.getLogger(__name__)

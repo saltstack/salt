@@ -2,6 +2,7 @@
 A module for working with the Windows Event log system.
 .. versionadded:: 3006.0
 """
+
 # https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging
 
 import collections

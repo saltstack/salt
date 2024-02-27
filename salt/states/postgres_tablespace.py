@@ -15,7 +15,6 @@ A module used to create and manage PostgreSQL tablespaces.
 
 """
 
-
 import salt.utils.dictupdate as dictupdate
 
 
@@ -120,11 +119,11 @@ def present(
 
     # already exists, make sure it's got the right config
     if tblspaces[name]["Location"] != directory and not __opts__["test"]:
-        ret[
-            "comment"
-        ] = """Tablespace {} is not at the right location. This is
+        ret["comment"] = (
+            """Tablespace {} is not at the right location. This is
             unfixable without dropping and recreating the tablespace.""".format(
-            name
+                name
+            )
         )
         ret["result"] = False
         return ret
@@ -152,11 +151,11 @@ def present(
             if "{}={}".format(k, v) not in tblspaces[name]["Opts"]:
                 if __opts__["test"]:
                     ret["result"] = None
-                    ret[
-                        "comment"
-                    ] = """Tablespace {} options to be
+                    ret["comment"] = (
+                        """Tablespace {} options to be
                         altered""".format(
-                        name
+                            name
+                        )
                     )
                     break  # we know it's going to be altered, no reason to cont
                 if __salt__["postgres.tablespace_alter"](name, set_option={k: v}):

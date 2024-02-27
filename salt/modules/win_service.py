@@ -5,6 +5,7 @@ Windows Service module.
 
     Rewritten to use PyWin32
 """
+
 import fnmatch
 import logging
 import re

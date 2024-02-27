@@ -1,6 +1,7 @@
 """
 Integration tests for the beacon states
 """
+
 import logging
 
 import pytest

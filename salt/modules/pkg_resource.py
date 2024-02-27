@@ -2,7 +2,6 @@
 Resources needed by pkg providers
 """
 
-
 import copy
 import fnmatch
 import logging

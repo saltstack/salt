@@ -2,7 +2,6 @@
 Module for managing dnsmasq
 """
 
-
 import logging
 import os
 

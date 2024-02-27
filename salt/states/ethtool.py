@@ -29,7 +29,6 @@ Configuration of network device
 
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError
@@ -118,10 +117,10 @@ def coalesce(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Device {} coalescing settings are set to be updated:\n{}".format(
-                    name, "\n".join(diff)
+                ret["comment"] = (
+                    "Device {} coalescing settings are set to be updated:\n{}".format(
+                        name, "\n".join(diff)
+                    )
                 )
                 return ret
 
@@ -205,10 +204,10 @@ def ring(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Device {} ring parameters are set to be updated:\n{}".format(
-                    name, "\n".join(diff)
+                ret["comment"] = (
+                    "Device {} ring parameters are set to be updated:\n{}".format(
+                        name, "\n".join(diff)
+                    )
                 )
                 return ret
 
@@ -284,10 +283,10 @@ def offload(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Device {} offload settings are set to be updated:\n{}".format(
-                    name, "\n".join(diff)
+                ret["comment"] = (
+                    "Device {} offload settings are set to be updated:\n{}".format(
+                        name, "\n".join(diff)
+                    )
                 )
                 return ret
 

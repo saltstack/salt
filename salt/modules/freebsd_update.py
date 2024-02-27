@@ -8,7 +8,6 @@ Support for freebsd-update utility on FreeBSD.
 :platform:      FreeBSD
 """
 
-
 import logging
 
 import salt.utils.path

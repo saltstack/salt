@@ -2,7 +2,6 @@
 Manage Django sites
 """
 
-
 import os
 
 import salt.exceptions

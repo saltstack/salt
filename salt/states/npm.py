@@ -18,7 +18,6 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
           - pkg: npm
 """
 
-
 import re
 
 from salt.exceptions import CommandExecutionError, CommandNotFoundError

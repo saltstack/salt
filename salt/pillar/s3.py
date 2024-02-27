@@ -87,7 +87,6 @@ for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 """
 
-
 import logging
 import os
 import pickle
@@ -144,7 +143,6 @@ def ext_pillar(
     path_style=False,
     https_enable=True,
 ):
-
     """
     Execute a command and read the output as YAML
     """

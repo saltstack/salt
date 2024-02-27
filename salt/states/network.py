@@ -554,10 +554,10 @@ def managed(name, enabled=True, **kwargs):
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm="")
                     ret["result"] = None
-                    ret[
-                        "comment"
-                    ] = "Bond interface {} is set to be updated:\n{}".format(
-                        name, "\n".join(diff)
+                    ret["comment"] = (
+                        "Bond interface {} is set to be updated:\n{}".format(
+                            name, "\n".join(diff)
+                        )
                     )
             else:
                 if not old and new:
@@ -626,9 +626,9 @@ def managed(name, enabled=True, **kwargs):
                         # Interface should restart to validate if it's up
                         __salt__["ip.down"](name, iface_type)
                         __salt__["ip.up"](name, iface_type)
-                        ret["changes"][
-                            "status"
-                        ] = "Interface {} restart to validate".format(name)
+                        ret["changes"]["status"] = (
+                            "Interface {} restart to validate".format(name)
+                        )
                 else:
                     __salt__["ip.up"](name, iface_type)
                     ret["changes"]["status"] = "Interface {} is up".format(name)
@@ -670,10 +670,10 @@ def managed(name, enabled=True, **kwargs):
                         __salt__["cmd.run"](cmd, python_shell=False)
                     else:
                         log.error("Command 'ifenslave' not found")
-                    ret["changes"][
-                        "enslave"
-                    ] = "Added slaves '{}' to master '{}'".format(
-                        " ".join(missing_slaves), name
+                    ret["changes"]["enslave"] = (
+                        "Added slaves '{}' to master '{}'".format(
+                            " ".join(missing_slaves), name
+                        )
                     )
             else:
                 log.info(
@@ -726,10 +726,10 @@ def routes(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Interface {} routes are set to be updated:\n{}".format(
-                    name, "\n".join(diff)
+                ret["comment"] = (
+                    "Interface {} routes are set to be updated:\n{}".format(
+                        name, "\n".join(diff)
+                    )
                 )
                 return ret
         if not old and new:
@@ -791,10 +791,10 @@ def system(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Global network settings are set to be updated:\n{}".format(
-                    "\n".join(diff)
+                ret["comment"] = (
+                    "Global network settings are set to be updated:\n{}".format(
+                        "\n".join(diff)
+                    )
                 )
                 return ret
         if not old and new:

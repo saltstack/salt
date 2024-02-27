@@ -1,6 +1,7 @@
 """
 Tests for the boto_sns state
 """
+
 import re
 
 import pytest

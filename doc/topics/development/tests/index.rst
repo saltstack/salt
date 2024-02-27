@@ -364,8 +364,7 @@ the actual testing, such as functions containing assertions, must start with
 
 .. code-block:: python
 
-    def test_user_present(self):
-        ...
+    def test_user_present(self): ...
 
 When functions in test files are not prepended with ``test_``, the function
 acts as a normal, helper function and is not run as a test by the test suite.

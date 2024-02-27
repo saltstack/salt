@@ -212,10 +212,10 @@ def present(name, entry=None, family="ipv4", **kwargs):
                     )
                 else:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Failed to add to entry {1} to set {0} for family {2}.\n{3}".format(
-                        kwargs["set_name"], _entry, family, command
+                    ret["comment"] = (
+                        "Failed to add to entry {1} to set {0} for family {2}.\n{3}".format(
+                            kwargs["set_name"], _entry, family, command
+                        )
                     )
     return ret
 

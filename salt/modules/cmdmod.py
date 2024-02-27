@@ -431,9 +431,11 @@ def _run(
             "as user '{}' ".format(runas) if runas else "",
             "in group '{}' ".format(group) if group else "",
             cwd,
-            ". Executing command in the background, no output will be logged."
-            if bg
-            else "",
+            (
+                ". Executing command in the background, no output will be logged."
+                if bg
+                else ""
+            ),
         )
         log.info(log_callback(msg))
 
@@ -999,7 +1001,6 @@ def _run_all_quiet(
     success_stderr=None,
     ignore_retcode=None,
 ):
-
     """
     Helper for running commands quietly for minion startup.
     Returns a dict of return data.

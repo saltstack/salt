@@ -2,7 +2,6 @@
 unit tests for the fileserver runner
 """
 
-
 import pytest
 
 import salt.loader

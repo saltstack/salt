@@ -3,7 +3,6 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 """
 
-
 import errno
 import io
 import logging

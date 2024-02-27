@@ -43,6 +43,7 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
 Module Documentation
 ====================
 """
+
 import logging
 import re
 import urllib.parse

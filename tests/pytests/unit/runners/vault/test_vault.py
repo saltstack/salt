@@ -2,7 +2,6 @@
 Unit tests for the Vault runner
 """
 
-
 import logging
 
 import pytest

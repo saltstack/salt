@@ -26,7 +26,6 @@ Example States
         - name: domain1
 """
 
-
 __virtualname__ = "keystone_domain"
 
 

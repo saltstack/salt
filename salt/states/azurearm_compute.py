@@ -198,9 +198,9 @@ def availability_set_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     if sku:
@@ -325,9 +325,9 @@ def availability_set_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     aset = __salt__["azurearm_compute.availability_set_get"](

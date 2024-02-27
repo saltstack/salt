@@ -4,6 +4,7 @@
 
     log beacon test cases
 """
+
 import pytest
 
 import salt.beacons.log_beacon as log_beacon

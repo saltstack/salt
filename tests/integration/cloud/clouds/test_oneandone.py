@@ -1,6 +1,7 @@
 """
     :codeauthor: :email:`Amel Ajdinovic <amel@stackpointcloud.com>`
 """
+
 import pytest
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest

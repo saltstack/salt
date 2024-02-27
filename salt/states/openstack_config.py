@@ -8,7 +8,6 @@ Manage OpenStack configuration file settings.
 
 """
 
-
 from salt.exceptions import CommandExecutionError
 
 

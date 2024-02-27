@@ -6,7 +6,6 @@ Management of Jenkins
 
 """
 
-
 import difflib
 import io
 import logging

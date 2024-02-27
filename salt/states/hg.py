@@ -13,7 +13,6 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 """
 
-
 import logging
 import os
 import shutil
@@ -145,9 +144,9 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
                 " updating."
             )
         else:
-            ret[
-                "comment"
-            ] = "No changes found and update_head=False so will skip updating."
+            ret["comment"] = (
+                "No changes found and update_head=False so will skip updating."
+            )
         return ret
 
     if rev:

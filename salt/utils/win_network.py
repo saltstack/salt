@@ -18,6 +18,7 @@ depending on the version of Windows this is run on. Once support for Windows
 :depends: - pythonnet
           - wmi
 """
+
 # https://docs.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface.getallnetworkinterfaces?view=netframework-4.7.2
 
 import logging

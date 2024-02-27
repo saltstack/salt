@@ -4,6 +4,7 @@ noxfile
 
 Nox configuration script
 """
+
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 import contextlib
@@ -1712,7 +1713,7 @@ class Recompress:
         d_targz = tempd.joinpath(targz.name)
         with tarfile.open(d_tar, "w|") as wfile:
             with tarfile.open(targz, "r:gz") as rfile:
-                rfile.extractall(d_src)
+                rfile.extractall(d_src)  # nosec
                 extracted_dir = next(pathlib.Path(d_src).iterdir())
                 for name in sorted(extracted_dir.rglob("*")):
                     wfile.add(

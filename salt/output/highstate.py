@@ -123,7 +123,6 @@ Example output with no special settings in configuration files:
     Total:     0
 """
 
-
 import collections
 import logging
 import pprint

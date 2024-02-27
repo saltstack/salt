@@ -11,7 +11,6 @@ SaltClass Pillar Module
 For additional configuration instructions, see the :mod:`saltclass <salt.tops.saltclass>` module
 """
 
-
 import logging
 
 import salt.utils.saltclass as sc

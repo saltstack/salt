@@ -21,7 +21,6 @@ The hook_url can be specified in the master or minion configuration like below:
       hook_url: https://outlook.office.com/webhook/837
 """
 
-
 from salt.exceptions import SaltInvocationError
 
 

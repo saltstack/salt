@@ -51,9 +51,9 @@ def test_ethtool_pause():
         with patch.dict(ethtool.__opts__, {"test": True}):
             expected["result"] = None
             expected["changes"] = {}
-            expected[
-                "comment"
-            ] = "Device eth0 pause parameters are set to be updated:\nautoneg: off\nrx: off\ntx: off"
+            expected["comment"] = (
+                "Device eth0 pause parameters are set to be updated:\nautoneg: off\nrx: off\ntx: off"
+            )
             ret = ethtool.pause("eth0", autoneg=False, rx=False, tx=False)
             assert ret == expected
             mock_set.assert_not_called()

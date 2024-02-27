@@ -35,10 +35,10 @@ def present(name, owner=None, grants=None, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if __salt__["mssql.role_exists"](name, **kwargs):
-        ret[
-            "comment"
-        ] = "Role {} is already present (Not going to try to set its grants)".format(
-            name
+        ret["comment"] = (
+            "Role {} is already present (Not going to try to set its grants)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:

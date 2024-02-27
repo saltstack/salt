@@ -38,7 +38,6 @@ Use the following Pg database schema:
     salt-run queue.process_queue test all backend=pgjsonb
 """
 
-
 import logging
 import sys
 from contextlib import contextmanager

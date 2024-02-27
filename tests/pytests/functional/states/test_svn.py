@@ -1,6 +1,7 @@
 """
 Tests for the SVN state
 """
+
 import logging
 
 import pytest

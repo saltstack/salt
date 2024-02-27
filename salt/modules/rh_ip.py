@@ -372,7 +372,6 @@ def _parse_settings_bond_0(opts, iface):
 
 
 def _parse_settings_bond_1(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond1.
     If an option has a value that is not expected, this
@@ -418,7 +417,6 @@ def _parse_settings_bond_2(opts, iface):
 
 
 def _parse_settings_bond_3(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond3.
     If an option has a value that is not expected, this
@@ -491,7 +489,6 @@ def _parse_settings_bond_4(opts, iface):
 
 
 def _parse_settings_bond_5(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond5.
     If an option has a value that is not expected, this
@@ -511,7 +508,6 @@ def _parse_settings_bond_5(opts, iface):
 
 
 def _parse_settings_bond_6(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond6.
     If an option has a value that is not expected, this
@@ -531,7 +527,6 @@ def _parse_settings_bond_6(opts, iface):
 
 
 def _parse_settings_vlan(opts, iface):
-
     """
     Filters given options and outputs valid settings for a vlan
     """

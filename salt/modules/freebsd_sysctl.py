@@ -2,7 +2,6 @@
 Module for viewing and modifying sysctl parameters
 """
 
-
 import logging
 import os
 

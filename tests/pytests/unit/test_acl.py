@@ -2,7 +2,6 @@
     Unit tests for salt.acl.ClientACL
 """
 
-
 import pytest
 
 from salt import acl

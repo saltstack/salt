@@ -6,7 +6,6 @@ A state module to manage Gentoo configuration via eselect
 
 """
 
-
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {"set_": "set"}
 

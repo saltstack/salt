@@ -1,6 +1,7 @@
 """
 Integration tests for functions located in the salt.cloud.__init__.py file.
 """
+
 import pytest
 
 import salt.cloud

@@ -2,7 +2,6 @@
 Run nagios plugins/checks from salt and get the return as data.
 """
 
-
 import logging
 import os
 import stat

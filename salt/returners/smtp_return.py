@@ -104,7 +104,6 @@ Also you need to create additional file ``/srv/salt/templates/email.j2`` with em
 This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 """
 
-
 import io
 import logging
 import os

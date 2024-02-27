@@ -230,9 +230,9 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             # if command.split fails arg will not be set
             if "arg" not in locals():
                 arg = command
-            ret[
-                "error"
-            ] = "Invalid formatted command, see debug log for details: {}".format(arg)
+            ret["error"] = (
+                "Invalid formatted command, see debug log for details: {}".format(arg)
+            )
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)

@@ -231,7 +231,6 @@ To use it, one may pass it like this. Example:
 
 """
 
-
 import copy
 import logging
 import os
@@ -1100,14 +1099,14 @@ def script(
         return ret
 
     if context and not isinstance(context, dict):
-        ret[
-            "comment"
-        ] = "Invalidly-formatted 'context' parameter. Must be formed as a dict."
+        ret["comment"] = (
+            "Invalidly-formatted 'context' parameter. Must be formed as a dict."
+        )
         return ret
     if defaults and not isinstance(defaults, dict):
-        ret[
-            "comment"
-        ] = "Invalidly-formatted 'defaults' parameter. Must be formed as a dict."
+        ret["comment"] = (
+            "Invalidly-formatted 'defaults' parameter. Must be formed as a dict."
+        )
         return ret
 
     if runas and salt.utils.platform.is_windows() and not password:

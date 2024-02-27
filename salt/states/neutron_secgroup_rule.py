@@ -28,7 +28,6 @@ Example States
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 """
 
-
 __virtualname__ = "neutron_secgroup_rule"
 
 

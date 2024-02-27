@@ -2,7 +2,6 @@
 A collection of hashing and encoding functions
 """
 
-
 import base64
 import hashlib
 import hmac

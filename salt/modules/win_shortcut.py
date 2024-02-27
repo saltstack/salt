@@ -6,6 +6,7 @@ url shortcuts.
 
 .. versionadded:: 3005
 """
+
 # https://docs.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh
 # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/windows-scripting/f5y78918(v=vs.84)
 import logging

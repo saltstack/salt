@@ -27,7 +27,6 @@ through the XML API or through a brokered connection to Panorama.
 
 """
 
-
 import logging
 import time
 

@@ -9,6 +9,7 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
+
 import os
 import re
 import subprocess

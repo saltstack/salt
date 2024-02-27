@@ -48,7 +48,6 @@ Module Documentation
 ====================
 """
 
-
 import logging
 import re
 import urllib.parse

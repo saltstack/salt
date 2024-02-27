@@ -4,7 +4,6 @@ Enforce state for SSL/TLS
 
 """
 
-
 import datetime
 import logging
 import time

@@ -14,7 +14,6 @@ Support for htpasswd module. Requires the apache2-utils package for Debian-based
 
 """
 
-
 import salt.utils.path
 
 __virtualname__ = "webutil"

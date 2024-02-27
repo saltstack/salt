@@ -313,6 +313,7 @@ file ``samba/map.sls``, you could do the following.
         Service.running("samba", name=Samba.service)
 
 """
+
 # TODO: Interface for working with reactor files
 
 

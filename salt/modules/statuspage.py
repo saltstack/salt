@@ -18,7 +18,6 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2017.7.0
 """
 
-
 import logging
 
 # import third party

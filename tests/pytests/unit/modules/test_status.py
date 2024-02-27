@@ -2,7 +2,6 @@
     Test cases for salt.modules.status
 """
 
-
 import os
 
 import pytest

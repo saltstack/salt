@@ -2,7 +2,6 @@
 Stores eauth tokens in the filesystem of the master. Location is configured by the master config option 'token_dir'
 """
 
-
 import hashlib
 import logging
 import os
@@ -93,7 +92,7 @@ def list_tokens(opts):
     :returns: List of dicts (tokens)
     """
     ret = []
-    for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(opts["token_dir"]):
+    for dirpath, dirnames, filenames in salt.utils.path.os_walk(opts["token_dir"]):
         for token in filenames:
             ret.append(token)
     return ret

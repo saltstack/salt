@@ -28,7 +28,6 @@ Example States
         - project: project1
 """
 
-
 __virtualname__ = "neutron_network"
 
 

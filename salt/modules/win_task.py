@@ -1582,9 +1582,9 @@ def info(name, location="\\"):
                 trigger["repeat_interval"] = _reverse_lookup(
                     duration, triggerObj.Repetition.Interval
                 )
-                trigger[
-                    "repeat_stop_at_duration_end"
-                ] = triggerObj.Repetition.StopAtDurationEnd
+                trigger["repeat_stop_at_duration_end"] = (
+                    triggerObj.Repetition.StopAtDurationEnd
+                )
             triggers.append(trigger)
 
         properties["settings"] = settings

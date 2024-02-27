@@ -10,7 +10,6 @@ Pacemaker/Cororsync conifguration system (PCS)
 .. versionadded:: 2016.3.0
 """
 
-
 import logging
 
 import salt.utils.path

@@ -5,6 +5,7 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 """
+
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
@@ -50,7 +51,7 @@ __opts__ = {
     # name of the state id for the generated start state.
     "stateconf_goal_state": ".goal",
     # name of the state id for the generated goal state.
-    "stateconf_state_func": "stateconf.set"
+    "stateconf_state_func": "stateconf.set",
     # names the state and the state function to be recognized as a special
     # state from which to gather sls file context variables. It should be
     # specified in the 'state.func' notation, and both the state module and

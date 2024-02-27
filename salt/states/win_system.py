@@ -191,9 +191,7 @@ def workgroup(name):
     current_workgroup = (
         out["Domain"]
         if "Domain" in out
-        else out["Workgroup"]
-        if "Workgroup" in out
-        else ""
+        else out["Workgroup"] if "Workgroup" in out else ""
     )
 
     # Notify the user if the requested workgroup is the same
@@ -216,9 +214,7 @@ def workgroup(name):
     new_workgroup = (
         out["Domain"]
         if "Domain" in out
-        else out["Workgroup"]
-        if "Workgroup" in out
-        else ""
+        else out["Workgroup"] if "Workgroup" in out else ""
     )
 
     # Return our results based on the changes
@@ -461,14 +457,14 @@ def shutdown(
 
     if only_on_pending_reboot and not __salt__["system.get_pending_reboot"]():
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "System {} will be skipped because no reboot is pending".format(action)
+            ret["comment"] = (
+                "System {} will be skipped because no reboot is pending".format(action)
+            )
         else:
-            ret[
-                "comment"
-            ] = "System {} has been skipped because no reboot was pending".format(
-                action
+            ret["comment"] = (
+                "System {} has been skipped because no reboot was pending".format(
+                    action
+                )
             )
         return ret
 

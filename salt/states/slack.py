@@ -24,7 +24,6 @@ The api key can be specified in the master or minion configuration like below:
 
 """
 
-
 from salt.exceptions import SaltInvocationError
 
 

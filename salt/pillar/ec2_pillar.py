@@ -53,7 +53,6 @@ returns a list of key/value pairs for all of the EC2 tags assigned to the
 instance.
 """
 
-
 import logging
 import re
 

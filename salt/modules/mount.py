@@ -2,7 +2,6 @@
 Salt module to manage Unix mounts and the fstab file
 """
 
-
 import logging
 import os
 import re

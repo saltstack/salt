@@ -11,7 +11,6 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
       secret_key: '280d4699-a817-4719-ba6f-ca56e573e44f'
 """
 
-
 import logging
 import time
 

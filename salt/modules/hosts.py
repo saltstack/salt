@@ -2,7 +2,6 @@
 Manage the information in the hosts file
 """
 
-
 import errno
 import logging
 import os

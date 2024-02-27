@@ -2,7 +2,6 @@
 Module to interact with keystores
 """
 
-
 import logging
 import os
 from datetime import datetime

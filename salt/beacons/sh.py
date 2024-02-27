@@ -1,6 +1,7 @@
 """
 Watch the shell commands being executed actively. This beacon requires strace.
 """
+
 import logging
 import time
 

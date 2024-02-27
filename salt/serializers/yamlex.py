@@ -98,6 +98,7 @@
 
     Document is defacto an aggregate mapping.
 """
+
 # pylint: disable=invalid-name,no-member,missing-docstring,no-self-use
 # pylint: disable=too-few-public-methods,too-many-public-methods
 

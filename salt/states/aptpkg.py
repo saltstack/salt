@@ -3,7 +3,6 @@ Package management operations specific to APT- and DEB-based systems
 ====================================================================
 """
 
-
 import logging
 
 import salt.utils.data

@@ -585,9 +585,7 @@ def test_build_interface_bond_mode_4():
                         "lacp_rate={}".format(
                             "1"
                             if lacp_rate == "fast"
-                            else "0"
-                            if lacp_rate == "slow"
-                            else lacp_rate
+                            else "0" if lacp_rate == "slow" else lacp_rate
                         ),
                         "miimon=100",
                         "mode=4",

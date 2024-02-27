@@ -9,7 +9,6 @@ environments. This also provides a function to generate yum repositories
 This module implements the pkgbuild interface
 """
 
-
 import errno
 import functools
 import logging

@@ -67,10 +67,10 @@ def present(
         ret["comment"] = "One and only one of password and domain should be specifies"
         return ret
     if __salt__["mssql.login_exists"](name, domain=domain, **kwargs):
-        ret[
-            "comment"
-        ] = "Login {} is already present (Not going to try to set its password)".format(
-            name
+        ret["comment"] = (
+            "Login {} is already present (Not going to try to set its password)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:

@@ -1,6 +1,7 @@
 """
 Functions for daemonizing and otherwise modifying running processes
 """
+
 import contextlib
 import copy
 import errno
@@ -920,9 +921,9 @@ class Process(multiprocessing.Process):
         self.__init__(*args, **kwargs)
         # Override self.__logging_config__ with what's in state
         self.__logging_config__ = logging_config
-        for (function, args, kwargs) in state["after_fork_methods"]:
+        for function, args, kwargs in state["after_fork_methods"]:
             self.register_after_fork_method(function, *args, **kwargs)
-        for (function, args, kwargs) in state["finalize_methods"]:
+        for function, args, kwargs in state["finalize_methods"]:
             self.register_finalize_method(function, *args, **kwargs)
 
     def __getstate__(self):

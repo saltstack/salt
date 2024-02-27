@@ -2,7 +2,6 @@
 Execute chef in server or solo mode
 """
 
-
 import logging
 import os
 import tempfile

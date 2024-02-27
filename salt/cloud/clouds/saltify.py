@@ -358,7 +358,7 @@ def _verify(vm_):
             log.debug("Testing SMB protocol for %s", vm_["name"])
             if __utils__["smb.get_conn"](**kwargs) is False:
                 return False
-        except (smbSessionError) as exc:
+        except smbSessionError as exc:
             log.error("Exception: %s", exc)
             return False
 

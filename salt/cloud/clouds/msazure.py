@@ -42,6 +42,7 @@ Example ``/etc/salt/cloud.providers`` or
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
 """
+
 # pylint: disable=function-redefined
 
 import copy

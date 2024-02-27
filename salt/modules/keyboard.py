@@ -3,7 +3,6 @@ Module for managing keyboards on supported POSIX-like systems using
 systemd, or such as Redhat, Debian and Gentoo.
 """
 
-
 import logging
 
 import salt.utils.path
