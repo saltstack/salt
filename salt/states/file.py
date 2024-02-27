@@ -3901,25 +3901,13 @@ def directory(
                 if not force:
                     return _error(
                         ret,
-                        f"File exists where the backup target {backupname} should go",
+                        "File exists where the backup target {} should go".format(
+                            backupname
+                        ),
                     )
-                if __opts__["test"]:
-                    ret["changes"][
-                        "forced"
-                    ] = f"Existing file at backup path {backupname} would be removed"
                 else:
                     __salt__["file.remove"](backupname)
-
-            if __opts__["test"]:
-                ret["changes"]["backup"] = f"{name} would be renamed to {backupname}"
-                ret["changes"][name] = {"directory": "new"}
-                ret[
-                    "comment"
-                ] = f"{name} would be backed up and replaced with a new directory"
-                ret["result"] = None
-                return ret
-            else:
-                os.rename(name, backupname)
+            os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
