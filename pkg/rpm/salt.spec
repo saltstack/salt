@@ -432,17 +432,33 @@ find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
 
 
 # assumes systemd for RHEL 7 & 8 & 9
+# foregoing %systemd_* scriptlets due to RHEL 7/8 vs. RHEL 9 incompatibilities
+## - Using hardcoded scriptlet definitions from RHEL 7/8 that are forward-compatible
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
-%systemd_preun salt-syndic.service > /dev/null 2>&1
-
+# %%systemd_preun salt-syndic.service > /dev/null 2>&1
+if [ $1 -eq 0 ] ; then
+  # Package removal, not upgrade
+  systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
+  systemctl stop salt-syndic.service > /dev/null 2>&1 || :
+fi
 
 %preun minion
-%systemd_preun salt-minion.service
+# %%systemd_preun salt-minion.service
+if [ $1 -eq 0 ] ; then
+  # Package removal, not upgrade
+  systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+  systemctl stop salt-minion.service > /dev/null 2>&1 || :
+fi
 
 
 %preun api
-%systemd_preun salt-api.service
+# %%systemd_preun salt-api.service
+if [ $1 -eq 0 ] ; then
+  # Package removal, not upgrade
+  systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
+  systemctl stop salt-api.service > /dev/null 2>&1 || :
+fi
 
 
 %post
@@ -456,7 +472,14 @@ ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
 %post master
-%systemd_post salt-master.service
+# %%systemd_post salt-master.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-master.service >/dev/null 2>&1 || :
+else
+  # Initial installation
+  systemctl preset salt-master.service >/dev/null 2>&1 || :
+fi
 ln -s -f /opt/saltstack/salt/salt %{_bindir}/salt
 ln -s -f /opt/saltstack/salt/salt-cp %{_bindir}/salt-cp
 ln -s -f /opt/saltstack/salt/salt-key %{_bindir}/salt-key
@@ -477,11 +500,25 @@ if [ $1 -lt 2 ]; then
 fi
 
 %post syndic
-%systemd_post salt-syndic.service
+# %%systemd_post salt-syndic.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-syndic.service >/dev/null 2>&1 || :
+else
+  # Initial installation
+  systemctl preset salt-syndic.service >/dev/null 2>&1 || :
+fi
 ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 
 %post minion
-%systemd_post salt-minion.service
+# %%systemd_post salt-minion.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-minion.service >/dev/null 2>&1 || :
+else
+  # Initial installation
+  systemctl preset salt-minion.service >/dev/null 2>&1 || :
+fi
 ln -s -f /opt/saltstack/salt/salt-minion %{_bindir}/salt-minion
 ln -s -f /opt/saltstack/salt/salt-call %{_bindir}/salt-call
 ln -s -f /opt/saltstack/salt/salt-proxy %{_bindir}/salt-proxy
@@ -503,7 +540,14 @@ fi
 ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 
 %post api
-%systemd_post salt-api.service
+# %%systemd_post salt-api.service
+if [ $1 -gt 1 ] ; then
+  # Upgrade
+  systemctl retry-restart salt-api.service >/dev/null 2>&1 || :
+else
+  # Initial installation
+  systemctl preset salt-api.service >/dev/null 2>&1 || :
+fi
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
 
 
@@ -544,7 +588,12 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun master
-%systemd_postun_with_restart salt-master.service
+# %%systemd_postun_with_restart salt-master.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+  # Package upgrade, not uninstall
+  systemctl try-restart salt-master.service >/dev/null 2>&1 || :
+fi
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-minion | grep Name | grep salt-minion)" ]; then
@@ -560,10 +609,20 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun syndic
-%systemd_postun_with_restart salt-syndic.service
+# %%systemd_postun_with_restart salt-syndic.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+  # Package upgrade, not uninstall
+  systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
+fi
 
 %postun minion
-%systemd_postun_with_restart salt-minion.service
+# %%systemd_postun_with_restart salt-minion.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+  # Package upgrade, not uninstall
+  systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+fi
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
     if [ -z "$(rpm -qi salt-master | grep Name | grep salt-master)" ]; then
@@ -579,10 +638,65 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun api
-%systemd_postun_with_restart salt-api.service
-
+# %%systemd_postun_with_restart salt-api.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+  # Package upgrade, not uninstall
+  systemctl try-restart salt-api.service >/dev/null 2>&1 || :
+fi
 
 %changelog
+* Tue Feb 20 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.7
+
+# Deprecated
+
+- Deprecate and stop using ``salt.features`` [#65951](https://github.com/saltstack/salt/issues/65951)
+
+# Changed
+
+- Change module search path priority, so Salt extensions can be overridden by syncable modules and module_dirs. You can switch back to the old logic by setting features.enable_deprecated_module_search_path_priority to true, but it will be removed in Salt 3008. [#65938](https://github.com/saltstack/salt/issues/65938)
+
+# Fixed
+
+- Fix an issue with mac_shadow that was causing a command execution error when
+  retrieving values that were not yet set. For example, retrieving last login
+  before the user had logged in. [#34658](https://github.com/saltstack/salt/issues/34658)
+- Fixed an issue when keys didn't match because of line endings [#52289](https://github.com/saltstack/salt/issues/52289)
+- Corrected encoding of credentials for use with Artifactory [#63063](https://github.com/saltstack/salt/issues/63063)
+- Use `send_multipart` instead of `send` when sending multipart message. [#65018](https://github.com/saltstack/salt/issues/65018)
+- Fix an issue where the minion would crash on Windows if some of the grains
+  failed to resolve [#65154](https://github.com/saltstack/salt/issues/65154)
+- Fix issue with openscap when the error was outside the expected scope. It now
+  returns failed with the error code and the error [#65193](https://github.com/saltstack/salt/issues/65193)
+- Upgrade relenv to 0.15.0 to fix namespaced packages installed by salt-pip [#65433](https://github.com/saltstack/salt/issues/65433)
+- Fix regression of fileclient re-use when rendering sls pillars and states [#65450](https://github.com/saltstack/salt/issues/65450)
+- Fixes the s3fs backend computing the local cache's files with the wrong hash type [#65589](https://github.com/saltstack/salt/issues/65589)
+- Fixed Salt-SSH pillar rendering and state rendering with nested SSH calls when called via saltutil.cmd or in an orchestration [#65670](https://github.com/saltstack/salt/issues/65670)
+- Fix boto execution module loading [#65691](https://github.com/saltstack/salt/issues/65691)
+- Removed PR 65185 changes since incomplete solution [#65692](https://github.com/saltstack/salt/issues/65692)
+- catch only ret/ events not all returning events. [#65727](https://github.com/saltstack/salt/issues/65727)
+- Fix nonsensical time in fileclient timeout error. [#65752](https://github.com/saltstack/salt/issues/65752)
+- Fixes an issue when reading/modifying ini files that contain unicode characters [#65777](https://github.com/saltstack/salt/issues/65777)
+- added https proxy to the list of proxies so that requests knows what to do with https based proxies [#65824](https://github.com/saltstack/salt/issues/65824)
+- Ensure minion channels are closed on any master connection error. [#65932](https://github.com/saltstack/salt/issues/65932)
+- Fixed issue where Salt can't find libcrypto when pip installed from a cloned repo [#65954](https://github.com/saltstack/salt/issues/65954)
+- Fix RPM package systemd scriptlets to make RPM packages more universal [#65987](https://github.com/saltstack/salt/issues/65987)
+- Fixed an issue where fileclient requests during Pillar rendering cause
+  fileserver backends to be needlessly refreshed. [#65990](https://github.com/saltstack/salt/issues/65990)
+- Fix exceptions being set on futures that are already done in ZeroMQ transport [#66006](https://github.com/saltstack/salt/issues/66006)
+- Use hmac compare_digest method in hashutil module to mitigate potential timing attacks [#66041](https://github.com/saltstack/salt/issues/66041)
+- Fix request channel default timeout regression. In 3006.5 it was changed from
+  60 to 30 and is now set back to 60 by default. [#66061](https://github.com/saltstack/salt/issues/66061)
+- Upgrade relenv to 0.15.1 to fix debugpy support. [#66094](https://github.com/saltstack/salt/issues/66094)
+
+# Security
+
+- Bump to ``cryptography==42.0.0`` due to https://github.com/advisories/GHSA-3ww4-gg4f-jr7f
+
+  In the process, we were also required to update to ``pyOpenSSL==24.0.0`` [#66004](https://github.com/saltstack/salt/issues/66004)
+- Bump to `cryptography==42.0.3` due to https://github.com/advisories/GHSA-3ww4-gg4f-jr7f [#66090](https://github.com/saltstack/salt/issues/66090)
+
+
 * Fri Jan 26 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.6
 
 # Changed

@@ -7,6 +7,7 @@ import pytest
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 class SaltcheckModuleTest(ModuleCase):
     """
     Test the saltcheck module

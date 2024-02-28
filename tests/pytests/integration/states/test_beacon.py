@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(240)
 def test_present_absent(salt_master, salt_minion, salt_call_cli):
     ret = salt_call_cli.run("beacons.reset")
 

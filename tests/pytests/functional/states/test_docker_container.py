@@ -29,6 +29,7 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing(
         "docker", "dockerd", reason="Docker not installed"
     ),
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
@@ -62,7 +63,7 @@ class Network:
 
     @ip_arg.default
     def _ip_arg(self):
-        return "ipv{}_address".format(self.net.version)
+        return f"ipv{self.net.version}_address"
 
     @enable_ipv6.default
     def _enable_ipv6(self):
@@ -70,12 +71,13 @@ class Network:
 
     @staticmethod
     def arg_map(arg_name):
-        return {
+        nwmap = {
             "ipv4_address": "IPv4Address",
             "ipv6_address": "IPv6Address",
             "links": "Links",
             "aliases": "Aliases",
-        }[arg_name]
+        }
+        return nwmap[arg_name]
 
     @property
     def compressed_subnet(self):
@@ -226,7 +228,7 @@ def test_running_with_no_predefined_volume(
     ret = docker_container.running(
         name=container_name,
         image=image,
-        binds="{}:/foo".format(tmp_path),
+        binds=f"{tmp_path}:/foo",
         shutdown_timeout=1,
     )
     assert ret.result is True
@@ -566,7 +568,7 @@ def test_absent_with_stopped_container(
     # Nothing should have changed
     assert ret.changes == {}
     # Ensure that the comment field says the container does not exist
-    assert ret.comment == "Container '{}' does not exist".format(container_name)
+    assert ret.comment == f"Container '{container_name}' does not exist"
 
 
 @pytest.mark.slow_test
@@ -605,7 +607,7 @@ def test_absent_with_running_container(docker_container, container_name, image):
     # Check that we have a removed container ID in the changes dict
     assert "removed" in ret.changes
     # The comment should mention that the container was removed
-    assert ret.comment == "Forcibly removed container '{}'".format(container_name)
+    assert ret.comment == f"Forcibly removed container '{container_name}'"
 
 
 @pytest.mark.slow_test
@@ -735,7 +737,7 @@ def test_running_networks(
             )
             log.error(msg)
             log.error("Connected networks: %s", connected_networks)
-            pytest.fail("{}. See log for more information.".format(msg))
+            pytest.fail(f"{msg}. See log for more information.")
 
         # Check that container continued running and didn't immediately exit
         assert inspect_result["State"]["Running"]
@@ -758,12 +760,10 @@ def test_running_networks(
             }
         assert ret.changes == expected
 
-        expected = [
-            "Container '{}' is already configured as specified.".format(container_name)
-        ]
+        expected = [f"Container '{container_name}' is already configured as specified."]
         expected.extend(
             [
-                "Reconnected to network '{}' with updated configuration.".format(x.name)
+                f"Reconnected to network '{x.name}' with updated configuration."
                 for x in sorted(networks.nets, key=lambda y: y.name)
             ]
         )
@@ -884,7 +884,7 @@ def test_running_explicit_networks(
         net_changes = ret.changes["container"]["Networks"]
 
         assert (
-            "Container '{}' is already configured as specified.".format(container_name)
+            f"Container '{container_name}' is already configured as specified."
             in ret.comment
         )
 
@@ -893,15 +893,13 @@ def test_running_explicit_networks(
         ]["Networks"]
 
         for default_network in default_networks:
-            assert (
-                "Disconnected from network '{}'.".format(default_network) in ret.comment
-            )
+            assert f"Disconnected from network '{default_network}'." in ret.comment
             assert default_network in net_changes
             # We've tested that the state return is correct, but let's be extra
             # paranoid and check the actual connected networks.
             assert default_network not in updated_networks
 
-        assert "Connected to network '{}'.".format(net.name) in ret.comment
+        assert f"Connected to network '{net.name}'." in ret.comment
 
 
 def test_run_with_onlyif(docker_container, container_name, image, modules):
@@ -1021,7 +1019,7 @@ def test_run_with_creates(
             )
             assert ret.result is True
             assert not ret.changes
-            assert ret.comment == "{} exists".format(good_file1)
+            assert ret.comment == f"{good_file1} exists"
         finally:
             try:
                 modules.docker.rm(container_name, force=True)

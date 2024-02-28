@@ -19,12 +19,12 @@ contextvars
 
 setproctitle>=1.2.3
 timelib>=0.2.5
-pyopenssl>=20.0.1
+pyopenssl>=24.0.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 importlib-metadata>=3.3.0
-cryptography>=41.0.3
+cryptography>=42.0.0
 
 # From old requirements/static/pkg/linux.in
 rpm-vercmp; sys_platform == 'linux'

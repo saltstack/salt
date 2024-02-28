@@ -342,7 +342,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     saltenv = context["saltenv"]
     loader = None
     newline = False
-    file_client = context.get("fileclient", None)
 
     if tmplstr and not isinstance(tmplstr, str):
         # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
@@ -358,11 +357,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if tmplpath:
                 loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
         else:
+            from salt.loader.dunder import __file_client__
+
             loader = salt.utils.jinja.SaltCacheLoader(
                 opts,
                 saltenv,
                 pillar_rend=context.get("_pillar_rend", False),
-                _file_client=file_client,
+                _file_client=context.get("fileclient", __file_client__.value()),
             )
 
         env_args = {"extensions": [], "loader": loader}
