@@ -1,8 +1,7 @@
 import pytest
 import salt.modules.state as statemod
-# from salt.modules.state import apply
-from unittest import mock
-from pprint import pprint
+from tests.support.unit import mock
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -23,6 +22,7 @@ def configure_loader_modules():
             },
         },
     }
+
 
 def test_aggregate_requisites(salt_master, salt_call_cli):
     """Test to ensure that aggregated states honor requisites"""

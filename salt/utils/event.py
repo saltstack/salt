@@ -60,7 +60,6 @@ import logging
 import os
 import time
 from collections.abc import Iterable, MutableMapping
-from typing import Union
 
 import tornado.ioloop
 import tornado.iostream
@@ -174,7 +173,7 @@ def fire_args(opts, jid, tag_data, prefix=""):
             )
 
 
-def tagify(suffix: Union[Iterable[object], object] = "", prefix: str = "", base: str = SALT):
+def tagify(suffix="", prefix="", base=SALT):
     """
     convenience function to build a namespaced event tag string
     from joining with the TABPART character the base, prefix and suffix
@@ -186,7 +185,7 @@ def tagify(suffix: Union[Iterable[object], object] = "", prefix: str = "", base:
     Else use string suffix
 
     """
-    parts: list = [base, TAGS.get(prefix, prefix)]
+    parts = [base, TAGS.get(prefix, prefix)]
     if isinstance(suffix, Iterable) and not isinstance(suffix, str):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append

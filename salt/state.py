@@ -11,7 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 import copy
 import datetime
 import fnmatch
@@ -24,15 +23,16 @@ import re
 import site
 import time
 import traceback
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import Any, Optional, Union
 
 import networkx as nx
+
 import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
 import salt.pillar
-from salt.requisite import DependencyGraph, RequisiteType
 import salt.syspaths as syspaths
 import salt.utils.args
 import salt.utils.crypt
@@ -52,11 +52,11 @@ import salt.utils.verify
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
+from salt.requisite import DependencyGraph, RequisiteType
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.odict import DefaultOrderedDict, OrderedDict
-
 
 log = logging.getLogger(__name__)
 
@@ -72,8 +72,8 @@ LowChunk = dict[str, Any]
 # These are keywords passed to state module functions which are to be used
 # by salt in this state module and not on the actual state module function
 STATE_REQUISITE_KEYWORDS = frozenset(
-    [req_type.value for req_type in RequisiteType] +
-    [
+    [req_type.value for req_type in RequisiteType]
+    + [
         "onfail_stop",
     ]
 )
@@ -211,10 +211,9 @@ def state_args(id_: Hashable, state: Hashable, high: HighData) -> set[Any]:
     return args
 
 
-def find_name(name: str,
-              state: str,
-              high: HighData,
-              strict: bool = False) -> list[tuple[str, dict[str, str]]]:
+def find_name(
+    name: str, state: str, high: HighData, strict: bool = False
+) -> list[tuple[str, dict[str, str]]]:
     """
     Scan high data for the id referencing the given name and return a list of (IDs, state) tuples that match
 
@@ -468,8 +467,7 @@ def _verify_high(high: dict) -> list[str]:
                                 for req in arg[argfirst]:
                                     if isinstance(req, str):
                                         req = {"id": req}
-                                    if (not isinstance(req, dict)
-                                            or len(req) != 1):
+                                    if not isinstance(req, dict) or len(req) != 1:
                                         errors.append(
                                             f"Requisite declaration {req} in "
                                             f"state {id_} in SLS {body['__sls__']} "
@@ -489,10 +487,10 @@ def _verify_high(high: dict) -> list[str]:
                                         )
                                     if not ishashable(req_val):
                                         errors.append(
-                                                f'Illegal requisite "{req_val}", '
-                                                f'in SLS {body["__sls__"]}, '
-                                                "please check your syntax.\n"
-                                            )
+                                            f'Illegal requisite "{req_val}", '
+                                            f'in SLS {body["__sls__"]}, '
+                                            "please check your syntax.\n"
+                                        )
                                         continue
                             # Make sure that there is only one key in the
                             # dict
@@ -604,8 +602,9 @@ class Compiler:
         """
         return _verify_high(high)
 
-    def order_chunks(self,
-                     chunks: Iterable[LowChunk]) -> tuple[list[LowChunk], list[str]]:
+    def order_chunks(
+        self, chunks: Iterable[LowChunk]
+    ) -> tuple[list[LowChunk], list[str]]:
         """
         Sort the chunk list verifying that the chunks follow the order
         specified in the order options.
@@ -633,8 +632,7 @@ class Compiler:
         except nx.NetworkXUnfeasible:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.find_cycle_edges()
-            errors.append(
-                f"Recursive requisites were found: {cycle_edges}")
+            errors.append(f"Recursive requisites were found: {cycle_edges}")
         return sorted_chunks, errors
 
     def compile_high_data(self, high):
@@ -686,18 +684,14 @@ class Compiler:
                         name_order = name_order + 1
                         for fun in funcs:
                             live["fun"] = fun
-                            self.dependency_dag.add_chunk(
-                                live,
-                                False)
+                            self.dependency_dag.add_chunk(live, False)
                             chunks.append(live)
                             break
                 else:
                     live = copy.deepcopy(chunk)
                     for fun in funcs:
                         live["fun"] = fun
-                        self.dependency_dag.add_chunk(
-                            live,
-                            False)
+                        self.dependency_dag.add_chunk(live, False)
                         chunks.append(live)
                         break
         chunks = self.order_chunks(chunks)
@@ -896,14 +890,15 @@ class State:
                     return
                 self.mod_init.add(low["state"])
 
-    def _mod_aggregate(self,
-                       low: LowChunk,
-                       running: dict[str, dict[str, Any]]) -> LowChunk:
+    def _mod_aggregate(
+        self, low: LowChunk, running: dict[str, dict[str, Any]]
+    ) -> LowChunk:
         """
         Execute the aggregation systems to runtime modify the low chunk
         """
-        if not low.get("__agg__") and \
-                (aggregate_chunks := self.dependency_dag.get_aggregate_chunks(low)):
+        if not low.get("__agg__") and (
+            aggregate_chunks := self.dependency_dag.get_aggregate_chunks(low)
+        ):
             agg_fun = f"{low['state']}.mod_aggregate"
             try:
                 low["__agg__"] = True
@@ -1386,8 +1381,9 @@ class State:
         """
         return _verify_high(high)
 
-    def order_chunks(self,
-                     chunks: Iterable[LowChunk]) -> tuple[list[LowChunk], list[str]]:
+    def order_chunks(
+        self, chunks: Iterable[LowChunk]
+    ) -> tuple[list[LowChunk], list[str]]:
         """
         Sort the chunk list verifying that the chunks follow the order
         specified in the order options.
@@ -1419,8 +1415,7 @@ class State:
         except nx.NetworkXUnfeasible:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.find_cycle_edges()
-            errors.append(
-                f"Recursive requisites were found: {cycle_edges}")
+            errors.append(f"Recursive requisites were found: {cycle_edges}")
         return sorted_chunks, errors
 
     def _reconcile_watch_req(self, low: LowChunk):
@@ -1430,15 +1425,17 @@ class State:
         if RequisiteType.WATCH in low:
             if f"{low['state']}.mod_watch" not in self.states:
                 low.setdefault(RequisiteType.REQUIRE.value, []).extend(
-                    low.pop(RequisiteType.WATCH))
+                    low.pop(RequisiteType.WATCH)
+                )
         if RequisiteType.WATCH_ANY in low:
             if f"{low['state']}.mod_watch" not in self.states:
                 low.setdefault(RequisiteType.REQUIRE_ANY.value, []).extend(
-                    low.pop(RequisiteType.WATCH_ANY))
+                    low.pop(RequisiteType.WATCH_ANY)
+                )
 
-    def compile_high_data(self, high: dict[str, Any],
-                          orchestration_jid: Union[str, int, None] = None
-                          ) -> tuple[list[LowChunk], list[str]]:
+    def compile_high_data(
+        self, high: dict[str, Any], orchestration_jid: Union[str, int, None] = None
+    ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
@@ -1501,8 +1498,8 @@ class State:
                             live["fun"] = fun
                             if not self._check_disabled(live, disabled):
                                 self.dependency_dag.add_chunk(
-                                    live,
-                                    self._allow_aggregate(live, agg_opt))
+                                    live, self._allow_aggregate(live, agg_opt)
+                                )
                                 chunks.append(live)
                                 break
                 else:
@@ -1511,8 +1508,8 @@ class State:
                         live["fun"] = fun
                         if not self._check_disabled(live, disabled):
                             self.dependency_dag.add_chunk(
-                                    live,
-                                    self._allow_aggregate(live, agg_opt))
+                                live, self._allow_aggregate(live, agg_opt)
+                            )
                             chunks.append(live)
                             break
         chunks, errors = self.order_chunks(chunks)
@@ -1524,8 +1521,9 @@ class State:
             agg_opt = low["aggregate"]
         check_fun = False
         try:
-            if (agg_opt is True or (
-                    not isinstance(agg_opt, str) and low["state"] in agg_opt)):
+            if agg_opt is True or (
+                not isinstance(agg_opt, str) and low["state"] in agg_opt
+            ):
                 check_fun = True
         except TypeError:
             pass
@@ -1671,11 +1669,13 @@ class State:
             "prereq_in",
         }
         req_in_all = req_in.union(
-            {RequisiteType.REQUIRE.value,
-             RequisiteType.WATCH.value,
-             RequisiteType.ONFAIL.value,
-             "onfail_stop",  # onfail_stop is an undocumented poorly named req type
-             RequisiteType.ONCHANGES.value}
+            {
+                RequisiteType.REQUIRE.value,
+                RequisiteType.WATCH.value,
+                RequisiteType.ONFAIL.value,
+                "onfail_stop",  # onfail_stop is an undocumented poorly named req type
+                RequisiteType.ONCHANGES.value,
+            }
         )
         extend = {}
         errors = []
@@ -1901,9 +1901,7 @@ class State:
                                         continue
                                     # The rkey is not present yet, create it
                                     extend[name][_state].append({rkey: [{state: id_}]})
-        high["__extend__"] = [
-            {key: val} for key, val in extend.items()
-        ]
+        high["__extend__"] = [{key: val} for key, val in extend.items()]
         req_in_high, req_in_errors = self.reconcile_extend(high, strict=True)
         errors.extend(req_in_errors)
         return req_in_high, errors
@@ -2053,10 +2051,13 @@ class State:
         return ret
 
     @salt.utils.decorators.state.OutputUnifier("content_check", "unify")
-    def call(self, low: LowChunk,
-             chunks: Optional[Sequence[LowChunk]] = None,
-             running: Optional[dict[str, dict]] = None,
-             retries: int = 1):
+    def call(
+        self,
+        low: LowChunk,
+        chunks: Optional[Sequence[LowChunk]] = None,
+        running: Optional[dict[str, dict]] = None,
+        retries: int = 1,
+    ):
         """
         Call a state directly with the low data structure, verify data
         before processing.
@@ -2474,8 +2475,11 @@ class State:
             validated_retry_data = retry_defaults
         return validated_retry_data
 
-    def call_chunks(self, chunks: Sequence[LowChunk],
-                    disabled_states: Optional[dict[str, dict[str, Any]]] = None) -> dict[str, Any]:
+    def call_chunks(
+        self,
+        chunks: Sequence[LowChunk],
+        disabled_states: Optional[dict[str, dict[str, Any]]] = None,
+    ) -> dict[str, Any]:
         """
         Iterate over a list of chunks and call them, checking for requires.
         """
@@ -2605,14 +2609,14 @@ class State:
                     retset.add(False)
         return False not in retset
 
-    def _check_requisites(self, low: LowChunk,
-                          running: dict[str, dict[str, Any]]):
+    def _check_requisites(self, low: LowChunk, running: dict[str, dict[str, Any]]):
         """
         Look into the running data to check the status of all requisite
         states.
         """
         reqs = {
-            rtype.value: [] for rtype in (
+            rtype.value: []
+            for rtype in (
                 RequisiteType.REQUIRE,
                 RequisiteType.REQUIRE_ANY,
                 RequisiteType.WATCH,
@@ -2622,7 +2626,8 @@ class State:
                 RequisiteType.ONCHANGES_ANY,
                 RequisiteType.ONFAIL_ALL,
                 RequisiteType.ONCHANGES,
-                RequisiteType.ONCHANGES_ANY)
+                RequisiteType.ONCHANGES_ANY,
+            )
         }
         if not low.get("__prereq__"):
             # if the low chunk is not set to run in test mode for a
@@ -2677,13 +2682,17 @@ class State:
                     else:
                         req_stats.add("onchangesmet")
                     continue
-                if r_type_base == RequisiteType.WATCH.value and run_dict[tag]["changes"]:
+                if (
+                    r_type_base == RequisiteType.WATCH.value
+                    and run_dict[tag]["changes"]
+                ):
                     req_stats.add("change")
                     continue
-                if r_type_base == RequisiteType.PREREQ.value and run_dict[tag]["result"] is None:
-                    req_stats.add("premet")
-                if r_type_base == RequisiteType.PREREQ.value and not run_dict[tag]["result"] is None:
-                    req_stats.add("pre")
+                if r_type_base == RequisiteType.PREREQ.value:
+                    if run_dict[tag]["result"] is None:
+                        req_stats.add("premet")
+                    else:
+                        req_stats.add("pre")
                 else:
                     if run_dict[tag].get("__state_ran__", True):
                         req_stats.add("met")
@@ -2733,9 +2742,9 @@ class State:
 
         return status, reqs
 
-    def event(self, chunk_ret: dict,
-              length: int,
-              fire_event: Union[bool, str] = False) -> None:
+    def event(
+        self, chunk_ret: dict, length: int, fire_event: Union[bool, str] = False
+    ) -> None:
         """
         Fire an event on the master bus
 
@@ -2782,10 +2791,13 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low: LowChunk,
-                   running: dict[str, dict],
-                   chunks: Sequence[LowChunk],
-                   depth: int = 0) -> dict[str, dict]:
+    def call_chunk(
+        self,
+        low: LowChunk,
+        running: dict[str, dict],
+        chunks: Sequence[LowChunk],
+        depth: int = 0,
+    ) -> dict[str, dict]:
         """
         Execute the chunk if the requisites did not fail
         """
@@ -2932,7 +2944,9 @@ class State:
             else:
                 running[tag] = self.call(low, chunks, running)
             if tag in running:
-                self.event(running[tag], len(chunks), fire_event=low.get("fire_event", False))
+                self.event(
+                    running[tag], len(chunks), fire_event=low.get("fire_event", False)
+                )
 
             for sub_state_data in running[tag].pop("sub_state_run", ()):
                 start_time, duration = _calculate_fake_duration()
@@ -2953,11 +2967,14 @@ class State:
 
         return running
 
-    def _call_unmet_requisites(self, low: LowChunk,
-                               running: dict[str, dict],
-                               chunks: Sequence[LowChunk],
-                               tag: str,
-                               depth: int) -> dict[str, dict]:
+    def _call_unmet_requisites(
+        self,
+        low: LowChunk,
+        running: dict[str, dict],
+        chunks: Sequence[LowChunk],
+        tag: str,
+        depth: int,
+    ) -> dict[str, dict]:
         for _, chunk in self.dependency_dag.get_dependencies(low):
             # Check to see if the chunk has been run, only run it if
             # it has not been run already
@@ -3128,8 +3145,8 @@ class State:
                                         if req in low:
                                             low.pop(req)
                                     self.dependency_dag.add_chunk(
-                                        low,
-                                        self._allow_aggregate(low, {}))
+                                        low, self._allow_aggregate(low, {})
+                                    )
                                     mod_watchers.append(low)
         ret = self.call_chunks(mod_watchers)
         running.update(ret)
@@ -3139,8 +3156,9 @@ class State:
         running.update(errors)
         return running
 
-    def call_high(self, high: HighData,
-                  orchestration_jid: Union[str, int, None] = None) -> Union[dict, list]:
+    def call_high(
+        self, high: HighData, orchestration_jid: Union[str, int, None] = None
+    ) -> Union[dict, list]:
         """
         Process a high data call and ensure the defined states.
         """
@@ -3322,7 +3340,7 @@ class LazyAvailStates:
     are many environments.
     """
 
-    def __init__(self, hs: 'BaseHighState'):
+    def __init__(self, hs: "BaseHighState"):
         self._hs = hs
         self._avail: dict[Hashable, Optional[list[str]]] = {"base": None}
         self._filled = False
@@ -3351,8 +3369,9 @@ class LazyAvailStates:
 
     def items(self):
         self._fill()
-        ret = [(saltenv, self.__getitem__(saltenv))
-               for saltenv, _ in self._avail.items()]
+        ret = [
+            (saltenv, self.__getitem__(saltenv)) for saltenv, _ in self._avail.items()
+        ]
         return ret
 
 
@@ -3364,6 +3383,7 @@ class BaseHighState:
     When extending this class, please note that ``self.client`` and
     ``self.matcher`` should be instantiated and handled.
     """
+
     client: salt.fileclient.RemoteClient
     matchers: Mapping[str, Callable]
     state: State
