@@ -475,7 +475,7 @@ ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 # %%systemd_post salt-master.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl retry-restart salt-master.service >/dev/null 2>&1 || :
+  systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 else
   # Initial installation
   systemctl preset salt-master.service >/dev/null 2>&1 || :
@@ -503,7 +503,7 @@ fi
 # %%systemd_post salt-syndic.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl retry-restart salt-syndic.service >/dev/null 2>&1 || :
+  systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 else
   # Initial installation
   systemctl preset salt-syndic.service >/dev/null 2>&1 || :
@@ -514,7 +514,7 @@ ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 # %%systemd_post salt-minion.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl retry-restart salt-minion.service >/dev/null 2>&1 || :
+  systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 else
   # Initial installation
   systemctl preset salt-minion.service >/dev/null 2>&1 || :
@@ -543,7 +543,7 @@ ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 # %%systemd_post salt-api.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl retry-restart salt-api.service >/dev/null 2>&1 || :
+  systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 else
   # Initial installation
   systemctl preset salt-api.service >/dev/null 2>&1 || :
