@@ -74,6 +74,12 @@ The information which can be stored in a roster ``target`` is the following:
                      # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
         ssh_options: # List of options (as 'option=argument') to pass to ssh.
 
+.. warning::
+    Salt will mask any text matching ``passwd`` in the output to avoid leaking
+    passwords in the log or stdout. Using a simple password like ``password``
+    will cause any text in the output matching ``password`` to be replaced with
+    asterisks (``*``).
+
 
 .. _ssh_pre_flight:
 
