@@ -1843,10 +1843,17 @@ def running(
         )
 
         if not skip_comparison:
+            docker_version_info = __salt__["docker.version"]()["VersionInfo"]
+            if docker_version_info < (25, 0):
+                compare_containers_ignore = "Hostname"
+            else:
+                # With docker >= 25.0 we get a new value to compare,
+                # MacAddress, which we'll ignore for now.
+                compare_containers_ignore = "Hostname,MacAddress"
             container_changes = __salt__["docker.compare_containers"](
                 name,
                 temp_container_name,
-                ignore="Hostname",
+                ignore=compare_containers_ignore,
             )
             if container_changes:
                 if _check_diff(container_changes):
