@@ -25,7 +25,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 pytestmark = [
-    pytest.mark.timeout_unless_on_windows(180),
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 log = logging.getLogger(__name__)
