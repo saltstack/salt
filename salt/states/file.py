@@ -2295,7 +2295,7 @@ def managed(
     show_changes=True,
     create=True,
     contents=None,
-    tmp_dir="",
+    tmp_dir=None,
     tmp_ext="",
     contents_pillar=None,
     contents_grains=None,
@@ -2324,6 +2324,7 @@ def managed(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    new_file_diff=False,
     **kwargs,
 ):
     r"""
@@ -3015,6 +3016,12 @@ def managed(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3343,6 +3350,7 @@ def managed(
                     ignore_ordering=ignore_ordering,
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
+                    new_file_diff=new_file_diff,
                     **kwargs,
                 )
                 if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
@@ -3362,9 +3370,11 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if not isinstance(
-                            ret["changes"], tuple
-                        ) and exc.strerror.startswith("Path not found"):
+                        if (
+                            not isinstance(ret["changes"], tuple)
+                            and exc.strerror.startswith("Path not found")
+                            and not new_file_diff
+                        ):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
@@ -3485,6 +3495,7 @@ def managed(
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3577,6 +3588,7 @@ def managed(
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -8029,7 +8041,7 @@ def serialize(
     serializer_opts=None,
     deserializer_opts=None,
     check_cmd=None,
-    tmp_dir="",
+    tmp_dir=None,
     tmp_ext="",
     **kwargs,
 ):
