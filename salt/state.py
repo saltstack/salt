@@ -1299,7 +1299,7 @@ class State:
         Load the modules into the state
         """
         log.info("Loading fresh modules for state activity")
-        self.utils = salt.loader.utils(self.opts)
+        self.utils = salt.loader.utils(self.opts, file_client=self.file_client)
         self.functions = salt.loader.minion_mods(
             self.opts,
             self.state_con,
@@ -1331,6 +1331,7 @@ class State:
             self.functions,
             states=self.states,
             proxy=self.proxy,
+            file_client=self.file_client,
             context=self.state_con,
         )
 

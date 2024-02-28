@@ -8,6 +8,7 @@ from salt.exceptions import SaltInvocationError
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout(240),
     pytest.mark.skip_if_binaries_missing("softwareupdate"),
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,

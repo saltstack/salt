@@ -42,10 +42,11 @@ def test_format_log_list(caplog):
     """
     Test running format_log when ret is not a dictionary
     """
-    ret = ["test1", "test2"]
-    salt.state.format_log(ret)
-    assert "INFO" in caplog.text
-    assert f"{ret}" in caplog.text
+    with caplog.at_level(logging.INFO):
+        ret = ["test1", "test2"]
+        salt.state.format_log(ret)
+        assert "INFO" in caplog.text
+        assert f"{ret}" in caplog.text
 
 
 def test_render_error_on_invalid_requisite(minion_opts):

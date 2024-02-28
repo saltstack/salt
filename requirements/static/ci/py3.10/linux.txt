@@ -17,7 +17,7 @@ aiosignal==1.3.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   aiohttp
-ansible-core==2.16.2
+ansible-core==2.16.3
     # via ansible
 ansible==9.1.0 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
@@ -33,7 +33,7 @@ async-timeout==4.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   aiohttp
-attrs==23.1.0
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   aiohttp
@@ -109,7 +109,7 @@ contextvars==2.4
     #   -r requirements/base.txt
 croniter==1.3.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==41.0.7
+cryptography==42.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -187,7 +187,7 @@ importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-inflect==6.0.4
+inflect==7.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   jaraco.text
@@ -378,7 +378,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -439,13 +439,13 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.1
+python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
 python-telegram-bot==20.3
     # via -r requirements/static/ci/linux.in
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   tempora
@@ -466,7 +466,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.1.1
+pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/zeromq.txt
@@ -588,6 +588,7 @@ types-pyyaml==6.0.1
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   inflect
     #   napalm
     #   pydantic
     #   pytest-shell-utilities

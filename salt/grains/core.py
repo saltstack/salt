@@ -730,46 +730,62 @@ def _windows_virtual(osdata):
     if osdata["kernel"] != "Windows":
         return grains
 
-    grains["virtual"] = osdata.get("virtual", "physical")
+    # Set the default virtual environment to physical, meaning not a VM
+    grains["virtual"] = "physical"
 
-    # It is possible that the 'manufacturer' and/or 'productname' grains
-    # exist but have a value of None.
+    # It is possible that the 'manufacturer' and/or 'productname' grains exist
+    # but have a value of None
     manufacturer = osdata.get("manufacturer", "")
     if manufacturer is None:
         manufacturer = ""
-    productname = osdata.get("productname", "")
-    if productname is None:
-        productname = ""
+    product_name = osdata.get("productname", "")
+    if product_name is None:
+        product_name = ""
+    bios_string = osdata.get("biosstring", "")
+    if bios_string is None:
+        bios_string = ""
 
     if "QEMU" in manufacturer:
         # FIXME: Make this detect between kvm or qemu
         grains["virtual"] = "kvm"
-    if "Bochs" in manufacturer:
+    elif "VRTUAL" in bios_string:  # (not a typo)
+        grains["virtual"] = "HyperV"
+    elif "A M I" in bios_string:
+        grains["virtual"] = "VirtualPC"
+    elif "Xen" in bios_string:
+        grains["virtual"] = "Xen"
+        if "HVM domU" in product_name:
+            grains["virtual_subtype"] = "HVM domU"
+    elif "AMAZON" in bios_string:
+        grains["virtual"] = "EC2"
+    elif "Bochs" in manufacturer:
         grains["virtual"] = "kvm"
     # Product Name: (oVirt) www.ovirt.org
     # Red Hat Community virtualization Project based on kvm
-    elif "oVirt" in productname:
+    elif "oVirt" in product_name:
         grains["virtual"] = "kvm"
         grains["virtual_subtype"] = "oVirt"
     # Red Hat Enterprise Virtualization
-    elif "RHEV Hypervisor" in productname:
+    elif "RHEV Hypervisor" in product_name:
         grains["virtual"] = "kvm"
         grains["virtual_subtype"] = "rhev"
     # Product Name: VirtualBox
-    elif "VirtualBox" in productname:
+    elif "VirtualBox" in product_name:
         grains["virtual"] = "VirtualBox"
     # Product Name: VMware Virtual Platform
-    elif "VMware" in productname:
+    elif "VMware" in product_name:
         grains["virtual"] = "VMware"
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
-    elif "Microsoft" in manufacturer and "Virtual Machine" in productname:
+    elif "Microsoft" in manufacturer and "Virtual Machine" in product_name:
         grains["virtual"] = "VirtualPC"
+    elif "OpenStack" in product_name:
+        grains["virtual"] = "OpenStack"
     # Manufacturer: Parallels Software International Inc.
     elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
     # Apache CloudStack
-    elif "CloudStack KVM Hypervisor" in productname:
+    elif "CloudStack KVM Hypervisor" in product_name:
         grains["virtual"] = "kvm"
         grains["virtual_subtype"] = "cloudstack"
     return grains
@@ -1498,88 +1514,143 @@ def _windows_platform_data():
     if not HAS_WMI:
         return {}
 
+    grains = {}
     with salt.utils.winapi.Com():
         wmi_c = wmi.WMI()
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
-        systeminfo = wmi_c.Win32_ComputerSystem()[0]
-        # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
-        osinfo = wmi_c.Win32_OperatingSystem()[0]
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
-        biosinfo = wmi_c.Win32_BIOS()[0]
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
-        timeinfo = wmi_c.Win32_TimeZone()[0]
-        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
-        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
+        try:
+            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
+            systeminfo = wmi_c.Win32_ComputerSystem()[0]
+            grains.update(
+                {
+                    "manufacturer": _clean_value(
+                        "manufacturer", systeminfo.Manufacturer
+                    ),
+                    "productname": _clean_value("productname", systeminfo.Model),
+                }
+            )
+        except IndexError:
+            grains.update({"manufacturer": None, "productname": None})
+            log.warning("Computer System info not available on this system")
+
+        try:
+            # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
+            osinfo = wmi_c.Win32_OperatingSystem()[0]
+            os_release = _windows_os_release_grain(
+                caption=osinfo.Caption, product_type=osinfo.ProductType
+            )
+            grains.update(
+                {
+                    "kernelrelease": _clean_value("kernelrelease", osinfo.Version),
+                    "osfullname": _clean_value("osfullname", osinfo.Caption),
+                    "osmanufacturer": _clean_value(
+                        "osmanufacturer", osinfo.Manufacturer
+                    ),
+                    "osrelease": _clean_value("osrelease", os_release),
+                    "osversion": _clean_value("osversion", osinfo.Version),
+                }
+            )
+        except IndexError:
+            grains.update(
+                {
+                    "kernelrelease": None,
+                    "osfullname": None,
+                    "osmanufacturer": None,
+                    "osrelease": None,
+                    "osversion": None,
+                }
+            )
+            log.warning("Operating System info not available on this system")
+
+        try:
+            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
+            biosinfo = wmi_c.Win32_BIOS()[0]
+            grains.update(
+                {
+                    # bios name had a bunch of whitespace appended to it in my testing
+                    # 'PhoenixBIOS 4.0 Release 6.0     '
+                    "biosversion": _clean_value("biosversion", biosinfo.Name.strip()),
+                    "biosstring": _clean_value("string", biosinfo.Version),
+                    "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
+                }
+            )
+        except IndexError:
+            grains.update(
+                {"biosstring": None, "biosversion": None, "serialnumber": None}
+            )
+            log.warning("BIOS info not available on this system")
+
+        try:
+            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
+            timeinfo = wmi_c.Win32_TimeZone()[0]
+            grains.update(
+                {
+                    "timezone": _clean_value("timezone", timeinfo.Description),
+                }
+            )
+        except IndexError:
+            grains.update({"timezone": None})
+            log.warning("TimeZone info not available on this system")
+
+        try:
+            # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+            csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
+            grains.update(
+                {
+                    "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
+                }
+            )
+        except IndexError:
+            grains.update({"uuid": None})
+            log.warning("Computer System Product info not available on this system")
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboard = {"product": None, "serial": None}
         try:
             motherboardinfo = wmi_c.Win32_BaseBoard()[0]
-            motherboard["product"] = motherboardinfo.Product
-            motherboard["serial"] = motherboardinfo.SerialNumber
+            grains.update(
+                {
+                    "motherboard": {
+                        "productname": _clean_value(
+                            "motherboard.productname", motherboardinfo.Product
+                        ),
+                        "serialnumber": _clean_value(
+                            "motherboard.serialnumber", motherboardinfo.SerialNumber
+                        ),
+                    },
+                }
+            )
         except IndexError:
+            grains.update(
+                {
+                    "motherboard": {"productname": None, "serialnumber": None},
+                }
+            )
             log.debug("Motherboard info not available on this system")
 
-        kernel_version = platform.version()
-        info = salt.utils.win_osinfo.get_os_version_info()
+        grains.update(
+            {
+                "kernelversion": _clean_value("kernelversion", platform.version()),
+            }
+        )
         net_info = salt.utils.win_osinfo.get_join_info()
-
-        service_pack = None
-        if info["ServicePackMajor"] > 0:
-            service_pack = "".join(["SP", str(info["ServicePackMajor"])])
-
-        os_release = _windows_os_release_grain(
-            caption=osinfo.Caption, product_type=osinfo.ProductType
+        grains.update(
+            {
+                "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
+                "windowsdomaintype": _clean_value(
+                    "windowsdomaintype", net_info["DomainType"]
+                ),
+            }
         )
 
-        grains = {
-            "kernelrelease": _clean_value("kernelrelease", osinfo.Version),
-            "kernelversion": _clean_value("kernelversion", kernel_version),
-            "osversion": _clean_value("osversion", osinfo.Version),
-            "osrelease": _clean_value("osrelease", os_release),
-            "osservicepack": _clean_value("osservicepack", service_pack),
-            "osmanufacturer": _clean_value("osmanufacturer", osinfo.Manufacturer),
-            "manufacturer": _clean_value("manufacturer", systeminfo.Manufacturer),
-            "productname": _clean_value("productname", systeminfo.Model),
-            # bios name had a bunch of whitespace appended to it in my testing
-            # 'PhoenixBIOS 4.0 Release 6.0     '
-            "biosversion": _clean_value("biosversion", biosinfo.Name.strip()),
-            "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
-            "osfullname": _clean_value("osfullname", osinfo.Caption),
-            "timezone": _clean_value("timezone", timeinfo.Description),
-            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
-            "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
-            "windowsdomaintype": _clean_value(
-                "windowsdomaintype", net_info["DomainType"]
-            ),
-            "motherboard": {
-                "productname": _clean_value(
-                    "motherboard.productname", motherboard["product"]
-                ),
-                "serialnumber": _clean_value(
-                    "motherboard.serialnumber", motherboard["serial"]
-                ),
-            },
-        }
-
-        # test for virtualized environments
-        # I only had VMware available so the rest are unvalidated
-        if "VRTUAL" in biosinfo.Version:  # (not a typo)
-            grains["virtual"] = "HyperV"
-        elif "A M I" in biosinfo.Version:
-            grains["virtual"] = "VirtualPC"
-        elif "VMware" in systeminfo.Model:
-            grains["virtual"] = "VMware"
-        elif "VirtualBox" in systeminfo.Model:
-            grains["virtual"] = "VirtualBox"
-        elif "Xen" in biosinfo.Version:
-            grains["virtual"] = "Xen"
-            if "HVM domU" in systeminfo.Model:
-                grains["virtual_subtype"] = "HVM domU"
-        elif "OpenStack" in systeminfo.Model:
-            grains["virtual"] = "OpenStack"
-        elif "AMAZON" in biosinfo.Version:
-            grains["virtual"] = "EC2"
+        info = salt.utils.win_osinfo.get_os_version_info()
+        if info["ServicePackMajor"] > 0:
+            service_pack = "".join(["SP", str(info["ServicePackMajor"])])
+            grains.update(
+                {
+                    "osservicepack": _clean_value("osservicepack", service_pack),
+                }
+            )
+        else:
+            grains.update({"osservicepack": None})
 
     return grains
 

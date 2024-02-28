@@ -22,6 +22,31 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def connect_master_mock():
+    class ConnectMasterMock:
+        """
+        Mock connect master call.
+
+        The first call will raise an exception stored on the exc attribute.
+        Subsequent calls will return True.
+        """
+
+        def __init__(self):
+            self.calls = 0
+            self.exc = Exception
+
+        @tornado.gen.coroutine
+        def __call__(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                raise self.exc()
+            else:
+                return True
+
+    return ConnectMasterMock()
+
+
 def test_minion_load_grains_false(minion_opts):
     """
     Minion does not generate grains when load_grains is False
@@ -1126,3 +1151,55 @@ def test_load_args_and_kwargs(minion_opts):
     _args = [{"max_sleep": 40, "__kwarg__": True}]
     with pytest.raises(salt.exceptions.SaltInvocationError):
         ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
+
+
+async def test_connect_master_salt_client_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an salt client error while connecting to master.
+    """
+    minion_opts["acceptance_wait_time"] = 0
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+
+    connect_master_mock.exc = SaltClientError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    await mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # The first call raised an error which caused minion.destroy to get called,
+    # the second call is a success.
+    assert minion.connect_master.calls == 2
+
+
+async def test_connect_master_unresolveable_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an unresolvable while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = SaltMasterUnresolvableError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    await mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # Unresolvable errors break out of the loop.
+    assert minion.connect_master.calls == 1
+
+
+async def test_connect_master_general_exception_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an un-handled exception while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = SaltClientError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    await mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # The first call raised an error which caused minion.destroy to get called,
+    # the second call is a success.
+    assert minion.connect_master.calls == 2

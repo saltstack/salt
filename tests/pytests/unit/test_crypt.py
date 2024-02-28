@@ -1,6 +1,6 @@
 import pytest
 
-import salt.channel.server as server
+import salt.crypt as crypt
 
 
 @pytest.fixture
@@ -22,8 +22,7 @@ def key_data():
 def test__clean_key(key_data, linesep):
     tst_key = linesep.join(key_data)
     chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) == clean_func(chk_key)
+    assert crypt.clean_key(tst_key) == crypt.clean_key(chk_key)
 
 
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
@@ -31,5 +30,4 @@ def test__clean_key_mismatch(key_data, linesep):
     tst_key = linesep.join(key_data)
     tst_key = tst_key.replace("5", "4")
     chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) != clean_func(chk_key)
+    assert crypt.clean_key(tst_key) != crypt.clean_key(chk_key)
