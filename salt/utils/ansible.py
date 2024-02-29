@@ -12,7 +12,7 @@ __virtualname__ = "ansible"
 log = logging.getLogger(__name__)
 
 
-def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
+def __virtual__():
     if salt.utils.path.which("ansible-inventory"):
         return __virtualname__
     return (False, "Install `ansible` to use inventory")

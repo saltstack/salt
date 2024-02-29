@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from optparse import OptionGroup, OptionParser
+from optparse import OptionGroup, OptionParser  # pylint: disable=deprecated-module
 
 logging.QUIET = 0
 logging.GARBAGE = 1
@@ -236,7 +236,7 @@ def build_centos(opts):
     log.info("Building CentOS RPM")
     log.info("Detecting major release")
     try:
-        with open("/etc/redhat-release") as fp_:
+        with open("/etc/redhat-release", encoding="utf-8") as fp_:
             redhat_release = fp_.read().strip()
             major_release = int(redhat_release.split()[2].split(".")[0])
     except (ValueError, IndexError):
@@ -322,9 +322,9 @@ def build_centos(opts):
 
     # Prepare SPEC file
     spec_path = os.path.join(opts.build_dir, "SPECS", "salt.spec")
-    with open(opts.spec_file) as spec:
+    with open(opts.spec_file, encoding="utf-8") as spec:
         spec_lines = spec.read().splitlines()
-    with open(spec_path, "w") as fp_:
+    with open(spec_path, "w", encoding="utf-8") as fp_:
         for line in spec_lines:
             if line.startswith("%global srcver "):
                 line = f"%global srcver {salt_srcver}"

@@ -15,6 +15,7 @@ import logging
 import os
 from ctypes import wintypes
 
+# pylint: disable=3rd-party-module-not-gated
 import ntsecuritycon
 import psutil
 import win32api
@@ -22,6 +23,8 @@ import win32con
 import win32process
 import win32security
 import win32service
+
+# pylint: enable=3rd-party-module-not-gated
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -398,7 +401,7 @@ class ContiguousUnicode(ctypes.Structure):
 
     @classmethod
     def from_address_copy(cls, address, size=None):
-        x = ctypes.Structure.__new__(cls)
+        x = ctypes.Structure.__new__(cls)  # pylint: disable=no-value-for-parameter
         if size is not None:
             ctypes.resize(x, size)
         ctypes.memmove(ctypes.byref(x), address, ctypes.sizeof(x))

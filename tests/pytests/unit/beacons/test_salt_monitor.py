@@ -1,5 +1,3 @@
-# pylint: disable=E8231
-# Salt libs
 import pytest
 
 import salt.beacons.salt_monitor as salt_monitor

@@ -13,7 +13,7 @@
 
 """Unittest for ipaddress module."""
 
-# pylint: disable=string-substitution-usage-error,pointless-statement,abstract-method,cell-var-from-loop
+# pylint: disable=pointless-statement,abstract-method,cell-var-from-loop,unnecessary-dunder-call
 
 import contextlib
 import functools

@@ -41,8 +41,6 @@ from salt._logging import (
 try:
     import psutil
 
-    if not hasattr(psutil, "virtual_memory"):
-        raise ImportError("Version of psutil too old.")
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -89,7 +87,7 @@ def _gather_buffer_space():
 
     Result is in bytes.
     """
-    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
+    if HAS_PSUTIL:
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:

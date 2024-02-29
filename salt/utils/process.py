@@ -592,7 +592,7 @@ class ProcessManager:
             # with the tree option will not be able to find them.
             return
 
-        for pid in self._process_map.copy().keys():
+        for pid in self._process_map.copy():
             try:
                 os.kill(pid, signal_)
             except OSError as exc:
@@ -944,7 +944,7 @@ class Process(multiprocessing.Process):
             "logging_config": self.__logging_config__,
         }
 
-    def __decorate_run(self, run_func):
+    def __decorate_run(self, run_func):  # pylint: disable=unused-private-member
         @functools.wraps(run_func)
         def wrapped_run_func():
             # Static after fork method, always needs to happen first

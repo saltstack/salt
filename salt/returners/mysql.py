@@ -148,10 +148,6 @@ import salt.utils.data
 import salt.utils.job
 import salt.utils.json
 
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
-
-
 try:
     # Trying to import MySQLdb
     import MySQLdb

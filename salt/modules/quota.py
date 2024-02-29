@@ -105,7 +105,7 @@ def set_(device, **kwargs):
         "file-hard-limit": 0,
     }
 
-    current = None
+    current = ret = None
     cmd = "setquota"
     if "user" in kwargs:
         cmd += " -u {} ".format(kwargs["user"])

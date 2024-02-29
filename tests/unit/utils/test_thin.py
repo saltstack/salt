@@ -113,7 +113,8 @@ class SSHThinTestCase(TestCase):
 
         return popen
 
-    def _version_info(self, major=None, minor=None):
+    @staticmethod
+    def _version_info(major=None, minor=None):
         """
         Fake version info.
 
@@ -801,7 +802,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_compression_fallback_py3(self):
         """
@@ -852,7 +853,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_control_files_written_py3(self):
         """
@@ -905,7 +906,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_main_content_files_written_py3(self):
@@ -974,7 +975,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
@@ -1087,7 +1088,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     def test_gen_thin_control_files_written_access_denied_cwd(self):
         """
         Test thin.gen_thin function if control files are written (version, salt-call etc)

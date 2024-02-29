@@ -157,7 +157,10 @@ class SSDPFactory(SSDPBase):
         :return:
         """
         tries = 0
-        slp_time = lambda: 0.5 / random.randint(10, 30)
+
+        def slp_time():
+            return 0.5 / random.randint(10, 30)
+
         slp = slp_time()
         while tries < attempts:
             try:

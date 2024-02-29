@@ -112,15 +112,17 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
             cls.salt_dunder[func] = MockDocstringable(docstring)
             cls._docstrings[func] = docstring
 
-            module = func.split(".")[0]
+            module = func.split(".", maxsplit=1)[0]
             cls._statedocstrings[func] = docstring
             cls._statedocstrings[module] = f"docstring for {module}"
 
-            cls._modules.add(func.split(".")[0])
+            cls._modules.add(func.split(".", maxsplit=1)[0])
 
             docstring = f"docstring for {func}"
             mock = MockDocstringable(docstring)
-            mock.set_module_docstring("docstring for {}".format(func.split(".")[0]))
+            mock.set_module_docstring(
+                "docstring for {}".format(func.split(".", maxsplit=1)[0])
+            )
             Mockstate.State.states[func] = mock
 
         cls._modules = sorted(list(cls._modules))

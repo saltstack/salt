@@ -4123,7 +4123,7 @@ def readlink(path, canonicalize=False):
         except OSError as exc:
             if exc.errno == errno.EINVAL:
                 raise CommandExecutionError(f"Not a symbolic link: {path}")
-            raise CommandExecutionError(exc.__str__())
+            raise CommandExecutionError(str(exc))
 
 
 def readdir(path):
@@ -6063,7 +6063,7 @@ def get_diff(
                 continue
             paths.append(cached_path)
         except MinionError as exc:
-            errors.append(salt.utils.stringutils.to_unicode(exc.__str__()))
+            errors.append(salt.utils.stringutils.to_unicode(str(exc)))
             continue
 
     if errors:

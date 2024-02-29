@@ -319,7 +319,10 @@ def _blkid_output(out):
     """
     Parse blkid output.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = {}
     for dev_meta in flt(out.split("\n\n")):
         dev = {}
@@ -439,11 +442,13 @@ def mkfs(
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' lso='logdev=/dev/sda2,size=10000b'
     """
 
-    getopts = lambda args: dict(
-        (args and ("=" in args) and args or None)
-        and [kw.split("=") for kw in args.split(",")]
-        or []
-    )
+    def getopts(args):
+        return dict(
+            (args and ("=" in args) and args or None)
+            and [kw.split("=") for kw in args.split(",")]
+            or []
+        )
+
     cmd = ["mkfs.xfs"]
     if label:
         cmd.append("-L")

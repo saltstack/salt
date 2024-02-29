@@ -685,7 +685,7 @@ def latest(
             name, https_user, https_pass, https_only=True
         )
     except ValueError as exc:
-        return _fail(ret, exc.__str__())
+        return _fail(ret, str(exc))
 
     redacted_fetch_url = salt.utils.url.redact_http_basic_auth(desired_fetch_url)
 
@@ -1063,6 +1063,7 @@ def latest(
                 if (not revs_match and not update_head) and (
                     branch is None or branch == local_branch
                 ):
+                    # pylint: disable=used-before-assignment
                     ret["comment"] = (
                         "{} is already present and local HEAD ({}) does not "
                         "match, but update_head=False. HEAD has not been "
@@ -1787,9 +1788,7 @@ def latest(
                         )
                         log.error(msg, name)
                         # Disable check for string substitution
-                        return _fail(
-                            ret, msg % "Repository", comments
-                        )  # pylint: disable=E1321
+                        return _fail(ret, msg % "Repository", comments)
                 else:
                     if remote_rev_type == "tag" and rev not in __salt__[
                         "git.list_tags"
@@ -2297,7 +2296,7 @@ def detached(
             name, https_user, https_pass, https_only=True
         )
     except ValueError as exc:
-        return _fail(ret, exc.__str__())
+        return _fail(ret, str(exc))
 
     redacted_fetch_url = salt.utils.url.redact_http_basic_auth(desired_fetch_url)
 

@@ -113,7 +113,7 @@ def _post_message(message, chat_id, token):
         parameters["text"] = message
 
     try:
-        response = requests.post(url, data=parameters)
+        response = requests.post(url, data=parameters, timeout=120)
         result = response.json()
 
         log.debug("Raw response of the telegram request is %s", response)

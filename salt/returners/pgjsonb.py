@@ -170,10 +170,6 @@ import salt.returners
 import salt.utils.data
 import salt.utils.job
 
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
-
-
 try:
     import psycopg2
     import psycopg2.extras

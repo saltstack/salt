@@ -379,9 +379,7 @@ def list_(
         try:
             dirs, files, links = func(name, cached, *args)
         except OSError as exc:
-            raise CommandExecutionError(
-                f"Failed to list contents of {name}: {exc.__str__()}"
-            )
+            raise CommandExecutionError(f"Failed to list contents of {name}: {exc}")
         except CommandExecutionError as exc:
             raise
         except Exception as exc:  # pylint: disable=broad-except
@@ -395,9 +393,7 @@ def list_(
                 log.debug("Cleaned cached archive %s", cached)
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
-                    log.warning(
-                        "Failed to clean cached archive %s: %s", cached, exc.__str__()
-                    )
+                    log.warning("Failed to clean cached archive %s: %s", cached, exc)
 
         if strip_components:
             for item in (dirs, files, links):
@@ -796,8 +792,8 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
         os.setegid(uinfo["gid"])
         os.seteuid(uinfo["uid"])
 
+    exc = None
     try:
-        exc = None
         archived_files = []
         with contextlib.closing(
             zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED, zip64)
@@ -1199,7 +1195,7 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None, use_etag=F
     except zipfile.BadZipfile:
         raise CommandExecutionError(f"{name} is not a ZIP file", info=archive_info)
     except Exception as exc:  # pylint: disable=broad-except
-        raise CommandExecutionError(exc.__str__(), info=archive_info)
+        raise CommandExecutionError(exc, info=archive_info)
     else:
         ret = False
 
@@ -1209,9 +1205,7 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None, use_etag=F
             log.debug("Cleaned cached archive %s", cached)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                log.warning(
-                    "Failed to clean cached archive %s: %s", cached, exc.__str__()
-                )
+                log.warning("Failed to clean cached archive %s: %s", cached, exc)
     return ret
 
 

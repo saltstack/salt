@@ -45,7 +45,7 @@ def test_empty_config():
 
 def test_network_info_equal(stub_net_io_counters):
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=stub_net_io_counters),
     ):
         config = [
@@ -91,7 +91,7 @@ def test_network_info_equal(stub_net_io_counters):
 
 def test_network_info_greater_than(stub_net_io_counters):
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=stub_net_io_counters),
     ):
         config = [

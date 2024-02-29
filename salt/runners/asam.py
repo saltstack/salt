@@ -146,7 +146,7 @@ def _get_asam_configuration(driver_url=""):
 
 
 def _make_post_request(url, data, auth, verify=True):
-    r = requests.post(url, data=data, auth=auth, verify=verify)
+    r = requests.post(url, data=data, auth=auth, verify=verify, timeout=120)
     if r.status_code != requests.codes.ok:
         r.raise_for_status()
     else:

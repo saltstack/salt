@@ -102,7 +102,7 @@ class VMWareTest(CloudTest):
         """
         # salt-cloud -p my-instant-clone IC3
         profile_name = "vmware-test-instant-clone"
-        self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
+        self.run_cloud("-a remove_all_snapshots cloud-tests-template-base")
 
         # create the instance
         log_format = "%(message)s"

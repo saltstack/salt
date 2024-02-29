@@ -142,13 +142,13 @@ def rpm(
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
     else:
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         if arch is None:
             ctx.error(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
         if not python_version:
             python_version = shared_constants["python_version"]
@@ -760,7 +760,9 @@ def salt_onedir(
         shutil.copyfile(src, dst)
 
     # Add package type file for package grain
-    with open(pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w") as fp:
+    with open(
+        pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w", encoding="utf-8"
+    ) as fp:
         fp.write("onedir")
 
 

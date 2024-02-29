@@ -5,15 +5,12 @@ import os.path
 import random
 import string
 
-import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 import pytest
-from pkg_resources import (  # pylint: disable=3rd-party-module-not-gated
-    DistributionNotFound,
-)
 
 import salt.config
 import salt.loader
 import salt.modules.boto_vpc as boto_vpc
+from salt._compat import importlib_metadata
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.utils.versions import Version
@@ -117,8 +114,8 @@ def _get_moto_version():
         return Version(str(moto.__version__))
     except AttributeError:
         try:
-            return Version(pkg_resources.get_distribution("moto").version)
-        except DistributionNotFound:
+            return Version(importlib_metadata.version("moto"))
+        except importlib_metadata.PackageNotFoundError:
             return False
 
 

@@ -7,7 +7,7 @@ on a single system to test scale capabilities
 # pylint: disable=resource-leakage
 
 import hashlib
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import random
 import shutil

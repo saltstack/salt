@@ -525,12 +525,15 @@ def _get_disks(conn, dom):
                         "disk size": vol_info[2],
                     }
 
+                    _nodes = elem.findall(  # pylint: disable=cell-var-from-loop
+                        ".//backingStore[source]"
+                    )
                     backing_files = [
                         {
                             "file": node.find("source").get("file"),
                             "file format": node.find("format").get("type"),
                         }
-                        for node in elem.findall(".//backingStore[source]")
+                        for node in _nodes
                     ]
 
                     if backing_files:
@@ -569,7 +572,7 @@ def _get_disks(conn, dom):
                     disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                     continue
 
-                if qemu_target in all_volumes.keys():
+                if qemu_target in all_volumes:
                     # If the qemu_target is a known path, output a volume
                     volume = all_volumes[qemu_target]
                     qemu_target, extra_properties = _get_disk_volume_data(
@@ -604,7 +607,7 @@ def _get_disks(conn, dom):
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
-                if qemu_target in all_volumes.keys():
+                if qemu_target in all_volumes:
                     volume = all_volumes[qemu_target]
                     qemu_target, extra_properties = _get_disk_volume_data(
                         volume["pool"], volume["name"]
@@ -1008,7 +1011,7 @@ def _gen_xml(
     efi_value = context["boot"].get("efi", None) if boot else None
     if efi_value is True:
         context["boot"]["os_attrib"] = "firmware='efi'"
-    elif efi_value is not None and type(efi_value) != bool:
+    elif efi_value is not None and not isinstance(efi_value, bool):
         raise SaltInvocationError("Invalid efi value")
 
     if os_type == "xen":
@@ -1958,7 +1961,7 @@ def _handle_efi_param(boot, desc):
         return True
 
     # check the case that loader tag might be present. This happens after the vm ran
-    elif type(efi_value) == bool and os_attrib == {}:
+    elif isinstance(efi_value, bool) and os_attrib == {}:
         if efi_value is True and parent_tag.find("loader") is None:
             parent_tag.set("firmware", "efi")
             return True
@@ -1966,7 +1969,7 @@ def _handle_efi_param(boot, desc):
             parent_tag.remove(parent_tag.find("loader"))
             parent_tag.remove(parent_tag.find("nvram"))
             return True
-    elif type(efi_value) != bool:
+    elif not isinstance(efi_value, bool):
         raise SaltInvocationError("Invalid efi value")
     return False
 

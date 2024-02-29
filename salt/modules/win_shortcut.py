@@ -83,7 +83,9 @@ def get(path):
 
     # This will load the existing shortcut
     with salt.utils.winapi.Com():
-        shell = win32com.client.Dispatch("WScript.Shell")
+        shell = win32com.client.Dispatch(  # pylint: disable=used-before-assignment
+            "WScript.Shell"
+        )
         shortcut = shell.CreateShortcut(path)
 
         arguments = ""

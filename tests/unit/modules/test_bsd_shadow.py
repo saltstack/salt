@@ -12,6 +12,7 @@ from tests.support.unit import TestCase
 
 shadow = pytest.importorskip("salt.modules.bsd_shadow")
 
+
 # Although bsd_shadow runs on NetBSD and OpenBSD as well, the mocks are
 # currently only designed for FreeBSD.
 

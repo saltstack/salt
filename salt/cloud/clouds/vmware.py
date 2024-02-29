@@ -1646,7 +1646,7 @@ def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""
         snapshots[snapshot_path] = {
             "name": snapshot.name,
             "description": snapshot.description,
-            "created": str(snapshot.createTime).split(".")[0],
+            "created": str(snapshot.createTime).split(".", maxsplit=1)[0],
             "state": snapshot.state,
             "path": snapshot_path,
         }

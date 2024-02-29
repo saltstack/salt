@@ -1,6 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
-
+import argparse
 import modulefinder
 import os
 import pprint
@@ -8,13 +8,6 @@ import sys
 
 import salt.utils.json
 import salt.utils.yaml
-
-try:
-    import argparse  # pylint: disable=minimum-python-version
-
-    HAS_ARGPARSE = True
-except ImportError:
-    HAS_ARGPARSE = False
 
 
 def parse():
@@ -86,8 +79,6 @@ def scan(opts):
 
 
 if __name__ == "__main__":
-    if not HAS_ARGPARSE:
-        print("The argparse python module is required")
     opts = parse()
     try:
         scand = scan(opts)

@@ -259,13 +259,7 @@ class SaltCP:
                 log.debug(
                     "Creating empty dir %s on %starget '%s'",
                     dirname,
-                    (
-                        "{} ".format(
-                            selected_target_option
-                        )  # pylint: disable=str-format-in-logging
-                        if selected_target_option
-                        else ""
-                    ),
+                    f"{selected_target_option} " if selected_target_option else "",
                     tgt,
                 )
                 args = [tgt, "cp.recv_chunked", [remote_path, None], timeout]

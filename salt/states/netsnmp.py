@@ -110,7 +110,7 @@ def _clear_community_details(community_details):
 
     _mode = community_details.get["mode"] = community_details.get("mode").lower()
 
-    if _mode in _COMMUNITY_MODE_MAP.keys():
+    if _mode in _COMMUNITY_MODE_MAP:
         community_details["mode"] = _COMMUNITY_MODE_MAP.get(_mode)
 
     if community_details["mode"] not in ["ro", "rw"]:
@@ -191,7 +191,7 @@ def _create_diff_action(diff, diff_key, key, value):
     DRY to build diff parts (added, removed, updated).
     """
 
-    if diff_key not in diff.keys():
+    if diff_key not in diff:
         diff[diff_key] = {}
     diff[diff_key][key] = value
 

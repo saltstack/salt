@@ -46,7 +46,8 @@ class Network:
                 "Indexing not supported for networks without a custom subnet"
             )
 
-    def arg_map(self, arg_name):
+    @staticmethod
+    def arg_map(arg_name):
         ret = {
             "ipv4_address": "IPv4Address",
             "ipv6_address": "IPv6Address",

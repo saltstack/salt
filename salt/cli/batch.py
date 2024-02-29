@@ -90,7 +90,10 @@ class Batch:
         """
         Return the active number of minions to maintain
         """
-        partition = lambda x: float(x) / 100.0 * len(self.minions)
+
+        def partition(x):
+            return float(x) / 100.0 * len(self.minions)
+
         try:
             if isinstance(self.opts["batch"], str) and "%" in self.opts["batch"]:
                 res = partition(float(self.opts["batch"].strip("%")))

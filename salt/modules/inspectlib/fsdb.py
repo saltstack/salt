@@ -16,15 +16,12 @@
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
-
-
 import csv
 import datetime
 import gzip
 import os
 import re
 import shutil
-import sys
 
 from salt.utils.odict import OrderedDict
 
@@ -182,7 +179,10 @@ class CsvDB:
         :param obj:
         :return:
         """
-        get_type = lambda item: str(type(item)).split("'")[1]
+
+        def get_type(item):
+            return str(type(item)).split("'")[1]
+
         if not os.path.exists(os.path.join(self.db_path, obj._TABLE)):
             with gzip.open(os.path.join(self.db_path, obj._TABLE), "wt") as table_file:
                 csv.writer(table_file).writerow(
@@ -333,14 +333,10 @@ class CsvDB:
         return objects
 
     def _to_type(self, data, type):
-        if type == "int":
+        if type in ("int", "long"):
             data = int(data)
         elif type == "float":
             data = float(data)
-        elif type == "long":
-            # pylint: disable=undefined-variable,incompatible-py3-code
-            data = sys.version_info[0] == 2 and long(data) or int(data)
-            # pylint: enable=undefined-variable,incompatible-py3-code
         else:
             data = str(data)
         return data

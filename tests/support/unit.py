@@ -159,7 +159,6 @@ class TestLoader(_TestLoader):
 
 class TestCase(_TestCase):
 
-    # pylint: disable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
     ##   Commented out because it may be causing tests to hang
     ##   at the end of the run
     #
@@ -179,7 +178,6 @@ class TestCase(_TestCase):
     #            print('\nWARNING: A misbehaving test has modified the working directory!\nThe test suite has reset the working directory '
     #                    'on tearDown() to {0}\n'.format(cls._cwd))
     #            cls._chdir_counter += 1
-    # pylint: enable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)

@@ -188,7 +188,13 @@ def test_paths_log_rotation(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
 
-    if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
+    if install_salt.distro_id not in (
+        "almalinux",
+        "centos",
+        "redhat",
+        "amzn",
+        "fedora",
+    ):
         pytest.skip(
             "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
         )
@@ -296,7 +302,7 @@ def test_paths_log_rotation(
                                 for _path in log_files_list:
                                     log_path = pathlib.Path(_path)
                                     assert log_path.exists()
-                                    with log_path.open("a") as f:
+                                    with log_path.open("a", encoding="utf-8") as f:
                                         f.write("This is a log rotation test\n")
 
                                 # force log rotation

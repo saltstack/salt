@@ -136,7 +136,7 @@ def test_state_sls_id_test_state_test_post_run(salt_call_cli, testfile_path):
     true post the state already being run previously
     """
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES, "testfile")
-    testfile_path.write_text(source.read_text())
+    testfile_path.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
     testfile_path.chmod(0o644)
     ret = salt_call_cli.run("state.sls", "sls-id-test")
     assert ret.returncode == 0

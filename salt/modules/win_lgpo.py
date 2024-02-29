@@ -8682,8 +8682,8 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
     }
     policy_class = policy_class.title()
     policy_data = _policy_info()
-    if policy_class not in policy_data.policies.keys():
-        policy_classes = ", ".join(policy_data.policies.keys())
+    if policy_class not in policy_data.policies:
+        policy_classes = ", ".join(policy_data.policies)
         ret["message"] = (
             'The requested policy class "{}" is invalid, '
             "policy_class should be one of: {}"
@@ -9707,7 +9707,7 @@ def get_policy(
         raise SaltInvocationError("policy_class must be defined")
     policy_class = policy_class.title()
     policy_data = _policy_info()
-    if policy_class not in policy_data.policies.keys():
+    if policy_class not in policy_data.policies:
         policy_classes = ", ".join(policy_data.policies.keys())
         raise CommandExecutionError(
             'The requested policy class "{}" is invalid, policy_class should '

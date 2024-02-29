@@ -621,7 +621,7 @@ class ReqServerChannel:
                 return {"enc": "clear", "load": {"ret": False}}
 
         if not HAS_M2:
-            cipher = PKCS1_OAEP.new(pub)
+            cipher = PKCS1_OAEP.new(pub)  # pylint: disable=used-before-assignment
         ret = {
             "enc": "pub",
             "pub_key": self.master_key.get_pub_str(),

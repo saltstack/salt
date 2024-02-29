@@ -29,12 +29,15 @@ def download_and_verify(fp, name, repo=REPO):
     Download an installer and verify its contents.
     """
     md5 = f"{name}.md5"
-    url = lambda x: f"{repo}/{x}"
-    resp = requests.get(url(md5))
+
+    def url(x):
+        return f"{repo}/{x}"
+
+    resp = requests.get(url(md5), timeout=60)
     if resp.status_code != 200:
         raise Exception("Unable to fetch installer md5")
     installer_md5 = resp.text.strip().split()[0].lower()
-    resp = requests.get(url(name), stream=True)
+    resp = requests.get(url(name), stream=True, timeout=60)
     if resp.status_code != 200:
         raise Exception("Unable to fetch installer")
     md5hsh = hashlib.md5()

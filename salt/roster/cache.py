@@ -220,7 +220,7 @@ def _minion_lookup(minion_id, key, minion):
         try:
             net = ipaddress.ip_network(key, strict=True)
         except ValueError:
-            log.error("%s is an invalid CIDR network", net)
+            log.error("%s is an invalid CIDR network", key)
             return None
 
         for addr in addrs[net.version]:

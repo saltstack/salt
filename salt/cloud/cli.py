@@ -390,12 +390,10 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             self.error(msg.format(exc))
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
-        # pylint: disable=str-format-in-logging
         log.error(
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
-        # pylint: enable=str-format-in-logging
         self.exit(salt.defaults.exitcodes.EX_GENERIC)

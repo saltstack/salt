@@ -148,9 +148,9 @@ def _process_emerge_err(stdout, stderr):
     if slot_conflicts:
         ret["slot conflicts"] = slot_conflicts
 
-    blocked = re.compile(
-        r"(?m)^\[blocks .+\] " r"([^ ]+/[^ ]+-[0-9]+[^ ]+)" r".*$"
-    ).findall(stdout)
+    blocked = re.compile(r"(?m)^\[blocks .+\] ([^ ]+/[^ ]+-[0-9]+[^ ]+).*$").findall(
+        stdout
+    )
 
     unsatisfied = re.compile(r"Error: The above package list contains").findall(stderr)
 
@@ -331,7 +331,9 @@ def _get_upgradable(backtrack=3):
         r".*$"
     )
     keys = ["name", "version"]
-    _get = lambda l, k: l[keys.index(k)]
+
+    def _get(line, k):
+        return line[keys.index(k)]
 
     upgrades = rexp.findall(out)
 

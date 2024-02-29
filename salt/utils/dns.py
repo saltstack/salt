@@ -583,7 +583,6 @@ def lookup(
 
     rdtype = rdtype.upper()
 
-    # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
         ("gai", _lookup_gai, not any((rdtype not in ("A", "AAAA"), servers, secure))),
         ("dnspython", _lookup_dnspython, HAS_DNSPYTHON),
@@ -592,7 +591,6 @@ def lookup(
         ("host", _lookup_host, HAS_HOST and not secure),
         ("nslookup", _lookup_nslookup, HAS_NSLOOKUP and not secure),
     )
-    # pylint: enable=bad-whitespace,multiple-spaces-before-keyword
 
     try:
         if method == "auto":

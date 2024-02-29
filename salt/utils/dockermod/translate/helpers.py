@@ -72,7 +72,7 @@ def get_port_range(port_def):
         if range_start > range_end:
             raise ValueError("start > end")
     except (TypeError, ValueError) as exc:
-        if exc.__str__() == "start > end":
+        if str(exc) == "start > end":
             msg = (
                 "Start of port range ({}) cannot be greater than end of "
                 "port range ({})".format(range_start, range_end)

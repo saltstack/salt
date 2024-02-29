@@ -25,11 +25,11 @@ master config. The configuration is read using :py:func:`config.get
         - "-A FORWARD"
 """
 
+import argparse
 import logging
 import os
 import re
 import string
-import sys
 import uuid
 
 import salt.utils.args
@@ -1080,17 +1080,8 @@ def _parser():
     iptables(8) and iptables-extensions(8) man pages.  They will not all be
     used by all parts of the module; use them intelligently and appropriately.
     """
-    add_arg = None
-    if sys.version.startswith("2.6"):
-        import optparse
-
-        parser = optparse.OptionParser()
-        add_arg = parser.add_option
-    else:
-        import argparse  # pylint: disable=minimum-python-version
-
-        parser = argparse.ArgumentParser()
-        add_arg = parser.add_argument
+    parser = argparse.ArgumentParser()
+    add_arg = parser.add_argument
 
     # COMMANDS
     add_arg("-A", "--append", dest="append", action="append")

@@ -95,7 +95,7 @@ def init(opts):
     __context__["dummy_proxy"] = {"id": opts["id"]}
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:
-        state["initialized"] = True
+        state["initialized"] = True  # pylint: disable=unsupported-assignment-operation
 
 
 def initialized():
@@ -113,12 +113,12 @@ def grains():
     Make up some grains
     """
     with _loaded_state(__opts__) as state:
-        if "grains_cache" not in state:
-            state["grains_cache"] = {
-                "dummy_grain_1": "one",
-                "dummy_grain_2": "two",
-                "dummy_grain_3": "three",
-            }
+        # pylint: disable=unsupported-assignment-operation,unsupported-membership-test
+        state["grains_cache"] = {
+            "dummy_grain_1": "one",
+            "dummy_grain_2": "two",
+            "dummy_grain_3": "three",
+        }
         return state["grains_cache"]
 
 
@@ -127,7 +127,7 @@ def grains_refresh():
     Refresh the grains
     """
     with _loaded_state(__opts__) as state:
-        if "grains_cache" in state:
+        if "grains_cache" in state:  # pylint: disable=unsupported-membership-test
             state.pop("grains_cache")
     return grains()
 
@@ -262,7 +262,7 @@ def shutdown(opts):
     """
     log.debug("dummy proxy shutdown() called...")
     with _loaded_state(__opts__) as state:
-        if "filename" in state:
+        if "filename" in state:  # pylint: disable=unsupported-membership-test
             os.unlink(state["filename"])
 
 

@@ -4,7 +4,6 @@ Salt package
 
 import asyncio
 import importlib
-import locale
 import os
 import sys
 import warnings

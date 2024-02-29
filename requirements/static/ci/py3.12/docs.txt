@@ -53,7 +53,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.3
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

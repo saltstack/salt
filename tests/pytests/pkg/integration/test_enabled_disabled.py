@@ -11,7 +11,7 @@ def test_services(install_salt, salt_cli, salt_minion):
     services_enabled = []
     if install_salt.distro_id in ("ubuntu", "debian"):
         services_enabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
-    elif install_salt.distro_id in ("centos", "redhat", "amzn", "fedora"):
+    elif install_salt.distro_id in ("almalinux", "centos", "redhat", "amzn", "fedora"):
         services_disabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
     elif install_salt.distro_id == "photon":
         services_enabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]

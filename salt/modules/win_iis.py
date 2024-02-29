@@ -1455,7 +1455,7 @@ def set_container_setting(name, container, settings):
         # Map to numeric to support server 2008
         if (
             setting == "processModel.identityType"
-            and settings[setting] in identityType_map2numeric.keys()
+            and settings[setting] in identityType_map2numeric
         ):
             value = identityType_map2numeric[settings[setting]]
 
@@ -1489,7 +1489,7 @@ def set_container_setting(name, container, settings):
         # map identity type from numeric to string for comparing
         if (
             setting == "processModel.identityType"
-            and settings[setting] in identityType_map2string.keys()
+            and settings[setting] in identityType_map2string
         ):
             settings[setting] = identityType_map2string[settings[setting]]
 

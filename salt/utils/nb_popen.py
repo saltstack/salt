@@ -24,14 +24,12 @@ import time
 
 mswindows = sys.platform == "win32"
 
-try:
+if mswindows:
     import msvcrt
 
     import pywintypes
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
-except ImportError:
-    import fcntl
 
 log = logging.getLogger(__name__)
 
@@ -179,6 +177,8 @@ class NonBlockingPopen(subprocess.Popen):
             conn, maxsize = self.get_conn_maxsize(which, maxsize)
             if conn is None:
                 return None
+
+            import fcntl
 
             flags = fcntl.fcntl(conn, fcntl.F_GETFL)
             if not conn.closed:

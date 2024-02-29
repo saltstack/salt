@@ -501,7 +501,7 @@ def container_setting(name, container, settings=None):
         # map identity type from numeric to string for comparing
         if (
             setting == "processModel.identityType"
-            and settings[setting] in identityType_map2string.keys()
+            and settings[setting] in identityType_map2string
         ):
             settings[setting] = identityType_map2string[settings[setting]]
 

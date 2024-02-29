@@ -345,7 +345,10 @@ def split_input(val, mapper=None):
     Take an input value and split it into a list, returning the resulting list
     """
     if mapper is None:
-        mapper = lambda x: x
+
+        def mapper(x):
+            return x
+
     if isinstance(val, list):
         return list(map(mapper, val))
     try:

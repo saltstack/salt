@@ -51,8 +51,8 @@ def write_launchd_plist(program):
         sys.stderr.write(f"Supported programs: '{supported_programs}'\n")
         sys.exit(-1)
 
-        return plist_sample_text.format(
-            program=program,
-            python=sys.executable,
-            script=os.path.join(os.path.dirname(sys.executable), program),
-        )
+    return plist_sample_text.format(
+        program=program,
+        python=sys.executable,
+        script=os.path.join(os.path.dirname(sys.executable), program),
+    )

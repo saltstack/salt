@@ -784,7 +784,9 @@ def runner(name, **kwargs):
     try:
         kwargs["__pub_user"] = __user__
         log.debug(
-            f"added __pub_user to kwargs using dunder user '{__user__}', kwargs '{kwargs}'"
+            "added __pub_user to kwargs using dunder user '%s', kwargs '%s'",
+            __user__,
+            kwargs,
         )
     except NameError:
         log.warning("unable to find user for fire args event due to missing __user__")

@@ -66,7 +66,7 @@ STATE_FUNC = STATE_NAME = ""
 def __init__(opts):
     global STATE_NAME, STATE_FUNC
     STATE_FUNC = __opts__["stateconf_state_func"]
-    STATE_NAME = STATE_FUNC.split(".")[0]
+    STATE_NAME = STATE_FUNC.split(".", maxsplit=1)[0]
 
 
 MOD_BASENAME = os.path.basename(__file__)

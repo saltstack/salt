@@ -241,9 +241,15 @@ def _poll_for_events(
     """
     if action:
         stop_status = (f"{action}_FAILED", f"{action}_COMPLETE")
-        stop_check = lambda a: a in stop_status
+
+        def stop_check(a):
+            return a in stop_status
+
     else:
-        stop_check = lambda a: a.endswith("_COMPLETE") or a.endswith("_FAILED")
+
+        def stop_check(a):
+            return a.endswith("_COMPLETE") or a.endswith("_FAILED")
+
     timeout_sec = timeout * 60
     no_event_polls = 0
     msg_template = "\n Stack %(name)s %(status)s \n"

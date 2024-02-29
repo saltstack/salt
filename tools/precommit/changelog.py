@@ -11,6 +11,7 @@ import re
 import sys
 
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 import tools.utils
 
@@ -34,16 +35,16 @@ changelog = command_group(
     name="changelog",
     help="Changelog tools",
     description=__doc__,
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "changelog.txt"
+            / "changelog.txt",
         ],
-    },
+    ),
     parent="pre-commit",
 )
 

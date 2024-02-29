@@ -2903,8 +2903,8 @@ def ip_fqdn():
         if not ret["ipv" + ipv_num]:
             ret[key] = []
         else:
+            start_time = datetime.datetime.utcnow()
             try:
-                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):

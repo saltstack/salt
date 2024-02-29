@@ -174,6 +174,7 @@ def _query(
         params=params,
         data=salt.utils.json.dumps(data),
         verify=verify_ssl,
+        timeout=120,
     )
 
     if result.text is None or result.text == "":
@@ -196,6 +197,7 @@ def _query(
                 params=params,
                 data=data,  # Already serialized above, don't do it again
                 verify=verify_ssl,
+                timeout=120,
             ).json()
             offset = next_page_results["offset"]
             limit = next_page_results["limit"]

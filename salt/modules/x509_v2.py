@@ -1943,7 +1943,7 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
         )
     result = result[next(iter(result))]
     if not isinstance(result, dict) or "data" not in result:
-        log.error(f"Received invalid return value from ca_server: {result}")
+        log.error("Received invalid return value from ca_server: %s", result)
         raise CommandExecutionError(
             "Received invalid return value from ca_server. See minion log for details"
         )

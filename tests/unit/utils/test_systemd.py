@@ -351,8 +351,6 @@ class SystemdTestCase(TestCase):
             Raised by DBUS, e.g. when a PID does not belong to a service
             """
 
-            ...
-
         dbus_mock = Mock()
         dbus_mock.DBusException = DBusException()
         dbus_mock.GetUnitByPID = Mock(site_effect=dbus_mock.DBusException)

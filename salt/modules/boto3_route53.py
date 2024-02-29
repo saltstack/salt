@@ -948,7 +948,7 @@ def _aws_decode(x):
     if "\\" in x:
         return x.decode("unicode_escape")
 
-    if type(x) == bytes:
+    if isinstance(x, bytes):
         return x.decode("idna")
 
     return x

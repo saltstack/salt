@@ -277,7 +277,7 @@ def test_grains_refresh(test_opts):
 
 def test_fns():
     ret = napalm_proxy.fns()
-    assert "details" in ret.keys()
+    assert "details" in ret
 
 
 def test_shutdown(test_opts):

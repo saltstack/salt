@@ -128,8 +128,8 @@ def _test_hwclock_sync(system, hwclock_has_compare):
         raise CompareTimeout
 
     for _ in range(2):
+        orig_handler = signal.signal(signal.SIGALRM, _alrm_handler)
         try:
-            orig_handler = signal.signal(signal.SIGALRM, _alrm_handler)
             signal.alarm(3)
             rpipeFd, wpipeFd = os.pipe()
             log.debug("Comparing hwclock to sys clock")

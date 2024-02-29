@@ -314,7 +314,7 @@ def MX(domain, resolve=False, nameserver=None):
     stdout = [x.split() for x in cmd["stdout"].split("\n")]
 
     if resolve:
-        return [(lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout]
+        return [[x[0], A(x[1], nameserver)[0]] for x in stdout]
 
     return stdout
 

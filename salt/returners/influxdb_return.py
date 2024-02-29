@@ -108,7 +108,9 @@ def _get_version(host, port, user, password):
     version = None
     # check the InfluxDB version via the HTTP API
     try:
-        result = requests.get(f"http://{host}:{port}/ping", auth=(user, password))
+        result = requests.get(
+            f"http://{host}:{port}/ping", auth=(user, password), timeout=120
+        )
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:  # pylint: disable=broad-except

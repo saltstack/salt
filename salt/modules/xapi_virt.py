@@ -17,6 +17,7 @@ Useful documentation:
 """
 
 import contextlib
+import importlib
 import os
 import sys
 
@@ -25,15 +26,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-try:
-    import importlib  # pylint: disable=minimum-python-version
-
-    HAS_IMPORTLIB = True
-except ImportError:
-    # Python < 2.7 does not have importlib
-    HAS_IMPORTLIB = False
-
 
 # Define the module's virtual name
 __virtualname__ = "virt"
@@ -55,9 +47,7 @@ def _check_xenapi():
                 sys.path.append(xapipath)
 
     try:
-        if HAS_IMPORTLIB:
-            return importlib.import_module("xen.xm.XenAPI")
-        return __import__("xen.xm.XenAPI").xm.XenAPI
+        return importlib.import_module("xen.xm.XenAPI")
     except (ImportError, AttributeError):
         return False
 

@@ -175,7 +175,7 @@ def _get_devices(params):
         raise CommandExecutionError("Parameter ID is required.")
 
     return (
-        type(params["id"]) == int
+        isinstance(params["id"], int)
         and [params["id"]]
         or [int(dev) for dev in params["id"].split(",")]
     )

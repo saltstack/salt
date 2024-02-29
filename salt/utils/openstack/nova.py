@@ -196,7 +196,7 @@ class NovaServer:
             self.extra["password"] = password
 
     def __str__(self):
-        return self.__dict__
+        return str(self.__dict__)
 
 
 def get_entry(dict_, key, value, raise_error=True):

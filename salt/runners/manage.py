@@ -558,10 +558,7 @@ def safe_accept(target, tgt_type="glob"):
             print(message)
             print("")
 
-    __jid_event__.fire_event(
-        {"message": f"Accepted {len(ret):d} keys"},
-        "progress",
-    )
+    __jid_event__.fire_event({"message": f"Accepted {len(ret):d} keys"}, "progress")
     return ret, failures
 
 

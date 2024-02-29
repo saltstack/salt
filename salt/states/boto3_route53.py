@@ -62,7 +62,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # keep lint from choking
 # pylint: disable=W0106
-# pylint: disable=E1320
 
 
 import logging
@@ -72,7 +71,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 from salt.exceptions import SaltInvocationError
 
-log = logging.getLogger(__name__)  # pylint: disable=W1699
+log = logging.getLogger(__name__)
 
 
 def __virtual__():

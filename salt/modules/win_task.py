@@ -245,7 +245,7 @@ def _reverse_lookup(dictionary, value):
     """
     value_index = -1
     for idx, dict_value in enumerate(dictionary.values()):
-        if type(dict_value) == list:
+        if isinstance(dict_value, list):
             if value in dict_value:
                 value_index = idx
                 break
@@ -269,7 +269,7 @@ def _lookup_first(dictionary, key):
     :rtype: str
     """
     value = dictionary[key]
-    if type(value) == list:
+    if isinstance(value, list):
         return value[0]
     else:
         return value

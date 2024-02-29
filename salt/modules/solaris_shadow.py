@@ -114,7 +114,7 @@ def info(name):
     }
 
     try:
-        data = pwd.getpwnam(name)
+        data = pwd.getpwnam(name)  # pylint: disable=used-before-assignment
         ret.update({"name": name})
     except KeyError:
         return ret
