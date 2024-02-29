@@ -207,7 +207,10 @@ def which(exe=None):
         # iterate through all extensions to see which one is executable
         for ext in pathext:
             pext = p + ext
-            rp = resolve(pext)
+            try:
+                rp = resolve(pext)
+            except OSError as exc:
+                continue
             if is_executable(rp):
                 return p + ext
             continue
@@ -287,7 +290,7 @@ def check_or_die(command):
         raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError("'{}' is not in the path".format(command))
+        raise CommandNotFoundError(f"'{command}' is not in the path")
 
 
 def sanitize_win_path(winpath):

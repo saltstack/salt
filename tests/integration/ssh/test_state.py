@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 class SSHStateTest(SSHCase):
     """
     testing the state system with salt-ssh
@@ -35,7 +36,7 @@ class SSHStateTest(SSHCase):
     def _check_request(self, empty=False):
         check = self.run_function("state.check_request", wipe=False)
         if empty:
-            self.assertFalse(bool(check), "bool({}) is not False".format(check))
+            self.assertFalse(bool(check), f"bool({check}) is not False")
         else:
             self._check_dict_ret(
                 ret=check["default"]["test_run"]["local"]["return"],

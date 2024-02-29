@@ -50,6 +50,7 @@ class SSHCustomModuleTest(SSHCase):
         self.assertEqual(expected, cmd)
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout(120)
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
@@ -70,7 +71,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("state.sls", arg=["custom_module"])
         for key in cmd:
             if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
-                raise AssertionError("{} is not a proper state return".format(cmd))
+                raise AssertionError(f"{cmd} is not a proper state return")
             elif not cmd[key]["result"]:
                 raise AssertionError(cmd[key]["comment"])
             cmd_ret = cmd[key]["changes"].get("ret", None)
