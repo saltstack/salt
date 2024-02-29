@@ -1149,11 +1149,13 @@ class MinionManager(MinionBase):
                 self.minions.append(minion)
                 break
             except SaltClientError as exc:
+                minion.destroy()
                 failed = True
                 log.error(
                     "Error while bringing up minion for multi-master. Is "
-                    "master at %s responding?",
+                    "master at %s responding? The error message was %s",
                     minion.opts["master"],
+                    exc,
                     exc_info=True,
                 )
                 last = time.time()
@@ -1161,6 +1163,7 @@ class MinionManager(MinionBase):
                     auth_wait += self.auth_wait
                 await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
+                minion.destroy()
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
                     " unresolveable address. Set 'master' value in minion config.".format(
@@ -1170,6 +1173,7 @@ class MinionManager(MinionBase):
                 log.error(err)
                 break
             except Exception as e:  # pylint: disable=broad-except
+                minion.destroy()
                 failed = True
                 log.critical(
                     "Unexpected error while connecting to %s",
@@ -3281,19 +3285,14 @@ class Minion(MinionBase):
         """
         Tear down the minion
         """
-        if self._running is False:
-            return
-
         self._running = False
         if hasattr(self, "schedule"):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
             self.pub_channel.close()
-            del self.pub_channel
-        if hasattr(self, "req_channel") and self.req_channel:
+        if hasattr(self, "req_channel") and self.req_channel is not None:
             self.req_channel.close()
-            self.req_channel = None
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()

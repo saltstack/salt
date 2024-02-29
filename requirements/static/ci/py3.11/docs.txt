@@ -111,7 +111,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.15.1
     # via sphinx
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   tempora

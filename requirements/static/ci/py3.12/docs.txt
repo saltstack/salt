@@ -18,7 +18,7 @@ annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pydantic
-attrs==23.1.0
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
@@ -53,7 +53,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -187,7 +187,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.15.1
     # via sphinx
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -195,11 +195,11 @@ python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-python-gnupg==0.5.1
+python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   tempora
@@ -208,7 +208,7 @@ pyyaml==6.0.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==25.1.1
+pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/zeromq.txt

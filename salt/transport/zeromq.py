@@ -741,14 +741,16 @@ class AsyncReqMessageClient:
                 try:
                     recv = yield self.socket.recv()
                 except zmq.eventloop.future.CancelledError as exc:
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                     return
 
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            future.set_exception(exc)
+            if not future.done():
+                future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
@@ -884,7 +886,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
-        run in a thread or process as it creates and runs an it's own ioloop.
+        run in a thread or process as it creates and runs its own ioloop.
         """
         ioloop = tornado.ioloop.IOLoop()
         ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)

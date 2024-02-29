@@ -1,3 +1,57 @@
+salt (3006.7) stable; urgency=medium
+
+
+  # Deprecated
+
+  * Deprecate and stop using ``salt.features`` [#65951](https://github.com/saltstack/salt/issues/65951)
+
+  # Changed
+
+  * Change module search path priority, so Salt extensions can be overridden by syncable modules and module_dirs. You can switch back to the old logic by setting features.enable_deprecated_module_search_path_priority to true, but it will be removed in Salt 3008. [#65938](https://github.com/saltstack/salt/issues/65938)
+
+  # Fixed
+
+  * Fix an issue with mac_shadow that was causing a command execution error when
+    retrieving values that were not yet set. For example, retrieving last login
+    before the user had logged in. [#34658](https://github.com/saltstack/salt/issues/34658)
+  * Fixed an issue when keys didn't match because of line endings [#52289](https://github.com/saltstack/salt/issues/52289)
+  * Corrected encoding of credentials for use with Artifactory [#63063](https://github.com/saltstack/salt/issues/63063)
+  * Use `send_multipart` instead of `send` when sending multipart message. [#65018](https://github.com/saltstack/salt/issues/65018)
+  * Fix an issue where the minion would crash on Windows if some of the grains
+    failed to resolve [#65154](https://github.com/saltstack/salt/issues/65154)
+  * Fix issue with openscap when the error was outside the expected scope. It now
+    returns failed with the error code and the error [#65193](https://github.com/saltstack/salt/issues/65193)
+  * Upgrade relenv to 0.15.0 to fix namespaced packages installed by salt-pip [#65433](https://github.com/saltstack/salt/issues/65433)
+  * Fix regression of fileclient re-use when rendering sls pillars and states [#65450](https://github.com/saltstack/salt/issues/65450)
+  * Fixes the s3fs backend computing the local cache's files with the wrong hash type [#65589](https://github.com/saltstack/salt/issues/65589)
+  * Fixed Salt-SSH pillar rendering and state rendering with nested SSH calls when called via saltutil.cmd or in an orchestration [#65670](https://github.com/saltstack/salt/issues/65670)
+  * Fix boto execution module loading [#65691](https://github.com/saltstack/salt/issues/65691)
+  * Removed PR 65185 changes since incomplete solution [#65692](https://github.com/saltstack/salt/issues/65692)
+  * catch only ret/ events not all returning events. [#65727](https://github.com/saltstack/salt/issues/65727)
+  * Fix nonsensical time in fileclient timeout error. [#65752](https://github.com/saltstack/salt/issues/65752)
+  * Fixes an issue when reading/modifying ini files that contain unicode characters [#65777](https://github.com/saltstack/salt/issues/65777)
+  * added https proxy to the list of proxies so that requests knows what to do with https based proxies [#65824](https://github.com/saltstack/salt/issues/65824)
+  * Ensure minion channels are closed on any master connection error. [#65932](https://github.com/saltstack/salt/issues/65932)
+  * Fixed issue where Salt can't find libcrypto when pip installed from a cloned repo [#65954](https://github.com/saltstack/salt/issues/65954)
+  * Fix RPM package systemd scriptlets to make RPM packages more universal [#65987](https://github.com/saltstack/salt/issues/65987)
+  * Fixed an issue where fileclient requests during Pillar rendering cause
+    fileserver backends to be needlessly refreshed. [#65990](https://github.com/saltstack/salt/issues/65990)
+  * Fix exceptions being set on futures that are already done in ZeroMQ transport [#66006](https://github.com/saltstack/salt/issues/66006)
+  * Use hmac compare_digest method in hashutil module to mitigate potential timing attacks [#66041](https://github.com/saltstack/salt/issues/66041)
+  * Fix request channel default timeout regression. In 3006.5 it was changed from
+    60 to 30 and is now set back to 60 by default. [#66061](https://github.com/saltstack/salt/issues/66061)
+  * Upgrade relenv to 0.15.1 to fix debugpy support. [#66094](https://github.com/saltstack/salt/issues/66094)
+
+  # Security
+
+  * Bump to ``cryptography==42.0.0`` due to https://github.com/advisories/GHSA-3ww4-gg4f-jr7f
+
+    In the process, we were also required to update to ``pyOpenSSL==24.0.0`` [#66004](https://github.com/saltstack/salt/issues/66004)
+  * Bump to `cryptography==42.0.3` due to https://github.com/advisories/GHSA-3ww4-gg4f-jr7f [#66090](https://github.com/saltstack/salt/issues/66090)
+
+
+ -- Salt Project Packaging <saltproject-packaging@vmware.com>  Tue, 20 Feb 2024 21:54:35 +0000
+
 salt (3006.6) stable; urgency=medium
 
 

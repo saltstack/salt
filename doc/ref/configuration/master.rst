@@ -112,8 +112,13 @@ Tell the master to also use salt-ssh when running commands against minions.
 
 .. note::
 
-    Cross-minion communication is still not possible.  The Salt mine and
-    publish.publish do not work between minion types.
+    Enabling this does not influence the limitations on cross-minion communication.
+    The Salt mine and ``publish.publish`` do not work from regular minions
+    to SSH minions, the other way around is partly possible since 3007.0
+    (during state rendering on the master).
+    This means you can use the mentioned functions to call out to regular minions
+    in ``sls`` templates and wrapper modules, but state modules
+    (which are executed on the remote) relying on them still do not work.
 
 ``ret_port``
 ------------

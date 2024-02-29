@@ -400,6 +400,7 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 def test_pillar_refresh_pillar_scheduler(salt_master, salt_cli, salt_minion):
     """
     Ensure schedule jobs in pillar are only updated when values change.
