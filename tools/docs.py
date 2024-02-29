@@ -27,6 +27,12 @@ docs = command_group(
         requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "base.txt",
             tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
+            tools.utils.REPO_ROOT
+            / "requirements"
+            / "static"
+            / "ci"
+            / "py{}.{}".format(*sys.version_info)
+            / "docs.txt",
         ],
         install_args=[
             "--constraint",
