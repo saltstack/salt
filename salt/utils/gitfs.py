@@ -251,7 +251,7 @@ class GitProvider:
         # DGM try getting machine_identifier
         # get machine_identifier
         self.mach_id = salt.utils.files.get_machine_identifier()
-        log.debug(f"machine_id for lock file, machine_id '{self.mach_id}'")
+        log.debug("DGM machine_id for lock file, machine_id %s", self.mach_id)
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
@@ -920,7 +920,7 @@ class GitProvider:
                 )
             return False
         except NotImplementedError as exc:
-            log.warning(f"fetch got NotImplementedError, exc '{exc}'")
+            log.warning("fetch got NotImplementedError exception %s", exc)
 
     def _lock(self, lock_type="update", failhard=False):
         """
@@ -1041,6 +1041,8 @@ class GitProvider:
         contextmanager here because the lock is meant to stay and not be
         automatically removed.
         """
+        dbg_msg = f"DGM GitProvider lock entry, pid '{os.getpid()}'"
+        log.warning(dbg_msg)
         success = []
         failed = []
         try:
