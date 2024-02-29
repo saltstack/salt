@@ -247,6 +247,17 @@ def query(
         else:
             http_proxy_url = f"http://{proxy_host}:{proxy_port}"
 
+        if header_dict is None:
+            header_dict = {}
+
+        if method == "POST" and "Content-Type" not in header_dict:
+            log.debug(
+                "Content-Type not provided for POST request, assuming application/x-www-form-urlencoded"
+            )
+            header_dict["Content-Type"] = "application/x-www-form-urlencoded"
+            if "Content-Length" not in header_dict:
+                header_dict["Content-Length"] = f"{len(data)}"
+
     match = re.match(
         r"https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)",
         url,
