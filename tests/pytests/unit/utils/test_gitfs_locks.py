@@ -5,6 +5,7 @@ any remotes.
 
 import logging
 import pathlib
+import signal
 import tempfile
 import time
 
@@ -22,7 +23,14 @@ from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 from tests.support.runtests import RUNTIME_VARS
 
+# import multiprocessing
+
+
 log = logging.getLogger(__name__)
+## logger = multiprocessing.log_to_stderr()
+## logger.setLevel(logging.INFO)
+## ## log = logger.getLogger(__name__)
+## log = logger.getLogger()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -319,21 +327,25 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
                 )
 
             def init_remote(self):
-                log.debug(f"DGM MockedProvider init_remote tmp_name '{tmp_name}'")
+                dbg_msg = f"DGM MockedProvider init_remote tmp_name '{tmp_name}'"
+                log.debug(dbg_msg)
                 self.gitdir = salt.utils.path.join(tmp_name, ".git")
-                log.debug(f"DGM MockedProvider init_remote gitdir '{self.gitdir}'")
+                dbg_msg = f"DGM MockedProvider init_remote gitdir '{self.gitdir}'"
+                log.debug(dbg_msg)
                 self.repo = True
                 new = False
                 return new
 
             def envs(self):
                 dgm_test_base = ["base"]
-                log.debug(f"DGM MockedProvider env base '{dgm_test_base}'")
+                dbg_msg = f"DGM MockedProvider env base '{dgm_test_base}'"
+                log.debug(dbg_msg)
                 return ["base"]
 
             def _fetch(self):
                 self.fetched = True
-                log.debug(f"DGM MockedProvider _fetch self.fetched '{self.fetched}'")
+                dbg_msg = f"DGM MockedProvider _fetch self.fetched '{self.fetched}'"
+                log.debug(dbg_msg)
 
         # Clear the instance map so that we make sure to create a new instance
         # for this test class.
@@ -477,7 +489,7 @@ def process_kill_test(main_class):
 
     Check that lock is obtained and then it should be released by SIGTERM checks
     """
-    log.debug("DGM process_kill_test entry")
+    log.debug("DGM process_kill_test entry pid, '{os.getpid()}'")
     provider = main_class.remotes[0]
     provider.lock()
 
@@ -502,48 +514,71 @@ def test_git_provider_sigterm_cleanup(main_class, caplog):
 
     provider = main_class.remotes[0]
 
-    procmgr = salt.utils.process.ProcessManager(wait_for_kill=30)
-    proc = procmgr.add_process(process_kill_test, args=(main_class,), name="test_kill")
+    ## DGM find lock file location
+    ##    provider.lock()
+    ##    file_name = provider._get_lock_file("update")
+    ##    log.debug(f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}'")
+
+    ## proc = multiprocessing.Process(target=process_kill_test)
+    ##    procmgr = salt.utils.process.ProcessManager(wait_for_kill=30)
+    ##    proc = procmgr.add_process(process_kill_test, args=(main_class,), name="test_kill")
     ## proc.start()
 
-    while not proc.is_alive():
-        log.debug(
-            "DGM test_git_provider_sigterm_cleanup sleeping waiting for child process to become alive"
+    # Reset signals to default ones before adding processes to the process
+    # manager. We don't want the processes being started to inherit those
+    # signal handlers
+    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+        procmgr = salt.utils.process.ProcessManager(wait_for_kill=5)
+        proc = procmgr.add_process(
+            process_kill_test, args=(main_class,), name="test_kill"
         )
+
+    # Install the SIGINT/SIGTERM handlers if not done so far
+    if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGINT, procmgr._handle_signals)
+
+    if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGTERM, procmgr._handle_signals)
+
+    while not proc.is_alive():
+        dbg_msg = "DGM test_git_provider_sigterm_cleanup sleeping waiting for child process to become alive"
+        log.debug(dbg_msg)
         time.sleep(1)  # give some time for it to be started
 
     # child process should be alive
-    log.debug(
-        f"DGM test_git_provider_sigterm_cleanup child process is alive with pid '{proc.pid}'"
-    )
+    dbg_msg = f"DGM test_git_provider_sigterm_cleanup child process is alive with pid '{proc.pid}'"
+    log.debug(dbg_msg)
 
     file_name = provider._get_lock_file("update")
-    log.debug(
-        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}'"
-    )
+    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}'"
+    log.debug(dbg_msg)
 
     assert pathlib.Path(file_name).exists()
     assert pathlib.Path(file_name).is_file()
 
-    log.debug(
-        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', exists and is a file, send SIGTERM signal"
-    )
+    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', exists and is a file, send SIGTERM signal"
+    log.debug(dbg_msg)
 
-    proc.terminate()  # sends a SIGTERM
+    procmgr.terminate()  # sends a SIGTERM
 
     time.sleep(1)  # give some time for it to terminate
     log.debug("DGM test_git_provider_sigterm_cleanup lock , post terminate")
 
     assert not proc.is_alive()
-    log.debug("DGM test_git_provider_sigterm_cleanup lock , child is not alive")
+
+    dbg_msg = "DGM test_git_provider_sigterm_cleanup lock , child is not alive"
+    log.debug(dbg_msg)
 
     test_file_exits = pathlib.Path(file_name).exists()
-    log.debug(
-        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does it exist anymore '{test_file_exits}'"
-    )
+
+    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does it exist anymore '{test_file_exits}'"
+    log.debug(dbg_msg)
+
     assert not pathlib.Path(file_name).exists()
-    log.debug(
-        f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does NOT exist anymore"
-    )
+
+    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does NOT exist anymore"
+    log.debug(dbg_msg)
 
     log.debug("DGM test_git_provider_sigterm_cleanup exit")
