@@ -23,7 +23,6 @@ import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
-import salt.loader
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -338,6 +337,11 @@ def pytest_configure(config):
         "when called returns `True`. If `skip` is a callable, it should accept a single argument "
         "'grains', which is the grains dictionary.",
     )
+    config.addinivalue_line(
+        "markers",
+        "timeout_unless_on_windows(*args, **kwargs): Apply the 'timeout' marker unless running "
+        "on Windows.",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -445,7 +449,35 @@ def pytest_collection_modifyitems(config, items):
     from_filenames_collection_modifyitems(config, items)
 
     log.warning("Mofifying collected tests to keep track of fixture usage")
+
+    timeout_marker_tests_paths = (
+        str(PYTESTS_DIR / "pkg"),
+        str(PYTESTS_DIR / "scenarios"),
+    )
     for item in items:
+        marker = item.get_closest_marker("timeout_unless_on_windows")
+        if marker is not None:
+            if not salt.utils.platform.is_windows():
+                # Apply the marker since we're not on windows
+                marker_kwargs = marker.kwargs.copy()
+                if "func_only" not in marker_kwargs:
+                    # Default to counting only the test execution for the timeouts, ie,
+                    # withough including the fixtures setup time towards the timeout.
+                    marker_kwargs["func_only"] = True
+                item.add_marker(pytest.mark.timeout(*marker.args, **marker_kwargs))
+        else:
+            if (
+                not salt.utils.platform.is_windows()
+                and not str(pathlib.Path(item.fspath).resolve()).startswith(
+                    timeout_marker_tests_paths
+                )
+                and not item.get_closest_marker("timeout")
+            ):
+                # Let's apply the timeout marker on the test, if the marker
+                # is not already applied
+                # Default to counting only the test execution for the timeouts, ie,
+                # withough including the fixtures setup time towards the timeout.
+                item.add_marker(pytest.mark.timeout(90, func_only=True))
         for fixture in item.fixturenames:
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue

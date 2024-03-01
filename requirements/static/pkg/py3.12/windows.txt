@@ -10,7 +10,7 @@ aiosignal==1.3.1
     # via aiohttp
 annotated-types==0.6.0
     # via pydantic
-attrs==23.1.0
+attrs==23.2.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco.text
@@ -30,7 +30,7 @@ clr-loader==0.2.6
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.3
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -103,15 +103,15 @@ pymssql==2.2.7 ; sys_platform == "win32"
     # via -r requirements/base.txt
 pymysql==1.1.0 ; sys_platform == "win32"
     # via -r requirements/base.txt
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via -r requirements/base.txt
 python-dateutil==2.8.2
     # via -r requirements/base.txt
-python-gnupg==0.5.1
+python-gnupg==0.5.2
     # via -r requirements/base.txt
 pythonnet==3.0.3 ; sys_platform == "win32"
     # via -r requirements/base.txt
-pytz==2023.3.post1
+pytz==2024.1
     # via tempora
 pywin32==306 ; sys_platform == "win32"
     # via
@@ -119,7 +119,7 @@ pywin32==306 ; sys_platform == "win32"
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.1.1
+pyzmq==25.1.2
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via -r requirements/base.txt

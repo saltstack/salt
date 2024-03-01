@@ -91,9 +91,10 @@ def salt_minion_1(salt_master_1, salt_master_2):
         yield factory
 
 
-def test_job_resturn(salt_master_1, salt_master_2, salt_minion_1):
+@pytest.mark.timeout_unless_on_windows(360)
+def test_job_return(salt_master_1, salt_master_2, salt_minion_1):
     cli = salt_master_1.salt_cli(timeout=120)
-    ret = cli.run("test.ping", "-v", minion_tgt="minion-1")
+    ret = cli.run("test.ping", "-v", minion_tgt=salt_minion_1.id)
     for line in ret.stdout.splitlines():
         if "with jid" in line:
             jid = line.split("with jid")[1].strip()

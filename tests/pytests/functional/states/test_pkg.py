@@ -19,6 +19,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 

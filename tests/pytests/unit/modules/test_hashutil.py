@@ -6,6 +6,7 @@
 import pytest
 
 import salt.modules.hashutil as hashutil
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -84,3 +85,9 @@ def test_hmac_compute(the_string, the_string_hmac_compute):
 
 def test_github_signature(the_string, the_string_github):
     assert hashutil.github_signature(the_string, "shared secret", the_string_github)
+
+
+def test_github_signature_uses_hmac_compare_digest(the_string, the_string_github):
+    with patch("hmac.compare_digest") as hmac_compare:
+        assert hashutil.github_signature(the_string, "shared secret", the_string_github)
+        hmac_compare.assert_called_once()

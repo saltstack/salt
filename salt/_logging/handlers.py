@@ -4,65 +4,14 @@
 
     Salt's logging handlers
 """
-
 import logging
 import logging.handlers
-import queue as _queue
 import sys
 from collections import deque
 
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin
-from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
-
-
-class TemporaryLoggingHandler(logging.NullHandler):
-    """
-    This logging handler will store all the log records up to its maximum
-    queue size at which stage the first messages stored will be dropped.
-
-    Should only be used as a temporary logging handler, while the logging
-    system is not fully configured.
-
-    Once configured, pass any logging handlers that should have received the
-    initial log messages to the function
-    :func:`TemporaryLoggingHandler.sync_with_handlers` and all stored log
-    records will be dispatched to the provided handlers.
-
-    .. versionadded:: 0.17.0
-    """
-
-    def __init__(self, level=logging.NOTSET, max_queue_size=10000):
-        warn_until_date(
-            "20240101",
-            "Please stop using '{name}.TemporaryLoggingHandler'. "
-            "'{name}.TemporaryLoggingHandler' will go away after "
-            "{{date}}.".format(name=__name__),
-        )
-        super().__init__(level=level)
-        self.__messages = deque(maxlen=max_queue_size)
-
-    def handle(self, record):
-        self.acquire()
-        self.__messages.append(record)
-        self.release()
-
-    def sync_with_handlers(self, handlers=()):
-        """
-        Sync the stored log records to the provided log handlers.
-        """
-        if not handlers:
-            return
-
-        while self.__messages:
-            record = self.__messages.popleft()
-            for handler in handlers:
-                if handler.level > record.levelno:
-                    # If the handler's level is higher than the log record one,
-                    # it should not handle the log record
-                    continue
-                handler.handle(record)
 
 
 class StreamHandler(ExcInfoOnLogLevelFormatMixin, logging.StreamHandler):
@@ -214,33 +163,3 @@ class WatchedFileHandler(
     """
     Watched file handler which properly handles exc_info on a per handler basis
     """
-
-
-class QueueHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
-):  # pylint: disable=no-member,inconsistent-mro
-    def __init__(self, queue):  # pylint: disable=useless-super-delegation
-        super().__init__(queue)
-        warn_until_date(
-            "20240101",
-            "Please stop using '{name}.QueueHandler' and instead "
-            "use 'logging.handlers.QueueHandler'. "
-            "'{name}.QueueHandler' will go away after "
-            "{{date}}.".format(name=__name__),
-        )
-
-    def enqueue(self, record):
-        """
-        Enqueue a record.
-
-        The base implementation uses put_nowait. You may want to override
-        this method if you want to use blocking, timeouts or custom queue
-        implementations.
-        """
-        try:
-            self.queue.put_nowait(record)
-        except _queue.Full:
-            sys.stderr.write(
-                "[WARNING ] Message queue is full, "
-                'unable to write "{}" to log.\n'.format(record)
-            )
