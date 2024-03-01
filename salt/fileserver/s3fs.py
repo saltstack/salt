@@ -596,7 +596,7 @@ def _prune_deleted_files(metadata):
     if log.isEnabledFor(logging.DEBUG):
         import pprint
 
-        log.debug(f"cached file list: {pprint.pformat(cached_files)}")
+        log.debug("cached file list:\n%s", pprint.pformat(cached_files))
 
     for root in roots:
         for base, dirs, files in os.walk(root):
@@ -605,19 +605,20 @@ def _prune_deleted_files(metadata):
                 relpath = os.path.relpath(path, root)
 
                 if relpath not in cached_files:
-                    log.debug(f"file '{path}' not found in cached file list")
+                    log.debug("File '%s' not found in cached file list", path)
                     log.info(
-                        f"file '{relpath}' was deleted from bucket, deleting local copy"
+                        "File '%s' was deleted from bucket, deleting local copy",
+                        relpath,
                     )
 
                     os.unlink(path)
-                    dir = os.path.dirname(path)
+                    dirname = os.path.dirname(path)
 
                     # delete empty dirs all the way up to the cache dir
-                    while dir != cache_dir and len(os.listdir(dir)) == 0:
-                        log.debug(f"directory '{dir}' is now empty, removing")
-                        os.rmdir(dir)
-                        dir = os.path.dirname(dir)
+                    while dirname != cache_dir and len(os.listdir(dirname)) == 0:
+                        log.debug("Directory '%s' is now empty, removing", dirname)
+                        os.rmdir(dirname)
+                        dirname = os.path.dirname(dirname)
 
 
 def _write_buckets_cache_file(metadata, cache_file):
