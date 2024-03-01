@@ -345,11 +345,9 @@ def test_chocolatey_version_refresh():
     context = {"chocolatey._version": "0.9.9"}
     mock_find = MagicMock(return_value="some_path")
     mock_run = MagicMock(return_value="2.2.0")
-    with (
-        patch.dict(chocolatey.__context__, context),
-        patch.object(chocolatey, "_find_chocolatey", mock_find),
-        patch.dict(chocolatey.__salt__, {"cmd.run": mock_run}),
-    ):
+    with patch.dict(chocolatey.__context__, context), patch.object(
+        chocolatey, "_find_chocolatey", mock_find
+    ), patch.dict(chocolatey.__salt__, {"cmd.run": mock_run}):
         result = chocolatey.chocolatey_version(refresh=True)
         expected = "2.2.0"
         assert result == expected
