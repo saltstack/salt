@@ -14,6 +14,7 @@ from requests.structures import CaseInsensitiveDict
 
 import salt.utils.data
 import salt.utils.platform
+import salt.utils.win_dotnet
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -126,9 +127,16 @@ def _find_chocolatey():
     raise CommandExecutionError(err)
 
 
-def chocolatey_version():
+def chocolatey_version(refresh=False):
     """
     Returns the version of Chocolatey installed on the minion.
+
+    Args:
+
+        refresh (bool):
+            Refresh the cached version of chocolatey
+
+            .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -136,6 +144,9 @@ def chocolatey_version():
 
         salt '*' chocolatey.chocolatey_version
     """
+    if refresh:
+        __context__.pop("chocolatey._version", False)
+
     if "chocolatey._version" in __context__:
         return __context__["chocolatey._version"]
 
@@ -147,7 +158,7 @@ def chocolatey_version():
     return __context__["chocolatey._version"]
 
 
-def bootstrap(force=False, source=None):
+def bootstrap(force=False, source=None, version=None):
     """
     Download and install the latest version of the Chocolatey package manager
     via the official bootstrap.
@@ -166,6 +177,11 @@ def bootstrap(force=False, source=None):
         and .NET requirements must already be met on the target. This shouldn't
         be a problem on Windows versions 2012/8 and later
 
+    .. note::
+        If you're installing chocolatey version 2.0+ the system requires .NET
+        4.8. Installing this requires a reboot, therefore this module will not
+        automatically install .NET 4.8.
+
     Args:
 
         force (bool):
@@ -181,6 +197,12 @@ def bootstrap(force=False, source=None):
             - file:// - A local file on the system
 
             .. versionadded:: 3001
+
+        version (str):
+            The version of chocolatey to install. The latest version is
+            installed if this value is ``None``. Default is ``None``
+
+            .. versionadded:: 3008.0
 
     Returns:
         str: The stdout of the Chocolatey installation script
@@ -198,6 +220,9 @@ def bootstrap(force=False, source=None):
 
         # To bootstrap Chocolatey from a file on C:\\Temp
         salt '*' chocolatey.bootstrap source=C:\\Temp\\chocolatey.nupkg
+
+        # To bootstrap Chocolatey version 1.4.0
+        salt '*' chocolatey.bootstrap version=1.4.0
     """
     # Check if Chocolatey is already present in the path
     try:
@@ -272,7 +297,7 @@ def bootstrap(force=False, source=None):
     # Check that .NET v4.0+ is installed
     # Windows 7 / Windows Server 2008 R2 and below do not come with at least
     # .NET v4.0 installed
-    if not __utils__["dotnet.version_at_least"](version="4"):
+    if not salt.utils.win_dotnet.version_at_least(version="4"):
         # It took until .NET v4.0 for Microsoft got the hang of making
         # installers, this should work under any version of Windows
         url = "http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe"
@@ -336,10 +361,21 @@ def bootstrap(force=False, source=None):
             f"Failed to find Chocolatey installation script: {script}"
         )
 
+    # You tell the chocolatey install script which version to install by setting
+    # an environment variable
+    if version:
+        env = {"chocolateyVersion": version}
+    else:
+        env = None
+
     # Run the Chocolatey bootstrap
     log.debug("Installing Chocolatey: %s", script)
     result = __salt__["cmd.script"](
-        script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
+        source=script,
+        cwd=os.path.dirname(script),
+        shell="powershell",
+        python_shell=True,
+        env=env,
     )
     if result["retcode"] != 0:
         err = "Bootstrapping Chocolatey failed: {}".format(result["stderr"])
