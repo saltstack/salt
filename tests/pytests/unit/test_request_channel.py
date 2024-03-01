@@ -996,7 +996,7 @@ async def test_req_serv_auth_v1(minion_opts, master_opts, pki_dir):
     with salt.utils.files.fopen(
         str(pki_dir.joinpath("minion", "minion.pub")), "r"
     ) as fp:
-        pub_key = fp.read()
+        pub_key = salt.crypt.clean_key(fp.read())
 
     load = {
         "cmd": "_auth",
@@ -1054,7 +1054,7 @@ async def test_req_serv_auth_v2(minion_opts, master_opts, pki_dir):
     with salt.utils.files.fopen(
         str(pki_dir.joinpath("minion", "minion.pub")), "r"
     ) as fp:
-        pub_key = fp.read()
+        pub_key = salt.crypt.clean_key(fp.read())
 
     load = {
         "cmd": "_auth",

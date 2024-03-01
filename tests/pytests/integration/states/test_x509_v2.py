@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(120),
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
 ]
 

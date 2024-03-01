@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/tools.txt requirements/static/ci/tools.in
 #
-attrs==20.3.0
+attrs==23.2.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts

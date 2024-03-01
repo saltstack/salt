@@ -17,12 +17,11 @@ annotated-types==0.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   pydantic
-attrs==23.1.0
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
@@ -93,7 +92,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -303,7 +302,7 @@ pymysql==1.1.0 ; sys_platform == "win32"
     #   -r requirements/base.txt
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -336,7 +335,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-timeout==2.1.0
     # via -r requirements/pytest.txt
-pytest==7.2.0
+pytest==7.3.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -356,7 +355,7 @@ python-dateutil==2.8.2
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.1
+python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -364,7 +363,7 @@ pythonnet==3.0.3 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   tempora
@@ -388,7 +387,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.1
+pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/zeromq.txt

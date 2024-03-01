@@ -23,7 +23,7 @@ def install_npm(states):
         # Just name the thing we're looking for
         states.npm  # pylint: disable=pointless-statement
     except (CommandExecutionError, AttributeError, AssertionError) as exc:
-        pytest.skip("Unable to install npm - {}".format(exc))
+        pytest.skip(f"Unable to install npm - {exc}")
 
 
 @pytest.fixture(scope="module")
@@ -55,6 +55,7 @@ def npm(states, modules, apply_gitconfig_workaround):
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.timeout_unless_on_windows(120)
 def test_removed_installed_cycle(npm, modules):
     project_version = "pm2@5.1.0"
     success = modules.npm.uninstall("pm2")

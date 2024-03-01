@@ -38,6 +38,10 @@ try:
 except ImportError:
     HAS_WIN_FUNCTIONS = False
 
+if sys.platform == "win32":
+    import ctypes.wintypes
+
+
 log = logging.getLogger(__name__)
 
 

@@ -3,6 +3,10 @@ Tests using nginx formula
 """
 import pytest
 
+pytestmark = [
+    pytest.mark.timeout_unless_on_windows(120),
+]
+
 
 @pytest.fixture(scope="module")
 def _formula(saltstack_formula):

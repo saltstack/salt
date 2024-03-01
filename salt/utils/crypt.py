@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 
-import salt.loader
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
@@ -104,13 +103,15 @@ def decrypt(
     if renderers is None:
         if opts is None:
             raise TypeError("opts are required")
+
+        # Avaoid circular import
+        import salt.loader
+
         renderers = salt.loader.render(opts, {})
 
     rend_func = renderers.get(rend)
     if rend_func is None:
-        raise SaltInvocationError(
-            "Decryption renderer '{}' is not available".format(rend)
-        )
+        raise SaltInvocationError(f"Decryption renderer '{rend}' is not available")
 
     return rend_func(data, translate_newlines=translate_newlines)
 
@@ -156,7 +157,7 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
     for ind, _ in enumerate(pre):
         if ind % 2:
             # Is odd
-            finger += "{}:".format(pre[ind])
+            finger += f"{pre[ind]}:"
         else:
             finger += pre[ind]
     return finger.rstrip(":")
