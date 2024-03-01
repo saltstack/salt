@@ -41,23 +41,15 @@ import subprocess
 import tempfile
 from collections.abc import Sequence
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
 import salt.cache
 import salt.syspaths as syspaths
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import CommandExecutionError, SaltRunnerError
-
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.PublicKey import RSA
-    except ImportError:
-        from Crypto.PublicKey import RSA  # nosec
 
 __virtualname__ = "digicert"
 log = logging.getLogger(__name__)
@@ -533,28 +525,30 @@ def gen_key(minion_id, dns_name=None, password=None, key_len=2048):
 
         salt-run digicert.gen_key <minion_id> [dns_name] [password]
     """
-    keygen_type = "RSA"
 
-    if keygen_type == "RSA":
-        if HAS_M2:
-            gen = RSA.gen_key(key_len, 65537)
-            private_key = gen.as_pem(
-                cipher="des_ede3_cbc", callback=lambda x: bytes(password)
-            )
-        else:
-            gen = RSA.generate(bits=key_len)
-            private_key = gen.exportKey("PEM", password)
-        if dns_name is not None:
-            bank = "digicert/domains"
-            cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-            try:
-                data = cache.fetch(bank, dns_name)
-                data["private_key"] = private_key
-                data["minion_id"] = minion_id
-            except TypeError:
-                data = {"private_key": private_key, "minion_id": minion_id}
-            cache.store(bank, dns_name, data)
-    return private_key
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=key_len)
+    encryption = (
+        serialization.BestAvailableEncryption(bytes(password, encoding="utf-8"))
+        if password
+        else serialization.NoEncryption()
+    )
+    serialized_private_key = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=encryption,
+    )
+    if dns_name is not None:
+        bank = "digicert/domains"
+        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+        try:
+            data = cache.fetch(bank, dns_name)
+            data["private_key"] = serialized_private_key
+            data["minion_id"] = minion_id
+        except TypeError:
+            data = {"private_key": serialized_private_key, "minion_id": minion_id}
+        cache.store(bank, dns_name, data)
+
+    return serialized_private_key
 
 
 def get_org_details(organization_id):
