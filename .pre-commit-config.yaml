@@ -1520,7 +1520,7 @@ repos:
           - types-attrs
           - types-pyyaml
           - types-requests
-          - python-tools-scripts>=0.18.6
+          - python-tools-scripts==0.18.6
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12
