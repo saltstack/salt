@@ -211,7 +211,7 @@ class AsyncReqChannel:
                 timeout,
             )
         aes = key.decrypt(
-            ret["aes"],
+            ret["key"],
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA1()),
                 algorithm=hashes.SHA1(),
