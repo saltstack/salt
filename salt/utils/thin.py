@@ -15,6 +15,8 @@ import tarfile
 import tempfile
 import zipfile
 
+import _cffi_backend
+import cryptography
 import distro
 import jinja2
 import looseversion
@@ -275,6 +277,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "tornado",
         "msgpack",
         "certifi",
+        "cryptography",
+        "_cffi_backend",
         "singledispatch",
         "concurrent",
         "singledispatch_helpers",
@@ -424,6 +428,8 @@ def get_tops(extra_mods="", so_mods=""):
         tornado,
         msgpack,
         certifi,
+        cryptography,
+        _cffi_backend,
         singledispatch,
         concurrent,
         singledispatch_helpers,

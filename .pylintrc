@@ -759,5 +759,6 @@ allowed-3rd-party-modules=msgpack,
                           looseversion,
                           pytestskipmarkers,
                           cryptography,
+                          _cffi_backend,
                           aiohttp,
                           pytest_timeout
