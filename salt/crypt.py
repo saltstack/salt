@@ -178,6 +178,16 @@ class PrivateKey:
     def sign(self, data):
         return self.key.sign(data, padding.PKCS1v15(), hashes.SHA1())
 
+    def decrypt(self, data):
+        return self.key.decrypt(
+            data,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
+                label=None,
+            ),
+        )
+
 
 class PublicKey:
     def __init__(self, path):
@@ -369,14 +379,10 @@ def public_decrypt(pub, message):
 
 
 def pwdata_decrypt(rsa_key, pwdata):
-    serialization.load_pem_private_key(rsa_key)
-    password = rsa_key.decrypt(
+    key = serialization.load_pem_private_key(rsa_key.encode(), password=None)
+    password = key.decrypt(
         pwdata,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-            algorithm=hashes.SHA1(),
-            label=None,
-        ),
+        padding.PKCS1v15(),
     )
     return salt.utils.stringutils.to_unicode(password)
 
