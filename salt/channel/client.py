@@ -11,6 +11,8 @@ import uuid
 
 import tornado.gen
 import tornado.ioloop
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 import salt.crypt
 import salt.exceptions
@@ -23,9 +25,6 @@ import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
 from salt.utils.asynchronous import SyncWrapper
-
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 log = logging.getLogger(__name__)
 
