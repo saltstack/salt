@@ -176,11 +176,7 @@ class PrivateKey:
         return salt.utils.rsax931.RSAX931Signer(pem).sign(data)
 
     def sign(self, data):
-        return self.key.sign(
-            data,
-            padding.PKCS1v15(),
-            hashes.SHA1(),
-        )
+        return self.key.sign(data, padding.PKCS1v15(), hashes.SHA1())
 
 
 class PublicKey:
@@ -229,11 +225,15 @@ def _get_key_with_evict(path, timestamp, passphrase):
     second time the result is returned from the memoization.  If the file gets
     modified then the params are different and the key is loaded from disk.
     """
+    if passphrase:
+        password = passphrase.encode()
+    else:
+        password = None
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
     with salt.utils.files.fopen(path, "rb") as f:
         return serialization.load_pem_private_key(
             f.read(),
-            password=passphrase.encode(),
+            password=password,
         )
 
 
@@ -272,7 +272,7 @@ def sign_message(privkey_path, message, passphrase=None):
     """
     key = get_rsa_key(privkey_path, passphrase)
     return key.sign(
-        message,
+        salt.utils.stringutils.to_bytes(message),
         padding.PKCS1v15(),
         hashes.SHA1(),
     )
@@ -295,7 +295,7 @@ def verify_signature(pubkey_path, message, signature):
         )
     except cryptography.exceptions.InvalidSignature as exc:
         # Test this
-        log.debug("Signature verification failed: %s", exc.args[0])
+        log.debug("Signature verification failed: %s", exc)
         return False
     return True
 
@@ -1597,7 +1597,7 @@ class Crypticle:
         pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
         data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
         iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
-        cipher = Cipher(algorithms.AES(192), modes.CBC(iv_bytes))
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
         encryptor = cipher.encryptor()
         encr = encryptor.update(data)
         encr += encryptor.finalize()
@@ -1627,9 +1627,9 @@ class Crypticle:
             raise AuthenticationError("message authentication failed")
         iv_bytes = data[: self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE :]
-        cipher = Cipher(algorithms.AES(192), modes.CBC(iv_bytes))
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
         decryptor = cipher.decryptor()
-        data = decryptor.decrypt() + decryptor.finalize()
+        data = decryptor.update(data) + decryptor.finalize()
         return data[: -data[-1]]
 
     def dumps(self, obj, nonce=None):
