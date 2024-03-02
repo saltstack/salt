@@ -1,14 +1,13 @@
-import io
-import os
 import getpass
 import logging
+import os
 
 import pytest
 from cryptography.hazmat.primitives import serialization
 
+import salt.crypt as crypt
 import salt.utils.files
 import salt.utils.stringutils
-import salt.crypt as crypt
 from salt.exceptions import InvalidKeyError
 
 try:
@@ -247,11 +246,11 @@ def test_gen_keys_legacy(tmp_path):
     keyname = "test"
     keysize = 2048
     ret = legacy_gen_keys(str(keypath), keyname, keysize, passphrase=passphrase)
-    with io.open(ret, "rb") as fp:
+    with salt.utils.files.fopen(ret, "rb") as fp:
         keybytes = fp.read()
         assert keybytes.startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
         priv = serialization.load_pem_private_key(keybytes, passphrase.encode())
-    with io.open(ret.replace(".pem", ".pub"), "rb") as fp:
+    with salt.utils.files.fopen(ret.replace(".pem", ".pub"), "rb") as fp:
         keybytes = fp.read()
         assert keybytes.startswith(b"-----BEGIN PUBLIC KEY-----\n")
 
@@ -263,11 +262,11 @@ def test_gen_keys(tmp_path):
     keyname = "test"
     keysize = 2048
     ret = crypt.gen_keys(str(keypath), keyname, keysize, passphrase=passphrase)
-    with io.open(ret, "rb") as fp:
+    with salt.utils.files.fopen(ret, "rb") as fp:
         keybytes = fp.read()
         assert keybytes.startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
         priv = serialization.load_pem_private_key(keybytes, passphrase.encode())
-    with io.open(ret.replace(".pem", ".pub"), "rb") as fp:
+    with salt.utils.files.fopen(ret.replace(".pem", ".pub"), "rb") as fp:
         keybytes = fp.read()
         assert keybytes.startswith(b"-----BEGIN PUBLIC KEY-----\n")
 
