@@ -171,7 +171,7 @@ class PrivateKey:
         pem = self.key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=None,
+            encryption_algorithm=serialization.NoEncryption(),
         )
         return salt.utils.rsax931.RSAX931Signer(pem).sign(data)
 
@@ -343,7 +343,7 @@ def private_encrypt(key, message):
     pem = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=None,
+        encryption_algorithm=serialization.NoEncryption(),
     )
     signer = salt.utils.rsax931.RSAX931Signer(pem)
     return signer.sign(message)
@@ -360,9 +360,7 @@ def public_decrypt(pub, message):
         empty string if the verification failed
     """
 
-    with salt.utils.files.fopen(pub, "rb") as fp:
-        key = serialization.load_pem_public_key(fp.read())
-    pem = key.public_bytes(
+    pem = pub.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
@@ -596,7 +594,7 @@ class MasterKeys(dict):
             shared_pub.write_bytes(master_pub.read_bytes())
 
     def master_private_decrypt(self, data):
-        self.master_key.decrypt(
+        return self.master_key.decrypt(
             data,
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA1()),

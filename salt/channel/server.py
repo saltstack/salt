@@ -14,6 +14,8 @@ import pathlib
 import shutil
 
 import tornado.gen
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 import salt.crypt
 import salt.master
@@ -28,18 +30,6 @@ import salt.utils.stringutils
 import salt.utils.verify
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
-
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP  # nosec
-
 
 log = logging.getLogger(__name__)
 
@@ -630,8 +620,6 @@ class ReqServerChannel:
             else:
                 return {"enc": "clear", "load": {"ret": False}}
 
-        if not HAS_M2:
-            cipher = PKCS1_OAEP.new(pub)  # pylint: disable=used-before-assignment
         ret = {
             "enc": "pub",
             "pub_key": self.master_key.get_pub_str(),
@@ -661,17 +649,17 @@ class ReqServerChannel:
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
-        if not HAS_M2:
-            mcipher = PKCS1_OAEP.new(self.master_key.key)
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(
-                            load["token"], RSA.pkcs1_oaep_padding
-                        )
-                    else:
-                        mtoken = mcipher.decrypt(load["token"])
+                    mtoken = self.master_key.key.decrypt(
+                        ret["token"],
+                        padding.OAEP(
+                            mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                            algorithm=hashes.SHA1(),
+                            label=None,
+                        ),
+                    )
                     aes = f"{self.aes_key}_|-{mtoken}"
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
@@ -680,33 +668,39 @@ class ReqServerChannel:
             else:
                 aes = self.aes_key
 
-            if HAS_M2:
-                ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
-            else:
-                ret["aes"] = cipher.encrypt(aes)
+            ret["aes"] = pub.encrypt(
+                aes,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                    algorithm=hashes.SHA1(),
+                    label=None,
+                ),
+            )
         else:
             if "token" in load:
                 try:
-                    if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(
-                            load["token"], RSA.pkcs1_oaep_padding
-                        )
-                        ret["token"] = pub.public_encrypt(
-                            mtoken, RSA.pkcs1_oaep_padding
-                        )
-                    else:
-                        mtoken = mcipher.decrypt(load["token"])
-                        ret["token"] = cipher.encrypt(mtoken)
+                    mtoken = self.master_key.key.decrypt(
+                        ret["token"],
+                        padding.OAEP(
+                            mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                            algorithm=hashes.SHA1(),
+                            label=None,
+                        ),
+                    )
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
 
             aes = self.aes_key
-            if HAS_M2:
-                ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
-            else:
-                ret["aes"] = cipher.encrypt(aes)
+            ret["aes"] = pub.encrypt(
+                aes,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                    algorithm=hashes.SHA1(),
+                    label=None,
+                ),
+            )
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
