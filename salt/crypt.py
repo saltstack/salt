@@ -280,12 +280,7 @@ def sign_message(privkey_path, message, passphrase=None):
     """
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     """
-    key = get_rsa_key(privkey_path, passphrase)
-    return key.sign(
-        salt.utils.stringutils.to_bytes(message),
-        padding.PKCS1v15(),
-        hashes.SHA1(),
-    )
+    return PrivateKey(privkey_path, passphrase).sign(message)
 
 
 def verify_signature(pubkey_path, message, signature):
@@ -294,20 +289,7 @@ def verify_signature(pubkey_path, message, signature):
     Returns True for valid signature.
     """
     log.debug("salt.crypt.verify_signature: Loading public key")
-    pubkey = get_rsa_pub_key(pubkey_path)
-    log.debug("salt.crypt.verify_signature: Verifying signature")
-    try:
-        pubkey.verify(
-            signature,
-            message,
-            padding.PKCS1v15(),
-            hashes.SHA1(),
-        )
-    except cryptography.exceptions.InvalidSignature as exc:
-        # Test this
-        log.debug("Signature verification failed: %s", exc)
-        return False
-    return True
+    return PublicKey(pubkey_path).verify(message, signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
