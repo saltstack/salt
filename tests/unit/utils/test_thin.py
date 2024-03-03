@@ -64,6 +64,7 @@ class SSHThinTestCase(TestCase):
         ]
         lib_root = os.path.join(RUNTIME_VARS.TMP, "fake-libs")
         self.fake_libs = {
+            "cryptography": os.path.join(lib_root, "cryptography"),
             "distro": os.path.join(lib_root, "distro"),
             "jinja2": os.path.join(lib_root, "jinja2"),
             "yaml": os.path.join(lib_root, "yaml"),
@@ -79,6 +80,7 @@ class SSHThinTestCase(TestCase):
             "tornado": str(code_dir / "tornado"),
             "msgpack": str(code_dir / "msgpack"),
             "certifi": str(code_dir / "certifi"),
+            "cryptography": str(code_dir / "cryptography"),
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
@@ -473,6 +475,8 @@ class SSHThinTestCase(TestCase):
             "backports_abc",
             "concurrent",
             "contextvars",
+            "cryptography",
+            "_cffi_backend.cpython-310-x86_64-linux-gnu.so",
             "looseversion",
             "packaging",
         ]
@@ -575,6 +579,8 @@ class SSHThinTestCase(TestCase):
             "sdp_hlp",
             "ssl_mh",
             "concurrent",
+            "cryptography",
+            "_cffi_backend.cpython-310-x86_64-linux-gnu.so",
             "markupsafe",
             "backports_abc",
             "contextvars",
@@ -690,6 +696,8 @@ class SSHThinTestCase(TestCase):
             "sdp_hlp",
             "ssl_mh",
             "concurrent",
+            "cryptography",
+            "_cffi_backend.cpython-310-x86_64-linux-gnu.so",
             "markupsafe",
             "backports_abc",
             "contextvars",
@@ -1125,6 +1133,8 @@ class SSHThinTestCase(TestCase):
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
+                    (bts("cryptography/__init__.py"), bts("")),
+                    (bts(""), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
@@ -1167,6 +1177,8 @@ class SSHThinTestCase(TestCase):
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
+                    (bts("cryptography/__init__.py"), bts("")),
+                    (bts(""), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
@@ -1207,6 +1219,7 @@ class SSHThinTestCase(TestCase):
             self._popen(
                 None,
                 side_effect=[
+                    (bts(self.fake_libs["cryptography"]), bts("")),
                     (bts(self.fake_libs["distro"]), bts("")),
                     (bts(self.fake_libs["yaml"]), bts("")),
                     (bts(self.fake_libs["tornado"]), bts("")),

@@ -210,7 +210,8 @@ def test_gpg_pillar(salt_ssh_cli):
     gpg_keydir should not be overridden. This is issue #60002,
     which has the same cause as the one below.
     """
-    ret = salt_ssh_cli.run("pillar.items")
+    ret = salt_ssh_cli.run("pillar.items", "--log-level=trace")
+    print(ret.stderr)
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
