@@ -4,6 +4,7 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
 
+import asyncio
 import base64
 import binascii
 import copy
@@ -332,13 +333,7 @@ def private_encrypt(key, message):
     :rtype: str
     :return: The signature, or an empty string if the signature operation failed
     """
-    pem = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    signer = salt.utils.rsax931.RSAX931Signer(pem)
-    return signer.sign(message)
+    return key.encrypt(message)
 
 
 def public_decrypt(pub, message):
@@ -504,18 +499,18 @@ class MasterKeys(dict):
                 passphrase,
             )
         try:
-            key = get_rsa_key(path, passphrase)
+            key = PrivateKey(path, passphrase)
         except ValueError as e:
             message = f"Unable to read key: {path}; file may be corrupt"
         except TypeError as e:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
+            log.error(message)
+            raise MasterExit(message)
         except cryptography.UnsupportedAlgorithm as e:
             message = f"Unable to read key: {path}; key contains unsupported algorithm"
         else:
             log.debug("Loaded %s key: %s", name, path)
             return key
-        log.error(message)
-        raise MasterExit(message)
 
     def get_pub_str(self, name="master"):
         """
@@ -584,11 +579,6 @@ class MasterKeys(dict):
     def master_private_decrypt(self, data):
         return self.master_key.decrypt(
             data,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                algorithm=hashes.SHA1(),
-                label=None,
-            ),
         )
 
 
@@ -736,8 +726,7 @@ class AsyncAuth:
 
         return future
 
-    @tornado.gen.coroutine
-    def _authenticate(self):
+    async def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -759,7 +748,7 @@ class AsyncAuth:
             error = None
             while True:
                 try:
-                    creds = yield self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel)
                 except SaltClientError as exc:
                     error = exc
                     break
@@ -787,7 +776,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        yield tornado.gen.sleep(acceptance_wait_time)
+                        await asyncio.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -833,8 +822,7 @@ class AsyncAuth:
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
 
-    @tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -870,7 +858,7 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
-            payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
+            payload = await channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
@@ -885,8 +873,7 @@ class AsyncAuth:
         finally:
             if close_channel:
                 channel.close()
-        ret = self.handle_signin_response(sign_in_payload, payload)
-        raise tornado.gen.Return(ret)
+        return self.handle_signin_response(sign_in_payload, payload)
 
     def handle_signin_response(self, sign_in_payload, payload):
         auth = {}
@@ -1008,7 +995,7 @@ class AsyncAuth:
                 self.opts["keysize"],
                 self.opts.get("user"),
             )
-        key = get_rsa_key(self.rsa_path, None)
+        key = PrivateKey(self.rsa_path, None)
         log.debug("Loaded minion key: %s", self.rsa_path)
         return key
 
@@ -1079,14 +1066,7 @@ class AsyncAuth:
         else:
             log.debug("Decrypting the current master AES key")
         key = self.get_keys()
-        key_str = key.decrypt(
-            payload["aes"],
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                algorithm=hashes.SHA1(),
-                label=None,
-            ),
-        )
+        key_str = key.decrypt(payload["aes"])
         if "sig" in payload:
             m_path = os.path.join(self.opts["pki_dir"], self.mpub)
             if os.path.exists(m_path):
@@ -1108,14 +1088,7 @@ class AsyncAuth:
             return key_str.split("_|-")
         else:
             if "token" in payload:
-                token = key.decrypt(
-                    payload["token"],
-                    padding.OAEP(
-                        mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                        algorithm=hashes.SHA1(),
-                        label=None,
-                    ),
-                )
+                token = key.decrypt(payload["token"])
                 return key_str, token
             elif not master_pub:
                 return key_str, ""
