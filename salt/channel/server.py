@@ -14,8 +14,6 @@ import pathlib
 import shutil
 
 import tornado.gen
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 import salt.crypt
 import salt.master
@@ -612,7 +610,7 @@ class ReqServerChannel:
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            pub = salt.crypt.get_rsa_pub_key(pubfn)
+            pub = salt.crypt.PublicKey(pubfn)
         except salt.crypt.InvalidKeyError as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
             if sign_messages:
@@ -653,12 +651,7 @@ class ReqServerChannel:
             if "token" in load:
                 try:
                     mtoken = self.master_key.key.decrypt(
-                        ret["token"],
-                        padding.OAEP(
-                            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                            algorithm=hashes.SHA1(),
-                            label=None,
-                        ),
+                        load["token"],
                     )
                     aes = f"{self.aes_key}_|-{mtoken}"
                 except Exception:  # pylint: disable=broad-except
@@ -670,22 +663,15 @@ class ReqServerChannel:
 
             ret["aes"] = pub.encrypt(
                 aes,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                    algorithm=hashes.SHA1(),
-                    label=None,
-                ),
             )
         else:
             if "token" in load:
                 try:
                     mtoken = self.master_key.key.decrypt(
-                        ret["token"],
-                        padding.OAEP(
-                            mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                            algorithm=hashes.SHA1(),
-                            label=None,
-                        ),
+                        load["token"],
+                    )
+                    ret["token"] = pub.encrypt(
+                        mtoken,
                     )
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
@@ -693,14 +679,7 @@ class ReqServerChannel:
                     pass
 
             aes = self.aes_key
-            ret["aes"] = pub.encrypt(
-                aes,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                    algorithm=hashes.SHA1(),
-                    label=None,
-                ),
-            )
+            ret["aes"] = pub.encrypt(aes)
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())

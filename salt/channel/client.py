@@ -11,8 +11,6 @@ import uuid
 
 import tornado.gen
 import tornado.ioloop
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 import salt.crypt
 import salt.exceptions
@@ -210,14 +208,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        aes = key.decrypt(
-            ret["key"],
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA1()),
-                algorithm=hashes.SHA1(),
-                label=None,
-            ),
-        )
+        aes = key.decrypt(ret["key"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
