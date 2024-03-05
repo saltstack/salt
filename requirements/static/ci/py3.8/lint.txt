@@ -670,6 +670,7 @@ terminal==0.4.0
 textfsm==1.1.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/static/ci/common.in
     #   napalm
     #   netmiko
     #   ntc-templates

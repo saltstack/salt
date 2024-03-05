@@ -533,6 +533,7 @@ terminal==0.4.0
     # via ntc-templates
 textfsm==1.1.0
     # via
+    #   -r requirements/static/ci/common.in
     #   napalm
     #   netmiko
     #   ntc-templates
