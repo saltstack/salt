@@ -70,28 +70,35 @@ def present(
         .. versionadded:: 3007.0
 
     source
-        A path/URI or list of paths/URI to retrieve the key from.
-        By default, this works as a backup to retrieving the key from
-        the keyserver.
+        A (list of) path(s)/URI to retrieve the key(s) from.
+        By default, this works as a backup option in case retrieving a key
+        from the keyserver fails.
 
         .. note::
-            This works like the ``source`` parameter to ``file.managed``.
-            Only the first succesfully retrievable source is taken into account.
+            All listed sources will be iterated over in order until the first one found
+            to contain the requested key. If multiple keys are managed in a single
+            state, the effective sources are allowed to differ between keys.
+
+        .. important::
+            Internally, this uses :py:func:`gpg.read_key <salt.modules.gpg.read_key>`
+            to list keys in the sources. If a source is not a keyring, on GnuPG <2.1,
+            this can lead to unintentional decryption.
 
         .. versionadded:: 3008.0
 
     skip_keyserver
         Do not attempt to retrieve the key from the keyserver, only use ``source``.
-        Defaults to false.
+        Irrelevant when ``text`` is passed. Defaults to false.
 
         .. versionadded:: 3008.0
 
     text
-        Instead of retrieving the key(s) to import from a keyserver or
-        a local file source, import the key(s) from this (armored) string.
+        Instead of retrieving the key(s) to import from a keyserver/URI,
+        import them from this (armored) string.
 
         .. note::
-            ``name`` or ``keys`` must still specify the expected key ID(s).
+            ``name`` or ``keys`` must still specify the expected key ID(s),
+            so this cannot be used to indiscriminately import a keyring.
             Requires python-gnupg v0.5.1.
 
         .. versionadded:: 3008.0
