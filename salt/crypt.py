@@ -23,13 +23,20 @@ import traceback
 import uuid
 import weakref
 
-import cryptography.exceptions
 import tornado.gen
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+try:
+    import cryptography.exceptions
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+    HAS_CRYPTOGRAPHY = True
+except ImportError:
+    HAS_CRYPTOGRAPHY = False
 
 import salt.channel.client
+import salt.crypt_legacy
 import salt.defaults.exitcodes
 import salt.payload
 import salt.utils.crypt
@@ -98,6 +105,84 @@ def dropfile(cachedir, user=None, master_id=""):
         os.rename(dfn_next, dfn)
 
 
+def generate_private_key(size, e):
+    return rsa.generate_private_key(e, size)
+
+
+def public_from_private(key):
+    return key.public_key()
+
+
+def save_private_key(path, key, passphrase=None):
+    with salt.utils.files.fopen(path, "wb+") as f:
+        if passphrase:
+            enc = serialization.BestAvailableEncryption(passphrase.encode())
+        else:
+            enc = serialization.NoEncryption()
+        pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=enc,
+        )
+        f.write(pem)
+
+
+def save_public_key(path, key):
+    with salt.utils.files.fopen(path, "wb+") as f:
+        pem = key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        f.write(pem)
+
+
+def aes_encrypt(aes_key, hmac_key, data, block_size=16):
+    pad = block_size - len(data) % block_size
+    data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
+    iv_bytes = os.urandom(block_size)
+    cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
+    encryptor = cipher.encryptor()
+    encr = encryptor.update(data)
+    encr += encryptor.finalize()
+    data = iv_bytes + encr
+    sig = hmac.new(hmac_key, data, hashlib.sha256).digest()
+    return data + sig
+
+
+def aes_decrypt(
+    aes_key, hmac_key, data, block_size=16, sig_size=hashlib.sha256().digest_size
+):
+    sig = data[-sig_size:]
+    data = data[:-sig_size]
+    if not isinstance(data, bytes):
+        data = salt.utils.stringutils.to_bytes(data)
+    mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
+    if len(mac_bytes) != len(sig):
+        log.debug("Failed to authenticate message")
+        raise AuthenticationError("message authentication failed")
+    result = 0
+    for zipped_x, zipped_y in zip(mac_bytes, sig):
+        result |= zipped_x ^ zipped_y
+    if result != 0:
+        log.debug("Failed to authenticate message")
+        raise AuthenticationError("message authentication failed")
+    iv_bytes = data[:block_size]
+    data = data[block_size:]
+    cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
+    decryptor = cipher.decryptor()
+    data = decryptor.update(data) + decryptor.finalize()
+    return data[: -data[-1]]
+
+
+def pwdata_decrypt(rsa_key, pwdata):
+    key = serialization.load_pem_private_key(rsa_key.encode(), password=None)
+    password = key.decrypt(
+        pwdata,
+        padding.PKCS1v15(),
+    )
+    return salt.utils.stringutils.to_unicode(password)
+
+
 def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
     """
     Generate a RSA public keypair for use with salt
@@ -115,7 +200,7 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
     priv = f"{base}.pem"
     pub = f"{base}.pub"
 
-    gen = rsa.generate_private_key(e, keysize)
+    gen = generate_private_key(keysize, e)
 
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
@@ -131,24 +216,11 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
         )
 
     with salt.utils.files.set_umask(0o277):
-        with salt.utils.files.fopen(priv, "wb+") as f:
-            if passphrase:
-                enc = serialization.BestAvailableEncryption(passphrase.encode())
-            else:
-                enc = serialization.NoEncryption()
-            pem = gen.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=enc,
-            )
-            f.write(pem)
-    with salt.utils.files.fopen(pub, "wb+") as f:
-        pubkey = gen.public_key()
-        pem = pubkey.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        f.write(pem)
+        save_private_key(priv, gen, passphrase)
+
+    pubkey = public_from_private(gen)
+    save_public_key(pub, pubkey)
+
     os.chmod(priv, 0o400)
     if user:
         try:
@@ -334,34 +406,6 @@ def private_encrypt(key, message):
     :return: The signature, or an empty string if the signature operation failed
     """
     return key.encrypt(message)
-
-
-def public_decrypt(pub, message):
-    """
-    Verify an M2Crypto-compatible signature
-
-    :param Crypto.PublicKey.RSA._RSAobj key: The RSA public key object
-    :param str message: The signed message to verify
-    :rtype: str
-    :return: The message (or digest) recovered from the signature, or an
-        empty string if the verification failed
-    """
-
-    pem = pub.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    verifier = salt.utils.rsax931.RSAX931Verifier(pem)
-    return verifier.verify(message)
-
-
-def pwdata_decrypt(rsa_key, pwdata):
-    key = serialization.load_pem_private_key(rsa_key.encode(), password=None)
-    password = key.decrypt(
-        pwdata,
-        padding.PKCS1v15(),
-    )
-    return salt.utils.stringutils.to_unicode(password)
 
 
 class MasterKeys(dict):
@@ -1071,12 +1115,12 @@ class AsyncAuth:
             m_path = os.path.join(self.opts["pki_dir"], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    mkey = get_rsa_pub_key(m_path)
+                    mkey = PublicKey(m_path)
                 except Exception:  # pylint: disable=broad-except
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
                 digest = salt.utils.stringutils.to_bytes(digest)
-                m_digest = public_decrypt(mkey, payload["sig"])
+                m_digest = mkey.decrypt(payload["sig"])
                 if m_digest != digest:
                     return "", ""
         else:
@@ -1553,43 +1597,14 @@ class Crypticle:
         encrypt data with AES-CBC and sign it with HMAC-SHA256
         """
         aes_key, hmac_key = self.keys
-        pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
-        data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
-        iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
-        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
-        encryptor = cipher.encryptor()
-        encr = encryptor.update(data)
-        encr += encryptor.finalize()
-        data = iv_bytes + encr
-        sig = hmac.new(hmac_key, data, hashlib.sha256).digest()
-        return data + sig
+        return aes_encrypt(aes_key, hmac_key, data, self.AES_BLOCK_SIZE)
 
     def decrypt(self, data):
         """
         verify HMAC-SHA256 signature and decrypt data with AES-CBC
         """
         aes_key, hmac_key = self.keys
-        sig = data[-self.SIG_SIZE :]
-        data = data[: -self.SIG_SIZE]
-        if not isinstance(data, bytes):
-            data = salt.utils.stringutils.to_bytes(data)
-        mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
-        if len(mac_bytes) != len(sig):
-            log.debug("Failed to authenticate message")
-            raise AuthenticationError("message authentication failed")
-        result = 0
-
-        for zipped_x, zipped_y in zip(mac_bytes, sig):
-            result |= zipped_x ^ zipped_y
-        if result != 0:
-            log.debug("Failed to authenticate message")
-            raise AuthenticationError("message authentication failed")
-        iv_bytes = data[: self.AES_BLOCK_SIZE]
-        data = data[self.AES_BLOCK_SIZE :]
-        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
-        decryptor = cipher.decryptor()
-        data = decryptor.update(data) + decryptor.finalize()
-        return data[: -data[-1]]
+        return aes_decrypt(aes_key, hmac_key, data, self.AES_BLOCK_SIZE, self.SIG_SIZE)
 
     def dumps(self, obj, nonce=None):
         """
@@ -1631,3 +1646,19 @@ class Crypticle:
                     return {}
                 self.serial = serial
         return payload
+
+
+if not HAS_CRYPTOGRAPHY:
+    if not salt.crypt_legacy.HAS_CRYPTO:
+        raise RuntimeError(
+            "One of cryptography, pycrpto or pycryptodomex must be installed"
+        )
+    generate_private_key = salt.crypt_legacy.generate_private_key
+    public_from_private = salt.crypt_legacy.public_from_private
+    save_private_key = salt.crypt_legacy.save_private_key
+    save_public_key = salt.crypt_legacy.save_public_key
+    pwdata_decrypt = salt.crypt_legacy.pwdata_decrypt
+    aes_encrypt = salt.crypt_legacy.aes_encrypt
+    aes_decrypt = salt.crypt_legacy.aes_decrypt
+    PrivateKey = salt.crypt_legacy.PrivateKey
+    PublicKey = salt.crypt_legacy.PublicKey
