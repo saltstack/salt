@@ -949,6 +949,7 @@ class GitProvider:
                 os.write(fh_, salt.utils.stringutils.to_bytes(str(os.getpid())))
                 os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
                 os.write(fh_, salt.utils.stringutils.to_bytes(str(self.mach_id)))
+                os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
 
         except OSError as exc:
             if exc.errno == errno.EEXIST:
@@ -957,40 +958,57 @@ class GitProvider:
                         pid = int(
                             salt.utils.stringutils.to_unicode(fd_.readline()).rstrip()
                         )
-                        mach_id = int(
-                            salt.utils.stringutils.to_unicode(fd_.readline()).rstrip()
-                        )
                     except ValueError:
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.
                         pid = 0
+                    try:
+                        mach_id = salt.utils.stringutils.to_unicode(
+                            fd_.readline()
+                        ).rstrip()
+                    except ValueError as exc:
+                        # Lock file is empty, set machine id to 0 so it evaluates as
+                        # False.
                         mach_id = 0
+
                 global_lock_key = self.role + "_global_lock"
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
                     msg = (
                         f"{global_lock_key} is enabled and {lock_type} lockfile {lock_file} is present for "
-                        f"{self.role} remote '{self.id}' on machine_id {self.mach_id}."
+                        f"{self.role} remote '{self.id}' on machine_id {self.mach_id} with pid '{pid}'."
                     )
                     if pid:
                         msg += f" Process {pid} obtained the lock"
                         if self.mach_id or mach_id:
-                            msg += f" Process {pid} obtained the lock for machine_id {mach_id}, current machine_id {self.mach_id}"
-                        else:
-                            msg += f" Process {pid} obtained the lock"
+                            msg += f" for machine_id {mach_id}, current machine_id {self.mach_id}"
 
                         if not pid_exists(pid):
-                            msg += (
-                                " but this process is not running. The "
-                                "update may have been interrupted. If "
-                                "using multi-master with shared gitfs "
-                                "cache, the lock may have been obtained "
-                                "by another master"
-                            )
                             if self.mach_id != mach_id:
-                                msg += f", with machine_id {mach_id}"
+                                msg += (
+                                    " but this process is not running. The "
+                                    "update may have been interrupted. If "
+                                    "using multi-master with shared gitfs "
+                                    "cache, the lock may have been obtained "
+                                    "by another master, with machine_id {mach_id}"
+                                )
                             else:
-                                msg += "."
+                                msg += (
+                                    " but this process is not running. The "
+                                    "update may have been interrupted. "
+                                    " Given this process is for the same machine "
+                                    " the lock will be reallocated to new process "
+                                )
+                                log.warning(msg)
+                                success, fail = self._clear_lock()
+                                if success:
+                                    return self.__lock(
+                                        lock_type="update", failhard=failhard
+                                    )
+                                elif failhard:
+                                    raise
+                                return
+
                     log.warning(msg)
                     if failhard:
                         raise
@@ -1041,8 +1059,6 @@ class GitProvider:
         contextmanager here because the lock is meant to stay and not be
         automatically removed.
         """
-        dbg_msg = f"DGM GitProvider lock entry, pid '{os.getpid()}'"
-        log.warning(dbg_msg)
         success = []
         failed = []
         try:
