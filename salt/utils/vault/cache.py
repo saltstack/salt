@@ -96,7 +96,7 @@ class CommonCache:
                 if int(time.time()) - updated >= self.ttl:
                     if flush:
                         log.debug(
-                            f"Cached data in {self.cbank}/{ckey} outdated, flushing."
+                            "Cached data in %s/%s outdated, flushing.", self.cbank, ckey
                         )
                         self.flush()
                     return False
