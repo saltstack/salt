@@ -1,3 +1,8 @@
+"""
+Cryptographic implimentation using legacy libraries. The pycrypto and
+pycryptodomex implimentations are being preserved for use with salt-ssh's thin
+directory.
+"""
 import hashlib
 import hmac
 import logging

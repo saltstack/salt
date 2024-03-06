@@ -461,7 +461,7 @@ class AsyncPubChannel:
         async def wrap_callback(messages):
             payload = self.transport._decode_messages(messages)
             decoded = await self._decode_payload(payload)
-            log.info("PubChannel received: %r %r", decoded, callback)
+            log.debug("PubChannel received: %r %r", decoded, callback)
             if decoded is not None and callback is not None:
                 await callback(decoded)
 
