@@ -650,9 +650,7 @@ class ReqServerChannel:
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(
-                        load["token"],
-                    )
+                    mtoken = self.master_key.key.decrypt(load["token"])
                     aes = f"{self.aes_key}_|-{mtoken}"
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
@@ -667,12 +665,8 @@ class ReqServerChannel:
         else:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(
-                        load["token"],
-                    )
-                    ret["token"] = pub.encrypt(
-                        mtoken,
-                    )
+                    mtoken = self.master_key.key.decrypt(load["token"])
+                    ret["token"] = pub.encrypt(mtoken)
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
