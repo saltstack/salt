@@ -920,9 +920,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("py3", "pyall"):
             for i in range(1, 4):
-                files.append(os.path.join(py, "root", f"r{i}"))
+                files.append(os.path.join(py, "root", "r{}".format(i)))
             for i in range(4, 7):
-                files.append(os.path.join(py, "root2", f"r{i}"))
+                files.append(os.path.join(py, "root2", "r{}".format(i)))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
@@ -998,9 +998,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("pyall", "pyall", "py3"):
             for i in range(1, 4):
-                files.append(os.path.join("namespace", py, "root", f"r{i}"))
+                files.append(os.path.join("namespace", py, "root", "r{}".format(i)))
             for i in range(4, 7):
-                files.append(os.path.join("namespace", py, "root2", f"r{i}"))
+                files.append(os.path.join("namespace", py, "root2", "r{}".format(i)))
 
         for idx, cl in enumerate(thin.tarfile.open().method_calls[:-6]):
             arcname = cl[2].get("arcname")
@@ -1248,7 +1248,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if f"{_file}" in x[-2]]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     def test_pack_alternatives(self):
         """
@@ -1258,7 +1258,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if f"{_file}" in x[-2]]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1276,7 +1276,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if f"{_file}" in x[-2]]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1303,7 +1303,7 @@ class SSHThinTestCase(TestCase):
                 assert msg in log_handler.messages
         calls = self.tar.mock_calls
         for _file in self.exp_files:
-            arg = [x for x in calls if f"{_file}" in x[-2]]
+            arg = [x for x in calls if "{}".format(_file) in x[-2]]
             kwargs = [
                 x
                 for x in calls
@@ -1345,7 +1345,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if f"{_file}" in x[-2]]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     def test_pack_alternatives_empty_dependencies(self):
         """
@@ -1377,7 +1377,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if f"{_file}" in x[-2]]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")
