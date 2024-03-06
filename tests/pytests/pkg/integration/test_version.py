@@ -85,7 +85,7 @@ def test_compare_versions(version, binary, install_salt):
         )
 
 
-@pytest.mark.skip_unless_on_darwin()
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.parametrize(
     "symlink",
     [
@@ -117,7 +117,8 @@ def test_symlinks_created(version, symlink, install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
-@pytest.mark.skip_on_windows()
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_if_binaries_missing("rpmdev-vercmp")
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included
