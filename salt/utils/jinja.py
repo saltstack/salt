@@ -471,6 +471,9 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     obj = re.search(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 
@@ -498,6 +501,9 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     obj = re.match(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 
