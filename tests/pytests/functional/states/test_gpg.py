@@ -6,6 +6,7 @@ import psutil
 import pytest
 
 gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
+PYGNUPG_VERSION = tuple(int(x) for x in gnupglib.__version__.split("."))
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
@@ -78,6 +79,52 @@ of3GgxvhS1Qa7+ysj088az5GVt0pqVe3SbRVvn/jyC6yZvWuv94KdL3R7hCeEz2/
 JakCRJ4wxEsdeASE8t9H/oTqD0I5asMa9EMvn5ICEGeLsTeQb7OYYihTQj7HJLG6
 pDEmK8EhJDvV/9o0lnhm/9w=
 =Wc0O
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def key_b_fp():
+    return "118B4FAB78038CB2DF7B69E20F6C422647465C93"
+
+
+@pytest.fixture
+def key_b_pub():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4fxNQEEAOgAzbpheJrOq4il5BrMVtP1G1kU94QX2+xLXEgW/wPdE4HD6Zbg
+vliIg18v7Na4x8ubWy/7CkXC83EJ8SoSqcCccvuKjIWsm6tfeCidNstNCjewFMUR
+7ZOQmAe/I2JAlz2SgNxS3ZDiCZpGkxqE0GZ+1N7Mz2WHImnExG149RVHABEBAAG0
+LUtleSBCIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5YkBleGFtcGxlPojR
+BBMBCAA7FiEEEYtPq3gDjLLfe2niD2xCJkdGXJMFAmOH8TUCGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQD2xCJkdGXJNR3AQAk5ZoN+/ViIX3vA/LbXPn
+2VE1E7ETTeIGqsb5f98UfjIbYfkNE8+OtnPxnDbSOPWBEOT+XPPjmxnE0a2UNTfn
+ECO71/ZUiyC3ZN50IZ0vgzwBH+DeIV6PDAAun5FGx4RI7v6n0CPlrUcWKYe8wY1F
+COflOxnEyLVHXnX8wUIzZwo=
+=Hq0X
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def key_c_fp():
+    return "96F136AC4C92D78DAF33105E35C03186001C6E31"
+
+
+@pytest.fixture
+def key_c_pub():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4f2GgEEALToT23wZfLGM/JGCV4pWRlIXXqLwwEBSXral92HvsUjC8Vqsh1z
+1n0K8/vIpS9OH2Q21emtht4y36rbahy+w6wRc1XXjPQ28Pyd+8v/jSKy/NKW3g+y
+ZoB22vj4L35pAu/G6xs9+pKsLHGjMo+LsWZNEZ2Ar06aYA0dbTb0AqYfABEBAAG0
+LUtleSBDIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5Y0BleGFtcGxlPojR
+BBMBCAA7FiEElvE2rEyS142vMxBeNcAxhgAcbjEFAmOH9hoCGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQNcAxhgAcbjH2WAP/RtlUfN/novwmxxma6Zom
+P6skFnCcRCs0vMU3OnNwuxZt9B+j0sUTu6noGi04Gcbd0eQs7v57DQHcRhNidZU/
+8BJv5jD6E2yuzLK9lON+Yhgc6Pg6raA3hBeCY2HuzTEQLAThyV7ihboNILo7FJwo
+y9KvnTFP2+oeDX2Z/m4SoWw=
+=81Kb
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
@@ -184,6 +231,118 @@ def test_gpg_present_keyring_trust_change(
     key_info = gnupg_keyring.list_keys(keys=key_a_fp)
     assert key_info
     assert key_info[0]["trust"] == "u"
+
+
+def test_gpg_present_source(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+):
+    with pytest.helpers.temp_file(
+        "keys", contents=key_a_pub + "\n" + key_b_pub
+    ) as keyfile:
+        ret = gpg.present(
+            key_a_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            source=str(keyfile),
+        )
+    assert ret.result
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+
+
+@pytest.mark.skipif(
+    PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+)
+def test_gpg_present_text(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+):
+    concat = key_a_pub + "\n" + key_b_pub
+    ret = gpg.present(key_a_fp[-16:], gnupghome=str(gpghome), text=concat)
+    assert ret.result
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+
+
+@pytest.mark.skipif(
+    PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+)
+def test_gpg_present_text_not_contained(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp, key_c_fp
+):
+    concat = key_a_pub + "\n" + key_b_pub
+    ret = gpg.present(key_c_fp[-16:], gnupghome=str(gpghome), text=concat)
+    assert not ret.result
+    assert not ret.changes
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+    assert "Passed text did not contain the requested key" in ret.comment
+
+
+def test_gpg_present_multi_source(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+):
+    with pytest.helpers.temp_file("keyb", contents=key_b_pub) as keybfile:
+        with pytest.helpers.temp_file("keya", contents=key_a_pub) as keyafile:
+            ret = gpg.present(
+                key_a_fp[-16:],
+                gnupghome=str(gpghome),
+                skip_keyserver=True,
+                source=[str(keybfile), str(keyafile)],
+            )
+    assert ret.result
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+
+
+def test_gpg_present_source_not_contained(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp, key_c_fp
+):
+    with pytest.helpers.temp_file(
+        "keys", contents=key_a_pub + "\n" + key_b_pub
+    ) as keyfile:
+        ret = gpg.present(
+            key_c_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            source=str(keyfile),
+        )
+    assert not ret.result
+    assert not ret.changes
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+    assert (
+        "none of the specified sources were found or contained the key" in ret.comment
+    )
+
+
+def test_gpg_present_source_bad_keyfile(
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+):
+    with pytest.helpers.temp_file(
+        "keys", contents=key_a_pub + "\n" + key_b_pub
+    ) as keyfile:
+        with pytest.helpers.temp_file("badkeys", contents="foobar") as badkeyfile:
+            ret = gpg.present(
+                key_a_fp[-16:],
+                gnupghome=str(gpghome),
+                skip_keyserver=True,
+                source=["/foo/bar/non/ex/is/tent", str(badkeyfile), str(keyfile)],
+            )
+    assert ret.result
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
 
 
 @pytest.mark.windows_whitelisted

@@ -325,33 +325,7 @@ def list_keys(user=None, gnupghome=None, keyring=None):
     """
     _keys = []
     for _key in _list_keys(user=user, gnupghome=gnupghome, keyring=keyring):
-        tmp = {
-            "keyid": _key["keyid"],
-            "fingerprint": _key["fingerprint"],
-            "uids": _key["uids"],
-        }
-
-        expires = _key.get("expires", None)
-        date = _key.get("date", None)
-        length = _key.get("length", None)
-        owner_trust = _key.get("ownertrust", None)
-        trust = _key.get("trust", None)
-
-        if expires:
-            tmp["expires"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["expires"]))
-            )
-        if date:
-            tmp["created"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["date"]))
-            )
-        if length:
-            tmp["keyLength"] = _key["length"]
-        if owner_trust:
-            tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
-        if trust:
-            tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
-        _keys.append(tmp)
+        _keys.append(_render_key(_key))
     return _keys
 
 
@@ -384,34 +358,36 @@ def list_secret_keys(user=None, gnupghome=None, keyring=None):
     for _key in _list_keys(
         user=user, gnupghome=gnupghome, keyring=keyring, secret=True
     ):
-        tmp = {
-            "keyid": _key["keyid"],
-            "fingerprint": _key["fingerprint"],
-            "uids": _key["uids"],
-        }
-
-        expires = _key.get("expires", None)
-        date = _key.get("date", None)
-        length = _key.get("length", None)
-        owner_trust = _key.get("ownertrust", None)
-        trust = _key.get("trust", None)
-
-        if expires:
-            tmp["expires"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["expires"]))
-            )
-        if date:
-            tmp["created"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["date"]))
-            )
-        if length:
-            tmp["keyLength"] = _key["length"]
-        if owner_trust:
-            tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
-        if trust:
-            tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
-        _keys.append(tmp)
+        _keys.append(_render_key(_key))
     return _keys
+
+
+def _render_key(_key):
+    tmp = {
+        "keyid": _key["keyid"],
+        "fingerprint": _key["fingerprint"],
+        "uids": _key["uids"],
+    }
+
+    expires = _key.get("expires", None)
+    date = _key.get("date", None)
+    length = _key.get("length", None)
+    owner_trust = _key.get("ownertrust", None)
+    trust = _key.get("trust", None)
+
+    if expires:
+        tmp["expires"] = time.strftime(
+            "%Y-%m-%d", time.localtime(float(_key["expires"]))
+        )
+    if date:
+        tmp["created"] = time.strftime("%Y-%m-%d", time.localtime(float(_key["date"])))
+    if length:
+        tmp["keyLength"] = _key["length"]
+    if owner_trust:
+        tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
+    if trust:
+        tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
+    return tmp
 
 
 @_restore_ownership
@@ -831,7 +807,9 @@ def get_secret_key(
 
 
 @_restore_ownership
-def import_key(text=None, filename=None, user=None, gnupghome=None, keyring=None):
+def import_key(
+    text=None, filename=None, user=None, gnupghome=None, keyring=None, select=None
+):
     r"""
     Import a key from text or a file
 
@@ -855,6 +833,13 @@ def import_key(text=None, filename=None, user=None, gnupghome=None, keyring=None
 
         .. versionadded:: 3007.0
 
+    select
+        Limit imported keys to a (list of) known identifier(s). This can be
+        anything which GnuPG uses to identify keys like fingerprints, key IDs
+        or email addresses.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -863,33 +848,61 @@ def import_key(text=None, filename=None, user=None, gnupghome=None, keyring=None
         salt '*' gpg.import_key filename='/path/to/public-key-file'
 
     """
-    ret = {"res": True, "message": ""}
 
-    if not text and not filename:
+    def _import(gpg, path=None, data=None):
+        if path:
+            try:
+                try:
+                    imported_data = gpg.import_keys_file(path)
+                except AttributeError:
+                    # python-gnupg < 0.5.0
+                    with salt.utils.files.flopen(filename, "rb") as _fp:
+                        data = salt.utils.stringutils.to_unicode(_fp.read())
+            except OSError:
+                raise SaltInvocationError("filename does not exist.")
+        if data:
+            imported_data = gpg.import_keys(data)
+        ret = {"res": True, "message": "", "fingerprints": imported_data.fingerprints}
+        if imported_data.imported or imported_data.imported_rsa:
+            ret["message"] = "Successfully imported key(s)."
+        elif imported_data.unchanged:
+            ret["message"] = "Key(s) already exist in keychain."
+        elif imported_data.not_imported:
+            ret["res"] = False
+            ret["message"] = "Unable to import key."
+        elif not imported_data.count:
+            ret["res"] = False
+            ret["message"] = "Unable to import key."
+        return ret
+
+    if not (text or filename):
         raise SaltInvocationError("filename or text must be passed.")
+    if text and filename:
+        raise SaltInvocationError("filename and text are mutually exclusive.")
+
+    select = select or []
+    if not isinstance(select, list):
+        select = [select]
+
+    if select:
+        # GnuPG does not expose selective import behavior, so import everything
+        # to a temporary keyring and then export only the wanted keys.
+        tmpkeyring = __salt__["temp.file"]()
+        tmpgpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=tmpkeyring)
+        res = _import(tmpgpg, path=filename, data=text)
+        if not res["res"]:
+            return res
+        text = tmpgpg.export_keys(select)
+        if not text:
+            return {
+                "res": True,
+                "message": "After filtering, no keys to import were left.",
+                "fingerprints": [],
+            }
+        filename = None
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
-
-    if filename:
-        try:
-            with salt.utils.files.flopen(filename, "rb") as _fp:
-                text = salt.utils.stringutils.to_unicode(_fp.read())
-        except OSError:
-            raise SaltInvocationError("filename does not exist.")
-
-    imported_data = gpg.import_keys(text)
-
-    if imported_data.imported or imported_data.imported_rsa:
-        ret["message"] = "Successfully imported key(s)."
-    elif imported_data.unchanged:
-        ret["message"] = "Key(s) already exist in keychain."
-    elif imported_data.not_imported:
-        ret["res"] = False
-        ret["message"] = "Unable to import key."
-    elif not imported_data.count:
-        ret["res"] = False
-        ret["message"] = "Unable to import key."
-    return ret
+    return _import(gpg, path=filename, data=text)
 
 
 def export_key(
@@ -988,6 +1001,69 @@ def export_key(
             ret = False
 
     return ret
+
+
+def read_key(
+    path=None, text=None, fingerprint=None, keyid=None, user=None, gnupghome=None
+):
+    """
+    .. versionadded:: 3008.0
+
+    Read key(s) from the filesystem or a string.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' gpg.read_key /tmp/my-shiny-key.asc
+
+    path
+        The path to the key file to read. Either this or ``text`` is required.
+
+    text
+        The string to read the key from. Either this or ``path`` is required.
+
+        .. note::
+            Requires python-gnupg v0.5.1.
+
+    fingerprint
+        Only return key information if it matches this fingerprint.
+
+    keyid
+        Only return key information if it matches this keyid.
+
+    user
+        Which user's keychain to access, defaults to user Salt is running as.
+        Passing the user as ``salt`` will set the GnuPG home directory to
+        ``/etc/salt/gpgkeys``.
+
+    gnupghome
+        Specify the location where the GPG keyring and related files are stored.
+
+    .. important::
+        This can accidentally decrypt data on GnuPG versions below 2.1
+        if the file is not a keyring.
+    """
+    if not (path or text):
+        raise SaltInvocationError("Either `path` or `text` is required.")
+    if path and text:
+        raise SaltInvocationError("`path` and `text` are mutually exclusive.")
+    gpg = _create_gpg(user=user, gnupghome=gnupghome)
+    if path:
+        keys = gpg.scan_keys(path)
+    else:
+        keys = gpg.scan_keys_mem(text)
+
+    rets = []
+    for _key in keys:
+        if (
+            not (fingerprint or keyid)
+            or _key["fingerprint"] == fingerprint
+            or _key["keyid"] == keyid
+            or _key["keyid"][8:] == keyid
+        ):
+            rets.append(_render_key(_key))
+    return rets
 
 
 @_restore_ownership
