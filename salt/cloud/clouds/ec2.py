@@ -296,9 +296,11 @@ def query(
             location = get_location()
 
         if not requesturl:
-            endpoint = provider.get("endpoint", f"ec2.{location}.{service_url}")
+            endpoint = provider.get(
+                "endpoint", "ec2.{}.{}".format(location, service_url)
+            )
 
-            requesturl = f"https://{endpoint}/"
+            requesturl = "https://{}/".format(endpoint)
             endpoint = urllib.parse.urlparse(requesturl).netloc
             endpoint_path = urllib.parse.urlparse(requesturl).path
         else:
@@ -1478,7 +1480,7 @@ def _create_eni_if_necessary(interface, vm_):
 
     eni_desc = result[1]
     if not eni_desc or not eni_desc.get("networkInterfaceId"):
-        raise SaltCloudException(f"Failed to create interface: {result}")
+        raise SaltCloudException("Failed to create interface: {}".format(result))
 
     eni_id = eni_desc.get("networkInterfaceId")
     log.debug("Created network interface %s inst %s", eni_id, interface["DeviceIndex"])
@@ -1749,11 +1751,11 @@ def _param_from_config(key, data):
 
     if isinstance(data, dict):
         for k, v in data.items():
-            param.update(_param_from_config(f"{key}.{k}", v))
+            param.update(_param_from_config("{}.{}".format(key, k), v))
 
     elif isinstance(data, list) or isinstance(data, tuple):
         for idx, conf_item in enumerate(data):
-            prefix = f"{key}.{idx}"
+            prefix = "{}.{}".format(key, idx)
             param.update(_param_from_config(prefix, conf_item))
 
     else:
@@ -1868,7 +1870,7 @@ def request_instance(vm_=None, call=None):
             params[spot_prefix + "SecurityGroup.1"] = ex_securitygroup
         else:
             for counter, sg_ in enumerate(ex_securitygroup):
-                params[spot_prefix + f"SecurityGroup.{counter}"] = sg_
+                params[spot_prefix + "SecurityGroup.{}".format(counter)] = sg_
 
     ex_iam_profile = iam_profile(vm_)
     if ex_iam_profile:
@@ -1903,7 +1905,7 @@ def request_instance(vm_=None, call=None):
             params[spot_prefix + "SecurityGroupId.1"] = ex_securitygroupid
         else:
             for counter, sg_ in enumerate(ex_securitygroupid):
-                params[spot_prefix + f"SecurityGroupId.{counter}"] = sg_
+                params[spot_prefix + "SecurityGroupId.{}".format(counter)] = sg_
 
     placementgroup_ = get_placementgroup(vm_)
     if placementgroup_ is not None:
@@ -2507,7 +2509,7 @@ def wait_for_instance(
             for line in comps[0].splitlines():
                 if not line:
                     continue
-                keys += f"\n{ip_address} {line}"
+                keys += "\n{} {}".format(ip_address, line)
 
             with salt.utils.files.fopen(known_hosts_file, "a") as fp_:
                 fp_.write(salt.utils.stringutils.to_str(keys))
@@ -2561,7 +2563,7 @@ def _validate_key_path_and_mode(key_filename):
 
     if not os.path.exists(key_filename):
         raise SaltCloudSystemExit(
-            f"The EC2 key file '{key_filename}' does not exist.\n"
+            "The EC2 key file '{}' does not exist.\n".format(key_filename)
         )
 
     key_mode = stat.S_IMODE(os.stat(key_filename).st_mode)
@@ -2750,7 +2752,7 @@ def create(vm_=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "setting tags",
-            f"salt/cloud/spot_request_{sir_id}/tagging",
+            "salt/cloud/spot_request_{}/tagging".format(sir_id),
             args={"tags": spot_request_tags},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -2922,7 +2924,7 @@ def create(vm_=None, call=None):
             __utils__["cloud.fire_event"](
                 "event",
                 "setting tags",
-                f"salt/cloud/block_volume_{str(volid)}/tagging",
+                "salt/cloud/block_volume_{}/tagging".format(str(volid)),
                 args={"tags": tags},
                 sock_dir=__opts__["sock_dir"],
                 transport=__opts__["transport"],
@@ -3052,7 +3054,7 @@ def stop(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "stopping instance",
-        f"salt/cloud/{name}/stopping",
+        "salt/cloud/{}/stopping".format(name),
         args={"name": name, "instance_id": instance_id},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -3086,7 +3088,7 @@ def start(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "starting instance",
-        f"salt/cloud/{name}/starting",
+        "salt/cloud/{}/starting".format(name),
         args={"name": name, "instance_id": instance_id},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -3161,8 +3163,8 @@ def set_tags(
         tags = kwargs
 
     for idx, (tag_k, tag_v) in enumerate(tags.items()):
-        params[f"Tag.{idx}.Key"] = tag_k
-        params[f"Tag.{idx}.Value"] = tag_v
+        params["Tag.{}.Key".format(idx)] = tag_k
+        params["Tag.{}.Value".format(idx)] = tag_v
 
     attempts = 0
     while attempts < aws.AWS_MAX_RETRIES:
@@ -3208,7 +3210,7 @@ def set_tags(
 
         return settags
 
-    raise SaltCloudSystemExit(f"Failed to set tags on {name}!")
+    raise SaltCloudSystemExit("Failed to set tags on {}!".format(name))
 
 
 def get_tags(
@@ -3290,7 +3292,7 @@ def del_tags(
     params = {"Action": "DeleteTags", "ResourceId.1": instance_id}
 
     for idx, tag in enumerate(kwargs["tags"].split(",")):
-        params[f"Tag.{idx}.Key"] = tag
+        params["Tag.{}.Key".format(idx)] = tag
 
     aws.query(
         params,
@@ -3354,7 +3356,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        f"salt/cloud/{name}/destroying",
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name, "instance_id": instance_id},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -3375,7 +3377,7 @@ def destroy(name, call=None):
         "rename_on_destroy", get_configured_provider(), __opts__, search_global=False
     )
     if rename_on_destroy is not False:
-        newname = f"{name}-DEL{uuid.uuid4().hex}"
+        newname = "{}-DEL{}".format(name, uuid.uuid4().hex)
         rename(name, kwargs={"newname": newname}, call="action")
         log.info(
             "Machine will be identified as %s until it has been cleaned up.", newname
@@ -3408,7 +3410,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        f"salt/cloud/{name}/destroyed",
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name, "instance_id": instance_id},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -4054,8 +4056,8 @@ def _toggle_delvol(
         if volume_id is not None and volume_id != item["ebs"]["volumeId"]:
             continue
 
-        params[f"BlockDeviceMapping.{idx}.DeviceName"] = device_name
-        params[f"BlockDeviceMapping.{idx}.Ebs.DeleteOnTermination"] = value
+        params["BlockDeviceMapping.{}.DeviceName".format(idx)] = device_name
+        params["BlockDeviceMapping.{}.Ebs.DeleteOnTermination".format(idx)] = value
 
     aws.query(
         params,
@@ -4475,7 +4477,7 @@ def describe_volumes(kwargs=None, call=None):
     if "volume_id" in kwargs:
         volume_id = kwargs["volume_id"].split(",")
         for volume_index, volume_id in enumerate(volume_id):
-            params[f"VolumeId.{volume_index}"] = volume_id
+            params["VolumeId.{}".format(volume_index)] = volume_id
 
     log.debug(params)
 
@@ -4794,17 +4796,17 @@ def describe_snapshots(kwargs=None, call=None):
     if "snapshot_id" in kwargs:
         snapshot_ids = kwargs["snapshot_id"].split(",")
         for snapshot_index, snapshot_id in enumerate(snapshot_ids):
-            params[f"SnapshotId.{snapshot_index}"] = snapshot_id
+            params["SnapshotId.{}".format(snapshot_index)] = snapshot_id
 
     if "owner" in kwargs:
         owners = kwargs["owner"].split(",")
         for owner_index, owner in enumerate(owners):
-            params[f"Owner.{owner_index}"] = owner
+            params["Owner.{}".format(owner_index)] = owner
 
     if "restorable_by" in kwargs:
         restorable_bys = kwargs["restorable_by"].split(",")
         for restorable_by_index, restorable_by in enumerate(restorable_bys):
-            params[f"RestorableBy.{restorable_by_index}"] = restorable_by
+            params["RestorableBy.{}".format(restorable_by_index)] = restorable_by
 
     log.debug(params)
 
@@ -4929,6 +4931,11 @@ def get_password_data(
     for item in data:
         ret[next(iter(item.keys()))] = next(iter(item.values()))
 
+    if not salt.crypt.HAS_M2 and not salt.crypt.HAS_CRYPTO:
+        if "key" in kwargs or "key_file" in kwargs:
+            log.warning("No crypto library is installed, can not decrypt password")
+        return ret
+
     if "key" not in kwargs:
         if "key_file" in kwargs:
             with salt.utils.files.fopen(kwargs["key_file"], "r") as kf_:
@@ -5006,11 +5013,11 @@ def _parse_pricing(url, name):
         "storageGiB",
         "USD",
     ):
-        price_js = price_js.replace(keyword, f'"{keyword}"')
+        price_js = price_js.replace(keyword, '"{}"'.format(keyword))
 
     for keyword in ("region", "price", "size"):
-        price_js = price_js.replace(keyword, f'"{keyword}"')
-        price_js = price_js.replace(f'"{keyword}"s', f'"{keyword}s"')
+        price_js = price_js.replace(keyword, '"{}"'.format(keyword))
+        price_js = price_js.replace('"{}"s'.format(keyword), '"{}s"'.format(keyword))
 
     price_js = price_js.replace('""', '"')
 
@@ -5024,7 +5031,7 @@ def _parse_pricing(url, name):
                 sizes[size["size"]] = size
         regions[region["region"]] = sizes
 
-    outfile = os.path.join(__opts__["cachedir"], f"ec2-pricing-{name}.p")
+    outfile = os.path.join(__opts__["cachedir"], "ec2-pricing-{}.p".format(name))
     with salt.utils.files.fopen(outfile, "w") as fho:
         salt.utils.msgpack.dump(regions, fho)
 
@@ -5086,7 +5093,7 @@ def show_pricing(kwargs=None, call=None):
     else:
         name = "linux"
 
-    pricefile = os.path.join(__opts__["cachedir"], f"ec2-pricing-{name}.p")
+    pricefile = os.path.join(__opts__["cachedir"], "ec2-pricing-{}.p".format(name))
 
     if not os.path.isfile(pricefile):
         update_pricing({"type": name}, "function")
