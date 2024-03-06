@@ -659,9 +659,7 @@ class ReqServerChannel:
             else:
                 aes = self.aes_key
 
-            ret["aes"] = pub.encrypt(
-                aes,
-            )
+            ret["aes"] = pub.encrypt(aes)
         else:
             if "token" in load:
                 try:

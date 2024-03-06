@@ -66,7 +66,7 @@ if HAS_CRYPTO:
         with salt.utils.files.fopen(path, "wb+") as f:
             f.write(key.exportKey("PEM"))
 
-    def aes_ecrypt(aes_key, hmac_key, data, block_size=16):
+    def aes_encrypt(aes_key, hmac_key, data, block_size=16):
         pad = block_size - len(data) % block_size
         data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
         iv_bytes = os.urandom(block_size)
