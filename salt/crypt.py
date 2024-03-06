@@ -624,7 +624,7 @@ class MasterKeys(dict):
             shared_pub.write_bytes(master_pub.read_bytes())
 
     def master_private_decrypt(self, data):
-        return self.master_key.key.decrypt(data)
+        return self.master_key.decrypt(data)
 
 
 class AsyncAuth:
