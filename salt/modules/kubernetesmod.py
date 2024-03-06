@@ -1,7 +1,7 @@
 """
 Module for handling kubernetes calls.
 
-:optdepends:    - kubernetes Python client < 4.0
+:optdepends:    - kubernetes Python client >= 12.0
                 - PyYAML < 6.0
 :configuration: The k8s API settings are provided either in a pillar, in
     the minion's config file, or in master's config file::
@@ -61,6 +61,7 @@ import salt.utils.platform
 import salt.utils.templates
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, TimeoutError
+from salt.utils.versions import Version
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -68,15 +69,6 @@ try:
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
-
-    # pylint: disable=no-name-in-module
-    try:
-        # There is an API change in Kubernetes >= 2.0.0.
-        from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
-        from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
-    except ImportError:
-        from kubernetes.client import AppsV1beta1Deployment, AppsV1beta1DeploymentSpec
-    # pylint: enable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:
@@ -98,10 +90,13 @@ def __virtual__():
     """
     Check dependencies
     """
-    if HAS_LIBS:
-        return __virtualname__
+    if not HAS_LIBS:
+        return False, "python kubernetes library not found"
 
-    return False, "python kubernetes library not found"
+    if Version(kubernetes.__version__).major < 12:
+        return False, "python kubernetes library to old"
+
+    return __virtualname__
 
 
 if not salt.utils.platform.is_windows():
@@ -473,7 +468,7 @@ def deployments(namespace="default", **kwargs):
     """
     cfg = _setup_conn(**kwargs)
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.list_namespaced_deployment(namespace)
 
         return [dep["metadata"]["name"] for dep in api_response.to_dict().get("items")]
@@ -482,8 +477,7 @@ def deployments(namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->list_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->list_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -793,7 +787,7 @@ def delete_deployment(name, namespace="default", **kwargs):
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.delete_namespaced_deployment(
             name=name, namespace=namespace, body=body
         )
@@ -828,8 +822,7 @@ def delete_deployment(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->delete_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->delete_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -995,9 +988,10 @@ def create_deployment(
     """
     Creates the kubernetes deployment as defined by the user.
     """
+
     body = __create_object_body(
         kind="Deployment",
-        obj_class=AppsV1beta1Deployment,
+        obj_class=kubernetes.client.V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1011,7 +1005,7 @@ def create_deployment(
     cfg = _setup_conn(**kwargs)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.create_namespaced_deployment(namespace, body)
 
         return api_response.to_dict()
@@ -1238,9 +1232,10 @@ def replace_deployment(
     Replaces an existing deployment with a new one defined by name and
     namespace, having the specificed metadata and spec.
     """
+
     body = __create_object_body(
         kind="Deployment",
-        obj_class=AppsV1beta1Deployment,
+        obj_class=kubernetes.client.V1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1254,7 +1249,7 @@ def replace_deployment(
     cfg = _setup_conn(**kwargs)
 
     try:
-        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        api_instance = kubernetes.client.AppsV1Api()
         api_response = api_instance.replace_namespaced_deployment(name, namespace, body)
 
         return api_response.to_dict()
@@ -1263,8 +1258,7 @@ def replace_deployment(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->replace_namespaced_deployment"
+                "Exception when calling " "AppsV1Api->replace_namespaced_deployment"
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1429,6 +1423,32 @@ def replace_configmap(
         _cleanup(**cfg)
 
 
+def apply(file, namespace="default", **kwargs):
+    """
+    Apply k8s manifests from file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion1' kubernetes.apply /path/to/yaml/file/manifest.yaml namespace="default"
+    """
+    cfg = _setup_conn(**kwargs)
+    try:
+        client = kubernetes.client.ApiClient()
+        kubernetes.utils.create_from_yaml(client, file, verbose=True)
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->replace_namespaced_configmap"
+            )
+            raise CommandExecutionError(exc)
+    finally:
+        _cleanup(**cfg)
+
+
 def __create_object_body(
     kind,
     obj_class,
@@ -1536,9 +1556,10 @@ def __dict_to_object_meta(name, namespace, metadata):
 
 def __dict_to_deployment_spec(spec):
     """
-    Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
+    Converts a dictionary into kubernetes V1DeploymentSpec instance.
     """
-    spec_obj = AppsV1beta1DeploymentSpec(template=spec.get("template", ""))
+
+    spec_obj = kubernetes.client.V1DeploymentSpec(template=spec.get("template", ""))
     for key, value in spec.items():
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)

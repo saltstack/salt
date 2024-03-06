@@ -68,7 +68,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 kubernetes.__salt__, {"config.option": Mock(side_effect=self.settings)}
             ):
-                mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
+                mock_kubernetes_lib.client.AppsV1Api.return_value = Mock(
                     **{
                         "list_namespaced_deployment.return_value.to_dict.return_value": {
                             "items": [{"metadata": {"name": "mock_deployment_name"}}]
@@ -78,7 +78,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(kubernetes.deployments(), ["mock_deployment_name"])
                 # pylint: disable=E1120
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api()
+                    kubernetes.kubernetes.client.AppsV1Api()
                     .list_namespaced_deployment()
                     .to_dict.called
                 )
@@ -148,7 +148,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     {"config.option": Mock(side_effect=self.settings)},
                 ):
                     mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
-                    mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
+                    mock_kubernetes_lib.client.AppsV1Api.return_value = Mock(
                         **{
                             "delete_namespaced_deployment.return_value.to_dict.return_value": {
                                 "code": ""
@@ -160,7 +160,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     # pylint: disable=E1120
                     self.assertTrue(
-                        kubernetes.kubernetes.client.ExtensionsV1beta1Api()
+                        kubernetes.kubernetes.client.AppsV1Api()
                         .delete_namespaced_deployment()
                         .to_dict.called
                     )
@@ -175,7 +175,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 kubernetes.__salt__, {"config.option": Mock(side_effect=self.settings)}
             ):
-                mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
+                mock_kubernetes_lib.client.AppsV1Api.return_value = Mock(
                     **{
                         "create_namespaced_deployment.return_value.to_dict.return_value": {}
                     }
@@ -188,7 +188,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 # pylint: disable=E1120
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api()
+                    kubernetes.kubernetes.client.AppsV1Api()
                     .create_namespaced_deployment()
                     .to_dict.called
                 )
