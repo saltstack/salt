@@ -258,7 +258,7 @@ class BuildoutTestCase(Base):
         else:
             line_break = "\n"
         self.assertEqual(
-            f"foo{line_break}",
+            f"# pylint: skip-file{line_break}foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 

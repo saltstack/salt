@@ -1,5 +1,6 @@
 import pytest
 
+import salt.modules.test as testmod
 import salt.states.group as group
 import salt.utils.platform
 from tests.support.mock import MagicMock, call, patch
@@ -7,8 +8,13 @@ from tests.support.mock import MagicMock, call, patch
 
 @pytest.fixture
 def configure_loader_modules():
+
     return {
-        group: {"__salt__": {"test.ping": MagicMock()}, "__opts__": {"test": False}}
+        testmod: {},
+        group: {
+            "__salt__": {"test.ping": testmod.ping},
+            "__opts__": {"test": False},
+        },
     }
 
 
