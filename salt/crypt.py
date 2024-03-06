@@ -551,13 +551,13 @@ class MasterKeys(dict):
             message = f"Unable to read key: {path}; file may be corrupt"
         except TypeError as e:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
-            log.error(message)
-            raise MasterExit(message)
         except cryptography.UnsupportedAlgorithm as e:
             message = f"Unable to read key: {path}; key contains unsupported algorithm"
         else:
             log.debug("Loaded %s key: %s", name, path)
             return key
+        log.error(message)
+        raise MasterExit(message)
 
     def get_pub_str(self, name="master"):
         """
