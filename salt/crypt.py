@@ -4,7 +4,6 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
 
-import asyncio
 import base64
 import binascii
 import copy
@@ -58,6 +57,8 @@ from salt.exceptions import (
 )
 
 log = logging.getLogger(__name__)
+
+HAS_CRYPTO = salt.crypt_legacy.HAS_CRYPTO
 
 
 def clean_key(key):
@@ -249,7 +250,9 @@ class PrivateKey:
         return salt.utils.rsax931.RSAX931Signer(pem).sign(data)
 
     def sign(self, data):
-        return self.key.sign(data, padding.PKCS1v15(), hashes.SHA1())
+        return self.key.sign(
+            salt.utils.stringutils.to_bytes(data), padding.PKCS1v15(), hashes.SHA1()
+        )
 
     def decrypt(self, data):
         return self.key.decrypt(
@@ -281,8 +284,8 @@ class PublicKey:
     def verify(self, data, signature):
         try:
             self.key.verify(
-                signature,
-                data,
+                salt.utils.stringutils.to_bytes(signature),
+                salt.utils.stringutils.to_bytes(data),
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
@@ -621,9 +624,7 @@ class MasterKeys(dict):
             shared_pub.write_bytes(master_pub.read_bytes())
 
     def master_private_decrypt(self, data):
-        return self.master_key.decrypt(
-            data,
-        )
+        return self.master_key.key.decrypt(data)
 
 
 class AsyncAuth:
@@ -770,7 +771,8 @@ class AsyncAuth:
 
         return future
 
-    async def _authenticate(self):
+    @tornado.gen.coroutine
+    def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -792,7 +794,7 @@ class AsyncAuth:
             error = None
             while True:
                 try:
-                    creds = await self.sign_in(channel=channel)
+                    creds = yield self.sign_in(channel=channel)
                 except SaltClientError as exc:
                     error = exc
                     break
@@ -820,7 +822,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        await asyncio.sleep(acceptance_wait_time)
+                        yield tornado.gen.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -866,7 +868,8 @@ class AsyncAuth:
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
 
-    async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    @tornado.gen.coroutine
+    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -902,7 +905,7 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
-            payload = await channel.send(sign_in_payload, tries=tries, timeout=timeout)
+            payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
@@ -1649,7 +1652,7 @@ class Crypticle:
 
 
 if not HAS_CRYPTOGRAPHY:
-    if not salt.crypt_legacy.HAS_CRYPTO:
+    if not HAS_CRYPTO:
         raise RuntimeError(
             "One of cryptography, pycrpto or pycryptodomex must be installed"
         )

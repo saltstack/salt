@@ -3231,7 +3231,7 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
-    async def _handle_payload(self, payload):
+    def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
                 self._handle_decoded_payload(payload["load"])
