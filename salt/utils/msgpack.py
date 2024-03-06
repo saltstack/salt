@@ -3,35 +3,19 @@ Functions to work with MessagePack
 """
 import logging
 
+import salt.utils.versions
+
 log = logging.getLogger(__name__)
 
-HAS_MSGPACK = False
-try:
-    import msgpack
-
-    # There is a serialization issue on ARM and potentially other platforms for some msgpack bindings, check for it
-    if (
-        msgpack.version >= (0, 4, 0)
-        and msgpack.loads(msgpack.dumps([1, 2, 3], use_bin_type=False), use_list=True)
-        is None
-    ):
-        raise ImportError
-    elif msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
-        raise ImportError
-    HAS_MSGPACK = True
-except ImportError:
-    try:
-        import msgpack_pure as msgpack  # pylint: disable=import-error
-
-        HAS_MSGPACK = True
-    except ImportError:
-        pass
-        # Don't exit if msgpack is not available, this is to make local mode work without msgpack
-        # sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-
-if HAS_MSGPACK and hasattr(msgpack, "exceptions"):
-    exceptions = msgpack.exceptions
+msgpack = None
+if salt.utils.versions.reqs.msgpack:
+    msgpack = salt.utils.versions.reqs.msgpack.module
 else:
+    # TODO: Come up with a sane way to get a configured logfile
+    #       and write to the logfile when this error is hit also
+    log.fatal("Unable to import msgpack or msgpack_pure python modules")
+
+if msgpack and not hasattr(msgpack, "exceptions"):
 
     class PackValueError(Exception):
         """
@@ -46,11 +30,13 @@ else:
         PackValueError = PackValueError()
 
     exceptions = _exceptions()
+elif msgpack:
+    exceptions = msgpack.exceptions
 
 # One-to-one mappings
 Packer = msgpack.Packer
 ExtType = msgpack.ExtType
-version = (0, 0, 0) if not HAS_MSGPACK else msgpack.version
+version = (0, 0, 0) if not msgpack else msgpack.version
 
 
 def _sanitize_msgpack_kwargs(kwargs):
