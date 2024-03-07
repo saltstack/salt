@@ -7,6 +7,7 @@ Example beacon to use with salt-proxy
       proxy_example:
         endpoint: beacon
 """
+
 import logging
 
 import salt.utils.beacons

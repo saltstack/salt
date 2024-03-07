@@ -1562,9 +1562,9 @@ def test_remove_with_epoch_and_arch_info():
     installed = "8:3.8.12-4.n.el7"
     list_pkgs_mock = MagicMock(
         side_effect=lambda **kwargs: {
-            name_and_arch: [installed]
-            if kwargs.get("versions_as_list", False)
-            else installed
+            name_and_arch: (
+                [installed] if kwargs.get("versions_as_list", False) else installed
+            )
         }
     )
     cmd_mock = MagicMock(

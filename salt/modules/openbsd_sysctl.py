@@ -61,7 +61,7 @@ def get(name):
 
         salt '*' sysctl.get hw.physmem
     """
-    cmd = "sysctl -n {}".format(name)
+    cmd = f"sysctl -n {name}"
     out = __salt__["cmd.run"](cmd)
     return out
 
@@ -77,7 +77,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.inet.ip.forwarding 1
     """
     ret = {}
-    cmd = 'sysctl {}="{}"'.format(name, value)
+    cmd = f'sysctl {name}="{value}"'
     data = __salt__["cmd.run_all"](cmd)
 
     # Certain values cannot be set from this console, at the current
@@ -119,7 +119,7 @@ def persist(name, value, config="/etc/sysctl.conf"):
     with salt.utils.files.fopen(config, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line)
-            if not line.startswith("{}=".format(name)):
+            if not line.startswith(f"{name}="):
                 nlines.append(line)
                 continue
             else:
@@ -133,11 +133,11 @@ def persist(name, value, config="/etc/sysctl.conf"):
                     rest = rest[len(rest_v) :]
                 if rest_v == value:
                     return "Already set"
-                new_line = "{}={}{}".format(key, value, rest)
+                new_line = f"{key}={value}{rest}"
                 nlines.append(new_line)
                 edited = True
     if not edited:
-        nlines.append("{}={}\n".format(name, value))
+        nlines.append(f"{name}={value}\n")
     with salt.utils.files.fopen(config, "wb") as ofile:
         ofile.writelines(salt.utils.data.encode(nlines))
 

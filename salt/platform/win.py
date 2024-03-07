@@ -15,6 +15,7 @@ import logging
 import os
 from ctypes import wintypes
 
+# pylint: disable=3rd-party-module-not-gated
 import ntsecuritycon
 import psutil
 import win32api
@@ -22,6 +23,8 @@ import win32con
 import win32process
 import win32security
 import win32service
+
+# pylint: enable=3rd-party-module-not-gated
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -154,7 +157,7 @@ class NTSTATUS(wintypes.LONG):
     def __repr__(self):
         name = self.__class__.__name__
         status = wintypes.ULONG.from_buffer(self)
-        return "{}({})".format(name, status.value)
+        return f"{name}({status.value})"
 
 
 PNTSTATUS = ctypes.POINTER(NTSTATUS)
@@ -163,7 +166,7 @@ PNTSTATUS = ctypes.POINTER(NTSTATUS)
 class BOOL(wintypes.BOOL):
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, bool(self))
+        return f"{name}({bool(self)})"
 
 
 class HANDLE(wintypes.HANDLE):
@@ -187,7 +190,7 @@ class HANDLE(wintypes.HANDLE):
     __del__ = Close
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, int(self))
+        return f"{self.__class__.__name__}({int(self)})"
 
 
 class LARGE_INTEGER(wintypes.LARGE_INTEGER):
@@ -202,7 +205,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, self.value)
+        return f"{name}({self.value})"
 
     def as_time(self):
         time100ns = self.value - self._unix_epoch
@@ -258,7 +261,7 @@ class LUID(ctypes.Structure):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, int(self))
+        return f"{name}({int(self)})"
 
 
 LPLUID = ctypes.POINTER(LUID)
@@ -309,7 +312,7 @@ class TOKEN_SOURCE(ctypes.Structure):
 LPTOKEN_SOURCE = ctypes.POINTER(TOKEN_SOURCE)
 py_source_context = TOKEN_SOURCE(b"PYTHON  ")
 py_origin_name = __name__.encode()
-py_logon_process_name = "{}-{}".format(py_origin_name, os.getpid())
+py_logon_process_name = f"{py_origin_name}-{os.getpid()}"
 SIZE_T = ctypes.c_size_t
 
 
@@ -340,7 +343,7 @@ class ContiguousUnicode(ctypes.Structure):
 
     def _get_unicode_string(self, name):
         wchar_size = ctypes.sizeof(WCHAR)
-        s = getattr(self, "_{}".format(name))
+        s = getattr(self, f"_{name}")
         length = s.Length // wchar_size
         buf = s.Buffer
         if buf:
@@ -372,7 +375,7 @@ class ContiguousUnicode(ctypes.Structure):
         addr = ctypes.addressof(self) + ctypes.sizeof(cls)
         for n, v in zip(self._string_names_, values):
             ptr = ctypes.cast(addr, PWCHAR)
-            ustr = getattr(self, "_{}".format(n))
+            ustr = getattr(self, f"_{n}")
             length = ustr.Length = len(v) * wchar_size
             full_length = length + wchar_size
             if (n == name and value is None) or (
@@ -398,13 +401,13 @@ class ContiguousUnicode(ctypes.Structure):
 
     @classmethod
     def from_address_copy(cls, address, size=None):
-        x = ctypes.Structure.__new__(cls)
+        x = ctypes.Structure.__new__(cls)  # pylint: disable=no-value-for-parameter
         if size is not None:
             ctypes.resize(x, size)
         ctypes.memmove(ctypes.byref(x), address, ctypes.sizeof(x))
         delta = ctypes.addressof(x) - address
         for n in cls._string_names_:
-            ustr = getattr(x, "_{}".format(n))
+            ustr = getattr(x, f"_{n}")
             addr = ctypes.c_void_p.from_buffer(ustr.Buffer)
             if addr:
                 addr.value += delta

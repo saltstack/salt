@@ -154,7 +154,6 @@
 
 """
 
-
 import datetime
 import logging
 import logging.handlers
@@ -266,7 +265,7 @@ class LogstashFormatter(logging.Formatter):
         self.msg_path = msg_path
         self.msg_type = msg_type
         self.version = version
-        self.format = getattr(self, "format_v{}".format(version))
+        self.format = getattr(self, f"format_v{version}")
         super().__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
@@ -287,7 +286,7 @@ class LogstashFormatter(logging.Formatter):
                 "processName": record.processName,
             },
             "@message": record.getMessage(),
-            "@source": "{}://{}/{}".format(self.msg_type, host, self.msg_path),
+            "@source": f"{self.msg_type}://{host}/{self.msg_path}",
             "@source_host": host,
             "@source_path": self.msg_path,
             "@tags": ["salt"],

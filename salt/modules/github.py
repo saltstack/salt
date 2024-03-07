@@ -29,7 +29,6 @@ For example:
       allow_repo_privacy_changes: False
 """
 
-
 import logging
 
 import salt.utils.http
@@ -119,7 +118,7 @@ def _get_members(organization, params=None):
 def _get_repos(profile, params=None, ignore_cache=False):
     # Use cache when no params are given
     org_name = _get_config_value(profile, "org_name")
-    key = "github.{}:repos".format(org_name)
+    key = f"github.{org_name}:repos"
 
     if key not in __context__ or ignore_cache or params is not None:
         org_name = _get_config_value(profile, "org_name")
@@ -143,7 +142,7 @@ def _get_repos(profile, params=None, ignore_cache=False):
             next_result.append(repo)
 
             # Cache a copy of each repo for single lookups
-            repo_key = "github.{}:{}:repo_info".format(org_name, repo.name.lower())
+            repo_key = f"github.{org_name}:{repo.name.lower()}:repo_info"
             __context__[repo_key] = _repo_to_dict(repo)
 
         __context__[key] = next_result
@@ -171,7 +170,7 @@ def list_users(profile="github", ignore_cache=False):
         salt myminion github.list_users profile='my-github-profile'
     """
     org_name = _get_config_value(profile, "org_name")
-    key = "github.{}:users".format(org_name)
+    key = f"github.{org_name}:users"
     if key not in __context__ or ignore_cache:
         client = _get_client(profile)
         organization = client.get_organization(org_name)
@@ -1834,7 +1833,7 @@ def _query(
         url += action
 
     if command:
-        url += "/{}".format(command)
+        url += f"/{command}"
 
     log.debug("GitHub URL: %s", url)
 

@@ -1,6 +1,7 @@
 """
 Unit tests for the Nested outputter
 """
+
 import pytest
 
 import salt.output.nested as nested

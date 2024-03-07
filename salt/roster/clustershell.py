@@ -11,7 +11,6 @@ When you want to use host globs for target matching, use ``--roster clustershell
 
 """
 
-
 import copy
 import socket
 

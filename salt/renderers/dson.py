@@ -11,7 +11,6 @@ This renderer requires `Dogeon`__ (installable via pip)
 .. __: https://github.com/soasme/dogeon
 """
 
-
 import logging
 
 try:

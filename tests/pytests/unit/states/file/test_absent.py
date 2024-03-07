@@ -58,7 +58,7 @@ def test_absent():
         assert filestate.absent("") == ret
 
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt, "name": name})
             assert filestate.absent(name) == ret
 
@@ -69,7 +69,7 @@ def test_absent():
 
         with patch.object(os.path, "isfile", mock_t):
             with patch.dict(filestate.__opts__, {"test": True}):
-                comt = "File {} is set for removal".format(name)
+                comt = f"File {name} is set for removal"
                 ret.update(
                     {
                         "comment": comt,
@@ -82,20 +82,20 @@ def test_absent():
 
             with patch.dict(filestate.__opts__, {"test": False}):
                 with patch.dict(filestate.__salt__, {"file.remove": mock_file}):
-                    comt = "Removed file {}".format(name)
+                    comt = f"Removed file {name}"
                     ret.update(
                         {"comment": comt, "result": True, "changes": {"removed": name}}
                     )
                     assert filestate.absent(name) == ret
 
-                    comt = "Removed file {}".format(name)
+                    comt = f"Removed file {name}"
                     ret.update({"comment": "", "result": False, "changes": {}})
                     assert filestate.absent(name) == ret
 
         with patch.object(os.path, "isfile", mock_f):
             with patch.object(os.path, "isdir", mock_t):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "Directory {} is set for removal".format(name)
+                    comt = f"Directory {name} is set for removal"
                     ret.update(
                         {"comment": comt, "changes": {"removed": name}, "result": None}
                     )
@@ -103,7 +103,7 @@ def test_absent():
 
                 with patch.dict(filestate.__opts__, {"test": False}):
                     with patch.dict(filestate.__salt__, {"file.remove": mock_tree}):
-                        comt = "Removed directory {}".format(name)
+                        comt = f"Removed directory {name}"
                         ret.update(
                             {
                                 "comment": comt,
@@ -113,12 +113,12 @@ def test_absent():
                         )
                         assert filestate.absent(name) == ret
 
-                        comt = "Failed to remove directory {}".format(name)
+                        comt = f"Failed to remove directory {name}"
                         ret.update({"comment": comt, "result": False, "changes": {}})
                         assert filestate.absent(name) == ret
 
             with patch.object(os.path, "isdir", mock_f):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "File {} is not present".format(name)
+                    comt = f"File {name} is not present"
                     ret.update({"comment": comt, "result": True})
                     assert filestate.absent(name) == ret

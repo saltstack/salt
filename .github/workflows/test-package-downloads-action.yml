@@ -112,24 +112,6 @@ jobs:
           - distro-slug: centos-7-arm64
             arch: arm64
             pkg-type: package
-          - distro-slug: centosstream-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centosstream-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centosstream-8-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: centosstream-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centosstream-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centosstream-9-arm64
-            arch: arm64
-            pkg-type: package
           - distro-slug: debian-10
             arch: x86_64
             pkg-type: package
@@ -148,31 +130,13 @@ jobs:
           - distro-slug: debian-12-arm64
             arch: arm64
             pkg-type: package
-          - distro-slug: fedora-37
+          - distro-slug: fedora-39
             arch: x86_64
             pkg-type: package
-          - distro-slug: fedora-37-arm64
+          - distro-slug: fedora-39-arm64
             arch: aarch64
             pkg-type: package
-          - distro-slug: fedora-37-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: fedora-38
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: fedora-38-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: fedora-38-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: photonos-3
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-3-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-3-arm64
+          - distro-slug: fedora-39-arm64
             arch: arm64
             pkg-type: package
           - distro-slug: photonos-4

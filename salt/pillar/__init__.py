@@ -260,8 +260,8 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["clean_cache"] = self.clean_cache
         if self.ext:
             load["ext"] = self.ext
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -358,8 +358,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
 
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -562,6 +562,7 @@ class Pillar:
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
 
         if opts.get("file_client", "") == "local" and not opts.get(
@@ -574,11 +575,15 @@ class Pillar:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
                 self.functions = salt.loader.minion_mods(
-                    opts, utils=utils, file_client=self.client
+                    opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
             else:
                 self.functions = salt.loader.minion_mods(
-                    self.opts, utils=utils, file_client=self.client
+                    self.opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
         else:
             self.functions = functions
@@ -1216,7 +1221,7 @@ class Pillar:
                     errors.append(
                         "Failed to load ext_pillar {}: {}".format(
                             key,
-                            exc.__str__(),
+                            exc,
                         )
                     )
                     log.error(
@@ -1367,6 +1372,11 @@ class Pillar:
         if self.client:
             try:
                 self.client.destroy()
+            except AttributeError:
+                pass
+        if self.fileclient:
+            try:
+                self.fileclient.destroy()
             except AttributeError:
                 pass
 

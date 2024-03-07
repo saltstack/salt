@@ -14,7 +14,6 @@ Module for sending messages to Mattermost
           api_url: https://example.com
 """
 
-
 import logging
 
 import salt.utils.json
@@ -130,7 +129,7 @@ def post_message(message, channel=None, username=None, api_url=None, hook=None):
     log.debug("Parameters: %s", parameters)
     data = salt.utils.json.dumps(parameters)
     result = salt.utils.mattermost.query(
-        api_url=api_url, hook=hook, data="payload={}".format(data)
+        api_url=api_url, hook=hook, data=f"payload={data}"
     )
 
     if result:
@@ -168,7 +167,7 @@ def post_event(event, channel=None, username=None, api_url=None, hook=None):
     log.debug("Event data: %s", event["data"])
     message = "tag: {}\r\n".format(event["tag"])
     for key, value in event["data"].items():
-        message += "{}: {}\r\n".format(key, value)
+        message += f"{key}: {value}\r\n"
     result = post_message(
         message, channel=channel, username=username, api_url=api_url, hook=hook
     )

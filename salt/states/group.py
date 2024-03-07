@@ -33,7 +33,6 @@ In Windows, if no domain is specified in the user or group name (i.e.
           - user2
 """
 
-
 import sys
 
 import salt.utils.platform
@@ -204,9 +203,9 @@ def present(
         # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "Error. Same user(s) can not be added and deleted simultaneously"
+            ret["comment"] = (
+                "Error. Same user(s) can not be added and deleted simultaneously"
+            )
             return ret
 
     changes = _changes(name, gid, addusers, delusers, members, local=local)

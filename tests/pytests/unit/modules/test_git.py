@@ -2,7 +2,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-
 import copy
 import logging
 import os
@@ -88,9 +87,11 @@ def test_list_worktrees(worktree_info, worktree_root):
         return "worktree {}\nHEAD {}\n{}\n".format(
             path,
             worktree_info[path]["HEAD"],
-            "branch {}".format(worktree_info[path]["branch"])
-            if worktree_info[path]["branch"] != "detached"
-            else "detached",
+            (
+                "branch {}".format(worktree_info[path]["branch"])
+                if worktree_info[path]["branch"] != "detached"
+                else "detached"
+            ),
         )
 
     # Build dict for _cmd_run_side_effect below. Start with the output from

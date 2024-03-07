@@ -49,7 +49,7 @@ class _crypttab_entry:
     @classmethod
     def dict_from_line(cls, line, keys=crypttab_keys):
         if len(keys) != 4:
-            raise ValueError("Invalid key array: {}".format(keys))
+            raise ValueError(f"Invalid key array: {keys}")
         if line.startswith("#"):
             raise cls.ParseError("Comment!")
 
@@ -263,15 +263,18 @@ def set_crypttab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _crypttab_entry.crypttab_keys
+
+        def filterFn(key):
+            return key not in _crypttab_entry.crypttab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
-        msg = 'Unrecognized keys in match_on: "{}"'.format(invalid_keys)
+        msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
         raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{}"'.format(config))
+        raise CommandExecutionError(f'Bad config file "{config}"')
 
     try:
         with salt.utils.files.fopen(config, "r") as ifile:
@@ -335,7 +338,7 @@ def open(name, device, keyfile):
         )
 
     code = __salt__["cmd.retcode"](
-        "cryptsetup open --key-file {} {} {}".format(keyfile, device, name)
+        f"cryptsetup open --key-file {keyfile} {device} {name}"
     )
     return code == 0
 
@@ -350,5 +353,5 @@ def close(name):
 
         salt '*' cryptdev.close foo
     """
-    code = __salt__["cmd.retcode"]("cryptsetup close {}".format(name))
+    code = __salt__["cmd.retcode"](f"cryptsetup close {name}")
     return code == 0

@@ -4,7 +4,6 @@ This state downloads artifacts from Nexus 3.x.
 .. versionadded:: 2018.3.0
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

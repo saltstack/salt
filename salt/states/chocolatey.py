@@ -141,13 +141,13 @@ def installed(
                     ret["comment"] = f"{name} {version} is already installed"
             else:
                 if allow_multiple:
-                    ret[
-                        "comment"
-                    ] = f"{name} {version} will be installed side by side with {name} {installed_version} if supported"
+                    ret["comment"] = (
+                        f"{name} {version} will be installed side by side with {name} {installed_version} if supported"
+                    )
                 else:
-                    ret[
-                        "comment"
-                    ] = f"{name} {version} will be installed over {name} {installed_version}"
+                    ret["comment"] = (
+                        f"{name} {version} will be installed over {name} {installed_version}"
+                    )
                     force = True
         else:
             version = installed_version
@@ -374,14 +374,14 @@ def upgraded(
                 if salt.utils.versions.compare(
                     ver1=installed_version, oper="<", ver2=version
                 ):
-                    ret[
-                        "comment"
-                    ] = f"{name} {installed_version} will be upgraded to version {version}"
+                    ret["comment"] = (
+                        f"{name} {installed_version} will be upgraded to version {version}"
+                    )
                 # If installed version is newer than new version
                 else:
-                    ret[
-                        "comment"
-                    ] = f"{name} {installed_version} (newer) is already installed"
+                    ret["comment"] = (
+                        f"{name} {installed_version} (newer) is already installed"
+                    )
                     return ret
         # Catch all for a condition where version is not passed and there is no
         # available version

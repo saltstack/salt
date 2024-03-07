@@ -4,6 +4,7 @@
 
     Test current salt master with older salt minions
 """
+
 import logging
 import pathlib
 

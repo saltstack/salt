@@ -50,7 +50,6 @@ config:
 
 """
 
-
 import hashlib
 import logging
 import os
@@ -1259,10 +1258,10 @@ class _Swagger:
                     if not result.get("deleted"):
                         ret["abort"] = True
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "delete_stage delete_api_deployment, {}".format(
-                            result.get("error")
+                        ret["comment"] = (
+                            "delete_stage delete_api_deployment, {}".format(
+                                result.get("error")
+                            )
                         )
                 else:
                     ret["comment"] = "stage {} has been deleted.\n".format(
@@ -1605,12 +1604,12 @@ class _Swagger:
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in create_model_response:
-                        ret[
-                            "comment"
-                        ] = "Failed to create model {}, schema {}, error: {}".format(
-                            model,
-                            _dict_to_json_pretty(schema),
-                            create_model_response["error"]["message"],
+                        ret["comment"] = (
+                            "Failed to create model {}, schema {}, error: {}".format(
+                                model,
+                                _dict_to_json_pretty(schema),
+                                create_model_response["error"]["message"],
+                            )
                         )
                     return ret
 
@@ -2268,10 +2267,10 @@ def usage_plan_association_present(
             plan_id, stages_to_add, **common_args
         )
         if "error" in result:
-            ret[
-                "comment"
-            ] = "Failed to associate a usage plan {} to the apis {}, {}".format(
-                plan_name, stages_to_add, result["error"]
+            ret["comment"] = (
+                "Failed to associate a usage plan {} to the apis {}, {}".format(
+                    plan_name, stages_to_add, result["error"]
+                )
             )
             ret["result"] = False
             return ret
@@ -2375,10 +2374,10 @@ def usage_plan_association_absent(
             plan_id, stages_to_remove, **common_args
         )
         if "error" in result:
-            ret[
-                "comment"
-            ] = "Failed to disassociate a usage plan {} from the apis {}, {}".format(
-                plan_name, stages_to_remove, result["error"]
+            ret["comment"] = (
+                "Failed to disassociate a usage plan {} from the apis {}, {}".format(
+                    plan_name, stages_to_remove, result["error"]
+                )
             )
             ret["result"] = False
             return ret

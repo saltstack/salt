@@ -4,6 +4,7 @@ tests.pytests.functional.utils.test_process
 
 Test salt's process utility module
 """
+
 import pytest
 
 import salt.utils.process

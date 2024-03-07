@@ -73,6 +73,7 @@ def setwinsize(child, rows=80, cols=80):
 
     Thank you for the shortcut PEXPECT
     """
+    # pylint: disable=used-before-assignment
     TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
     if TIOCSWINSZ == 2148037735:
         # Same bits, but with sign.
@@ -215,7 +216,7 @@ class Terminal:
             log.warning(
                 "Failed to spawn the VT: %s", err, exc_info_on_loglevel=logging.DEBUG
             )
-            raise TerminalException("Failed to spawn the VT. Error: {}".format(err))
+            raise TerminalException(f"Failed to spawn the VT. Error: {err}")
 
         log.debug(
             "Child Forked! PID: %s  STDOUT_FD: %s  STDERR_FD: %s",
@@ -246,7 +247,7 @@ class Terminal:
         self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
             self.stdin_logger = logging.getLogger(
-                "{}.{}.PID-{}.STDIN".format(__name__, self.__class__.__name__, self.pid)
+                f"{__name__}.{self.__class__.__name__}.PID-{self.pid}.STDIN"
             )
         elif log_stdin is not None:
             if not isinstance(log_stdin, logging.Logger):
@@ -294,7 +295,7 @@ class Terminal:
         """
         Send the provided data to the terminal appending a line feed.
         """
-        return self.send("{}{}".format(data, linesep))
+        return self.send(f"{data}{linesep}")
 
     def recv(self, maxsize=None):
         """
@@ -373,7 +374,7 @@ class Terminal:
             elif sig == signal.CTRL_BREAK_EVENT:
                 os.kill(self.pid, signal.CTRL_BREAK_EVENT)
             else:
-                raise ValueError("Unsupported signal: {}".format(sig))
+                raise ValueError(f"Unsupported signal: {sig}")
             # pylint: enable=E1101
 
         def terminate(self, force=False):
@@ -396,7 +397,7 @@ class Terminal:
         def _spawn(self):
             if not isinstance(self.args, str) and self.shell is True:
                 self.args = " ".join(self.args)
-            parent, child = pty.openpty()
+            parent, child = pty.openpty()  # pylint: disable=used-before-assignment
             err_parent, err_child = os.pipe()
             child_name = os.ttyname(child)
             proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn
@@ -442,9 +443,7 @@ class Terminal:
                 tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
                 if tty_fd >= 0:
                     os.close(tty_fd)
-                    raise TerminalException(
-                        "Could not open child pty, {}".format(child_name)
-                    )
+                    raise TerminalException(f"Could not open child pty, {child_name}")
             # which exception, shouldn't we catch explicitly .. ?
             except Exception:  # pylint: disable=broad-except
                 # Good! We are disconnected from a controlling tty.
@@ -452,9 +451,7 @@ class Terminal:
             tty_fd = os.open(child_name, os.O_RDWR)
             setwinsize(tty_fd, rows, cols)
             if tty_fd < 0:
-                raise TerminalException(
-                    "Could not open child pty, {}".format(child_name)
-                )
+                raise TerminalException(f"Could not open child pty, {child_name}")
             else:
                 os.close(tty_fd)
             if os.name != "posix":

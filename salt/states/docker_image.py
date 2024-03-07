@@ -253,7 +253,7 @@ def present(
     try:
         image_info = __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" in msg:
             # Image not present
             image_info = None
@@ -316,10 +316,10 @@ def present(
                 repository=name, tag=tag, base=base, mods=sls, **sls_build_kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret[
-                "comment"
-            ] = "Encountered error using SLS {} for building {}: {}".format(
-                sls, full_image, exc
+            ret["comment"] = (
+                "Encountered error using SLS {} for building {}: {}".format(
+                    sls, full_image, exc
+                )
             )
             return ret
         if image_info is None or image_update["Id"] != image_info["Id"][:12]:
@@ -361,7 +361,7 @@ def present(
     try:
         __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" not in msg:
             error = "Failed to inspect image '{}' after it was {}: {}".format(
                 full_image, action, msg

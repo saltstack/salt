@@ -6,7 +6,6 @@ State module to manage Elasticsearch index templates
    Use elasticsearch state instead
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ def absent(name):
         index_template = __salt__["elasticsearch.index_template_get"](name=name)
         if index_template and name in index_template:
             if __opts__["test"]:
-                ret["comment"] = "Index template {} will be removed".format(name)
+                ret["comment"] = f"Index template {name} will be removed"
                 ret["changes"]["old"] = index_template[name]
                 ret["result"] = None
             else:
@@ -39,13 +38,13 @@ def absent(name):
                     )
                     ret["changes"]["old"] = index_template[name]
                 else:
-                    ret[
-                        "comment"
-                    ] = "Failed to remove index template {} for unknown reasons".format(
-                        name
+                    ret["comment"] = (
+                        "Failed to remove index template {} for unknown reasons".format(
+                            name
+                        )
                     )
         else:
-            ret["comment"] = "Index template {} is already absent".format(name)
+            ret["comment"] = f"Index template {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -88,9 +87,9 @@ def present(name, definition):
         )
         if not index_template_exists:
             if __opts__["test"]:
-                ret[
-                    "comment"
-                ] = "Index template {} does not exist and will be created".format(name)
+                ret["comment"] = (
+                    f"Index template {name} does not exist and will be created"
+                )
                 ret["changes"] = {"new": definition}
                 ret["result"] = None
             else:
@@ -112,7 +111,7 @@ def present(name, definition):
                         name, output
                     )
         else:
-            ret["comment"] = "Index template {} is already present".format(name)
+            ret["comment"] = f"Index template {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)

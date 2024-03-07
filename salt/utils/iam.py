@@ -24,6 +24,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     Based heavily on boto.utils.retry_url
     """
     for i in range(0, num_retries):
+        exc = None
         try:
             result = requests.get(url, timeout=timeout, proxies={"http": ""})
             if hasattr(result, "text"):

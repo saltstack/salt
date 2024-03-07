@@ -94,7 +94,7 @@ def get_latest_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.encodestring(f"{username}:{password}").replace("\n", "")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -175,7 +175,7 @@ def get_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.encodestring(f"{username}:{password}").replace("\n", "")
         )
     snapshot_url, file_name = _get_snapshot_url(
         nexus_url=nexus_url,
@@ -241,7 +241,7 @@ def get_snapshot_version_string(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.encodestring(f"{username}:{password}").replace("\n", "")
         )
     return _get_snapshot_url(
         nexus_url=nexus_url,
@@ -306,7 +306,7 @@ def get_latest_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.encodestring(f"{username}:{password}").replace("\n", "")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -379,7 +379,7 @@ def get_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.encodestring(f"{username}:{password}").replace("\n", "")
         )
     release_url, file_name = _get_release_url(
         repository, group_id, artifact_id, packaging, version, nexus_url, classifier
@@ -688,7 +688,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            "Artifact downloaded from URL: {}".format(artifact_url),
+            f"Artifact downloaded from URL: {artifact_url}",
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file

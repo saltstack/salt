@@ -2,7 +2,6 @@
     Tests cases for salt.modules.tomcat
 """
 
-
 import io
 import urllib.request
 

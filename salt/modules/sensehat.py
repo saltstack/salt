@@ -19,7 +19,6 @@ Example:
 
 """
 
-
 import logging
 
 try:
@@ -39,6 +38,7 @@ def __virtual__():
     """
     if has_sense_hat:
         try:
+            global _sensehat
             _sensehat = SenseHat()
         except OSError:
             return (

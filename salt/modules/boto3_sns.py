@@ -38,6 +38,7 @@ Connection module for Amazon SNS
 
 :depends: boto3
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -143,7 +144,7 @@ def topic_exists(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto3_sns.topic_exists mytopic region=us-east-1
     """
     topics = list_topics(region=region, key=key, keyid=keyid, profile=profile)
-    return name in list(topics.values() + topics.keys())
+    return name in list(topics.values()) + list(topics)
 
 
 def create_topic(Name, region=None, key=None, keyid=None, profile=None):

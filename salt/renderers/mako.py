@@ -10,7 +10,6 @@ To install Mako, do the following:
     salt-pip install mako
 """
 
-
 import io
 
 import salt.utils.templates

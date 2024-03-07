@@ -348,7 +348,7 @@ class GetStoragePoliciesTestCase(TestCase):
                     resourceType=pbm.profile.ResourceTypeEnum.STORAGE
                 )
             )
-            mock_obj.name = "fake_policy{}".format(i)
+            mock_obj.name = f"fake_policy{i}"
             self.mock_policies.append(mock_obj)
         patches = (
             (

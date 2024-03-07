@@ -1810,9 +1810,9 @@ def test_lxc_virtual():
         os.path,
         "isfile",
         MagicMock(
-            side_effect=lambda x: True
-            if x in ("/proc/1/cgroup", "/proc/1/environ")
-            else False
+            side_effect=lambda x: (
+                True if x in ("/proc/1/cgroup", "/proc/1/environ") else False
+            )
         ),
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
         core.__salt__, {"cmd.run_all": MagicMock()}
@@ -1858,9 +1858,11 @@ def test_container_inside_virtual_machine():
         os.path,
         "isfile",
         MagicMock(
-            side_effect=lambda x: True
-            if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
-            else False
+            side_effect=lambda x: (
+                True
+                if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+                else False
+            )
         ),
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
         core.__salt__, {"cmd.run_all": MagicMock()}
@@ -3631,8 +3633,8 @@ def test_linux_devicetree_data(test_input, expected):
             raise FileNotFoundError()
 
         m = MagicMock()
-        m.__enter__.return_value.read = (
-            lambda: test_input.get(filename)  # pylint: disable=W0640
+        m.__enter__.return_value.read = lambda: (
+            test_input.get(filename)  # pylint: disable=W0640
             if filename in test_input  # pylint: disable=W0640
             else _raise_fnfe()
         )

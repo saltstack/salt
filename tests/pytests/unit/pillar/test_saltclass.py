@@ -53,7 +53,7 @@ def temp_saltclass_tree(tmp_path, minion_id):
     """
     default_init.write_text(test_list)
 
-    minion_node_file = nodes_dir / "{}.yml".format(minion_id)
+    minion_node_file = nodes_dir / f"{minion_id}.yml"
     nodes_text = """
     environment: base
 

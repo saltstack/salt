@@ -18,7 +18,6 @@ data to return as pillar information. From there you can take a look at the
 varstack on how this file is evaluated.
 """
 
-
 try:
     import varstack
 except ImportError:

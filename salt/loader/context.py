@@ -1,6 +1,7 @@
 """
 Manage the context a module loaded by Salt's loader
 """
+
 import collections.abc
 import contextlib
 import copy

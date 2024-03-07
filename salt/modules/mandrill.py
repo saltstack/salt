@@ -17,7 +17,6 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2018.3.0
 """
 
-
 import logging
 
 import salt.utils.json

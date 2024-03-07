@@ -8,7 +8,6 @@
     ESXi host configuration schemas
 """
 
-
 from salt.utils.schema import (
     ArrayItem,
     BooleanItem,

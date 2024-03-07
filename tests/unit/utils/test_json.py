@@ -105,7 +105,7 @@ class JSONTestCase(TestCase):
         self.assertDictEqual(ret, expected_ret)
 
         # Now pre-pend some garbage and re-test
-        garbage_prepend_json = "{}{}".format(LOREM_IPSUM, test_sample_json)
+        garbage_prepend_json = f"{LOREM_IPSUM}{test_sample_json}"
         ret = salt.utils.json.find_json(garbage_prepend_json)
         self.assertDictEqual(ret, expected_ret)
 

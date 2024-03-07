@@ -2,7 +2,6 @@
 unit tests for the mysql_cache cache
 """
 
-
 import logging
 
 import pytest

@@ -311,10 +311,10 @@ def absent(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "The privilege(s): {} are set to be revoked from {}".format(
-                _privs, name
+            ret["comment"] = (
+                "The privilege(s): {} are set to be revoked from {}".format(
+                    _privs, name
+                )
             )
             return ret
 

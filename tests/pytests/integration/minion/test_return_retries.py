@@ -108,7 +108,9 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
     )
     cli = master.salt_cli()
     sls_tempfile = master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents)
-    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
+    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), (
+        sls_tempfile
+    ):
         cmd = 'import time; time.sleep(6); print(\'{"foo": "bang"}\');\n'
         with salt.utils.files.fopen(tmp_path / "script.py", "w") as fp:
             fp.write(cmd)

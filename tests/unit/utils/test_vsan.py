@@ -3,6 +3,7 @@
 
     Tests functions in salt.utils.vsan
 """
+
 import logging
 
 import pytest

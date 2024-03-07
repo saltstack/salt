@@ -373,12 +373,12 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "open_mode": True,
     }
     if platform.is_windows():
-        config_overrides[
-            "winrepo_dir"
-        ] = rf"{salt_factories.root_dir}\srv\salt\win\repo"
-        config_overrides[
-            "winrepo_dir_ng"
-        ] = rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
+        config_overrides["winrepo_dir"] = (
+            rf"{salt_factories.root_dir}\srv\salt\win\repo"
+        )
+        config_overrides["winrepo_dir_ng"] = (
+            rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
+        )
         config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
 
     if install_salt.classic and platform.is_windows():

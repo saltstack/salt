@@ -2345,7 +2345,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             return {}
         elif f"..{os.sep}" in salt.utils.stringutils.to_unicode(member.path):
             return {}
-    s_pkg.extractall(root)
+    s_pkg.extractall(root)  # nosec
     s_pkg.close()
     lowstate_json = os.path.join(root, "lowstate.json")
     with salt.utils.files.fopen(lowstate_json, "r") as fp_:

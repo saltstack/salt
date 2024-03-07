@@ -1,6 +1,7 @@
 """
     :codeauthor: :email:`Zach Moody <zmoody@do.co>`
 """
+
 import pytest
 
 import salt.modules.netbox as netbox

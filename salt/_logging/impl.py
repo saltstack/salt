@@ -170,7 +170,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             logging.getLogger(__name__)
 
         """
-        instance = super().__new__(cls)
+        instance = super().__new__(cls)  # pylint: disable=no-value-for-parameter
 
         try:
             max_logger_length = len(
@@ -480,7 +480,7 @@ def setup_temp_handler(log_level=None):
 
         def tryflush():
             try:
-                handler.flush()
+                handler.flush()  # pylint: disable=cell-var-from-loop
             except ValueError:
                 # File handle has already been closed.
                 pass

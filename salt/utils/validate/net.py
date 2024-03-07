@@ -37,7 +37,7 @@ def __ip_addr(addr, address_family=socket.AF_INET):
 
     try:
         if "/" not in addr:
-            addr = "{addr}/{mask_max}".format(addr=addr, mask_max=mask_max)
+            addr = f"{addr}/{mask_max}"
     except TypeError:
         return False
 

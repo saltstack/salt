@@ -30,7 +30,6 @@ A simple example might be something like the following:
 
 """
 
-
 import logging
 
 import salt.utils.versions

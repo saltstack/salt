@@ -110,7 +110,7 @@ async def test_unclosed_request_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
 
@@ -128,6 +128,6 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()

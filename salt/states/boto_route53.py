@@ -70,7 +70,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
 
-
 import logging
 import uuid
 
@@ -192,10 +191,10 @@ def present(
             log.info("Found private IP %s for instance %s", private_ip, name_tag)
         else:
             if public_ip is None:
-                ret[
-                    "comment"
-                ] = "Error: No Public IP assigned to instance with Name {}".format(
-                    name_tag
+                ret["comment"] = (
+                    "Error: No Public IP assigned to instance with Name {}".format(
+                        name_tag
+                    )
                 )
                 ret["result"] = False
                 return ret

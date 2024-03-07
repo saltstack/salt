@@ -90,7 +90,7 @@ def image_running(name, system_image, kickstart_image=None, issu=True, **kwargs)
             system_image=system_image,
             kickstart_image=kickstart_image,
             issu=issu,
-            **kwargs
+            **kwargs,
         )
 
     if upgrade["upgrade_in_progress"]:
@@ -99,7 +99,7 @@ def image_running(name, system_image, kickstart_image=None, issu=True, **kwargs)
         ret["comment"] = "NX-OS Device Now Being Upgraded - See Change Details Below"
     elif upgrade["succeeded"]:
         ret["result"] = upgrade["succeeded"]
-        ret["comment"] = "NX-OS Device Running Image: {}".format(_version_info())
+        ret["comment"] = f"NX-OS Device Running Image: {_version_info()}"
     else:
         ret["comment"] = "Upgrade Failed: {}.".format(upgrade["error_data"])
 

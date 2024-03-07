@@ -509,6 +509,90 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
+  almalinux-8-pkg-tests:
+    name: Alma Linux 8 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: almalinux-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  almalinux-8-arm64-pkg-tests:
+    name: Alma Linux 8 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  almalinux-9-pkg-tests:
+    name: Alma Linux 9 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  almalinux-9-arm64-pkg-tests:
+    name: Alma Linux 9 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -606,69 +690,6 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  centosstream-8-pkg-tests:
-    name: CentOS Stream 8 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: centosstream-8
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  centosstream-9-pkg-tests:
-    name: CentOS Stream 9 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: centosstream-9
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  centosstream-9-arm64-pkg-tests:
-    name: CentOS Stream 9 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: centosstream-9-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       nox-version: 2022.8.7
@@ -776,48 +797,6 @@ jobs:
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  photonos-3-pkg-tests:
-    name: Photon OS 3 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: photonos-3
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  photonos-3-arm64-pkg-tests:
-    name: Photon OS 3 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: photonos-3-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: arm64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
@@ -1332,6 +1311,27 @@ jobs:
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
+  almalinux-8-arm64:
+    name: Alma Linux 8 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      workflow-slug: ci
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
   almalinux-9:
     name: Alma Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1344,6 +1344,27 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      workflow-slug: ci
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
+  almalinux-9-arm64:
+    name: Alma Linux 9 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
@@ -1479,48 +1500,6 @@ jobs:
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  centosstream-8:
-    name: CentOS Stream 8 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: centosstream-8
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      workflow-slug: ci
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
-  centosstream-9:
-    name: CentOS Stream 9 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: centosstream-9
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      workflow-slug: ci
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
   debian-10:
     name: Debian 10 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1626,36 +1605,15 @@ jobs:
       workflow-slug: ci
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  fedora-37:
-    name: Fedora 37 Test
+  fedora-39:
+    name: Fedora 39 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: fedora-37
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      workflow-slug: ci
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
-  fedora-38:
-    name: Fedora 38 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: fedora-38
+      distro-slug: fedora-39
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -1680,48 +1638,6 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      workflow-slug: ci
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
-  photonos-3:
-    name: Photon OS 3 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: photonos-3
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
-      workflow-slug: ci
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
-  photonos-3-arm64:
-    name: Photon OS 3 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: photonos-3-arm64
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
@@ -1917,25 +1833,22 @@ jobs:
       - macos-13
       - macos-13-xlarge
       - almalinux-8
+      - almalinux-8-arm64
       - almalinux-9
+      - almalinux-9-arm64
       - amazonlinux-2
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
-      - centosstream-8
-      - centosstream-9
       - debian-10
       - debian-11
       - debian-11-arm64
       - debian-12
       - debian-12-arm64
-      - fedora-37
-      - fedora-38
+      - fedora-39
       - opensuse-15
-      - photonos-3
-      - photonos-3-arm64
       - photonos-4
       - photonos-4-arm64
       - photonos-5
@@ -2074,25 +1987,22 @@ jobs:
       - macos-13
       - macos-13-xlarge
       - almalinux-8
+      - almalinux-8-arm64
       - almalinux-9
+      - almalinux-9-arm64
       - amazonlinux-2
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
-      - centosstream-8
-      - centosstream-9
       - debian-10
       - debian-11
       - debian-11-arm64
       - debian-12
       - debian-12-arm64
-      - fedora-37
-      - fedora-38
+      - fedora-39
       - opensuse-15
-      - photonos-3
-      - photonos-3-arm64
       - photonos-4
       - photonos-4-arm64
       - photonos-5
@@ -2101,21 +2011,20 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+      - almalinux-8-pkg-tests
+      - almalinux-8-arm64-pkg-tests
+      - almalinux-9-pkg-tests
+      - almalinux-9-arm64-pkg-tests
       - amazonlinux-2-pkg-tests
       - amazonlinux-2-arm64-pkg-tests
       - amazonlinux-2023-pkg-tests
       - amazonlinux-2023-arm64-pkg-tests
       - centos-7-pkg-tests
-      - centosstream-8-pkg-tests
-      - centosstream-9-pkg-tests
-      - centosstream-9-arm64-pkg-tests
       - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
       - debian-12-pkg-tests
       - debian-12-arm64-pkg-tests
-      - photonos-3-pkg-tests
-      - photonos-3-arm64-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
       - photonos-5-pkg-tests

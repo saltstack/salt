@@ -1,6 +1,7 @@
 """
 Tests for the salt fileclient
 """
+
 import errno
 import logging
 import os

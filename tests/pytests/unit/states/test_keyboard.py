@@ -29,17 +29,17 @@ def test_system():
     with patch.dict(
         keyboard.__salt__, {"keyboard.get_sys": mock, "keyboard.set_sys": mock_t}
     ):
-        comt = "System layout {} already set".format(name)
+        comt = f"System layout {name} already set"
         ret.update({"comment": comt})
         assert keyboard.system(name) == ret
 
         with patch.dict(keyboard.__opts__, {"test": True}):
-            comt = "System layout {} needs to be set".format(name)
+            comt = f"System layout {name} needs to be set"
             ret.update({"comment": comt, "result": None})
             assert keyboard.system(name) == ret
 
         with patch.dict(keyboard.__opts__, {"test": False}):
-            comt = "Set system keyboard layout {}".format(name)
+            comt = f"Set system keyboard layout {name}"
             ret.update({"comment": comt, "result": True, "changes": {"layout": name}})
             assert keyboard.system(name) == ret
 
@@ -64,17 +64,17 @@ def test_xorg():
     with patch.dict(
         keyboard.__salt__, {"keyboard.get_x": mock, "keyboard.set_x": mock_t}
     ):
-        comt = "XOrg layout {} already set".format(name)
+        comt = f"XOrg layout {name} already set"
         ret.update({"comment": comt})
         assert keyboard.xorg(name) == ret
 
         with patch.dict(keyboard.__opts__, {"test": True}):
-            comt = "XOrg layout {} needs to be set".format(name)
+            comt = f"XOrg layout {name} needs to be set"
             ret.update({"comment": comt, "result": None})
             assert keyboard.xorg(name) == ret
 
         with patch.dict(keyboard.__opts__, {"test": False}):
-            comt = "Set XOrg keyboard layout {}".format(name)
+            comt = f"Set XOrg keyboard layout {name}"
             ret.update({"comment": comt, "result": True, "changes": {"layout": name}})
             assert keyboard.xorg(name) == ret
 

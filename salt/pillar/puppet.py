@@ -19,9 +19,7 @@ def ext_pillar(minion_id, pillar, command):  # pylint: disable=W0613
     Execute an unmodified puppet_node_classifier and read the output as YAML
     """
     try:
-        data = salt.utils.yaml.safe_load(
-            __salt__["cmd.run"]("{} {}".format(command, minion_id))
-        )
+        data = salt.utils.yaml.safe_load(__salt__["cmd.run"](f"{command} {minion_id}"))
         return data["parameters"]
     except Exception:  # pylint: disable=broad-except
         log.critical("YAML data from %s failed to parse", command)

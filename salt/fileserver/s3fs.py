@@ -87,7 +87,6 @@ structure::
         s3.s3_sync_on_update: False
 """
 
-
 import datetime
 import logging
 import os
@@ -726,7 +725,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                 if cached_md5 == file_md5:
                     return
                 else:
-                    log.info(f"found different hash for file {path}, updating...")
+                    log.info("found different hash for file %s, updating...", path)
             else:
                 cached_file_stat = os.stat(cached_file_path)
                 cached_file_size = cached_file_stat.st_size
@@ -762,6 +761,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         https_enable=https_enable,
                     )
                     if ret is not None:
+                        s3_file_mtime = s3_file_size = None
                         for header_name, header_value in ret["headers"].items():
                             name = header_name.strip()
                             value = header_value.strip()
@@ -771,9 +771,8 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                                 )
                             elif str(name).lower() == "content-length":
                                 s3_file_size = int(value)
-                        if (
-                            cached_file_size == s3_file_size
-                            and cached_file_mtime > s3_file_mtime
+                        if (s3_file_size and cached_file_size == s3_file_size) and (
+                            s3_file_mtime and cached_file_mtime > s3_file_mtime
                         ):
                             log.info(
                                 "%s - %s : %s skipped download since cached file size "
