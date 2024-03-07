@@ -907,7 +907,7 @@ def refresh_db(**kwargs):
     The database is stored in a serialized format located by default at the
     following location:
 
-    ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p``
+    ``C:\ProgramData\Salt Project\Salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p``
 
     This module performs the following steps to generate the software metadata
     database:
@@ -976,7 +976,7 @@ def refresh_db(**kwargs):
 
     .. warning::
         When calling this command from a state using `module.run` be sure to
-        pass `failhard: False`. Otherwise the state will report failure if it
+        pass `failhard: False`. Otherwise, the state will report failure if it
         encounters a bad software definition file.
 
     CLI Example:
@@ -1170,10 +1170,11 @@ def genrepo(**kwargs):
             if name.endswith(".sls"):
                 total_files_processed += 1
                 _repo_process_pkg_sls(
-                    os.path.join(root, name),
-                    os.path.join(short_path, name),
-                    ret,
-                    successful_verbose,
+                    filename=os.path.join(root, name),
+                    short_path_name=os.path.join(short_path, name),
+                    ret=ret,
+                    successful_verbose=successful_verbose,
+                    saltenv=saltenv,
                 )
 
     with salt.utils.files.fopen(repo_details.winrepo_file, "wb") as repo_cache:
@@ -1212,7 +1213,9 @@ def genrepo(**kwargs):
         return results
 
 
-def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
+def _repo_process_pkg_sls(
+    filename, short_path_name, ret, successful_verbose, saltenv="base"
+):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
@@ -1227,6 +1230,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             __opts__["renderer"],
             __opts__.get("renderer_blacklist", ""),
             __opts__.get("renderer_whitelist", ""),
+            saltenv=saltenv,
         )
     except SaltRenderError as exc:
         return _failed_compile("Failed to compile", exc)
