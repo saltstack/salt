@@ -20,6 +20,7 @@ import salt.utils.gitfs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
+from salt.grains.core import get_machine_id
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 
@@ -404,7 +405,8 @@ def test_git_provider_mp_gen_lock(main_class, caplog):
     """
     # DGM try getting machine_identifier
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier()
+    ## mach_id = salt.utils.files.get_machine_identifier()
+    mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     test_msg1 = (
@@ -437,7 +439,8 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
     """
     # DGM try getting machine_identifier
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier()
+    ## mach_id = salt.utils.files.get_machine_identifier()
+    mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     test_msg1 = (
@@ -508,7 +511,8 @@ def test_git_provider_mp_lock_bad_machine(main_class, caplog):
     """
     # DGM try getting machine_identifier
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier()
+    ## mach_id = salt.utils.files.get_machine_identifier()
+    mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     provider = main_class.remotes[0]
