@@ -990,13 +990,13 @@ class GitProvider:
                                     "update may have been interrupted. If "
                                     "using multi-master with shared gitfs "
                                     "cache, the lock may have been obtained "
-                                    "by another master, with machine_id {mach_id}"
+                                    f"by another master, with machine_id {mach_id}"
                                 )
                             else:
                                 msg += (
                                     " but this process is not running. The "
                                     "update may have been interrupted. "
-                                    " Given this process is for the same machine "
+                                    " Given this process is for the same machine"
                                     " the lock will be reallocated to new process "
                                 )
                                 log.warning(msg)
