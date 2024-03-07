@@ -39,6 +39,7 @@ import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
+from salt.grains.core import get_machine_id
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
@@ -250,7 +251,8 @@ class GitProvider:
 
         # DGM try getting machine_identifier
         # get machine_identifier
-        self.mach_id = salt.utils.files.get_machine_identifier()
+        ## self.mach_id = salt.utils.files.get_machine_identifier()
+        self.mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
         log.debug("DGM machine_id for lock file, machine_id %s", self.mach_id)
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
