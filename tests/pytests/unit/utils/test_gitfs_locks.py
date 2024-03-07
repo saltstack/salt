@@ -22,57 +22,51 @@ import salt.utils.platform
 import salt.utils.process
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-from tests.support.runtests import RUNTIME_VARS
+
+try:
+    import pwd
+except ImportError:
+    import salt.utils.win_functions
 
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _create_old_tempdir():
-    pathlib.Path(RUNTIME_VARS.TMP).mkdir(exist_ok=True, parents=True)
+def _get_user():
+    """
+    Get the user associated with the current process.
+    """
+    if salt.utils.platform.is_windows():
+        return salt.utils.win_functions.get_current_user(with_domain=False)
+    return pwd.getpwuid(os.getuid())[0]
 
 
-@pytest.fixture(scope="session", autouse=True)
-def bridge_pytest_and_runtests(
-    reap_stray_processes,
-    salt_factories,
-    salt_syndic_master_factory,
-    salt_syndic_factory,
-    salt_master_factory,
-    salt_minion_factory,
-    salt_sub_minion_factory,
-    sshd_config_dir,
-):
-    # Make sure unittest2 uses the pytest generated configuration
-    RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_factory.config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_factory.config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(salt_sub_minion_factory.config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(
-        salt_syndic_master_factory.config
-    )
-    RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(salt_syndic_factory.config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["client_config"] = freeze(
-        salt.config.client_config(salt_master_factory.config["conf_file"])
+@pytest.fixture(scope="module", autouse=True)
+def _factory_root_dir(salt_factories):
+    return salt_factories.root_dir.resolve()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _salt_master_factory_config_parent(salt_master_factory):
+    return pathlib.PurePath(salt_master_factory.config["conf_file"]).parent
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _salt_master_factory_config_path(salt_master_factory):
+    return pathlib.PurePath(salt_master_factory.config["conf_file"]).parent.joinpath(
+        "master"
     )
 
-    # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP_ROOT_DIR = str(salt_factories.root_dir.resolve())
-    RUNTIME_VARS.TMP_CONF_DIR = pathlib.PurePath(
-        salt_master_factory.config["conf_file"]
-    ).parent
-    RUNTIME_VARS.TMP_MINION_CONF_DIR = pathlib.PurePath(
-        salt_minion_factory.config["conf_file"]
-    ).parent
-    RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = pathlib.PurePath(
-        salt_sub_minion_factory.config["conf_file"]
-    ).parent
-    RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = pathlib.PurePath(
-        salt_syndic_master_factory.config["conf_file"]
-    ).parent
-    RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = pathlib.PurePath(
-        salt_syndic_factory.config["conf_file"]
-    ).parent
-    RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+
+@pytest.fixture(scope="module", autouse=True)
+def _salt_minion_factory_config_path(salt_minion_factory):
+    return pathlib.PurePath(salt_minion_factory.config["conf_file"]).parent.joinpath(
+        "minion"
+    )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _create_old_tempdir(_factory_root_dir):
+    return pathlib.Path(str(_factory_root_dir)).mkdir(exist_ok=True, parents=True)
 
 
 ## @pytest.fixture
@@ -95,31 +89,32 @@ def _clear_instance_map():
 
 class AdaptedConfigurationTestCaseMixin:
 
-    ## __slots__ = ()
-
     @staticmethod
-    def get_temp_config(config_for, **config_overrides):
+    def get_temp_config(config_for, _factory_root_dir, **config_overrides):
 
-        rootdir = config_overrides.get("root_dir", RUNTIME_VARS.TMP)
+        rootdir = config_overrides.get("root_dir", str(_factory_root_dir))
 
         if not pathlib.Path(rootdir).exists():
-            pathlib.Path(RUNTIME_VARS.TMP).mkdir(exist_ok=True, parents=True)
+            pathlib.Path(str(_factory_root_dir)).mkdir(exist_ok=True, parents=True)
 
-        rootdir = config_overrides.get("root_dir", RUNTIME_VARS.TMP)
+        rootdir = config_overrides.get("root_dir", str(_factory_root_dir))
         conf_dir = config_overrides.pop(
-            "conf_dir", pathlib.PurePath(rootdir).joinpath("conf")
+            "conf_dir", str(pathlib.PurePath(rootdir).joinpath("conf"))
         )
+
+        curr_user = _get_user()
         for key in ("cachedir", "pki_dir", "sock_dir"):
             if key not in config_overrides:
                 config_overrides[key] = key
         if "log_file" not in config_overrides:
             config_overrides["log_file"] = f"logs/{config_for}.log".format()
         if "user" not in config_overrides:
-            config_overrides["user"] = RUNTIME_VARS.RUNNING_TESTS_USER
+            config_overrides["user"] = curr_user
         config_overrides["root_dir"] = rootdir
 
         cdict = AdaptedConfigurationTestCaseMixin.get_config(
-            config_for, from_scratch=True
+            config_for,
+            from_scratch=True,
         )
 
         if config_for in ("master", "client_config"):
@@ -153,7 +148,7 @@ class AdaptedConfigurationTestCaseMixin:
                 rdict["sock_dir"],
                 conf_dir,
             ],
-            RUNTIME_VARS.RUNNING_TESTS_USER,
+            curr_user,
             root_dir=rdict["root_dir"],
         )
 
@@ -163,66 +158,42 @@ class AdaptedConfigurationTestCaseMixin:
         return rdict
 
     @staticmethod
-    def get_config(config_for, from_scratch=False):
+    def get_config(
+        config_for,
+        from_scratch=False,
+    ):
         if from_scratch:
-            if config_for in ("master", "syndic_master", "mm_master", "mm_sub_master"):
-                return salt.config.master_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
+            if config_for in ("master"):
+                return salt.config.master_config(str(_salt_master_factory_config_path))
+            elif config_for in ("minion"):
+                return salt.config.minion_config(str(_salt_minion_factory_config_path))
+            elif config_for == "client_config":
+                return salt.config_client_config(str(_salt_master_factory_config_path))
+        if config_for not in ("master", "minion", "client_config"):
+            if config_for in ("master"):
+                return freeze(
+                    salt.config.master_config(str(_salt_master_factory_config_path))
                 )
-            elif config_for in ("minion", "sub_minion"):
-                return salt.config.minion_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
-                    cache_minion_id=False,
-                )
-            elif config_for in ("syndic",):
-                return salt.config.syndic_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path("minion"),
+            elif config_for in ("minion"):
+                return freeze(
+                    salt.config.minion_config(str(_salt_minion_factory_config_path))
                 )
             elif config_for == "client_config":
-                return salt.config.client_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path("master")
+                return freeze(
+                    salt.config.client_config(str(_salt_master_factory_config_path))
                 )
 
-        if config_for not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            if config_for in ("master", "syndic_master", "mm_master", "mm_sub_master"):
-                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.master_config(
-                        AdaptedConfigurationTestCaseMixin.get_config_file_path(
-                            config_for
-                        )
-                    )
-                )
-            elif config_for in ("minion", "sub_minion"):
-                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.minion_config(
-                        AdaptedConfigurationTestCaseMixin.get_config_file_path(
-                            config_for
-                        )
-                    )
-                )
-            elif config_for in ("syndic",):
-                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.syndic_config(
-                        AdaptedConfigurationTestCaseMixin.get_config_file_path(
-                            config_for
-                        ),
-                        AdaptedConfigurationTestCaseMixin.get_config_file_path(
-                            "minion"
-                        ),
-                    )
-                )
-            elif config_for == "client_config":
-                RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.client_config(
-                        AdaptedConfigurationTestCaseMixin.get_config_file_path("master")
-                    )
-                )
-        return RUNTIME_VARS.RUNTIME_CONFIGS[config_for]
+        log.error(
+            "Should not reach this section of code for get_config, missing support for input config_for %s",
+            config_for,
+        )
+
+        # at least return master's config
+        return freeze(salt.config.master_config(str(_salt_master_factory_config_path)))
 
     @property
     def config_dir(self):
-        return RUNTIME_VARS.TMP_CONF_DIR
+        return str(_salt_master_factory_config_parent)
 
     def get_config_dir(self):
         log.warning("Use the config_dir attribute instead of calling get_config_dir()")
@@ -231,34 +202,12 @@ class AdaptedConfigurationTestCaseMixin:
     @staticmethod
     def get_config_file_path(filename):
         if filename == "master":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_CONF_DIR).joinpath(filename)
+            return str(_salt_master_factory_config_path)
+
         if filename == "minion":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_MINION_CONF_DIR).joinpath(filename)
-        if filename == "syndic_master":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR).joinpath(
-                "master"
-            )
-        if filename == "syndic":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR).joinpath(
-                "minion"
-            )
-        if filename == "sub_minion":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR).joinpath(
-                "minion"
-            )
-        if filename == "mm_master":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_MM_CONF_DIR).joinpath("master")
-        if filename == "mm_sub_master":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR).joinpath("master")
-        if filename == "mm_minion":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR).joinpath(
-                "minion"
-            )
-        if filename == "mm_sub_minion":
-            return pathlib.PurePath(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR).joinpath(
-                "minion"
-            )
-        return pathlib.PurePath(RUNTIME_VARS.TMP_CONF_DIR).joinpath(filename)
+            return str(_salt_minion_factory_config_path)
+
+        return str(_salt_master_factory_config_path)
 
     @property
     def master_opts(self):
@@ -342,7 +291,10 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
         gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
 
         self.opts = self.get_temp_config(
-            "master", gitfs_remotes=gitfs_remotes, verified_gitfs_provider="mocked"
+            "master",
+            _factory_root_dir,
+            gitfs_remotes=gitfs_remotes,
+            verified_gitfs_provider="mocked",
         )
         self.main_class = salt.utils.gitfs.GitFS(
             self.opts,
@@ -352,6 +304,7 @@ class TestGitBase(AdaptedConfigurationTestCaseMixin):
             git_providers=git_providers,
         )
 
+    # DGM TBD do we need this, look at removing
     def tearDown(self):
         # Providers are preserved with GitFS's instance_map
         for remote in self.main_class.remotes:
@@ -394,9 +347,10 @@ def test_get_cachedir_basename(main_class):
     assert main_class.remotes[1].get_cache_basename() == "_"
 
 
-def test_git_provider_mp_lock(main_class):
+def test_git_provider_mp_lock_and_clear_lock(main_class):
     """
     Check that lock is released after provider.lock()
+    and that lock is released after provider.clear_lock()
     """
     provider = main_class.remotes[0]
     provider.lock()
@@ -404,12 +358,6 @@ def test_git_provider_mp_lock(main_class):
     assert provider._master_lock.acquire(timeout=5)
     provider._master_lock.release()
 
-
-def test_git_provider_mp_clear_lock(main_class):
-    """
-    Check that lock is released after provider.clear_lock()
-    """
-    provider = main_class.remotes[0]
     provider.clear_lock()
     # check that lock has been released
     assert provider._master_lock.acquire(timeout=5)
@@ -454,17 +402,166 @@ def test_git_provider_mp_gen_lock(main_class, caplog):
     """
     Check that gen_lock is obtains lock, and then releases, provider.lock()
     """
-    test_msg1 = "Set update lock for gitfs remote 'file://repo1.git' on machine_id"
+    # DGM try getting machine_identifier
+    # get machine_identifier
+    mach_id = salt.utils.files.get_machine_identifier()
+    cur_pid = os.getpid()
+
+    test_msg1 = (
+        f"Set update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
+    )
     test_msg2 = "Attempting to remove 'update' lock for 'gitfs' remote 'file://repo1.git' due to lock_set1 'True' or lock_set2"
-    test_msg3 = "Removed update lock for gitfs remote 'file://repo1.git' on machine_id"
+    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
 
     provider = main_class.remotes[0]
+
+    # loop seeing if the test can be made to mess up a lock/unlock sequence
+    max_count = 10000
+    count = 0
+    while count < max_count:
+        count = count + 1
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG):
+            provider.fetch()
+
+        assert test_msg1 in caplog.text
+        assert test_msg2 in caplog.text
+        assert test_msg3 in caplog.text
+
+
+@pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
+def test_git_provider_mp_lock_dead_pid(main_class, caplog):
+    """
+    Check that lock obtains lock, if previous pid in lock file doesn't exist for same machine id
+    """
+    # DGM try getting machine_identifier
+    # get machine_identifier
+    mach_id = salt.utils.files.get_machine_identifier()
+    cur_pid = os.getpid()
+
+    test_msg1 = (
+        f"Set update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
+    )
+    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
+
+    provider = main_class.remotes[0]
+    provider.lock()
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+
+    # get lock file and manipulate it for a dead pid
+    file_name = provider._get_lock_file("update")
+    dead_pid = 1234  # give it non-existant pid
+    test_msg2 = (
+        f"gitfs_global_lock is enabled and update lockfile {file_name} "
+        "is present for gitfs remote 'file://repo1.git' on machine_id "
+        f"{mach_id} with pid '{dead_pid}'. Process {dead_pid} obtained "
+        f"the lock for machine_id {mach_id}, current machine_id {mach_id} "
+        "but this process is not running. The update may have been "
+        "interrupted.  Given this process is for the same machine the "
+        "lock will be reallocated to new process"
+    )
+
+    # remove existing lock file and write fake lock file with bad pid
+    assert pathlib.Path(file_name).is_file()
+    pathlib.Path(file_name).unlink()
+
+    try:
+        # write lock file similar to salt/utils/gitfs.py
+        fh_ = os.open(file_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        with os.fdopen(fh_, "wb"):
+            # Write the lock file and close the filehandle
+            os.write(fh_, salt.utils.stringutils.to_bytes(str(dead_pid)))
+            os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+            os.write(fh_, salt.utils.stringutils.to_bytes(str(mach_id)))
+            os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+
+    except OSError as exc:
+        log.error(
+            "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
+        )
+
+    provider._master_lock.release()
+
     with caplog.at_level(logging.DEBUG):
-        provider.fetch()
+        provider.lock()
+        # check that lock has been released
+        assert provider._master_lock.acquire(timeout=5)
+        provider._master_lock.release()
+
+    provider.clear_lock()
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+    provider._master_lock.release()
 
     assert test_msg1 in caplog.text
     assert test_msg2 in caplog.text
     assert test_msg3 in caplog.text
+
+
+@pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
+def test_git_provider_mp_lock_bad_machine(main_class, caplog):
+    """
+    Check that lock obtains lock, if previous pid in lock file doesn't exist for same machine id
+    """
+    # DGM try getting machine_identifier
+    # get machine_identifier
+    mach_id = salt.utils.files.get_machine_identifier()
+    cur_pid = os.getpid()
+
+    provider = main_class.remotes[0]
+    provider.lock()
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+
+    # get lock file and manipulate it for a dead pid
+    file_name = provider._get_lock_file("update")
+    bad_mach_id = "abcedf0123456789"  # give it non-existant pid
+
+    test_msg1 = (
+        f"gitfs_global_lock is enabled and update lockfile {file_name} "
+        "is present for gitfs remote 'file://repo1.git' on machine_id "
+        f"{mach_id} with pid '{cur_pid}'. Process {cur_pid} obtained "
+        f"the lock for machine_id {bad_mach_id}, current machine_id {mach_id}"
+    )
+    test_msg2 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
+
+    # remove existing lock file and write fake lock file with bad pid
+    assert pathlib.Path(file_name).is_file()
+    pathlib.Path(file_name).unlink()
+
+    try:
+        # write lock file similar to salt/utils/gitfs.py
+        fh_ = os.open(file_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        with os.fdopen(fh_, "wb"):
+            # Write the lock file and close the filehandle
+            os.write(fh_, salt.utils.stringutils.to_bytes(str(cur_pid)))
+            os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+            os.write(fh_, salt.utils.stringutils.to_bytes(str(bad_mach_id)))
+            os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+
+    except OSError as exc:
+        log.error(
+            "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
+        )
+
+    provider._master_lock.release()
+
+    with caplog.at_level(logging.DEBUG):
+        provider.lock()
+        # check that lock has been released
+        assert provider._master_lock.acquire(timeout=5)
+        provider._master_lock.release()
+
+    provider.clear_lock()
+    # check that lock has been released
+    assert provider._master_lock.acquire(timeout=5)
+    provider._master_lock.release()
+
+    assert test_msg1 in caplog.text
+    assert test_msg2 in caplog.text
 
 
 class KillProcessTest(salt.utils.process.SignalHandlingProcess):
@@ -482,16 +579,10 @@ class KillProcessTest(salt.utils.process.SignalHandlingProcess):
         """
         Start the test process to kill
         """
-        log.debug("DGM kill_test_process entry pid %s", os.getpid())
-
-        ## provider = main_class.remotes[0]
         self.provider.lock()
-
-        log.debug("DGM kill_test_process obtained lock")
 
         # check that lock has been released
         assert self.provider._master_lock.acquire(timeout=5)
-        log.debug("DGM kill_test_process tested assert masterlock acquire")
 
         while True:
             tsleep = 1
@@ -507,16 +598,12 @@ def test_git_provider_sigterm_cleanup(main_class, caplog):
     Start process which will obtain lock, and leave it locked
     then kill the process via SIGTERM and ensure locked resources are cleaned up
     """
-    log.debug("DGM test_git_provider_sigterm_cleanup entry")
-
     provider = main_class.remotes[0]
 
-    log.debug("DGM test_git_provider_sigterm_cleanup, get procmgn and add process")
     with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
         procmgr = salt.utils.process.ProcessManager(wait_for_kill=1)
         proc = procmgr.add_process(KillProcessTest, args=(provider,), name="test_kill")
 
-    log.debug("DGM test_git_provider_sigterm_cleanup, check if process is alive")
     while not proc.is_alive():
         time.sleep(1)  # give some time for it to be started
 
@@ -524,27 +611,13 @@ def test_git_provider_sigterm_cleanup(main_class, caplog):
 
     # child process should be alive
     file_name = provider._get_lock_file("update")
-    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}'"
-    log.debug(dbg_msg)
 
     assert pathlib.Path(file_name).exists()
     assert pathlib.Path(file_name).is_file()
 
-    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', exists and is a file, send SIGTERM signal"
-    log.debug(dbg_msg)
-
     procmgr.terminate()  # sends a SIGTERM
 
     time.sleep(1)  # give some time for it to terminate
-    log.debug("DGM test_git_provider_sigterm_cleanup lock , post terminate")
 
     assert not proc.is_alive()
-
-    dbg_msg = "DGM test_git_provider_sigterm_cleanup lock , child is not alive"
-    log.debug(dbg_msg)
-
-    test_file_exits = pathlib.Path(file_name).exists()
-    dbg_msg = f"DGM test_git_provider_sigterm_cleanup lock file location, '{file_name}', does it exist anymore '{test_file_exits}'"
-    log.debug(dbg_msg)
-
     assert not pathlib.Path(file_name).exists()
