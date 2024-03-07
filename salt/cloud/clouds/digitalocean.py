@@ -483,9 +483,14 @@ def create(vm_):
                 dns_hostname,
                 dns_domain,
             )
-            __add_dns_addr__ = lambda t, d: post_dns_record(
-                dns_domain=dns_domain, name=dns_hostname, record_type=t, record_data=d
-            )
+
+            def __add_dns_addr__(t, d):
+                return post_dns_record(
+                    dns_domain=dns_domain,
+                    name=dns_hostname,
+                    record_type=t,
+                    record_data=d,
+                )
 
             log.debug("create_dns_record: %s", __add_dns_addr__)
         else:
@@ -651,6 +656,7 @@ def query(
             "Authorization": "Bearer " + personal_access_token,
             "Content-Type": "application/json",
         },
+        timeout=120,
     )
     if request.status_code > 299:
         raise SaltCloudSystemExit(

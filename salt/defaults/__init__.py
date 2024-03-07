@@ -45,8 +45,8 @@ class _Constant:
 
     def __repr__(self):
         if self.value:
-            return "<Constant.{} value={}>".format(self.name, self.value)
-        return "<Constant.{}>".format(self.name)
+            return f"<Constant.{self.name} value={self.value}>"
+        return f"<Constant.{self.name}>"
 
 
 # Default delimiter for multi-level traversal in targeting

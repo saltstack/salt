@@ -138,10 +138,10 @@ def present(name, params, **kwargs):
 
         else:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = 'Zabbix Value map "{}" already exists and corresponds to a definition.'.format(
-                name
+            ret["comment"] = (
+                'Zabbix Value map "{}" already exists and corresponds to a definition.'.format(
+                    name
+                )
             )
 
     else:

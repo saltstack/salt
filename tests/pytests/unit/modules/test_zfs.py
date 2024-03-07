@@ -215,9 +215,9 @@ def test_create_error_missing_parent(utils_patch):
     )
     ret = {}
     ret["stdout"] = ""
-    ret[
-        "stderr"
-    ] = "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"
+    ret["stderr"] = (
+        "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"
+    )
     ret["retcode"] = 1
     mock_cmd = MagicMock(return_value=ret)
     with patch.dict(zfs.__salt__, {"cmd.run_all": mock_cmd}), patch.dict(

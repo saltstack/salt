@@ -2,7 +2,6 @@
 Resources needed by pkg providers
 """
 
-
 import copy
 import fnmatch
 import logging
@@ -26,7 +25,9 @@ def _repack_pkgs(pkgs, normalize=True):
     if normalize and "pkg.normalize_name" in __salt__:
         _normalize_name = __salt__["pkg.normalize_name"]
     else:
-        _normalize_name = lambda pkgname: pkgname
+
+        def _normalize_name(pkgname):
+            return pkgname
 
     repacked_pkgs = {
         _normalize_name(str(x)): str(y) if y is not None else y
@@ -71,7 +72,9 @@ def pack_sources(sources, normalize=True):
     if normalize and "pkg.normalize_name" in __salt__:
         _normalize_name = __salt__["pkg.normalize_name"]
     else:
-        _normalize_name = lambda pkgname: pkgname
+
+        def _normalize_name(pkgname):
+            return pkgname
 
     if isinstance(sources, str):
         try:
@@ -410,7 +413,7 @@ def format_version(epoch, version, release):
     """
     Formats a version string for list_pkgs.
     """
-    full_version = "{}:{}".format(epoch, version) if epoch else version
+    full_version = f"{epoch}:{version}" if epoch else version
     if release:
-        full_version += "-{}".format(release)
+        full_version += f"-{release}"
     return full_version

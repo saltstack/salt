@@ -44,7 +44,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
     }
 
     # Send the command to target
-    func = "modjk.{}".format(cmd)
+    func = f"modjk.{cmd}"
     args = [worker, lbn, profile]
     response = __salt__["publish.publish"](target, func, args, tgt_type)
 
@@ -58,7 +58,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
 
     # parse response
     if not response:
-        ret["msg"] = "no servers answered the published command {}".format(cmd)
+        ret["msg"] = f"no servers answered the published command {cmd}"
         return ret
     elif len(errors) > 0:
         ret["msg"] = "the following minions return False"
@@ -127,16 +127,16 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
         return ret
     if status["errors"]:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "the following balancers could not find the worker {}: {}".format(
-            name, status["errors"]
+        ret["comment"] = (
+            "the following balancers could not find the worker {}: {}".format(
+                name, status["errors"]
+            )
         )
         return ret
     if not status["wrong_state"]:
-        ret[
-            "comment"
-        ] = "the worker is in the desired activation state on all the balancers"
+        ret["comment"] = (
+            "the worker is in the desired activation state on all the balancers"
+        )
         return ret
     else:
         ret["comment"] = "the action {} will be sent to the balancers {}".format(

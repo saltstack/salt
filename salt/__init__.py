@@ -4,19 +4,12 @@ Salt package
 
 import asyncio
 import importlib
-import locale
 import os
 import sys
 import warnings
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-if sys.version_info < (3,):  # pragma: no cover
-    sys.stderr.write(
-        "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
-    )
-    sys.stderr.flush()
 
 
 class NaclImporter:

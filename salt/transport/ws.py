@@ -128,9 +128,9 @@ class PublishClient(salt.transport.base.PublishClient):
                     conn = aiohttp.UnixConnector(path=self.path)
                     session = aiohttp.ClientSession(connector=conn)
                     if self.ssl:
-                        url = f"https://ipc.saltproject.io/ws"
+                        url = "https://ipc.saltproject.io/ws"
                     else:
-                        url = f"http://ipc.saltproject.io/ws"
+                        url = "http://ipc.saltproject.io/ws"
                 log.error("pub client connect %r %r", url, ctx)
                 ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
             except Exception as exc:  # pylint: disable=broad-except
@@ -154,7 +154,7 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._ws is None:
             self._ws, self._session = await self.getstream(timeout=timeout)
             if self.connect_callback:
-                self.connect_callback(True)
+                self.connect_callback(True)  # pylint: disable=not-callable
             self.connected = True
 
     async def connect(
@@ -281,9 +281,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __setstate__(self, state):
         self.__init__(**state)
-
-    def __setstate__(self, state):
-        self.__init__(state["opts"])
 
     def __getstate__(self):
         return {
@@ -424,7 +421,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self._connecting = asyncio.create_task(self._connect())
         return self._connecting
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
         """
@@ -545,7 +544,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closed = False
         self.ssl = self.opts.get("ssl", None)
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
         if self.ssl is not None:
             ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)

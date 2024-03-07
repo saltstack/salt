@@ -11,7 +11,6 @@ This state module was designed to manage RESTCONF states.
 This module relies on the RESTCONF proxy module to interface with the devices.
 """
 
-
 import difflib
 import json
 import logging

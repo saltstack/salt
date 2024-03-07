@@ -217,7 +217,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function("group.add", [self._group], gid=self._gid)
         self.run_function("user.add", [self._user])
         self.run_function("user.add", [self._user1])
-        m = "{},{}".format(self._user, self._user1)
+        m = f"{self._user},{self._user1}"
         ret = self.run_function("group.members", [self._group, m])
         self.assertTrue(ret)
         group_info = self.run_function("group.info", [self._group])

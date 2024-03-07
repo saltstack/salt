@@ -1,5 +1,3 @@
-# This is a compilation of requirements installed on salt-jenkins git.salt state run
-
 --constraint=../pkg/py{py_version}/{platform}.txt
 
 pygit2>=1.10.1

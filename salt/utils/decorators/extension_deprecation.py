@@ -1,6 +1,7 @@
 """
 Decorators for deprecation of modules to Salt extensions
 """
+
 import logging
 from functools import wraps
 

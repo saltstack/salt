@@ -314,7 +314,7 @@ class AllEventsHandler(
     """
 
     # pylint: disable=W0221
-    def get(self, token):
+    def get(self, token):  # pylint: disable=invalid-overridden-method
         """
         Check the token, returns a 401 if the token is invalid.
         Else open the websocket connection

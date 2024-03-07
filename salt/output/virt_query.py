@@ -13,9 +13,9 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     """
     out = ""
     for id_ in data["data"]:
-        out += "{}\n".format(id_)
+        out += f"{id_}\n"
         for vm_ in data["data"][id_]["vm_info"]:
-            out += "  {}\n".format(vm_)
+            out += f"  {vm_}\n"
             vm_data = data[id_]["vm_info"][vm_]
             if "cpu" in vm_data:
                 out += "    CPU: {}\n".format(vm_data["cpu"])
@@ -30,13 +30,13 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
                     )
             if "disks" in vm_data:
                 for disk, d_data in vm_data["disks"].items():
-                    out += "    Disk - {}:\n".format(disk)
+                    out += f"    Disk - {disk}:\n"
                     out += "      Size: {}\n".format(d_data["disk size"])
                     out += "      File: {}\n".format(d_data["file"])
                     out += "      File Format: {}\n".format(d_data["file format"])
             if "nics" in vm_data:
                 for mac in vm_data["nics"]:
-                    out += "    Nic - {}:\n".format(mac)
+                    out += f"    Nic - {mac}:\n"
                     out += "      Source: {}\n".format(
                         vm_data["nics"][mac]["source"][
                             next(iter(vm_data["nics"][mac]["source"].keys()))

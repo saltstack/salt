@@ -206,6 +206,7 @@ Multiple policy configuration
 
         Windows Components\\Windows Update\\Configure Automatic Updates:
 """
+
 import logging
 
 import salt.utils.data
@@ -428,7 +429,7 @@ def set_(
                                     )
                                     deprecation_comments.append(msg)
                                 else:
-                                    msg = "Invalid element name: {}".format(e_name)
+                                    msg = f"Invalid element name: {e_name}"
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
@@ -525,7 +526,7 @@ def set_(
                             )
                             policy_changes.append(p_name)
                     else:
-                        msg = '"{}" is already set'.format(p_name)
+                        msg = f'"{p_name}" is already set'
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)

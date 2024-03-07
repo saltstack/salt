@@ -98,20 +98,20 @@ def present(name, value, config=None):
             return ret
         # otherwise, we don't have it set anywhere and need to set it
         ret["result"] = None
-        ret["comment"] = "Sysctl option {} would be changed to {}".format(name, value)
+        ret["comment"] = f"Sysctl option {name} would be changed to {value}"
         return ret
 
     try:
         update = __salt__["sysctl.persist"](name, value, config)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to set {} to {}: {}".format(name, value, exc)
+        ret["comment"] = f"Failed to set {name} to {value}: {exc}"
         return ret
 
     if update == "Updated":
         ret["changes"] = {name: value}
-        ret["comment"] = "Updated sysctl value {} = {}".format(name, value)
+        ret["comment"] = f"Updated sysctl value {name} = {value}"
     elif update == "Already set":
-        ret["comment"] = "Sysctl value {} = {} is already set".format(name, value)
+        ret["comment"] = f"Sysctl value {name} = {value} is already set"
 
     return ret

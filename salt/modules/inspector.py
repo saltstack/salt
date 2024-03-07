@@ -51,7 +51,7 @@ def _(module):
 
     import importlib
 
-    mod = importlib.import_module("salt.modules.inspectlib.{}".format(module))
+    mod = importlib.import_module(f"salt.modules.inspectlib.{module}")
     mod.__grains__ = __grains__
     mod.__pillar__ = __pillar__
     mod.__salt__ = __salt__

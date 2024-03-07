@@ -20,7 +20,7 @@ def test_empty_config_file_and_value_not_found():
     """
     name = "some.unknown.oid"
     value = "1"
-    comment = "Sysctl option {} would be changed to {}".format(name, value)
+    comment = f"Sysctl option {name} would be changed to {value}"
 
     ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
@@ -59,7 +59,7 @@ def test_to_be_changed_not_configured():
     """
     name = "vfs.usermount"
     value = "1"
-    comment = "Sysctl option {} set to be changed to {}".format(name, value)
+    comment = f"Sysctl option {name} set to be changed to {value}"
     ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
     def mock_current(config_file=None):
@@ -137,7 +137,7 @@ def test_no_change():
     """
     name = "vfs.usermount"
     value = "1"
-    comment = "Sysctl value {} = {} is already set".format(name, value)
+    comment = f"Sysctl value {name} = {value} is already set"
     ret = {"name": name, "result": True, "changes": {}, "comment": comment}
 
     def mock_config(config_file=None):
@@ -159,7 +159,7 @@ def test_change():
     name = "vfs.usermount"
     old_value = "2"
     value = "1"
-    comment = "Sysctl option {} would be changed to {}".format(name, value)
+    comment = f"Sysctl option {name} would be changed to {value}"
     ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
     def mock_config(config_file=None):
@@ -180,7 +180,7 @@ def test_failed_to_set():
     """
     name = "net.isr.maxthreads"
     value = "8"
-    comment = "Failed to set {} to {}: ".format(name, value)
+    comment = f"Failed to set {name} to {value}: "
     ret = {"name": name, "result": False, "changes": {}, "comment": comment}
 
     with patch.dict(sysctl.__opts__, {"test": False}):
@@ -195,7 +195,7 @@ def test_already_set():
     """
     name = "vfs.usermount"
     value = "1"
-    comment = "Sysctl value {} = {} is already set".format(name, value)
+    comment = f"Sysctl value {name} = {value} is already set"
     ret = {"name": name, "result": True, "changes": {}, "comment": comment}
     with patch.dict(sysctl.__opts__, {"test": False}):
         mock = MagicMock(return_value="Already set")
@@ -209,7 +209,7 @@ def test_updated():
     """
     name = "vfs.usermount"
     value = "1"
-    comment = "Updated sysctl value {} = {}".format(name, value)
+    comment = f"Updated sysctl value {name} = {value}"
     changes = {name: value}
     ret = {"name": name, "result": True, "changes": changes, "comment": comment}
     with patch.dict(sysctl.__opts__, {"test": False}):

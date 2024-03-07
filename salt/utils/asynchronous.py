@@ -2,7 +2,6 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-
 import asyncio
 import contextlib
 import logging

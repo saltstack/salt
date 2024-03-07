@@ -260,8 +260,8 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["clean_cache"] = self.clean_cache
         if self.ext:
             load["ext"] = self.ext
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -358,8 +358,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
 
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -1221,7 +1221,7 @@ class Pillar:
                     errors.append(
                         "Failed to load ext_pillar {}: {}".format(
                             key,
-                            exc.__str__(),
+                            exc,
                         )
                     )
                     log.error(

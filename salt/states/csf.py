@@ -107,8 +107,8 @@ def rule_present(
         return ret
     else:
         if ttl:
-            method = "temp{}".format(method)
-        func = __salt__["csf.{}".format(method)]
+            method = f"temp{method}"
+        func = __salt__[f"csf.{method}"]
         rule = func(
             ip,
             port=port,
@@ -387,7 +387,7 @@ def option_present(name, value, reload=False):
     if current_option:
         l = __salt__["csf.split_option"](current_option)
         option_value = l[1]
-        if '"{}"'.format(value) == option_value:
+        if f'"{value}"' == option_value:
             return ret
         else:
             result = __salt__["csf.set_option"](option, value)
@@ -395,7 +395,7 @@ def option_present(name, value, reload=False):
             ret["changes"]["Option"] = "Changed"
     else:
         result = __salt__["file.append"](
-            "/etc/csf/csf.conf", args='{} = "{}"'.format(option, value)
+            "/etc/csf/csf.conf", args=f'{option} = "{value}"'
         )
         ret["comment"] = "Option not present. Appended to csf.conf"
         ret["changes"]["Option"] = "Changed."

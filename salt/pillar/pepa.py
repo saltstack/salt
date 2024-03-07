@@ -291,7 +291,7 @@ except ImportError:
 # Only used when called from a terminal
 log = None
 if __name__ == "__main__":
-    import argparse  # pylint: disable=minimum-python-version
+    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("hostname", help="Hostname")
@@ -611,11 +611,11 @@ if __name__ == "__main__":
 
         log.info("Authenticate REST API")
         auth = {"username": username, "password": password, "eauth": "pam"}
-        request = requests.post(args.url + "/login", auth)
+        request = requests.post(args.url + "/login", auth, timeout=120)
 
         if not request.ok:
             raise RuntimeError(
-                "Failed to authenticate to SaltStack REST API: {}".format(request.text)
+                f"Failed to authenticate to SaltStack REST API: {request.text}"
             )
 
         response = request.json()
@@ -623,7 +623,9 @@ if __name__ == "__main__":
 
         log.info("Request Grains from REST API")
         headers = {"X-Auth-Token": token, "Accept": "application/json"}
-        request = requests.get(args.url + "/minions/" + args.hostname, headers=headers)
+        request = requests.get(
+            args.url + "/minions/" + args.hostname, headers=headers, timeout=120
+        )
 
         result = request.json().get("return", [{}])[0]
         if args.hostname not in result:
@@ -651,8 +653,8 @@ if __name__ == "__main__":
     if __opts__["pepa_validate"]:
         validate(result, __opts__["ext_pillar"][loc]["pepa"]["resource"])
 
+    orig_ignore = salt.utils.yaml.SafeOrderedDumper.ignore_aliases
     try:
-        orig_ignore = salt.utils.yaml.SafeOrderedDumper.ignore_aliases
         salt.utils.yaml.SafeOrderedDumper.ignore_aliases = lambda x, y: True
 
         def _print_result(result):

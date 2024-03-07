@@ -1,6 +1,7 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
+
 import os
 
 import pytest

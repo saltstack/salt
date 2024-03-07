@@ -170,9 +170,11 @@ def add(name, mac, mtu=1500):
         return True
     else:
         return {
-            "Error": "failed to create nictag."
-            if "stderr" not in res and res["stderr"] == ""
-            else res["stderr"]
+            "Error": (
+                "failed to create nictag."
+                if "stderr" not in res and res["stderr"] == ""
+                else res["stderr"]
+            )
         }
 
 
@@ -226,9 +228,11 @@ def update(name, mac=None, mtu=None):
         return True
     else:
         return {
-            "Error": "failed to update nictag."
-            if "stderr" not in res and res["stderr"] == ""
-            else res["stderr"]
+            "Error": (
+                "failed to update nictag."
+                if "stderr" not in res and res["stderr"] == ""
+                else res["stderr"]
+            )
         }
 
 
@@ -259,7 +263,9 @@ def delete(name, force=False):
         return True
     else:
         return {
-            "Error": "failed to delete nictag."
-            if "stderr" not in res and res["stderr"] == ""
-            else res["stderr"]
+            "Error": (
+                "failed to delete nictag."
+                if "stderr" not in res and res["stderr"] == ""
+                else res["stderr"]
+            )
         }

@@ -1,6 +1,7 @@
 """
 These commands are used for our GitHub Actions workflows.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -19,7 +20,9 @@ log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+    "r", encoding="utf-8"
+) as rfh:
     AMIS = json.load(rfh)
 
 
@@ -97,25 +100,22 @@ def generate_workflows(ctx: Context):
     test_salt_listing: dict[str, list[tuple[str, ...]]] = {
         "linux": [
             ("almalinux-8", "Alma Linux 8", "x86_64", "no-fips"),
+            ("almalinux-8-arm64", "Alma Linux 8 Arm64", "arm64", "no-fips"),
             ("almalinux-9", "Alma Linux 9", "x86_64", "no-fips"),
+            ("almalinux-9-arm64", "Alma Linux 9 Arm64", "arm64", "no-fips"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "no-fips"),
             ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "arm64", "no-fips"),
             ("amazonlinux-2023", "Amazon Linux 2023", "x86_64", "no-fips"),
             ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "arm64", "no-fips"),
             ("archlinux-lts", "Arch Linux LTS", "x86_64", "no-fips"),
             ("centos-7", "CentOS 7", "x86_64", "no-fips"),
-            ("centosstream-8", "CentOS Stream 8", "x86_64", "no-fips"),
-            ("centosstream-9", "CentOS Stream 9", "x86_64", "no-fips"),
             ("debian-10", "Debian 10", "x86_64", "no-fips"),
             ("debian-11", "Debian 11", "x86_64", "no-fips"),
             ("debian-11-arm64", "Debian 11 Arm64", "arm64", "no-fips"),
             ("debian-12", "Debian 12", "x86_64", "no-fips"),
             ("debian-12-arm64", "Debian 12 Arm64", "arm64", "no-fips"),
-            ("fedora-37", "Fedora 37", "x86_64", "no-fips"),
-            ("fedora-38", "Fedora 38", "x86_64", "no-fips"),
+            ("fedora-39", "Fedora 39", "x86_64", "no-fips"),
             ("opensuse-15", "Opensuse 15", "x86_64", "no-fips"),
-            ("photonos-3", "Photon OS 3", "x86_64", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "no-fips"),
             ("photonos-4", "Photon OS 4", "x86_64", "fips"),
             ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "fips"),
             ("photonos-5", "Photon OS 5", "x86_64", "fips"),
@@ -139,6 +139,10 @@ def generate_workflows(ctx: Context):
 
     test_salt_pkg_listing = {
         "linux": [
+            ("almalinux-8", "Alma Linux 8", "x86_64", "rpm", "no-fips"),
+            ("almalinux-8-arm64", "Alma Linux 8 Arm64", "arm64", "rpm", "no-fips"),
+            ("almalinux-9", "Alma Linux 9", "x86_64", "rpm", "no-fips"),
+            ("almalinux-9-arm64", "Alma Linux 9 Arm64", "arm64", "rpm", "no-fips"),
             ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm", "no-fips"),
             (
                 "amazonlinux-2-arm64",
@@ -156,22 +160,11 @@ def generate_workflows(ctx: Context):
                 "no-fips",
             ),
             ("centos-7", "CentOS 7", "x86_64", "rpm", "no-fips"),
-            ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm", "no-fips"),
-            ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm", "no-fips"),
-            (
-                "centosstream-9-arm64",
-                "CentOS Stream 9 Arm64",
-                "arm64",
-                "rpm",
-                "no-fips",
-            ),
             ("debian-10", "Debian 10", "x86_64", "deb", "no-fips"),
             ("debian-11", "Debian 11", "x86_64", "deb", "no-fips"),
             ("debian-11-arm64", "Debian 11 Arm64", "arm64", "deb", "no-fips"),
             ("debian-12", "Debian 12", "x86_64", "deb", "no-fips"),
             ("debian-12-arm64", "Debian 12 Arm64", "arm64", "deb", "no-fips"),
-            ("photonos-3", "Photon OS 3", "x86_64", "rpm", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "rpm", "no-fips"),
             ("photonos-4", "Photon OS 4", "x86_64", "rpm", "fips"),
             ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "rpm", "fips"),
             ("photonos-5", "Photon OS 5", "x86_64", "rpm", "fips"),
@@ -215,7 +208,6 @@ def generate_workflows(ctx: Context):
         "almalinux",
         "amazonlinux",
         "centos",
-        "centosstream",
         "fedora",
         "photon",
     )

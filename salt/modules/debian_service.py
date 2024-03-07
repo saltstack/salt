@@ -74,9 +74,9 @@ def get_enabled():
 
         salt '*' service.get_enabled
     """
-    prefix = "/etc/rc[S{}].d/S".format(_get_runlevel())
+    prefix = f"/etc/rc[S{_get_runlevel()}].d/S"
     ret = set()
-    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob("{}*".format(prefix))]:
+    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob(f"{prefix}*")]:
         ret.add(re.split(r"\d+", line)[-1])
     return sorted(ret)
 
@@ -277,7 +277,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     """
-    cmd = "update-rc.d {} disable".format(name)
+    cmd = f"update-rc.d {name} disable"
     return not __salt__["cmd.retcode"](cmd)
 
 

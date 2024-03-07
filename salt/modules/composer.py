@@ -48,7 +48,7 @@ def did_composer_install(dir):
 
         salt '*' composer.did_composer_install /var/www/application
     """
-    lockFile = "{}/vendor".format(dir)
+    lockFile = f"{dir}/vendor"
     if os.path.exists(lockFile):
         return True
     return False
@@ -147,7 +147,7 @@ def _run_composer(
     # Don't need a dir for the 'selfupdate' action; all other actions do need a dir
     if directory is None and action != "selfupdate":
         raise SaltInvocationError(
-            "The 'directory' argument is required for composer.{}".format(action)
+            f"The 'directory' argument is required for composer.{action}"
         )
 
     # Base Settings

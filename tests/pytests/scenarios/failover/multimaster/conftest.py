@@ -91,8 +91,8 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
     mm_master_2_addr = salt_mm_failover_master_2.config["interface"]
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
@@ -129,8 +129,8 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
     # We put the second master first in the list so it has the right startup checks every time.
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
+            f"{mm_master_2_addr}:{mm_master_2_port}",
+            f"{mm_master_1_addr}:{mm_master_1_port}",
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
@@ -174,7 +174,7 @@ def run_salt_cmds():
                 for minion in list(minions_to_check):
                     try:
                         ret = cli.run(
-                            "--timeout={}".format(timeout),
+                            f"--timeout={timeout}",
                             "test.ping",
                             minion_tgt=minion,
                         )

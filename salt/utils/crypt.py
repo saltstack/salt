@@ -1,6 +1,7 @@
 """
 Functions dealing with encryption
 """
+
 import hashlib
 import logging
 import os

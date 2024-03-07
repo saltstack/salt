@@ -4,7 +4,6 @@
     Test cases for salt.modules.rbenv
 """
 
-
 import os
 
 import pytest

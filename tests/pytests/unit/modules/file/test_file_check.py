@@ -88,7 +88,7 @@ def test_check_managed_follow_symlinks(a_link, tfile):
         a_link, tfile, None, None, user, None, lperms, None, None, None, None, None
     )
     assert ret is True
-    assert comments == "The file {} is in the correct state".format(a_link)
+    assert comments == f"The file {a_link} is in the correct state"
 
     ret, comments = filemod.check_managed(
         a_link, tfile, None, None, user, None, "0644", None, None, None, None, None
@@ -113,7 +113,7 @@ def test_check_managed_follow_symlinks(a_link, tfile):
         follow_symlinks=True,
     )
     assert ret is True
-    assert comments == "The file {} is in the correct state".format(a_link)
+    assert comments == f"The file {a_link} is in the correct state"
 
 
 @pytest.mark.skip_on_windows(reason="os.symlink is not available on Windows")

@@ -4,7 +4,6 @@
     Test cases for salt.modules.ldapmod
 """
 
-
 import time
 
 import pytest

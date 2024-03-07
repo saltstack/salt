@@ -523,7 +523,7 @@ def all_the_docker(
             except docker.errors.APIError as exc:
                 # if the container isn't running, there's not thing we can do
                 # at this point.
-                log.info(f"Docker failed removing /etc/salt: %s", exc)
+                log.info("Docker failed removing /etc/salt: %s", exc)
 
 
 @pytest.fixture(

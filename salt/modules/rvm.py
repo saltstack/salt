@@ -21,8 +21,8 @@ __opts__ = {
 
 def _get_rvm_location(runas=None):
     if runas:
-        runas_home = os.path.expanduser("~{}".format(runas))
-        rvmpath = "{}/.rvm/bin/rvm".format(runas_home)
+        runas_home = os.path.expanduser(f"~{runas}")
+        rvmpath = f"{runas_home}/.rvm/bin/rvm"
         if os.path.exists(rvmpath):
             return [rvmpath]
     return ["/usr/local/rvm/bin/rvm"]
@@ -87,7 +87,7 @@ def install(runas=None):
     ret = __salt__["cmd.run_all"](
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
-        "curl -Ls {installer} | bash -s stable".format(installer=installer),
+        f"curl -Ls {installer} | bash -s stable",
         runas=runas,
         python_shell=True,
     )

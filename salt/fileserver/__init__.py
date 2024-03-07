@@ -2,7 +2,6 @@
 File server pluggable modules and generic backend functions
 """
 
-
 import errno
 import fnmatch
 import logging

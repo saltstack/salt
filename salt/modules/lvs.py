@@ -192,7 +192,7 @@ def add_server(
     server_address=None,
     packet_forward_method="dr",
     weight=1,
-    **kwargs
+    **kwargs,
 ):
     """
 
@@ -228,7 +228,7 @@ def add_server(
             server_address=server_address,
             packet_forward_method=packet_forward_method,
             weight=weight,
-            **kwargs
+            **kwargs,
         ),
     )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -247,7 +247,7 @@ def edit_server(
     server_address=None,
     packet_forward_method=None,
     weight=None,
-    **kwargs
+    **kwargs,
 ):
     """
 
@@ -283,7 +283,7 @@ def edit_server(
             server_address=server_address,
             packet_forward_method=packet_forward_method,
             weight=weight,
-            **kwargs
+            **kwargs,
         ),
     )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -347,7 +347,7 @@ def clear():
         salt '*' lvs.clear
     """
 
-    cmd = "{} -C".format(__detect_os())
+    cmd = f"{__detect_os()} -C"
 
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
@@ -371,7 +371,7 @@ def get_rules():
         salt '*' lvs.get_rules
     """
 
-    cmd = "{} -S -n".format(__detect_os())
+    cmd = f"{__detect_os()} -S -n"
 
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
@@ -395,7 +395,7 @@ def list_(protocol=None, service_address=None):
             _build_cmd(protocol=protocol, service_address=service_address),
         )
     else:
-        cmd = "{} -L -n".format(__detect_os())
+        cmd = f"{__detect_os()} -L -n"
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
@@ -425,7 +425,7 @@ def zero(protocol=None, service_address=None):
             _build_cmd(protocol=protocol, service_address=service_address),
         )
     else:
-        cmd = "{} -Z".format(__detect_os())
+        cmd = f"{__detect_os()} -Z"
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
@@ -482,7 +482,7 @@ def check_server(protocol=None, service_address=None, server_address=None, **kwa
             protocol=protocol,
             service_address=service_address,
             server_address=server_address,
-            **kwargs
+            **kwargs,
         )
     )
     # Exact match

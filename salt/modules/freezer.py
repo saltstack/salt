@@ -49,8 +49,8 @@ def _paths(name=None):
     name = "freezer" if not name else name
     states_path = _states_path()
     return (
-        os.path.join(states_path, "{}-pkgs.yml".format(name)),
-        os.path.join(states_path, "{}-reps.yml".format(name)),
+        os.path.join(states_path, f"{name}-pkgs.yml"),
+        os.path.join(states_path, f"{name}-reps.yml"),
     )
 
 

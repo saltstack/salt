@@ -4,7 +4,6 @@ Provide authentication using OpenStack Keystone
 :depends:   - keystoneclient Python module
 """
 
-
 try:
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
     from keystoneclient.v2_0 import client

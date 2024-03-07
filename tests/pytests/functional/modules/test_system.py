@@ -128,8 +128,8 @@ def _test_hwclock_sync(system, hwclock_has_compare):
         raise CompareTimeout
 
     for _ in range(2):
+        orig_handler = signal.signal(signal.SIGALRM, _alrm_handler)
         try:
-            orig_handler = signal.signal(signal.SIGALRM, _alrm_handler)
             signal.alarm(3)
             rpipeFd, wpipeFd = os.pipe()
             log.debug("Comparing hwclock to sys clock")
@@ -178,7 +178,7 @@ def test_get_system_date_time(setup_teardown_vars, system, fmt_str):
     t1 = datetime.datetime.now()
     res = system.get_system_date_time()
     t2 = datetime.datetime.strptime(res, fmt_str)
-    msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
+    msg = f"Difference in times is too large. Now: {t1} Fake: {t2}"
     assert _same_times(t1, t2, seconds_diff=3), msg
 
 
@@ -189,7 +189,7 @@ def test_get_system_date_time_utc(setup_teardown_vars, system, fmt_str):
     t1 = datetime.datetime.utcnow()
     res = system.get_system_date_time("+0000")
     t2 = datetime.datetime.strptime(res, fmt_str)
-    msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
+    msg = f"Difference in times is too large. Now: {t1} Fake: {t2}"
     assert _same_times(t1, t2, seconds_diff=3), msg
 
 

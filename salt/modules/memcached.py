@@ -51,7 +51,7 @@ def _connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
     values assigned to missing values.
     """
     if str(port).isdigit():
-        return memcache.Client(["{}:{}".format(host, port)], debug=0)
+        return memcache.Client([f"{host}:{port}"], debug=0)
     raise SaltInvocationError("port must be an integer")
 
 
@@ -214,10 +214,10 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     cur = get(key)
 
     if cur is None:
-        raise CommandExecutionError("Key '{}' does not exist".format(key))
+        raise CommandExecutionError(f"Key '{key}' does not exist")
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be incremented".format(key)
+            f"Value for key '{key}' must be an integer to be incremented"
         )
 
     try:
@@ -245,10 +245,10 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     cur = get(key)
     if cur is None:
-        raise CommandExecutionError("Key '{}' does not exist".format(key))
+        raise CommandExecutionError(f"Key '{key}' does not exist")
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be decremented".format(key)
+            f"Value for key '{key}' must be an integer to be decremented"
         )
 
     try:

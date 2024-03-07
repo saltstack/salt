@@ -1,6 +1,7 @@
 """
 Zeromq transport classes
 """
+
 import asyncio
 import asyncio.exceptions
 import errno
@@ -365,7 +366,6 @@ class PublishClient(salt.transport.base.PublishClient):
     #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
-
         """
         Register a callback for received messages (that we didn't initiate)
 
@@ -1037,7 +1037,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_context.destroy(1)
             self.daemon_context.term()
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -1081,7 +1083,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket = None
         self.sending = asyncio.Lock()
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         if self.socket is None:
             self._connect_called = True
             self._closing = False

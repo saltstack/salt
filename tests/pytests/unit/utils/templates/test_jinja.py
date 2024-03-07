@@ -1,6 +1,7 @@
 """
 Tests for salt.utils.templates
 """
+
 import re
 
 from collections import OrderedDict

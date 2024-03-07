@@ -1,6 +1,7 @@
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
+
 import asyncio
 import ctypes
 import logging
@@ -510,7 +511,7 @@ def test_req_server_chan_encrypt_v2(master_opts, pki_dir):
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
-            cipher = PKCS1_OAEP.new(key)
+            cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
             aes = cipher.decrypt(ret["key"])
         pcrypt = salt.crypt.Crypticle(master_opts, aes)
         signed_msg = pcrypt.loads(ret[dictkey])

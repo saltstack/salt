@@ -68,12 +68,12 @@ class TencentCloudTest(ShellCase):
                 [
                     i.strip()
                     for i in self.run_cloud(
-                        "-p tencentcloud-test {}".format(INSTANCE_NAME), timeout=500
+                        f"-p tencentcloud-test {INSTANCE_NAME}", timeout=500
                     )
                 ],
             )
         except AssertionError:
-            self.run_cloud("-d {} --assume-yes".format(INSTANCE_NAME), timeout=500)
+            self.run_cloud(f"-d {INSTANCE_NAME} --assume-yes", timeout=500)
             raise
 
         # delete the instance
@@ -81,9 +81,7 @@ class TencentCloudTest(ShellCase):
             INSTANCE_NAME + ":",
             [
                 i.strip()
-                for i in self.run_cloud(
-                    "-d {} --assume-yes".format(INSTANCE_NAME), timeout=500
-                )
+                for i in self.run_cloud(f"-d {INSTANCE_NAME} --assume-yes", timeout=500)
             ],
         )
 
@@ -92,8 +90,8 @@ class TencentCloudTest(ShellCase):
         Clean up after tests
         """
         query = self.run_cloud("--query")
-        ret_str = "        {}:".format(INSTANCE_NAME)
+        ret_str = f"        {INSTANCE_NAME}:"
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud("-d {} --assume-yes".format(INSTANCE_NAME), timeout=500)
+            self.run_cloud(f"-d {INSTANCE_NAME} --assume-yes", timeout=500)

@@ -2,7 +2,6 @@
     Test cases for salt.modules.config
 """
 
-
 import fnmatch
 
 import pytest

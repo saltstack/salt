@@ -46,7 +46,7 @@ class BlackoutPillar:
         self.minion_1_pillar.write_text(pillar_contents)
         self.refresh_pillar(exiting_blackout=False)
         self.in_blackout = True
-        return self.__enter__()
+        return self.__enter__()  # pylint: disable=unnecessary-dunder-call
 
     def exit_blackout(self):
         if self.in_blackout:
@@ -76,7 +76,7 @@ class BlackoutPillar:
                     )
                 else:
                     pytest.fail(
-                        "Minion did not refresh pillar after {} seconds".format(timeout)
+                        f"Minion did not refresh pillar after {timeout} seconds"
                     )
 
             time.sleep(sleep)

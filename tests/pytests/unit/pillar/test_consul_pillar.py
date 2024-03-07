@@ -54,9 +54,7 @@ def configure_loader_modules():
 
 
 def test_connection(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",
@@ -71,9 +69,7 @@ def test_connection(base_pillar_data):
 
 
 def test_pillar_data(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",
@@ -90,9 +86,7 @@ def test_pillar_data(base_pillar_data):
 
 
 def test_blank_root(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",
@@ -104,9 +98,7 @@ def test_blank_root(base_pillar_data):
 
 
 def test_pillar_nest(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",
@@ -122,9 +114,7 @@ def test_pillar_nest(base_pillar_data):
 
 
 def test_value_parsing(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",
@@ -137,9 +127,7 @@ def test_value_parsing(base_pillar_data):
 
 
 def test_non_expansion(base_pillar_data):
-    with patch.dict(
-        consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-    ):
+    with patch.dict(consul_pillar.__salt__, {"grains.get": MagicMock(return_value={})}):
         with patch.object(
             consul_pillar,
             "consul_fetch",

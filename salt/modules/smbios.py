@@ -75,7 +75,7 @@ def get(string, clean=True):
         salt '*' smbios.get system-uuid clean=False
     """
 
-    val = _dmidecoder("-s {}".format(string)).strip()
+    val = _dmidecoder(f"-s {string}").strip()
 
     # Cleanup possible comments in strings.
     val = "\n".join([v for v in val.split("\n") if not v.startswith("#")])
@@ -158,7 +158,7 @@ def records(rec_type=None, fields=None, clean=True):
     if rec_type is None:
         smbios = _dmi_parse(_dmidecoder(), clean, fields)
     else:
-        smbios = _dmi_parse(_dmidecoder("-t {}".format(rec_type)), clean, fields)
+        smbios = _dmi_parse(_dmidecoder(f"-t {rec_type}"), clean, fields)
 
     return smbios
 
@@ -334,6 +334,6 @@ def _dmidecoder(args=None):
     if not args:
         out = salt.modules.cmdmod._run_quiet(dmidecoder)
     else:
-        out = salt.modules.cmdmod._run_quiet("{} {}".format(dmidecoder, args))
+        out = salt.modules.cmdmod._run_quiet(f"{dmidecoder} {args}")
 
     return out

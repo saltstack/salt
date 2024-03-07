@@ -21,7 +21,6 @@ The hook_url can be specified in the master or minion configuration like below:
       hook_url: https://outlook.office.com/webhook/837
 """
 
-
 from salt.exceptions import SaltInvocationError
 
 
@@ -70,7 +69,7 @@ def post_card(name, message, hook_url=None, title=None, theme_color=None):
         return ret
 
     if not message:
-        ret["comment"] = "Teams message is missing: {}".format(message)
+        ret["comment"] = f"Teams message is missing: {message}"
         return ret
 
     try:
@@ -81,11 +80,11 @@ def post_card(name, message, hook_url=None, title=None, theme_color=None):
             theme_color=theme_color,
         )
     except SaltInvocationError as sie:
-        ret["comment"] = "Failed to send message ({}): {}".format(sie, name)
+        ret["comment"] = f"Failed to send message ({sie}): {name}"
     else:
         if isinstance(result, bool) and result:
             ret["result"] = True
-            ret["comment"] = "Sent message: {}".format(name)
+            ret["comment"] = f"Sent message: {name}"
         else:
             ret["comment"] = "Failed to send message ({}): {}".format(
                 result["message"], name

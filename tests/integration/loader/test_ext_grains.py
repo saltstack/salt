@@ -5,7 +5,6 @@
     Test Salt's loader regarding external grains
 """
 
-
 import os
 import time
 

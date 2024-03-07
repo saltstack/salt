@@ -1,6 +1,7 @@
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.genesis as genesis

@@ -3,7 +3,6 @@ Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 """
 
-
 import logging
 import os
 import sys

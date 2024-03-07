@@ -46,6 +46,7 @@ Connection module for Amazon S3 using boto3
 
 :depends: boto3
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

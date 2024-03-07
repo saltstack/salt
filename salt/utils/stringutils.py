@@ -2,7 +2,6 @@
 Functions for manipulating or otherwise processing strings
 """
 
-
 import base64
 import difflib
 import errno
@@ -50,7 +49,7 @@ def to_bytes(s, encoding=None, errors="strict"):
         # raised, otherwise we would have already returned (or raised some
         # other exception).
         raise exc  # pylint: disable=raising-bad-type
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 def to_str(s, encoding=None, errors="strict", normalize=False):
@@ -88,7 +87,7 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
         # raised, otherwise we would have already returned (or raised some
         # other exception).
         raise exc  # pylint: disable=raising-bad-type
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 def to_unicode(s, encoding=None, errors="strict", normalize=False):
@@ -112,7 +111,7 @@ def to_unicode(s, encoding=None, errors="strict", normalize=False):
         return _normalize(s)
     elif isinstance(s, (bytes, bytearray)):
         return _normalize(to_str(s, encoding, errors))
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 @jinja_filter("str_to_num")
@@ -301,7 +300,7 @@ def build_whitespace_split_regex(text):
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r"(?:[\s]+)?{}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
-    return r"(?m)^{}$".format(regex)
+    return rf"(?m)^{regex}$"
 
 
 def expr_match(line, expr):
@@ -323,7 +322,7 @@ def expr_match(line, expr):
         if fnmatch.fnmatch(line, expr):
             return True
         try:
-            if re.match(r"\A{}\Z".format(expr), line):
+            if re.match(rf"\A{expr}\Z", line):
                 return True
         except re.error:
             pass
@@ -460,7 +459,7 @@ def print_cli(msg, retries=10, step=0.01):
             except UnicodeEncodeError:
                 print(msg.encode("utf-8"))
         except OSError as exc:
-            err = "{}".format(exc)
+            err = f"{exc}"
             if exc.errno != errno.EPIPE:
                 if (
                     "temporarily unavailable" in err or exc.errno in (errno.EAGAIN,)
@@ -523,7 +522,7 @@ def get_diff(a, b, *args, **kwargs):
             salt.utils.data.decode_list(a, encoding=encoding),
             salt.utils.data.decode_list(b, encoding=encoding),
             *args,
-            **kwargs
+            **kwargs,
         )
     )
 

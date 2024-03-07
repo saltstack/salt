@@ -2,7 +2,6 @@
 Test the grains module
 """
 
-
 import logging
 import time
 

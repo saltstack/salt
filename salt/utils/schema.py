@@ -512,7 +512,7 @@ class Schema(metaclass=SchemaMeta):
         serialized = OrderedDict()
         if id_ is not None:
             # This is meant as a configuration section, sub json schema
-            serialized["id"] = "{}/{}.json#".format(BASE_SCHEMA_URL, id_)
+            serialized["id"] = f"{BASE_SCHEMA_URL}/{id_}.json#"
         else:
             # Main configuration block, json schema
             serialized["$schema"] = "http://json-schema.org/draft-04/schema#"
@@ -687,7 +687,7 @@ class SchemaItem(metaclass=BaseSchemaItemMeta):
         Return the argname value looking up on all possible attributes
         """
         # Let's see if there's a private function to get the value
-        argvalue = getattr(self, "__get_{}__".format(argname), None)
+        argvalue = getattr(self, f"__get_{argname}__", None)
         if argvalue is not None and callable(argvalue):
             argvalue = argvalue()  # pylint: disable=not-callable
         if argvalue is None:
@@ -695,7 +695,7 @@ class SchemaItem(metaclass=BaseSchemaItemMeta):
             argvalue = getattr(self, argname, None)
         if argvalue is None:
             # Let's see if it's defined as a private class variable
-            argvalue = getattr(self, "__{}__".format(argname), None)
+            argvalue = getattr(self, f"__{argname}__", None)
         if argvalue is None:
             # Let's look for it in the extra dictionary
             argvalue = self.extra.get(argname, None)
@@ -737,7 +737,7 @@ class BaseSchemaItem(SchemaItem):
         default=None,
         enum=None,
         enumNames=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -876,7 +876,7 @@ class StringItem(BaseSchemaItem):
         pattern=None,
         min_length=None,
         max_length=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1006,7 +1006,7 @@ class NumberItem(BaseSchemaItem):
         exclusive_minimum=None,
         maximum=None,
         exclusive_maximum=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1071,7 +1071,7 @@ class ArrayItem(BaseSchemaItem):
         max_items=None,
         unique_items=None,
         additional_items=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1169,7 +1169,7 @@ class DictItem(BaseSchemaItem):
         additional_properties=None,
         min_properties=None,
         max_properties=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1481,7 +1481,7 @@ class ComplexSchemaItem(BaseSchemaItem):
         The serialization of the complex item is a pointer to the item
         definition
         """
-        return {"$ref": "#/definitions/{}".format(self.definition_name)}
+        return {"$ref": f"#/definitions/{self.definition_name}"}
 
     def get_definition(self):
         """Returns the definition of the complex item"""

@@ -1941,14 +1941,17 @@ def test_update_disks(make_mock_vm):
             added_disk_path = os.path.join(
                 virt.__salt__["config.get"]("virt:images"), "my_vm_added.qcow2"
             )
-            assert mock_run.call_args[0][
-                0
-            ] == 'qemu-img create -f qcow2 "{}" 2048M'.format(added_disk_path)
+            assert (
+                mock_run.call_args[0][0]
+                == f'qemu-img create -f qcow2 "{added_disk_path}" 2048M'
+            )
             assert mock_chmod.call_args[0][0] == added_disk_path
             assert [
-                ET.fromstring(disk).find("source").get("file")
-                if str(disk).find("<source") > -1
-                else None
+                (
+                    ET.fromstring(disk).find("source").get("file")
+                    if str(disk).find("<source") > -1
+                    else None
+                )
                 for disk in ret["disk"]["attached"]
             ] == [None, os.path.join(root_dir, "my_vm_added.qcow2")]
 
@@ -2018,9 +2021,11 @@ def test_update_disks_existing_block(make_mock_vm):
                     ],
                 )
                 assert [
-                    ET.fromstring(disk).find("source").get("file")
-                    if str(disk).find("<source") > -1
-                    else None
+                    (
+                        ET.fromstring(disk).find("source").get("file")
+                        if str(disk).find("<source") > -1
+                        else None
+                    )
                     for disk in ret["disk"]["attached"]
                 ] == ["/dev/ssd/data"]
 

@@ -28,8 +28,8 @@ def etcd_static_port(sdb_etcd_port):  # pylint: disable=function-redefined
     scope="module",
     params=(EtcdVersion.v2, EtcdVersion.v3_v2_mode),
     ids=etcd_version_ids,
-)  # pylint: disable=function-redefined
-def etcd_version(request):
+)
+def etcd_version(request):  # pylint: disable=function-redefined
     # The only parameter is True because the salt integration
     # configuration for the salt-master and salt-minion defaults
     # to v2.

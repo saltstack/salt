@@ -2,7 +2,6 @@
 Test the core grains
 """
 
-
 import pytest
 
 from tests.support.case import ModuleCase

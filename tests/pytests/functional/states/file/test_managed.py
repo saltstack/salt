@@ -778,7 +778,6 @@ def test_issue_8947_utf8_sls(modules, tmp_path, state_tree, subtests):
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows(reason="Windows does not support setuid. Skipping.")
 def test_owner_after_setuid(file, modules, tmp_path, state_file_account):
-
     """
     Test to check file user/group after setting setuid or setgid.
     Because Python os.chown() does reset the setuid/setgid to 0.

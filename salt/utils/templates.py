@@ -1,6 +1,7 @@
 """
 Template render systems
 """
+
 import codecs
 import importlib.machinery
 import importlib.util
@@ -672,7 +673,6 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         raise ImportError()
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    # pylint: enable=no-member
     sys.modules[name] = mod
 
     # File templates need these set as __var__

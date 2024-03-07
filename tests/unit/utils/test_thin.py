@@ -113,7 +113,8 @@ class SSHThinTestCase(TestCase):
 
         return popen
 
-    def _version_info(self, major=None, minor=None):
+    @staticmethod
+    def _version_info(major=None, minor=None):
         """
         Fake version info.
 
@@ -801,7 +802,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_compression_fallback_py3(self):
         """
@@ -852,7 +853,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_control_files_written_py3(self):
         """
@@ -905,7 +906,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_main_content_files_written_py3(self):
@@ -919,9 +920,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("py3", "pyall"):
             for i in range(1, 4):
-                files.append(os.path.join(py, "root", "r{}".format(i)))
+                files.append(os.path.join(py, "root", f"r{i}"))
             for i in range(4, 7):
-                files.append(os.path.join(py, "root2", "r{}".format(i)))
+                files.append(os.path.join(py, "root2", f"r{i}"))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
@@ -974,7 +975,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
@@ -997,9 +998,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ("pyall", "pyall", "py3"):
             for i in range(1, 4):
-                files.append(os.path.join("namespace", py, "root", "r{}".format(i)))
+                files.append(os.path.join("namespace", py, "root", f"r{i}"))
             for i in range(4, 7):
-                files.append(os.path.join("namespace", py, "root2", "r{}".format(i)))
+                files.append(os.path.join("namespace", py, "root2", f"r{i}"))
 
         for idx, cl in enumerate(thin.tarfile.open().method_calls[:-6]):
             arcname = cl[2].get("arcname")
@@ -1087,7 +1088,7 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    @patch("salt.utils.thin.sys.version_info", _version_info(3, 6))
     def test_gen_thin_control_files_written_access_denied_cwd(self):
         """
         Test thin.gen_thin function if control files are written (version, salt-call etc)
@@ -1247,7 +1248,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     def test_pack_alternatives(self):
         """
@@ -1257,7 +1258,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1275,7 +1276,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
                 assert [
                     x
                     for x in calls
@@ -1302,7 +1303,7 @@ class SSHThinTestCase(TestCase):
                 assert msg in log_handler.messages
         calls = self.tar.mock_calls
         for _file in self.exp_files:
-            arg = [x for x in calls if "{}".format(_file) in x[-2]]
+            arg = [x for x in calls if f"{_file}" in x[-2]]
             kwargs = [
                 x
                 for x in calls
@@ -1344,7 +1345,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     def test_pack_alternatives_empty_dependencies(self):
         """
@@ -1376,7 +1377,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [x for x in calls if f"{_file}" in x[-2]]
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")
@@ -1390,11 +1391,11 @@ class SSHThinTestCase(TestCase):
         # This was previously an integration test and is now here, as a unit test.
         # Should actually be a functional test
         with VirtualEnv() as venv:
-            salt.utils.thin.gen_thin(str(venv.venv_dir))
+            thin.gen_thin(str(venv.venv_dir))
             thin_dir = venv.venv_dir / "thin"
             thin_archive = thin_dir / "thin.tgz"
             tar = tarfile.open(str(thin_archive))
-            tar.extractall(str(thin_dir))
+            tar.extractall(str(thin_dir))  # nosec
             tar.close()
             ret = venv.run(
                 venv.venv_python,
