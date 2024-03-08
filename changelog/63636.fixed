@@ -1,0 +1,1 @@
+Explicit "priv" attribute in terraform state is now correctly used instead of overriden with default / fallback values.
