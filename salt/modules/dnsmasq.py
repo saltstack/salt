@@ -5,6 +5,7 @@ Module for managing dnsmasq
 
 import logging
 import os
+from glob import glob
 
 import salt.utils.files
 import salt.utils.platform
@@ -87,19 +88,25 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
         salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
     """
-    dnsopts = get_config(config_file)
+
+    def _edit_in_all_configs(before_key, after_key):
+        for config in includes:
+            __salt__["file.sed"](
+                path=config,
+                before="^{}=.*".format(key),
+                after="{}={}".format(key, kwargs[key]),
+            )
+
+    def _delete_in_all_configs(key):
+        for config in includes:
+            __salt__["file.line"](
+                config_file, match=f"^{key}(=.*|$)".format(key), mode="delete"
+            )
+
+    dnsopts = get_config(config_file, follow)
     includes = [config_file]
-    if follow is True and "conf-dir" in dnsopts:
-        for filename in os.listdir(dnsopts["conf-dir"]):
-            if filename.startswith("."):
-                continue
-            if filename.endswith("~"):
-                continue
-            if filename.endswith("bak"):
-                continue
-            if filename.endswith("#") and filename.endswith("#"):
-                continue
-            includes.append("{}/{}".format(dnsopts["conf-dir"], filename))
+    if follow:
+        includes.extend(_discover_configs(dnsopts))
 
     ret_kwargs = {}
     for key in kwargs:
@@ -111,26 +118,30 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
 
         if key in dnsopts:
             if isinstance(dnsopts[key], str):
-                for config in includes:
-                    __salt__["file.sed"](
-                        path=config,
-                        before="^{}=.*".format(key),
-                        after="{}={}".format(key, kwargs[key]),
-                    )
+                _edit_in_all_configs(key, kwargs[key])
+            elif isinstance(dnsopts[key], bool) and not kwargs[key]:
+                _delete_in_all_configs(key)
+            elif isinstance(dnsopts[key], bool) and kwargs[key] and dnsopts[key]:
+                pass
             else:
                 __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
+        elif isinstance(kwargs[key], bool) and kwargs[key]:
+            __salt__["file.append"](config_file, key)
+        elif isinstance(kwargs[key], bool) and not kwargs[key]:
+            pass
         else:
             __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
     return ret_kwargs
 
 
-def get_config(config_file="/etc/dnsmasq.conf"):
+def get_config(config_file="/etc/dnsmasq.conf", follow=True):
     """
     Dumps all options from the config file.
 
-    config_file
-        The location of the config file from which to obtain contents.
+    :param string config_file The location of the config file from which to obtain contents.
         Defaults to ``/etc/dnsmasq.conf``.
+    :param bool follow: attempt to set the config option inside any file within
+        the ``conf-dir`` where it has already been enabled.
 
     CLI Examples:
 
@@ -140,18 +151,35 @@ def get_config(config_file="/etc/dnsmasq.conf"):
         salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     """
     dnsopts = _parse_dnamasq(config_file)
-    if "conf-dir" in dnsopts:
-        for filename in os.listdir(dnsopts["conf-dir"]):
-            if filename.startswith("."):
-                continue
-            if filename.endswith("~"):
-                continue
-            if filename.endswith("#") and filename.endswith("#"):
-                continue
-            dnsopts.update(
-                _parse_dnamasq("{}/{}".format(dnsopts["conf-dir"], filename))
-            )
+    if follow:
+        for config in _discover_configs(dnsopts):
+            dnsopts.update(_parse_dnamasq(config))
     return dnsopts
+
+
+def _discover_configs(dnsopts):
+    if "conf-dir" not in dnsopts:
+        return []
+
+    config_files = []
+    # See "--conf-dir" in manpage
+    config_dir_and_maybe_glob = dnsopts["conf-dir"].split(",")
+    config_dir = config_dir_and_maybe_glob[0]
+    try:
+        config_file_glob = config_dir_and_maybe_glob[1]
+    except IndexError:
+        config_file_glob = "*"
+
+    for filename in glob(os.path.join(config_dir, config_file_glob)):
+        if filename.startswith("."):
+            continue
+        if filename.endswith("~"):
+            continue
+        if filename.startswith("#") and filename.endswith("#"):
+            continue
+        config_files.append(filename)
+
+    return config_files
 
 
 def _parse_dnamasq(filename):
@@ -165,22 +193,21 @@ def _parse_dnamasq(filename):
 
     with salt.utils.files.fopen(filename, "r") as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
-            if not line.strip():
+            line = salt.utils.stringutils.to_unicode(line).strip()
+            if not line:  # Empty string
                 continue
             if line.startswith("#"):
                 continue
             if "=" in line:
-                comps = line.split("=")
-                if comps[0] in fileopts:
-                    if isinstance(fileopts[comps[0]], str):
-                        temp = fileopts[comps[0]]
-                        fileopts[comps[0]] = [temp]
-                    fileopts[comps[0]].append(comps[1].strip())
+                comps = line.split(sep="=", maxsplit=1)
+                key = comps[0].rstrip()
+                if key in fileopts:
+                    if isinstance(fileopts[key], str):
+                        temp = fileopts[key]
+                        fileopts[key] = [temp]
+                    fileopts[key].append(comps[1].lstrip())
                 else:
-                    fileopts[comps[0]] = comps[1].strip()
+                    fileopts[key] = comps[1].lstrip()
             else:
-                if "unparsed" not in fileopts:
-                    fileopts["unparsed"] = []
-                fileopts["unparsed"].append(line)
+                fileopts[line] = True
     return fileopts
