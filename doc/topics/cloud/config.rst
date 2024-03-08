@@ -364,11 +364,35 @@ be set in the configuration file to enable interfacing with GoGrid:
 OpenStack
 ---------
 
-Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
-openstack-infra team.
+Using Salt for OpenStack can leverage the `openstacksdk <https://docs.openstack.org/openstacksdk/latest/>`
+or legacy `shade <https://docs.openstack.org/shade/latest/>` drivers managed by the openstack-infra team.
 
-This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
-`os-client-config <https://docs.openstack.org/os-client-config/latest/>`
+This driver can be configured using the ``clouds.yml`` file with 
+`openstacksdk os-client-config <https://docs.openstack.org/openstacksdk/latest/user/config/>`
+or `shade os-client-config <https://docs.openstack.org/os-client-config/latest/>`.
+
+The ``clouds.yml`` can be located in any of these directories: 
+ - cwd
+ - ~/.config/openstack
+ - /etc/openstack
+
+Using the openstacksdk module. (Recomended)
+
+.. code-block:: yaml
+
+    clouds:
+      myopenstack:
+        auth:
+          username: admin
+          password: password123
+          user_domain_name: mydomain
+          project_name: myproject
+          project_domain_name: myproject
+          auth_url: https://example.org:5000/v3
+        identity_api_version: 3
+        region_name: RegionOne
+
+Using the legacy shade module.
 
 .. code-block:: yaml
 
@@ -377,7 +401,7 @@ This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
       region_name: RegionOne
       cloud: mycloud
 
-Or by just configuring the same auth block directly in the cloud provider config.
+Method 3
 
 .. code-block:: yaml
 
@@ -390,7 +414,7 @@ Or by just configuring the same auth block directly in the cloud provider config
         project_name: 'demo'
         auth_url: 'http://openstack/identity'
 
-Both of these methods support using the
+These methods support using the
 `vendor <https://docs.openstack.org/os-client-config/latest/user/vendor-support.html>`
 options.
 
