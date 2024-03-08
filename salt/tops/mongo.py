@@ -1,16 +1,19 @@
 """
-Read tops data from a mongodb collection
+Read tops data from a MongoDB collection
 
-This module will load tops data from a mongo collection. It uses the node's id
+:depends: pymongo (for salt-master)
+
+This module will load tops data from a MongoDB collection. It uses the node's id
 for lookups.
 
-Salt Master Mongo Configuration
+Salt Master MongoDB Configuration
 ===============================
 
-The module shares the same base mongo connection variables as
+The module shares the same base MongoDB connection variables as
 :py:mod:`salt.returners.mongo_return`. These variables go in your master
 config file.
 
+   * ``mongo.authdb`` - The mongo database to authenticate to. Defaults to ``'salt'``.
    * ``mongo.db`` - The mongo database to connect to. Defaults to ``'salt'``.
    * ``mongo.host`` - The mongo host to connect to. Supports replica sets by
      specifying all hosts in the set, comma-delimited. Defaults to ``'salt'``.
@@ -20,9 +23,34 @@ config file.
      you are using mongo authentication. Defaults to ``''``.
    * ``mongo.password`` - The password for connecting to mongo. Only required
      if you are using mongo authentication. Defaults to ``''``.
+   * ``mongo.ssl`` - Whether to connect via TLS. Defaults to ``False``.
+
+Or single URI:
+
+.. code-block:: yaml
+
+    mongo.uri: URI
+
+where uri is in the format:
+
+.. code-block:: text
+
+    mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+Example:
+
+.. code-block:: text
+
+    mongodb://db1.example.net:27017/mydatabase
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
+
+If URI is provided, the other settings are simply ignored.
+More information on URI format can be found in
+https://docs.mongodb.com/manual/reference/connection-string/
 
 
-Configuring the Mongo Tops Subsystem
+Configuring the MongoDB Tops Subsystem
 ====================================
 
 .. code-block:: yaml
@@ -53,10 +81,12 @@ except ImportError:
 
 
 __opts__ = {
+    "mongo.authdb": "salt",
     "mongo.db": "salt",
     "mongo.host": "salt",
     "mongo.password": "",
     "mongo.port": 27017,
+    "mongo.ssl": False,
     "mongo.user": "",
 }
 
@@ -76,7 +106,7 @@ def top(**kwargs):
     Connect to a mongo database and read per-node tops data.
 
     Parameters:
-        * `collection`: The mongodb collection to read data from. Defaults to
+        * `collection`: The MongoDB collection to read data from. Defaults to
           ``'tops'``.
         * `id_field`: The field in the collection that represents an individual
           minion id. Defaults to ``'_id'``.
@@ -96,6 +126,16 @@ def top(**kwargs):
     host = __opts__["mongo.host"]
     port = __opts__["mongo.port"]
     ssl = __opts__.get("mongo.ssl") or False
+
+    uri = __opts__.get("mongo.uri")
+    host = __opts__.get("mongo.host")
+    port = __opts__.get("mongo.port") or 27017
+    user = __opts__.get("mongo.user")
+    password = __opts__.get("mongo.password")
+
+    db = __opts__.get("mongo.db")
+    authdb = __opts__.get("mongo.authdb") or db
+
     collection = __opts__["master_tops"]["mongo"].get("collection", "tops")
     id_field = __opts__["master_tops"]["mongo"].get("id_field", "_id")
     re_pattern = __opts__["master_tops"]["mongo"].get("re_pattern", "")
@@ -105,18 +145,19 @@ def top(**kwargs):
         "environment_field", "environment"
     )
 
-    log.info("connecting to %s:%s for mongo ext_tops", host, port)
-    conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
-
-    log.debug("using database '%s'", __opts__["mongo.db"])
-    mdb = conn[__opts__["mongo.db"]]
-
-    user = __opts__.get("mongo.user")
-    password = __opts__.get("mongo.password")
-
-    if user and password:
-        log.debug("authenticating as '%s'", user)
-        mdb.authenticate(user, password)
+    if not uri:
+        # Construct URI from other settings
+        uri = 'mongodb://'
+        if user and password:
+            uri += '%s:%s@' % (user, password)
+        uri += '%s:%s/%s?authSource=%s&authMechanism=SCRAM-SHA-256' % (host, port, db, authdb)
+        if ssl:
+            uri += '&tls=true'
+        
+    pymongo.uri_parser.parse_uri(uri)
+    conn = pymongo.MongoClient(uri)
+    log.info("connecting to %s for mongo ext_tops", uri)
+    mdb = conn.get_database()
 
     # Do the regex string replacement on the minion id
     minion_id = kwargs["opts"]["id"]
