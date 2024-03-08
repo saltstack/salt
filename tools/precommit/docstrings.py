@@ -751,7 +751,6 @@ MISSING_EXAMPLES = {
         "delete_advanced_configs",
         "get_vm",
     ],
-    "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
     "salt/modules/zk_concurrency.py": [
         "lock",
