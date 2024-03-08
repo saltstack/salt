@@ -93,7 +93,7 @@ def test_present():
         # Update - test=False
         with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Updated permissions for {}".format(acl_name)
+                comt = f"Updated permissions for {acl_name}"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -118,7 +118,7 @@ def test_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_name)
+                comt = f"Error updating permissions for {acl_name}: Custom err"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -148,7 +148,7 @@ def test_present():
         # New - test=False
         with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Applied new permissions for {}".format(acl_name)
+                comt = f"Applied new permissions for {acl_name}"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -168,7 +168,252 @@ def test_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_name)
+                comt = f"Error updating permissions for {acl_name}: Custom err"
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {},
+                    "result": False,
+                }
+                assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+
+        # New - recurse true
+        with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+            # Update - test=True
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "Updated permissions will be applied for {}: rwx -> {}".format(
+                    acl_name, perms
+                )
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {
+                        "new": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": perms,
+                        },
+                        "old": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": "rwx",
+                        },
+                    },
+                    "result": None,
+                }
+
+                assert (
+                    linux_acl.present(name, acl_type, acl_name, perms, recurse=True)
+                    == ret
+                )
+
+        # New - recurse true - nothing to do
+        with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+            # Update - test=True
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "Permissions are in the desired state"
+                ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                assert (
+                    linux_acl.present(name, acl_type, acl_name, perms, recurse=True)
+                    == ret
+                )
+
+        # No acl type
+        comt = "ACL Type does not exist"
+        ret = {"name": name, "comment": comt, "result": False, "changes": {}}
+        assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+
+        # default recurse false - nothing to do
+        with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+            # Update - test=True
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "Permissions are in the desired state"
+                ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                assert (
+                    linux_acl.present(
+                        name, "d:" + acl_type, acl_name, perms, recurse=False
+                    )
+                    == ret
+                )
+
+        # default recurse false - nothing to do
+        with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+            # Update - test=True
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "Permissions are in the desired state"
+                ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                assert (
+                    linux_acl.present(
+                        name, "d:" + acl_type, acl_name, perms, recurse=False
+                    )
+                    == ret
+                )
+
+        # default recurse true - nothing to do
+        with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+            # Update - test=True
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "Permissions are in the desired state"
+                ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                assert (
+                    linux_acl.present(
+                        name, "d:" + acl_type, acl_name, perms, recurse=True
+                    )
+                    == ret
+                )
+
+
+def test_present_conditional_x():
+    """
+    Test to ensure a Linux ACL containing a conditional X is applied correctly
+    """
+    maxDiff = None
+    name = "/root"
+    acl_type = "users"
+    acl_name = "damian"
+    perms = "rwX"
+
+    mock = MagicMock(
+        side_effect=[
+            {name: {acl_type: [{acl_name: {"octal": 5}}]}},
+            {name: {acl_type: [{acl_name: {"octal": 5}}]}},
+            {name: {acl_type: [{acl_name: {"octal": 5}}]}},
+            {name: {acl_type: [{}]}},
+            {name: {acl_type: [{}]}},
+            {name: {acl_type: [{}]}},
+            {
+                name: {acl_type: [{acl_name: {"octal": 7}}]},
+                name + "/foo": {acl_type: [{acl_name: {"octal": 5}}]},
+            },
+            {
+                name: {acl_type: [{acl_name: {"octal": 7}}]},
+                name + "/foo": {acl_type: [{acl_name: {"octal": 7}}]},
+            },
+            {name: {acl_type: ""}},
+            {
+                name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+            },
+            {
+                name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+            },
+            {
+                name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+            },
+        ]
+    )
+    mock_modfacl = MagicMock(return_value=True)
+
+    with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+        # Update - test=True
+        with patch.dict(linux_acl.__opts__, {"test": True}):
+            comt = "Updated permissions will be applied for {}: r-x -> {}".format(
+                acl_name, perms
+            )
+            ret = {
+                "name": name,
+                "comment": comt,
+                "changes": {
+                    "new": {
+                        "acl_name": acl_name,
+                        "acl_type": acl_type,
+                        "perms": perms,
+                    },
+                    "old": {
+                        "acl_name": acl_name,
+                        "acl_type": acl_type,
+                        "perms": "r-x",
+                    },
+                },
+                "result": None,
+            }
+
+            assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+        # Update - test=False
+        with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
+            with patch.dict(linux_acl.__opts__, {"test": False}):
+                comt = f"Updated permissions for {acl_name}"
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {
+                        "new": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": perms,
+                        },
+                        "old": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": "r-x",
+                        },
+                    },
+                    "result": True,
+                }
+                assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+        # Update - modfacl error
+        with patch.dict(
+            linux_acl.__salt__,
+            {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
+        ):
+            with patch.dict(linux_acl.__opts__, {"test": False}):
+                comt = f"Error updating permissions for {acl_name}: Custom err"
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {},
+                    "result": False,
+                }
+                assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+        # New - test=True
+        with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
+            with patch.dict(linux_acl.__opts__, {"test": True}):
+                comt = "New permissions will be applied for {}: {}".format(
+                    acl_name, perms
+                )
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {
+                        "new": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": perms,
+                        }
+                    },
+                    "result": None,
+                }
+                assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+        # New - test=False
+        with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
+            with patch.dict(linux_acl.__opts__, {"test": False}):
+                comt = f"Applied new permissions for {acl_name}"
+                ret = {
+                    "name": name,
+                    "comment": comt,
+                    "changes": {
+                        "new": {
+                            "acl_name": acl_name,
+                            "acl_type": acl_type,
+                            "perms": perms,
+                        }
+                    },
+                    "result": True,
+                }
+                assert linux_acl.present(name, acl_type, acl_name, perms) == ret
+        # New - modfacl error
+        with patch.dict(
+            linux_acl.__salt__,
+            {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
+        ):
+            with patch.dict(linux_acl.__opts__, {"test": False}):
+                comt = f"Error updating permissions for {acl_name}: Custom err"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -395,7 +640,7 @@ def test_list_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_names)
+                comt = f"Error updating permissions for {acl_names}: Custom err"
                 expected = {
                     "name": name,
                     "comment": comt,
@@ -453,7 +698,7 @@ def test_list_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_names)
+                comt = f"Error updating permissions for {acl_names}: Custom err"
                 expected = {
                     "name": name,
                     "comment": comt,
