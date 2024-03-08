@@ -14,7 +14,6 @@ pytestmark = [
     pytest.mark.core_test,
     pytest.mark.skip_on_windows,
     pytest.mark.skip_on_aix,
-    pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
 
