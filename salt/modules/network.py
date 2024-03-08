@@ -16,6 +16,7 @@ import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.systemd
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
@@ -1472,9 +1473,11 @@ def mod_hostname(hostname):
         o_hostname = __salt__["cmd.run"](check_hostname_cmd).split(" ")[-1]
 
     if hostname_cmd.endswith("hostnamectl"):
+        verb = "hostname" if salt.utils.systemd.version() >= 249 else "set-hostname"
         result = __salt__["cmd.run_all"](
-            "{} set-hostname {}".format(
+            "{} {} {}".format(
                 hostname_cmd,
+                verb,
                 hostname,
             )
         )

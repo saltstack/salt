@@ -11,7 +11,7 @@ import salt.modules.network as networkmod
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, mock_open, patch
+from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
@@ -376,6 +376,33 @@ def test_mod_hostname():
         networkmod.__grains__, {"os_family": "A"}
     ):
         assert networkmod.mod_hostname("hostname")
+
+
+def test_mod_hostname_hostnamectl():
+    """
+    Test for Modify hostname when hostnamectl is used
+    """
+    assert not networkmod.mod_hostname(None)
+    file_d = "\n".join(["#", "A B C D,E,F G H"])
+
+    mock_run_all = MagicMock(
+        return_value={"retcode": 0, "stdout": "Static hostname: testhostname"}
+    )
+    patch_run_all = patch.dict(networkmod.__salt__, {"cmd.run_all": mock_run_all})
+    cmd = "hostname" if salt.utils.systemd.version() >= 249 else "set-hostname"
+    with patch.dict(
+        networkmod.__utils__,
+        {
+            "path.which": MagicMock(return_value="hostnamectl"),
+            "files.fopen": mock_open(read_data=file_d),
+        },
+    ), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=None)}
+    ), patch.dict(
+        networkmod.__grains__, {"os_family": "A"}
+    ), patch_run_all:
+        assert networkmod.mod_hostname("hostname")
+        assert mock_run_all.call_args_list[1] == call(f"hostnamectl {cmd} hostname")
 
 
 def test_mod_hostname_quoted():
