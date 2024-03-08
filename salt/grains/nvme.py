@@ -7,7 +7,8 @@ To enable these grains set `nvme_grains: True` in the minion config.
 
 .. code-block:: yaml
 
-    nvme_grains: True
+    disabled_grains:
+      - nvme
 """
 
 import errno
@@ -24,9 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if __opts__.get("nvme_grains", False) is False:
-        return False
-    return __virtualname__
+    return __virtualname__ not in __opts__.get("disabled_grains", [])
 
 
 def nvme_nqn():

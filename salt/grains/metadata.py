@@ -6,12 +6,7 @@ Grains from cloud metadata servers at 169.254.169.254
 :depends: requests
 
 To enable these grains that pull from the http://169.254.169.254/latest
-metadata server set `metadata_server_grains: True` in the minion config.
-
-.. code-block:: yaml
-
-    metadata_server_grains: True
-
+metadata server remove "metadata_server" from "disabled_grains" in the minion config.
 """
 
 import os
@@ -28,7 +23,7 @@ HOST = f"http://{IP}/"
 
 
 def __virtual__():
-    if __opts__.get("metadata_server_grains", False) is False:
+    if "metadata_server" in __opts__.get("disabled_grains", []):
         return False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(0.1)

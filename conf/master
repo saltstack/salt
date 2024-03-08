@@ -133,10 +133,13 @@
 # Set the directory used to hold unix sockets:
 #sock_dir: /var/run/salt/master
 
+
+# Some grains can be slow to compute. Add grains to this list to disable their computation.
+#disabled_grains:
+#  - gpu
 # The master can take a while to start up when lspci and/or dmidecode is used
-# to populate the grains for the master. Enable if you want to see GPU hardware
-# data for your master.
-# enable_gpu_grains: False
+# to populate the grains for the master. Remove "gpu" from disabled_grains if
+# you want to see GPU hardware data for your master.
 
 # The master maintains a job cache. While this is a great addition, it can be
 # a burden on the master for larger deployments (over 5000 minions).

@@ -3,11 +3,7 @@ Grains for iSCSI Qualified Names (IQN).
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set `iscsi_grains: True` in the minion config.
-
-.. code-block:: yaml
-
-    iscsi_grains: True
+To enable these grains remove "iscsi" from "disabled_grains" in the minion config.
 """
 
 import errno
@@ -25,10 +21,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if __opts__.get("iscsi_grains", False) is False:
-        return False
-    else:
-        return __virtualname__
+    return __virtualname__ not in __opts__.get("disabled_grains", [])
 
 
 def iscsi_iqn():
