@@ -359,6 +359,7 @@ additional-builtins=__opts__,
   __grains__,
   __context__,
   __runner__,
+  __matcher__
   __ret__,
   __env__,
   __low__,

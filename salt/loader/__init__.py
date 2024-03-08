@@ -435,6 +435,7 @@ def matchers(opts, loaded_base_name=None):
         _module_dirs(opts, "matchers"),
         opts,
         tag="matchers",
+        pack_self="__matchers__",
         loaded_base_name=loaded_base_name,
     )
 

@@ -21,12 +21,11 @@ def confirm_top(match, data, nodegroups=None):
             if "match" in item:
                 matcher = item["match"]
 
-    matchers = salt.loader.matchers(__opts__)
     funcname = matcher + "_match.match"
     if matcher == "nodegroup":
-        return matchers[funcname](match, nodegroups)
+        return __matchers__[funcname](match, nodegroups)
     else:
-        m = matchers[funcname]
+        m = __matchers__[funcname]
         return m(match)
     # except TypeError, KeyError:
     #     log.error("Attempting to match with unknown matcher: %s", matcher)
