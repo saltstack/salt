@@ -779,6 +779,60 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     return ret
 
 
+def glob_list(data, pattern):
+    """
+    Uses fnmatch for "globbing" elements of a list:
+    The globbing the list [eth0, eth2, lo] with pattern
+    'eth*' results in [eth0, eth2]
+
+    Same function as used in Salt's match.glob.
+    https://docs.python.org/3/library/fnmatch.html
+    """
+    if not isinstance(data, list):
+        error_msg = "1st argument should be a list but is "
+        raise TypeError(error_msg + str(type(data)))
+    matches = []
+    for num, element in enumerate(data):
+        if not isinstance(element, str):
+            error_msg = "List element " + str(num) + " isn't a str but "
+            raise TypeError(error_msg + str(element))
+        if fnmatch.fnmatch(element, str(pattern)):
+            matches.append(element)
+    return matches
+
+
+def replace_list_element(orig, placeholder, updates_list):
+    """
+    Takes a list `orig` and inserts the elements of `updates_list`
+    anyplace where an element equal `placeholder` has been.
+    In list ['a', 'bx', 'c'] placeholder 'bx' would be replaced
+    with the elements of ['b1', 'b2', 'b3'] resulting in list
+    ['a', 'b1', 'b2', 'b3', 'c'].
+    """
+    if not isinstance(orig, list) or not isinstance(updates_list, list):
+        if not isinstance(orig, list) and not isinstance(updates_list, list):
+            msg = "Neiter arg 0 'orig' nor arg 2 'updates_list' is a list-like!"
+        if not isinstance(orig, list) and isinstance(updates_list, list):
+            msg = "Arg 0 'orig' isn't a list(-like object)!"
+        if isinstance(orig, list) and not isinstance(updates_list, list):
+            msg = "Arg 2 'updates_list' isn't a list(-like object)!"
+        raise TypeError(msg)
+
+    if placeholder not in orig:
+        return orig
+    indexed_orig = list(enumerate(orig))
+    indexed_orig.reverse()
+    updated = []
+    for index, elem in indexed_orig:
+        if elem == placeholder:
+            for update in updates_list:
+                updated.insert(index, update)
+        else:
+            updated.append(elem)
+    updated.reverse()
+    return updated
+
+
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     """
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
