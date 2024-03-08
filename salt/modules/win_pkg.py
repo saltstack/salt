@@ -47,6 +47,7 @@ import time
 import urllib.parse
 from functools import cmp_to_key
 
+import salt.fileserver
 import salt.payload
 import salt.syspaths
 import salt.utils.args
@@ -915,7 +916,7 @@ def refresh_db(**kwargs):
     - Fetch the package definition files (.sls) from `winrepo_source_dir`
       (default `salt://win/repo-ng`) and cache them in
       `<cachedir>\files\<saltenv>\<winrepo_source_dir>`
-      (default: ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng``)
+      (default: ``C:\ProgramData\Salt Project\Salt\var\cache\salt\minion\files\base\win\repo-ng``)
     - Call :py:func:`pkg.genrepo <salt.modules.win_pkg.genrepo>` to parse the
       package definition files and generate the repository metadata database
       file (`winrepo.p`)
@@ -1019,6 +1020,11 @@ def refresh_db(**kwargs):
         raise CommandExecutionError(
             "Failed to clear one or more winrepo cache files", info={"failed": failed}
         )
+
+    # Clear the cache so that newly copied package definitions will be picked up
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    load = {"saltenv": saltenv, "fsbackend": None}
+    fileserver.clear_file_list_cache(load=load)
 
     # Cache repo-ng locally
     log.info("Fetching *.sls files from %s", repo_details.winrepo_source_dir)
@@ -2359,7 +2365,23 @@ def _get_name_map(saltenv="base"):
 
 def get_package_info(name, saltenv="base"):
     """
-    Return package info. Returns empty map if package not available.
+    Get information about the package as found in the winrepo database
+
+    Args:
+
+        name (str): The name of the package
+
+        saltenv (str): The salt environment to use. Default is "base"
+
+    Returns:
+        dict: A dictionary of package info, empty if package not available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_package_info chrome
+
     """
     return _get_package_info(name=name, saltenv=saltenv)
 
