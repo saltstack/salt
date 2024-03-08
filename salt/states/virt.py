@@ -297,6 +297,9 @@ def defined(
     live=True,
     host_devices=None,
     autostart=False,
+    stop_on_crash=False,
+    stop_on_poweroff=False,
+    stop_on_lockfailure=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -580,11 +583,35 @@ def defined(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
+
+    :param stop_on_crash:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_poweroff:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_lockfailure:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
 
     :param live:
         If set to ``False`` the changes will not be applied live to the running instance, but will
@@ -673,6 +700,9 @@ def defined(
                 stop_on_reboot=stop_on_reboot,
                 host_devices=host_devices,
                 autostart=autostart,
+                stop_on_crash=stop_on_crash,
+                stop_on_poweroff=stop_on_poweroff,
+                stop_on_lockfailure=stop_on_lockfailure,
             )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -716,6 +746,9 @@ def defined(
                     clock=clock,
                     stop_on_reboot=stop_on_reboot,
                     host_devices=host_devices,
+                    stop_on_crash=stop_on_crash,
+                    stop_on_poweroff=stop_on_poweroff,
+                    stop_on_lockfailure=stop_on_lockfailure,
                 )
             ret["changes"][name] = {"definition": True}
             ret["comment"] = "Domain {} defined".format(name)
@@ -756,6 +789,9 @@ def running(
     stop_on_reboot=False,
     host_devices=None,
     autostart=False,
+    stop_on_crash=False,
+    stop_on_poweroff=False,
+    stop_on_lockfailure=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -901,11 +937,35 @@ def running(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
+
+    :param stop_on_crash:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_poweroff:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_lockfailure:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
 
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
@@ -1035,6 +1095,9 @@ def running(
         consoles=consoles,
         host_devices=host_devices,
         autostart=autostart,
+        stop_on_crash=stop_on_crash,
+        stop_on_poweroff=stop_on_poweroff,
+        stop_on_lockfailure=stop_on_lockfailure,
     )
 
     result = True if not __opts__["test"] else None

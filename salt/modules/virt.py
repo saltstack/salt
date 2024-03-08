@@ -947,6 +947,9 @@ def _gen_xml(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    stop_on_crash=False,
+    stop_on_poweroff=False,
+    stop_on_lockfailure=False,
     **kwargs
 ):
     """
@@ -958,6 +961,9 @@ def _gen_xml(
         "hypervisor_features": hypervisor_features or {},
         "clock": clock or {},
         "on_reboot": "destroy" if stop_on_reboot else "restart",
+        "on_crash": "destroy" if stop_on_crash else "restart",
+        "on_poweroff": "destroy" if stop_on_poweroff else "restart",
+        "on_lockfailure": "destroy" if stop_on_lockfailure else "restart",
     }
 
     context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
@@ -2006,6 +2012,9 @@ def init(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    stop_on_crash=False,
+    stop_on_poweroff=False,
+    stop_on_lockfailure=False,
     **kwargs
 ):
     """
@@ -2211,11 +2220,35 @@ def init(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
+
+    :param stop_on_crash:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_poweroff:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_lockfailure:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
 
     :param boot:
         Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
@@ -2912,6 +2945,9 @@ def init(
             consoles,
             stop_on_reboot,
             host_devices,
+            stop_on_crash,
+            stop_on_poweroff,
+            stop_on_lockfailure,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -3499,6 +3535,9 @@ def update(
     stop_on_reboot=False,
     host_devices=None,
     autostart=False,
+    stop_on_crash=False,
+    stop_on_poweroff=False,
+    stop_on_lockfailure=False,
     **kwargs
 ):
     """
@@ -3613,11 +3652,35 @@ def update(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
+
+    :param stop_on_crash:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_poweroff:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
+
+    :param stop_on_lockfailure:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: 3007
 
     :param test: run in dry-run mode if set to True
 
@@ -3761,6 +3824,9 @@ def update(
             consoles=consoles,
             stop_on_reboot=stop_on_reboot,
             host_devices=host_devices,
+            stop_on_crash=stop_on_crash,
+            stop_on_poweroff=stop_on_poweroff,
+            stop_on_lockfailure=stop_on_lockfailure,
             **kwargs
         )
     )
@@ -3884,6 +3950,21 @@ def update(
         {
             "path": "stop_on_reboot",
             "xpath": "on_reboot",
+            "convert": lambda v: "destroy" if v else "restart",
+        },
+        {
+            "path": "stop_on_crash",
+            "xpath": "on_crash",
+            "convert": lambda v: "destroy" if v else "restart",
+        },
+        {
+            "path": "stop_on_poweroff",
+            "xpath": "on_poweroff",
+            "convert": lambda v: "destroy" if v else "restart",
+        },
+        {
+            "path": "stop_on_lockfailure",
+            "xpath": "on_lockfailure",
             "convert": lambda v: "destroy" if v else "restart",
         },
         {"path": "boot:kernel", "xpath": "os/kernel"},
