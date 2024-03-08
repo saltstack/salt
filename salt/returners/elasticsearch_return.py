@@ -113,15 +113,38 @@ STATE_FUNCTIONS = {
     "state.sls": "state_apply",
 }
 
+try:
+    import elasticsearch
+
+    ES_MAJOR_VERSION = elasticsearch.__version__[0]
+    logging.getLogger("elasticsearch").setLevel(logging.CRITICAL)
+    HAS_ELASTICSEARCH = True
+except ImportError:
+    HAS_ELASTICSEARCH = False
+    ES_MAJOR_VERSION = None
+
+__virtualname__ = "elasticsearch"
+
 
 def __virtual__():
+    """
+    Only load if elasticsearch libraries exist and meet requirements.
+    """
+    if not HAS_ELASTICSEARCH:
+        return (
+            False,
+            "Cannot load module elasticsearch: elasticsearch libraries not found",
+        )
     if "elasticsearch.index_exists" not in __salt__:
         return (
             False,
             "Elasticsearch module not availble.  Check that the elasticsearch library"
             " is installed.",
         )
-    return __virtualname__
+    if ES_MAJOR_VERSION is not None and ES_MAJOR_VERSION < 8:
+        return __virtualname__
+    else:
+        return (False, "Cannot load module, wrong elasticsearch version")
 
 
 def _get_options(ret=None):
@@ -183,8 +206,8 @@ def _ensure_index(index):
                 "number_of_replicas": options["number_of_replicas"],
             }
         }
-        __salt__["elasticsearch.index_create"]("{}-v1".format(index), index_definition)
-        __salt__["elasticsearch.alias_create"]("{}-v1".format(index), index)
+        __salt__["elasticsearch.index_create"](f"{index}-v1", index_definition)
+        __salt__["elasticsearch.alias_create"](f"{index}-v1", index)
 
 
 def _convert_keys(data):
@@ -236,9 +259,9 @@ def returner(ret):
 
     # Build the index name
     if options["states_single_index"] and job_fun in STATE_FUNCTIONS:
-        index = "salt-{}".format(STATE_FUNCTIONS[job_fun])
+        index = f"salt-{STATE_FUNCTIONS[job_fun]}"
     else:
-        index = "salt-{}".format(job_fun_escaped)
+        index = f"salt-{job_fun_escaped}"
 
     if options["index_date"]:
         index = "{}-{}".format(index, datetime.date.today().strftime("%Y.%m.%d"))
@@ -260,7 +283,7 @@ def returner(ret):
         # index to be '<index>-ordered' so as not to clash with the unsorted
         # index data format
         if options["states_order_output"] and isinstance(ret["return"], dict):
-            index = "{}-ordered".format(index)
+            index = f"{index}-ordered"
             max_chars = len(str(len(ret["return"])))
 
             for uid, data in ret["return"].items():

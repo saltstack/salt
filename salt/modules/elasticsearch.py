@@ -58,8 +58,11 @@ log = logging.getLogger(__name__)
 try:
     import elasticsearch
 
+    ES_MAJOR_VERSION = elasticsearch.__version__[0]
+
     # pylint: disable=no-name-in-module
-    from elasticsearch import RequestsHttpConnection
+    if ES_MAJOR_VERSION < 8:
+        from elasticsearch import RequestsHttpConnection
 
     # pylint: enable=no-name-in-module
 
@@ -67,18 +70,25 @@ try:
     HAS_ELASTICSEARCH = True
 except ImportError:
     HAS_ELASTICSEARCH = False
+    ES_MAJOR_VERSION = None
+
+__virtualname__ = "elasticsearch"
 
 
 def __virtual__():
     """
-    Only load if elasticsearch libraries exist.
+    Only load if elasticsearch libraries exist and meet requirements.
     """
     if not HAS_ELASTICSEARCH:
         return (
             False,
             "Cannot load module elasticsearch: elasticsearch libraries not found",
         )
-    return True
+
+    if ES_MAJOR_VERSION < 8:
+        return __virtualname__
+    else:
+        return (False, "Cannot load module, wrong elasticsearch version")
 
 
 def _get_instance(hosts=None, profile=None):

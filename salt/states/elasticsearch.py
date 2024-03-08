@@ -11,6 +11,33 @@ import salt.utils.json
 
 log = logging.getLogger(__name__)
 
+try:
+    import elasticsearch
+
+    ES_MAJOR_VERSION = elasticsearch.__version__[0]
+    logging.getLogger("elasticsearch").setLevel(logging.CRITICAL)
+    HAS_ELASTICSEARCH = True
+except ImportError:
+    HAS_ELASTICSEARCH = False
+
+__virtualname__ = "elasticsearch"
+
+
+def __virtual__():
+    """
+    Only load if elasticsearch libraries exist and meet requirements.
+    """
+    if not HAS_ELASTICSEARCH:
+        return (
+            False,
+            "Cannot load module elasticsearch: elasticsearch libraries not found",
+        )
+
+    if ES_MAJOR_VERSION < 8:
+        return __virtualname__
+    else:
+        return (False, "Cannot load module, wrong elasticsearch version")
+
 
 def index_absent(name):
     """
@@ -26,20 +53,20 @@ def index_absent(name):
         index = __salt__["elasticsearch.index_get"](index=name)
         if index and name in index:
             if __opts__["test"]:
-                ret["comment"] = "Index {} will be removed".format(name)
+                ret["comment"] = f"Index {name} will be removed"
                 ret["changes"]["old"] = index[name]
                 ret["result"] = None
             else:
                 ret["result"] = __salt__["elasticsearch.index_delete"](index=name)
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed index {}".format(name)
+                    ret["comment"] = f"Successfully removed index {name}"
                     ret["changes"]["old"] = index[name]
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove index {} for unknown reasons".format(name)
+                    ] = f"Failed to remove index {name} for unknown reasons"
         else:
-            ret["comment"] = "Index {} is already absent".format(name)
+            ret["comment"] = f"Index {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -79,9 +106,7 @@ def index_present(name, definition=None):
         index_exists = __salt__["elasticsearch.index_exists"](index=name)
         if not index_exists:
             if __opts__["test"]:
-                ret["comment"] = "Index {} does not exist and will be created".format(
-                    name
-                )
+                ret["comment"] = f"Index {name} does not exist and will be created"
                 ret["changes"] = {"new": definition}
                 ret["result"] = None
             else:
@@ -89,15 +114,15 @@ def index_present(name, definition=None):
                     index=name, body=definition
                 )
                 if output:
-                    ret["comment"] = "Successfully created index {}".format(name)
+                    ret["comment"] = f"Successfully created index {name}"
                     ret["changes"] = {
                         "new": __salt__["elasticsearch.index_get"](index=name)[name]
                     }
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create index {}, {}".format(name, output)
+                    ret["comment"] = f"Cannot create index {name}, {output}"
         else:
-            ret["comment"] = "Index {} is already present".format(name)
+            ret["comment"] = f"Index {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -124,9 +149,7 @@ def alias_absent(name, index):
             and alias.get(index, {}).get("aliases", {}).get(name, None) is not None
         ):
             if __opts__["test"]:
-                ret["comment"] = "Alias {} for index {} will be removed".format(
-                    name, index
-                )
+                ret["comment"] = f"Alias {name} for index {index} will be removed"
                 ret["changes"]["old"] = (
                     alias.get(index, {}).get("aliases", {}).get(name, {})
                 )
@@ -138,20 +161,16 @@ def alias_absent(name, index):
                 if ret["result"]:
                     ret[
                         "comment"
-                    ] = "Successfully removed alias {} for index {}".format(name, index)
+                    ] = f"Successfully removed alias {name} for index {index}"
                     ret["changes"]["old"] = (
                         alias.get(index, {}).get("aliases", {}).get(name, {})
                     )
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove alias {} for index {} for unknown reasons".format(
-                        name, index
-                    )
+                    ] = f"Failed to remove alias {name} for index {index} for unknown reasons"
         else:
-            ret["comment"] = "Alias {} for index {} is already absent".format(
-                name, index
-            )
+            ret["comment"] = f"Alias {name} for index {index} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -200,14 +219,11 @@ def alias_present(name, index, definition=None):
                 if not old:
                     ret[
                         "comment"
-                    ] = "Alias {} for index {} does not exist and will be created".format(
-                        name, index
-                    )
+                    ] = f"Alias {name} for index {index} does not exist and will be created"
                 else:
-                    ret["comment"] = (
-                        "Alias {} for index {} exists with wrong configuration and will"
-                        " be overridden".format(name, index)
-                    )
+                    ret[
+                        "comment"
+                    ] = f"Alias {name} for index {index} exists with wrong configuration and will be overridden"
 
                 ret["result"] = None
             else:
@@ -218,24 +234,18 @@ def alias_present(name, index, definition=None):
                     if not old:
                         ret[
                             "comment"
-                        ] = "Successfully created alias {} for index {}".format(
-                            name, index
-                        )
+                        ] = f"Successfully created alias {name} for index {index}"
                     else:
                         ret[
                             "comment"
-                        ] = "Successfully replaced alias {} for index {}".format(
-                            name, index
-                        )
+                        ] = f"Successfully replaced alias {name} for index {index}"
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create alias {} for index {}, {}".format(
-                        name, index, output
-                    )
+                    ret[
+                        "comment"
+                    ] = f"Cannot create alias {name} for index {index}, {output}"
         else:
-            ret["comment"] = "Alias {} for index {} is already present".format(
-                name, index
-            )
+            ret["comment"] = f"Alias {name} for index {index} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -257,7 +267,7 @@ def index_template_absent(name):
         index_template = __salt__["elasticsearch.index_template_get"](name=name)
         if index_template and name in index_template:
             if __opts__["test"]:
-                ret["comment"] = "Index template {} will be removed".format(name)
+                ret["comment"] = f"Index template {name} will be removed"
                 ret["changes"]["old"] = index_template[name]
                 ret["result"] = None
             else:
@@ -265,18 +275,14 @@ def index_template_absent(name):
                     name=name
                 )
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed index template {}".format(
-                        name
-                    )
+                    ret["comment"] = f"Successfully removed index template {name}"
                     ret["changes"]["old"] = index_template[name]
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove index template {} for unknown reasons".format(
-                        name
-                    )
+                    ] = f"Failed to remove index template {name} for unknown reasons"
         else:
-            ret["comment"] = "Index template {} is already absent".format(name)
+            ret["comment"] = f"Index template {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -318,7 +324,7 @@ def index_template_present(name, definition, check_definition=False):
             if __opts__["test"]:
                 ret[
                     "comment"
-                ] = "Index template {} does not exist and will be created".format(name)
+                ] = f"Index template {name} does not exist and will be created"
                 ret["changes"] = {"new": definition}
                 ret["result"] = None
             else:
@@ -326,9 +332,7 @@ def index_template_present(name, definition, check_definition=False):
                     name=name, body=definition
                 )
                 if output:
-                    ret["comment"] = "Successfully created index template {}".format(
-                        name
-                    )
+                    ret["comment"] = f"Successfully created index template {name}"
                     ret["changes"] = {
                         "new": __salt__["elasticsearch.index_template_get"](name=name)[
                             name
@@ -336,9 +340,7 @@ def index_template_present(name, definition, check_definition=False):
                     }
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create index template {}, {}".format(
-                        name, output
-                    )
+                    ret["comment"] = f"Cannot create index template {name}, {output}"
         else:
             if check_definition:
                 if isinstance(definition, str):
@@ -359,9 +361,7 @@ def index_template_present(name, definition, check_definition=False):
                     if __opts__["test"]:
                         ret[
                             "comment"
-                        ] = "Index template {} exist but need to be updated".format(
-                            name
-                        )
+                        ] = f"Index template {name} exist but need to be updated"
                         ret["changes"] = diff
                         ret["result"] = None
                     else:
@@ -371,23 +371,19 @@ def index_template_present(name, definition, check_definition=False):
                         if output:
                             ret[
                                 "comment"
-                            ] = "Successfully updated index template {}".format(name)
+                            ] = f"Successfully updated index template {name}"
                             ret["changes"] = diff
                         else:
                             ret["result"] = False
                             ret[
                                 "comment"
-                            ] = "Cannot update index template {}, {}".format(
-                                name, output
-                            )
+                            ] = f"Cannot update index template {name}, {output}"
                 else:
                     ret[
                         "comment"
-                    ] = "Index template {} is already present and up to date".format(
-                        name
-                    )
+                    ] = f"Index template {name} is already present and up to date"
             else:
-                ret["comment"] = "Index template {} is already present".format(name)
+                ret["comment"] = f"Index template {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -409,20 +405,20 @@ def pipeline_absent(name):
         pipeline = __salt__["elasticsearch.pipeline_get"](id=name)
         if pipeline and name in pipeline:
             if __opts__["test"]:
-                ret["comment"] = "Pipeline {} will be removed".format(name)
+                ret["comment"] = f"Pipeline {name} will be removed"
                 ret["changes"]["old"] = pipeline[name]
                 ret["result"] = None
             else:
                 ret["result"] = __salt__["elasticsearch.pipeline_delete"](id=name)
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed pipeline {}".format(name)
+                    ret["comment"] = f"Successfully removed pipeline {name}"
                     ret["changes"]["old"] = pipeline[name]
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove pipeline {} for unknown reasons".format(name)
+                    ] = f"Failed to remove pipeline {name} for unknown reasons"
         else:
-            ret["comment"] = "Pipeline {} is already absent".format(name)
+            ret["comment"] = f"Pipeline {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -467,12 +463,11 @@ def pipeline_present(name, definition):
                 if not pipeline:
                     ret[
                         "comment"
-                    ] = "Pipeline {} does not exist and will be created".format(name)
+                    ] = f"Pipeline {name} does not exist and will be created"
                 else:
-                    ret["comment"] = (
-                        "Pipeline {} exists with wrong configuration and will be"
-                        " overridden".format(name)
-                    )
+                    ret[
+                        "comment"
+                    ] = f"Pipeline {name} exists with wrong configuration and will be overridden"
 
                 ret["result"] = None
             else:
@@ -481,18 +476,14 @@ def pipeline_present(name, definition):
                 )
                 if output:
                     if not pipeline:
-                        ret["comment"] = "Successfully created pipeline {}".format(name)
+                        ret["comment"] = f"Successfully created pipeline {name}"
                     else:
-                        ret["comment"] = "Successfully replaced pipeline {}".format(
-                            name
-                        )
+                        ret["comment"] = f"Successfully replaced pipeline {name}"
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create pipeline {}, {}".format(
-                        name, output
-                    )
+                    ret["comment"] = f"Cannot create pipeline {name}, {output}"
         else:
-            ret["comment"] = "Pipeline {} is already present".format(name)
+            ret["comment"] = f"Pipeline {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -514,7 +505,7 @@ def search_template_absent(name):
         template = __salt__["elasticsearch.search_template_get"](id=name)
         if template:
             if __opts__["test"]:
-                ret["comment"] = "Search template {} will be removed".format(name)
+                ret["comment"] = f"Search template {name} will be removed"
                 ret["changes"]["old"] = salt.utils.json.loads(template["template"])
                 ret["result"] = None
             else:
@@ -522,18 +513,14 @@ def search_template_absent(name):
                     id=name
                 )
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed search template {}".format(
-                        name
-                    )
+                    ret["comment"] = f"Successfully removed search template {name}"
                     ret["changes"]["old"] = salt.utils.json.loads(template["template"])
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove search template {} for unknown reasons".format(
-                        name
-                    )
+                    ] = f"Failed to remove search template {name} for unknown reasons"
         else:
-            ret["comment"] = "Search template {} is already absent".format(name)
+            ret["comment"] = f"Search template {name} is already absent"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
@@ -577,14 +564,11 @@ def search_template_present(name, definition):
                 if not template:
                     ret[
                         "comment"
-                    ] = "Search template {} does not exist and will be created".format(
-                        name
-                    )
+                    ] = f"Search template {name} does not exist and will be created"
                 else:
-                    ret["comment"] = (
-                        "Search template {} exists with wrong configuration and will be"
-                        " overridden".format(name)
-                    )
+                    ret[
+                        "comment"
+                    ] = f"Search template {name} exists with wrong configuration and will be overridden"
 
                 ret["result"] = None
             else:
@@ -593,20 +577,14 @@ def search_template_present(name, definition):
                 )
                 if output:
                     if not template:
-                        ret[
-                            "comment"
-                        ] = "Successfully created search template {}".format(name)
+                        ret["comment"] = f"Successfully created search template {name}"
                     else:
-                        ret[
-                            "comment"
-                        ] = "Successfully replaced search template {}".format(name)
+                        ret["comment"] = f"Successfully replaced search template {name}"
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create search template {}, {}".format(
-                        name, output
-                    )
+                    ret["comment"] = f"Cannot create search template {name}, {output}"
         else:
-            ret["comment"] = "Search template {} is already present".format(name)
+            ret["comment"] = f"Search template {name} is already present"
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(err)
