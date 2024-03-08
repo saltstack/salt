@@ -129,17 +129,16 @@ def listen(opts):
                         jid_counter += 1
                         found_minions.append(data["id"])
                         print(
-                            "Reply received from [{}]. Total replies now: [{}].".format(
-                                ret["data"]["id"], jid_counter
-                            )
+                            f"Reply received from [{data['id']}]. Total replies now: [{jid_counter}]."
                         )
                     continue
         else:
-            print("Event fired at {}".format(time.asctime()))
+            print(f"Event fired at {time.asctime()}")
             print("*" * 25)
-            print("Tag: {}".format(ret["tag"]))
+            print(f"Tag: {ret['tag']}")
             print("Data:")
             pprint.pprint(ret["data"])
+
 
 
 if __name__ == "__main__":
