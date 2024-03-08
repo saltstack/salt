@@ -85,7 +85,7 @@ User realm domain. Required if mechanism is ``sspi``.
 
 principal
 ^^^^^^^^^
-Kerberos principal. Rquired if mechanism is ``sspi``.
+Kerberos principal. Required if mechanism is ``sspi``.
 
 protocol
 ^^^^^^^^
