@@ -1377,6 +1377,13 @@ def hardlink(
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories.
+
+    .. code-block:: yaml
+
+        symlink_/tmp/saltylink:
+          file.hardlink:
+            - name: /tmp/saltylink
+            - target: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -1658,6 +1665,13 @@ def symlink(
         existence checks instead of ``os.path.exists()``.
 
         .. versionadded:: 3007.0
+
+    .. code-block:: yaml
+
+        symlink_/tmp/saltylink:
+          file.symlink:
+            - name: /tmp/saltylink
+            - target: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -1941,6 +1955,12 @@ def absent(name, **kwargs):
 
     name
         The path which should be deleted
+
+    .. code-block:: yaml
+
+        remove:
+          file.absent:
+            - name: /tmp/file_to_remove
     """
     name = os.path.expanduser(name)
 
@@ -2242,6 +2262,12 @@ def exists(name, **kwargs):
 
     name
         Absolute path which must exist
+
+    .. code-block:: yaml
+
+        exists_/tmp/saltyfile:
+          file.exists:
+            - name: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -2262,6 +2288,12 @@ def missing(name, **kwargs):
 
     name
         Absolute path which must NOT exist
+
+    .. code-block:: yaml
+
+        missing_/tmp/saltyfile:
+          file.missing:
+            - name: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -8139,7 +8171,7 @@ def serialize(
 
         .. code-block:: yaml
 
-           /etc/dummy/package.yaml
+           /etc/dummy/package.yaml:
              file.serialize:
                - serializer: yaml
                - serializer_opts:
@@ -8171,7 +8203,7 @@ def serialize(
 
         .. code-block:: yaml
 
-           /etc/dummy/package.yaml
+           /etc/dummy/package.yaml:
              file.serialize:
                - serializer: yaml
                - serializer_opts:
