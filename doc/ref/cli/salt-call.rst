@@ -69,11 +69,13 @@ Options
 
 .. option:: --file-root=FILE_ROOT
 
-    Set this directory as the base file root.
+    Set this directory as the base file root. Can be specified more than once
+    to include multiple base file roots.
 
 .. option:: --pillar-root=PILLAR_ROOT
 
-    Set this directory as the base pillar root.
+    Set this directory as the base pillar root. Can be specified more than
+    once to include multiple base pillar roots.
 
 .. option:: --retcode-passthrough
 
