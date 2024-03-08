@@ -14,6 +14,8 @@ version 0.9+)
         influxdb.port: 8086
         influxdb.user: 'root'
         influxdb.password: 'root'
+        influxdb.ssl: False
+        influxdb.verify_ssl: False
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
@@ -66,6 +68,8 @@ def _client(
     influxdb_password=None,
     influxdb_host=None,
     influxdb_port=None,
+    influxdb_ssl=None,
+    influxdb_verify_ssl=None,
     **client_args
 ):
     if not influxdb_user:
@@ -76,6 +80,10 @@ def _client(
         influxdb_host = __salt__["config.option"]("influxdb.host", "localhost")
     if not influxdb_port:
         influxdb_port = __salt__["config.option"]("influxdb.port", 8086)
+    if not influxdb_ssl:
+        influxdb_ssl = __salt__["config.option"]("influxdb.ssl", False)
+    if not influxdb_verify_ssl:
+        influxdb_ssl = __salt__["config.option"]("influxdb.verify_ssl", False)
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in client_args:
             del client_args[ignore]
@@ -84,6 +92,8 @@ def _client(
         port=influxdb_port,
         username=influxdb_user,
         password=influxdb_password,
+        ssl=influxdb_ssl,
+        verify_ssl=influxdb_verify_ssl,
         **client_args
     )
 
