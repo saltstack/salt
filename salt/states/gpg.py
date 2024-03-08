@@ -34,6 +34,9 @@ def present(
     gnupghome=None,
     trust=None,
     keyring=None,
+    source=None,
+    skip_keyserver=False,
+    text=None,
     **kwargs,
 ):
     """
@@ -65,9 +68,50 @@ def present(
         a local filesystem path.
 
         .. versionadded:: 3007.0
+
+    source
+        A (list of) path(s)/URI to retrieve the key(s) from.
+        By default, this works as a backup option in case retrieving a key
+        from the keyserver fails.
+
+        .. note::
+            All listed sources will be iterated over in order until the first one found
+            to contain the requested key. If multiple keys are managed in a single
+            state, the effective sources are allowed to differ between keys.
+
+        .. important::
+            Internally, this uses :py:func:`gpg.read_key <salt.modules.gpg.read_key>`
+            to list keys in the sources. If a source is not a keyring, on GnuPG <2.1,
+            this can lead to unintentional decryption.
+
+        .. versionadded:: 3008.0
+
+    skip_keyserver
+        Do not attempt to retrieve the key from the keyserver, only use ``source``.
+        Irrelevant when ``text`` is passed. Defaults to false.
+
+        .. versionadded:: 3008.0
+
+    text
+        Instead of retrieving the key(s) to import from a keyserver/URI,
+        import them from this (armored) string.
+
+        .. note::
+            ``name`` or ``keys`` must still specify the expected key ID(s),
+            so this cannot be used to indiscriminately import a keyring.
+            Requires python-gnupg v0.5.1.
+
+        .. versionadded:: 3008.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
+
+    if not text and skip_keyserver and not source:
+        ret["result"] = False
+        ret[
+            "comment"
+        ] = "When skipping keyservers, you must provide at least one source"
+        return ret
 
     _current_keys = __salt__["gpg.list_keys"](
         user=user, gnupghome=gnupghome, keyring=keyring
@@ -137,13 +181,65 @@ def present(
                     ret, f"changes:{key}:added", True
                 )
                 continue
-            result = __salt__["gpg.receive_keys"](
-                keyserver=keyserver,
-                keys=key,
-                user=user,
-                gnupghome=gnupghome,
-                keyring=keyring,
-            )
+            result = {}
+            if text:
+                has_key = __salt__["gpg.read_key"](
+                    text=text, keyid=key, gnupghome=gnupghome, user=user
+                )
+                if has_key:
+                    log.debug(f"Passed text contains key {key}")
+                    result = __salt__["gpg.import_key"](
+                        text=text,
+                        user=user,
+                        gnupghome=gnupghome,
+                        keyring=keyring,
+                        select=key,
+                    )
+                else:
+                    result = {
+                        "res": False,
+                        "message": ["Passed text did not contain the requested key"],
+                    }
+            else:
+                if not skip_keyserver:
+                    result = __salt__["gpg.receive_keys"](
+                        keyserver=keyserver,
+                        keys=key,
+                        user=user,
+                        gnupghome=gnupghome,
+                        keyring=keyring,
+                    )
+                if (not result or result["res"] is False) and source:
+                    if not isinstance(source, list):
+                        source = [source]
+                    for src in source:
+                        sfn = __salt__["cp.cache_file"](src)
+                        if sfn:
+                            log.debug(f"Found source: {src}")
+                            has_key = __salt__["gpg.read_key"](
+                                path=sfn, keyid=key, gnupghome=gnupghome, user=user
+                            )
+                            if has_key:
+                                log.debug(f"Found source {src} contains key {key}")
+                                result = __salt__["gpg.import_key"](
+                                    filename=sfn,
+                                    user=user,
+                                    gnupghome=gnupghome,
+                                    keyring=keyring,
+                                    select=key,
+                                )
+                                break
+                    else:
+                        prev_msg = ""
+                        if result:
+                            prev_msg = " ".join(result["message"]) + ". In addition, "
+                        result = {
+                            "res": False,
+                            "message": [
+                                prev_msg
+                                + f"none of the specified sources were found or contained the key {key}."
+                            ],
+                        }
             if result["res"] is False:
                 ret["result"] = result["res"]
                 ret["comment"].extend(result["message"])
