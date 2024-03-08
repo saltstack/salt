@@ -15,6 +15,7 @@ import time
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
@@ -471,6 +472,12 @@ def _netstat_route_linux():
     """
     ret = []
     cmd = "netstat -A inet -rn | tail -n+3"
+    which_netstat = salt.utils.path.which("netstat")
+    is_busybox = salt.utils.path.islink(which_netstat) and salt.utils.path.readlink(
+        which_netstat
+    ).endswith("/busybox")
+    if is_busybox:
+        cmd = "netstat -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
@@ -484,6 +491,9 @@ def _netstat_route_linux():
                 "interface": comps[7],
             }
         )
+    # No IPv6 in BusyBox'es netstat:
+    if is_busybox:
+        return ret
     cmd = "netstat -A inet6 -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
