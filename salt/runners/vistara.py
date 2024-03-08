@@ -87,7 +87,7 @@ def delete_device(name, safety_on=True):
     if not config:
         return False
 
-    access_token = _get_oath2_access_token(
+    access_token = _get_oauth2_access_token(
         config["client_key"], config["client_secret"]
     )
 
@@ -178,7 +178,7 @@ def _delete_resource(device_id, client_id, access_token):
     return respbodydict
 
 
-def _get_oath2_access_token(client_key, client_secret):
+def _get_oauth2_access_token(client_key, client_secret):
     """
     Query the vistara API and get an access_token
 
