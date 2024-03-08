@@ -292,7 +292,7 @@ class Runner(RunnerClient):
                     print(f"jid: {self.jid}")
 
                 if self.opts.get("eauth"):
-                    ret = self.cmd_sync(low)
+                    ret = self.cmd_sync(low, timeout=self.opts.get("timeout"))
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
                         outputter = ret["outputter"]
                         ret = ret["data"]
