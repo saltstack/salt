@@ -39,19 +39,19 @@ def _parse_numbers(text):
         return decimal.Decimal(text)
 
     try:
-        postPrefixes = {
-            "K": "10E3",
-            "M": "10E6",
-            "G": "10E9",
-            "T": "10E12",
-            "P": "10E15",
-            "E": "10E18",
-            "Z": "10E21",
-            "Y": "10E24",
+        unit_suffixes = {
+            "K": "1E3",
+            "M": "1E6",
+            "G": "1E9",
+            "T": "1E12",
+            "P": "1E15",
+            "E": "1E18",
+            "Z": "1E21",
+            "Y": "1E24",
         }
-        if text[-1] in postPrefixes.keys():
+        if text[-1] in unit_suffixes.keys():
             v = decimal.Decimal(text[:-1])
-            v = v * decimal.Decimal(postPrefixes[text[-1]])
+            v = v * decimal.Decimal(unit_suffixes[text[-1]])
             return v
         else:
             return decimal.Decimal(text)
