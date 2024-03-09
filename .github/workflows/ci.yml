@@ -67,28 +67,10 @@ jobs:
             repo:
               - added|modified:
                 - '**'
-            doc-requirements:
-              - added|modified: &doc_requirements
-                - requirements/static/ci/py3.*/docs.txt
-            lint-requirements:
-              - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.txt
-            pkg_requirements:
-              - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.txt
-                - requirements/static/pkg/py3.*/linux.txt
-                - requirements/static/pkg/py3.*/freebsd.txt
-                - requirements/static/pkg/py3.*/windows.txt
-            test_requirements:
-              - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.txt
-                - requirements/static/ci/py3.*/linux.txt
-                - requirements/static/ci/py3.*/freebsd.txt
-                - requirements/static/ci/py3.*/windows.txt
-                - requirements/static/ci/py3.*/darwin-crypto.txt
-                - requirements/static/ci/py3.*/linux-crypto.txt
-                - requirements/static/ci/py3.*/freebsd-crypto.txt
-                - requirements/static/ci/py3.*/windows-crypto.txt
+            requirements:
+              - added|modified: &requirements
+                - requirements/*.txt
+                - poetry.lock
             deleted:
               - deleted:
                 - '**'
@@ -96,7 +78,7 @@ jobs:
               - added|modified:
                 - doc/**
                 - .github/workflows/build-docs.yml
-                - *doc_requirements
+                - *requirements
             workflows:
               - added|modified:
                 - cicd/shared-gh-workflows-context.yml
@@ -117,19 +99,18 @@ jobs:
             lint:
               - added|modified:
                 - .pylintrc
-                - *lint_requirements
+                - *requirements
             golden_images:
               - added|modified:
                 - cicd/golden-images.json
             pkg_tests:
               - added|modified: &pkg_tests_added_modified
                 - pkg/**
-                - *pkg_requirements
+                - *requirements
                 - *salt_added_modified
             testrun:
               - added|modified:
-                - *pkg_requirements
-                - *test_requirements
+                - *requirements
                 - *salt_added_modified
                 - *tests_added_modified
                 - *pkg_tests_added_modified
@@ -146,12 +127,12 @@ jobs:
 
       - name: Pretty Print The GH Actions Event
         run:
-          tools ci print-gh-event
+          poetry run tools ci print-gh-event
 
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
-          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+          poetry run tools ci define-cache-seed ${{ env.CACHE_SEED }}
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -166,12 +147,12 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools ci get-pr-test-labels --repository ${{ github.repository }}
+          poetry run tools ci get-pr-test-labels --repository ${{ github.repository }}
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/*.txt', 'poetry.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -185,7 +166,7 @@ jobs:
       - name: Process Changed Files
         id: process-changed-files
         run: |
-          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+          poetry run tools ci process-changed-files ${{ github.event_name }} changed-files.json
 
       - name: Check Collected Changed Files
         if: ${{ github.event_name == 'pull_request' }}
@@ -195,7 +176,7 @@ jobs:
       - name: Define Runner Types
         id: runner-types
         run: |
-          tools ci runner-types ${{ github.event_name }}
+          poetry run tools ci runner-types ${{ github.event_name }}
 
       - name: Check Defined Runners
         run: |
@@ -204,7 +185,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs ${{ github.event_name }} changed-files.json
+          poetry run tools ci define-jobs ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
@@ -215,19 +196,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools ci get-releases
+          poetry run tools ci get-releases
 
       - name: Get Latest Salt Releases for Testing
         id: get-testing-releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
+          poetry run tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
       - name: Define Testrun
         id: define-testrun
         run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
+          poetry run tools ci define-testrun ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Test Run
         run: |
@@ -265,6 +246,7 @@ jobs:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -295,22 +277,22 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb --draft
-          tools changelog update-deb
+          poetry run tools changelog update-deb --draft
+          poetry run tools changelog update-deb
 
       - name: Update RPM changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-rpm --draft
-          tools changelog update-rpm
+          poetry run tools changelog update-rpm --draft
+          poetry run tools changelog update-rpm
 
       - name: Update Release Notes
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-release-notes --draft
-          tools changelog update-release-notes
+          poetry run tools changelog update-release-notes --draft
+          poetry run tools changelog update-release-notes
 
       - name: Generate MAN Pages
         shell: bash
@@ -319,14 +301,14 @@ jobs:
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
         run: |
-          tools docs man
+          poetry run tools docs man
 
       - name: Update Changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-changelog-md --draft
-          tools changelog update-changelog-md
+          poetry run tools changelog update-changelog-md --draft
+          poetry run tools changelog update-changelog-md
 
       - name: Show Changes Diff
         shell: bash
@@ -1889,7 +1871,7 @@ jobs:
       - name: Upload Code Coverage To Codecov
         if: ${{ ! github.event.repository.private }}
         run: |
-          tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
+          poetry run tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
       - name: Combine Code Coverage
         run: |

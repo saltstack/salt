@@ -146,7 +146,7 @@ concurrency:
 
       - name: Upload Release Artifacts
         run: |
-          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
+          poetry run tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
       - name: Upload PyPi Artifacts
         uses: actions/upload-artifact@v4
@@ -225,6 +225,6 @@ concurrency:
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
-          tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          poetry run tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
 <%- endblock jobs %>

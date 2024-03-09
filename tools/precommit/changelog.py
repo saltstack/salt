@@ -8,10 +8,9 @@ from __future__ import annotations
 import logging
 import pathlib
 import re
-import sys
 
 from ptscripts import Context, command_group
-from ptscripts.models import VirtualEnvPipConfig
+from ptscripts.models import VirtualEnvPoetryConfig
 
 import tools.utils
 
@@ -35,16 +34,7 @@ changelog = command_group(
     name="changelog",
     help="Changelog tools",
     description=__doc__,
-    venv_config=VirtualEnvPipConfig(
-        requirements_files=[
-            tools.utils.REPO_ROOT
-            / "requirements"
-            / "static"
-            / "ci"
-            / "py{}.{}".format(*sys.version_info)
-            / "changelog.txt",
-        ],
-    ),
+    venv_config=VirtualEnvPoetryConfig(groups=["changelog"]),
     parent="pre-commit",
 )
 

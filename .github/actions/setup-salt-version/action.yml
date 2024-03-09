@@ -40,4 +40,4 @@ runs:
         if [ "${{ inputs.cwd }}" != "" ]; then
           cd "${{ inputs.cwd }}"
         fi
-        tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.release == 'true' && '--release' || '' }} ${{ inputs.salt-version }}
+        poetry run tools pkg set-salt-version --overwrite ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.release == 'true' && '--release' || '' }} ${{ inputs.salt-version }}

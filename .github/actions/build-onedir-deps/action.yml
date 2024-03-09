@@ -46,7 +46,7 @@ runs:
           ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
             hashFiles(
               format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
+              'requirements/*.txt', 'poetry.lock',
               '.github/actions/build-onedir-deps/action.yml',
               '.github/workflows/build-deps-onedir-*.yml',
               'cicd/shared-gh-workflows-context.yml'
@@ -57,9 +57,9 @@ runs:
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
-        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
+        poetry run tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
       run: |
-        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
+        poetry run tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}

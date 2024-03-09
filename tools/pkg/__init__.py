@@ -19,7 +19,7 @@ import tempfile
 
 import yaml
 from ptscripts import Context, command_group
-from ptscripts.models import VirtualEnvPipConfig
+from ptscripts.models import VirtualEnvPoetryConfig
 
 import tools.utils
 
@@ -120,9 +120,13 @@ def set_salt_version(
     """
     salt_version_file = tools.utils.REPO_ROOT / "salt" / "_version.txt"
     if salt_version_file.exists():
+        contents = salt_version_file.read_text(encoding="utf-8").strip()
+        msg = f"The 'salt/_version.txt' file already exists with contents: '{contents}'"
         if not overwrite:
-            ctx.error("The 'salt/_version.txt' file already exists")
+            ctx.error(msg)
             ctx.exit(1)
+        ctx.warn(msg)
+        ctx.info("Removing existing 'salt/_version.txt' file")
         salt_version_file.unlink()
     if salt_version is None:
         if not tools.utils.REPO_ROOT.joinpath(".git").exists():
@@ -138,12 +142,7 @@ def set_salt_version(
     elif validate_version:
         ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
         with ctx.virtualenv(
-            name="set-salt-version",
-            config=VirtualEnvPipConfig(
-                requirements_files=[
-                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
-                ]
-            ),
+            name="set-salt-version", config=VirtualEnvPoetryConfig(no_root=False)
         ) as venv:
             code = f"""
             import sys
@@ -201,10 +200,11 @@ def set_salt_version(
 
     gh_env_file = os.environ.get("GITHUB_ENV", None)
     if gh_env_file is not None:
-        variable_text = f"SALT_VERSION={salt_version}"
-        ctx.info(f"Writing '{variable_text}' to '$GITHUB_ENV' file:", gh_env_file)
-        with open(gh_env_file, "w", encoding="utf-8") as wfh:
-            wfh.write(f"{variable_text}\n")
+        for variable in ("SALT_VERSION", "POETRY_DYNAMIC_VERSIONING_BYPASS"):
+            variable_text = f"{variable}={salt_version}"
+            ctx.info(f"Writing '{variable_text}' to '$GITHUB_ENV' file:", gh_env_file)
+            with open(gh_env_file, "w", encoding="utf-8") as wfh:
+                wfh.write(f"{variable_text}\n")
 
     gh_output_file = os.environ.get("GITHUB_OUTPUT", None)
     if gh_output_file is not None:
@@ -374,11 +374,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 
 @pkg.command(
     name="source-tarball",
-    venv_config=VirtualEnvPipConfig(
-        requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ],
-    ),
+    venv_config=VirtualEnvPoetryConfig(groups=["build"]),
 )
 def source_tarball(ctx: Context):
     shutil.rmtree("dist/", ignore_errors=True)
@@ -397,11 +393,9 @@ def source_tarball(ctx: Context):
         },
     }
     ctx.run(
-        "python3",
-        "-m",
+        "poetry",
         "build",
-        "--sdist",
-        str(tools.utils.REPO_ROOT),
+        "--format=sdist",
         env=env,
         check=True,
     )
@@ -417,16 +411,12 @@ def source_tarball(ctx: Context):
             for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
-    ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
+    ctx.run("poetry", "run", "python", "-m", "twine", "check", "dist/*", check=True)
 
 
 @pkg.command(
     name="pypi-upload",
-    venv_config=VirtualEnvPipConfig(
-        requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ],
-    ),
+    venv_config=VirtualEnvPoetryConfig(groups=["build"]),
     arguments={
         "files": {
             "help": "Files to upload to PyPi",
@@ -439,7 +429,14 @@ def source_tarball(ctx: Context):
 )
 def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
     ctx.run(
-        "python3", "-m", "twine", "check", *[str(fpath) for fpath in files], check=True
+        "poetry",
+        "run",
+        "python",
+        "-m",
+        "twine",
+        "check",
+        *[str(fpath) for fpath in files],
+        check=True,
     )
     if test is True:
         repository_url = "https://test.pypi.org/legacy/"
@@ -451,8 +448,8 @@ def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
         ctx.error("The 'TWINE_PASSWORD' variable is not set. Cannot upload.")
         ctx.exit(1)
     cmdline = [
-        "twine",
-        "upload",
+        "poetry",
+        "publish",
         f"--repository-url={repository_url}",
         "--username=__token__",
     ]

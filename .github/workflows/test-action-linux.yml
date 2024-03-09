@@ -101,7 +101,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }}
+          poetry run tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }}
 
   test:
     name: Test
@@ -154,10 +154,6 @@ jobs:
         with:
           name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
 
-      - name: PyPi Proxy
-        run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
@@ -180,23 +176,23 @@ jobs:
         env:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
+          poetry run tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         run: |
-          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+          poetry run tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
       - name: Upload Checkout To VM
         run: |
-          tools --timestamps vm rsync ${{ inputs.distro-slug }}
+          poetry run tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+          poetry run tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
       - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+          poetry run tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
@@ -204,7 +200,7 @@ jobs:
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --core-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
@@ -213,7 +209,7 @@ jobs:
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
@@ -221,7 +217,7 @@ jobs:
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
 
@@ -229,7 +225,7 @@ jobs:
         id: run-core-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
 
@@ -237,7 +233,7 @@ jobs:
         id: run-flaky-tests
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
@@ -245,7 +241,7 @@ jobs:
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             -E TEST_GROUP ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
             --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
@@ -253,13 +249,13 @@ jobs:
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success'
         run: |
-          tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
+          poetry run tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
-          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
+          poetry run tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
@@ -271,7 +267,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
+          poetry run tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'

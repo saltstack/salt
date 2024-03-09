@@ -133,7 +133,7 @@ jobs:
           APPLE_TEAM_ID: "${{ secrets.MAC_SIGN_APPLE_TEAM_ID }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
         run: |
-          tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+          poetry run tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
               format(
                 '--onedir salt-{0}-onedir-macos-{1}.tar.xz --salt-version {0} {2}',
@@ -221,18 +221,18 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
         run: |
-          tools pkg configure-git
+          poetry run tools pkg configure-git
 
       - name: Apply release patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
         run: |
-          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          poetry run tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Build Deb
         working-directory: pkgs/checkout/
         run: |
-          tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+          poetry run tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
@@ -307,16 +307,16 @@ jobs:
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools pkg configure-git
+          poetry run tools pkg configure-git
 
       - name: Apply release patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          poetry run tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Build RPM
         run: |
-          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+          poetry run tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
@@ -421,7 +421,7 @@ jobs:
 
       - name: Build Windows Packages
         run: |
-          tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+          poetry run tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
             inputs.source == 'onedir' &&
             format(
               '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',

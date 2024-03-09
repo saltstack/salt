@@ -15,6 +15,8 @@ inputs:
 outputs:
   version:
     value: ${{ steps.get-version.outputs.version }}
+  cache-prefix:
+    value: ${{ steps.cache-hash.outputs.cache-prefix }}
 
 
 env:
@@ -33,39 +35,29 @@ runs:
       with:
         python-binary: python3
 
+    - uses: ./.github/actions/setup-poetry
+      id: setup-poetry
+      with:
+        cache-prefix: ${{ inputs.cache-prefix }}
+
     - name: Define Cache Hash
-      id: venv-hash
+      id: cache-hash
       shell: bash
       run: |
-        VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
-          steps.get-python-version.outputs.version-sha256sum }}|${{
-          hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
-        echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
-        echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
-
-    - uses: ./.github/actions/cached-virtualenv
-      id: tools-virtualenv
-      with:
-        name: tools.${{ steps.venv-hash.outputs.venv-hash }}
-        cache-seed: tools|${{ steps.venv-hash.outputs.venv-hash }}
+        echo "TOOLS_VIRTUALENV_CACHE_SEED=${{ steps.setup-poetry.outputs.poetry-hash }}" | tee -a "${GITHUB_ENV}"
+        echo "cache-prefix=${{ steps.setup-poetry.outputs.poetry-hash }}" | tee -a "${GITHUB_OUTPUT}"
 
     - name: Restore Python Tools Virtualenvs Cache
-      uses: actions/cache@v3.3.1
+      uses: actions/cache@v4
       with:
         path: ${{ inputs.cwd }}/.tools-venvs
-        key: ${{ inputs.cache-prefix }}|${{ steps.venv-hash.outputs.venv-hash }}
+        key: ${{ steps.setup-poetry.outputs.poetry-hash }}|tools-venvs
 
     - name: Install 'python-tools-scripts'
       shell: bash
       working-directory: ${{ inputs.cwd }}
       run: |
-        PYTHON_EXE=${{ steps.tools-virtualenv.outputs.python-executable }}
-        (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
-        if [ $exitcode -eq 0 ]; then
-          ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
-        else
-          ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
-        fi
+        poetry install --no-root --with=tools
 
     - name: Get 'python-tools-scripts' Version
       id: get-version
@@ -73,6 +65,6 @@ runs:
       working-directory: ${{ inputs.cwd }}
       run: |
         # The first time `tools` runs with newer virtual enviroments we need to disregard the output
-        tools --debug --version
-        VERSION=$(tools --version | tail -n 1)
+        poetry run tools --debug --version
+        VERSION=$(poetry run tools --version | tail -n 1)
         echo "version=$VERSION" >> "${GITHUB_OUTPUT}"

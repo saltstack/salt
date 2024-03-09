@@ -45,7 +45,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -65,8 +65,7 @@ else:
     PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
 PRINT_SYSTEM_INFO_ONLY = os.environ.get("PRINT_SYSTEM_INFO_ONLY", "0") == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
-EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
-COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
+POETRY_REQUIREMENT = os.environ.get("POETRY_REQUIREMENT")
 
 # Global Path Definitions
 REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
@@ -85,7 +84,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10")
+_PYTHON_VERSIONS = ("3", "3.7", "3.8", "3.9", "3.10", "3.11")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -186,167 +185,43 @@ def _get_session_python_version_info(session):
     return version_info
 
 
-def _get_pydir(session):
-    version_info = _get_session_python_version_info(session)
-    if version_info < (3, 5):
-        session.error("Only Python >= 3.5 is supported")
-    if IS_WINDOWS and version_info < (3, 6):
-        session.error("Only Python >= 3.6 is supported on Windows")
-    return "py{}.{}".format(*version_info)
-
-
-def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
-    assert requirements_type in ("ci", "pkg")
-    pydir = _get_pydir(session)
-
-    if IS_WINDOWS:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "windows.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a windows requirements file for {pydir}")
-    elif IS_DARWIN:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "darwin.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a darwin requirements file for {pydir}")
-    elif IS_FREEBSD:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "freebsd.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a freebsd requirements file for {pydir}")
-    else:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "linux.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a linux requirements file for {pydir}")
-
-
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
+def _install_requirements(session, *, groups=(), no_root=False, onedir=False):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return False
 
-    env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
-    install_command = [
-        "python",
-        "-m",
-        "pip",
-        "install",
-        "--progress-bar=off",
-    ]
-    if upgrade:
-        install_command.append("-U")
-    install_command.extend(["setuptools", "pip", "wheel"])
-    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT, env=env)
-    return True
-
-
-def _install_requirements(
-    session,
-    *extra_requirements,
-    requirements_type="ci",
-    onedir=False,
-):
     if onedir and IS_LINUX:
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
-
-    if not _upgrade_pip_setuptools_and_wheel(session):
-        return False
 
     # Install requirements
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
 
-    requirements_file = _get_pip_requirements_file(
-        session, requirements_type=requirements_type
+    poetry = shutil.which("poetry", path=os.pathsep.join(session.virtualenv.bin_paths))
+    if poetry is None:
+        session.log("Installing poetry in the virtual environment")
+        poerty_requirement = POETRY_REQUIREMENT
+        if poerty_requirement is None:
+            poerty_requirement = "poetry>=1.8.0"
+        session.install(poerty_requirement, silent=PIP_INSTALL_SILENT, env=env)
+
+    session_run_always(session, "poetry", "--version", external="error")
+
+    cmdline = ["poetry", "install"]
+    if no_root:
+        cmdline.append("--no-root")
+    for group in groups:
+        cmdline.append(f"--with={group}")
+    session_run_always(
+        session, *cmdline, silent=PIP_INSTALL_SILENT, env=env, external="error"
     )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
-
-    if extra_requirements:
-        install_command = ["--progress-bar=off"]
-        install_command += list(extra_requirements)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
-
-    if EXTRA_REQUIREMENTS_INSTALL:
-        session.log(
-            "Installing the following extra requirements because the"
-            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
-            EXTRA_REQUIREMENTS_INSTALL,
-        )
-        # We pass --constraint in this step because in case any of these extra dependencies has a requirement
-        # we're already using, we want to maintain the locked version
-        install_command = ["--progress-bar=off", "--constraint", requirements_file]
-        install_command += EXTRA_REQUIREMENTS_INSTALL.split()
-        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
-
     return True
 
 
-def _install_coverage_requirement(session):
-    if SKIP_REQUIREMENTS_INSTALL is False:
-        env = os.environ.copy()
-        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
-        coverage_requirement = COVERAGE_REQUIREMENT
-        if coverage_requirement is None:
-            coverage_requirement = "coverage==7.3.1"
-            if IS_LINUX:
-                distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
-                if distro_slug is not None and distro_slug in (
-                    "centos-7",
-                    "debian-10",
-                    "photonos-3",
-                ):
-                    # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
-                    # Unit tests don't finish before the 5 hours timeout when they should
-                    # finish within 1 to 2 hours.
-                    coverage_requirement = "coverage==5.5"
-        session.install(
-            "--progress-bar=off",
-            coverage_requirement,
-            silent=PIP_INSTALL_SILENT,
-            env=env,
-        )
-
-
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
-    _install_coverage_requirement(session)
+    _install_requirements(session, groups=["test", "coverage"])
     if on_rerun is False:
         session.run("coverage", "erase")
 
@@ -407,7 +282,7 @@ def _report_coverage(
     xml_report=False,
     json_report=False,
 ):
-    _install_coverage_requirement(session)
+    _install_requirements(session, groups=["coverage"])
 
     if not any([combine, cli_report, html_report, xml_report, json_report]):
         session.error(
@@ -540,37 +415,16 @@ def _report_coverage(
 @nox.session(python=_PYTHON_VERSIONS, name="test-parametrized")
 @nox.parametrize("coverage", [False, True])
 @nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
-def test_parametrized(session, coverage, transport, crypto):
+def test_parametrized(session, coverage, transport):
     """
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    if _install_requirements(session):
-
-        if crypto:
-            session_run_always(
-                session,
-                "pip",
-                "uninstall",
-                "-y",
-                "m2crypto",
-                "pycrypto",
-                "pycryptodome",
-                "pycryptodomex",
-                silent=True,
-            )
-            install_command = [
-                "--progress-bar=off",
-                "--constraint",
-                _get_pip_requirements_file(session, crypto=True),
-            ]
-            install_command.append(crypto)
-            session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
-    cmd_args = [
-        f"--transport={transport}",
-    ] + session.posargs
+    groups = ["test"]
+    if coverage:
+        groups.append("coverage")
+    _install_requirements(session, groups=groups)
+    cmd_args = [f"--transport={transport}"] + session.posargs
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
@@ -578,7 +432,7 @@ def test_parametrized(session, coverage, transport, crypto):
 @nox.parametrize("coverage", [False, True])
 def test(session, coverage):
     """
-    pytest session with zeromq transport and default crypto
+    pytest session with zeromq transport
     """
     session.notify(
         find_session_runner(
@@ -586,36 +440,16 @@ def test(session, coverage):
             "test-parametrized",
             session.python,
             coverage=coverage,
-            crypto=None,
             transport="zeromq",
         )
     )
-
-
-@nox.session(python=_PYTHON_VERSIONS)
-@nox.parametrize("coverage", [False, True])
-def pytest(session, coverage):
-    """
-    pytest session with zeromq transport and default crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-tcp")
 @nox.parametrize("coverage", [False, True])
 def test_tcp(session, coverage):
     """
-    pytest session with TCP transport and default crypto
+    pytest session with TCP transport
     """
     session.notify(
         find_session_runner(
@@ -623,36 +457,16 @@ def test_tcp(session, coverage):
             "test-parametrized",
             session.python,
             coverage=coverage,
-            crypto=None,
             transport="tcp",
         )
     )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp")
-@nox.parametrize("coverage", [False, True])
-def pytest_tcp(session, coverage):
-    """
-    pytest session with TCP transport and default crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-zeromq")
 @nox.parametrize("coverage", [False, True])
 def test_zeromq(session, coverage):
     """
-    pytest session with zeromq transport and default crypto
+    pytest session with zeromq transport
     """
     session.notify(
         find_session_runner(
@@ -660,251 +474,9 @@ def test_zeromq(session, coverage):
             "test-parametrized",
             session.python,
             coverage=coverage,
-            crypto=None,
             transport="zeromq",
         )
     )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq")
-@nox.parametrize("coverage", [False, True])
-def pytest_zeromq(session, coverage):
-    """
-    pytest session with zeromq transport and default crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def test_m2crypto(session, coverage):
-    """
-    pytest session with zeromq transport and m2crypto
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="m2crypto",
-            transport="zeromq",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def pytest_m2crypto(session, coverage):
-    """
-    pytest session with zeromq transport and m2crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def test_tcp_m2crypto(session, coverage):
-    """
-    pytest session with TCP transport and m2crypto
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="m2crypto",
-            transport="tcp",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def pytest_tcp_m2crypto(session, coverage):
-    """
-    pytest session with TCP transport and m2crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def test_zeromq_m2crypto(session, coverage):
-    """
-    pytest session with zeromq transport and m2crypto
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="m2crypto",
-            transport="zeromq",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-m2crypto")
-@nox.parametrize("coverage", [False, True])
-def pytest_zeromq_m2crypto(session, coverage):
-    """
-    pytest session with zeromq transport and m2crypto
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def test_pycryptodome(session, coverage):
-    """
-    pytest session with zeromq transport and pycryptodome
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="pycryptodome",
-            transport="zeromq",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def pytest_pycryptodome(session, coverage):
-    """
-    pytest session with zeromq transport and pycryptodome
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def test_tcp_pycryptodome(session, coverage):
-    """
-    pytest session with TCP transport and pycryptodome
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="pycryptodome",
-            transport="tcp",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def pytest_tcp_pycryptodome(session, coverage):
-    """
-    pytest session with TCP transport and pycryptodome
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def test_zeromq_pycryptodome(session, coverage):
-    """
-    pytest session with zeromq transport and pycryptodome
-    """
-    session.notify(
-        find_session_runner(
-            session,
-            "test-parametrized",
-            session.python,
-            coverage=coverage,
-            crypto="pycryptodome",
-            transport="zeromq",
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def pytest_zeromq_pycryptodome(session, coverage):
-    """
-    pytest session with zeromq transport and pycryptodome
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-cloud")
@@ -913,19 +485,10 @@ def test_cloud(session, coverage):
     """
     pytest cloud tests session
     """
-    pydir = _get_pydir(session)
-    if pydir == "py3.5":
-        session.error(
-            "Due to conflicting and unsupported requirements the cloud tests only run on Py3.6+"
-        )
-    # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "cloud.txt"
-        )
-
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    groups = ["test", "cloud"]
+    if coverage:
+        groups.append("coverage")
+    _install_requirements(session, groups=groups)
 
     cmd_args = [
         "--run-expensive",
@@ -933,62 +496,6 @@ def test_cloud(session, coverage):
         "cloud",
     ] + session.posargs
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
-@nox.parametrize("coverage", [False, True])
-def pytest_cloud(session, coverage):
-    """
-    pytest cloud tests session
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-tornado")
-@nox.parametrize("coverage", [False, True])
-def test_tornado(session, coverage):
-    """
-    pytest tornado tests session
-    """
-    # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session)
-        session.install(
-            "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
-        )
-        session.install(
-            "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
-        )
-    _pytest(session, coverage=coverage, cmd_args=session.posargs)
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
-@nox.parametrize("coverage", [False, True])
-def pytest_tornado(session, coverage):
-    """
-    pytest tornado tests session
-    """
-    try:
-        session_name = session.name
-    except AttributeError:
-        session_name = session._runner.friendly_name
-    session_warn(
-        session,
-        "This nox session is deprecated, please call {!r} instead".format(
-            session_name.replace("pytest-", "test-")
-        ),
-    )
-    session.notify(session_name.replace("pytest-", "test-"))
 
 
 def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
@@ -1058,7 +565,11 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
 
 def _ci_test(session, transport, onedir=False):
     # Install requirements
-    _install_requirements(session, onedir=onedir)
+    groups = ["test"]
+    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
+    if track_code_coverage:
+        groups.append("coverage")
+    _install_requirements(session, groups=groups)
     env = {}
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
@@ -1112,7 +623,6 @@ def _ci_test(session, transport, onedir=False):
             runtests_log_filename = f"runtests-grp{test_group_number}"
 
     rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
-    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
 
     common_pytest_args = [
         "--color=yes",
@@ -1377,12 +887,7 @@ def pre_archive_cleanup(session, pkg):
             "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
         )
 
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, groups=["tools"], no_root=True)
 
     cmdline = [
         "tools",
@@ -1451,78 +956,6 @@ def create_json_coverage_reports_onedir(session):
     _report_coverage(session, combine=True, cli_report=False, json_report=True)
 
 
-class Tee:
-    """
-    Python class to mimic linux tee behaviour
-    """
-
-    def __init__(self, first, second):
-        self._first = first
-        self._second = second
-
-    def write(self, b):
-        wrote = self._first.write(b)
-        self._first.flush()
-        self._second.write(b)
-        self._second.flush()
-
-    def fileno(self):
-        return self._first.fileno()
-
-
-def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
-    if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        base_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
-        )
-        lint_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "lint.txt"
-        )
-        install_command = [
-            "--progress-bar=off",
-            "-r",
-            base_requirements_file,
-            "-r",
-            lint_requirements_file,
-        ]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
-    cmd_args = ["pylint", f"--rcfile={rcfile}"] + list(flags) + list(paths)
-    cmd_kwargs = {"env": {"PYTHONUNBUFFERED": "1"}}
-    session.run(*cmd_args, **cmd_kwargs)
-
-
-def _lint_pre_commit(session, rcfile, flags, paths):
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    session._runner.venv = VirtualEnv(
-        os.environ["VIRTUAL_ENV"],
-        interpreter=session._runner.func.python,
-        reuse_existing=True,
-        venv=True,
-    )
-    _lint(
-        session,
-        rcfile,
-        flags,
-        paths,
-        upgrade_setuptools_and_pip=False,
-    )
-
-
 @nox.session(python="3")
 def lint(session):
     """
@@ -1537,13 +970,12 @@ def lint_salt(session):
     """
     Run PyLint against Salt.
     """
-    flags = ["--disable=I"]
-    if session.posargs:
-        paths = session.posargs
-    else:
-        # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
-    _lint(session, ".pylintrc", flags, paths)
+    session_warn(
+        session,
+        "Please stop using this nox session and start using the 'tools' command shown below.",
+    )
+    _install_requirements(session, groups=["tools"], no_root=True)
+    session.run("tools", "lint", "salt", *session.posargs)
 
 
 @nox.session(python="3", name="lint-tests")
@@ -1551,38 +983,12 @@ def lint_tests(session):
     """
     Run PyLint against Salt and it's test suite.
     """
-    flags = ["--disable=I"]
-    if session.posargs:
-        paths = session.posargs
-    else:
-        paths = ["tests/"]
-    _lint(session, ".pylintrc", flags, paths)
-
-
-@nox.session(python=False, name="lint-salt-pre-commit")
-def lint_salt_pre_commit(session):
-    """
-    Run PyLint against Salt.
-    """
-    flags = ["--disable=I"]
-    if session.posargs:
-        paths = session.posargs
-    else:
-        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
-    _lint_pre_commit(session, ".pylintrc", flags, paths)
-
-
-@nox.session(python=False, name="lint-tests-pre-commit")
-def lint_tests_pre_commit(session):
-    """
-    Run PyLint against Salt and it's test suite.
-    """
-    flags = ["--disable=I"]
-    if session.posargs:
-        paths = session.posargs
-    else:
-        paths = ["tests/"]
-    _lint_pre_commit(session, ".pylintrc", flags, paths)
+    session_warn(
+        session,
+        "Please stop using this nox session and start using the 'tools' command shown below.",
+    )
+    _install_requirements(session, groups=["tools"], no_root=True)
+    session.run("tools", "lint", "tests", *session.posargs)
 
 
 @nox.session(python="3")
@@ -1613,12 +1019,7 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, groups=["docs"])
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1636,12 +1037,7 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, groups=["docs"])
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1665,12 +1061,7 @@ def changelog(session, draft, force):
         session,
         "Please stop using this nox session and start using the 'tools' command shown below.",
     )
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
-        )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, groups=["tools"], no_root=True)
 
     cmd = ["tools", "changelog", "update-changelog-md"]
     if draft:
@@ -1747,6 +1138,7 @@ def build(session):
 
         git show -s --format=%at HEAD
     """
+    _install_requirements(session, groups=["build"], no_root=True)
     shutil.rmtree("dist/", ignore_errors=True)
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
@@ -1875,8 +1267,12 @@ def ci_test_onedir_pkgs(session):
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
     # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "pyzmq")
+    groups = ["test"]
+    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
+    if track_code_coverage:
+        groups.append("coverage")
+    _install_requirements(session, groups=groups)
+
     env = {
         "ONEDIR_TESTRUN": "1",
         "PKG_TEST_TYPE": chunk,

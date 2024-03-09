@@ -1,8 +1,0 @@
---constraint=../pkg/py{py_version}/{platform}.txt
-
-dmidecode
-patch
-pygit2>=1.10.1
-sed
-pywinrm>=0.4.1
-yamllint

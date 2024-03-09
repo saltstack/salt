@@ -34,6 +34,7 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   <%- endif %>
 
@@ -86,15 +87,15 @@
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb --draft
-          tools changelog update-deb
+          poetry run tools changelog update-deb --draft
+          poetry run tools changelog update-deb
 
       - name: Update RPM changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-rpm --draft
-          tools changelog update-rpm
+          poetry run tools changelog update-rpm --draft
+          poetry run tools changelog update-rpm
 
       - name: Update Release Notes
         shell: bash
@@ -102,15 +103,15 @@
         run: |
           <%- if gh_environment == 'nightly' %>
           if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
-              tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
-              tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
+              poetry run tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
+              poetry run tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
           else
-              tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
-              tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
+              poetry run tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
+              poetry run tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
           fi
           <%- else %>
-          tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
-          tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
+          poetry run tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
+          poetry run tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
           <%- endif %>
 
       - name: Generate MAN Pages
@@ -120,14 +121,14 @@
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
         run: |
-          tools docs man
+          poetry run tools docs man
 
       - name: Update Changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-changelog-md --draft
-          tools changelog update-changelog-md
+          poetry run tools changelog update-changelog-md --draft
+          poetry run tools changelog update-changelog-md
 
       - name: Show Changes Diff
         shell: bash
@@ -373,7 +374,7 @@
       - name: Upload Code Coverage To Codecov
         if: ${{ ! github.event.repository.private }}
         run: |
-          tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
+          poetry run tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
       - name: Combine Code Coverage
         run: |

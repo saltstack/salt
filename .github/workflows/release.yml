@@ -78,7 +78,7 @@ jobs:
 
       - name: Pretty Print The GH Actions Event
         run:
-          tools ci print-gh-event
+          poetry run tools ci print-gh-event
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -91,33 +91,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          poetry run tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
           if [ "${{ github.event.repository.private }}" = "true" ]; then
-            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+            poetry run tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
           fi
 
       - name: Check Release Staged
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          poetry run tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
       - name: Get Salt Releases
         id: get-salt-releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools ci get-releases
+          poetry run tools ci get-releases
 
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
-          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+          poetry run tools ci define-cache-seed ${{ env.CACHE_SEED }}
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/*.txt', 'poetry.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
@@ -160,7 +160,7 @@ jobs:
 
       - name: Download Onedir Tarball Artifact
         run: |
-          tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
+          poetry run tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
 
       - name: Upload Onedir Tarball as an Artifact
         uses: actions/upload-artifact@v4
@@ -212,7 +212,7 @@ jobs:
       - name: Backup Previous Releases
         id: backup
         run: |
-          tools pkg repo backup-previous-releases
+          poetry run tools pkg repo backup-previous-releases
 
   publish-repositories:
     name: Publish Repositories
@@ -246,7 +246,7 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
-          tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
+          poetry run tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
   pkg-download-tests:
     name: Package Downloads
@@ -325,7 +325,7 @@ jobs:
       - name: Prepare Release
         id: prepare-release
         run: |
-          tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+          poetry run tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Configure Git
         shell: bash
@@ -431,7 +431,7 @@ jobs:
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
-          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          poetry run tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks

@@ -1,3 +1,274 @@
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry]
+name = "salt"
+version = "0.0.0"
+description = "Portable, distributed, remote execution and configuration management system"
+authors = ["Thomas S Hatch <thatch45@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.rst"
+homepage = "https://saltproject.io"
+repository = "https://github.com/saltstack/salt"
+documentation = "https://docs.saltproject.io"
+keywords = ["configuration management", "automation"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Cython",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: System :: Clustering",
+  "Topic :: System :: Distributed Computing",
+]
+include = [
+  "doc/man/salt-api.1",
+  "doc/man/salt-cloud.1",
+  "doc/man/salt-cp.1",
+  "doc/man/salt-key.1",
+  "doc/man/salt-master.1",
+  "doc/man/salt-minion.1",
+  "doc/man/salt-proxy.1",
+  "doc/man/salt-run.1",
+  "doc/man/spm.1",
+  "doc/man/salt.1",
+  "doc/man/salt-ssh.1",
+  "doc/man/salt-syndic.1",
+  "salt/_version.txt",
+  "salt/cloud/deploy/*.sh",
+  "salt/templates/rh_ip/*.jinja",
+  "salt/templates/suse_ip/*.jinja",
+  "salt/templates/debian_ip/*.jinja",
+  "salt/templates/virt/*.jinja",
+  "salt/templates/git/*",
+  "salt/templates/lxc/*",
+]
+
+[tool.poetry.scripts]
+salt = "salt.scripts:salt_main"
+salt-api = "salt.scripts:salt_api"
+salt-call = "salt.scripts:salt_call"
+salt-cloud = "salt.scripts:salt_cloud"
+salt-cp = "salt.scripts:salt_cp"
+salt-key = "salt.scripts:salt_key"
+salt-master = "salt.scripts:salt_master"
+salt-minion = "salt.scripts:salt_minion"
+salt-pip = "salt.scripts:salt_pip"
+salt-proxy = "salt.scripts:salt_proxy"
+salt-run = "salt.scripts:salt_run"
+salt-ssh = "salt.scripts:salt_ssh"
+salt-syndic = "salt.scripts:salt_syndic"
+spm = "salt.scripts:salt_spm"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.poetry-dynamic-versioning.files."salt/_version.txt"]
+persistent-substitution = true
+initial-content = "REPLACE_ME"
+[tool.poetry-dynamic-versioning.substitution]
+files = [
+  "salt/_version.txt"
+]
+patterns = [
+  "(.*)REPLACE_ME(.*)"
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+aiohttp = "^3.9.0"
+cherrypy = "^18.6.0"
+contextvars = "^2.4"
+cryptography = "^42.0.0"
+distro = "^1.5.0"
+importlib-metadata = "^6.0.0"
+jinja2 = "^3.1.3"
+jmespath = "^1.0.1"
+looseversion = "^1.0.2"
+markupsafe = "^2.1.2"
+msgpack = "^1.0.2"
+packaging = ">=23.0"
+psutil = "^5.8.0"
+pyopenssl = "^24.0.0"
+python-dateutil = "^2.8.1"
+python-gnupg = "^0.4.8"
+pyyaml = "^6.0.1"
+pyzmq = "^25.0.0"
+requests = "^2.31.0"
+setproctitle = "^1.3.2"
+timelib = "^0.2.5"
+# Linux only requirements
+rpm-vercmp = {version = "^0.1.2", platform = "linux"}
+# Windows only requirements
+lxml = {version = "^4.9.1", platform = "windows"}
+pymssql = {version = "^2.2.1", platform = "windows"}
+pymysql = {version = "^1.0.2", platform = "windows"}
+pythonnet = {version = "^3.0.1", platform = "windows", python = ">=3.8,<3.13"}
+pywin32 = {version = "^305", platform = "windows"}
+wmi = {version = "^1.5.1", platform = "windows"}
+xmltodict = {version = "^0.13.0", platform = "windows"}
+
+
+[tool.poetry.group.test]
+optional = true
+[tool.poetry.group.test.dependencies]
+bcrypt = "^4.1.2"
+boto = ">=2.46.0"
+boto3 = ">=1.21.46"
+cassandra-driver = ">=2.0"
+certifi = ">=2022.12.07"
+cffi = ">=1.14.6"
+cheetah3 = ">=3.2.2"
+cherrypy = ">=17.4.1"
+clustershell = "^1.8.3"
+dnspython = "^1.16.0"
+docker = "^6.1.3"
+etcd3-py = "0.1.6"
+flaky = "^3.7.0"
+genshi = ">=0.7.3"
+gitpython = ">=3.1.37"
+hglib = {version = "^2.6.1"}
+jmespath = "^1.0.1"
+jsonschema = "^3.2.0"
+keyring = ">=5.7.1"
+kubernetes = "<4.0"
+mako = "^1.2.2"
+mercurial = {version = "^6.0.1"}
+mock = "^5.1.0"
+more-itertools = "^5.0"
+moto = ">=3.0.1"
+passlib = ">=1.7.4"
+pyfakefs = "^5.3.1"
+pygit2 = "^1.13.0"
+pynacl = ">=1.5.0"
+pytest = "^7.3.0"
+pytest-custom-exit-code = "^0.3.0"
+pytest-helpers-namespace = "^2021.12.29"
+pytest-httpserver = {version = "^1.0.8"}
+pytest-salt-factories = ">=1.0.0rc29"
+pytest-subtests = "^0.4.0"
+pytest-timeout = "^2.1.0"
+python-etcd = ">0.4.2"
+pyvmomi = "^6.7.1.2018.12"
+requests = "^2.31.0"
+rfc3987 = "^1.3.8"
+sqlparse = ">=0.4.4"
+strict-rfc3339 = ">=0.7"
+toml = "^0.10.2"
+trustme = {version = "^1.1.0"}
+virtualenv = ">=20.3.0"
+watchdog = ">=0.9.0"
+wempy = "^0.2.1"
+xmldiff = ">=2.4"
+yamllint = {version = "^1.26.3"}
+
+# Linux specific requirements
+ansible = {version = "^9.1.0", platform = "linux", python = ">=3.10,<4.0"}
+kazoo = {version = "^2.6.1", platform = "linux"}
+libnacl = {version = ">=1.7.1", platform = "linux"}
+paramiko = {version = ">=2.10.1", platform = "linux"}
+pyiface = {version = "^0.0.11", platform = "linux"}
+pyinotify = {version = ">=0.9.6", platform = "linux"}
+pymysql = {version = ">=1.0.2", platform = "linux"}
+python-consul = {version = "^1.1.0", platform = "linux"}
+python-telegram-bot = {version = "^13.7", platform = "linux"}
+redis-py-cluster = {version = "^2.1.3", platform = "linux"}
+slack-bolt = {version = "^1.15.5", platform = "linux"}
+twilio = {version = "^7.9.2", platform = "linux"}
+
+# Linux and MacOS requirements
+croniter = {version = "^0.3.29", markers = "sys_platform != 'win32'"}
+junos-eznc = {version = ">=2.4.0", markers = "sys_platform != 'win32'"}
+jxmlease = {version = "^1.0.1", markers = "sys_platform != 'win32'"}
+napalm = {version = "^3.1.0", markers = "sys_platform != 'win32'"}
+
+# Windows specific test requirements
+dmidecode = {version = "^0.9.0", platform = "windows"}
+patch = {version = "^1.16", platform = "windows"}
+pywinrm = {version = "^0.4.1", platform = "windows"}
+sed = {version = "^0.3.1", platform = "windows"}
+
+
+[tool.poetry.group.coverage]
+optional = true
+[tool.poetry.group.coverage.dependencies]
+coverage = "^7.3.1"
+
+
+[tool.poetry.group.build]
+optional = true
+[tool.poetry.group.build.dependencies]
+twine = {version = "^5.0.0"}
+
+
+[tool.poetry.group.changelog]
+optional = true
+[tool.poetry.group.changelog.dependencies]
+towncrier = "^22.12.0"
+
+
+[tool.poetry.group.cloud]
+optional = true
+[tool.poetry.group.cloud.dependencies]
+apache-libcloud = ">=2.5.0"
+netaddr = "^0.7.19"
+profitbricks = "^4.1.3"
+pypsexec = "^0.1.0"
+pyspnego = {version= "^0.8.0"}
+pywinrm = "^0.4.1"
+smbprotocol = "^1.10.0"
+
+
+[tool.poetry.group.docs]
+optional = true
+[tool.poetry.group.docs.dependencies]
+cherrypy = "^18.6.0"
+jinja2 = "^3.1.3"
+myst-docutils = {extras = ["linkify"], version = "^0.18.1"}
+sphinx = {version = "^6.1.3", python = ">=3.9,<4.0"}
+sphinxcontrib-httpdomain = "^1.8.1"
+sphinxcontrib-spelling = "^7.7.0"
+
+
+[tool.poetry.group.lint]
+optional = true
+[tool.poetry.group.lint.dependencies]
+pylint = {version = "^3.1.0"}
+saltpylint = {version = "2024.2.5"}
+toml = ">=0.10.2"  # This is so that isort can be configured on pyproject.toml
+
+
+[tool.poetry.group.tools]
+optional = true
+[tool.poetry.group.tools.dependencies]
+attrs = "^23.2.0"
+boto3 = "^1.34.45"
+jinja2 = "^3.1.3"
+packaging = ">=23.0"
+python-tools-scripts = {extras = ["poetry"], version = "^0.20.5", python = ">=3.9,<4.0"}
+pyyaml = "^6.0.1"
+
+
+[tool.poetry.group.tools-virustotal]
+optional = true
+[tool.poetry.group.tools-virustotal.dependencies]
+virustotal3 = "^1.0.8"
+
 [tool.black]
 exclude= """
 /(
