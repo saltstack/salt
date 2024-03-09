@@ -208,7 +208,7 @@ def get_process_info(pid=None):
 
     # pid_exists can have false positives
     # for example Windows reserves PID 5 in a hack way
-    # another reasons is the the process requires kernel permissions
+    # another reasons is the process requires kernel permissions
     try:
         raw_process_info.status()
     except psutil.NoSuchProcess:

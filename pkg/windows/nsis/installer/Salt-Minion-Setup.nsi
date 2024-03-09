@@ -284,7 +284,7 @@ Function pageMinionConfig
             `hostname` no changes will be made."
     ${Else}
         ${NSD_CreateLabel} 0 75u 100% 60u \
-            "Clicking `Install` will backup the the existing minion config \
+            "Clicking `Install` will backup the existing minion config \
             file and minion.d directories. The values above will be used in \
             the custom config.$\n\
             $\n\

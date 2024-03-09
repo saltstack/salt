@@ -5680,7 +5680,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * 41ae390 Merge pull request `#51231`_ from terminalmage/issue51056
 
-      * 4a61477 Clarify documentation for the the gitfs "all_saltenvs" config param
+      * 4a61477 Clarify documentation for the gitfs "all_saltenvs" config param
 
                       * 0574476 Merge branch '2018.3' into fix_test_pkg
 
