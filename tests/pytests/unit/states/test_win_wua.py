@@ -307,7 +307,7 @@ def test_installed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -414,7 +414,7 @@ def test_installed_test_mode(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -476,7 +476,7 @@ def test_installed_already_installed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -569,7 +569,7 @@ def test_removed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the uninstall variable. This will
@@ -645,7 +645,7 @@ def test_removed_test_mode(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will

@@ -27,7 +27,7 @@ almost exclusively maintained by external corporations – if these corporations
 documentation outlining transfer of ownership it can be handled on a case-by-case basis. The
 community modules can be hosted either in individual or corporate source control systems,
 alternatively they can also be hosted in the community run Salt Extensions Github organization,
-that will operate like the the Salt Formulas Github organization.
+that will operate like the Salt Formulas Github organization.
 The criteria to determine which category to place modules in will follow these rules:
 
 ## Core Modules
