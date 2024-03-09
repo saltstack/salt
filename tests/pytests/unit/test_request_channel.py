@@ -661,7 +661,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
 
     client.transport.send = mocksend
 
-    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # Note the 'ver' value in 'load' does not represent the 'version' sent
     # in the top level of the transport's message.
     load = {
         "id": target,
@@ -737,7 +737,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
 
     client.transport.send = mocksend
 
-    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # Note the 'ver' value in 'load' does not represent the 'version' sent
     # in the top level of the transport's message.
     load = {
         "id": target,
@@ -829,7 +829,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
 
     client.transport.send = mocksend
 
-    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # Note the 'ver' value in 'load' does not represent the 'version' sent
     # in the top level of the transport's message.
     load = {
         "id": target,
@@ -928,7 +928,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
 
     client.transport.send = mocksend
 
-    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # Note the 'ver' value in 'load' does not represent the 'version' sent
     # in the top level of the transport's message.
     load = {
         "id": target,
