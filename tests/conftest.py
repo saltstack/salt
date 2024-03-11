@@ -821,11 +821,14 @@ def pytest_runtest_setup(item):
         entropy_generator.generate_entropy()
 
     if salt.utils.platform.is_windows():
-        unit_tests_paths = (
+        auto_whitelisted_paths = (
             str(TESTS_DIR / "unit"),
             str(PYTESTS_DIR / "unit"),
+            str(PYTESTS_DIR / "pkg"),
         )
-        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(
+            auto_whitelisted_paths
+        ):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
