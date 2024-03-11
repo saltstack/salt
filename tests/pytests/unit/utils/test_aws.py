@@ -7,7 +7,7 @@
 import io
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import requests
@@ -78,11 +78,11 @@ def test_get_metadata_imdsv2():
 def test_assumed_creds_not_updating_dictionary_while_iterating():
     mock_cache = {
         "expired": {
-            "Expiration": time.mktime(datetime.utcnow().timetuple()),
+            "Expiration": time.mktime(datetime.now(tz=timezone.utc).timetuple()),
         },
         "not_expired_1": {
             "Expiration": time.mktime(
-                (datetime.utcnow() + timedelta(days=1)).timetuple()
+                (datetime.now(tz=timezone.utc) + timedelta(days=1)).timetuple()
             ),
             "AccessKeyId": "mock_AccessKeyId",
             "SecretAccessKey": "mock_SecretAccessKey",
@@ -90,7 +90,7 @@ def test_assumed_creds_not_updating_dictionary_while_iterating():
         },
         "not_expired_2": {
             "Expiration": time.mktime(
-                (datetime.utcnow() + timedelta(seconds=300)).timetuple()
+                (datetime.now(tz=timezone.utc) + timedelta(seconds=300)).timetuple()
             ),
         },
     }
@@ -103,11 +103,11 @@ def test_assumed_creds_not_updating_dictionary_while_iterating():
 def test_assumed_creds_deletes_expired_key():
     mock_cache = {
         "expired": {
-            "Expiration": time.mktime(datetime.utcnow().timetuple()),
+            "Expiration": time.mktime(datetime.now(tz=timezone.utc).timetuple()),
         },
         "not_expired_1": {
             "Expiration": time.mktime(
-                (datetime.utcnow() + timedelta(days=1)).timetuple()
+                (datetime.now(tz=timezone.utc) + timedelta(days=1)).timetuple()
             ),
             "AccessKeyId": "mock_AccessKeyId",
             "SecretAccessKey": "mock_SecretAccessKey",
@@ -115,7 +115,7 @@ def test_assumed_creds_deletes_expired_key():
         },
         "not_expired_2": {
             "Expiration": time.mktime(
-                (datetime.utcnow() + timedelta(seconds=300)).timetuple()
+                (datetime.now(tz=timezone.utc) + timedelta(seconds=300)).timetuple()
             ),
         },
     }
@@ -152,7 +152,7 @@ def test_creds_with_role_arn_should_always_call_assumed_creds():
     access_key_id = "mock_AccessKeyId"
     secret_access_key = "mock_SecretAccessKey"
     token = "mock_Token"
-    expiration = (datetime.utcnow() + timedelta(seconds=900)).strftime(
+    expiration = (datetime.now(tz=timezone.utc) + timedelta(seconds=900)).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
 

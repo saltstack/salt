@@ -6,6 +6,7 @@ import datetime
 import hashlib
 import os
 from calendar import month_abbr as months
+from datetime import datetime, timezone
 
 import salt.utils.stringutils
 
@@ -16,7 +17,7 @@ def _utc_now():
     """
     Helper method so tests do not have to patch the built-in method.
     """
-    return datetime.datetime.utcnow()
+    return datetime.now(tz=timezone.utc)
 
 
 def gen_jid(opts):

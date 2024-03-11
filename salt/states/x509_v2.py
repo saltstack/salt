@@ -489,7 +489,7 @@ def certificate_managed(
 
                 if (
                     current.not_valid_after
-                    < datetime.datetime.utcnow()
+                    < datetime.datetime.now(tz=datetime.timezone.utc)
                     + datetime.timedelta(days=days_remaining)
                 ):
                     changes["expiration"] = True
@@ -897,7 +897,7 @@ def crl_managed(
                     changes["encoding"] = encoding
                 if days_remaining and (
                     current.next_update
-                    < datetime.datetime.utcnow()
+                    < datetime.datetime.now(tz=datetime.timezone.utc)
                     + datetime.timedelta(days=days_remaining)
                 ):
                     changes["expiration"] = True
