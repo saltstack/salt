@@ -3900,9 +3900,9 @@ def directory(
             if __opts__["test"]:
                 ret["changes"]["backup"] = f"{name} would be renamed to {backupname}"
                 ret["changes"][name] = {"directory": "new"}
-                ret[
-                    "comment"
-                ] = f"{name} would be backed up and replaced with a new directory"
+                ret["comment"] = (
+                    f"{name} would be backed up and replaced with a new directory"
+                )
                 ret["result"] = None
                 return ret
             else:
