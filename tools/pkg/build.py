@@ -504,13 +504,13 @@ def onedir_dependencies(
     os.environ["RELENV_FETCH_VERSION"] = relenv_version
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
-    try:
-        import relenv.create
-    except ImportError:
-        ctx.exit(1, "Relenv not installed in the current environment.")
+    relenv = shutil.which("relenv")
+    if relenv is None:
+        ctx.error("Could not find the 'relenv' binary in path.")
+        ctx.exit(1)
 
     dest = pathlib.Path(package_name).resolve()
-    relenv.create.create(dest, arch=arch, version=python_version)
+    ctx.run(relenv, "create", f"--arch={arch}", f"--python={python_version}", str(dest))
 
     # Validate that we're using the relenv version we really want to
     if platform == "windows":
@@ -545,55 +545,28 @@ def onedir_dependencies(
     else:
         env["RELENV_BUILDENV"] = "1"
         python_bin = env_scripts_dir / "python3"
-        install_args.extend(
-            [
-                "--use-pep517",
-                "--no-cache-dir",
-                "--no-binary=:all:",
-            ]
-        )
 
-    version_info = ctx.run(
-        str(python_bin),
-        "-c",
-        "import sys; print('{}.{}'.format(*sys.version_info))",
-        capture=True,
-    )
-    requirements_version = version_info.stdout.strip().decode()
-    requirements_file = (
-        tools.utils.REPO_ROOT
-        / "requirements"
-        / "static"
-        / "pkg"
-        / f"py{requirements_version}"
-        / f"{platform if platform != 'macos' else 'darwin'}.txt"
-    )
-    _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
+    poetry_requirement = "poetry"
+    poetry_version = os.environ.get("POETRY_VERSION")
+    if poetry_version:
+        poetry_requirement += f"=={poetry_version}"
 
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-    ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
+    ret = ctx.run(str(python_bin), "-m", "pip", "install", poetry_requirement)
+    if ret.returncode:
+        ctx.error("Failed to install Poentry in the relenv environment")
+        ctx.exit(1)
+
+    ret = ctx.run(
+        str(env_scripts_dir),
         "install",
-        "-U",
-        "setuptools",
-        "pip",
-        "wheel",
+        "--no-interaction",
+        "--sync",
+        "--no-root",
         env=env,
     )
-    ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
-        "install",
-        *install_args,
-        "-r",
-        str(requirements_file),
-        env=env,
-    )
+    if ret.returncode:
+        ctx.error("Failed to install Salt dependencies in the relenv environment")
+        ctx.exit(1)
 
 
 @build.command(
@@ -670,7 +643,6 @@ def salt_onedir(
     )
 
     env = os.environ.copy()
-    env["USE_STATIC_REQUIREMENTS"] = "1"
     env["RELENV_BUILDENV"] = "1"
     if platform == "windows":
         ctx.run(
