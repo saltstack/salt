@@ -44,7 +44,7 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.15
+immutables==0.20
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/base.txt
