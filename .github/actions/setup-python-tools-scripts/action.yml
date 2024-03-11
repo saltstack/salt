@@ -57,7 +57,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.cwd }}
       run: |
-        poetry install --no-root --with=tools
+        poetry install --no-root --only=tools
 
     - name: Get 'python-tools-scripts' Version
       id: get-version
