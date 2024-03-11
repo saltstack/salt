@@ -557,7 +557,7 @@ def onedir_dependencies(
         ctx.exit(1)
 
     ret = ctx.run(
-        str(env_scripts_dir),
+        str(env_scripts_dir / "poetry"),
         "install",
         "--no-interaction",
         "--sync",
