@@ -39,6 +39,10 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
 
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.local/bin" >> "${GITHUB_PATH}"
+
       - uses: actions/checkout@v4
 
       - name: Setup Python Tools Scripts
