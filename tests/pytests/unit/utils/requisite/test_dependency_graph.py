@@ -3,7 +3,7 @@ Test functions in state.py that are not a part of a class
 """
 import pytest
 
-import salt.requisite
+import salt.utils.requisite
 
 pytestmark = [
     pytest.mark.core_test,
@@ -109,7 +109,7 @@ def test_ordering():
             "listen": [{"test": "success-6"}],
         },
     ]
-    depend_graph = salt.requisite.DependencyGraph()
+    depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
         low.update({"__env__": env,
                     "__sls__": sls, })
@@ -152,7 +152,7 @@ def test_find_cycle_edges():
             "require": [{"test": "state-1"}],
         },
     ]
-    depend_graph = salt.requisite.DependencyGraph()
+    depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
         low.update({"__env__": env,
                     "__sls__": sls, })
@@ -161,34 +161,19 @@ def test_find_cycle_edges():
         depend_graph.add_requisites(low, [])
     expected_cycle_edges = [
         ({'__env__': 'base',
+          '__id__': 'state-3',
+          '__sls__': 'test',
+          'fun': 'succeed_with_changes',
+          'name': 'state-3',
+          'require': [{'test': 'state-1'}],
+          'state': 'test'},
+         'require',
+         {'__env__': 'base',
           '__id__': 'state-1',
           '__sls__': 'test',
           'fun': 'succeed_with_changes',
           'name': 'state-1',
           'require': [{'test': 'state-2'}],
-          'state': 'test'},
-         'require',
-         {'__env__': 'base',
-          '__id__': 'state-3',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-3',
-          'require': [{'test': 'state-1'}],
-          'state': 'test'}),
-        ({'__env__': 'base',
-          '__id__': 'state-3',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-3',
-          'require': [{'test': 'state-1'}],
-          'state': 'test'},
-         'require',
-         {'__env__': 'base',
-          '__id__': 'state-2',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-2',
-          'require': [{'test': 'state-3'}],
           'state': 'test'}),
         ({'__env__': 'base',
           '__id__': 'state-2',
@@ -199,11 +184,26 @@ def test_find_cycle_edges():
           'state': 'test'},
          'require',
          {'__env__': 'base',
+          '__id__': 'state-3',
+          '__sls__': 'test',
+          'fun': 'succeed_with_changes',
+          'name': 'state-3',
+          'require': [{'test': 'state-1'}],
+          'state': 'test'}),
+        ({'__env__': 'base',
           '__id__': 'state-1',
           '__sls__': 'test',
           'fun': 'succeed_with_changes',
           'name': 'state-1',
           'require': [{'test': 'state-2'}],
+          'state': 'test'},
+         'require',
+         {'__env__': 'base',
+          '__id__': 'state-2',
+          '__sls__': 'test',
+          'fun': 'succeed_with_changes',
+          'name': 'state-2',
+          'require': [{'test': 'state-3'}],
           'state': 'test'})]
     cycle_edges = depend_graph.find_cycle_edges()
     assert expected_cycle_edges == cycle_edges
@@ -258,7 +258,7 @@ def test_get_aggregate_chunks():
             "require": ["packages-4"],
         },
     ]
-    depend_graph = salt.requisite.DependencyGraph()
+    depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
         low.update({"__env__": env,
                     "__sls__": sls, })
@@ -330,7 +330,7 @@ def test_get_dependencies():
             "require": ["packages-4"],
         },
     ]
-    depend_graph = salt.requisite.DependencyGraph()
+    depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
         low.update({"__env__": env,
                     "__sls__": sls, })
@@ -340,11 +340,11 @@ def test_get_dependencies():
     depend_graph.aggregate_and_order_chunks(100)
     expected_aggregates = [
         (chunks[0], []),
-        (chunks[1], [(salt.requisite.RequisiteType.REQUIRE, "requirement")]),
-        (chunks[2], [(salt.requisite.RequisiteType.REQUIRE, "requirement")]),
+        (chunks[1], [(salt.utils.requisite.RequisiteType.REQUIRE, "requirement")]),
+        (chunks[2], [(salt.utils.requisite.RequisiteType.REQUIRE, "requirement")]),
         (chunks[3], []),
         (chunks[4], []),
-        (chunks[5], [(salt.requisite.RequisiteType.REQUIRE, "packages-4")]),
+        (chunks[5], [(salt.utils.requisite.RequisiteType.REQUIRE, "packages-4")]),
     ]
     for low, expected_dependency_tuples in expected_aggregates:
         depend_tuples = [
@@ -403,7 +403,7 @@ def test_get_dependencies_when_aggregated():
             "require": ["packages-4"],
         },
     ]
-    depend_graph = salt.requisite.DependencyGraph()
+    depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
         low.update({"__env__": env,
                     "__sls__": sls, })
@@ -413,15 +413,15 @@ def test_get_dependencies_when_aggregated():
     depend_graph.aggregate_and_order_chunks(100)
     expected_aggregates = [
         (chunks[0], []),
-        (chunks[1], [(salt.requisite.RequisiteType.REQUIRE, "requirement")]),
-        (chunks[2], [(salt.requisite.RequisiteType.REQUIRE, "requirement")]),
+        (chunks[1], [(salt.utils.requisite.RequisiteType.REQUIRE, "requirement")]),
+        (chunks[2], [(salt.utils.requisite.RequisiteType.REQUIRE, "requirement")]),
         (chunks[3], []),
         (chunks[4], []),
-        (chunks[5], [(salt.requisite.RequisiteType.REQUIRE, "packages-4"),
-                     (salt.requisite.RequisiteType.REQUIRE, "packages-1"),
-                     (salt.requisite.RequisiteType.REQUIRE, "packages-4"),
-                     (salt.requisite.RequisiteType.REQUIRE, "packages-2"),
-                     (salt.requisite.RequisiteType.REQUIRE, "packages-3"),]),
+        (chunks[5], [(salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
+                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-1"),
+                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
+                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-2"),
+                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-3"),]),
     ]
     for low, expected_dependency_tuples in expected_aggregates:
         depend_tuples = [

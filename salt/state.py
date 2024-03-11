@@ -10,6 +10,7 @@ The data sent to the state calls is as follows:
       'argn': '<arbitrary argument, can have many of these>'
       }
 """
+from __future__ import annotations
 
 import copy
 import datetime
@@ -48,11 +49,11 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.utils.verify
+from salt.utils.requisite import DependencyGraph, RequisiteType
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
-from salt.requisite import DependencyGraph, RequisiteType
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
@@ -61,12 +62,12 @@ from salt.utils.odict import DefaultOrderedDict, OrderedDict
 log = logging.getLogger(__name__)
 
 # See https://docs.saltproject.io/en/latest/ref/states/layers.html for details on the naming
-# __exclude__ and __extend__ are list values; the other items are state items are
-# state items that have dict values. This could be cleaned up some by making
+# __exclude__ and __extend__ are list values; the other items are state items
+# that have dict values. This could be cleaned up some by making
 # exclude and extend into dicts instead of lists so the type of all the values are
-# homogenous.
-HighData = dict[str, Union[Mapping[str, Any], list[Union[Mapping[str, Any], str]]]]
-LowChunk = dict[str, Any]
+# homogeneous.
+HighData: dict[str, Union[Mapping[str, Any], list[Union[Mapping[str, Any], str]]]]
+LowChunk: dict[str, Any]
 
 
 # These are keywords passed to state module functions which are to be used
@@ -95,7 +96,6 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "parallel",
         "prereq",
         "prereq_in",
-        "prerequired",
         "reload_modules",
         "reload_grains",
         "reload_pillar",
@@ -120,7 +120,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_pid",
         "__pub_tgt_type",
         "__prereq__",
-        "__prerequired__",
+        "__prerequiring__",
         "__umask__",
     ]
 )
@@ -403,7 +403,7 @@ def _verify_high(high: dict) -> list[str]:
         if not isinstance(id_, str):
             errors.append(
                 f"ID '{id_}' in SLS '{body['__sls__']}' is not formed as a string, "
-                f"but is a {type(id_).__name__}. It may need to be quoted."
+                f"but is type {type(id_).__name__}. It may need to be quoted."
             )
         elif id_.startswith("__"):
             continue
@@ -487,8 +487,8 @@ def _verify_high(high: dict) -> list[str]:
                                         )
                                     if not ishashable(req_val):
                                         errors.append(
-                                            f'Illegal requisite "{req_val}", '
-                                            f'in SLS {body["__sls__"]}, '
+                                            f'Illegal requisite "{req_val}" '
+                                            f'in SLS "{body["__sls__"]}", '
                                             "please check your syntax.\n"
                                         )
                                         continue
@@ -631,7 +631,7 @@ class Compiler:
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
         except nx.NetworkXUnfeasible:
             sorted_chunks = []
-            cycle_edges = self.dependency_dag.find_cycle_edges()
+            cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
         return sorted_chunks, errors
 
@@ -774,7 +774,6 @@ class State:
             self.state_con = context
         self.state_con["fileclient"] = self.file_client
         self.load_modules()
-        self.active = set()
         self.mod_init = set()
         self.pre = {}
         self.__run_num = 0
@@ -1395,6 +1394,14 @@ class State:
         disabled_reqs = self.opts.get("disabled_requisites", [])
         if not isinstance(disabled_reqs, list):
             disabled_reqs = [disabled_reqs]
+        if not self.dependency_dag.dag:
+            # if order_chunks was called without calling compile_high_data then
+            # we need to add the chunks to the dag
+            agg_opt = self.functions["config.option"]("state_aggregate")
+            for chunk in chunks:
+                self.dependency_dag.add_chunk(
+                    chunk, self._allow_aggregate(chunk, agg_opt)
+                )
         for chunk in chunks:
             chunk["name"] = salt.utils.data.decode(chunk["name"])
             self._reconcile_watch_req(chunk)
@@ -1414,7 +1421,7 @@ class State:
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
         except nx.NetworkXUnfeasible:
             sorted_chunks = []
-            cycle_edges = self.dependency_dag.find_cycle_edges()
+            cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
         return sorted_chunks, errors
 
@@ -1665,13 +1672,13 @@ class State:
             "onchanges_in",
             "use",
             "use_in",
-            "prereq",
             "prereq_in",
         }
         req_in_all = req_in.union(
             {
                 RequisiteType.REQUIRE.value,
                 RequisiteType.WATCH.value,
+                RequisiteType.PREREQ.value,
                 RequisiteType.ONFAIL.value,
                 "onfail_stop",  # onfail_stop is an undocumented poorly named req type
                 RequisiteType.ONCHANGES.value,
@@ -1718,7 +1725,7 @@ class State:
                                 if "." in _state:
                                     errors.append(
                                         "Invalid requisite in {}: {} for "
-                                        "{}, in SLS '{}'. Requisites must "
+                                        "{} in SLS '{}'. Requisites must "
                                         "not contain dots, did you mean '{}'?".format(
                                             rkey,
                                             _state,
@@ -1786,42 +1793,13 @@ class State:
                                     hinges.append((pname, pstate))
                                 if "." in pstate:
                                     errors.append(
-                                        "Invalid requisite in {}: {} for "
-                                        "{}, in SLS '{}'. Requisites must "
-                                        "not contain dots, did you mean '{}'?".format(
-                                            rkey,
-                                            pstate,
-                                            pname,
-                                            body["__sls__"],
-                                            pstate[: pstate.find(".")],
-                                        )
+                                        f"Invalid requisite in {rkey}: {pstate} for "
+                                        f"{pname}, in SLS '{body['__sls__']}'. Requisites must "
+                                        f"not contain dots, did you mean '{pstate[: pstate.find('.')]}'?"
                                     )
                                     pstate = pstate.split(".")[0]
                                 for tup in hinges:
                                     name, _state = tup
-                                    if key == "prereq_in":
-                                        # Add prerequired to origin
-                                        if id_ not in extend:
-                                            extend[id_] = OrderedDict()
-                                        if state not in extend[id_]:
-                                            extend[id_][state] = []
-                                        extend[id_][state].append(
-                                            {"prerequired": [{_state: name}]}
-                                        )
-                                    if key == "prereq":
-                                        # Add prerequired to prereqs
-                                        ext_ids = find_name(
-                                            name, _state, high, strict=True
-                                        )
-                                        for ext_id, _req_state in ext_ids:
-                                            if ext_id not in extend:
-                                                extend[ext_id] = OrderedDict()
-                                            if _req_state not in extend[ext_id]:
-                                                extend[ext_id][_req_state] = []
-                                            extend[ext_id][_req_state].append(
-                                                {"prerequired": [{state: id_}]}
-                                            )
-                                        continue
                                     if key == "use_in":
                                         # Add the running states args to the
                                         # use_in states
@@ -2504,7 +2482,6 @@ class State:
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
                     return running
-            self.active = set()
         while True:
             if self.reconcile_procs(running):
                 break
@@ -2614,31 +2591,13 @@ class State:
         Look into the running data to check the status of all requisite
         states.
         """
-        reqs = {
-            rtype.value: []
-            for rtype in (
-                RequisiteType.REQUIRE,
-                RequisiteType.REQUIRE_ANY,
-                RequisiteType.WATCH,
-                RequisiteType.WATCH_ANY,
-                RequisiteType.PREREQ,
-                RequisiteType.ONFAIL,
-                RequisiteType.ONCHANGES_ANY,
-                RequisiteType.ONFAIL_ALL,
-                RequisiteType.ONCHANGES,
-                RequisiteType.ONCHANGES_ANY,
-            )
-        }
-        if not low.get("__prereq__"):
-            # if the low chunk is not set to run in test mode for a
-            # prereq check then also check any PREREQUIRED requisites.
-            reqs[RequisiteType.PREREQUIRED.value] = []
+        reqs = {}
         for req_type, chunk in self.dependency_dag.get_dependencies(low):
-            reqs[req_type].append(chunk)
+            reqs.setdefault(req_type, []).append(chunk)
         fun_stats = set()
         for r_type, chunks in reqs.items():
             req_stats = set()
-            r_type_base = re.sub(r"_any$|all$", "", r_type)
+            r_type_base = re.sub(r"_any$|_all$", "", r_type)
             if r_type_base == RequisiteType.PREREQ.value:
                 run_dict = self.pre
             else:
@@ -2709,7 +2668,7 @@ class State:
                     # a met requisite in this case implies a success
                     if "met" in req_stats:
                         req_stats.remove("onfail")
-            if r_type.endswith("_all"):
+            if r_type.endswith("_all") and "onfail" in req_stats:
                 if "onfail" in req_stats:
                     # a met requisite in this case implies a failure
                     if "met" in req_stats:
@@ -2801,11 +2760,15 @@ class State:
         """
         Execute the chunk if the requisites did not fail
         """
-        low = self._mod_aggregate(low, running)
+        if self.dependency_dag.dag:
+            low = self._mod_aggregate(low, running)
+        elif chunks:
+            raise SaltRenderError(
+                "call_chunk called with multiple chunks but order_chunks was not called."
+                " order_chunks must be called first when there are multiple chunks."
+            )
         self._mod_init(low)
         tag = _gen_tag(low)
-        if not low.get("prerequired"):
-            self.active.add(tag)
 
         status, reqs = self._check_requisites(low, running)
         if status == "unmet":
@@ -2817,14 +2780,13 @@ class State:
             else:
                 running[tag] = self.call(low, chunks, running)
         elif status == "skip_req":
-            running[tag] = {
-                "changes": {},
-                "result": True,
-                "comment": "State was not run because requisites were skipped by another state",
-                "__run_num__": self.__run_num,
-            }
-            for key in ("__sls__", "__id__", "name"):
-                running[tag][key] = low.get(key)
+            self._assign_not_run_result_dict(
+                low=low,
+                tag=tag,
+                result=True,
+                comment="State was not run because requisites were skipped by another state",
+                running=running,
+            )
         elif status == "skip_watch" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
             ret[
@@ -2846,6 +2808,7 @@ class State:
                 running[tag]["__run_num__"] = self.__run_num
                 for key in ("__sls__", "__id__", "name"):
                     running[tag][key] = low.get(key)
+                self.__run_num += 1
             # otherwise the failure was due to a requisite down the chain
             else:
                 # determine what the requisite failures were, and return
@@ -2871,19 +2834,13 @@ class State:
                 _cmt = "One or more requisite failed: {}".format(
                     ", ".join(str(i) for i in failed_requisites)
                 )
-                start_time, duration = _calculate_fake_duration()
-                running[tag] = {
-                    "changes": {},
-                    "result": False,
-                    "duration": duration,
-                    "start_time": start_time,
-                    "comment": _cmt,
-                    "__run_num__": self.__run_num,
-                }
-                for key in ("__sls__", "__id__", "name"):
-                    running[tag][key] = low.get(key)
-                self.pre[tag] = running[tag]
-            self.__run_num += 1
+                self._assign_not_run_result_dict(
+                    low=low,
+                    tag=tag,
+                    result=False,
+                    comment=_cmt,
+                    running=running,
+                )
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
             if not ret["changes"] and not ret.get("skip_watch", False):
@@ -2894,59 +2851,38 @@ class State:
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == "pre":
-            start_time, duration = _calculate_fake_duration()
-            pre_ret = {
-                "changes": {},
-                "result": True,
-                "duration": duration,
-                "start_time": start_time,
-                "comment": "No changes detected",
-                "__run_num__": self.__run_num,
-            }
-            for key in ("__sls__", "__id__", "name"):
-                pre_ret[key] = low.get(key)
-            running[tag] = pre_ret
-            self.pre[tag] = pre_ret
-            self.__run_num += 1
+            self._assign_not_run_result_dict(
+                low=low,
+                tag=tag,
+                result=True,
+                comment="No changes detected",
+                running=running,
+            )
         elif status == "onfail":
-            start_time, duration = _calculate_fake_duration()
-            running[tag] = {
-                "changes": {},
-                "result": True,
-                "duration": duration,
-                "start_time": start_time,
-                "comment": "State was not run because onfail req did not change",
-                "__state_ran__": False,
-                "__run_num__": self.__run_num,
-            }
-            for key in ("__sls__", "__id__", "name"):
-                running[tag][key] = low.get(key)
-            self.__run_num += 1
+            self._assign_not_run_result_dict(
+                low=low,
+                tag=tag,
+                result=True,
+                comment="State was not run because onfail req did not change",
+                running=running,
+            )
         elif status == "onchanges":
-            start_time, duration = _calculate_fake_duration()
-            running[tag] = {
-                "changes": {},
-                "result": True,
-                "duration": duration,
-                "start_time": start_time,
-                "comment": (
-                    "State was not run because none of the onchanges reqs changed"
-                ),
-                "__state_ran__": False,
-                "__run_num__": self.__run_num,
-            }
-            for key in ("__sls__", "__id__", "name"):
-                running[tag][key] = low.get(key)
-            self.__run_num += 1
+            self._assign_not_run_result_dict(
+                low=low,
+                tag=tag,
+                result=True,
+                comment="State was not run because none of the onchanges reqs changed",
+                running=running,
+            )
         else:
             if low.get("__prereq__"):
                 self.pre[tag] = self.call(low, chunks, running)
             else:
                 running[tag] = self.call(low, chunks, running)
-            if tag in running:
-                self.event(
-                    running[tag], len(chunks), fire_event=low.get("fire_event", False)
-                )
+        if tag in running:
+            self.event(
+                running[tag], len(chunks), fire_event=low.get("fire_event", False)
+            )
 
             for sub_state_data in running[tag].pop("sub_state_run", ()):
                 start_time, duration = _calculate_fake_duration()
@@ -2967,6 +2903,29 @@ class State:
 
         return running
 
+    def _assign_not_run_result_dict(self,
+            low: LowChunk,
+            tag: str,
+            result: bool,
+            comment: str,
+            running: dict[str, dict]) -> None:
+        start_time, duration = _calculate_fake_duration()
+        ret = {
+            "changes": {},
+            "result": result,
+            "duration": duration,
+            "start_time": start_time,
+            "comment": comment,
+            "__state_ran__": False,
+            "__run_num__": self.__run_num,
+        }
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low.get(key)
+        running[tag] = ret
+        if low.get("__prereq__"):
+            self.pre[tag] = ret
+        self.__run_num += 1
+
     def _call_unmet_requisites(
         self,
         low: LowChunk,
@@ -2980,28 +2939,6 @@ class State:
             # it has not been run already
             ctag = _gen_tag(chunk)
             if ctag not in running:
-                if ctag in self.active:
-                    if chunk.get("__prerequired__"):
-                        # Prereq recursive, run this chunk with prereq on
-                        if tag not in self.pre:
-                            low["__prereq__"] = True
-                            self.pre[ctag] = self.call(low, chunks, running)
-                        return running
-                    elif ctag not in running:
-                        log.error("Recursive requisite found")
-                        running[tag] = {
-                            "changes": {},
-                            "result": False,
-                            "comment": "Recursive requisite found",
-                            "__run_num__": self.__run_num,
-                        }
-                        for key in ("__sls__", "__id__", "name"):
-                            running[tag][key] = low.get(key)
-                    self.__run_num += 1
-                    self.event(
-                        running[tag], len(chunks), fire_event=low.get("fire_event")
-                    )
-                    return running
                 running = self.call_chunk(chunk, running, chunks)
                 if self.check_failhard(chunk, running):
                     running["__FAILHARD__"] = True
@@ -3362,7 +3299,7 @@ class LazyAvailStates:
     def __getitem__(self, saltenv: Hashable) -> list[str]:
         if saltenv != "base":
             self._fill()
-        if (states := self._avail[saltenv]) is None:
+        if (states := self._avail.get(saltenv)) is None:
             states = self._hs.client.list_states(saltenv)
             self._avail[saltenv] = states
         return states
@@ -4529,8 +4466,10 @@ class BaseHighState:
 
     def compile_low_chunks(self, context=None):
         """
-        Compile the highstate but don't run it, return the low chunks to
-        see exactly what the highstate will execute
+        Compile the highstate but don't run it
+
+        If there are errors return the errors otherwise return
+        the low chunks to see exactly what the highstate will execute
         """
         top = self.get_top(context=context)
         matches = self.top_matches(top)
@@ -4550,8 +4489,9 @@ class BaseHighState:
             return errors
 
         # Compile and verify the raw chunks
-        chunks = self.state.compile_high_data(high)
-
+        chunks, errors = self.state.compile_high_data(high)
+        if errors:
+            return errors
         return chunks
 
     def compile_state_usage(self):

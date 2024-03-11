@@ -89,10 +89,12 @@ def test_render_error_on_invalid_requisite(minion_opts):
                 ]
             )
         }
+        expected_result = ['Requisite [require: file] in state [git] in SLS'
+                           ' [issue_35226] must have a string as the value']
         minion_opts["pillar"] = {"git": OrderedDict([("test1", "test")])}
         state_obj = salt.state.State(minion_opts)
-        with pytest.raises(salt.exceptions.SaltRenderError):
-            state_obj.call_high(high_data)
+        return_result = state_obj.call_high(high_data)
+        assert expected_result == return_result
 
 
 def test_verify_onlyif_parse(minion_opts):
@@ -896,6 +898,16 @@ def test_mod_aggregate(minion_opts):
             "aggregate": True,
             "fun": "installed",
         },
+        {
+            "state": "pkg",
+            "name": "hello",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "hello",
+            "order": 10003,
+            "aggregate": True,
+            "fun": "installed",
+        },
     ]
 
     running = {}
@@ -910,16 +922,16 @@ def test_mod_aggregate(minion_opts):
         "order": 10002,
         "fun": "installed",
         "__agg__": True,
-        "pkgs": ["figlet", "sl"],
+        "pkgs": ["sl", "hello"],
     }
 
     with patch("salt.state.State._gather_pillar"):
         state_obj = salt.state.State(minion_opts)
-        state_obj.order_chunks(chunks)
         with patch.dict(
             state_obj.states,
             {"pkg.mod_aggregate": MagicMock(return_value=mock_pkg_mod_aggregate)},
         ):
+            state_obj.order_chunks(chunks)
             low_ret = state_obj._mod_aggregate(low, running)
 
             # Ensure the low returned contains require
@@ -933,7 +945,7 @@ def test_mod_aggregate(minion_opts):
             assert "require" not in low_ret
 
             # Ensure pkgs were aggregated
-            assert low_ret["pkgs"] == ["figlet", "sl"]
+            assert low_ret["pkgs"] == ["sl", "hello"]
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):

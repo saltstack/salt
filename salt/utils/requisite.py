@@ -3,6 +3,7 @@ The classes and functions in this module are related to requisite
 handling and ordering of chunks by the State compiler
 """
 
+from __future__ import annotations
 
 import fnmatch
 import logging
@@ -16,7 +17,7 @@ import networkx as nx  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 # See https://docs.saltproject.io/en/latest/ref/states/layers.html for details on the naming
-LowChunk = dict[str, Any]
+LowChunk: dict[str, Any]
 
 
 def _gen_tag(low: LowChunk) -> str:
@@ -90,37 +91,50 @@ class DependencyGraph:
         self.nodes_lookup_map: dict[tuple[str, str], set[str]] = {}
         self.sls_to_nodes: dict[str, set[str]] = {}
 
-    def _add_prereq(self, node_tag: str, req_type: RequisiteType, req_tag: str):
-        self.dag.nodes[node_tag]["chunk"]["__prerequired__"] = True
+    def _add_prereq(self, node_tag: str, req_tag: str):
+        # the prerequiring chunk is the state declaring the prereq
+        # requisite; the prereq/prerequired state is the one that is
+        # declared in the requisite prereq statement
+        self.dag.nodes[node_tag]["chunk"]["__prerequiring__"] = True
         prereq_chunk = self.dag.nodes[req_tag]["chunk"]
+        # set __prereq__ true to run the state in test mode
         prereq_chunk["__prereq__"] = True
-        prereq_check_node = f"prereq_check_{req_tag}"
-        self.dag.add_node(
-            prereq_check_node, chunk=prereq_chunk, state=prereq_chunk["state"]
-        )
-        self.dag.add_edge(node_tag, prereq_check_node, RequisiteType.PREREQUIRED)
-        for u, _, key, data in self.dag.in_edges(req_tag, data=True, keys=True):
-            if key != RequisiteType.PREREQ:
-                self.dag.add_edge(u, prereq_check_node, key, **data)
-        self.dag.add_edge(req_tag, node_tag, req_type)
+        prereq_check_node = self._get_prereq_node_tag(req_tag)
+        if not self.dag.nodes.get(prereq_check_node):
+            self.dag.add_node(
+                prereq_check_node, chunk=prereq_chunk, state=prereq_chunk["state"]
+            )
+            # all the dependencies of the node for the prerequired
+            # chunk also need to be applied to its prereq check node
+            for dependency_node, _, req_type, data in self.dag.in_edges(req_tag, data=True, keys=True):
+                if req_type != RequisiteType.PREREQ:
+                    self.dag.add_edge(dependency_node, prereq_check_node, req_type, **data)
+        self.dag.add_edge(prereq_check_node, node_tag, RequisiteType.PREREQ)
+        self.dag.add_edge(node_tag, req_tag, RequisiteType.REQUIRE)
 
     def _add_reqs(
-        self, node_tag: str, req_type: RequisiteType, req_tags: Iterable[str]
+        self, node_tag: str, has_preq_node: bool, req_type: RequisiteType, req_tags: Iterable[str]
     ) -> None:
         for req_tag in req_tags:
             if req_type == RequisiteType.PREREQ:
-                self._add_prereq(node_tag, req_type, req_tag)
+                self._add_prereq(node_tag, req_tag)
             else:
+                if has_preq_node:
+                    # if the low chunk is set to run in test mode for a
+                    # prereq check then also add the requisites to the 
+                    # prereq node.
+                    prereq_node_tag = self._get_prereq_node_tag(node_tag)
+                    self.dag.add_edge(req_tag, prereq_node_tag, key=req_type)    
                 self.dag.add_edge(req_tag, node_tag, key=req_type)
 
     def _copy_edges(self, source: str, dest: str) -> None:
         """Add the edges from source node to dest node"""
-        for u, _, key, data in self.dag.in_edges(source, data=True, keys=True):
-            self.dag.add_edge(u, dest, key, **data)
-        for _, v, key, data in self.dag.out_edges(source, data=True, keys=True):
-            self.dag.add_edge(dest, v, key, **data)
+        for dependency, _, req_type, data in self.dag.in_edges(source, data=True, keys=True):
+            self.dag.add_edge(dependency, dest, req_type, **data)
+        for _, dependent, req_type, data in self.dag.out_edges(source, data=True, keys=True):
+            self.dag.add_edge(dest, dependent, req_type, **data)
 
-    def _get_chunk_order(self, cap: int, node: str) -> Union[int, float]:
+    def _get_chunk_order(self, cap: int, node: str) -> tuple[Union[int, float], Union[int, float]]:
         dag = self.dag
         stack: list[tuple[str, bool, Union[int, float], Union[int, float]]] = [
             # node, is_processing_children, child_min, req_order
@@ -154,9 +168,9 @@ class DependencyGraph:
             else:  # after processing node
                 child_min_node = node_data.get("child_min")
                 if child_min_node is None:
-                    for _, child, key in dag.out_edges(node, keys=True):
-                        if req_order <= key.weight:
-                            req_order = key.weight
+                    for _, child, req_type in dag.out_edges(node, keys=True):
+                        if req_order <= req_type.weight:
+                            req_order = req_type.weight
                             child_order = (
                                 dag.nodes[child]
                                 .get("chunk", {})
@@ -166,12 +180,23 @@ class DependencyGraph:
                     node_data["child_min"] = child_min
                     if order > child_min:
                         order = child_min
-                        chunk["order"] = order
                 stack.pop()
-        return order
+        return (order, chunk["order"])
+
+    def _get_prereq_node_tag(self, low_tag: str):
+        return f"{low_tag}_|-__prereq_test__"
 
     def _is_fnmatch_pattern(self, value: str) -> bool:
         return any(char in value for char in ("*", "?", "[", "]"))
+
+    def _chunk_str(self, chunk: LowChunk) -> str:
+        node_dict = {
+            "SLS": chunk["__sls__"],
+            "ID": chunk["__id__"],
+        }
+        if chunk["__id__"] != chunk["name"]:
+            node_dict["NAME"] = chunk["name"]
+        return str(node_dict)
 
     def add_chunk(self, low: LowChunk, allow_aggregate: bool) -> None:
         node_id = _gen_tag(low)
@@ -184,17 +209,22 @@ class DependencyGraph:
         self.nodes_lookup_map.setdefault((low["state"], low["__id__"]), set()).add(
             node_id
         )
-        self.nodes_lookup_map.setdefault(("id", low["__id__"]), set()).add(node_id)
-        self.nodes_lookup_map.setdefault(("id", low["name"]), set()).add(node_id)
+        self.nodes_lookup_map.setdefault(
+            ("id", low["__id__"]), set()).add(node_id)
+        self.nodes_lookup_map.setdefault(
+            ("id", low["name"]), set()).add(node_id)
         if sls := low.get("__sls__"):
             self.sls_to_nodes.setdefault(sls, set()).add(node_id)
         if sls_included_from := low.get("__sls_included_from__"):
-            self.sls_to_nodes.setdefault(sls_included_from, set()).add(node_id)
+            for sls in sls_included_from:
+                self.sls_to_nodes.setdefault(sls, set()).add(node_id)
 
     def add_dependency(
         self, low: LowChunk, req_type: RequisiteType, req_key: str, req_val: str
     ) -> bool:
         found = False
+        prereq_tag = None
+        has_prereq_node = low.get("__prereq__", False)
         if req_key == "sls":
             # Allow requisite tracking of entire sls files
             if self._is_fnmatch_pattern(req_val):
@@ -203,12 +233,12 @@ class DependencyGraph:
                 for sls, req_tags in self.sls_to_nodes.items():
                     if fnmatch.fnmatch(sls, req_val):
                         found = True
-                        self._add_reqs(node_tag, req_type, req_tags)
+                        self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
             else:
                 node_tag = _gen_tag(low)
-                for req_tags in self.sls_to_nodes.get(req_val, []):
+                if req_tags := self.sls_to_nodes.get(req_val, []):
                     found = True
-                    self._add_reqs(node_tag, req_type, req_tags)
+                    self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
         elif self._is_fnmatch_pattern(req_val):
             # This iterates over every chunk to check
             # if any match instead of doing a look up since
@@ -217,11 +247,11 @@ class DependencyGraph:
             for (state_type, name_or_id), req_tags in self.nodes_lookup_map.items():
                 if req_key == state_type and (fnmatch.fnmatch(name_or_id, req_val)):
                     found = True
-                    self._add_reqs(node_tag, req_type, req_tags)
+                    self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
         elif req_tags := self.nodes_lookup_map.get((req_key, req_val)):
             found = True
             node_tag = _gen_tag(low)
-            self._add_reqs(node_tag, req_type, req_tags)
+            self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
         return found
 
     def add_requisites(
@@ -247,7 +277,7 @@ class DependencyGraph:
                 RequisiteType.WATCH_ANY,
                 RequisiteType.PREREQ,
                 RequisiteType.ONFAIL,
-                RequisiteType.ONCHANGES_ANY,
+                RequisiteType.ONFAIL_ANY,
                 RequisiteType.ONFAIL_ALL,
                 RequisiteType.ONCHANGES,
                 RequisiteType.ONCHANGES_ANY,
@@ -256,7 +286,8 @@ class DependencyGraph:
         for r_type in reqs:
             if low_reqs := low.get(r_type.value):
                 if r_type in disabled_reqs:
-                    log.warning("The %s requisite has been disabled, Ignoring.", r_type)
+                    log.warning(
+                        "The %s requisite has been disabled, Ignoring.", r_type)
                     continue
                 for req_ref in low_reqs:
                     if isinstance(req_ref, str):
@@ -304,14 +335,14 @@ class DependencyGraph:
 
         def _get_order(node):
             chunk = dag.nodes[node].get("chunk", {})
+            chunk_label = "{0[state]}{0[name]}{0[fun]}".format(
+                chunk) if chunk else ""
             chunk_order = self._get_chunk_order(cap, node)
-            return (chunk_order, "{0[state]}{0[name]}{0[fun]}".format(chunk))
+            return (chunk_order, chunk_label)
 
         # Iterate over the nodes in topological order to get the correct
         # ordering which takes requisites into account
-        for i, node in enumerate(
-            nx.lexicographical_topological_sort(dag, key=_get_order)
-        ):
+        for node in nx.lexicographical_topological_sort(dag, key=_get_order):
             topo_order[node] = None
             data = dag.nodes[node]
             if not data.get("allow_aggregate"):
@@ -319,7 +350,7 @@ class DependencyGraph:
 
             node_type = data["state"]
             added = False
-            for i, group in enumerate(groups_by_type[node_type]):
+            for idx, group in enumerate(groups_by_type[node_type]):
                 if len(group) >= max_group_size:
                     continue
                 # Check if the node can be reached from any node in the group
@@ -335,7 +366,7 @@ class DependencyGraph:
                     if agg_node is None:
                         # there is now more than one node for this
                         # group so aggregate them
-                        agg_node = f"__aggregate_{node_type}_{i}__"
+                        agg_node = f"__aggregate_{node_type}_{idx}__"
                         dag.add_node(
                             agg_node, state=node_type, aggregated_nodes=group.keys()
                         )
@@ -357,19 +388,25 @@ class DependencyGraph:
                 # use a dict instead of set to retain insertion ordering
                 groups_by_type[node_type].append({node: None})
 
-        ordered_chunks = [dag.nodes[node].get("chunk", {}) for node in topo_order]
+        ordered_chunks = [dag.nodes[node].get(
+            "chunk", {}) for node in topo_order]
         return ordered_chunks
 
-    def find_cycle_edges(self) -> list[tuple[str, str, str]]:
+    def find_cycle_edges(self) -> list[tuple[LowChunk, RequisiteType, LowChunk]]:
         """
         Find the cycles if the graph is not a Directed Acyclic Graph
         """
         dag = self.dag
         try:
-            cycle_edges = [
-                (dag.nodes[u]["chunk"], key.value, dag.nodes[v]["chunk"])
-                for u, v, key in nx.find_cycle(dag)
-            ]
+            cycle_edges = []
+            for dependency, dependent, req_type in nx.find_cycle(dag):
+                dependency_chunk = self.dag.nodes[dependency]["chunk"]
+                dependent_chunk = self.dag.nodes[dependent]["chunk"]
+                if req_type not in dependent_chunk and req_type == RequisiteType.REQUIRE:
+                    # show the original prereq requisite for the require edges
+                    # added for the prereq
+                    req_type = RequisiteType.PREREQ
+                cycle_edges.append((dependent_chunk, req_type, dependency_chunk))
             return cycle_edges
         except nx.NetworkXNoCycle:
             # If the graph is a DAG, return an empty list
@@ -388,11 +425,22 @@ class DependencyGraph:
             ]
         return []
 
+    def get_cycles_str(self) -> str:
+        cycle_edges = [
+            f"({self._chunk_str(dependency)}, '{req_type.value}', {self._chunk_str(dependent)})"
+            for dependency, req_type, dependent in self.find_cycle_edges()
+        ]
+        return ", ".join(cycle_edges)
+
     def get_dependencies(
         self, low: LowChunk
     ) -> Generator[tuple[RequisiteType, LowChunk], None, None]:
         """Get the requisite type and low chunk for each dependency of low"""
         low_tag = _gen_tag(low)
+        if low.get("__prereq__"):
+            # if the low chunk is set to run in test mode for a
+            # prereq check then return the reqs for prereq test node.
+            low_tag = self._get_prereq_node_tag(low_tag)
         for req_id, _, req_type in self.dag.in_edges(low_tag, keys=True):
             if chunk := self.dag.nodes[req_id].get("chunk"):
                 yield req_type, chunk

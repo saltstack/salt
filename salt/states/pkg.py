@@ -3596,8 +3596,6 @@ def mod_aggregate(low, chunks, running):
     The mod_aggregate function which looks up all packages in the available
     low chunks and merges them into a single pkgs ref in the present low data
     """
-    pkgs = set()
-    pkg_type = None
     agg_enabled = [
         "installed",
         "latest",
@@ -3606,6 +3604,9 @@ def mod_aggregate(low, chunks, running):
     ]
     if low.get("fun") not in agg_enabled:
         return low
+    is_sources = "sources" in low
+    # use a dict instead of a set to maintain insertion order
+    pkgs = {}
     for chunk in chunks:
         tag = __utils__["state.gen_tag"](chunk)
         if tag in running:
@@ -3620,40 +3621,49 @@ def mod_aggregate(low, chunks, running):
             # Check for the same repo
             if chunk.get("fromrepo") != low.get("fromrepo"):
                 continue
+            # If hold exists in the chunk, do not add to aggregation
+            # otherwise all packages will be held or unheld.
+            # setting a package to be held/unheld is not as
+            # time consuming as installing/uninstalling.
+            if "hold" in chunk:
+                continue
             # Check first if 'sources' was passed so we don't aggregate pkgs
             # and sources together.
-            if "sources" in chunk:
-                if pkg_type is None:
-                    pkg_type = "sources"
-                if pkg_type == "sources":
-                    pkgs.update(chunk["sources"])
+            if is_sources and "sources" in chunk:
+                _combine_pkgs(pkgs, chunk["sources"])
+                chunk["__agg__"] = True
+            elif not is_sources:
+                # Pull out the pkg names!
+                if "pkgs" in chunk:
+                    _combine_pkgs(pkgs, chunk["pkgs"])
                     chunk["__agg__"] = True
-            else:
-                # If hold exists in the chunk, do not add to aggregation
-                # otherwise all packages will be held or unheld.
-                # setting a package to be held/unheld is not as
-                # time consuming as installing/uninstalling.
-                if "hold" not in chunk:
-                    if pkg_type is None:
-                        pkg_type = "pkgs"
-                    if pkg_type == "pkgs":
-                        # Pull out the pkg names!
-                        if "pkgs" in chunk:
-                            pkgs.update(chunk["pkgs"])
-                            chunk["__agg__"] = True
-                        elif "name" in chunk:
-                            version = chunk.pop("version", None)
-                            if version is not None:
-                                pkgs.add({chunk["name"]: version})
-                            else:
-                                pkgs.add(chunk["name"])
-                            chunk["__agg__"] = True
-    if pkg_type is not None and pkgs:
-        if pkg_type in low:
-            low[pkg_type].extend(pkgs)
-        else:
-            low[pkg_type] = list(pkgs)
+                elif "name" in chunk:
+                    version = chunk.pop("version", None)
+                    pkgs.setdefault(chunk["name"], set()).add(version)
+                    chunk["__agg__"] = True
+    if pkgs:
+        pkg_type = "sources" if is_sources else "pkgs"
+        low_pkgs = {}
+        _combine_pkgs(low_pkgs, low.get(pkg_type, []))
+        _combine_pkgs(low_pkgs, pkgs.items())
+        # the value is the version for pkgs and
+        # the URI for sources
+        low_pkgs_list = [
+            name if value is None else {name: value}
+            for name, values in pkgs.items()
+            for value in values
+        ]
+        low[pkg_type] = low_pkgs_list
     return low
+
+
+def _combine_pkgs(pkgs_dict, additional_pkgs_list):
+    for item in additional_pkgs_list:
+        if isinstance(item, str):
+            pkgs_dict.setdefault(item, set())
+        else:
+            for pkg, version in item:
+                pkgs_dict.setdefault(pkg, set()).add(version)
 
 
 def mod_watch(name, **kwargs):

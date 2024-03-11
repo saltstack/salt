@@ -1,6 +1,6 @@
 import pytest
 import salt.modules.state as statemod
-from tests.support.unit import mock
+from tests.support.mock import MagicMock
 
 
 @pytest.fixture
@@ -13,9 +13,9 @@ def configure_loader_modules():
                 "state_aggregate": True,
             },
             "__salt__": {
-                "pkg.install": mock.Mock(return_value={"hello": "new", "cowsay": "new", "fortune-mod": "new"}),
-                "pkg.remove": mock.Mock(return_value={}),
-                "pkg.list_pkgs": mock.Mock(return_value={}),
+                "pkg.install": MagicMock(return_value={"hello": "new", "cowsay": "new", "fortune-mod": "new"}),
+                "pkg.remove": MagicMock(return_value={}),
+                "pkg.list_pkgs": MagicMock(return_value={}),
             },
             "__grains__": {
                 "os": "Linux",
