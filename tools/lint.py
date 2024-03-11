@@ -66,4 +66,4 @@ def _run_lint(
     rcfile: str = ".pylintrc",
     flags: Iterable[str] = (),
 ):
-    ctx.run("pylint", f"--rcfile={rcfile}", *flags, *paths)
+    ctx.run("poetry", "run", "pylint", f"--rcfile={rcfile}", *flags, *paths)
