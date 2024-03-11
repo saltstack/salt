@@ -449,9 +449,9 @@ def test_directory_backupname_force_test_mode_noclobber(
     See https://github.com/saltstack/salt/issues/66049
     """
     source_dir = tmp_path / "source_directory"
+    source_dir.mkdir()
     dest_dir = tmp_path / "dest_directory"
     backupname = tmp_path / "backup_dir"
-    source_dir.mkdir()
     dest_dir.symlink_to(source_dir.resolve())
 
     if backupname_isfile:
@@ -470,7 +470,7 @@ def test_directory_backupname_force_test_mode_noclobber(
     assert ret.result is None
     try:
         # Confirm dest_dir not modified
-        assert dest_dir.readlink() == source_dir
+        assert salt.utils.path.readlink(str(dest_dir)) == str(source_dir)
     except OSError:
         pytest.fail(f"{dest_dir} was modified")
 
