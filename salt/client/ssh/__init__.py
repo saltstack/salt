@@ -965,6 +965,7 @@ class Single:
         thin=None,
         mine=False,
         minion_opts=None,
+        pre_ssh_hook=None,
         identities_only=False,
         sudo_user=None,
         remote_port_forwards=None,
@@ -1004,6 +1005,8 @@ class Single:
         self.opts["thin_dir"] = self.thin_dir
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
+
+        self.ssh_pre_hook = kwargs.get("ssh_pre_hook", None)
 
         self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
         self.ssh_pre_flight_args = kwargs.get("ssh_pre_flight_args", None)
@@ -1164,6 +1167,15 @@ class Single:
         """
         stdout = stderr = ""
         retcode = salt.defaults.exitcodes.EX_OK
+
+        if self.ssh_pre_hook:
+            parts = self.ssh_pre_hook.split()
+            if not os.path.exists(parts[0]):
+                log.error(
+                    "The ssh_pre_hook script %s does not exist", parts[0]
+                )
+            else:
+                subprocess.call(['sh'] + parts)
 
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
