@@ -240,17 +240,14 @@ class VaultClient:
                     namespace=self.namespace,
                     verify=self.verify,
                 )
-        url = self._get_url("sys/wrapping/unwrap")
+        endpoint = "sys/wrapping/unwrap"
         headers = self._get_headers()
         payload = {}
         if "X-Vault-Token" not in headers:
             headers["X-Vault-Token"] = str(wrapped)
         else:
             payload["token"] = str(wrapped)
-        res = self.session.request("POST", url, headers=headers, json=payload)
-        if not res.ok:
-            self._raise_status(res)
-        return res.json()
+        return self.post(endpoint=endpoint, add_headers=headers, payload=payload)
 
     def wrap_info(self, wrapped):
         """
