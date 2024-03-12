@@ -243,7 +243,7 @@ idna==3.7
     #   httpx
     #   requests
     #   yarl
-immutables==0.15
+immutables==0.20
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
