@@ -621,7 +621,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.10-requirements
         name: Linux CI Py3.10 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/linux-crypto\.txt))$
         pass_filenames: false
         args:
@@ -636,7 +635,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.11-requirements
         name: Linux CI Py3.11 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/linux-crypto\.txt))$
         pass_filenames: false
         args:
@@ -651,7 +649,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.12-requirements
         name: Linux CI Py3.12 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
         pass_filenames: false
         args:
@@ -832,7 +829,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.11-requirements
         name: FreeBSD CI Py3.11 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
@@ -847,7 +843,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.12-requirements
         name: FreeBSD CI Py3.12 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/freebsd-crypto\.txt))$
         pass_filenames: false
         args:

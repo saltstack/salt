@@ -414,7 +414,7 @@ platformdirs==2.2.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   virtualenv
-pluggy==0.13.0
+pluggy==1.4.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   pytest
@@ -534,7 +534,7 @@ pytest-timeout==2.3.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/pytest.txt
