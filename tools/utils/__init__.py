@@ -223,7 +223,11 @@ def download_file(
     headers: dict[str, str] | None = None,
 ) -> pathlib.Path:
     ctx.info(f"Downloading {dest.name!r} @ {url} ...")
-    curl = shutil.which("curl")
+    if sys.platform == "win32":
+        # We don't want to use curl on Windows, it doesn't work
+        curl = None
+    else:
+        curl = shutil.which("curl")
     if curl is not None:
         command = [curl, "-sS", "-L"]
         if headers:
