@@ -251,7 +251,7 @@ pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
     # via virtualenv
-pluggy==0.13.0
+pluggy==1.4.0
     # via pytest
 portend==2.6
     # via
@@ -327,7 +327,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-timeout==2.3.1
     # via -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
