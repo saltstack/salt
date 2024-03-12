@@ -8,6 +8,11 @@ import salt.modules.pip as pip
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
 
 
 class FakeFopen:
@@ -1783,6 +1788,9 @@ def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_run
         )
 
 
+@pytest.mark.skipif(
+    MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+)
 @pytest.mark.parametrize(
     "bin_env,target,target_env,expected_target",
     [
