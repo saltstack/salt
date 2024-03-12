@@ -249,11 +249,8 @@ class GitProvider:
         def _val_cb(x, y):
             return str(y)
 
-        # DGM try getting machine_identifier
         # get machine_identifier
-        ## self.mach_id = salt.utils.files.get_machine_identifier()
         self.mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
-        log.debug("DGM machine_id for lock file, machine_id %s", self.mach_id)
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
