@@ -82,7 +82,7 @@ def PKG_TARGETS(grains):
         else:
             _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
-        _PKG_TARGETS = ["lynx", "htop"]
+        _PKG_TARGETS = ["iotop", "screen"]
     return _PKG_TARGETS
 
 
