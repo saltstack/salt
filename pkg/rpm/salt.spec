@@ -425,11 +425,24 @@ usermod -c "%{_SALT_NAME}" \
          %{_SALT_USER}
 
 %pre master
-# Reset permissions to fix previous installs
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
-find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-  \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
-  \( -user salt -o -group salt \) -exec chown root:root \{\} \;
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs
+    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+    _CUR_USER=$(command -v salt-master | xargs ls -l | cut -d ' ' -f 3)
+    _CUR_GROUP=$(command -v salt-master | xargs ls -l | cut -d ' ' -f 4)
+    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+      \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
+      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+fi
+
+%pre minion
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs
+    _CUR_USER=$(command -v salt-minion | xargs ls -l | cut -d ' ' -f 3)
+    _CUR_GROUP=$(command -v salt-minion | xargs ls -l | cut -d ' ' -f 4)
+    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+fi
 
 
 # assumes systemd for RHEL 7 & 8 & 9
