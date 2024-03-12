@@ -1076,12 +1076,10 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        ## mach_id = salt.utils.files.get_machine_identifier()
         mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
-        dbg_msg = (
-            f"exiting for process id '{os.getpid()}' and machine identifer '{mach_id}'"
+        log.debug(
+            "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
         )
-        log.debug(dbg_msg)
 
         cur_pid = os.getpid()
         if HAS_PSUTIL:
