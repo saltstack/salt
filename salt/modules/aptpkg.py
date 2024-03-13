@@ -20,6 +20,7 @@ import re
 import shutil
 import tempfile
 import time
+from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
@@ -204,24 +205,26 @@ if not HAS_APT:
             repo_line.append(self.type)
             opts = _get_opts(self.line)
             if self.architectures:
-                archs = ",".join(self.architectures)
-                opts["arch"]["full"] = f"arch={archs}"
+                if "arch" not in opts:
+                    opts["arch"] = {}
+                opts["arch"]["full"] = f"arch={','.join(self.architectures)}"
                 opts["arch"]["value"] = self.architectures
             if self.signedby:
+                if "signedby" not in opts:
+                    opts["signedby"] = {}
                 opts["signedby"]["full"] = f"signed-by={self.signedby}"
                 opts["signedby"]["value"] = self.signedby
 
-            ordered_opts = [
-                opt_type for opt_type, opt in opts.items() if opt["full"] != ""
-            ]
+            ordered_opts = []
 
             for opt in opts.values():
                 if opt["full"] != "":
-                    ordered_opts[opt["index"]] = opt["full"]
+                    ordered_opts.append(opt["full"])
 
             if ordered_opts:
-                repo_line.append("[{}]".format(" ".join(ordered_opts)))
+                repo_line.append(f"[{' '.join(ordered_opts)}]")
 
+            print("repo_line")
             repo_line += [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
                 repo_line.append(f"#{self.comment}")
@@ -237,10 +240,12 @@ if not HAS_APT:
             if repo_line[1].startswith("["):
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
-                self.architectures.extend(opts["arch"]["value"])
-                self.signedby = opts["signedby"]["value"]
-                for opt in opts:
-                    opt = opts[opt]["full"]
+                if "arch" in opts:
+                    self.architectures.extend(opts["arch"]["value"])
+                if "signedby" in opts:
+                    self.signedby = opts["signedby"]["value"]
+                for opt in opts.values():
+                    opt = opt["full"]
                     if opt:
                         try:
                             repo_line.pop(repo_line.index(opt))
@@ -1732,31 +1737,27 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[(.*=.*)\]", line)
-    ret = {
-        "arch": {"full": "", "value": "", "index": 0},
-        "signedby": {"full": "", "value": "", "index": 0},
-    }
 
+    ret = OrderedDict()
     if not get_opts:
         return ret
     opts = get_opts.group(0).strip("[]")
     architectures = []
-    for idx, opt in enumerate(opts.split()):
+    for opt in opts.split():
         if opt.startswith("arch"):
             architectures.extend(opt.split("=", 1)[1].split(","))
+            ret["arch"] = {}
             ret["arch"]["full"] = opt
             ret["arch"]["value"] = architectures
-            ret["arch"]["index"] = idx
         elif opt.startswith("signed-by"):
+            ret["signedby"] = {}
             ret["signedby"]["full"] = opt
             ret["signedby"]["value"] = opt.split("=", 1)[1]
-            ret["signedby"]["index"] = idx
         else:
             other_opt = opt.split("=", 1)[0]
             ret[other_opt] = {}
             ret[other_opt]["full"] = opt
             ret[other_opt]["value"] = opt.split("=", 1)[1]
-            ret[other_opt]["index"] = idx
     return ret
 
 
