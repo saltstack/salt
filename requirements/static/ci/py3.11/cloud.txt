@@ -159,7 +159,7 @@ filelock==3.0.12
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt

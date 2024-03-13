@@ -120,7 +120,7 @@ etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.3.0
     # via
