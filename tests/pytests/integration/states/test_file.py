@@ -1,6 +1,7 @@
 """
 Tests for the file state
 """
+
 import logging
 import os
 import pathlib
@@ -656,7 +657,9 @@ def test_patch_single_file_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(numbers_file, "w"):
             pass
@@ -729,7 +732,9 @@ def test_patch_directory_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(math_file, "w"):
             pass

@@ -13,7 +13,6 @@ Module used to access the esx proxy connection methods
 
 """
 
-
 import logging
 from functools import wraps
 

@@ -329,6 +329,7 @@ the case when the dependency is unavailable.
     """
     Cheese execution (or returner/beacon/etc.) module
     """
+
     try:
         import enzymes
 

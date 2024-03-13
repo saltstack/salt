@@ -1,6 +1,7 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
+
 import os
 import textwrap
 

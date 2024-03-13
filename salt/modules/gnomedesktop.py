@@ -2,7 +2,6 @@
 GNOME implementations
 """
 
-
 import logging
 import re
 
@@ -78,7 +77,7 @@ class _GSettings:
 
         cmd = self.gsetting_command + ["get", str(self.SCHEMA), str(self.KEY)]
         environ = {}
-        environ["XDG_RUNTIME_DIR"] = "/run/user/{}".format(uid)
+        environ["XDG_RUNTIME_DIR"] = f"/run/user/{uid}"
         result = __salt__["cmd.run_all"](
             cmd, runas=user, env=environ, python_shell=False
         )
@@ -103,12 +102,12 @@ class _GSettings:
             log.info("User does not exist")
             result = {}
             result["retcode"] = 1
-            result["stdout"] = "User {} does not exist".format(user)
+            result["stdout"] = f"User {user} does not exist"
             return result
 
         cmd = self.gsetting_command + ["set", self.SCHEMA, self.KEY, value]
         environ = {}
-        environ["XDG_RUNTIME_DIR"] = "/run/user/{}".format(uid)
+        environ["XDG_RUNTIME_DIR"] = f"/run/user/{uid}"
         result = __salt__["cmd.run_all"](
             cmd, runas=user, env=environ, python_shell=False
         )

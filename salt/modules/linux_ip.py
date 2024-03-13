@@ -45,7 +45,7 @@ def down(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {} down".format(iface))
+        return __salt__["cmd.run"](f"ip link set {iface} down")
     return None
 
 
@@ -92,7 +92,7 @@ def _ip_ifaces():
                 at_ = comps[0]
                 if len(comps) % 2 != 0:
                     last = comps.pop()
-                    comps[-1] += " {}".format(last)
+                    comps[-1] += f" {last}"
                 ifi = iter(comps)
                 ret[if_][at_] = dict(list(zip(ifi, ifi)))
             else:
@@ -114,7 +114,7 @@ def up(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {} up".format(iface))
+        return __salt__["cmd.run"](f"ip link set {iface} up")
     return None
 
 

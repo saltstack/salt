@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_pki
 """
 
-
 import pytest
 
 import salt.modules.win_pki as win_pki

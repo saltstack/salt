@@ -96,7 +96,7 @@ class CommonCache:
                 if int(time.time()) - updated >= self.ttl:
                     if flush:
                         log.debug(
-                            f"Cached data in {self.cbank}/{ckey} outdated, flushing."
+                            "Cached data in %s/%s outdated, flushing.", self.cbank, ckey
                         )
                         self.flush()
                     return False
@@ -317,9 +317,11 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
                 self.expire_events(
                     tag=f"vault/lease/{ckey}/expire",
                     data={
-                        "valid_for_less": valid_for
-                        if valid_for is not None
-                        else data.get("min_ttl") or 0,
+                        "valid_for_less": (
+                            valid_for
+                            if valid_for is not None
+                            else data.get("min_ttl") or 0
+                        ),
                     },
                 )
             ret = None

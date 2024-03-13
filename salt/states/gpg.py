@@ -108,9 +108,9 @@ def present(
 
     if not text and skip_keyserver and not source:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "When skipping keyservers, you must provide at least one source"
+        ret["comment"] = (
+            "When skipping keyservers, you must provide at least one source"
+        )
         return ret
 
     _current_keys = __salt__["gpg.list_keys"](
@@ -187,7 +187,7 @@ def present(
                     text=text, keyid=key, gnupghome=gnupghome, user=user
                 )
                 if has_key:
-                    log.debug(f"Passed text contains key {key}")
+                    log.debug("Passed text contains key %s", key)
                     result = __salt__["gpg.import_key"](
                         text=text,
                         user=user,
@@ -215,12 +215,12 @@ def present(
                     for src in source:
                         sfn = __salt__["cp.cache_file"](src)
                         if sfn:
-                            log.debug(f"Found source: {src}")
+                            log.debug("Found source: %s", src)
                             has_key = __salt__["gpg.read_key"](
                                 path=sfn, keyid=key, gnupghome=gnupghome, user=user
                             )
                             if has_key:
-                                log.debug(f"Found source {src} contains key {key}")
+                                log.debug("Found source %s contains key %s", src, key)
                                 result = __salt__["gpg.import_key"](
                                     filename=sfn,
                                     user=user,

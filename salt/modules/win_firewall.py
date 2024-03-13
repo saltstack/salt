@@ -151,7 +151,7 @@ def get_rule(name="all"):
 
         salt '*' firewall.get_rule 'MyAppPort'
     """
-    cmd = ["netsh", "advfirewall", "firewall", "show", "rule", "name={}".format(name)]
+    cmd = ["netsh", "advfirewall", "firewall", "show", "rule", f"name={name}"]
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:
         raise CommandExecutionError(ret["stdout"])
@@ -228,15 +228,15 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip
         "firewall",
         "add",
         "rule",
-        "name={}".format(name),
-        "protocol={}".format(protocol),
-        "dir={}".format(dir),
-        "action={}".format(action),
-        "remoteip={}".format(remoteip),
+        f"name={name}",
+        f"protocol={protocol}",
+        f"dir={dir}",
+        f"action={action}",
+        f"remoteip={remoteip}",
     ]
 
     if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
-        cmd.append("localport={}".format(localport))
+        cmd.append(f"localport={localport}")
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:
@@ -292,19 +292,19 @@ def delete_rule(name=None, localport=None, protocol=None, dir=None, remoteip=Non
     """
     cmd = ["netsh", "advfirewall", "firewall", "delete", "rule"]
     if name:
-        cmd.append("name={}".format(name))
+        cmd.append(f"name={name}")
     if protocol:
-        cmd.append("protocol={}".format(protocol))
+        cmd.append(f"protocol={protocol}")
     if dir:
-        cmd.append("dir={}".format(dir))
+        cmd.append(f"dir={dir}")
     if remoteip:
-        cmd.append("remoteip={}".format(remoteip))
+        cmd.append(f"remoteip={remoteip}")
 
     if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
         if localport:
             if not protocol:
                 cmd.append("protocol=tcp")
-            cmd.append("localport={}".format(localport))
+            cmd.append(f"localport={localport}")
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:

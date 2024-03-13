@@ -84,7 +84,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     ret = ""
 
     for status in sorted(data):
-        ret += "{}\n".format(trans[status])
+        ret += f"{trans[status]}\n"
         for key in sorted(data[status]):
             key = salt.utils.data.decode(key)
             skey = salt.output.strip_esc_sequence(key) if strip_colors else key

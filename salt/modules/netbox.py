@@ -190,7 +190,7 @@ def get_(app, endpoint, id=None, **kwargs):
             endpoint,
             id=id,
             auth_required=True if app in AUTH_ENDPOINTS else False,
-            **kwargs
+            **kwargs,
         )
     )
 
@@ -1014,7 +1014,7 @@ def create_circuit_provider(name, asn=None):
         else:
             log.error("Duplicate provider with different ASN: %s: %s", name, asn)
             raise CommandExecutionError(
-                "Duplicate provider with different ASN: {}: {}".format(name, asn)
+                f"Duplicate provider with different ASN: {name}: {asn}"
             )
     else:
         payload = {"name": name, "slug": slugify(name)}

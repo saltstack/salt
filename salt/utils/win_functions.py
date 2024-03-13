@@ -135,7 +135,7 @@ def get_sid_from_name(name):
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
-        raise CommandExecutionError("User {} not found: {}".format(name, exc))
+        raise CommandExecutionError(f"User {name} not found: {exc}")
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -166,7 +166,7 @@ def get_current_user(with_domain=True):
         elif not with_domain:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        raise CommandExecutionError("Failed to get current user: {}".format(exc))
+        raise CommandExecutionError(f"Failed to get current user: {exc}")
 
     if not user_name:
         return False
@@ -253,7 +253,7 @@ def escape_for_cmd_exe(arg):
     meta_re = re.compile(
         "(" + "|".join(re.escape(char) for char in list(meta_chars)) + ")"
     )
-    meta_map = {char: "^{}".format(char) for char in meta_chars}
+    meta_map = {char: f"^{char}" for char in meta_chars}
 
     def escape_meta_chars(m):
         char = m.group(1)

@@ -1,6 +1,7 @@
 """
 Unit tests for salt.fileclient
 """
+
 import salt.config
 import salt.fileclient as fileclient
 from tests.support.mock import MagicMock, patch

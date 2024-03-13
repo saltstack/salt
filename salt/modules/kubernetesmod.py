@@ -160,7 +160,7 @@ def _setup_conn_old(**kwargs):
         or kubernetes.client.configuration.password != password
     ):
         # Recreates API connection if settings are changed
-        kubernetes.client.configuration.__init__()
+        kubernetes.client.configuration.__init__()  # pylint: disable=unnecessary-dunder-call
 
     kubernetes.client.configuration.host = host
     kubernetes.client.configuration.user = username

@@ -4,7 +4,6 @@ Manage Dell DRAC.
 .. versionadded:: 2015.8.2
 """
 
-
 import logging
 import os
 import re
@@ -69,12 +68,12 @@ def __execute_cmd(
         if module.startswith("ALL_"):
             modswitch = "-a " + module[module.index("_") + 1 : len(module)].lower()
         else:
-            modswitch = "-m {}".format(module)
+            modswitch = f"-m {module}"
     else:
         modswitch = ""
     if not host:
         # This is a local call
-        cmd = __salt__["cmd.run_all"]("racadm {} {}".format(command, modswitch))
+        cmd = __salt__["cmd.run_all"](f"racadm {command} {modswitch}")
     else:
         cmd = __salt__["cmd.run_all"](
             "racadm -r {} -u {} -p {} {} {}".format(
@@ -100,12 +99,12 @@ def __execute_ret(
         if module == "ALL":
             modswitch = "-a "
         else:
-            modswitch = "-m {}".format(module)
+            modswitch = f"-m {module}"
     else:
         modswitch = ""
     if not host:
         # This is a local call
-        cmd = __salt__["cmd.run_all"]("racadm {} {}".format(command, modswitch))
+        cmd = __salt__["cmd.run_all"](f"racadm {command} {modswitch}")
     else:
         cmd = __salt__["cmd.run_all"](
             "racadm -r {} -u {} -p {} {} {}".format(
@@ -153,7 +152,7 @@ def get_dns_dracname(host=None, admin_username=None, admin_password=None):
 def set_dns_dracname(name, host=None, admin_username=None, admin_password=None):
 
     ret = __execute_ret(
-        "set iDRAC.NIC.DNSRacName {}".format(name),
+        f"set iDRAC.NIC.DNSRacName {name}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -256,7 +255,7 @@ def network_info(host=None, admin_username=None, admin_password=None, module=Non
     if module not in inv.get("switch") and module not in inv.get("server"):
         cmd = {}
         cmd["retcode"] = -1
-        cmd["stdout"] = "No module {} found.".format(module)
+        cmd["stdout"] = f"No module {module} found."
         return cmd
 
     cmd = __execute_ret(
@@ -293,7 +292,7 @@ def nameservers(ns, host=None, admin_username=None, admin_password=None, module=
 
     for i in range(1, len(ns) + 1):
         if not __execute_cmd(
-            "config -g cfgLanNetworking -o cfgDNSServer{} {}".format(i, ns[i - 1]),
+            f"config -g cfgLanNetworking -o cfgDNSServer{i} {ns[i - 1]}",
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -332,7 +331,7 @@ def syslog(
         module=None,
     ):
         return __execute_cmd(
-            "config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {}".format(server),
+            f"config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {server}",
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -386,7 +385,7 @@ def list_users(host=None, admin_username=None, admin_password=None, module=None)
 
     for idx in range(1, 17):
         cmd = __execute_ret(
-            "getconfig -g cfgUserAdmin -i {}".format(idx),
+            f"getconfig -g cfgUserAdmin -i {idx}",
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -434,7 +433,7 @@ def delete_user(
 
     if uid:
         return __execute_cmd(
-            "config -g cfgUserAdmin -o cfgUserAdminUserName -i {} ".format(uid),
+            f"config -g cfgUserAdmin -o cfgUserAdminUserName -i {uid} ",
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -522,7 +521,7 @@ def deploy_password(
     on that then setting the password is much quicker.
     """
     return __execute_cmd(
-        "deploy -u {} -p {}".format(username, password),
+        f"deploy -u {username} -p {password}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -545,7 +544,7 @@ def deploy_snmp(snmp, host=None, admin_username=None, admin_password=None, modul
 
     """
     return __execute_cmd(
-        "deploy -v SNMPv2 {} ro".format(snmp),
+        f"deploy -v SNMPv2 {snmp} ro",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -599,7 +598,7 @@ def create_user(
 
     # Create user account first
     if not __execute_cmd(
-        "config -g cfgUserAdmin -o cfgUserAdminUserName -i {} {}".format(uid, username),
+        f"config -g cfgUserAdmin -o cfgUserAdminUserName -i {uid} {username}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -620,9 +619,7 @@ def create_user(
         return False
 
     # Enable users admin
-    if not __execute_cmd(
-        "config -g cfgUserAdmin -o cfgUserAdminEnable -i {} 1".format(uid)
-    ):
+    if not __execute_cmd(f"config -g cfgUserAdmin -o cfgUserAdminEnable -i {uid} 1"):
         delete_user(username, uid)
         return False
 
@@ -703,7 +700,7 @@ def set_snmp(community, host=None, admin_username=None, admin_password=None):
         salt dell dracr.set_snmp public
     """
     return __execute_cmd(
-        "config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {}".format(community),
+        f"config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {community}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -767,7 +764,7 @@ def server_power(
 
     """
     return __execute_cmd(
-        "serveraction {}".format(status),
+        f"serveraction {status}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1089,7 +1086,7 @@ def set_slotname(slot, name, host=None, admin_username=None, admin_password=None
 
     """
     return __execute_cmd(
-        "config -g cfgServerInfo -o cfgServerName -i {} {}".format(slot, name),
+        f"config -g cfgServerInfo -o cfgServerName -i {slot} {name}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1121,7 +1118,7 @@ def set_chassis_name(name, host=None, admin_username=None, admin_password=None):
 
     """
     return __execute_cmd(
-        "setsysinfo -c chassisname {}".format(name),
+        f"setsysinfo -c chassisname {name}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1265,7 +1262,7 @@ def set_chassis_location(location, host=None, admin_username=None, admin_passwor
 
     """
     return __execute_cmd(
-        "setsysinfo -c chassislocation {}".format(location),
+        f"setsysinfo -c chassislocation {location}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1368,7 +1365,7 @@ def set_general(
     cfg_sec, cfg_var, val, host=None, admin_username=None, admin_password=None
 ):
     return __execute_cmd(
-        "config -g {} -o {} {}".format(cfg_sec, cfg_var, val),
+        f"config -g {cfg_sec} -o {cfg_var} {val}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1377,7 +1374,7 @@ def set_general(
 
 def get_general(cfg_sec, cfg_var, host=None, admin_username=None, admin_password=None):
     ret = __execute_ret(
-        "getconfig -g {} -o {}".format(cfg_sec, cfg_var),
+        f"getconfig -g {cfg_sec} -o {cfg_var}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1458,7 +1455,7 @@ def _update_firmware(cmd, host=None, admin_username=None, admin_password=None):
 
 def bare_rac_cmd(cmd, host=None, admin_username=None, admin_password=None):
     ret = __execute_ret(
-        "{}".format(cmd),
+        f"{cmd}",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -1488,13 +1485,13 @@ def update_firmware(filename, host=None, admin_username=None, admin_password=Non
     """
     if os.path.exists(filename):
         return _update_firmware(
-            "update -f {}".format(filename),
+            f"update -f {filename}",
             host=None,
             admin_username=None,
             admin_password=None,
         )
     else:
-        raise CommandExecutionError("Unable to find firmware file {}".format(filename))
+        raise CommandExecutionError(f"Unable to find firmware file {filename}")
 
 
 def update_firmware_nfs_or_cifs(
@@ -1533,13 +1530,13 @@ def update_firmware_nfs_or_cifs(
     """
     if os.path.exists(filename):
         return _update_firmware(
-            "update -f {} -l {}".format(filename, share),
+            f"update -f {filename} -l {share}",
             host=None,
             admin_username=None,
             admin_password=None,
         )
     else:
-        raise CommandExecutionError("Unable to find firmware file {}".format(filename))
+        raise CommandExecutionError(f"Unable to find firmware file {filename}")
 
 
 # def get_idrac_nic()

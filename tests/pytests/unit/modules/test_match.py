@@ -2,7 +2,6 @@
     :codeauthor: Oleg Lipovchenko <oleg.lipovchenko@gmail.com>
 """
 
-
 import pytest
 
 import salt.loader
@@ -145,7 +144,7 @@ def test_watch_for_opts_mismatch_compound_match(minion_id):
     and use it instead of `__opts__`.  If sometime in the future we update the matchers
     and use `__opts__` directly this breaks proxy matching.
     """
-    assert compound_match.match("L@{}".format(minion_id))
+    assert compound_match.match(f"L@{minion_id}")
     assert compound_match.match("L@rest03", {"id": "rest03"})
     assert not compound_match.match("L@rest03")
 

@@ -84,7 +84,7 @@ def present(name, persist=False, mods=None):
     # Intersection of loaded and proposed modules
     already_loaded = list(set(loaded_mods) & set(mods))
     if len(already_loaded) == 1:
-        comment = "Kernel module {} is already present".format(already_loaded[0])
+        comment = f"Kernel module {already_loaded[0]} is already present"
         _append_comment(ret, comment)
     elif len(already_loaded) > 1:
         comment = "Kernel modules {} are already present".format(
@@ -103,7 +103,7 @@ def present(name, persist=False, mods=None):
         if ret["comment"]:
             ret["comment"] += "\n"
         if len(not_loaded) == 1:
-            comment = "Kernel module {} is set to be loaded".format(not_loaded[0])
+            comment = f"Kernel module {not_loaded[0]} is set to be loaded"
         else:
             comment = "Kernel modules {} are set to be loaded".format(
                 ", ".join(not_loaded)
@@ -115,7 +115,7 @@ def present(name, persist=False, mods=None):
     unavailable = list(set(not_loaded) - set(__salt__["kmod.available"]()))
     if unavailable:
         if len(unavailable) == 1:
-            comment = "Kernel module {} is unavailable".format(unavailable[0])
+            comment = f"Kernel module {unavailable[0]} is unavailable"
         else:
             comment = "Kernel modules {} are unavailable".format(", ".join(unavailable))
         _append_comment(ret, comment)
@@ -161,7 +161,7 @@ def present(name, persist=False, mods=None):
 
     if loaded["failed"]:
         for mod, msg in loaded["failed"]:
-            _append_comment(ret, "Failed to load kernel module {}: {}".format(mod, msg))
+            _append_comment(ret, f"Failed to load kernel module {mod}: {msg}")
 
     return ret
 
@@ -205,7 +205,7 @@ def absent(name, persist=False, comment=True, mods=None):
             ret["result"] = None
             if len(to_unload) == 1:
                 _append_comment(
-                    ret, "Kernel module {} is set to be removed".format(to_unload[0])
+                    ret, f"Kernel module {to_unload[0]} is set to be removed"
                 )
             elif len(to_unload) > 1:
                 _append_comment(
@@ -252,15 +252,13 @@ def absent(name, persist=False, comment=True, mods=None):
 
         if unloaded["failed"]:
             for mod, msg in unloaded["failed"]:
-                _append_comment(
-                    ret, "Failed to remove kernel module {}: {}".format(mod, msg)
-                )
+                _append_comment(ret, f"Failed to remove kernel module {mod}: {msg}")
 
         return ret
 
     else:
         if len(mods) == 1:
-            ret["comment"] = "Kernel module {} is already removed".format(mods[0])
+            ret["comment"] = f"Kernel module {mods[0]} is already removed"
         else:
             ret["comment"] = "Kernel modules {} are already removed".format(
                 ", ".join(mods)

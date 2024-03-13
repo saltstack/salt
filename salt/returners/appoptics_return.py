@@ -69,7 +69,6 @@ the name of the state that was invoked, e.g. ``role_salt_master.netapi``.
 
 """
 
-
 import logging
 
 import salt.returners

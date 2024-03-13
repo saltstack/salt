@@ -72,7 +72,7 @@ def _auth(api_key=None, profile="telemetry"):
 
 
 def _update_cache(deployment_id, metric_name, alert):
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     if key in __context__:
         alerts = __context__[key]
@@ -101,7 +101,7 @@ def _retrieve_channel_id(email, profile="telemetry"):
             _get_telemetry_base(profile)
             + "/notification-channels?_type=EmailNotificationChannel"
         )
-        response = requests.get(get_url, headers=auth)
+        response = requests.get(get_url, headers=auth, timeout=120)
 
         if response.status_code == 200:
             cache_result = {}
@@ -133,14 +133,14 @@ def get_alert_config(
     auth = _auth(profile=profile)
     alert = False
 
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     if key not in __context__:
         try:
             get_url = _get_telemetry_base(profile) + "/alerts?deployment={}".format(
                 deployment_id
             )
-            response = requests.get(get_url, headers=auth)
+            response = requests.get(get_url, headers=auth, timeout=120)
         except requests.exceptions.RequestException as e:
             log.error(str(e))
             return False
@@ -197,7 +197,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             "email": notify_channel,
         }
         response = requests.post(
-            post_url, data=salt.utils.json.dumps(data), headers=auth
+            post_url, data=salt.utils.json.dumps(data), headers=auth, timeout=120
         )
         if response.status_code == 200:
             log.info(
@@ -209,9 +209,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             notification_channel_id = response.json().get("_id")
             __context__["telemetry.channels"][notify_channel] = notification_channel_id
         else:
-            raise Exception(
-                "Failed to created notification channel {}".format(notify_channel)
-            )
+            raise Exception(f"Failed to created notification channel {notify_channel}")
 
     return notification_channel_id
 
@@ -233,9 +231,9 @@ def get_alarms(deployment_id, profile="telemetry"):
 
     try:
         response = requests.get(
-            _get_telemetry_base(profile)
-            + "/alerts?deployment={}".format(deployment_id),
+            _get_telemetry_base(profile) + f"/alerts?deployment={deployment_id}",
             headers=auth,
+            timeout=120,
         )
     except requests.exceptions.RequestException as e:
         log.error(str(e))
@@ -247,7 +245,7 @@ def get_alarms(deployment_id, profile="telemetry"):
         if alarms:
             return alarms
 
-        return "No alarms defined for deployment: {}".format(deployment_id)
+        return f"No alarms defined for deployment: {deployment_id}"
     else:
         # Non 200 response, sent back the error response'
         return {
@@ -275,7 +273,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     auth = _auth(api_key, profile)
     request_uri = _get_telemetry_base(profile) + "/alerts"
 
-    key = "telemetry.{}.alerts".format(deployment_id)
+    key = f"telemetry.{deployment_id}.alerts"
 
     # set the notification channels if not already set
     post_body = {
@@ -293,7 +291,10 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
     try:
         response = requests.post(
-            request_uri, data=salt.utils.json.dumps(post_body), headers=auth
+            request_uri,
+            data=salt.utils.json.dumps(post_body),
+            headers=auth,
+            timeout=120,
         )
     except requests.exceptions.RequestException as e:
         # TODO: May be we should retry?
@@ -364,7 +365,10 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
     try:
         response = requests.put(
-            request_uri, data=salt.utils.json.dumps(post_body), headers=auth
+            request_uri,
+            data=salt.utils.json.dumps(post_body),
+            headers=auth,
+            timeout=120,
         )
     except requests.exceptions.RequestException as e:
         log.error("Update failed: %s", e)
@@ -421,15 +425,15 @@ def delete_alarms(
     if not alert_ids:
         return (
             False,
-            "failed to find alert associated with deployment: {}".format(deployment_id),
+            f"failed to find alert associated with deployment: {deployment_id}",
         )
 
     failed_to_delete = []
     for id in alert_ids:
-        delete_url = _get_telemetry_base(profile) + "/alerts/{}".format(id)
+        delete_url = _get_telemetry_base(profile) + f"/alerts/{id}"
 
         try:
-            response = requests.delete(delete_url, headers=auth)
+            response = requests.delete(delete_url, headers=auth, timeout=120)
             if metric_name:
                 log.debug(
                     "updating cache and delete %s key from %s",

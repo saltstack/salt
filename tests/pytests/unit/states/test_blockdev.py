@@ -29,7 +29,7 @@ def test_tuned():
         ret.update({"comment": comt})
         assert blockdev.tuned(name) == ret
 
-    comt = "Changes to {} will be applied ".format(name)
+    comt = f"Changes to {name} will be applied "
     with patch.dict(blockdev.__salt__, {"file.is_blkdev": True}):
         ret.update({"comment": comt, "result": None})
         with patch.dict(blockdev.__opts__, {"test": True}):
@@ -47,7 +47,7 @@ def test_formatted():
     with patch.object(
         os.path, "exists", MagicMock(side_effect=[False, True, True, True, True])
     ):
-        comt = "{} does not exist".format(name)
+        comt = f"{name} does not exist"
         ret.update({"comment": comt})
         assert blockdev.formatted(name) == ret
 
@@ -55,7 +55,7 @@ def test_formatted():
 
         # Test state return when block device is already in the correct state
         with patch.dict(blockdev.__salt__, {"cmd.run": mock_ext4}):
-            comt = "{} already formatted with ext4".format(name)
+            comt = f"{name} already formatted with ext4"
             ret.update({"comment": comt, "result": True})
             assert blockdev.formatted(name) == ret
 
@@ -69,7 +69,7 @@ def test_formatted():
         with patch.dict(
             blockdev.__salt__, {"cmd.run": MagicMock(return_value="new-thing")}
         ):
-            comt = "Changes to {} will be applied ".format(name)
+            comt = f"Changes to {name} will be applied "
             ret.update({"comment": comt, "result": None})
             with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
                 with patch.dict(blockdev.__opts__, {"test": True}):
@@ -83,7 +83,7 @@ def test_formatted():
                 "disk.format": MagicMock(return_value=True),
             },
         ):
-            comt = "Failed to format {}".format(name)
+            comt = f"Failed to format {name}"
             ret.update({"comment": comt, "result": False})
             with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
                 with patch.dict(blockdev.__opts__, {"test": False}):

@@ -116,6 +116,7 @@ ZB      10**21
 YB      10**24
 ======  =======
 """
+
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
@@ -298,9 +299,7 @@ def _get_domain(conn, *vms, **kwargs):
     if vms:
         for name in vms:
             if name not in all_vms:
-                raise CommandExecutionError(
-                    'The VM "{name}" is not present'.format(name=name)
-                )
+                raise CommandExecutionError(f'The VM "{name}" is not present')
             else:
                 lookup_vms.append(name)
     else:
@@ -324,9 +323,9 @@ def _parse_qemu_img_info(info):
             "file format": disk_infos["format"],
             "disk size": disk_infos["actual-size"],
             "virtual size": disk_infos["virtual-size"],
-            "cluster size": disk_infos["cluster-size"]
-            if "cluster-size" in disk_infos
-            else None,
+            "cluster size": (
+                disk_infos["cluster-size"] if "cluster-size" in disk_infos else None
+            ),
         }
 
         if "full-backing-filename" in disk_infos.keys():
@@ -515,7 +514,7 @@ def _get_disks(conn, dom):
             disk_type = elem.get("type")
 
             def _get_disk_volume_data(pool_name, volume_name):
-                qemu_target = "{}/{}".format(pool_name, volume_name)
+                qemu_target = f"{pool_name}/{volume_name}"
                 pool = conn.storagePoolLookupByName(pool_name)
                 extra_properties = {}
                 try:
@@ -526,12 +525,15 @@ def _get_disks(conn, dom):
                         "disk size": vol_info[2],
                     }
 
+                    _nodes = elem.findall(  # pylint: disable=cell-var-from-loop
+                        ".//backingStore[source]"
+                    )
                     backing_files = [
                         {
                             "file": node.find("source").get("file"),
                             "file format": node.find("format").get("type"),
                         }
-                        for node in elem.findall(".//backingStore[source]")
+                        for node in _nodes
                     ]
 
                     if backing_files:
@@ -553,9 +555,9 @@ def _get_disks(conn, dom):
                                 "file": backing_path.text
                             }
                             if backing_format is not None:
-                                extra_properties["backing file"][
-                                    "file format"
-                                ] = backing_format.get("type")
+                                extra_properties["backing file"]["file format"] = (
+                                    backing_format.get("type")
+                                )
                 except libvirt.libvirtError:
                     # The volume won't be found if the pool is not started, just output less infos
                     log.info(
@@ -570,7 +572,7 @@ def _get_disks(conn, dom):
                     disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                     continue
 
-                if qemu_target in all_volumes.keys():
+                if qemu_target in all_volumes:
                     # If the qemu_target is a known path, output a volume
                     volume = all_volumes[qemu_target]
                     qemu_target, extra_properties = _get_disk_volume_data(
@@ -605,7 +607,7 @@ def _get_disks(conn, dom):
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
-                if qemu_target in all_volumes.keys():
+                if qemu_target in all_volumes:
                     volume = all_volumes[qemu_target]
                     qemu_target, extra_properties = _get_disk_volume_data(
                         volume["pool"], volume["name"]
@@ -614,7 +616,7 @@ def _get_disks(conn, dom):
                 qemu_target = source.get("protocol")
                 source_name = source.get("name")
                 if source_name:
-                    qemu_target = "{}:{}".format(qemu_target, source_name)
+                    qemu_target = f"{qemu_target}:{source_name}"
 
                 # Reverse the magic for the rbd and gluster pools
                 if source.get("protocol") in ["rbd", "gluster"]:
@@ -622,7 +624,7 @@ def _get_disks(conn, dom):
                         pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
                         name_node = pool_i_xml.find("source/name")
                         if name_node is not None and source_name.startswith(
-                            "{}/".format(name_node.text)
+                            f"{name_node.text}/"
                         ):
                             qemu_target = "{}{}".format(
                                 pool_i.name(), source_name[len(name_node.text) :]
@@ -638,7 +640,7 @@ def _get_disks(conn, dom):
                         qemu_target = urllib.parse.urlunparse(
                             (
                                 source.get("protocol"),
-                                "{}:{}".format(hostname, port) if port else hostname,
+                                f"{hostname}:{port}" if port else hostname,
                                 source_name,
                                 "",
                                 saxutils.unescape(source.get("query", "")),
@@ -743,9 +745,7 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             bandwidth_value = int(max_bandwidth)
         except ValueError:
-            raise SaltInvocationError(
-                "Invalid max_bandwidth value: {}".format(max_bandwidth)
-            )
+            raise SaltInvocationError(f"Invalid max_bandwidth value: {max_bandwidth}")
         dom.migrateSetMaxSpeed(bandwidth_value)
 
     max_downtime = kwargs.get("max_downtime")
@@ -753,9 +753,7 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             downtime_value = int(max_downtime)
         except ValueError:
-            raise SaltInvocationError(
-                "Invalid max_downtime value: {}".format(max_downtime)
-            )
+            raise SaltInvocationError(f"Invalid max_downtime value: {max_downtime}")
         dom.migrateSetMaxDowntime(downtime_value)
 
     if kwargs.get("offline") is True:
@@ -776,13 +774,13 @@ def _migrate(dom, dst_uri, **kwargs):
         "comp_xbzrle_cache": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
     }
 
-    for (comp_option, param_key) in comp_options.items():
+    for comp_option, param_key in comp_options.items():
         comp_option_value = kwargs.get(comp_option)
         if comp_option_value:
             try:
                 params[param_key] = int(comp_option_value)
             except ValueError:
-                raise SaltInvocationError("Invalid {} value".format(comp_option))
+                raise SaltInvocationError(f"Invalid {comp_option} value")
 
     parallel_connections = kwargs.get("parallel_connections")
     if parallel_connections:
@@ -888,7 +886,7 @@ def _disk_from_pool(conn, pool, pool_xml, volume_name):
         # Gluster and RBD need pool/volume name
         name_node = pool_xml.find("./source/name")
         if name_node is not None:
-            disk_context["volume"] = "{}/{}".format(name_node.text, volume_name)
+            disk_context["volume"] = f"{name_node.text}/{volume_name}"
         # Copy the authentication if any for RBD
         auth_node = pool_xml.find("./source/auth")
         if auth_node is not None:
@@ -947,7 +945,7 @@ def _gen_xml(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Generate the XML string to define a libvirt VM
@@ -1013,7 +1011,7 @@ def _gen_xml(
     efi_value = context["boot"].get("efi", None) if boot else None
     if efi_value is True:
         context["boot"]["os_attrib"] = "firmware='efi'"
-    elif efi_value is not None and type(efi_value) != bool:
+    elif efi_value is not None and not isinstance(efi_value, bool):
         raise SaltInvocationError("Invalid efi value")
 
     if os_type == "xen":
@@ -1300,9 +1298,11 @@ def _gen_pool_xml(
     ):
         source = {
             "devices": source_devices or [],
-            "dir": source_dir
-            if source_format != "cifs" or not source_dir
-            else source_dir.lstrip("/"),
+            "dir": (
+                source_dir
+                if source_format != "cifs" or not source_dir
+                else source_dir.lstrip("/")
+            ),
             "adapter": source_adapter,
             "hosts": [
                 {"name": host[0], "port": host[1] if len(host) > 1 else None}
@@ -1391,7 +1391,7 @@ def _zfs_image_create(
             )
         )
 
-    destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
+    destination_fs = os.path.join(pool, f"{vm_name}.{disk_name}")
     log.debug("Image destination will be %s", destination_fs)
 
     existing_disk = __salt__["zfs.list"](name=pool)
@@ -1423,9 +1423,7 @@ def _zfs_image_create(
             sparse=sparse_volume,
         )
 
-    blockdevice_path = os.path.join(
-        "/dev/zvol", pool, "{}.{}".format(vm_name, disk_name)
-    )
+    blockdevice_path = os.path.join("/dev/zvol", pool, f"{vm_name}.{disk_name}")
     log.debug("Image path will be %s", blockdevice_path)
     return blockdevice_path
 
@@ -1458,7 +1456,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
         qcow2 = False
         if salt.utils.path.which("qemu-img"):
-            res = __salt__["cmd.run"]('qemu-img info "{}"'.format(sfn))
+            res = __salt__["cmd.run"](f'qemu-img info "{sfn}"')
             imageinfo = salt.utils.yaml.safe_load(res)
             qcow2 = imageinfo["file format"] == "qcow2"
         try:
@@ -1477,9 +1475,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
             if disk_size and qcow2:
                 log.debug("Resize qcow2 image to %sM", disk_size)
-                __salt__["cmd.run"](
-                    'qemu-img resize "{}" {}M'.format(img_dest, disk_size)
-                )
+                __salt__["cmd.run"](f'qemu-img resize "{img_dest}" {disk_size}M')
 
             log.debug("Apply umask and remove exec bit")
             mode = (0o0777 ^ mask) & 0o0666
@@ -1487,7 +1483,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
         except OSError as err:
             raise CommandExecutionError(
-                "Problem while copying image. {} - {}".format(disk_image, err)
+                f"Problem while copying image. {disk_image} - {err}"
             )
 
     else:
@@ -1514,7 +1510,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
         except OSError as err:
             raise CommandExecutionError(
-                "Problem while creating volume {} - {}".format(img_dest, err)
+                f"Problem while creating volume {img_dest} - {err}"
             )
 
     return img_dest
@@ -1730,7 +1726,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                     index = min(
                         idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
-                    disk["filename"] = "{}{}".format(os.path.basename(device), index)
+                    disk["filename"] = f"{os.path.basename(device)}{index}"
 
             # Is the user wanting to reuse an existing volume?
             if disk.get("source_file"):
@@ -1965,7 +1961,7 @@ def _handle_efi_param(boot, desc):
         return True
 
     # check the case that loader tag might be present. This happens after the vm ran
-    elif type(efi_value) == bool and os_attrib == {}:
+    elif isinstance(efi_value, bool) and os_attrib == {}:
         if efi_value is True and parent_tag.find("loader") is None:
             parent_tag.set("firmware", "efi")
             return True
@@ -1973,7 +1969,7 @@ def _handle_efi_param(boot, desc):
             parent_tag.remove(parent_tag.find("loader"))
             parent_tag.remove(parent_tag.find("nvram"))
             return True
-    elif type(efi_value) != bool:
+    elif not isinstance(efi_value, bool):
         raise SaltInvocationError("Invalid efi value")
     return False
 
@@ -2006,7 +2002,7 @@ def init(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Initialize a new vm
@@ -2912,7 +2908,7 @@ def init(
             consoles,
             stop_on_reboot,
             host_devices,
-            **kwargs
+            **kwargs,
         )
         log.debug("New virtual machine definition: %s", vm_xml)
         conn.defineXML(vm_xml)
@@ -2982,12 +2978,16 @@ def _nics_equal(nic1, nic2):
         }
         return {
             "type": source_type,
-            "source": source_getters[source_type](source_node)
-            if source_node is not None
-            else None,
-            "model": nic.find("model").attrib["type"]
-            if nic.find("model") is not None
-            else None,
+            "source": (
+                source_getters[source_type](source_node)
+                if source_node is not None
+                else None
+            ),
+            "model": (
+                nic.find("model").attrib["type"]
+                if nic.find("model") is not None
+                else None
+            ),
         }
 
     def _get_mac(nic):
@@ -3112,7 +3112,7 @@ def _get_disk_target(targets, disks_count, prefix):
     :param prefix: the prefix of the target name, i.e. "hd"
     """
     for i in range(disks_count):
-        ret = "{}{}".format(prefix, string.ascii_lowercase[i])
+        ret = f"{prefix}{string.ascii_lowercase[i]}"
         if ret not in targets:
             return ret
     return None
@@ -3235,12 +3235,16 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").get("service")
-            if item.find("source") is not None
-            else None,
-            "protocol": item.find("protocol").get("type")
-            if item.find("protocol") is not None
-            else None,
+            "port": (
+                item.find("source").get("service")
+                if item.find("source") is not None
+                else None
+            ),
+            "protocol": (
+                item.find("protocol").get("type")
+                if item.find("protocol") is not None
+                else None
+            ),
         }
 
     return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
@@ -3294,8 +3298,8 @@ def _compute_device_changes(old_xml, new_xml, to_skip):
         changes[dev_type] = {}
         if not to_skip[dev_type]:
             old = devices_node.findall(dev_type)
-            new = new_xml.findall("devices/{}".format(dev_type))
-            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
+            new = new_xml.findall(f"devices/{dev_type}")
+            changes[dev_type] = globals()[f"_diff_{dev_type}_lists"](old, new)
     return changes
 
 
@@ -3499,7 +3503,7 @@ def update(
     stop_on_reboot=False,
     host_devices=None,
     autostart=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Update the definition of an existing domain.
@@ -3761,7 +3765,7 @@ def update(
             consoles=consoles,
             stop_on_reboot=stop_on_reboot,
             host_devices=host_devices,
-            **kwargs
+            **kwargs,
         )
     )
     set_autostart(name, "on" if autostart else "off")
@@ -3796,7 +3800,7 @@ def update(
         # _handle_unit treats bytes as invalid unit for the purpose of consistency
         unit = unit if unit != "bytes" else "b"
         value = node.get("memory") or node.get("size") or node.text
-        return _handle_unit("{}{}".format(value, unit)) if value else None
+        return _handle_unit(f"{value}{unit}") if value else None
 
     def _set_vcpu(node, value):
         node.text = str(value)
@@ -4063,32 +4067,32 @@ def update(
     for timer in timer_names:
         params_mapping += [
             xmlutil.attribute(
-                "clock:timers:{}:track".format(timer),
-                "clock/timer[@name='{}']".format(timer),
+                f"clock:timers:{timer}:track",
+                f"clock/timer[@name='{timer}']",
                 "track",
                 ["name"],
             ),
             xmlutil.attribute(
-                "clock:timers:{}:tickpolicy".format(timer),
-                "clock/timer[@name='{}']".format(timer),
+                f"clock:timers:{timer}:tickpolicy",
+                f"clock/timer[@name='{timer}']",
                 "tickpolicy",
                 ["name"],
             ),
             xmlutil.int_attribute(
-                "clock:timers:{}:frequency".format(timer),
-                "clock/timer[@name='{}']".format(timer),
+                f"clock:timers:{timer}:frequency",
+                f"clock/timer[@name='{timer}']",
                 "frequency",
                 ["name"],
             ),
             xmlutil.attribute(
-                "clock:timers:{}:mode".format(timer),
-                "clock/timer[@name='{}']".format(timer),
+                f"clock:timers:{timer}:mode",
+                f"clock/timer[@name='{timer}']",
                 "mode",
                 ["name"],
             ),
             _yesno_attribute(
-                "clock:timers:{}:present".format(timer),
-                "clock/timer[@name='{}']".format(timer),
+                f"clock:timers:{timer}:present",
+                f"clock/timer[@name='{timer}']",
                 "present",
                 ["name"],
             ),
@@ -4096,8 +4100,8 @@ def update(
         for attr in ["slew", "threshold", "limit"]:
             params_mapping.append(
                 xmlutil.int_attribute(
-                    "clock:timers:{}:{}".format(timer, attr),
-                    "clock/timer[@name='{}']/catchup".format(timer),
+                    f"clock:timers:{timer}:{attr}",
+                    f"clock/timer[@name='{timer}']/catchup",
                     attr,
                 )
             )
@@ -5490,7 +5494,7 @@ def migrate(vm_, target, **kwargs):
 
     if not urllib.parse.urlparse(target).scheme:
         proto = "qemu"
-        dst_uri = "{}://{}/system".format(proto, target)
+        dst_uri = f"{proto}://{target}/system"
     else:
         dst_uri = target
 
@@ -5779,7 +5783,7 @@ def get_hypervisor():
     result = [
         hyper
         for hyper in hypervisors
-        if getattr(sys.modules[__name__], "_is_{}_hyper".format(hyper))()
+        if getattr(sys.modules[__name__], f"_is_{hyper}_hyper")()
     ]
     return result[0] if result else None
 
@@ -5862,7 +5866,7 @@ def vm_cputime(vm_=None, **kwargs):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
             "cputime": int(raw[4]),
-            "cputime_percent": int("{:.0f}".format(cputime_percent)),
+            "cputime_percent": int(f"{cputime_percent:.0f}"),
         }
 
     info = {}
@@ -6134,7 +6138,7 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
         )
 
     if suffix:
-        name = "{name}-{suffix}".format(name=name, suffix=suffix)
+        name = f"{name}-{suffix}"
 
     doc = ElementTree.Element("domainsnapshot")
     n_name = ElementTree.SubElement(doc, "name")
@@ -6258,7 +6262,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
         conn.close()
         raise CommandExecutionError(
             snapshot
-            and 'Snapshot "{}" not found'.format(vm_snapshot)
+            and f'Snapshot "{vm_snapshot}" not found'
             or "No more previous snapshots available"
         )
     elif snap.isCurrent():
@@ -6363,7 +6367,7 @@ def _parse_caps_cell(cell):
     if mem_node is not None:
         unit = mem_node.get("unit", "KiB")
         memory = mem_node.text
-        result["memory"] = "{} {}".format(memory, unit)
+        result["memory"] = f"{memory} {unit}"
 
     pages = [
         {
@@ -6425,7 +6429,7 @@ def _parse_caps_bank(bank):
 
         minimum = control.get("min")
         if minimum:
-            result_control["min"] = "{} {}".format(minimum, unit)
+            result_control["min"] = f"{minimum} {unit}"
         controls.append(result_control)
     if controls:
         result["controls"] = controls
@@ -6445,15 +6449,19 @@ def _parse_caps_host(host):
 
         elif child.tag == "cpu":
             cpu = {
-                "arch": child.find("arch").text
-                if child.find("arch") is not None
-                else None,
-                "model": child.find("model").text
-                if child.find("model") is not None
-                else None,
-                "vendor": child.find("vendor").text
-                if child.find("vendor") is not None
-                else None,
+                "arch": (
+                    child.find("arch").text if child.find("arch") is not None else None
+                ),
+                "model": (
+                    child.find("model").text
+                    if child.find("model") is not None
+                    else None
+                ),
+                "vendor": (
+                    child.find("vendor").text
+                    if child.find("vendor") is not None
+                    else None
+                ),
                 "features": [
                     feature.get("name") for feature in child.findall("feature")
                 ],
@@ -6499,12 +6507,14 @@ def _parse_caps_host(host):
 
     result["security"] = [
         {
-            "model": secmodel.find("model").text
-            if secmodel.find("model") is not None
-            else None,
-            "doi": secmodel.find("doi").text
-            if secmodel.find("doi") is not None
-            else None,
+            "model": (
+                secmodel.find("model").text
+                if secmodel.find("model") is not None
+                else None
+            ),
+            "doi": (
+                secmodel.find("doi").text if secmodel.find("doi") is not None else None
+            ),
             "baselabels": [
                 {"type": label.get("type"), "label": label.text}
                 for label in secmodel.findall("baselabel")
@@ -6652,9 +6662,9 @@ def _parse_domain_caps(caps):
     result = {
         "emulator": caps.find("path").text if caps.find("path") is not None else None,
         "domain": caps.find("domain").text if caps.find("domain") is not None else None,
-        "machine": caps.find("machine").text
-        if caps.find("machine") is not None
-        else None,
+        "machine": (
+            caps.find("machine").text if caps.find("machine") is not None else None
+        ),
         "arch": caps.find("arch").text if caps.find("arch") is not None else None,
     }
 
@@ -6848,11 +6858,9 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             ]
 
             if not cpu_specs:
-                raise ValueError("Model {} not found in CPU map".format(cpu_model))
+                raise ValueError(f"Model {cpu_model} not found in CPU map")
             elif len(cpu_specs) > 1:
-                raise ValueError(
-                    "Multiple models {} found in CPU map".format(cpu_model)
-                )
+                raise ValueError(f"Multiple models {cpu_model} found in CPU map")
 
             cpu_specs = cpu_specs[0]
 
@@ -6892,7 +6900,7 @@ def network_define(
     addresses=None,
     physical_function=None,
     dns=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create libvirt network.
@@ -7191,7 +7199,7 @@ def network_update(
     physical_function=None,
     dns=None,
     test=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Update a virtual network if needed.
@@ -7658,14 +7666,12 @@ def _parse_pools_caps(doc):
         }
         for option_kind in ["pool", "vol"]:
             options = {}
-            default_format_node = pool.find(
-                "{}Options/defaultFormat".format(option_kind)
-            )
+            default_format_node = pool.find(f"{option_kind}Options/defaultFormat")
             if default_format_node is not None:
                 options["default_format"] = default_format_node.get("type")
             options_enums = {
                 enum.get("name"): [value.text for value in enum.findall("value")]
-                for enum in pool.findall("{}Options/enum".format(option_kind))
+                for enum in pool.findall(f"{option_kind}Options/enum")
             }
             if options_enums:
                 options.update(options_enums)
@@ -7888,7 +7894,7 @@ def pool_define(
     source_format=None,
     transient=False,
     start=True,  # pylint: disable=redefined-outer-name
-    **kwargs
+    **kwargs,
 ):
     """
     Create libvirt pool.
@@ -8076,9 +8082,9 @@ def _pool_set_secret(
 
             # Create secret if needed
             if not secret:
-                description = "Passphrase for {} pool created by Salt".format(pool_name)
+                description = f"Passphrase for {pool_name} pool created by Salt"
                 if not usage:
-                    usage = "pool_{}".format(pool_name)
+                    usage = f"pool_{pool_name}"
                 secret_xml = _gen_secret_xml(secret_type, usage, description)
                 if not test:
                     secret = conn.secretDefineXML(secret_xml)
@@ -8114,7 +8120,7 @@ def pool_update(
     source_name=None,
     source_format=None,
     test=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Update a libvirt storage pool if needed.
@@ -8487,7 +8493,7 @@ def pool_undefine(name, **kwargs):
             }
             secret_type = auth_types[auth_node.get("type")]
             secret_usage = auth_node.find("secret").get("usage")
-            if secret_type and "pool_{}".format(name) == secret_usage:
+            if secret_type and f"pool_{name}" == secret_usage:
                 secret = conn.secretLookupByUsage(secret_type, secret_usage)
                 secret.undefine()
 
@@ -8719,9 +8725,11 @@ def volume_infos(pool=None, volume=None, **kwargs):
             if backing_store_path is not None:
                 backing_store = {
                     "path": backing_store_path.text,
-                    "format": backing_store_format.get("type")
-                    if backing_store_format is not None
-                    else None,
+                    "format": (
+                        backing_store_format.get("type")
+                        if backing_store_format is not None
+                        else None
+                    ),
                 }
 
             format_node = vol_xml.find("./target/format")
@@ -8809,7 +8817,7 @@ def volume_define(
     permissions=None,
     backing_store=None,
     nocow=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Create libvirt volume.
@@ -8910,7 +8918,7 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
             inData = False
             eof = os.lseek(fd, 0, os.SEEK_END)
             if eof < cur:
-                raise RuntimeError("Current position in file after EOF: {}".format(cur))
+                raise RuntimeError(f"Current position in file after EOF: {cur}")
             sectionLen = eof - cur
         else:
             if data > cur:
@@ -8963,16 +8971,14 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
                 if stream:
                     stream.abort()
                 if ret:
-                    raise CommandExecutionError(
-                        "Failed to close file: {}".format(err.strerror)
-                    )
+                    raise CommandExecutionError(f"Failed to close file: {err.strerror}")
         if stream:
             try:
                 stream.finish()
             except libvirt.libvirtError as err:
                 if ret:
                     raise CommandExecutionError(
-                        "Failed to finish stream: {}".format(err.get_error_message())
+                        f"Failed to finish stream: {err.get_error_message()}"
                     )
     return ret
 

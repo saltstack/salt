@@ -78,7 +78,7 @@ def test_secedit_policy(shell, name, setting, exp_regexes, cumulative_rights, tm
     )
     assert result is True
     temp_file = tmp_path / random_string("secedit-output-")
-    ret = shell.run("secedit", "/export", "/cfg", "{}".format(temp_file))
+    ret = shell.run("secedit", "/export", "/cfg", f"{temp_file}")
     assert ret.returncode == 0
     with salt.utils.files.fopen(temp_file, encoding="utf-16") as reader:
         content = reader.read()

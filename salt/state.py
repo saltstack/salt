@@ -128,11 +128,9 @@ STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(
 ).union(STATE_RUNTIME_KEYWORDS)
 
 
-def _odict_hashable(self):
-    return id(self)
-
-
-OrderedDict.__hash__ = _odict_hashable
+class HashableOrderedDict(OrderedDict):
+    def __hash__(self):
+        return id(self)
 
 
 def split_low_tag(tag):
@@ -450,7 +448,7 @@ class Compiler:
         errors = []
         if not isinstance(high, dict):
             errors.append("High data is not a dictionary and is invalid")
-        reqs = OrderedDict()
+        reqs = HashableOrderedDict()
         if not errors:
             for name, body in high.items():
                 try:
@@ -1494,7 +1492,7 @@ class State:
         errors = []
         if not isinstance(high, dict):
             errors.append("High data is not a dictionary and is invalid")
-        reqs = OrderedDict()
+        reqs = HashableOrderedDict()
         for name, body in high.items():
             try:
                 if name.startswith("__"):
@@ -1574,7 +1572,7 @@ class State:
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
-                                    reqs[name] = OrderedDict(state=state)
+                                    reqs[name] = HashableOrderedDict(state=state)
                                     for req in arg[argfirst]:
                                         if isinstance(req, str):
                                             req = {"id": req}
@@ -1951,7 +1949,7 @@ class State:
                                 # Not a use requisite_in
                                 found = False
                                 if name not in extend:
-                                    extend[name] = OrderedDict()
+                                    extend[name] = HashableOrderedDict()
                                 if "." in _state:
                                     errors.append(
                                         "Invalid requisite in {}: {} for "
@@ -2039,7 +2037,7 @@ class State:
                                     if key == "prereq_in":
                                         # Add prerequired to origin
                                         if id_ not in extend:
-                                            extend[id_] = OrderedDict()
+                                            extend[id_] = HashableOrderedDict()
                                         if state not in extend[id_]:
                                             extend[id_][state] = []
                                         extend[id_][state].append(
@@ -2052,7 +2050,7 @@ class State:
                                         )
                                         for ext_id, _req_state in ext_ids:
                                             if ext_id not in extend:
-                                                extend[ext_id] = OrderedDict()
+                                                extend[ext_id] = HashableOrderedDict()
                                             if _req_state not in extend[ext_id]:
                                                 extend[ext_id][_req_state] = []
                                             extend[ext_id][_req_state].append(
@@ -2070,7 +2068,7 @@ class State:
                                                 continue
                                             ext_args = state_args(ext_id, _state, high)
                                             if ext_id not in extend:
-                                                extend[ext_id] = OrderedDict()
+                                                extend[ext_id] = HashableOrderedDict()
                                             if _req_state not in extend[ext_id]:
                                                 extend[ext_id][_req_state] = []
                                             ignore_args = req_in_all.union(ext_args)
@@ -2099,7 +2097,7 @@ class State:
                                                 continue
                                             loc_args = state_args(id_, state, high)
                                             if id_ not in extend:
-                                                extend[id_] = OrderedDict()
+                                                extend[id_] = HashableOrderedDict()
                                             if state not in extend[id_]:
                                                 extend[id_][state] = []
                                             ignore_args = req_in_all.union(loc_args)
@@ -2119,7 +2117,7 @@ class State:
                                         continue
                                     found = False
                                     if name not in extend:
-                                        extend[name] = OrderedDict()
+                                        extend[name] = HashableOrderedDict()
                                     if _state not in extend[name]:
                                         extend[name][_state] = []
                                     extend[name]["__env__"] = body["__env__"]
@@ -2956,7 +2954,7 @@ class State:
                                 " with name [{}]".format(req_key, chunk["name"])
                             )
                         except TypeError:
-                            # On Python 2, the above req_val, being an OrderedDict, will raise a KeyError,
+                            # On Python 2, the above req_val, being an HashableOrderedDict, will raise a KeyError,
                             # however on Python 3 it will raise a TypeError
                             # This was found when running tests.unit.test_state.StateCompilerTestCase.test_render_error_on_invalid_requisite
                             raise SaltRenderError(
@@ -3088,11 +3086,13 @@ class State:
             self.opts.get("state_events", True) or fire_event
         ):
             if not self.opts.get("master_uri"):
-                ev_func = (
-                    lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+
+                def ev_func(ret, tag, preload=None):
+                    with salt.utils.event.get_master_event(
                         self.opts, self.opts["sock_dir"], listen=False
-                    ).fire_event(ret, tag)
-                )
+                    ) as _evt:
+                        _evt.fire_event(ret, tag)
+
             else:
                 ev_func = self.functions["event.fire_master"]
 
@@ -3771,8 +3771,8 @@ class LazyAvailStates:
     def items(self):
         self._fill()
         ret = []
-        for saltenv, states in self._avail.items():
-            ret.append((saltenv, self.__getitem__(saltenv)))
+        for saltenv in self._avail:
+            ret.append((saltenv, self[saltenv]))
         return ret
 
 
@@ -3789,7 +3789,7 @@ class BaseHighState:
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
         self.avail = self.__gather_avail()
-        self.building_highstate = OrderedDict()
+        self.building_highstate = HashableOrderedDict()
 
     def __gather_avail(self):
         """
@@ -4023,10 +4023,10 @@ class BaseHighState:
         environment from the top file will be considered, and it too will be
         ignored if that environment was defined in the "base" top file.
         """
-        top = DefaultOrderedDict(OrderedDict)
+        top = DefaultOrderedDict(HashableOrderedDict)
 
         # Check base env first as it is authoritative
-        base_tops = tops.pop("base", DefaultOrderedDict(OrderedDict))
+        base_tops = tops.pop("base", DefaultOrderedDict(HashableOrderedDict))
         for ctop in base_tops:
             for saltenv, targets in ctop.items():
                 if saltenv == "include":
@@ -4079,7 +4079,7 @@ class BaseHighState:
         sections matching a given saltenv, which appear in a different
         saltenv's top file, will be ignored.
         """
-        top = DefaultOrderedDict(OrderedDict)
+        top = DefaultOrderedDict(HashableOrderedDict)
         for cenv, ctops in tops.items():
             if all([x == {} for x in ctops]):
                 # No top file found in this env, check the default_top
@@ -4160,7 +4160,7 @@ class BaseHighState:
                     states.append(item)
             return match_type, states
 
-        top = DefaultOrderedDict(OrderedDict)
+        top = DefaultOrderedDict(HashableOrderedDict)
         for ctops in tops.values():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
@@ -4256,7 +4256,7 @@ class BaseHighState:
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
         """
-        matches = DefaultOrderedDict(OrderedDict)
+        matches = DefaultOrderedDict(HashableOrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in top.items():
             if self.opts["saltenv"]:
@@ -4543,9 +4543,11 @@ class BaseHighState:
                                 " on the salt master in saltenv(s): {} ".format(
                                     env_key,
                                     inc_sls,
-                                    ", ".join(matches)
-                                    if env_key == xenv_key
-                                    else env_key,
+                                    (
+                                        ", ".join(matches)
+                                        if env_key == xenv_key
+                                        else env_key
+                                    ),
                                 )
                             )
                         elif len(resolved_envs) > 1:
@@ -4745,10 +4747,10 @@ class BaseHighState:
                             # match SLS foobar in environment
                             this_sls = f"SLS {sls_match} in saltenv"
                             if this_sls in error:
-                                errors[
-                                    i
-                                ] = "No matching sls found for '{}' in env '{}'".format(
-                                    sls_match, saltenv
+                                errors[i] = (
+                                    "No matching sls found for '{}' in env '{}'".format(
+                                        sls_match, saltenv
+                                    )
                                 )
                     all_errors.extend(errors)
 

@@ -1,6 +1,7 @@
 """
 Test config option type enforcement
 """
+
 import pytest
 
 import salt.config

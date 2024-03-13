@@ -20,7 +20,7 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
-cryptography==42.0.3
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   pyspnego

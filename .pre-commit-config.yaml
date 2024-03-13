@@ -6,7 +6,7 @@ exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: check-merge-conflict  # Check for files that contain merge conflict strings.
       - id: trailing-whitespace   # Trims trailing whitespace.
@@ -46,7 +46,7 @@ repos:
           )$
 
   - repo: https://github.com/saltstack/python-tools-scripts
-    rev: "0.18.6"
+    rev: "0.20.0"
     hooks:
       - id: tools
         alias: check-changelog-entries
@@ -1166,6 +1166,7 @@ repos:
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
 
   # ----- Lint CI Requirements -------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-ci-lint-3.8-requirements
         name: Lint CI Py3.8 Requirements
@@ -1397,7 +1398,7 @@ repos:
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.2
+    rev: v3.15.1
     hooks:
       - id: pyupgrade
         name: Upgrade code for Py3.8+
@@ -1437,7 +1438,7 @@ repos:
         args: [--silent, -E, fix_asserts, -E, fix_docstrings, -E, fix_tornado_imports]
 
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         additional_dependencies: ['toml']
@@ -1447,36 +1448,40 @@ repos:
             (?x)^(
                 templates/.*|
                 salt/ext/.*|
-                tests/kitchen/.*
             )$
 
   - repo: https://github.com/psf/black
-    rev: 22.6.0
+    rev: 24.2.0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
         # This should be kept in sync with pyproject.toml
         exclude: >
             (?x)^(
+                salt/client/ssh/ssh_py_shim\.py|
                 templates/.*|
                 salt/ext/.*|
-                tests/kitchen/.*
             )$
 
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.12.1
+    rev: 1.16.0
     hooks:
       - id: blacken-docs
         args: [--skip-errors]
-        files: ^doc/.*\.rst
+        files: ^(doc/)?.*\.(rst|md)
+        exclude: >
+            (?x)^(
+                rfcs/.*|
+                salt/ext/.*|
+            )$
         additional_dependencies:
-          - black==22.6.0
+          - black==24.2.0
 
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
   # ----- Security -------------------------------------------------------------------------------------------------->
   - repo: https://github.com/PyCQA/bandit
-    rev: "1.7.4"
+    rev: "1.7.7"
     hooks:
       - id: bandit
         alias: bandit-salt
@@ -1490,7 +1495,7 @@ repos:
             )$
         additional_dependencies: ['importlib_metadata<5']
   - repo: https://github.com/PyCQA/bandit
-    rev: "1.7.4"
+    rev: "1.7.7"
     hooks:
       - id: bandit
         alias: bandit-tests
@@ -1503,7 +1508,7 @@ repos:
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.8.0
     hooks:
       - id: mypy
         alias: mypy-tools
@@ -1520,15 +1525,15 @@ repos:
           - types-attrs
           - types-pyyaml
           - types-requests
-          - python-tools-scripts>=0.18.6
+          - python-tools-scripts==0.20.0
 
   - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2021.6.12
+    rev: v2022.11.21
     hooks:
       - id: nox
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|(salt|tasks|tools)/.*)\.py$
+        files: ^((setup|noxfile)|(salt|tools)/.*)\.py$
         exclude: >
             (?x)^(
                 templates/.*|
@@ -1543,7 +1548,7 @@ repos:
           - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2021.6.12
+    rev: v2022.11.21
     hooks:
       - id: nox
         alias: lint-tests

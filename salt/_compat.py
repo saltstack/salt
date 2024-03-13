@@ -1,6 +1,7 @@
 """
 Salt compatibility code
 """
+
 # pylint: disable=unused-import
 import sys
 

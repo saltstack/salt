@@ -36,7 +36,7 @@ def _table_attrs(table):
     """
     Helper function to find valid table attributes
     """
-    cmd = ["osqueryi"] + ["--json"] + ["pragma table_info({})".format(table)]
+    cmd = ["osqueryi"] + ["--json"] + [f"pragma table_info({table})"]
     res = __salt__["cmd.run_all"](cmd)
     if res["retcode"] == 0:
         attrs = []
@@ -81,14 +81,14 @@ def _osquery_cmd(table, attrs=None, where=None, format="json"):
                 for a in attrs:
                     if a not in valid_attrs:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "{} is not a valid attribute for table {}".format(a, table)
+                        ret["comment"] = (
+                            f"{a} is not a valid attribute for table {table}"
+                        )
                         return ret
                 _attrs = ",".join(attrs)
             else:
                 ret["result"] = False
-                ret["comment"] = "Invalid table {}.".format(table)
+                ret["comment"] = f"Invalid table {table}."
                 return ret
         else:
             ret["comment"] = "attrs must be specified as a list."
@@ -97,12 +97,12 @@ def _osquery_cmd(table, attrs=None, where=None, format="json"):
     else:
         _attrs = "*"
 
-    sql = "select {} from {}".format(_attrs, table)
+    sql = f"select {_attrs} from {table}"
 
     if where:
-        sql = "{} where {}".format(sql, where)
+        sql = f"{sql} where {where}"
 
-    sql = "{};".format(sql)
+    sql = f"{sql};"
 
     res = _osquery(sql)
     if res["result"]:

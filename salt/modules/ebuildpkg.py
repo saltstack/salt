@@ -148,9 +148,9 @@ def _process_emerge_err(stdout, stderr):
     if slot_conflicts:
         ret["slot conflicts"] = slot_conflicts
 
-    blocked = re.compile(
-        r"(?m)^\[blocks .+\] " r"([^ ]+/[^ ]+-[0-9]+[^ ]+)" r".*$"
-    ).findall(stdout)
+    blocked = re.compile(r"(?m)^\[blocks .+\] ([^ ]+/[^ ]+-[0-9]+[^ ]+).*$").findall(
+        stdout
+    )
 
     unsatisfied = re.compile(r"Error: The above package list contains").findall(stderr)
 
@@ -303,7 +303,7 @@ def _get_upgradable(backtrack=3):
         "--ask",
         "n",
         "--backtrack",
-        "{}".format(backtrack),
+        f"{backtrack}",
         "--pretend",
         "--update",
         "--newuse",
@@ -331,7 +331,9 @@ def _get_upgradable(backtrack=3):
         r".*$"
     )
     keys = ["name", "version"]
-    _get = lambda l, k: l[keys.index(k)]
+
+    def _get(line, k):
+        return line[keys.index(k)]
 
     upgrades = rexp.findall(out)
 
@@ -547,7 +549,7 @@ def install(
     fromrepo=None,
     uses=None,
     binhost=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -680,9 +682,9 @@ def install(
         if not version_num:
             version_num = ""
             if slot is not None:
-                version_num += ":{}".format(slot)
+                version_num += f":{slot}"
             if fromrepo is not None:
-                version_num += "::{}".format(fromrepo)
+                version_num += f"::{fromrepo}"
             if uses is not None:
                 version_num += "[{}]".format(",".join(uses))
             pkg_params = {name: version_num}
@@ -724,11 +726,11 @@ def install(
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ":" and verstr[0] != "[":
                         prefix = prefix or "="
-                        target = "{}{}-{}".format(prefix, param, verstr)
+                        target = f"{prefix}{param}-{verstr}"
                     else:
-                        target = "{}{}".format(param, verstr)
+                        target = f"{param}{verstr}"
                 else:
-                    target = "{}".format(param)
+                    target = f"{param}"
 
                 if "[" in target:
                     old = __salt__["portage_config.get_flags_from_package_conf"](
@@ -842,10 +844,10 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs)
     full_atom = pkg
 
     if slot is not None:
-        full_atom = "{}:{}".format(full_atom, slot)
+        full_atom = f"{full_atom}:{slot}"
 
     if fromrepo is not None:
-        full_atom = "{}::{}".format(full_atom, fromrepo)
+        full_atom = f"{full_atom}::{fromrepo}"
 
     if binhost == "try":
         bin_opts = ["-g"]
@@ -950,7 +952,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
             "n",
             "--quiet",
             "--backtrack",
-            "{}".format(backtrack),
+            f"{backtrack}",
             "--update",
             "--newuse",
             "--deep",
@@ -1034,9 +1036,9 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     ):
         fullatom = name
         if slot is not None:
-            targets = ["{}:{}".format(fullatom, slot)]
+            targets = [f"{fullatom}:{slot}"]
         if fromrepo is not None:
-            targets = ["{}::{}".format(fullatom, fromrepo)]
+            targets = [f"{fullatom}::{fromrepo}"]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
@@ -1165,9 +1167,9 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     ):
         fullatom = name
         if slot is not None:
-            targets = ["{}:{}".format(fullatom, slot)]
+            targets = [f"{fullatom}:{slot}"]
         if fromrepo is not None:
-            targets = ["{}::{}".format(fullatom, fromrepo)]
+            targets = [f"{fullatom}::{fromrepo}"]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
@@ -1245,9 +1247,9 @@ def check_extra_requirements(pkgname, pkgver):
         # If no prefix characters were supplied and verstr contains a version, use '='
         if verstr[0] != ":" and verstr[0] != "[":
             prefix = prefix or "="
-            atom = "{}{}-{}".format(prefix, pkgname, verstr)
+            atom = f"{prefix}{pkgname}-{verstr}"
         else:
-            atom = "{}{}".format(pkgname, verstr)
+            atom = f"{pkgname}{verstr}"
     else:
         return True
 

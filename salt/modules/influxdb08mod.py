@@ -21,7 +21,6 @@ version 0.5-0.8)
     overwrite options passed into pillar.
 """
 
-
 import logging
 
 try:

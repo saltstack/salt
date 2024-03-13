@@ -3701,9 +3701,9 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
     def setUp(self):
         self.mock_si = MagicMock()
         self.mock_lic_assign_mgr = MagicMock()
-        type(
-            self.mock_si.content.licenseManager
-        ).licenseAssignmentManager = PropertyMock(return_value=self.mock_lic_assign_mgr)
+        type(self.mock_si.content.licenseManager).licenseAssignmentManager = (
+            PropertyMock(return_value=self.mock_lic_assign_mgr)
+        )
 
     def tearDown(self):
         for attr in ("mock_si", "mock_lic_assign_mgr"):
@@ -3712,9 +3712,9 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
-        type(
-            self.mock_si.content.licenseManager
-        ).licenseAssignmentManager = PropertyMock(side_effect=exc)
+        type(self.mock_si.content.licenseManager).licenseAssignmentManager = (
+            PropertyMock(side_effect=exc)
+        )
         with self.assertRaises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(
@@ -3725,9 +3725,9 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
-        type(
-            self.mock_si.content.licenseManager
-        ).licenseAssignmentManager = PropertyMock(side_effect=exc)
+        type(self.mock_si.content.licenseManager).licenseAssignmentManager = (
+            PropertyMock(side_effect=exc)
+        )
         with self.assertRaises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
@@ -3735,17 +3735,17 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
-        type(
-            self.mock_si.content.licenseManager
-        ).licenseAssignmentManager = PropertyMock(side_effect=exc)
+        type(self.mock_si.content.licenseManager).licenseAssignmentManager = (
+            PropertyMock(side_effect=exc)
+        )
         with self.assertRaises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
     def test_empty_license_assignment_manager(self):
-        type(
-            self.mock_si.content.licenseManager
-        ).licenseAssignmentManager = PropertyMock(return_value=None)
+        type(self.mock_si.content.licenseManager).licenseAssignmentManager = (
+            PropertyMock(return_value=None)
+        )
         with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(

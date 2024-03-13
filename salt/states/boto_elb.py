@@ -234,7 +234,6 @@ Tags can also be set:
                 OtherTag: 'My Other Value'
 """
 
-
 import hashlib
 import logging
 import re
@@ -736,10 +735,10 @@ def _elb_present(
             profile=profile,
         )
         if not _security_groups:
-            ret[
-                "comment"
-            ] = "Security groups {} do not map to valid security group ids.".format(
-                security_groups
+            ret["comment"] = (
+                "Security groups {} do not map to valid security group ids.".format(
+                    security_groups
+                )
             )
             ret["result"] = False
             return ret

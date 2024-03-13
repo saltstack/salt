@@ -2,7 +2,6 @@
 Module for viewing and modifying sysctl parameters
 """
 
-
 import logging
 import os
 
@@ -31,9 +30,9 @@ def __virtual__():
 
 def _formatfor(name, value, config, tail=""):
     if config == "/boot/loader.conf":
-        return '{}="{}"{}'.format(name, value, tail)
+        return f'{name}="{value}"{tail}'
     else:
-        return "{}={}{}".format(name, value, tail)
+        return f"{name}={value}{tail}"
 
 
 def show(config_file=False):
@@ -88,13 +87,13 @@ def show(config_file=False):
         out = __salt__["cmd.run"](cmd, output_loglevel="trace")
         value = None
         for line in out.splitlines():
-            if any([line.startswith("{}.".format(root)) for root in roots]):
+            if any([line.startswith(f"{root}.") for root in roots]):
                 if value is not None:
                     ret[key] = "\n".join(value)
                 (key, firstvalue) = line.split("=", 1)
                 value = [firstvalue]
             elif value is not None:
-                value.append("{}".format(line))
+                value.append(f"{line}")
         if value is not None:
             ret[key] = "\n".join(value)
         return ret
@@ -110,7 +109,7 @@ def get(name):
 
         salt '*' sysctl.get hw.physmem
     """
-    cmd = "sysctl -n {}".format(name)
+    cmd = f"sysctl -n {name}"
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -126,7 +125,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.inet.icmp.icmplim 50
     """
     ret = {}
-    cmd = 'sysctl {}="{}"'.format(name, value)
+    cmd = f'sysctl {name}="{value}"'
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if data["retcode"] != 0:
@@ -154,7 +153,7 @@ def persist(name, value, config="/etc/sysctl.conf"):
     with salt.utils.files.fopen(config, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line).rstrip("\n")
-            if not line.startswith("{}=".format(name)):
+            if not line.startswith(f"{name}="):
                 nlines.append(line)
                 continue
             else:
@@ -177,7 +176,7 @@ def persist(name, value, config="/etc/sysctl.conf"):
                 nlines.append(new_line)
                 edited = True
     if not edited:
-        nlines.append("{}\n".format(_formatfor(name, value, config)))
+        nlines.append(f"{_formatfor(name, value, config)}\n")
     with salt.utils.files.fopen(config, "w+") as ofile:
         nlines = [salt.utils.stringutils.to_str(_l) + "\n" for _l in nlines]
         ofile.writelines(nlines)

@@ -108,7 +108,7 @@ def deployed(
     timeout=60,
     update=False,
     profile=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Deploy stack with the specified properties
@@ -168,7 +168,7 @@ def deployed(
     existing_stack = __salt__["heat.show_stack"](name, profile=profile)
 
     if existing_stack["result"] and not update:
-        ret["comment"] = "Stack {} is deployed".format(name)
+        ret["comment"] = f"Stack {name} is deployed"
         return ret
     if existing_stack["result"] and update:
         if template:
@@ -223,7 +223,7 @@ def deployed(
                         salt.utils.files.safe_rm(template_tmp_file)
                     except ValueError as ex:
                         ret["result"] = False
-                        ret["comment"] = "Error parsing template {}".format(ex)
+                        ret["comment"] = f"Error parsing template {ex}"
             else:
                 ret["result"] = False
                 ret["comment"] = "Can not open template: {} {}".format(
@@ -245,13 +245,13 @@ def deployed(
             checksum_stack = __salt__["hashutil.digest"](template_stack["template"])
         except salt.exceptions.CommandExecutionError as cmdexc:
             ret["result"] = False
-            ret["comment"] = "{}".format(cmdexc)
+            ret["comment"] = f"{cmdexc}"
 
         if ret["result"] is True:
             if checksum_template == checksum_stack:
                 if __opts__["test"]:
                     ret["result"] = True
-                    ret["comment"] = "Stack {} is deployed".format(name)
+                    ret["comment"] = f"Stack {name} is deployed"
                     return ret
                 else:
                     ret["result"] = False
@@ -263,7 +263,7 @@ def deployed(
         if __opts__["test"]:
             stack = {
                 "result": None,
-                "comment": "Stack {} is set to be updated".format(name),
+                "comment": f"Stack {name} is set to be updated",
             }
         else:
             stack = __salt__["heat.update_stack"](
@@ -282,7 +282,7 @@ def deployed(
         if __opts__["test"]:
             stack = {
                 "result": None,
-                "comment": "Stack {} is set to be created".format(name),
+                "comment": f"Stack {name} is set to be created",
             }
         else:
             stack = __salt__["heat.create_stack"](
@@ -337,7 +337,7 @@ def absent(name, poll=5, timeout=60, profile=None):
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Stack {} is set to be removed".format(name)
+        ret["comment"] = f"Stack {name} is set to be removed"
         return ret
 
     stack = __salt__["heat.delete_stack"](

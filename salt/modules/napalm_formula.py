@@ -292,7 +292,7 @@ def render_field(dictionary, field, prepend=None, append=None, quotes=False, **o
         else:
             append = ""
     if quotes:
-        value = '"{value}"'.format(value=value)
+        value = f'"{value}"'
     return "{prepend} {value}{append}".format(
         prepend=prepend, value=value, append=append
     )

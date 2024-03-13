@@ -4,6 +4,7 @@ Beacon to emit Telegram messages
 Requires the python-telegram-bot library
 
 """
+
 import logging
 
 import salt.utils.beacons

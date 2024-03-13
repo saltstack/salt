@@ -153,7 +153,6 @@ pillar stated above:
 
 """
 
-
 import logging
 import os
 
@@ -701,9 +700,9 @@ def switch(
 
     if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
         ret["result"] = False
-        ret["comment"] = "There was an error setting the switch {}.".format(name)
+        ret["comment"] = f"There was an error setting the switch {name}."
 
-    ret["comment"] = "Dell chassis switch {} was updated.".format(name)
+    ret["comment"] = f"Dell chassis switch {name} was updated."
     return ret
 
 
@@ -756,7 +755,7 @@ def firmware_update(hosts=None, directory=""):
             ret["changes"].update(
                 {
                     "host": {
-                        "comment": "Firmware update submitted for {}".format(host),
+                        "comment": f"Firmware update submitted for {host}",
                         "success": True,
                     }
                 }
@@ -766,7 +765,7 @@ def firmware_update(hosts=None, directory=""):
             ret["changes"].update(
                 {
                     "host": {
-                        "comment": "FAILED to update firmware for {}".format(host),
+                        "comment": f"FAILED to update firmware for {host}",
                         "success": False,
                         "reason": str(err),
                     }

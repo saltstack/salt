@@ -18,7 +18,6 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2017.7.0
 """
 
-
 import logging
 
 # import third party
@@ -110,7 +109,7 @@ def _http_request(url, method="GET", headers=None, data=None):
     """
     Make the HTTP request and return the body as python object.
     """
-    req = requests.request(method, url, headers=headers, data=data)
+    req = requests.request(method, url, headers=headers, data=data, timeout=120)
     ret = _default_ret()
     ok_status = METHOD_OK_STATUS.get(method, 200)
     if req.status_code != ok_status:

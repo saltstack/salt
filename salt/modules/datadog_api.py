@@ -157,7 +157,9 @@ def cancel_downtime(api_key=None, app_key=None, scope=None, id=None):
     elif scope:
         params = {"api_key": api_key, "application_key": app_key, "scope": scope}
         response = requests.post(
-            "https://app.datadoghq.com/api/v1/downtime/cancel/by_scope", params=params
+            "https://app.datadoghq.com/api/v1/downtime/cancel/by_scope",
+            params=params,
+            timeout=120,
         )
         if response.status_code == 200:
             ret["result"] = True
@@ -165,7 +167,7 @@ def cancel_downtime(api_key=None, app_key=None, scope=None, id=None):
             ret["comment"] = "Successfully cancelled downtime"
         else:
             ret["response"] = response.text
-            ret["comment"] = "Status Code: {}".format(response.status_code)
+            ret["comment"] = f"Status Code: {response.status_code}"
         return ret
     else:
         raise SaltInvocationError("One of id or scope must be specified")

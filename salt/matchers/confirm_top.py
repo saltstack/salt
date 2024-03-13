@@ -3,6 +3,7 @@ The matcher subsystem needs a function called "confirm_top", which
 takes the data passed to a top file environment and determines if that
 data matches this minion.
 """
+
 import logging
 
 import salt.loader

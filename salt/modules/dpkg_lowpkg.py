@@ -62,14 +62,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
+                f"Unable to retrieve {path} from saltenv '{saltenv}'"
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{} does not exist on minion".format(path))
+            raise CommandExecutionError(f"{path} does not exist on minion")
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{} does not exist on minion".format(path))
+            raise SaltInvocationError(f"{path} does not exist on minion")
 
     cmd = ["dpkg", "-I", path]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
@@ -99,7 +99,7 @@ def bin_pkg_info(path, saltenv="base"):
         osarch = __grains__.get("osarch", "")
         arch = ret["arch"]
         if arch != "all" and osarch == "amd64" and osarch != arch:
-            ret["name"] += ":{}".format(arch)
+            ret["name"] += f":{arch}"
 
     return ret
 
@@ -120,7 +120,7 @@ def unpurge(*packages):
     ret = {}
     __salt__["cmd.run"](
         ["dpkg", "--set-selections"],
-        stdin=r"\n".join(["{} install".format(x) for x in packages]),
+        stdin=r"\n".join([f"{x} install" for x in packages]),
         python_shell=False,
         output_loglevel="trace",
     )
@@ -317,7 +317,7 @@ def _get_pkg_license(pkg):
     :return:
     """
     licenses = set()
-    cpr = "/usr/share/doc/{}/copyright".format(pkg)
+    cpr = f"/usr/share/doc/{pkg}/copyright"
     if os.path.exists(cpr):
         with salt.utils.files.fopen(cpr, errors="ignore") as fp_:
             for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
@@ -335,7 +335,7 @@ def _get_pkg_install_time(pkg):
     """
     iso_time = None
     if pkg is not None:
-        location = "/var/lib/dpkg/info/{}.list".format(pkg)
+        location = f"/var/lib/dpkg/info/{pkg}.list"
         if os.path.exists(location):
             iso_time = (
                 datetime.datetime.utcfromtimestamp(

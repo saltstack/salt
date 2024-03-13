@@ -401,7 +401,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     if refresh:
         cmd.append("-S")  # update repo db
     if fromrepo:
-        cmd.append("--repository={}".format(fromrepo))
+        cmd.append(f"--repository={fromrepo}")
     cmd.append("-y")  # assume yes when asked
     cmd.extend(pkg_params)
 
@@ -578,9 +578,7 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
     if not _locate_repo_files(repo):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
-                conf_file.write(
-                    salt.utils.stringutils.to_str("repository={}\n".format(repo))
-                )
+                conf_file.write(salt.utils.stringutils.to_str(f"repository={repo}\n"))
         except OSError:
             return False
 

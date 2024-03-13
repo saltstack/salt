@@ -333,6 +333,7 @@ For example:
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 """
+
 import types
 
 import salt.utils.pydsl as pydsl

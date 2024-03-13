@@ -2,7 +2,6 @@
     Test cases for salt.modules.gentoo_service
 """
 
-
 import pytest
 
 import salt.modules.gentoo_service as gentoo_service

@@ -3,7 +3,6 @@ Used to manage the thorium register. The thorium register is where compound
 values are stored and computed, such as averages etc.
 """
 
-
 import salt.utils.stringutils
 
 __func_alias__ = {

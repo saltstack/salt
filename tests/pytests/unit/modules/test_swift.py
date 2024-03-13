@@ -4,7 +4,6 @@
     Test cases for salt.modules.swift
 """
 
-
 import pytest
 
 import salt.modules.swift as swift

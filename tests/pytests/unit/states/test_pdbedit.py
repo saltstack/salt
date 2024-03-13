@@ -22,4 +22,4 @@ def test_generate_absent():
             pdbedit_mod.__salt__, {"cmd.run_all": MagicMock(return_value=cmd_ret)}
         ):
             ret = pdbedit.absent(name)
-    assert ret["comment"] == "account {} is absent".format(name)
+    assert ret["comment"] == f"account {name} is absent"

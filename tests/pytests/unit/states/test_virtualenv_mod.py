@@ -4,7 +4,6 @@
     Test cases for salt.states.virtualenv_mod
 """
 
-
 import os
 
 import pytest
