@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import time
+import shutil
 
 import salt.defaults.exitcodes
 import salt.utils.json
@@ -33,12 +34,15 @@ SUDO_PROMPT_RE = re.compile(
 RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 RSTR_RE = re.compile(r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)")
 
+SSH_KEYGEN_PATH = shutil.which('ssh-keygen') or 'ssh-keygen'
+SSH_PATH = shutil.which('ssh') or 'ssh'
+SCP_PATH = shutil.which('scp') or 'scp'
 
 def gen_key(path):
     """
     Generate a key for use with salt-ssh
     """
-    cmd = ["ssh-keygen", "-P", "", "-f", path, "-t", "rsa", "-q"]
+    cmd = [SSH_KEYGEN_PATH, "-P", "", "-f", path, "-t", "rsa", "-q"]
     dirname = os.path.dirname(path)
     if dirname and not os.path.isdir(dirname):
         os.makedirs(os.path.dirname(path))
@@ -243,7 +247,7 @@ class Shell:
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
-    def _cmd_str(self, cmd, ssh="ssh"):
+    def _cmd_str(self, cmd, ssh=SSH_PATH):
         """
         Return the cmd string to execute
         """
@@ -252,13 +256,13 @@ class Shell:
         # need to deliver the SHIM to the remote host and execute it there
 
         command = [ssh]
-        if ssh != "scp":
+        if ssh != SCP_PATH:
             command.append(self.host)
-        if self.tty and ssh == "ssh":
+        if self.tty and ssh == SSH_PATH:
             command.append("-t -t")
         if self.passwd or self.priv:
             command.append(self.priv and self._key_opts() or self._passwd_opts())
-        if ssh != "scp" and self.remote_port_forwards:
+        if ssh != SCP_PATH and self.remote_port_forwards:
             command.append(
                 " ".join(
                     [f"-R {item}" for item in self.remote_port_forwards.split(",")]
@@ -355,7 +359,7 @@ class Shell:
             host = f"[{host}]"
 
         cmd = f"{local} {host}:{remote}"
-        cmd = self._cmd_str(cmd, ssh="scp")
+        cmd = self._cmd_str(cmd, ssh=SCP_PATH)
 
         logmsg = f"Executing command: {cmd}"
         if self.passwd:
