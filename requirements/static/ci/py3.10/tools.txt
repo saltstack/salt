@@ -40,7 +40,7 @@ pydantic-core==2.16.2
     # via pydantic
 pydantic==2.6.1
     # via python-tools-scripts
-pygments==2.13.0
+pygments==2.15.0
     # via rich
 python-dateutil==2.8.2
     # via botocore
