@@ -9,14 +9,7 @@ from pytestshellutils.utils.processes import terminate_process
 import salt.fileserver.hgfs as hgfs
 from tests.support.mock import patch
 
-try:
-    import hglib
-
-    HAS_HG = True
-except ImportError:
-    HAS_HG = False
-
-pytestmark = [pytest.mark.skipif(not HAS_HG, reason="missing hglib library")]
+hglib = pytest.importorskip("hglib")
 
 
 @pytest.fixture(scope="module")

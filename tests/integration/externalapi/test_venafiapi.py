@@ -13,14 +13,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 
-# pylint: disable=unused-import
-try:
-    import vcert
-    from vcert.common import CertificateRequest
-
-    HAS_VCERT = True
-except ImportError:
-    HAS_VCERT = False
+pytest.importorskip("vcert.common")
 
 # pylint: enable=unused-import
 from tests.support.case import ShellCase
@@ -46,7 +39,6 @@ def with_random_name(func):
     return wrapper
 
 
-@pytest.mark.skipif(HAS_VCERT is False, reason="The vcert module must be installed.")
 class VenafiTest(ShellCase):
     """
     Test the venafi runner

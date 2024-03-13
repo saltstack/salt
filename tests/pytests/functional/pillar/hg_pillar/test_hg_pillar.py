@@ -6,12 +6,7 @@ import pytest
 
 import salt.pillar.hg_pillar as hg_pillar
 
-try:
-    import hglib
-
-    HAS_HG = True
-except ImportError:
-    HAS_HG = False
+hglib = pytest.importorskip("hglib")
 
 
 @pytest.fixture(scope="module")
@@ -60,7 +55,6 @@ def hg_setup_and_teardown():
 @pytest.mark.skip_on_windows(
     reason="just testing if this or hgfs causes the issue with total crash"
 )
-@pytest.mark.skipif(not HAS_HG, reason="missing hglib library")
 def test_ext_pillar(hg_setup_and_teardown):
     data = hg_pillar.ext_pillar("*", None, hg_setup_and_teardown)
     assert data == {"testinfo": "info", "testinfo2": "info"}
