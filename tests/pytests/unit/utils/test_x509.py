@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 import salt.exceptions
-import salt.utils.x509 as x509
 from tests.support.mock import ANY, Mock, patch
 
+x509 = pytest.importorskip("salt.utils.x509")
 cryptography = pytest.importorskip(
     "cryptography", reason="Needs cryptography library", minversion="37.0"
 )
