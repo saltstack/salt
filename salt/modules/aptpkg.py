@@ -1770,7 +1770,11 @@ def _split_repo_str(repo):
     if not HAS_APT:
         signedby = entry.signedby
     else:
-        signedby = _get_opts(line=repo)["signedby"].get("value", "")
+        opts = _get_opts(line=repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
         if signedby:
             # python3-apt does not support signedby. So if signedby
             # is in the repo we have to check our code to see if the
@@ -1938,7 +1942,12 @@ def list_repos(**kwargs):
         if not HAS_APT:
             signedby = source.signedby
         else:
-            signedby = _get_opts(line=source.line)["signedby"].get("value", "")
+            opts = _get_opts(line=source.line)
+            if "signedby" in opts:
+                signedby = opts["signedby"].get("value", "")
+            else:
+                signedby = ""
+
         repo = {}
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
@@ -2958,7 +2967,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if not HAS_APT:
         signedby = mod_source.signedby
     else:
-        signedby = _get_opts(repo)["signedby"].get("value", "")
+        opts = _get_opts(repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
 
     return {
         repo: {
@@ -3059,7 +3072,11 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         signedby = source_entry.signedby
         kwargs["signedby"] = signedby
     else:
-        signedby = _get_opts(repo)["signedby"].get("value", "")
+        opts = _get_opts(repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
 
     _source_entry = source_list.add(
         type=source_entry.type,
