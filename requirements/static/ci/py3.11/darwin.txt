@@ -40,6 +40,8 @@ bcrypt==4.0.1
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
+blinker==1.7.0
+    # via flask
 boto3==1.26.152
     # via
     #   -r requirements/static/ci/common.in
@@ -74,6 +76,7 @@ cffi==1.16.0
 charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   impacket
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
@@ -87,7 +90,9 @@ cherrypy==18.8.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
 click==8.1.3
-    # via geomet
+    # via
+    #   flask
+    #   geomet
 clustershell==1.9.1
     # via -r requirements/static/ci/common.in
 contextvars==2.4
@@ -104,6 +109,8 @@ cryptography==42.0.5
     #   moto
     #   paramiko
     #   pyopenssl
+    #   pyspnego
+    #   smbprotocol
     #   trustme
     #   vcert
 distlib==0.3.8
@@ -116,15 +123,20 @@ distro==1.8.0
 dnspython==2.3.0
     # via
     #   -r requirements/static/ci/common.in
+    #   ldapdomaindump
     #   python-etcd
 docker==6.1.3
     # via -r requirements/pytest.txt
+dsinternals==1.2.4
+    # via impacket
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.13.1
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
+flask==3.0.2
+    # via impacket
 frozenlist==1.4.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -132,6 +144,8 @@ frozenlist==1.4.1
     #   aiosignal
 future==0.18.3
     # via
+    #   impacket
+    #   ldapdomaindump
     #   napalm
     #   textfsm
 genshi==0.7.7
@@ -157,6 +171,8 @@ immutables==0.15
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   contextvars
+impacket==0.11.0 ; sys_platform != "win32"
+    # via -r requirements/static/ci/common.in
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -169,6 +185,8 @@ iniconfig==2.0.0
     # via pytest
 ipaddress==1.0.23
     # via kubernetes
+itsdangerous==2.1.2
+    # via flask
 jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -191,6 +209,7 @@ jinja2==3.1.3
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
+    #   flask
     #   junos-eznc
     #   moto
     #   napalm
@@ -215,6 +234,12 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
+ldap3==2.9.1
+    # via
+    #   impacket
+    #   ldapdomaindump
+ldapdomaindump==0.9.4
+    # via impacket
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -313,6 +338,8 @@ pyasn1-modules==0.3.0
     # via google-auth
 pyasn1==0.5.1
     # via
+    #   impacket
+    #   ldap3
     #   pyasn1-modules
     #   rsa
 pycparser==2.21
@@ -323,6 +350,7 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/crypto.txt
+    #   impacket
 pydantic-core==2.14.5
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -346,6 +374,7 @@ pyopenssl==24.0.0
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   etcd3-py
+    #   impacket
 pyparsing==3.0.9
     # via junos-eznc
 pyrsistent==0.19.3
@@ -354,6 +383,10 @@ pyserial==3.5
     # via
     #   junos-eznc
     #   netmiko
+pyspnego==0.10.2 ; sys_platform != "win32"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   smbprotocol
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.12.29
@@ -467,6 +500,7 @@ six==1.16.0
     #   etcd3-py
     #   genshi
     #   geomet
+    #   impacket
     #   jsonschema
     #   junit-xml
     #   junos-eznc
@@ -478,6 +512,8 @@ six==1.16.0
     #   transitions
     #   vcert
     #   websocket-client
+smbprotocol==1.12.0 ; sys_platform != "win32"
+    # via -r requirements/static/ci/common.in
 smmap==5.0.0
     # via gitdb
 sqlparse==0.4.4
@@ -549,6 +585,7 @@ wempy==0.2.1
     # via -r requirements/static/ci/common.in
 werkzeug==3.0.1
     # via
+    #   flask
     #   moto
     #   pytest-httpserver
 xmldiff==2.6.3
