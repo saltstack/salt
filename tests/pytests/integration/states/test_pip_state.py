@@ -15,7 +15,9 @@ MISSING_SETUP_PY_FILE = not os.path.exists(
 pytestmark = [
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
     pytest.mark.requires_network,
-    pytest.mark.skipif(MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"),
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
 ]
 
 
