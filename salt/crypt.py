@@ -61,6 +61,11 @@ log = logging.getLogger(__name__)
 HAS_CRYPTO = salt.crypt_legacy.HAS_CRYPTO
 
 
+def fips_enabled():
+   import cryptography.hazmat.backends.openssl.backend
+   return cryptography.hazmat.backends.openssl.backend._fips_enabled
+
+
 def clean_key(key):
     """
     Clean the key so that it only has unix style line endings (\\n)
@@ -1651,7 +1656,7 @@ class Crypticle:
         return payload
 
 
-if not HAS_CRYPTOGRAPHY:
+if _fips_enabled() or not HAS_CRYPTOGRAPHY:
     if not HAS_CRYPTO:
         raise RuntimeError(
             "One of cryptography, pycrpto or pycryptodomex must be installed"
