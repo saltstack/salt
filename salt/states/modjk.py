@@ -26,7 +26,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
 
     if not isinstance(workers, list):
         ret["result"] = False
-        ret["comment"] = "workers should be a list not a {}".format(type(workers))
+        ret["comment"] = f"workers should be a list not a {type(workers)}"
         return ret
 
     if __opts__["test"]:
@@ -38,7 +38,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
         cmdret = __salt__[saltfunc](workers, lbn, profile=profile)
     except KeyError:
         ret["result"] = False
-        ret["comment"] = "unsupported function {}".format(saltfunc)
+        ret["comment"] = f"unsupported function {saltfunc}"
         return ret
 
     errors = []
@@ -49,7 +49,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
     ret["changes"] = {"status": cmdret}
     if errors:
         ret["result"] = False
-        ret["comment"] = "{} failed on some workers".format(saltfunc)
+        ret["comment"] = f"{saltfunc} failed on some workers"
 
     return ret
 

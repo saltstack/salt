@@ -7,6 +7,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 """
+
 import binascii
 import copy
 import hashlib
@@ -238,7 +239,14 @@ def assumed_creds(prov_dict, role_arn, location=None):
         requesturl="https://sts.amazonaws.com/",
     )
     headers["Accept"] = "application/json"
-    result = requests.request("GET", requesturl, headers=headers, data="", verify=True)
+    result = requests.request(
+        "GET",
+        requesturl,
+        headers=headers,
+        data="",
+        verify=True,
+        timeout=AWS_METADATA_TIMEOUT,
+    )
 
     if result.status_code >= 400:
         log.info("AssumeRole response: %s", result.content)
@@ -505,7 +513,10 @@ def query(
         log.trace("AWS Request Parameters: %s", params_with_headers)
         try:
             result = requests.get(
-                requesturl, headers=headers, params=params_with_headers
+                requesturl,
+                headers=headers,
+                params=params_with_headers,
+                timeout=AWS_METADATA_TIMEOUT,
             )
             log.debug("AWS Response Status Code: %s", result.status_code)
             log.trace("AWS Response Text: %s", result.text)

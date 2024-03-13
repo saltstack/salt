@@ -18,7 +18,6 @@ requisite to a pkg.installed state for the package which provides pip
           - pkg: python-pip
 """
 
-
 import logging
 import re
 import sys
@@ -355,7 +354,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
             "The pkg_resources packages was not loaded. Please install setuptools."
         )
         return None
-    normalize = lambda x: str(x).split("!", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split("!", 1)[-1] if ignore_epoch else str(x)
+
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -368,7 +370,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception(
-            f'Comparison of package versions "{pkg1}" and "{pkg2}" failed: {exc}'
+            'Comparison of package versions "%s" and "%s" failed: %s', pkg1, pkg2, exc
         )
     return None
 
@@ -754,11 +756,13 @@ def installed(
     # prepro = lambda pkg: pkg if type(pkg) == str else \
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
-    prepro = (
-        lambda pkg: pkg
-        if isinstance(pkg, str)
-        else " ".join((pkg.items()[0][0], pkg.items()[0][1]))
-    )
+    def prepro(pkg):
+        return (
+            pkg
+            if isinstance(pkg, str)
+            else " ".join((pkg.items()[0][0], pkg.items()[0][1]))
+        )
+
     pkgs = [prepro(pkg) for pkg in pkgs]
 
     ret = {"name": ";".join(pkgs), "result": None, "comment": "", "changes": {}}
@@ -881,7 +885,8 @@ def installed(
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
-                f"Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: {exc}"
+                "Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: %s",
+                exc,
             )
             pip_list = False
 

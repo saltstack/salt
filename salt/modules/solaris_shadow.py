@@ -114,7 +114,7 @@ def info(name):
     }
 
     try:
-        data = pwd.getpwnam(name)
+        data = pwd.getpwnam(name)  # pylint: disable=used-before-assignment
         ret.update({"name": name})
     except KeyError:
         return ret
@@ -144,7 +144,7 @@ def info(name):
     #  5. Maximum age
     #  6. Warning period
 
-    output = __salt__["cmd.run_all"]("passwd -s {}".format(name), python_shell=False)
+    output = __salt__["cmd.run_all"](f"passwd -s {name}", python_shell=False)
     if output["retcode"] != 0:
         return ret
 
@@ -183,7 +183,7 @@ def set_maxdays(name, maxdays):
     pre_info = info(name)
     if maxdays == pre_info["max"]:
         return True
-    cmd = "passwd -x {} {}".format(maxdays, name)
+    cmd = f"passwd -x {maxdays} {name}"
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["max"] != pre_info["max"]:
@@ -203,7 +203,7 @@ def set_mindays(name, mindays):
     pre_info = info(name)
     if mindays == pre_info["min"]:
         return True
-    cmd = "passwd -n {} {}".format(mindays, name)
+    cmd = f"passwd -n {mindays} {name}"
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["min"] != pre_info["min"]:
@@ -265,7 +265,7 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     """
-    cmd = "passwd -d {}".format(name)
+    cmd = f"passwd -d {name}"
     __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="quiet")
     uinfo = info(name)
     return not uinfo["passwd"]
@@ -296,7 +296,7 @@ def set_password(name, password):
                 continue
             comps[1] = password
             line = ":".join(comps)
-            lines.append("{}\n".format(line))
+            lines.append(f"{line}\n")
     with salt.utils.files.fopen(s_file, "w+") as ofile:
         lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
         ofile.writelines(lines)
@@ -318,7 +318,7 @@ def set_warndays(name, warndays):
     pre_info = info(name)
     if warndays == pre_info["warn"]:
         return True
-    cmd = "passwd -w {} {}".format(warndays, name)
+    cmd = f"passwd -w {warndays} {name}"
     __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
     if post_info["warn"] != pre_info["warn"]:

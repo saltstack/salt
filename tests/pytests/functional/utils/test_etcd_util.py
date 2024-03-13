@@ -66,23 +66,23 @@ def test_simple_operations(etcd_client, prefix):
     """
     Verify basic functionality in order to justify use of the cleanup fixture.
     """
-    assert not etcd_client.get("{}/mtg/ambush".format(prefix))
-    assert etcd_client.set("{}/mtg/ambush".format(prefix), "viper") == "viper"
-    assert etcd_client.get("{}/mtg/ambush".format(prefix)) == "viper"
-    assert etcd_client.set("{}/mtg/counter".format(prefix), "spell") == "spell"
-    assert etcd_client.tree("{}/mtg".format(prefix)) == {
+    assert not etcd_client.get(f"{prefix}/mtg/ambush")
+    assert etcd_client.set(f"{prefix}/mtg/ambush", "viper") == "viper"
+    assert etcd_client.get(f"{prefix}/mtg/ambush") == "viper"
+    assert etcd_client.set(f"{prefix}/mtg/counter", "spell") == "spell"
+    assert etcd_client.tree(f"{prefix}/mtg") == {
         "ambush": "viper",
         "counter": "spell",
     }
-    assert etcd_client.ls("{}/mtg".format(prefix)) == {
-        "{}/mtg".format(prefix): {
-            "{}/mtg/ambush".format(prefix): "viper",
-            "{}/mtg/counter".format(prefix): "spell",
+    assert etcd_client.ls(f"{prefix}/mtg") == {
+        f"{prefix}/mtg": {
+            f"{prefix}/mtg/ambush": "viper",
+            f"{prefix}/mtg/counter": "spell",
         },
     }
-    assert etcd_client.delete("{}/mtg/ambush".format(prefix))
-    assert etcd_client.delete("{}/mtg".format(prefix), recurse=True)
-    assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
+    assert etcd_client.delete(f"{prefix}/mtg/ambush")
+    assert etcd_client.delete(f"{prefix}/mtg", recurse=True)
+    assert not etcd_client.get(f"{prefix}/mtg", recurse=True)
 
 
 def test_simple_operations_with_raw_keys_and_values(
@@ -94,23 +94,23 @@ def test_simple_operations_with_raw_keys_and_values(
     modified_opts[profile_name]["etcd.raw_keys"] = True
     modified_opts[profile_name]["etcd.raw_values"] = True
     etcd_client = get_conn(modified_opts, profile=profile_name)
-    assert not etcd_client.get("{}/mtg/ambush".format(prefix))
-    assert etcd_client.set("{}/mtg/ambush".format(prefix), "viper") == b"viper"
-    assert etcd_client.get("{}/mtg/ambush".format(prefix)) == b"viper"
-    assert etcd_client.set("{}/mtg/counter".format(prefix), "spell") == b"spell"
-    assert etcd_client.tree("{}/mtg".format(prefix)) == {
+    assert not etcd_client.get(f"{prefix}/mtg/ambush")
+    assert etcd_client.set(f"{prefix}/mtg/ambush", "viper") == b"viper"
+    assert etcd_client.get(f"{prefix}/mtg/ambush") == b"viper"
+    assert etcd_client.set(f"{prefix}/mtg/counter", "spell") == b"spell"
+    assert etcd_client.tree(f"{prefix}/mtg") == {
         b"ambush": b"viper",
         b"counter": b"spell",
     }
-    assert etcd_client.ls("{}/mtg".format(prefix)) == {
-        "{}/mtg".format(prefix).encode("UTF-8"): {
-            "{}/mtg/ambush".format(prefix).encode("UTF-8"): b"viper",
-            "{}/mtg/counter".format(prefix).encode("UTF-8"): b"spell",
+    assert etcd_client.ls(f"{prefix}/mtg") == {
+        f"{prefix}/mtg".encode(): {
+            f"{prefix}/mtg/ambush".encode(): b"viper",
+            f"{prefix}/mtg/counter".encode(): b"spell",
         },
     }
-    assert etcd_client.delete("{}/mtg/ambush".format(prefix))
-    assert etcd_client.delete("{}/mtg".format(prefix), recurse=True)
-    assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
+    assert etcd_client.delete(f"{prefix}/mtg/ambush")
+    assert etcd_client.delete(f"{prefix}/mtg", recurse=True)
+    assert not etcd_client.get(f"{prefix}/mtg", recurse=True)
 
 
 def test_get(subtests, etcd_client, prefix):
@@ -120,14 +120,14 @@ def test_get(subtests, etcd_client, prefix):
 
     # Test general get case with key=value
     with subtests.test("inserted keys should be able to be retrieved"):
-        etcd_client.set("{}/get-test/key".format(prefix), "value")
-        assert etcd_client.get("{}/get-test/key".format(prefix)) == "value"
+        etcd_client.set(f"{prefix}/get-test/key", "value")
+        assert etcd_client.get(f"{prefix}/get-test/key") == "value"
 
     # Test with recurse=True.
     with subtests.test("keys should be able to be retrieved recursively"):
-        etcd_client.set("{}/get-test/key2/subkey".format(prefix), "subvalue")
-        etcd_client.set("{}/get-test/key2/subkey2/1".format(prefix), "subvalue1")
-        etcd_client.set("{}/get-test/key2/subkey2/2".format(prefix), "subvalue2")
+        etcd_client.set(f"{prefix}/get-test/key2/subkey", "subvalue")
+        etcd_client.set(f"{prefix}/get-test/key2/subkey2/1", "subvalue1")
+        etcd_client.set(f"{prefix}/get-test/key2/subkey2/2", "subvalue2")
 
         expected = {
             "subkey": "subvalue",
@@ -137,24 +137,22 @@ def test_get(subtests, etcd_client, prefix):
             },
         }
 
-        assert (
-            etcd_client.get("{}/get-test/key2".format(prefix), recurse=True) == expected
-        )
+        assert etcd_client.get(f"{prefix}/get-test/key2", recurse=True) == expected
 
 
 def test_read(subtests, etcd_client, prefix, etcd_version):
     """
     Test that we are able to read and wait.
     """
-    etcd_client.set("{}/read/1".format(prefix), "one")
-    etcd_client.set("{}/read/2".format(prefix), "two")
-    etcd_client.set("{}/read/3/4".format(prefix), "three/four")
+    etcd_client.set(f"{prefix}/read/1", "one")
+    etcd_client.set(f"{prefix}/read/2", "two")
+    etcd_client.set(f"{prefix}/read/3/4", "three/four")
 
     # Simple read test
     with subtests.test(
         "reading a newly inserted and existent key should return that key"
     ):
-        result = etcd_client.read("{}/read/1".format(prefix))
+        result = etcd_client.read(f"{prefix}/read/1")
         assert result
         if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
             assert result.value == "one"
@@ -171,10 +169,10 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
                 "2": "two",
                 "3": {"4": "three/four"},
             },
-            path="{}/read".format(prefix),
+            path=f"{prefix}/read",
         )
 
-        result = etcd_client.read("{}/read".format(prefix), recurse=True)
+        result = etcd_client.read(f"{prefix}/read", recurse=True)
         assert result
         if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
             assert result.children
@@ -187,7 +185,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
                 result_dict[child.key] = child.value
         else:
             for child in result:
-                if child.key != "{}/read".format(prefix):
+                if child.key != f"{prefix}/read":
                     result_dict[child.key] = child.value
         assert result_dict == expected
 
@@ -197,16 +195,16 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
 
         def wait_func(return_list):
             return_list.append(
-                etcd_client.read("{}/read/1".format(prefix), wait=True, timeout=30)
+                etcd_client.read(f"{prefix}/read/1", wait=True, timeout=30)
             )
 
         wait_thread = threading.Thread(target=wait_func, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/read/1".format(prefix), "not one")
+        etcd_client.set(f"{prefix}/read/1", "not one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified.key == "{}/read/1".format(prefix)
+        assert modified.key == f"{prefix}/read/1"
         assert modified.value == "not one"
 
     # Wait for an update using recursive
@@ -215,18 +213,16 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
 
         def wait_func_2(return_list):
             return_list.append(
-                etcd_client.read(
-                    "{}/read".format(prefix), wait=True, timeout=30, recurse=True
-                )
+                etcd_client.read(f"{prefix}/read", wait=True, timeout=30, recurse=True)
             )
 
         wait_thread = threading.Thread(target=wait_func_2, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/read/1".format(prefix), "one again!")
+        etcd_client.set(f"{prefix}/read/1", "one again!")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified.key == "{}/read/1".format(prefix)
+        assert modified.key == f"{prefix}/read/1"
         assert modified.value == "one again!"
 
     # Wait for an update after last modification
@@ -242,7 +238,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
         def wait_func_3(return_list):
             return_list.append(
                 etcd_client.read(
-                    "{}/read/1".format(prefix),
+                    f"{prefix}/read/1",
                     wait=True,
                     timeout=30,
                     start_revision=last_modified + 1,
@@ -252,10 +248,10 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
         wait_thread = threading.Thread(target=wait_func_3, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/read/1".format(prefix), "one")
+        etcd_client.set(f"{prefix}/read/1", "one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified.key == "{}/read/1".format(prefix)
+        assert modified.key == f"{prefix}/read/1"
         assert modified.value == "one"
 
     # Wait for an update after last modification, recursively
@@ -269,7 +265,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
         def wait_func_4(return_list):
             return_list.append(
                 etcd_client.read(
-                    "{}/read".format(prefix),
+                    f"{prefix}/read",
                     wait=True,
                     timeout=30,
                     recurse=True,
@@ -280,10 +276,10 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
         wait_thread = threading.Thread(target=wait_func_4, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/read/1".format(prefix), "one")
+        etcd_client.set(f"{prefix}/read/1", "one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified.key == "{}/read/1".format(prefix)
+        assert modified.key == f"{prefix}/read/1"
         assert modified.value == "one"
 
 
@@ -291,19 +287,19 @@ def test_update(subtests, etcd_client, prefix):
     """
     Ensure that we can update fields
     """
-    etcd_client.set("{}/read/1".format(prefix), "one")
-    etcd_client.set("{}/read/2".format(prefix), "two")
-    etcd_client.set("{}/read/3/4".format(prefix), "three/four")
+    etcd_client.set(f"{prefix}/read/1", "one")
+    etcd_client.set(f"{prefix}/read/2", "two")
+    etcd_client.set(f"{prefix}/read/3/4", "three/four")
 
     # Update existent fields
     with subtests.test("update should work on already existent field"):
         updated = {
-            "{}/read/1".format(prefix): "not one",
-            "{}/read/2".format(prefix): "not two",
+            f"{prefix}/read/1": "not one",
+            f"{prefix}/read/2": "not two",
         }
         assert etcd_client.update(updated) == updated
-        assert etcd_client.get("{}/read/1".format(prefix)) == "not one"
-        assert etcd_client.get("{}/read/2".format(prefix)) == "not two"
+        assert etcd_client.get(f"{prefix}/read/1") == "not one"
+        assert etcd_client.get(f"{prefix}/read/2") == "not two"
 
     # Update non-existent fields
     with subtests.test("update should work on non-existent fields"):
@@ -319,10 +315,10 @@ def test_update(subtests, etcd_client, prefix):
         }
 
         assert etcd_client.update(updated) == etcd_client._flatten(updated)
-        assert etcd_client.get("{}/read-2".format(prefix)) == "read-2"
-        assert etcd_client.get("{}/read-3".format(prefix)) == "read-3"
+        assert etcd_client.get(f"{prefix}/read-2") == "read-2"
+        assert etcd_client.get(f"{prefix}/read-3") == "read-3"
         assert (
-            etcd_client.get("{}/read-4".format(prefix), recurse=True)
+            etcd_client.get(f"{prefix}/read-4", recurse=True)
             == updated[prefix]["read-4"]
         )
 
@@ -332,15 +328,12 @@ def test_update(subtests, etcd_client, prefix):
             "2": "path updated two",
         }
         expected_return = {
-            "{}/read/1".format(prefix): "path updated one",
-            "{}/read/2".format(prefix): "path updated two",
+            f"{prefix}/read/1": "path updated one",
+            f"{prefix}/read/2": "path updated two",
         }
-        assert (
-            etcd_client.update(updated, path="{}/read".format(prefix))
-            == expected_return
-        )
-        assert etcd_client.get("{}/read/1".format(prefix)) == "path updated one"
-        assert etcd_client.get("{}/read/2".format(prefix)) == "path updated two"
+        assert etcd_client.update(updated, path=f"{prefix}/read") == expected_return
+        assert etcd_client.get(f"{prefix}/read/1") == "path updated one"
+        assert etcd_client.get(f"{prefix}/read/2") == "path updated two"
 
 
 def test_write_file(subtests, etcd_client, prefix):
@@ -350,28 +343,23 @@ def test_write_file(subtests, etcd_client, prefix):
     with subtests.test(
         "we should be able to write a single value for a non-existent key"
     ):
-        assert (
-            etcd_client.write_file("{}/write/key_1".format(prefix), "value_1")
-            == "value_1"
-        )
-        assert etcd_client.get("{}/write/key_1".format(prefix)) == "value_1"
+        assert etcd_client.write_file(f"{prefix}/write/key_1", "value_1") == "value_1"
+        assert etcd_client.get(f"{prefix}/write/key_1") == "value_1"
 
     with subtests.test("we should be able to write a single value for an existent key"):
         assert (
-            etcd_client.write_file("{}/write/key_1".format(prefix), "new_value_1")
+            etcd_client.write_file(f"{prefix}/write/key_1", "new_value_1")
             == "new_value_1"
         )
-        assert etcd_client.get("{}/write/key_1".format(prefix)) == "new_value_1"
+        assert etcd_client.get(f"{prefix}/write/key_1") == "new_value_1"
 
     with subtests.test("we should be able to write a single value with a ttl"):
         assert (
-            etcd_client.write_file(
-                "{}/write/ttl_key".format(prefix), "new_value_2", ttl=5
-            )
+            etcd_client.write_file(f"{prefix}/write/ttl_key", "new_value_2", ttl=5)
             == "new_value_2"
         )
         time.sleep(10)
-        assert etcd_client.get("{}/write/ttl_key".format(prefix)) is None
+        assert etcd_client.get(f"{prefix}/write/ttl_key") is None
 
 
 def test_write_directory(subtests, etcd_client, prefix, etcd_version):
@@ -382,19 +370,19 @@ def test_write_directory(subtests, etcd_client, prefix, etcd_version):
         pytest.skip("write_directory is not defined for etcd v3")
 
     with subtests.test("we should be able to create a non-existent directory"):
-        assert etcd_client.write_directory("{}/write_dir/dir1".format(prefix), None)
-        assert etcd_client.get("{}/write_dir/dir1".format(prefix)) is None
+        assert etcd_client.write_directory(f"{prefix}/write_dir/dir1", None)
+        assert etcd_client.get(f"{prefix}/write_dir/dir1") is None
 
     with subtests.test("writing an already existent directory should return True"):
-        assert etcd_client.write_directory("{}/write_dir/dir1".format(prefix), None)
-        assert etcd_client.get("{}/write_dir/dir1".format(prefix)) is None
+        assert etcd_client.write_directory(f"{prefix}/write_dir/dir1", None)
+        assert etcd_client.get(f"{prefix}/write_dir/dir1") is None
 
     with subtests.test("we should be able to write to a new directory"):
         assert (
-            etcd_client.write_file("{}/write_dir/dir1/key1".format(prefix), "value1")
+            etcd_client.write_file(f"{prefix}/write_dir/dir1/key1", "value1")
             == "value1"
         )
-        assert etcd_client.get("{}/write_dir/dir1/key1".format(prefix)) == "value1"
+        assert etcd_client.get(f"{prefix}/write_dir/dir1/key1") == "value1"
 
 
 def test_ls(subtests, etcd_client, prefix):
@@ -402,25 +390,25 @@ def test_ls(subtests, etcd_client, prefix):
     Test listing top level contents
     """
     with subtests.test("ls on a non-existent directory should return an empty dict"):
-        assert not etcd_client.ls("{}/ls".format(prefix))
+        assert not etcd_client.ls(f"{prefix}/ls")
 
     with subtests.test(
         "ls should list the top level keys and values at the given path"
     ):
-        etcd_client.set("{}/ls/1".format(prefix), "one")
-        etcd_client.set("{}/ls/2".format(prefix), "two")
-        etcd_client.set("{}/ls/3/4".format(prefix), "three/four")
+        etcd_client.set(f"{prefix}/ls/1", "one")
+        etcd_client.set(f"{prefix}/ls/2", "two")
+        etcd_client.set(f"{prefix}/ls/3/4", "three/four")
 
         # If it's a dir, it's suffixed with a slash
         expected = {
-            "{}/ls".format(prefix): {
-                "{}/ls/1".format(prefix): "one",
-                "{}/ls/2".format(prefix): "two",
-                "{}/ls/3/".format(prefix): {},
+            f"{prefix}/ls": {
+                f"{prefix}/ls/1": "one",
+                f"{prefix}/ls/2": "two",
+                f"{prefix}/ls/3/": {},
             },
         }
 
-        assert etcd_client.ls("{}/ls".format(prefix)) == expected
+        assert etcd_client.ls(f"{prefix}/ls") == expected
 
 
 @pytest.mark.parametrize("func", ("rm", "delete"))
@@ -431,18 +419,18 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
     func = getattr(etcd_client, func)
 
     with subtests.test("removing a non-existent key should do nothing"):
-        assert func("{}/rm/key1".format(prefix)) is None
+        assert func(f"{prefix}/rm/key1") is None
 
     with subtests.test("we should be able to remove an existing key"):
-        etcd_client.set("{}/rm/key1".format(prefix), "value1")
-        assert func("{}/rm/key1".format(prefix))
-        assert etcd_client.get("{}/rm/key1".format(prefix)) is None
+        etcd_client.set(f"{prefix}/rm/key1", "value1")
+        assert func(f"{prefix}/rm/key1")
+        assert etcd_client.get(f"{prefix}/rm/key1") is None
 
     with subtests.test("we should be able to remove an empty directory"):
         if etcd_version == EtcdVersion.v2:
-            etcd_client.write_directory("{}/rm/dir1".format(prefix), None)
-            assert func("{}/rm/dir1".format(prefix), recurse=True)
-            assert etcd_client.get("{}/rm/dir1".format(prefix), recurse=True) is None
+            etcd_client.write_directory(f"{prefix}/rm/dir1", None)
+            assert func(f"{prefix}/rm/dir1", recurse=True)
+            assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) is None
 
     with subtests.test("we should be able to remove a directory with keys"):
         updated = {
@@ -454,11 +442,11 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
                 },
             }
         }
-        etcd_client.update(updated, path="{}/rm".format(prefix))
+        etcd_client.update(updated, path=f"{prefix}/rm")
 
-        assert func("{}/rm/dir1".format(prefix), recurse=True)
-        assert etcd_client.get("{}/rm/dir1".format(prefix), recurse=True) is None
-        assert etcd_client.get("{}/rm/dir1/rm-1".format(prefix), recurse=True) is None
+        assert func(f"{prefix}/rm/dir1", recurse=True)
+        assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) is None
+        assert etcd_client.get(f"{prefix}/rm/dir1/rm-1", recurse=True) is None
 
     with subtests.test("removing a directory without recursion should do nothing"):
         updated = {
@@ -470,14 +458,11 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
                 },
             }
         }
-        etcd_client.update(updated, path="{}/rm".format(prefix))
+        etcd_client.update(updated, path=f"{prefix}/rm")
 
-        assert func("{}/rm/dir1".format(prefix)) is None
-        assert (
-            etcd_client.get("{}/rm/dir1".format(prefix), recurse=True)
-            == updated["dir1"]
-        )
-        assert etcd_client.get("{}/rm/dir1/rm-1".format(prefix)) == "value-1"
+        assert func(f"{prefix}/rm/dir1") is None
+        assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) == updated["dir1"]
+        assert etcd_client.get(f"{prefix}/rm/dir1/rm-1") == "value-1"
 
 
 def test_tree(subtests, etcd_client, prefix, etcd_version):
@@ -488,16 +473,16 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
         assert etcd_client.tree(prefix) is None
 
     with subtests.test("the tree of an file should be {key: value}"):
-        etcd_client.set("{}/1".format(prefix), "one")
-        assert etcd_client.tree("{}/1".format(prefix)) == {"1": "one"}
+        etcd_client.set(f"{prefix}/1", "one")
+        assert etcd_client.tree(f"{prefix}/1") == {"1": "one"}
 
     with subtests.test("the tree of an empty directory should be empty"):
         if etcd_version == EtcdVersion.v2:
-            etcd_client.write_directory("{}/2".format(prefix), None)
-            assert etcd_client.tree("{}/2".format(prefix)) == {}
+            etcd_client.write_directory(f"{prefix}/2", None)
+            assert etcd_client.tree(f"{prefix}/2") == {}
 
     with subtests.test("we should be able to recieve the tree of a directory"):
-        etcd_client.set("{}/3/4".format(prefix), "three/four")
+        etcd_client.set(f"{prefix}/3/4", "three/four")
         expected = {
             "1": "one",
             "2": {},
@@ -508,11 +493,11 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
         assert etcd_client.tree(prefix) == expected
 
     with subtests.test("we should be able to recieve the tree of an outer directory"):
-        etcd_client.set("{}/5/6/7".format(prefix), "five/six/seven")
+        etcd_client.set(f"{prefix}/5/6/7", "five/six/seven")
         expected = {
             "6": {"7": "five/six/seven"},
         }
-        assert etcd_client.tree("{}/5".format(prefix)) == expected
+        assert etcd_client.tree(f"{prefix}/5") == expected
 
 
 def test_watch(subtests, etcd_client, prefix):
@@ -523,32 +508,30 @@ def test_watch(subtests, etcd_client, prefix):
             "4": "three/four",
         },
     }
-    etcd_client.update(updated, path="{}/watch".format(prefix))
+    etcd_client.update(updated, path=f"{prefix}/watch")
 
     with subtests.test("watching an invalid key should timeout and return None"):
-        assert etcd_client.watch("{}/invalid".format(prefix), timeout=3) is None
+        assert etcd_client.watch(f"{prefix}/invalid", timeout=3) is None
 
     with subtests.test(
         "watching an valid key with no changes should timeout and return None"
     ):
-        assert etcd_client.watch("{}/watch/1".format(prefix), timeout=3) is None
+        assert etcd_client.watch(f"{prefix}/watch/1", timeout=3) is None
 
     # Wait for an update
     with subtests.test("updates should be able to be caught by waiting in read"):
         return_list = []
 
         def wait_func(return_list):
-            return_list.append(
-                etcd_client.watch("{}/watch/1".format(prefix), timeout=30)
-            )
+            return_list.append(etcd_client.watch(f"{prefix}/watch/1", timeout=30))
 
         wait_thread = threading.Thread(target=wait_func, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/watch/1".format(prefix), "not one")
+        etcd_client.set(f"{prefix}/watch/1", "not one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified["key"] == "{}/watch/1".format(prefix)
+        assert modified["key"] == f"{prefix}/watch/1"
         assert modified["value"] == "not one"
 
     # Wait for an update using recursive
@@ -557,16 +540,16 @@ def test_watch(subtests, etcd_client, prefix):
 
         def wait_func_2(return_list):
             return_list.append(
-                etcd_client.watch("{}/watch".format(prefix), timeout=30, recurse=True)
+                etcd_client.watch(f"{prefix}/watch", timeout=30, recurse=True)
             )
 
         wait_thread = threading.Thread(target=wait_func_2, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/watch/1".format(prefix), "one again!")
+        etcd_client.set(f"{prefix}/watch/1", "one again!")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified["key"] == "{}/watch/1".format(prefix)
+        assert modified["key"] == f"{prefix}/watch/1"
         assert modified["value"] == "one again!"
 
     # Wait for an update after last modification
@@ -579,7 +562,7 @@ def test_watch(subtests, etcd_client, prefix):
         def wait_func_3(return_list):
             return_list.append(
                 etcd_client.watch(
-                    "{}/watch/1".format(prefix),
+                    f"{prefix}/watch/1",
                     timeout=30,
                     start_revision=last_modified + 1,
                 )
@@ -588,10 +571,10 @@ def test_watch(subtests, etcd_client, prefix):
         wait_thread = threading.Thread(target=wait_func_3, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/watch/1".format(prefix), "one")
+        etcd_client.set(f"{prefix}/watch/1", "one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified["key"] == "{}/watch/1".format(prefix)
+        assert modified["key"] == f"{prefix}/watch/1"
         assert modified["value"] == "one"
 
     # Wait for an update after last modification, recursively
@@ -602,7 +585,7 @@ def test_watch(subtests, etcd_client, prefix):
         def wait_func_4(return_list):
             return_list.append(
                 etcd_client.watch(
-                    "{}/watch".format(prefix),
+                    f"{prefix}/watch",
                     timeout=30,
                     recurse=True,
                     start_revision=last_modified + 1,
@@ -612,8 +595,8 @@ def test_watch(subtests, etcd_client, prefix):
         wait_thread = threading.Thread(target=wait_func_4, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_client.set("{}/watch/1".format(prefix), "one")
+        etcd_client.set(f"{prefix}/watch/1", "one")
         wait_thread.join()
         modified = return_list.pop()
-        assert modified["key"] == "{}/watch/1".format(prefix)
+        assert modified["key"] == f"{prefix}/watch/1"
         assert modified["value"] == "one"

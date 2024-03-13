@@ -91,27 +91,27 @@ def present(
                     weight=weight,
                 )
                 if server_edit is True:
-                    ret[
-                        "comment"
-                    ] = "LVS Server {} in service {}({}) has been updated".format(
-                        name, service_address, protocol
+                    ret["comment"] = (
+                        "LVS Server {} in service {}({}) has been updated".format(
+                            name, service_address, protocol
+                        )
                     )
                     ret["changes"][name] = "Update"
                     return ret
                 else:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "LVS Server {} in service {}({}) update failed({})".format(
-                        name, service_address, protocol, server_edit
+                    ret["comment"] = (
+                        "LVS Server {} in service {}({}) update failed({})".format(
+                            name, service_address, protocol, server_edit
+                        )
                     )
                     return ret
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "LVS Server {} in service {}({}) is not present and needs to be created".format(
-                name, service_address, protocol
+            ret["comment"] = (
+                "LVS Server {} in service {}({}) is not present and needs to be created".format(
+                    name, service_address, protocol
+                )
             )
             ret["result"] = None
             return ret
@@ -124,18 +124,18 @@ def present(
                 weight=weight,
             )
             if server_add is True:
-                ret[
-                    "comment"
-                ] = "LVS Server {} in service {}({}) has been created".format(
-                    name, service_address, protocol
+                ret["comment"] = (
+                    "LVS Server {} in service {}({}) has been created".format(
+                        name, service_address, protocol
+                    )
                 )
                 ret["changes"][name] = "Present"
                 return ret
             else:
-                ret[
-                    "comment"
-                ] = "LVS Service {} in service {}({}) create failed({})".format(
-                    name, service_address, protocol, server_add
+                ret["comment"] = (
+                    "LVS Service {} in service {}({}) create failed({})".format(
+                        name, service_address, protocol, server_add
+                    )
                 )
                 ret["result"] = False
                 return ret
@@ -168,10 +168,10 @@ def absent(name, protocol=None, service_address=None, server_address=None):
     if server_check is True:
         if __opts__["test"]:
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "LVS Server {} in service {}({}) is present and needs to be removed".format(
-                name, service_address, protocol
+            ret["comment"] = (
+                "LVS Server {} in service {}({}) is present and needs to be removed".format(
+                    name, service_address, protocol
+                )
             )
             return ret
         server_delete = __salt__["lvs.delete_server"](
@@ -186,18 +186,18 @@ def absent(name, protocol=None, service_address=None, server_address=None):
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret[
-                "comment"
-            ] = "LVS Server {} in service {}({}) removed failed({})".format(
-                name, service_address, protocol, server_delete
+            ret["comment"] = (
+                "LVS Server {} in service {}({}) removed failed({})".format(
+                    name, service_address, protocol, server_delete
+                )
             )
             ret["result"] = False
             return ret
     else:
-        ret[
-            "comment"
-        ] = "LVS Server {} in service {}({}) is not present, so it cannot be removed".format(
-            name, service_address, protocol
+        ret["comment"] = (
+            "LVS Server {} in service {}({}) is not present, so it cannot be removed".format(
+                name, service_address, protocol
+            )
         )
 
     return ret

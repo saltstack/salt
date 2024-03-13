@@ -1,6 +1,7 @@
 """
 Routines to set up a minion
 """
+
 import asyncio
 import binascii
 import contextlib
@@ -80,21 +81,19 @@ from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
-HAS_PSUTIL = False
 try:
-    import salt.utils.psutil_compat as psutil
+    import psutil
 
     HAS_PSUTIL = True
 except ImportError:
-    pass
+    HAS_PSUTIL = False
 
-HAS_RESOURCE = False
 try:
     import resource
 
     HAS_RESOURCE = True
 except ImportError:
-    pass
+    HAS_RESOURCE = False
 
 try:
     import salt.utils.win_functions
@@ -3694,8 +3693,11 @@ class SyndicManager(MinionBase):
         self.raw_events = []
 
     def reconnect_event_bus(self, something):
+        # XXX: set_event_handler does not return anything!
+        # pylint: disable=assignment-from-no-return
         future = self.local.event.set_event_handler(self._process_event)
         self.io_loop.add_future(future, self.reconnect_event_bus)
+        # pylint: enable=assignment-from-no-return
 
     # Syndic Tune In
     def tune_in(self):
@@ -3715,8 +3717,12 @@ class SyndicManager(MinionBase):
         self.job_rets = {}
         self.raw_events = []
         self._reset_event_aggregation()
+
+        # XXX: set_event_handler does not return anything!
+        # pylint: disable=assignment-from-no-return
         future = self.local.event.set_event_handler(self._process_event)
         self.io_loop.add_future(future, self.reconnect_event_bus)
+        # pylint: enable=assignment-from-no-return
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(

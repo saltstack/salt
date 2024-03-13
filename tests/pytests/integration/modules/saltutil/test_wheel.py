@@ -2,7 +2,6 @@
 Integration tests for the saltutil module.
 """
 
-
 import pathlib
 import shutil
 

@@ -62,7 +62,7 @@ def write(key, value):
         key = target(key)
         log.trace("Writing %s to %s", value, key)
         with salt.utils.files.fopen(key, "w") as twriter:
-            twriter.write(salt.utils.stringutils.to_str("{}\n".format(value)))
+            twriter.write(salt.utils.stringutils.to_str(f"{value}\n"))
             return True
     except Exception:  # pylint: disable=broad-except
         return False

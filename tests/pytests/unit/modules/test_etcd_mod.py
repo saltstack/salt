@@ -9,7 +9,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import pytest
 
 import salt.modules.etcd_mod as etcd_mod

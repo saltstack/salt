@@ -8,7 +8,6 @@ The service module for OpenBSD
     <module-provider-override>`.
 """
 
-
 import fnmatch
 import logging
 import os
@@ -56,7 +55,7 @@ def start(name):
 
         salt '*' service.start <service name>
     """
-    cmd = "/etc/rc.d/{} -f start".format(name)
+    cmd = f"/etc/rc.d/{name} -f start"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -70,7 +69,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     """
-    cmd = "/etc/rc.d/{} -f stop".format(name)
+    cmd = f"/etc/rc.d/{name} -f stop"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -84,7 +83,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     """
-    cmd = "/etc/rc.d/{} -f restart".format(name)
+    cmd = f"/etc/rc.d/{name} -f restart"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -121,7 +120,7 @@ def status(name, sig=None):
         services = [name]
     results = {}
     for service in services:
-        cmd = "/etc/rc.d/{} -f check".format(service)
+        cmd = f"/etc/rc.d/{service} -f check"
         results[service] = not __salt__["cmd.retcode"](cmd, ignore_retcode=True)
     if contains_globbing:
         return results
@@ -140,7 +139,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     """
-    cmd = "/etc/rc.d/{} -f reload".format(name)
+    cmd = f"/etc/rc.d/{name} -f reload"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -220,7 +219,7 @@ def available(name):
 
         salt '*' service.available sshd
     """
-    path = "/etc/rc.d/{}".format(name)
+    path = f"/etc/rc.d/{name}"
     return os.path.isfile(path) and os.access(path, os.X_OK)
 
 

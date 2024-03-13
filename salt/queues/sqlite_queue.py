@@ -38,7 +38,7 @@ def _conn(queue):
     Return an sqlite connection
     """
     queue_dir = __opts__["sqlite_queue_dir"]
-    db = os.path.join(queue_dir, "{}.db".format(queue))
+    db = os.path.join(queue_dir, f"{queue}.db")
     log.debug("Connecting to: %s", db)
 
     con = sqlite3.connect(db)
@@ -61,7 +61,7 @@ def _list_tables(con):
 def _create_table(con, queue):
     with con:
         cur = con.cursor()
-        cmd = "CREATE TABLE {}(id INTEGER PRIMARY KEY, name TEXT UNIQUE)".format(queue)
+        cmd = f"CREATE TABLE {queue}(id INTEGER PRIMARY KEY, name TEXT UNIQUE)"
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
     return True
@@ -74,7 +74,7 @@ def _list_items(queue):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        cmd = "SELECT name FROM {}".format(queue)
+        cmd = f"SELECT name FROM {queue}"
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
@@ -138,15 +138,15 @@ def insert(queue, items):
         cur = con.cursor()
         if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
+            cmd = f"INSERT INTO {queue}(name) VALUES('{items}')"
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. sqlite error: {}".format(esc)
+                return f"Item already exists in this queue. sqlite error: {esc}"
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = "INSERT INTO {}(name) VALUES(?)".format(queue)
+            cmd = f"INSERT INTO {queue}(name) VALUES(?)"
             log.debug("SQL Query: %s", cmd)
             newitems = []
             for item in items:
@@ -162,12 +162,12 @@ def insert(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
+            cmd = f"INSERT INTO {queue}(name) VALUES('{items}')"
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. sqlite error: {}".format(esc)
+                return f"Item already exists in this queue. sqlite error: {esc}"
     return True
 
 
@@ -180,13 +180,13 @@ def delete(queue, items):
         cur = con.cursor()
         if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
+            cmd = f"DELETE FROM {queue} WHERE name = '{items}'"
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = "DELETE FROM {} WHERE name = ?".format(queue)
+            cmd = f"DELETE FROM {queue} WHERE name = ?"
             log.debug("SQL Query: %s", cmd)
             newitems = []
             for item in items:
@@ -196,7 +196,7 @@ def delete(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
+            cmd = f"DELETE FROM {queue} WHERE name = '{items}'"
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
@@ -207,7 +207,7 @@ def pop(queue, quantity=1, is_runner=False):
     """
     Pop one or more or all items from the queue return them.
     """
-    cmd = "SELECT name FROM {}".format(queue)
+    cmd = f"SELECT name FROM {queue}"
     if quantity != "all":
         try:
             quantity = int(quantity)
@@ -216,7 +216,7 @@ def pop(queue, quantity=1, is_runner=False):
                 exc
             )
             raise SaltInvocationError(error_txt)
-        cmd = "".join([cmd, " LIMIT {}".format(quantity)])
+        cmd = "".join([cmd, f" LIMIT {quantity}"])
     log.debug("SQL Query: %s", cmd)
     con = _conn(queue)
     items = []
@@ -227,7 +227,7 @@ def pop(queue, quantity=1, is_runner=False):
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
             _quote_escape(itemlist)
-            del_cmd = 'DELETE FROM {} WHERE name IN ("{}")'.format(queue, itemlist)
+            del_cmd = f'DELETE FROM {queue} WHERE name IN ("{itemlist}")'
 
             log.debug("SQL Query: %s", del_cmd)
 

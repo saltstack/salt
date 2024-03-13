@@ -47,7 +47,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   certvalidator
     #   oscrypto
-astroid==2.3.3
+astroid==3.1.0
     # via pylint
 attrs==23.2.0
     # via
@@ -147,7 +147,7 @@ croniter==1.3.15 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-cryptography==42.0.3
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -158,6 +158,8 @@ cryptography==42.0.3
     #   paramiko
     #   pyopenssl
     #   vcert
+dill==0.3.8
+    # via pylint
 distlib==0.3.8
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -172,6 +174,10 @@ dnspython==2.3.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   python-etcd
+docker==6.1.3
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/lint.in
 etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -325,8 +331,6 @@ kubernetes==3.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-lazy-object-proxy==1.4.3
-    # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -361,8 +365,6 @@ mercurial==6.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/linux.in
-modernize==0.5
-    # via saltpylint
 more-itertools==5.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -423,6 +425,7 @@ packaging==23.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
+    #   docker
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -443,6 +446,7 @@ pathspec==0.11.1
 platformdirs==4.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   pylint
     #   virtualenv
 portend==3.1.0
     # via
@@ -463,8 +467,6 @@ pyasn1==0.5.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pyasn1-modules
     #   rsa
-pycodestyle==2.10.0
-    # via saltpylint
 pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -505,7 +507,7 @@ pyjwt==2.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   twilio
-pylint==2.4.4
+pylint==3.1.0
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
@@ -608,6 +610,7 @@ requests==2.31.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   apache-libcloud
+    #   docker
     #   etcd3-py
     #   kubernetes
     #   moto
@@ -641,7 +644,7 @@ s3transfer==0.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   boto3
-saltpylint==2023.8.3
+saltpylint==2024.2.5
     # via -r requirements/static/ci/lint.in
 scp==0.14.5
     # via
@@ -662,7 +665,6 @@ six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   astroid
     #   cassandra-driver
     #   etcd3-py
     #   genshi
@@ -728,6 +730,8 @@ toml==0.10.2
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
+tomlkit==0.12.3
+    # via pylint
 tornado==6.3.3
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -767,6 +771,7 @@ urllib3==1.26.18
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
@@ -786,6 +791,7 @@ watchdog==3.0.0
 websocket-client==0.40.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   docker
     #   kubernetes
 wempy==0.2.1
     # via
@@ -795,8 +801,6 @@ werkzeug==3.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   moto
-wrapt==1.11.2
-    # via astroid
 xmldiff==2.6.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

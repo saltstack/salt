@@ -2,7 +2,6 @@
 Tests for salt.utils.jid
 """
 
-
 import datetime
 import os
 
@@ -35,9 +34,9 @@ class JidTestCase(TestCase):
             self.assertEqual(ret, "20021225120000000000")
             with patch("salt.utils.jid.LAST_JID_DATETIME", None):
                 ret = salt.utils.jid.gen_jid({"unique_jid": True})
-                self.assertEqual(ret, "20021225120000000000_{}".format(os.getpid()))
+                self.assertEqual(ret, f"20021225120000000000_{os.getpid()}")
                 ret = salt.utils.jid.gen_jid({"unique_jid": True})
-                self.assertEqual(ret, "20021225120000000001_{}".format(os.getpid()))
+                self.assertEqual(ret, f"20021225120000000001_{os.getpid()}")
 
     def test_deprecation_58225(self):
         # check that type error will be raised

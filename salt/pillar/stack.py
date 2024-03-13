@@ -373,6 +373,7 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 |       - root   |       - mat             |                         |
 +----------------+-------------------------+-------------------------+
 """
+
 import functools
 import glob
 import logging
@@ -475,9 +476,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             try:
                 yaml = jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
             except Exception as e:
-                raise Exception(
-                    'Stack pillar template render error in {}:\n"{}"'.format(path, e)
-                )
+                raise Exception(f'Stack pillar template render error in {path}:\n"{e}"')
             try:
                 obj = salt.utils.yaml.safe_load(yaml)
             except Exception as e:
@@ -505,9 +504,7 @@ def _cleanup(obj):
 def _merge_dict(stack, obj):
     strategy = obj.pop("__", "merge-last")
     if strategy not in strategies:
-        raise Exception(
-            'Unknown strategy "{}", should be one of {}'.format(strategy, strategies)
-        )
+        raise Exception(f'Unknown strategy "{strategy}", should be one of {strategies}')
     if strategy == "overwrite":
         return _cleanup(obj)
     else:
@@ -544,9 +541,7 @@ def _merge_list(stack, obj):
         strategy = obj[0]["__"]
         del obj[0]
     if strategy not in strategies:
-        raise Exception(
-            'Unknown strategy "{}", should be one of {}'.format(strategy, strategies)
-        )
+        raise Exception(f'Unknown strategy "{strategy}", should be one of {strategies}')
     if strategy == "overwrite":
         return obj
     elif strategy == "remove":

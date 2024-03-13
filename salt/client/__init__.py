@@ -8,7 +8,6 @@ The data structure needs to be:
               'key': '<read in the key file>'}
 """
 
-
 import logging
 
 # The components here are simple, and they need to be and stay simple, we
@@ -1295,7 +1294,7 @@ class LocalClient:
                 except KeyError as exc:
                     # This is a safe pass. We're just using the try/except to
                     # avoid having to deep-check for keys.
-                    missing_key = exc.__str__().strip("'\"")
+                    missing_key = str(exc).strip("'\"")
                     if missing_key == "retcode":
                         log.debug("retcode missing from client return")
                     else:

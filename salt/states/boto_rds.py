@@ -68,7 +68,6 @@ config:
 
 """
 
-
 import logging
 import os
 
@@ -476,9 +475,9 @@ def replica_present(
             )
             if not modified:
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] = f"Failed to update parameter group of {name} RDS instance."
+                ret["comment"] = (
+                    f"Failed to update parameter group of {name} RDS instance."
+                )
             ret["changes"]["old"] = pmg_name
             ret["changes"]["new"] = db_parameter_group_name
         ret["result"] = True

@@ -374,7 +374,7 @@ def _validate_filetype(filetype):
     Checks if the given filetype is a valid SELinux filetype
     specification. Throws an SaltInvocationError if it isn't.
     """
-    if filetype not in _SELINUX_FILETYPES.keys():
+    if filetype not in _SELINUX_FILETYPES:
         raise SaltInvocationError(f"Invalid filetype given: {filetype}")
     return True
 

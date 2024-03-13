@@ -1,13 +1,14 @@
 """
 Test Salt Pkg Downloads
 """
+
 import contextlib
 import logging
 import os
 import pathlib
 import shutil
 
-import packaging
+import packaging.version
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -97,7 +98,7 @@ def get_salt_release():
         salt_release = "3006.0rc2"
     if pkg_test_type == "download-pkgs":
         if packaging.version.parse(salt_release) < packaging.version.parse("3006.0rc1"):
-            log.warning(f"The salt release being tested, {salt_release!r} looks off.")
+            log.warning("The salt release being tested, %r looks off.", salt_release)
     return salt_release
 
 
@@ -109,7 +110,9 @@ def get_repo_subpath_params():
         latest_release = packaging.version.parse(latest_env_var)
         if current_release >= latest_release:
             log.debug(
-                f"Running the tests for the latest release since {str(current_release)} >= {str(latest_release)}"
+                "Running the tests for the latest release since %s >= %s",
+                current_release,
+                latest_release,
             )
             params.append("latest")
     return params

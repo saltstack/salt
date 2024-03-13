@@ -65,17 +65,17 @@ def _write_adminfile(kwargs):
         fp_.write(salt.utils.stringutils.to_str(line))
 
     with salt.utils.files.fopen(adminfile, "w") as fp_:
-        _write_line(fp_, "email={}\n".format(email))
-        _write_line(fp_, "instance={}\n".format(instance))
-        _write_line(fp_, "partial={}\n".format(partial))
-        _write_line(fp_, "runlevel={}\n".format(runlevel))
-        _write_line(fp_, "idepend={}\n".format(idepend))
-        _write_line(fp_, "rdepend={}\n".format(rdepend))
-        _write_line(fp_, "space={}\n".format(space))
-        _write_line(fp_, "setuid={}\n".format(setuid))
-        _write_line(fp_, "conflict={}\n".format(conflict))
-        _write_line(fp_, "action={}\n".format(action))
-        _write_line(fp_, "basedir={}\n".format(basedir))
+        _write_line(fp_, f"email={email}\n")
+        _write_line(fp_, f"instance={instance}\n")
+        _write_line(fp_, f"partial={partial}\n")
+        _write_line(fp_, f"runlevel={runlevel}\n")
+        _write_line(fp_, f"idepend={idepend}\n")
+        _write_line(fp_, f"rdepend={rdepend}\n")
+        _write_line(fp_, f"space={space}\n")
+        _write_line(fp_, f"setuid={setuid}\n")
+        _write_line(fp_, f"conflict={conflict}\n")
+        _write_line(fp_, f"action={action}\n")
+        _write_line(fp_, f"basedir={basedir}\n")
 
     return adminfile
 

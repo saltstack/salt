@@ -181,7 +181,7 @@ class MessageFormatter(logging.Formatter):
         self.tags = tags
         self.msg_path = msg_path if msg_path else payload_type
         self.msg_type = msg_type if msg_type else payload_type
-        format_func = "format_{}_v{}".format(payload_type, version).replace(".", "_")
+        format_func = f"format_{payload_type}_v{version}".replace(".", "_")
         self.format = getattr(self, format_func)
         super().__init__(fmt=None, datefmt=None)
 
@@ -236,7 +236,7 @@ class MessageFormatter(logging.Formatter):
                 val = value
             else:
                 val = repr(value)
-            message_dict.update({"{}".format(key): val})
+            message_dict.update({f"{key}": val})
         return message_dict
 
     def format_gelf_v1_1(self, record):
@@ -286,7 +286,7 @@ class MessageFormatter(logging.Formatter):
             else:
                 val = repr(value)
             # GELF spec require "non-standard" fields to be prefixed with '_' (underscore).
-            message_dict.update({"_{}".format(key): val})
+            message_dict.update({f"_{key}": val})
 
         return message_dict
 
@@ -308,7 +308,7 @@ class MessageFormatter(logging.Formatter):
                 "processName": record.processName,
             },
             "@message": record.getMessage(),
-            "@source": "{}://{}/{}".format(self.msg_type, host, self.msg_path),
+            "@source": f"{self.msg_type}://{host}/{self.msg_path}",
             "@source_host": host,
             "@source_path": self.msg_path,
             "@tags": self.tags,

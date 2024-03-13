@@ -5,6 +5,7 @@
     tests.unit.modules.mdadm_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import re
 
 import pytest

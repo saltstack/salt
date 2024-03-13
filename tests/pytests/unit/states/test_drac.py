@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.states.drac as drac
@@ -25,12 +26,12 @@ def test_present():
     mock = MagicMock(return_value=[name])
     with patch.dict(drac.__salt__, {"drac.list_users": mock}):
         with patch.dict(drac.__opts__, {"test": True}):
-            comt = "`{}` already exists".format(name)
+            comt = f"`{name}` already exists"
             ret.update({"comment": comt})
             assert drac.present(name, password, permission) == ret
 
         with patch.dict(drac.__opts__, {"test": False}):
-            comt = "`{}` already exists".format(name)
+            comt = f"`{name}` already exists"
             ret.update({"comment": comt})
             assert drac.present(name, password, permission) == ret
 
@@ -46,12 +47,12 @@ def test_absent():
     mock = MagicMock(return_value=[])
     with patch.dict(drac.__salt__, {"drac.list_users": mock}):
         with patch.dict(drac.__opts__, {"test": True}):
-            comt = "`{}` does not exist".format(name)
+            comt = f"`{name}` does not exist"
             ret.update({"comment": comt})
             assert drac.absent(name) == ret
 
         with patch.dict(drac.__opts__, {"test": False}):
-            comt = "`{}` does not exist".format(name)
+            comt = f"`{name}` does not exist"
             ret.update({"comment": comt})
             assert drac.absent(name) == ret
 

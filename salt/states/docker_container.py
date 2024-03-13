@@ -1692,7 +1692,7 @@ def running(
         if exc.info is not None:
             return _format_comments(ret, exc.info)
         else:
-            ret["comment"] = exc.__str__()
+            ret["comment"] = str(exc)
             return ret
 
     comments = []
@@ -1759,7 +1759,7 @@ def running(
         return _format_comments(ret, comments)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        msg = exc.__str__()
+        msg = str(exc)
         if (
             isinstance(exc, CommandExecutionError)
             and isinstance(exc.info, dict)
@@ -1816,7 +1816,7 @@ def running(
                 # of the network's subnet. An exception will be raised once
                 # you try to start the container, however.
                 ret["result"] = False
-                comments.append(exc.__str__())
+                comments.append(str(exc))
                 return _format_comments(ret, comments)
 
         post_net_connect = __salt__["docker.inspect_container"](temp_container_name)
@@ -1849,10 +1849,17 @@ def running(
         )
 
         if not skip_comparison:
+            docker_version_info = __salt__["docker.version"]()["VersionInfo"]
+            if docker_version_info < (25, 0):
+                compare_containers_ignore = "Hostname"
+            else:
+                # With docker >= 25.0 we get a new value to compare,
+                # MacAddress, which we'll ignore for now.
+                compare_containers_ignore = "Hostname,MacAddress"
             container_changes = __salt__["docker.compare_containers"](
                 name,
                 temp_container_name,
-                ignore="Hostname",
+                ignore=compare_containers_ignore,
             )
             if container_changes:
                 if _check_diff(container_changes):
@@ -1883,9 +1890,9 @@ def running(
                     if not _replace(name, temp_container_name):
                         ret["result"] = False
                         return _format_comments(ret, comments)
-                    ret["changes"].setdefault("container_id", {})[
-                        "added"
-                    ] = temp_container["Id"]
+                    ret["changes"].setdefault("container_id", {})["added"] = (
+                        temp_container["Id"]
+                    )
             else:
                 # No changes between existing container and temp container.
                 # First check if a requisite is asking to send a signal to the
@@ -1945,7 +1952,7 @@ def running(
                             )
                             disconnected = True
                     except CommandExecutionError as exc:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
 
                     if net_name in networks:
                         try:
@@ -1954,7 +1961,7 @@ def running(
                             )
                             connected = True
                         except CommandExecutionError as exc:
-                            errors.append(exc.__str__())
+                            errors.append(str(exc))
                             if disconnected:
                                 # We succeeded in disconnecting but failed
                                 # to reconnect. This can happen if the
@@ -2201,7 +2208,7 @@ def run(
         if exc.info is not None:
             return _format_comments(ret, exc.info)
         else:
-            ret["comment"] = exc.__str__()
+            ret["comment"] = str(exc)
             return ret
 
     if __opts__["test"]:
@@ -2231,9 +2238,9 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    ret["comment"] = (
+                        "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    )
                     return ret
             else:
                 remove = bool(val)
@@ -2271,9 +2278,9 @@ def run(
                 pass
             else:
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret[
-                    "comment"
-                ] = f"Container ran and exited with a return code of {retcode}"
+                ret["comment"] = (
+                    f"Container ran and exited with a return code of {retcode}"
+                )
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")

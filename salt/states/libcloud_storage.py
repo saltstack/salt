@@ -63,7 +63,6 @@ This example will download the file from the remote cloud and keep it locally
 :depends: apache-libcloud
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

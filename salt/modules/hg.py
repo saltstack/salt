@@ -2,7 +2,6 @@
 Support for the Mercurial SCM
 """
 
-
 import logging
 
 import salt.utils.data
@@ -23,7 +22,7 @@ def __virtual__():
 
 
 def _ssh_flag(identity_path):
-    return ["--ssh", "ssh -i {}".format(identity_path)]
+    return ["--ssh", f"ssh -i {identity_path}"]
 
 
 def revision(cwd, rev="tip", short=False, user=None):
@@ -48,7 +47,7 @@ def revision(cwd, rev="tip", short=False, user=None):
 
         salt '*' hg.revision /path/to/repo mybranch
     """
-    cmd = ["hg", "id", "-i", "--debug" if not short else "", "-r", "{}".format(rev)]
+    cmd = ["hg", "id", "-i", "--debug" if not short else "", "-r", f"{rev}"]
 
     result = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
 
@@ -81,7 +80,7 @@ def describe(cwd, rev="tip", user=None):
         "hg",
         "log",
         "-r",
-        "{}".format(rev),
+        f"{rev}",
         "--template",
         "'{{latesttag}}-{{latesttagdistance}}-{{node|short}}'",
     ]
@@ -125,16 +124,16 @@ def archive(cwd, output, rev="tip", fmt=None, prefix=None, user=None):
     cmd = [
         "hg",
         "archive",
-        "{}".format(output),
+        f"{output}",
         "--rev",
-        "{}".format(rev),
+        f"{rev}",
     ]
     if fmt:
         cmd.append("--type")
-        cmd.append("{}".format(fmt))
+        cmd.append(f"{fmt}")
     if prefix:
         cmd.append("--prefix")
-        cmd.append('"{}"'.format(prefix))
+        cmd.append(f'"{prefix}"')
     return __salt__["cmd.run"](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
@@ -205,7 +204,7 @@ def update(cwd, rev, force=False, user=None):
 
         salt devserver1 hg.update /path/to/repo somebranch
     """
-    cmd = ["hg", "update", "{}".format(rev)]
+    cmd = ["hg", "update", f"{rev}"]
     if force:
         cmd.append("-C")
 
@@ -245,10 +244,10 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     """
-    cmd = ["hg", "clone", "{}".format(repository), "{}".format(cwd)]
+    cmd = ["hg", "clone", f"{repository}", f"{cwd}"]
     if opts:
         for opt in opts.split():
-            cmd.append("{}".format(opt))
+            cmd.append(f"{opt}")
     if identity:
         cmd.extend(_ssh_flag(identity))
 
@@ -285,7 +284,7 @@ def status(cwd, opts=None, user=None):
         cmd = ["hg", "status"]
         if opts:
             for opt in opts.split():
-                cmd.append("{}".format(opt))
+                cmd.append(f"{opt}")
         out = __salt__["cmd.run_stdout"](cmd, cwd=cwd, runas=user, python_shell=False)
         types = {
             "M": "modified",

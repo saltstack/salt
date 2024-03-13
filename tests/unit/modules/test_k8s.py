@@ -81,7 +81,7 @@ class TestK8SSecrets(TestCase):
 
     def test_get_one_secret(self):
         name = self.name
-        filename = "/tmp/{}.json".format(name)
+        filename = f"/tmp/{name}.json"
         with salt.utils.files.fopen(filename, "w") as f:
             salt.utils.json.dump(self.request, f)
 
@@ -102,7 +102,7 @@ class TestK8SSecrets(TestCase):
 
     def test_get_decoded_secret(self):
         name = self.name
-        filename = "/tmp/{}.json".format(name)
+        filename = f"/tmp/{name}.json"
         with salt.utils.files.fopen(filename, "w") as f:
             salt.utils.json.dump(self.request, f)
 
@@ -124,12 +124,10 @@ class TestK8SSecrets(TestCase):
         names = []
         expected_data = {}
         for i in range(2):
-            names.append("/tmp/{}-{}".format(name, i))
-            with salt.utils.files.fopen("/tmp/{}-{}".format(name, i), "w") as f:
-                expected_data["{}-{}".format(name, i)] = base64.b64encode(
-                    "{}{}".format(name, i)
-                )
-                f.write(salt.utils.stringutils.to_str("{}{}".format(name, i)))
+            names.append(f"/tmp/{name}-{i}")
+            with salt.utils.files.fopen(f"/tmp/{name}-{i}", "w") as f:
+                expected_data[f"{name}-{i}"] = base64.b64encode(f"{name}{i}")
+                f.write(salt.utils.stringutils.to_str(f"{name}{i}"))
         res = k8s.create_secret(
             "default", name, names, apiserver_url="http://127.0.0.1:8080"
         )
@@ -145,7 +143,7 @@ class TestK8SSecrets(TestCase):
 
     def test_update_secret(self):
         name = self.name
-        filename = "/tmp/{}.json".format(name)
+        filename = f"/tmp/{name}.json"
         with salt.utils.files.fopen(filename, "w") as f:
             salt.utils.json.dump(self.request, f)
 
@@ -157,12 +155,12 @@ class TestK8SSecrets(TestCase):
         expected_data = {}
         names = []
         for i in range(3):
-            names.append("/tmp/{}-{}-updated".format(name, i))
-            with salt.utils.files.fopen("/tmp/{}-{}-updated".format(name, i), "w") as f:
-                expected_data["{}-{}-updated".format(name, i)] = base64.b64encode(
-                    "{}{}-updated".format(name, i)
+            names.append(f"/tmp/{name}-{i}-updated")
+            with salt.utils.files.fopen(f"/tmp/{name}-{i}-updated", "w") as f:
+                expected_data[f"{name}-{i}-updated"] = base64.b64encode(
+                    f"{name}{i}-updated"
                 )
-                f.write("{}{}-updated".format(name, i))
+                f.write(f"{name}{i}-updated")
 
         res = k8s.update_secret(
             "default", name, names, apiserver_url="http://127.0.0.1:8080"
@@ -180,7 +178,7 @@ class TestK8SSecrets(TestCase):
 
     def test_delete_secret(self):
         name = self.name
-        filename = "/tmp/{}.json".format(name)
+        filename = f"/tmp/{name}.json"
         with salt.utils.files.fopen(filename, "w") as f:
             salt.utils.json.dump(self.request, f)
 
@@ -199,9 +197,7 @@ class TestK8SSecrets(TestCase):
         kubectl_out, err = proc.communicate()
         # stdout is empty, stderr is showing something like "not found"
         self.assertEqual("", kubectl_out)
-        self.assertEqual(
-            'Error from server: secrets "{}" not found\n'.format(name), err
-        )
+        self.assertEqual(f'Error from server: secrets "{name}" not found\n', err)
 
 
 @pytest.mark.skip_if_binaries_missing("kubectl")
@@ -241,12 +237,12 @@ spec:
 """.format(
             name
         )
-        filename = "/tmp/{}.yaml".format(name)
+        filename = f"/tmp/{name}.yaml"
         with salt.utils.files.fopen(filename, "w") as f:
             f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(
-            ["kubectl", "--namespace={}".format(namespace), "create", "-f", filename],
+            ["kubectl", f"--namespace={namespace}", "create", "-f", filename],
             stdout=PIPE,
         )
         # wee need to give kubernetes time save data in etcd
@@ -256,7 +252,7 @@ spec:
         proc = Popen(
             [
                 "kubectl",
-                "--namespace={}".format(namespace),
+                f"--namespace={namespace}",
                 "get",
                 "quota",
                 "-o",
@@ -292,12 +288,12 @@ spec:
 """.format(
             name
         )
-        filename = "/tmp/{}.yaml".format(name)
+        filename = f"/tmp/{name}.yaml"
         with salt.utils.files.fopen(filename, "w") as f:
             f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(
-            ["kubectl", "--namespace={}".format(namespace), "create", "-f", filename],
+            ["kubectl", f"--namespace={namespace}", "create", "-f", filename],
             stdout=PIPE,
         )
         # wee need to give kubernetes time save data in etcd
@@ -309,7 +305,7 @@ spec:
         proc = Popen(
             [
                 "kubectl",
-                "--namespace={}".format(namespace),
+                f"--namespace={namespace}",
                 "get",
                 "quota",
                 name,
@@ -335,7 +331,7 @@ spec:
         proc = Popen(
             [
                 "kubectl",
-                "--namespace={}".format(namespace),
+                f"--namespace={namespace}",
                 "get",
                 "quota",
                 name,
@@ -371,12 +367,12 @@ spec:
 """.format(
             name
         )
-        filename = "/tmp/{}.yaml".format(name)
+        filename = f"/tmp/{name}.yaml"
         with salt.utils.files.fopen(filename, "w") as f:
             f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(
-            ["kubectl", "--namespace={}".format(namespace), "create", "-f", filename],
+            ["kubectl", f"--namespace={namespace}", "create", "-f", filename],
             stdout=PIPE,
         )
         # wee need to give kubernetes time save data in etcd
@@ -392,7 +388,7 @@ spec:
         proc = Popen(
             [
                 "kubectl",
-                "--namespace={}".format(namespace),
+                f"--namespace={namespace}",
                 "get",
                 "quota",
                 name,
@@ -449,7 +445,7 @@ spec:
             name
         )
         limits = {"Container": {"defaultRequest": {"cpu": "100m"}}}
-        filename = "/tmp/{}.yaml".format(name)
+        filename = f"/tmp/{name}.yaml"
         with salt.utils.files.fopen(filename, "w") as f:
             f.write(salt.utils.stringutils.to_str(request))
 
@@ -505,7 +501,7 @@ spec:
 """.format(
             name
         )
-        filename = "/tmp/{}.yaml".format(name)
+        filename = f"/tmp/{name}.yaml"
         with salt.utils.files.fopen(filename, "w") as f:
             f.write(salt.utils.stringutils.to_str(request))
 

@@ -50,7 +50,7 @@ def revdep_rebuild(lib=None):
     """
     cmd = "revdep-rebuild -i --quiet --no-progress"
     if lib is not None:
-        cmd += " --library={}".format(lib)
+        cmd += f" --library={lib}"
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
@@ -62,7 +62,7 @@ def _pretty_size(size):
     while units and size >= 1000:
         size = size / 1024.0
         units.pop()
-    return "{}{}".format(round(size, 1), units[-1])
+    return f"{round(size, 1)}{units[-1]}"
 
 
 def _parse_exclude(exclude_file):
@@ -137,7 +137,7 @@ def eclean_dist(
         try:
             exclude = _parse_exclude(exclude_file)
         except excludemod.ParseExcludeFileException as e:
-            ret = {e: "Invalid exclusion file: {}".format(exclude_file)}
+            ret = {e: f"Invalid exclusion file: {exclude_file}"}
             return ret
 
     if time_limit != 0:
@@ -221,7 +221,7 @@ def eclean_pkg(
         try:
             exclude = _parse_exclude(exclude_file)
         except excludemod.ParseExcludeFileException as e:
-            ret = {e: "Invalid exclusion file: {}".format(exclude_file)}
+            ret = {e: f"Invalid exclusion file: {exclude_file}"}
             return ret
 
     if time_limit != 0:

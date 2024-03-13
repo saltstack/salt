@@ -1,6 +1,7 @@
 """
 Integration tests for the idem execution module
 """
+
 from contextlib import contextmanager
 
 import pytest

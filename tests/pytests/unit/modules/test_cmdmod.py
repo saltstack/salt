@@ -467,7 +467,7 @@ def test_shell_properly_handled_on_macOS():
                 )
 
                 assert re.search(
-                    "{} -l -c".format(user_default_shell), cmd_handler.cmd
+                    f"{user_default_shell} -l -c", cmd_handler.cmd
                 ), "cmd invokes right bash session on macOS"
 
             # User default shell is '/bin/zsh'
@@ -559,10 +559,6 @@ def test_run_all_binary_replace():
     with salt.utils.files.fopen(rand_bytes_file, "rb") as fp_:
         stdout_bytes = fp_.read()
 
-    # kitchen-salt uses unix2dos on all the files before copying them over
-    # to the vm that will be running the tests. It skips binary files though
-    # The file specified in `rand_bytes_file` is detected as binary so the
-    # Unix-style line ending remains. This should account for that.
     stdout_bytes = stdout_bytes.rstrip() + os.linesep.encode()
 
     # stdout with the non-decodable bits replaced with the unicode
@@ -911,9 +907,7 @@ def test_runas_env_all_os(test_os, test_family, bundled):
                                             "-c",
                                         ]
                                     if test_os == "FreeBSD":
-                                        env_cmd.extend(
-                                            ["{} -c {}".format(shell, sys.executable)]
-                                        )
+                                        env_cmd.extend([f"{shell} -c {sys.executable}"])
                                     else:
                                         env_cmd.extend([sys.executable])
                                     assert popen_mock.call_args_list[0][0][0] == env_cmd

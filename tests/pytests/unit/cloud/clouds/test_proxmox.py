@@ -156,14 +156,14 @@ def test__reconfigure_clone_params():
         "onboot": "0",
         "sshkeys": "ssh-rsa ABCDEF user@host\n",
     }
-    query_calls = [call("get", "nodes/myhost/qemu/{}/config".format(vmid))]
+    query_calls = [call("get", f"nodes/myhost/qemu/{vmid}/config")]
     for key, value in properties.items():
         if key == "sshkeys":
             value = urllib.parse.quote(value, safe="")
         query_calls.append(
             call(
                 "post",
-                "nodes/myhost/qemu/{}/config".format(vmid),
+                f"nodes/myhost/qemu/{vmid}/config",
                 {key: value},
             )
         )
@@ -346,7 +346,7 @@ def test_find_agent_ips():
         # CASE 1: Test ipv4 and ignore_cidr
         result = proxmox._find_agent_ip(vm_, ANY)
         mock_query.assert_any_call(
-            "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            "get", f"nodes/myhost/qemu/{ANY}/agent/network-get-interfaces"
         )
 
         assert result == "2.3.4.5"
@@ -356,7 +356,7 @@ def test_find_agent_ips():
         vm_["protocol"] = "ipv6"
         result = proxmox._find_agent_ip(vm_, ANY)
         mock_query.assert_any_call(
-            "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            "get", f"nodes/myhost/qemu/{ANY}/agent/network-get-interfaces"
         )
 
         assert result == "2001::1:2"
@@ -384,6 +384,7 @@ def test__authenticate_with_custom_port():
             "https://proxmox.connection.url:9999/api2/json/access/ticket",
             verify=True,
             data={"username": ("fakeuser",), "password": "secretpassword"},
+            timeout=120,
         )
 
 
@@ -515,6 +516,6 @@ def test_creation_failure_logging(caplog):
                     break
         if missing:
             raise AssertionError(
-                "Did not find error messages: {}".format(sorted(list(missing)))
+                f"Did not find error messages: {sorted(list(missing))}"
             )
     return

@@ -59,7 +59,7 @@ def _get_serializer(output):
         return getattr(serializers, output)
     except AttributeError:
         raise CommandExecutionError(
-            "Unknown serializer `{}` found for output option".format(output)
+            f"Unknown serializer `{output}` found for output option"
         )
 
 

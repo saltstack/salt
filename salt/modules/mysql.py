@@ -28,7 +28,6 @@ Module to provide MySQL compatibility to salt.
     Additionally, it is now possible to setup a user with no password.
 """
 
-
 import copy
 import hashlib
 import logging
@@ -2395,7 +2394,7 @@ def __grant_generate(
         if dbc != "*":
             # _ and % are authorized on GRANT queries and should get escaped
             # on the db name, but only if not requesting a table level grant
-            dbc = quote_identifier(dbc, for_grants=(table == "*"))
+            dbc = quote_identifier(dbc, for_grants=table == "*")
         if table != "*":
             table = quote_identifier(table)
     # identifiers cannot be used as values, and same thing for grants
@@ -2664,7 +2663,7 @@ def grant_revoke(
     if dbc != "*":
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
-        s_database = quote_identifier(dbc, for_grants=(table == "*"))
+        s_database = quote_identifier(dbc, for_grants=table == "*")
     if dbc == "*":
         # add revoke for *.*
         # before the modification query send to mysql will looks like
@@ -2765,11 +2764,13 @@ def __do_query_into_hash(conn, sql_str):
 
     rtn_results = []
 
+    cursor = None
     try:
         cursor = conn.cursor()
     except MySQLdb.MySQLError:
         log.error("%s: Can't get cursor for SQL->%s", mod, sql_str)
-        cursor.close()
+        if cursor:
+            cursor.close()
         log.debug("%s-->", mod)
         return rtn_results
 

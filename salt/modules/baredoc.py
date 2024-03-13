@@ -122,9 +122,9 @@ def _parse_module_docs(module_path, mod_name=None):
                             function_name = v
                 if mod_name and "." in mod_name:
                     if function_name == mod_name.split(".")[1]:
-                        ret["{}.{}".format(module_name, function_name)] = doc_string
+                        ret[f"{module_name}.{function_name}"] = doc_string
                 else:
-                    ret["{}.{}".format(module_name, function_name)] = doc_string
+                    ret[f"{module_name}.{function_name}"] = doc_string
     return salt.utils.doc.strip_rst(ret)
 
 

@@ -93,7 +93,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-cryptography==42.0.3
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt

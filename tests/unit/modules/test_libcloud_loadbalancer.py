@@ -1,6 +1,7 @@
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
+
 import pytest
 
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer

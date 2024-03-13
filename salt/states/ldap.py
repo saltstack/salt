@@ -314,6 +314,7 @@ def managed(name, entries, connect_spec=None):
                 o = old.get(dn, {})
                 n = new.get(dn, {})
 
+                op = None
                 try:
                     # perform the operation
                     if o:

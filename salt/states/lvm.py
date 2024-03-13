@@ -342,18 +342,18 @@ def lv_present(
             else:
                 # ignore percentage "extents" if the logical volume already exists
                 if "%" in str(extents):
-                    ret[
-                        "comment"
-                    ] = "Logical Volume {} already present, {} won't be resized.".format(
-                        name, extents
+                    ret["comment"] = (
+                        "Logical Volume {} already present, {} won't be resized.".format(
+                            name, extents
+                        )
                     )
                     extents = old_extents
                 size_mb = old_size_mb
 
             if force is False and (size_mb < old_size_mb or extents < old_extents):
-                ret[
-                    "comment"
-                ] = "To reduce a Logical Volume option 'force' must be True."
+                ret["comment"] = (
+                    "To reduce a Logical Volume option 'force' must be True."
+                )
                 ret["result"] = False
                 return ret
 
@@ -378,9 +378,9 @@ def lv_present(
                         )
 
                     if not changes:
-                        ret[
-                            "comment"
-                        ] = "Failed to resize Logical Volume. Unknown Error."
+                        ret["comment"] = (
+                            "Failed to resize Logical Volume. Unknown Error."
+                        )
                         ret["result"] = False
 
                     lv_info = __salt__["lvm.lvdisplay"](lvpath, quiet=True)[lvpath]
@@ -389,10 +389,10 @@ def lv_present(
                         ret["comment"] = f"Resized Logical Volume {name}"
                         ret["changes"]["resized"] = changes
                     else:
-                        ret[
-                            "comment"
-                        ] = "Failed to resize Logical Volume {}.\nError: {}".format(
-                            name, changes["Output from lvresize"]
+                        ret["comment"] = (
+                            "Failed to resize Logical Volume {}.\nError: {}".format(
+                                name, changes["Output from lvresize"]
+                            )
                         )
                         ret["result"] = False
     return ret

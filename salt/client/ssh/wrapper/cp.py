@@ -964,7 +964,7 @@ class SSHCpClient(salt.fileclient.FSClient):
 
     def _send_file(self, src, dest, makedirs, cachedir):
         def _error(stdout, stderr):
-            log.error(f"Failed sending file: {stderr or stdout}")
+            log.error("Failed sending file: %s", stderr or stdout)
             if Path(self.get_cachedir(cachedir)) in Path(src).parents:
                 # remove the cached file if the transfer fails
                 Path(src).unlink(missing_ok=True)
@@ -1022,7 +1022,7 @@ class SSHCpClient(salt.fileclient.FSClient):
             "rm -rf " + shlex.quote(str(path))
         )
         if retcode:
-            log.error(f"Failed deleting path '{path}': {stderr or stdout}")
+            log.error("Failed deleting path '%s': %s", path, stderr or stdout)
         return not retcode
 
     def get_url(

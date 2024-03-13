@@ -161,9 +161,7 @@ def get_image(vm_):
         images[vm_image]["name"] = images[vm_image]["id"]
         return images[vm_image]
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_size(vm_):
@@ -178,9 +176,7 @@ def get_size(vm_):
     if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]
 
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def query_instance(vm_=None, call=None):
@@ -375,11 +371,11 @@ def create_node(**kwargs):
 
     if metadata is not None:
         for key, value in metadata.items():
-            create_data["metadata.{}".format(key)] = value
+            create_data[f"metadata.{key}"] = value
 
     if tag is not None:
         for key, value in tag.items():
-            create_data["tag.{}".format(key)] = value
+            create_data[f"tag.{key}"] = value
 
     if firewall_enabled is not None:
         create_data["firewall_enabled"] = firewall_enabled
@@ -419,7 +415,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -435,7 +431,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -532,7 +528,6 @@ def take_action(
     method="GET",
     location=DEFAULT_LOCATION,
 ):
-
     """
     take action call used by start,stop, reboot
     :param name: name given to the machine
@@ -921,11 +916,11 @@ def avail_images(call=None):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default="{}{}/{}/images".format(DEFAULT_LOCATION, JOYENT_API_HOST_SUFFIX, user),
+        default=f"{DEFAULT_LOCATION}{JOYENT_API_HOST_SUFFIX}/{user}/images",
     )
 
     if not img_url.startswith("http://") and not img_url.startswith("https://"):
-        img_url = "{}://{}".format(_get_proto(), img_url)
+        img_url = f"{_get_proto()}://{img_url}"
 
     rcode, data = query(command="my/images", method="GET")
     log.debug(data)
@@ -1078,7 +1073,7 @@ def get_location_path(
     :param location: joyent data center location
     :return: url
     """
-    return "{}://{}{}".format(_get_proto(), location, api_host_suffix)
+    return f"{_get_proto()}://{location}{api_host_suffix}"
 
 
 def query(action=None, command=None, args=None, method="GET", location=None, data=None):
@@ -1152,7 +1147,7 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
         path += action
 
     if command:
-        path += "/{}".format(command)
+        path += f"/{command}"
 
     log.debug("User: '%s' on PATH: %s", user, path)
 
@@ -1168,16 +1163,16 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
         digest = md.final()
         signed = rsa_key.sign(digest, algo="sha256")
     else:
-        rsa_ = PKCS1_v1_5.new(rsa_key)
-        hash_ = SHA256.new()
+        rsa_ = PKCS1_v1_5.new(rsa_key)  # pylint: disable=used-before-assignment
+        hash_ = SHA256.new()  # pylint: disable=used-before-assignment
         hash_.update(timestamp.encode(__salt_system_encoding__))
         signed = rsa_.sign(hash_)
     signed = base64.b64encode(signed)
     user_arr = user.split("/")
     if len(user_arr) == 1:
-        keyid = "/{}/keys/{}".format(user_arr[0], ssh_keyname)
+        keyid = f"/{user_arr[0]}/keys/{ssh_keyname}"
     elif len(user_arr) == 2:
-        keyid = "/{}/users/{}/keys/{}".format(user_arr[0], user_arr[1], ssh_keyname)
+        keyid = f"/{user_arr[0]}/users/{user_arr[1]}/keys/{ssh_keyname}"
     else:
         log.error("Malformed user string")
 

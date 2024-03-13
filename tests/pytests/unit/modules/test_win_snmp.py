@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_snmp
 """
 
-
 import pytest
 
 import salt.modules.win_snmp as win_snmp

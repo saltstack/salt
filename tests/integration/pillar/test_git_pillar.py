@@ -686,7 +686,7 @@ class GitPythonMixin:
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
@@ -704,7 +704,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
@@ -714,7 +714,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):

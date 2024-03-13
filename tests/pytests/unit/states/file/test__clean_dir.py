@@ -1,6 +1,7 @@
 """
 Tests for _clean_dir function
 """
+
 import pytest
 
 import salt.states.file as file

@@ -2,7 +2,6 @@
 Neutron class
 """
 
-
 import logging
 
 import salt.utils.versions
@@ -89,7 +88,6 @@ class SaltNeutron(NeutronShell):
         use_keystoneauth=False,
         **kwargs
     ):
-
         """
         Set up neutron credentials
         """

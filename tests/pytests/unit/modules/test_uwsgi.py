@@ -2,7 +2,6 @@
     Test cases for salt.modules.uswgi
 """
 
-
 import pytest
 
 import salt.modules.uwsgi as uwsgi

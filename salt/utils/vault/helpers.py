@@ -111,7 +111,7 @@ def expand_pattern_lists(pattern, **mappings):
     # very expensive, since patterns will typically involve a handful of lists at
     # most.
 
-    for (_, field_name, _, _) in f.parse(pattern):
+    for _, field_name, _, _ in f.parse(pattern):
         if field_name is None:
             continue
         (value, _) = f.get_field(field_name, None, mappings)

@@ -706,6 +706,7 @@ Minion configuration (optional):
 
 .. _vault-setup:
 """
+
 import logging
 
 import salt.utils.vault as vault

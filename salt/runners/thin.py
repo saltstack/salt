@@ -6,7 +6,6 @@ in a standalone way. This runner has tools which generate the standalone salt
 system for easy consumption.
 """
 
-
 import salt.utils.thin
 
 

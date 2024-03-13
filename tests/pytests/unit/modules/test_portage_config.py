@@ -4,6 +4,7 @@
     pytest.unit.modules.portage_flags
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import pytest
 
 import salt.modules.portage_config as portage_config
@@ -26,7 +27,7 @@ def test_get_config_file_wildcards():
         ("cat/pkg::repo", "/etc/portage/package.mask/cat/pkg"),
     ]
 
-    for (atom, expected) in pairs:
+    for atom, expected in pairs:
         assert portage_config._get_config_file("mask", atom) == expected
 
 

@@ -1,6 +1,7 @@
 """
 Tests for win_shortcut execution module
 """
+
 import os
 import shutil
 import subprocess
@@ -127,7 +128,7 @@ def tmp_share():
     remove_cmd = [
         "powershell",
         "-command",
-        '"Remove-SmbShare -Name {} -Force" | Out-Null'.format(share_name),
+        f'"Remove-SmbShare -Name {share_name} -Force" | Out-Null',
     ]
     subprocess.run(create_cmd, check=True)
 
@@ -342,7 +343,7 @@ def test_create_lnk_smb_issue_61170(shortcut, tmp_dir, tmp_share):
         hot_key="Alt+Ctrl+C",
         icon_index=0,
         icon_location=r"C:\Windows\notepad.exe",
-        target=r"\\localhost\{}".format(tmp_share),
+        target=rf"\\localhost\{tmp_share}",
         window_style="Normal",
         working_dir=r"C:\Windows",
     )
@@ -354,7 +355,7 @@ def test_create_lnk_smb_issue_61170(shortcut, tmp_dir, tmp_share):
         "icon_index": 0,
         "icon_location": r"C:\Windows\notepad.exe",
         "path": test_link,
-        "target": r"\\localhost\{}".format(tmp_share),
+        "target": rf"\\localhost\{tmp_share}",
         "window_style": "Normal",
         "working_dir": r"C:\Windows",
     }
@@ -449,7 +450,7 @@ def test_create_backup(shortcut, tmp_lnk):
     }
     result = shortcut.get(path=str(tmp_lnk))
     assert result == expected
-    assert len(list(tmp_lnk.parent.glob("{}-*.lnk".format(tmp_lnk.stem)))) == 1
+    assert len(list(tmp_lnk.parent.glob(f"{tmp_lnk.stem}-*.lnk"))) == 1
 
 
 def test_create_make_dirs(shortcut, tmp_dir):

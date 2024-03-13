@@ -42,7 +42,7 @@ def test_license_present():
         ret.update({"comment": comt, "result": False})
         assert powerpath.license_present(name) == ret
 
-        comt = "License key {} already present".format(name)
+        comt = f"License key {name} already present"
         ret.update({"comment": comt, "result": True})
         assert powerpath.license_present(name) == ret
 
@@ -88,7 +88,7 @@ def test_license_absent():
         ret.update({"comment": comt, "result": False})
         assert powerpath.license_absent(name) == ret
 
-        comt = "License key {} not present".format(name)
+        comt = f"License key {name} not present"
         ret.update({"comment": comt, "result": True})
         assert powerpath.license_absent(name) == ret
 
