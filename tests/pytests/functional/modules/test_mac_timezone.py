@@ -156,6 +156,9 @@ def test_get_offset(timezone):
     """
     Test timezone.get_offset
     """
+    pytz = pytest.importorskip("pytz")
+    now = datetime.datetime.now(tz=pytz.UTC)
+
     ret = timezone.set_zone("Pacific/Wake")
     assert ret
     ret = timezone.get_offset()
@@ -166,7 +169,11 @@ def test_get_offset(timezone):
     assert ret
     ret = timezone.get_offset()
     assert isinstance(ret, str)
-    assert ret == "-0800"
+
+    if now.astimezone(pytz.timezone("America/Los_Angeles")).dst():
+        assert ret == "-0700"
+    else:
+        assert ret == "-0800"
 
 
 @pytest.mark.usefixtures("_reset_zone")
