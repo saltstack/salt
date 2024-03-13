@@ -224,7 +224,6 @@ if not HAS_APT:
             if ordered_opts:
                 repo_line.append(f"[{' '.join(ordered_opts)}]")
 
-            print("repo_line")
             repo_line += [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
                 repo_line.append(f"#{self.comment}")
