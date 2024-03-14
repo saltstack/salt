@@ -155,10 +155,11 @@ def xccdf_eval(
         proc = subprocess.Popen(
             cmd_opts, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tempdir
         )
-        (stdoutdata, error) = proc.communicate()
+        (_, error) = proc.communicate()
+        error = error.decode("ascii", errors="ignore")
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
-            error += f"\nKilled by signal {proc.returncode}\n".encode("ascii")
+            error += f"\nKilled by signal {proc.returncode}\n"
         returncode = proc.returncode
         if success:
             if not __salt__["cp.push_dir"](tempdir):
