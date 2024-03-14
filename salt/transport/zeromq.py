@@ -392,6 +392,9 @@ class PublishClient(salt.transport.base.PublishClient):
                     if msg:
                         try:
                             await callback(msg)
+                        except TypeError as exc:  # pylint: disable=broad-except
+                            if callback is not None:
+                                log.error("Exception while running callback %s", exc, exc_info=True)
                         except Exception:  # pylint: disable=broad-except
                             log.error("Exception while running callback", exc_info=True)
                     # log.debug("Callback done %r", callback)
