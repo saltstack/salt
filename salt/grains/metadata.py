@@ -16,7 +16,7 @@ metadata server set `metadata_server_grains: True` in the minion config.
 
 import os
 
-import salt.utils.aws as metadata
+import salt.utils.aws
 import salt.utils.data
 import salt.utils.json
 import salt.utils.stringutils
@@ -26,7 +26,7 @@ def _search(prefix="latest/"):
     Recursively look up all grains in the metadata server
     """
     ret = {}
-    result = metadata.get_metadata(prefix)
+    result = salt.utils.aws.get_metadata(prefix)
     body = result.text
     for line in body.split("\n"):
         if line.endswith("/"):
@@ -56,7 +56,7 @@ def _search(prefix="latest/"):
                 ret[line] = retdata
     return salt.utils.data.decode(ret)
 
-def main():
+def metadata():
     ret = {}
     ret['dynamic'] = _search('dynamic')
     ret['meta-data'] = _search('meta-data')
