@@ -448,8 +448,7 @@ def pytest_collection_modifyitems(config, items):
     groups_collection_modifyitems(config, items)
     from_filenames_collection_modifyitems(config, items)
 
-    log.warning("Mofifying collected tests to keep track of fixture usage")
-
+    log.warning("Modifying collected tests to keep track of fixture usage")
     timeout_marker_tests_paths = (
         str(PYTESTS_DIR / "pkg"),
         str(PYTESTS_DIR / "scenarios"),
