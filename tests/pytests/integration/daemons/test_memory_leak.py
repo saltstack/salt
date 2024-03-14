@@ -10,8 +10,6 @@ pytestmark = [
     pytest.mark.timeout_unless_on_windows(360),
 ]
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
-
 
 @pytest.fixture
 def file_add_delete_sls(tmp_path, salt_master):
