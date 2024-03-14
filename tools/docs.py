@@ -9,10 +9,9 @@ import logging
 import os
 import pathlib
 import shutil
-import sys
 
 from ptscripts import Context, command_group
-from ptscripts.models import VirtualEnvPipConfig
+from ptscripts.models import VirtualEnvPoetryConfig
 
 import tools.utils
 
@@ -23,16 +22,7 @@ docs = command_group(
     name="docs",
     help="Manpages tools",
     description=__doc__,
-    venv_config=VirtualEnvPipConfig(
-        requirements_files=[
-            tools.utils.REPO_ROOT
-            / "requirements"
-            / "static"
-            / "ci"
-            / "py{}.{}".format(*sys.version_info)
-            / "docs.txt",
-        ],
-    ),
+    venv_config=VirtualEnvPoetryConfig(groups=["docs"], no_root=False),
 )
 
 

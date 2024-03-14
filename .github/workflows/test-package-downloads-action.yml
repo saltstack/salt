@@ -224,23 +224,23 @@ jobs:
       - name: Start VM
         id: spin-up-vm
         run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
 
       - name: List Free Space
         run: |
-          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
+          poetry run tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
 
       - name: Upload Checkout To VM
         run: |
-          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm rsync ${{ matrix.distro-slug }}
 
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
 
       - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+          poetry run tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
@@ -256,7 +256,7 @@ jobs:
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING  -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
@@ -264,13 +264,13 @@ jobs:
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
-          tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
@@ -279,7 +279,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
+          poetry run tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
 
       - name: Fix file ownership
         run: |
@@ -641,23 +641,23 @@ jobs:
       - name: Start VM
         id: spin-up-vm
         run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
 
       - name: List Free Space
         run: |
-          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
+          poetry run tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
 
       - name: Upload Checkout To VM
         run: |
-          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm rsync ${{ matrix.distro-slug }}
 
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
 
       - name: Show System Info
         run: |
-          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+          poetry run tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
             --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
@@ -673,7 +673,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          poetry run tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
           -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
@@ -681,13 +681,13 @@ jobs:
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
-          tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
+          poetry run tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
@@ -696,7 +696,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
+          poetry run tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
 
       - name: Fix file ownership
         run: |

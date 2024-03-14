@@ -1,0 +1,132 @@
+name: Setup and Install Poetry
+description: Install and set up the Poetry
+inputs:
+  version:
+    description: "Version of Poetry to install"
+    required: true
+    default: "1.8.2"
+  plugins:
+    description: "Comma-separated list of Poetry plugins to install"
+    required: false
+    default: "poetry-dynamic-versioning,poetry-plugin-pypi-mirror"
+  python:
+    description: Which python binary to use
+    required: false
+    default: python3
+  cache-prefix:
+    required: true
+    description: Seed used to invalidate caches
+  cache-venv:
+    description: "Whether to cache the project .venv virtual environment"
+    required: false
+    default: "true"
+  cache-poetry:
+    description: "Whether to cache the Poetry runtime and cache directories"
+    required: false
+    default: "true"
+  max-workers:
+    description: "Maximum number of Poetry workers, if default of cores*4 is too large"
+    required: false
+    default: ""
+  disable-keyring:
+    description: "Whether to globally disable the Python keyring via Poetry configuration"
+    required: false
+    default: "true"
+
+outputs:
+  poetry-hash:
+    description: The HASH value of the poetry setup.
+    value: ${{ steps.poetry-hash.outputs.poetry-hash }}
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Get Python Version
+      id: get-python-version
+      uses: ./.github/actions/get-python-version
+      with:
+        python-binary: ${{ inputs.python }}
+
+    - name: Configure Poetry environment variables
+      shell: bash
+      run: |
+        # Configure Poetry environment variables
+        echo "POETRY_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+        echo "POETRY_CONFIG_DIR=$GITHUB_WORKSPACE/.poetry/config" >> "$GITHUB_ENV"
+        echo "POETRY_HOME=$GITHUB_WORKSPACE/.poetry/runtime" >> "$GITHUB_ENV"
+        echo "POETRY_CACHE=$GITHUB_WORKSPACE/.poetry/cache" >> "$GITHUB_ENV"
+        echo "POETRY_PLUGIN_HASH=$(echo '${{ inputs.plugins }}' | sha256sum | sed 's/ .*$//')" >> "$GITHUB_ENV"
+        # echo "POETRY_PYPI_MIRROR_URL=https://pypi-proxy.saltstack.net/root/local/+simple/" >> "$GITHUB_ENV"
+
+    - name: Generate the Poetry Hash that can be used to invalidate caches
+      id: poetry-hash
+      shell: bash
+      run: |
+        POETRY_HASH="${{
+          inputs.cache-prefix }}|${{ runner.os }}|${{ github.workflow }}${{
+          steps.get-python-version.outputs.version-sha256sum }}|${{ env.POETRY_VERSION }}|${{
+          env.POETRY_PLUGIN_HASH }}|${{ hashFiles('requirements/*.txt', 'poetry.lock')
+        }}"
+        echo "POETRY_HASH=${POETRY_HASH}" | tee -a "$GITHUB_ENV"
+        echo "poetry-hash=${POETRY_HASH}" | tee -a "$GITHUB_OUTPUT"
+
+    - name: Add Poetry to the system $PATH
+      shell: bash
+      run: |
+        # Add Poetry to the system $PATH
+        echo "$GITHUB_WORKSPACE/.poetry/runtime/bin" >> "$GITHUB_PATH"
+
+    - name: Cache $POETRY_HOME
+      if: "${{ inputs.cache-poetry == 'true' }}"
+      uses: actions/cache@v4
+      with:
+        path: ".poetry/runtime"
+        key: ${{ steps.poetry-hash.outputs.poetry-hash }}|poetry-runtime
+
+    - name: Cache $POETRY_CACHE
+      if: "${{ inputs.cache-poetry == 'true' }}"
+      uses: actions/cache@v4
+      with:
+        path: ".poetry/cache"
+        key: ${{ steps.poetry-hash.outputs.poetry-hash }}|poetry-cache
+
+    - name: Install Poetry
+      shell: bash
+      env:
+        PYTHON_BIN: ${{ steps.get-python-version.outputs.binary }}
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/install-poetry.sh"
+
+    - name: Display Poetry location and version
+      shell: bash
+      run: |
+        # Display Poetry location and version
+        which poetry
+        poetry --version
+
+    - name: Configure Poetry
+      shell: bash
+      env:
+        MAX_WORKERS: "${{ inputs.max-workers }}"
+        DISABLE_KEYRING: "${{ inputs.disable-keyring }}"
+        PYTHON_BIN: ${{ steps.get-python-version.outputs.binary }}
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/configure-poetry.sh"
+
+    - name: Install Poetry plugins
+      shell: bash
+      env:
+        PYTHON_BIN: ${{ steps.get-python-version.outputs.binary }}
+        POETRY_PLUGINS: "${{ inputs.plugins }}"
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/install-plugins.sh"
+
+    - name: Cache Virtual Environment
+      if: "${{ inputs.cache-venv == 'true' }}"
+      uses: actions/cache@v4
+      with:
+        path: ".venv"
+        key: ${{ steps.poetry-hash.outputs.poetry-hash }}|poetry-venv

@@ -94,7 +94,7 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
+          poetry run tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
 
   test:
     name: Test

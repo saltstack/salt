@@ -1,37 +1,16 @@
 import logging
-import pathlib
-import sys
 
 import ptscripts
-from ptscripts.models import DefaultPipConfig, VirtualEnvPipConfig
+from ptscripts.models import DefaultPoetryConfig, VirtualEnvPoetryConfig
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-REQUIREMENTS_FILES_PATH = REPO_ROOT / "requirements"
-STATIC_REQUIREMENTS_PATH = REQUIREMENTS_FILES_PATH / "static"
-CI_REQUIREMENTS_FILES_PATH = (
-    STATIC_REQUIREMENTS_PATH / "ci" / "py{}.{}".format(*sys.version_info)
-)
-DEFAULT_REQS_CONFIG = DefaultPipConfig(
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools.txt",
-    ],
-)
-RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
-    ],
-    add_as_extra_site_packages=True,
-)
+DEFAULT_REQS_CONFIG = DefaultPoetryConfig(groups=["tools"])
+RELEASE_VENV_CONFIG = VirtualEnvPoetryConfig(groups=["tools-virustotal"])
+
 ptscripts.set_default_config(DEFAULT_REQS_CONFIG)
 ptscripts.register_tools_module("tools.changelog")
 ptscripts.register_tools_module("tools.ci")
 ptscripts.register_tools_module("tools.docs")
+ptscripts.register_tools_module("tools.lint")
 ptscripts.register_tools_module("tools.pkg")
 ptscripts.register_tools_module("tools.pkg.repo")
 ptscripts.register_tools_module("tools.pkg.build")

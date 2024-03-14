@@ -34,23 +34,23 @@ runs:
       if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
       shell: bash
       run: |
-        tools pkg configure-git
+        poetry run tools pkg configure-git
 
     - name: Apply Release Patch
       if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
       shell: bash
       run: |
-        tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+        poetry run tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
     - name: Create Source Tarball
       shell: bash
       run: |
-        tools pkg source-tarball
+        poetry run tools pkg source-tarball
 
     - name: Create Hash Files
       shell: bash
       run: |
-        tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
+        poetry run tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Upload Source Tarball as an Artifact
       uses: actions/upload-artifact@v4

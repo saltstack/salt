@@ -45,12 +45,6 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
-      - name: Get Python Version
-        id: get-python-version
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: python3
-
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -60,19 +54,19 @@ jobs:
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools pkg configure-git
+          poetry run tools pkg configure-git
 
       - name: Apply release patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          poetry run tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4
         with:
           path: .tools-venvs/docs
-          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+          key: ${{ steps.python-tools-scripts.outputs.cache-prefix }}|docs
 
       - name: Prepare Docs Build
         run: |
@@ -91,7 +85,7 @@ jobs:
           SALT_ON_SALTSTACK: "1"
           ARCHIVE_FILENAME: "${{ format('salt-{0}-docs-{1}.tar.xz', inputs.salt-version, matrix.docs-output) }}"
         run: |
-          tools docs ${{ matrix.docs-output }}
+          poetry run tools docs ${{ matrix.docs-output }}
 
       - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
         if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}

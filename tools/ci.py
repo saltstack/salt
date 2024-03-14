@@ -524,11 +524,8 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
-    changed_pkg_requirements_files = json.loads(
-        changed_files_contents["pkg_requirements_files"]
-    )
-    changed_test_requirements_files = json.loads(
-        changed_files_contents["test_requirements_files"]
+    changed_requirements_files = json.loads(
+        changed_files_contents["requirements_files"]
     )
     if changed_files_contents["golden_images"] == "true":
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
@@ -537,18 +534,16 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "to `cicd/golden-images.json`.\n"
             )
         testrun = TestRun(type="full", skip_code_coverage=True)
-    elif changed_pkg_requirements_files or changed_test_requirements_files:
+    elif changed_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
                 "Full test run chosen because there was a change made "
-                "to the requirements files.\n"
+                "to the requirements.\n"
             )
             wfh.write(
                 "<details>\n<summary>Changed Requirements Files (click me)</summary>\n<pre>\n"
             )
-            for path in sorted(
-                changed_pkg_requirements_files + changed_test_requirements_files
-            ):
+            for path in sorted(changed_requirements_files):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
         testrun = TestRun(type="full", skip_code_coverage=True)

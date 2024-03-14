@@ -50,7 +50,7 @@ runs:
           ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
             hashFiles(
               format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
+              'requirements/*.txt', 'poetry.lock',
               '.github/actions/build-onedir-deps/action.yml',
               '.github/workflows/build-deps-onedir-*.yml',
               'cicd/shared-gh-workflows-context.yml'
@@ -65,12 +65,12 @@ runs:
     - name: Install Salt Into Onedir
       shell: bash
       run: |
-        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
+        poetry run tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
       run: |
-        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
+        poetry run tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
 
     - name: Create Archive
       shell: bash
@@ -88,7 +88,7 @@ runs:
     - name: Create Hash Files
       shell: bash
       run: |
-        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
+        poetry run tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
       uses: actions/upload-artifact@v4

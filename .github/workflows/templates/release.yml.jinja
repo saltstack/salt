@@ -104,7 +104,7 @@ permissions:
 
       - name: Pretty Print The GH Actions Event
         run:
-          tools ci print-gh-event
+          poetry run tools ci print-gh-event
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -117,28 +117,28 @@ permissions:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          poetry run tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
           if [ "${{ github.event.repository.private }}" = "true" ]; then
-            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+            poetry run tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
           fi
 
       - name: Check Release Staged
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          poetry run tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
       - name: Get Salt Releases
         id: get-salt-releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tools ci get-releases
+          poetry run tools ci get-releases
 
       - name: Set Cache Seed Output
         id: set-cache-seed
         run: |
-          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+          poetry run tools ci define-cache-seed ${{ env.CACHE_SEED }}
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
@@ -192,7 +192,7 @@ permissions:
 
       - name: Download Onedir Tarball Artifact
         run: |
-          tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
+          poetry run tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
 
       - name: Upload Onedir Tarball as an Artifact
         uses: actions/upload-artifact@v4
@@ -233,7 +233,7 @@ permissions:
       - name: Backup Previous Releases
         id: backup
         run: |
-          tools pkg repo backup-previous-releases
+          poetry run tools pkg repo backup-previous-releases
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
@@ -268,7 +268,7 @@ permissions:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
-          tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
+          poetry run tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
   <%- if includes.get("test-pkg-downloads", True) %>
   <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
@@ -334,7 +334,7 @@ permissions:
       - name: Prepare Release
         id: prepare-release
         run: |
-          tools pkg repo publish github --repository ${{ github.repository }} --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
+          poetry run tools pkg repo publish github --repository ${{ github.repository }} --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Configure Git
         shell: bash
@@ -421,7 +421,7 @@ permissions:
 
       - name: Restore Release Bucket
         run: |
-          tools pkg repo restore-previous-releases
+          poetry run tools pkg repo restore-previous-releases
   #}
 
   publish-pypi:
@@ -479,7 +479,7 @@ permissions:
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
-          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          poetry run tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
 <%- endblock jobs %>
 
