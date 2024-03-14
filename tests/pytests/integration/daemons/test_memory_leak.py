@@ -21,8 +21,6 @@ pytestmark = [
     ),
 ]
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
-
 
 @pytest.fixture
 def file_add_delete_sls(tmp_path, salt_master):
