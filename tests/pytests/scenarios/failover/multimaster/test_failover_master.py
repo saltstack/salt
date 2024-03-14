@@ -14,10 +14,8 @@ pytestmark = [
 
 log = logging.getLogger(__name__)
 
-GITHUB_ACTIONS = bool(os.getenv("GITHUB_ACTIONS"))
 
-
-@pytest.mark.skipif(GITHUB_ACTIONS, reason="Test is failing in GitHub Actions")
+@pytest.mark.skip_on_env("GITHUB_ACTIONS", present=True)
 def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
     """
     Verify https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html
