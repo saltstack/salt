@@ -16,6 +16,7 @@ pytestmark = [
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
     ),
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 
