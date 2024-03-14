@@ -237,7 +237,7 @@ class SaltPkgInstall:
                 break
         if not version:
             pytest.fail(
-                f"Failed to package artifacts in '{ARTIFACTS_DIR}'. "
+                f"Failed to find package artifacts in '{ARTIFACTS_DIR}'. "
                 f"Directory Contents:\n{pprint.pformat(artifacts)}"
             )
         return version
@@ -295,6 +295,10 @@ class SaltPkgInstall:
                         self.run_root = self.bin_dir / "run"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
+                log.debug("root: %s", self.root)
+                log.debug("bin_dir: %s", self.bin_dir)
+                log.debug("ssm_bin: %s", self.ssm_bin)
+                log.debug("run_root: %s", self.run_root)
 
         if not self.pkgs:
             pytest.fail("Could not find Salt Artifacts")
@@ -400,6 +404,9 @@ class SaltPkgInstall:
                         self.binary_paths["spm"] = [shutil.which("salt-spm")]
                     else:
                         self.binary_paths["pip"] = [shutil.which("salt-pip")]
+        log.debug("python_bin: %s", python_bin)
+        log.debug("binary_paths: %s", self.binary_paths)
+        log.debug("install_dir: %s", self.install_dir)
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
@@ -413,8 +420,8 @@ class SaltPkgInstall:
 
     def _check_retcode(self, ret):
         """
-        helper function ot check subprocess.run
-        returncode equals 0, if not raise assertionerror
+        Helper function to check subprocess.run returncode equals 0
+        If not raise AssertionError
         """
         if ret.returncode != 0:
             log.error(ret)
@@ -462,7 +469,13 @@ class SaltPkgInstall:
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+
+            # Add installation to the path
             self.update_process_path()
+
+            # Install the service using our config
+            if self.pkg_system_service:
+                self._install_ssm_service()
 
         elif platform.is_darwin():
             daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
@@ -508,6 +521,54 @@ class SaltPkgInstall:
             assert ret.returncode == 0
             assert "/saltstack/salt/run" not in ret.stdout
         log.info(ret)
+        self._check_retcode(ret)
+
+    def _install_ssm_service(self, service="minion"):
+        """
+        This function installs the service on Windows using SSM but does not
+        start it.
+
+        Args:
+
+            service (str):
+                The name of the service. Default is ``minion``
+        """
+        service_name = f"salt-{service}"
+        binary = self.install_dir / f"{service_name}.exe"
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "install",
+            service_name,
+            binary,
+            "-c",
+            f'"{str(self.conf_dir)}"',
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "set",
+            service_name,
+            "Description",
+            "Salt Minion for testing",
+        )
+        self._check_retcode(ret)
+        # This doesn't start the service. It will start automatically on reboot
+        # It is set here to make it the same as what the installer does
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "Start", "SERVICE_AUTO_START"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodConsole", "24000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodWindow", "2000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppRestartDelay", "60000"
+        )
         self._check_retcode(ret)
 
     def package_python_version(self):
@@ -762,7 +823,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
             if self.pkg_system_service:
-                self._install_system_service()
+                self._install_ssm_service()
 
         elif platform.is_darwin():
             if self.classic:
@@ -1229,8 +1290,8 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
